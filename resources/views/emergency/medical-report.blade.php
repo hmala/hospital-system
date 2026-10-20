@@ -643,7 +643,7 @@
         }
     }
 
-    $dischargeRecommendations = $emergency->discharge_recommendations ?? $emergency->discharge_notes ?? 'مراجعة العيادة الخارجية';
+    $dischargeRecommendations = $emergency->discharge_recommendations ?? $emergency->discharge_notes ?? '';
     
     $dischargeStatusBadge = 'الخروج بحالة مستقرة / مراجعة بعد 3 أيام';
     if ($emergency->discharge_type === 'against_medical_advice') {
@@ -871,7 +871,7 @@
                     <span>الشكوى الرئيسية</span>
                 </div>
                 <div class="textbox-content">
-                    {{ $emergency->symptoms ?: 'ألم حاد في البطن مترافق مع غثيان وإعياء عام.' }}
+                    {{ $emergency->symptoms ?? '' }}
                 </div>
             </div>
 
@@ -882,7 +882,7 @@
                     <span>تاريخ المريض الحالي History of Present Illness (HPI)</span>
                 </div>
                 <div class="textbox-content" style="min-height: 38px;">
-                    {{ $emergency->hpi ?: ($emergency->initial_assessment ?: 'بدأت الأعراض قبل عدة ساعات بصورة تدريجية مع اشتداد ملحوظ، تم استقبال المريض بقسم الطوارئ وتقديم الرعاية الأولية مع الاستقرار السريري.') }}
+                    {{ $emergency->hpi ?: ($emergency->initial_assessment ?: '') }}
                 </div>
             </div>
 
@@ -904,8 +904,6 @@
                     @endphp
                     @if(!empty($diagItems))
                         {{ implode(' | ', $diagItems) }}
-                    @else
-                        تم إجراء الفحوصات السريرية الأولية والتخطيط السريع، ولم تُطلب فحوصات إشعاعية أو مختبرية إضافية.
                     @endif
                 </div>
             </div>
@@ -919,8 +917,6 @@
                 <div class="textbox-content" style="min-height: 28px;">
                     @if(!empty($treatmentsList))
                         {{ implode(' • ', $treatmentsList) }}
-                    @else
-                        إعطاء سوائل وريدية، مسكنات ألم، مضادات تشنج، مع الملاحظة السريرية المستمرة.
                     @endif
                 </div>
             </div>
@@ -948,16 +944,24 @@
                                     <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
                                     <td>{{ $emergency->created_at->format('H:i') }}</td>
                                     <td><strong>{{ $srv->name }}</strong></td>
-                                    <td>{{ $emergency->diagnosis ?: 'تحسن جزئي تحت المراقبة' }}</td>
+                                    <td>{{ $emergency->diagnosis ?? '' }}</td>
                                     <td>{{ $doctorName }}</td>
                                 </tr>
                             @endforeach
+                        @elseif(!empty($emergency->diagnosis))
+                            <tr>
+                                <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
+                                <td>{{ $emergency->created_at->format('H:i') }}</td>
+                                <td>—</td>
+                                <td>{{ $emergency->diagnosis }}</td>
+                                <td>{{ $doctorName }}</td>
+                            </tr>
                         @else
                             <tr>
                                 <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
                                 <td>{{ $emergency->created_at->format('H:i') }}</td>
-                                <td><strong>إعطاء سوائل وريدية ومسكن</strong></td>
-                                <td>{{ $emergency->diagnosis ?: 'تحسن جزئي تحت المراقبة' }}</td>
+                                <td>—</td>
+                                <td>—</td>
                                 <td>{{ $doctorName }}</td>
                             </tr>
                         @endif
@@ -1023,7 +1027,7 @@
                     <span>الملاحظات الطبية - العدلية</span>
                 </div>
                 <div class="large-notes-box">
-{{ $emergency->medico_legal_notes ?: 'تمت معاينة المريض سريرياً وقت دخوله إلى قسم الطوارئ، والحالة مرضية اعتيادية ولا توجد أي علامات أو شبهة جنائية ظاهرة.' }}
+{{ $emergency->medico_legal_notes ?? '' }}
                 </div>
             </div>
 
@@ -1034,7 +1038,7 @@
                     <span>ملاحظات إضافية</span>
                 </div>
                 <div class="large-notes-box">
-{{ $emergency->notes ?: 'المريض مستقر من الناحية الحيوية، وتم تزويده بالتعليمات الطبية اللازمة وخطة العلاج المنزلي مع التنبيه بضرورة مراجعة الطوارئ فوراً في حال حدوث أي مستجدات أو تفاقم للأعراض.' }}
+{{ $emergency->notes ?? '' }}
                 </div>
             </div>
 
