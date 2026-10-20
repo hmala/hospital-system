@@ -203,18 +203,16 @@ class NicuController extends Controller
 
         // جلب قائمة التحاليل والأشعة والأدوية لمحاكاة محطة عمل الطبيب
         $labTests = LabTest::where('is_active', true)
-            ->select('id', 'name', 'code', 'price', 'category', 'is_hi_active', 'hi_price')
             ->orderBy('name')
             ->get();
 
         $radiologyTypes = RadiologyType::where('is_active', true)
-            ->select('id', 'name', 'code', 'price', 'type', 'is_hi_active', 'hi_price')
             ->orderBy('name')
             ->get();
 
-        $medicines = Medicine::select('id', 'name', 'dosage_form', 'strength')
+        $medicines = Medicine::where('is_active', true)
+            ->select('id', 'name', 'dosage_form', 'strength')
             ->orderBy('name')
-            ->limit(400)
             ->get();
 
         return view('nicu.show', compact(
