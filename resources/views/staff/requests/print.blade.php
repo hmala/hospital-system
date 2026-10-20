@@ -10,7 +10,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 8mm 12mm 10mm 12mm;
         }
 
         * {
@@ -31,12 +31,59 @@
             width: 210mm;
             max-width: 210mm;
             min-height: 297mm;
-            margin: 0 auto;
+            margin: 0 auto 20px auto;
             background: #ffffff;
-            padding: 16mm 20mm 35mm 20mm;
+            padding: 10mm 15mm 14mm 15mm;
             position: relative;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .report-main-content {
+            flex: 1 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-bottom-block {
+            margin-top: auto;
+            position: relative;
+            z-index: 1;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Repeating Table Architecture for Multi-Page Printing */
+        .report-print-container {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-print-container thead {
+            display: table-header-group;
+        }
+
+        .report-print-container tfoot {
+            display: table-footer-group;
+        }
+
+        .report-print-container tbody {
+            display: table-row-group;
+        }
+
+        .print-table-cell-header,
+        .print-table-cell-body,
+        .print-table-cell-footer {
+            border: none;
+            padding: 0;
+            margin: 0;
+            vertical-align: top;
         }
 
         @media screen and (max-width: 768px) {
@@ -271,8 +318,8 @@
             direction: rtl;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
             border-bottom: 2px solid #005a9c;
         }
 
@@ -282,22 +329,22 @@
             direction: rtl;
         }
         .header-hospital-ar h2 {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 900;
             color: #005a9c;
-            margin: 0 0 2px 0;
+            margin: 0 0 1px 0;
             line-height: 1.2;
             font-family: 'Cairo', 'Tajawal', sans-serif;
         }
         .header-hospital-ar h4 {
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 800;
             color: #0284c7;
             margin: 0 0 1px 0;
             font-family: 'Cairo', 'Tajawal', sans-serif;
         }
         .header-hospital-ar p {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 600;
             margin: 0;
@@ -305,12 +352,12 @@
 
         .header-logo {
             text-align: center;
-            width: 120px;
-            padding: 0 10px;
+            width: 110px;
+            padding: 0 8px;
         }
         .header-logo img, .hospital-logo-img {
-            max-width: 100px;
-            max-height: 80px;
+            max-width: 90px;
+            max-height: 72px;
             object-fit: contain;
         }
 
@@ -320,22 +367,22 @@
             flex: 1;
         }
         .header-hospital-en h2 {
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 900;
             color: #005a9c;
-            margin: 0 0 2px 0;
+            margin: 0 0 1px 0;
             line-height: 1.2;
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         .header-hospital-en h4 {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 800;
             color: #0284c7;
             margin: 0 0 1px 0;
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         .header-hospital-en p {
-            font-size: 9.5px;
+            font-size: 9px;
             color: #64748b;
             font-weight: 600;
             margin: 0;
@@ -346,15 +393,15 @@
             background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%);
             color: #ffffff;
             text-align: center;
-            padding: 6px 14px;
-            border-radius: 6px;
-            margin-bottom: 14px;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .document-title-banner h3 {
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-weight: 900;
             margin: 0;
             letter-spacing: 0.3px;
@@ -363,11 +410,11 @@
         .report-code-badge {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.4);
-            padding: 2px 10px;
+            padding: 1px 8px;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             direction: ltr;
         }
 
@@ -375,19 +422,19 @@
         .patient-info-card {
             background-color: #f8fafc;
             border: 1.2px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 8px 14px;
-            margin-bottom: 14px;
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin-bottom: 8px;
             display: grid;
-            grid-template-columns: 1.35fr 1.25fr 92px;
-            gap: 14px;
+            grid-template-columns: 1.35fr 1.25fr 85px;
+            gap: 10px;
             align-items: center;
         }
 
         .patient-zone-main, .patient-zone-order {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 2px;
         }
 
         .patient-zone-qr {
@@ -397,7 +444,7 @@
             align-items: center;
             justify-content: center;
             border-left: 1px dashed #cbd5e1;
-            padding-left: 10px;
+            padding-left: 8px;
         }
 
         .qr-box {
@@ -408,26 +455,26 @@
         }
 
         .qr-img {
-            width: 70px;
-            height: 70px;
+            width: 62px;
+            height: 62px;
             background: #ffffff;
             padding: 2px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         .qr-tag {
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 800;
             color: #005a9c;
-            margin-top: 3px;
-            letter-spacing: 0.5px;
+            margin-top: 2px;
+            letter-spacing: 0.4px;
             direction: ltr;
         }
 
         .qr-caption {
-            font-size: 8px;
+            font-size: 7.5px;
             color: #64748b;
             font-weight: 700;
             margin-top: 1px;
@@ -436,9 +483,9 @@
 
         .badge-coverage {
             display: inline-block;
-            padding: 1px 7px;
+            padding: 1px 6px;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
         }
         .badge-insurance {
@@ -455,23 +502,23 @@
         .info-row {
             display: flex;
             align-items: center;
-            line-height: 1.45;
-            font-size: 12.5px;
+            line-height: 1.35;
+            font-size: 11.5px;
         }
 
         .info-pill {
             background-color: #e5e8ec;
             color: #1e293b;
             font-weight: bold;
-            font-size: 11.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
-            min-width: 95px;
+            font-size: 10.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            min-width: 88px;
             display: inline-block;
         }
 
         .info-colon {
-            margin: 0 6px;
+            margin: 0 4px;
             font-weight: bold;
             color: #475569;
         }
@@ -479,7 +526,7 @@
         .val-arabic-name {
             color: #005a9c;
             font-weight: bold;
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-family: 'Tahoma', Arial, sans-serif;
             direction: rtl;
         }
@@ -487,28 +534,29 @@
         .val-english-name {
             color: #334155;
             font-weight: bold;
-            font-size: 12.5px;
+            font-size: 11.5px;
         }
 
         .info-val-text {
             color: #0f172a;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         /* Official Authentication & Signatures Block */
         .auth-block {
             border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 8px 16px;
+            border-radius: 6px;
+            padding: 6px 12px;
             background-color: #f8fafc;
-            margin-top: 14px;
-            margin-bottom: 10px;
+            margin-top: 8px;
+            margin-bottom: 4px;
             display: grid;
             grid-template-columns: 2fr 1.2fr;
-            gap: 20px;
+            gap: 15px;
             align-items: center;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .auth-cell {
@@ -526,33 +574,33 @@
         }
         .sig-empty-line {
             width: 85%;
-            height: 38px;
+            height: 26px;
             border-bottom: 1.5px dashed #005a9c;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             color: #94a3b8;
-            font-size: 11px;
+            font-size: 10px;
             font-style: italic;
         }
         .sig-title {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 800;
             color: #005a9c;
             margin-bottom: 2px;
             font-family: 'Cairo', 'Tajawal', sans-serif;
         }
         .sig-subtitle {
-            font-size: 10.5px;
+            font-size: 10px;
             color: #64748b;
             font-weight: 600;
         }
 
         .stamp-circle-box {
-            width: 78px;
-            height: 78px;
-            border: 2px dashed #005a9c;
+            width: 64px;
+            height: 64px;
+            border: 1.5px dashed #005a9c;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -561,7 +609,7 @@
             text-align: center;
             color: #005a9c;
             background: #ffffff;
-            padding: 4px;
+            padding: 3px;
         }
 
         /* Test Table Column Headers (Matching image double blue line) */
@@ -570,14 +618,14 @@
             grid-template-columns: 2.2fr 1fr 1fr;
             border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
-            padding: 6px 4px;
-            margin-bottom: 8px;
+            padding: 4px 4px;
+            margin-bottom: 4px;
         }
 
         .header-col {
             color: #1e4b88;
             font-weight: bold;
-            font-size: 13.5px;
+            font-size: 12.5px;
         }
 
         .header-col.center {
@@ -591,8 +639,10 @@
 
         /* Test Item Card */
         .test-card {
-            padding: 6px 4px 8px 4px;
+            padding: 4px 4px 5px 4px;
             border-bottom: 1px solid #e1e4e8;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .test-card:last-child {
@@ -603,18 +653,18 @@
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
             align-items: flex-start;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .test-name {
             font-weight: bold;
             color: #000;
-            font-size: 13.5px;
+            font-size: 12.5px;
         }
 
         .test-value-cell {
             text-align: center;
-            font-size: 13px;
+            font-size: 12.5px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -631,8 +681,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 3px;
-            padding-top: 3px;
+            margin-top: 2px;
+            padding-top: 2px;
             border-top: 1px dashed #cbd5e1;
             width: 88%;
             gap: 2px;
@@ -643,12 +693,12 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.2;
         }
 
         .prev-val-chip {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #1e4b88;
         }
@@ -662,7 +712,7 @@
         }
 
         .prev-date-text {
-            font-size: 9px;
+            font-size: 8.5px;
             color: #64748b;
             font-weight: 600;
         }
@@ -678,7 +728,7 @@
         .val-normal {
             color: #1e4b88;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .val-high {
@@ -687,9 +737,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -700,9 +750,9 @@
             color: #b45309;
             border: 1px solid #fcd34d;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -713,9 +763,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -726,9 +776,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: 800;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -740,9 +790,9 @@
             color: #b45309;
             border: 1px solid #fcd34d;
             font-weight: 800;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -754,18 +804,18 @@
             color: #15803d;
             border: 1px solid #bbf7d0;
             font-weight: 700;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .badge-flag {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
-            margin-left: 5px;
+            margin-left: 4px;
             vertical-align: middle;
         }
         .badge-flag.high { color: #b91c1c; }
@@ -773,7 +823,7 @@
 
         .unit-label {
             color: #333;
-            font-size: 12.5px;
+            font-size: 11.5px;
             margin-left: 4px;
         }
 
@@ -781,9 +831,9 @@
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
             align-items: baseline;
-            font-size: 12.5px;
+            font-size: 11.5px;
             color: #444;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .meta-label {
@@ -794,7 +844,7 @@
         .meta-conv-range {
             text-align: center;
             color: #444;
-            font-size: 12.5px;
+            font-size: 11.5px;
         }
 
         .meta-status-blank {
@@ -802,9 +852,9 @@
         }
 
         .test-device-row {
-            font-size: 12px;
+            font-size: 10.5px;
             color: #1e4b88;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         /* Category Header */
@@ -812,37 +862,36 @@
             background-color: #f1f4f8;
             color: #1e4b88;
             font-weight: bold;
-            font-size: 13px;
-            padding: 5px 8px;
-            margin-top: 8px;
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-top: 6px;
             border-left: 3px solid #1e4b88;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* Footer */
         .report-footer-wrapper {
-            position: absolute !important;
-            bottom: 14mm;
-            left: 20mm;
-            right: 20mm;
-            width: auto;
+            width: 100%;
+            margin-top: 6px;
             z-index: 10;
         }
 
         .report-footer {
             border-top: 1px solid #dee2e6;
-            padding-top: 8px;
+            padding-top: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #333;
             font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
         }
 
         .footer-printed-by {
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #333;
         }
 
@@ -852,7 +901,7 @@
         }
 
         .footer-datetime {
-            font-size: 11.5px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #444;
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -861,50 +910,51 @@
 
         .hospital-contact-line {
             text-align: center;
-            font-size: 10px;
+            font-size: 9.5px;
             color: #555;
-            margin-top: 6px;
+            margin-top: 4px;
             font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
             direction: rtl;
         }
 
         /* Print Media Styles */
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm 12mm 10mm 12mm;
+            }
+
             .print-toolbar {
                 display: none !important;
             }
 
             body {
-                background: #fff;
-                padding: 0;
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                background: #fff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .report-page {
                 box-shadow: none !important;
-                margin: 0 auto !important;
-                padding: 16mm 20mm 35mm 20mm !important;
-                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
-                min-height: 297mm !important;
+                min-height: auto !important;
                 position: relative !important;
                 box-sizing: border-box !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
                 page-break-after: auto;
             }
 
             .decorative-border {
-                display: block !important;
-                position: absolute;
-                top: 6mm;
-                right: 6mm;
-                bottom: 6mm;
-                left: 6mm;
-                border: 1px solid #7dd3fc;
-                border-radius: 2px;
+                display: none !important;
             }
 
             .report-page::before {
@@ -913,24 +963,37 @@
                 opacity: 0.04;
             }
 
+            .report-main-content {
+                flex: 1 0 auto !important;
+            }
+
+            .report-bottom-block {
+                margin-top: auto !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
             .report-footer-wrapper {
-                position: absolute !important;
-                bottom: 14mm !important;
-                left: 20mm !important;
-                right: 20mm !important;
-                width: auto !important;
+                position: static !important;
+                width: 100% !important;
+                margin-top: 6px !important;
                 z-index: 9999;
                 background: transparent !important;
             }
 
             .test-card {
-                break-inside: avoid;
-                page-break-inside: avoid;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
             }
 
-            .patient-info-grid {
-                break-inside: avoid;
-                page-break-inside: avoid;
+            .patient-info-card, .patient-info-grid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            .auth-block {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
             }
 
             body.letterhead-mode .report-header,
@@ -948,11 +1011,6 @@
             body.letterhead-mode .report-page {
                 padding-top: var(--letterhead-top, 45mm) !important;
                 padding-bottom: var(--letterhead-bottom, 25mm) !important;
-            }
-
-            @page {
-                size: A4 portrait;
-                margin: 0;
             }
         }
     </style>
@@ -1221,96 +1279,115 @@
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-        <!-- Header Section (Matching Emergency & Radiology) -->
-        <div class="report-header" style="direction: rtl;">
-            <div class="header-hospital-ar">
-                <h2>مستشفى الكفاءات الأهلي</h2>
-                <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
-                <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
-            </div>
-            <div class="header-logo">
-                <img src="{!! $hospitalLogoSrc !!}" 
-                     alt="Hospital Logo" 
-                     class="hospital-logo-img" 
-                     onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
-                     style="max-height: 80px; max-width: 100px; object-fit: contain;">
-            </div>
-            <div class="header-hospital-en">
-                <h2>Al-Kafa'at Private Hospital</h2>
-                <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
-                <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
-            </div>
-        </div>
+    <table class="report-print-container">
+        <thead>
+            <tr>
+                <td class="print-table-cell-header">
+                    <!-- Header Section (Matching Emergency & Radiology) -->
+                    <div class="report-header" style="direction: rtl;">
+                        <div class="header-hospital-ar">
+                            <h2>مستشفى الكفاءات الأهلي</h2>
+                            <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
+                            <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
+                        </div>
+                        <div class="header-logo">
+                            <img src="{!! $hospitalLogoSrc !!}" 
+                                 alt="Hospital Logo" 
+                                 class="hospital-logo-img" 
+                                 onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                                 style="max-height: 80px; max-width: 100px; object-fit: contain;">
+                        </div>
+                        <div class="header-hospital-en">
+                            <h2>Al-Kafa'at Private Hospital</h2>
+                            <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
+                            <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
+                        </div>
+                    </div>
 
-        <!-- Document Title Banner (Matching Emergency & Radiology) -->
-        <div class="document-title-banner">
-            <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' }}</h3>
-            <div class="report-code-badge">
-                LAB-#{{ $request->id }}
-            </div>
-        </div>
+                    <!-- Document Title Banner (Matching Emergency & Radiology) -->
+                    <div class="document-title-banner">
+                        <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' }}</h3>
+                        <div class="report-code-badge">
+                            LAB-#{{ $request->id }}
+                        </div>
+                    </div>
 
-        <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
-        <div class="patient-info-card">
-            <!-- Left Zone: Patient Demographics -->
-            <div class="patient-zone-main">
-                <div class="info-row">
-                    <span class="info-pill">Patient Name</span>
-                    <span class="info-colon">:</span>
-                    <span class="val-arabic-name">{{ $arabicName }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Patient Name</span>
-                    <span class="info-colon">:</span>
-                    <span class="val-english-name">{{ $englishName }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Age / Sex</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Phone No.</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
-                </div>
-            </div>
+                    <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
+                    <div class="patient-info-card">
+                        <!-- Left Zone: Patient Demographics -->
+                        <div class="patient-zone-main">
+                            <div class="info-row">
+                                <span class="info-pill">Patient Name</span>
+                                <span class="info-colon">:</span>
+                                <span class="val-arabic-name">{{ $arabicName }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Patient Name</span>
+                                <span class="info-colon">:</span>
+                                <span class="val-english-name">{{ $englishName }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Age / Sex</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Phone No.</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
+                            </div>
+                        </div>
 
-            <!-- Middle Zone: Order, Doctor & Coverage -->
-            <div class="patient-zone-order">
-                <div class="info-row">
-                    <span class="info-pill">Consultant</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Sample No.</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Date / Time</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Coverage</span>
-                    <span class="info-colon">:</span>
-                    <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                        {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
-                    </span>
-                </div>
-            </div>
+                        <!-- Middle Zone: Order, Doctor & Coverage -->
+                        <div class="patient-zone-order">
+                            <div class="info-row">
+                                <span class="info-pill">Consultant</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Sample No.</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Date / Time</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Coverage</span>
+                                <span class="info-colon">:</span>
+                                <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
+                                    {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                                </span>
+                            </div>
+                        </div>
 
-            <!-- Right Zone: Direct QR Code -->
-            <div class="patient-zone-qr">
-                <div class="qr-box">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
-                    <span class="qr-tag">LAB-#{{ $request->id }}</span>
-                    <span class="qr-caption">مسح للنتائج</span>
-                </div>
-            </div>
-        </div>
+                        <!-- Right Zone: Direct QR Code -->
+                        <div class="patient-zone-qr">
+                            <div class="qr-box">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
+                                <span class="qr-tag">LAB-#{{ $request->id }}</span>
+                                <span class="qr-caption">مسح للنتائج</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if(!isset($isBloodBankRequest) || !$isBloodBankRequest)
+                        <!-- Column Headers -->
+                        <div class="tests-header-bar">
+                            <div class="header-col">Laboratory Test Results</div>
+                            <div class="header-col center">Conventional Units</div>
+                            <div class="header-col right">Status</div>
+                        </div>
+                    @endif
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="print-table-cell-body">
 
         @if(isset($isBloodBankRequest) && $isBloodBankRequest)
             <!-- Blood Bank Specialized Table -->
@@ -1330,13 +1407,6 @@
                 @endif
             </div>
         @else
-            <!-- Column Headers -->
-            <div class="tests-header-bar">
-                <div class="header-col">Laboratory Test Results</div>
-                <div class="header-col center">Conventional Units</div>
-                <div class="header-col right">Status</div>
-            </div>
-
             <!-- Test Items List -->
             @php
                 $currentGroup = null;
@@ -1589,48 +1659,57 @@
             @endif
         @endif
 
-        <!-- Official Authentication & Signatures Block (مكان التوقيع فارغ للاختبار) -->
-        <div class="auth-block">
-            <!-- 1. Specialist / Medical Lab Scientist Signature -->
-            <div class="auth-cell">
-                <div class="signature-box-empty">
-                    <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
-                    <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
-                    <div class="sig-empty-line">
-                        (مكان التوقيع والاعتماد)
+            <!-- Official Authentication & Signatures Block (مكان التوقيع فارغ للاختبار) -->
+            <div class="auth-block">
+                <!-- 1. Specialist / Medical Lab Scientist Signature -->
+                <div class="auth-cell">
+                    <div class="signature-box-empty">
+                        <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                        <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                        <div class="sig-empty-line">
+                            (مكان التوقيع والاعتماد)
+                        </div>
+                        <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">
+                            التاريخ: {{ now()->format('Y-m-d') }}
+                        </div>
                     </div>
-                    <div style="font-size: 10px; color: #64748b; font-weight: 700; margin-top: 2px;">
-                        التاريخ: {{ now()->format('Y-m-d') }}
+                </div>
+
+                <!-- 2. Official Hospital / Dept Stamp -->
+                <div class="auth-cell">
+                    <div class="stamp-circle-box">
+                        <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                        <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                        <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                        <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
                     </div>
                 </div>
             </div>
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td class="print-table-cell-footer">
+                    <!-- Footer: Always at the bottom of EVERY page on print -->
+                    <div class="report-footer-wrapper">
+                        <div class="report-footer">
+                            <div class="footer-printed-by">
+                                Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+                            </div>
+                            <div class="footer-datetime">
+                                <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
+                            </div>
+                        </div>
 
-            <!-- 2. Official Hospital / Dept Stamp -->
-            <div class="auth-cell">
-                <div class="stamp-circle-box">
-                    <div style="font-size: 8px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                    <div style="font-size: 9.5px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
-                    <div style="font-size: 8.5px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
-                    <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer: Always at the bottom of every page on print and bottom on screen -->
-        <div class="report-footer-wrapper">
-            <div class="report-footer">
-                <div class="footer-printed-by">
-                    Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
-                </div>
-                <div class="footer-datetime">
-                    <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
-                </div>
-            </div>
-
-            <div class="hospital-contact-line">
-                📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
-            </div>
-        </div>
+                        <div class="hospital-contact-line">
+                            📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
 
     </div>
 
