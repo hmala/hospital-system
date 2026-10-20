@@ -2276,8 +2276,73 @@
                                                     </span>
                                                 </div>
                                             </div>
+                                            <!-- شريط مسار ومراحل الطلب التفاعلي (Status Progress Stepper) -->
+                                            <div class="px-2 py-2 bg-light-subtle border-bottom">
+                                                <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
+                                                    <div class="position-absolute start-0 end-0 top-50 translate-middle-y border-top border-2" style="border-color: #dee2e6 !important; z-index: 1;"></div>
+                                                    
+                                                    <!-- المرحلة 1: طلب الطبيب -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                            <i class="fas fa-check"></i>
+                                                        </span>
+                                                        <span class="fw-semibold text-dark" style="font-size: 0.7rem;">طلب الطبيب</span>
+                                                    </div>
+
+                                                    <!-- المرحلة 2: الكاشير -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">سُدّد</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-coins"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-danger" style="font-size: 0.7rem;">عند الكاشير</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 3: القسم المنفذ -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
+                                                        @elseif($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-spinner fa-spin"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-primary" style="font-size: 0.7rem;">قيد الفحص</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-hourglass-start"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">بالانتظار</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 4: النتيجة -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file-medical"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-success" style="font-size: 0.7rem;">النتيجة جاهزة</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">التقرير</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="card-body p-2 p-md-3">
-                                                <!-- تفاصيل العناصر المطلوبة مع إمكانية حذف فحص مفرد قبل السداد -->
+                                                <!-- جدول الفحوصات والخدمات السريري (Clinical Mini-Table) -->
                                                 @if($medRequest->type === 'lab')
                                                     @php
                                                         $labItems = [];
@@ -2287,17 +2352,45 @@
                                                             $labItems = [$reqDetails['description'] ?? '-'];
                                                         }
                                                     @endphp
-                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
-                                                        @foreach($labItems as $itemIdx => $lItem)
-                                                            <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}" style="font-size: 0.82rem;">
-                                                                <span>{{ $lItem }}</span>
-                                                                @if(!$isPaid && !$isCompleted)
-                                                                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذا التحليل من الطلب" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($lItem) }}', 'req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}')">
-                                                                        <i class="fas fa-times-circle"></i>
-                                                                    </button>
-                                                                @endif
-                                                            </span>
-                                                        @endforeach
+                                                    <div class="table-responsive rounded-2 border bg-white mb-2 shadow-2xs">
+                                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                                            <thead class="table-light text-muted" style="font-size: 0.72rem;">
+                                                                <tr>
+                                                                    <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
+                                                                    <th class="py-1 px-2">اسم التحليل المخبري</th>
+                                                                    <th class="py-1 px-2 text-center" style="width: 95px;">الحالة</th>
+                                                                    @if(!$isPaid && !$isCompleted)
+                                                                        <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
+                                                                    @endif
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="req-items-container-{{ $medRequest->id }}">
+                                                                @foreach($labItems as $itemIdx => $lItem)
+                                                                    <tr id="req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}">
+                                                                        <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
+                                                                        <td class="fw-semibold text-dark py-1 px-2">
+                                                                            <i class="fas fa-vial text-primary me-1 opacity-75"></i> {{ $lItem }}
+                                                                        </td>
+                                                                        <td class="text-center py-1 px-2">
+                                                                            @if($isCompleted)
+                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">مكتمل</span>
+                                                                            @elseif($isPaid)
+                                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">قيد التحليل</span>
+                                                                            @else
+                                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        @if(!$isPaid && !$isCompleted)
+                                                                            <td class="text-center py-1 px-2">
+                                                                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا التحليل" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($lItem) }}', 'req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}')">
+                                                                                    <i class="fas fa-times" style="font-size: 0.68rem;"></i>
+                                                                                </button>
+                                                                            </td>
+                                                                        @endif
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 @elseif($medRequest->type === 'radiology')
                                                     @php
@@ -2309,26 +2402,65 @@
                                                                 $tVal = $radTargets[$rt->id] ?? null;
                                                                 $radItems[] = [
                                                                     'id' => $rt->id,
-                                                                    'name' => $rt->name . (!empty($tVal) ? " [العضو: {$tVal}]" : ''),
+                                                                    'name' => $rt->name,
+                                                                    'target' => $tVal,
                                                                 ];
                                                             }
                                                         }
                                                     @endphp
-                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
-                                                        @if(count($radItems) > 0)
-                                                            @foreach($radItems as $radItem)
-                                                                <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}" style="font-size: 0.82rem;">
-                                                                    <span>{{ $radItem['name'] }}</span>
+                                                    <div class="table-responsive rounded-2 border bg-white mb-2 shadow-2xs">
+                                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                                            <thead class="table-light text-muted" style="font-size: 0.72rem;">
+                                                                <tr>
+                                                                    <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
+                                                                    <th class="py-1 px-2">نوع الفحص الشعاعي</th>
+                                                                    <th class="py-1 px-2">العضو المستهدف</th>
+                                                                    <th class="py-1 px-2 text-center" style="width: 95px;">الحالة</th>
                                                                     @if(!$isPaid && !$isCompleted)
-                                                                        <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذا الفحص من الطلب" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, {{ $radItem['id'] }}, 'req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}')">
-                                                                            <i class="fas fa-times-circle"></i>
-                                                                        </button>
+                                                                        <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
                                                                     @endif
-                                                                </span>
-                                                            @endforeach
-                                                        @else
-                                                            <span class="badge bg-light text-dark border font-monospace">{{ $reqDetails['description'] ?? '-' }}</span>
-                                                        @endif
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="req-items-container-{{ $medRequest->id }}">
+                                                                @if(count($radItems) > 0)
+                                                                    @foreach($radItems as $itemIdx => $radItem)
+                                                                        <tr id="req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}">
+                                                                            <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
+                                                                            <td class="fw-semibold text-dark py-1 px-2">
+                                                                                <i class="fas fa-x-ray text-info me-1 opacity-75"></i> {{ $radItem['name'] }}
+                                                                            </td>
+                                                                            <td class="py-1 px-2">
+                                                                                @if(!empty($radItem['target']))
+                                                                                    <span class="badge bg-light text-primary border" style="font-size: 0.72rem;"><i class="fas fa-crosshairs me-1"></i>{{ $radItem['target'] }}</span>
+                                                                                @else
+                                                                                    <span class="text-muted small">—</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="text-center py-1 px-2">
+                                                                                @if($isCompleted)
+                                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">مكتمل</span>
+                                                                                @elseif($isPaid)
+                                                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle" style="font-size: 0.68rem;">قيد الفحص</span>
+                                                                                @else
+                                                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            @if(!$isPaid && !$isCompleted)
+                                                                                <td class="text-center py-1 px-2">
+                                                                                    <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا الفحص" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, {{ $radItem['id'] }}, 'req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}')">
+                                                                                        <i class="fas fa-times" style="font-size: 0.68rem;"></i>
+                                                                                    </button>
+                                                                                </td>
+                                                                            @endif
+                                                                        </tr>
+                                                                    @endforeach
+                                                                @else
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-muted py-2 px-3">{{ $reqDetails['description'] ?? '-' }}</td>
+                                                                    </tr>
+                                                                @endif
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 @elseif($medRequest->type === 'nursing')
                                                     @php
@@ -2341,17 +2473,43 @@
                                                             $nursingItems = [$reqDetails['description'] ?? '-'];
                                                         }
                                                     @endphp
-                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
-                                                        @foreach($nursingItems as $nIdx => $nItem)
-                                                            <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}" style="font-size: 0.82rem;">
-                                                                <span>{{ $nItem }}</span>
-                                                                @if(!$isPaid && !$isCompleted)
-                                                                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذه الخدمة" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($nItem) }}', 'req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}')">
-                                                                        <i class="fas fa-times-circle"></i>
-                                                                    </button>
-                                                                @endif
-                                                            </span>
-                                                        @endforeach
+                                                    <div class="table-responsive rounded-2 border bg-white mb-2 shadow-2xs">
+                                                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                                            <thead class="table-light text-muted" style="font-size: 0.72rem;">
+                                                                <tr>
+                                                                    <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
+                                                                    <th class="py-1 px-2">الخدمة التمريضية المطلوبة</th>
+                                                                    <th class="py-1 px-2 text-center" style="width: 95px;">الحالة</th>
+                                                                    @if(!$isPaid && !$isCompleted)
+                                                                        <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
+                                                                    @endif
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="req-items-container-{{ $medRequest->id }}">
+                                                                @foreach($nursingItems as $nIdx => $nItem)
+                                                                    <tr id="req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}">
+                                                                        <td class="text-muted font-monospace text-center py-1 px-2">{{ $nIdx + 1 }}</td>
+                                                                        <td class="fw-semibold text-dark py-1 px-2">
+                                                                            <i class="fas fa-syringe text-success me-1 opacity-75"></i> {{ $nItem }}
+                                                                        </td>
+                                                                        <td class="text-center py-1 px-2">
+                                                                            @if($isCompleted)
+                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">أُنجز</span>
+                                                                            @else
+                                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">قيد الإجراء</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        @if(!$isPaid && !$isCompleted)
+                                                                            <td class="text-center py-1 px-2">
+                                                                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذه الخدمة" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($nItem) }}', 'req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}')">
+                                                                                    <i class="fas fa-times" style="font-size: 0.68rem;"></i>
+                                                                                </button>
+                                                                            </td>
+                                                                        @endif
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 @else
                                                     <div class="mb-2">
