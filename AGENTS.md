@@ -57,6 +57,23 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 92: تمكين الطبيب من حذف الفحوصات الفردية وإخفاء الطلبات الملغاة وإلغاء عرض الأسعار لمنع التشتيت Doctor Item-Level Request Modification, Clean Clean UI & Cancelled Requests Archive)
+
+### Done
+- **تمكين الطبيب من حذف وتعديل الفحوصات الفردية من الطلبات غير المسددة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * إضافة دالة `removeRequestItem` ومسار `DELETE /doctor/requests/{request}/remove-item`.
+  * حظر وإقفال الحذف إذا كان الطلب مسدداً `payment_status === 'paid'` لحماية الحسابات.
+  * دعم حذف تحاليل المختبر وفحوصات الأشعة والخدمات التمريضية كلاً على حدة مع تحديث `details` وإعادة احتساب المبالغ تلقائياً.
+  * في حال حذف الفحص الأخير المتبقي في الطلب، يتم تحويل حالة الطلب تلقائياً إلى ملغي `cancelled` وتوثيق سبب الإلغاء.
+- **إخفاء الطلبات الملغاة وترقية بطاقات طلبات الطبيب وإلغاء الأسعار ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * عزل وتصفية الطلبات النشطة فقط في القائمة الأساسية لتجنب تشتيت الطبيب.
+  * تجميع كافة الطلبات الملغاة في أسفل التبويب داخل قسم مطوي أنيق `[ 📁 أرشيف الطلبات الملغاة (مخفية) ]`.
+  * إضافة زر `×` تفاعلي على شارات الفحوصات لحذفها فورياً دون إعادة تحميل الصفحة (`AJAX`).
+  * تمييز لوني واضح لحالة الدفع: شارة صفراء وإطار أصفر للطلبات غير المسددة، شارة خضراء للمدفوعة.
+  * إلغاء عرض الأسعار في بطاقات الطلبات داخل عيادة الطبيب لمنع التشتيت وحصر الحسابات والخصومات بنظام الكاشير.
+- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorRemoveRequestItemTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorRemoveRequestItemTest.php))**:
+  * اجتياز كامل لـ 5 اختبارات ميزة تغطي حذف تحليل، إلغاء الطلب عند خلوه، حذف فحص أشعة، حظر الحذف بعد السداد، وإخفاء الملغاة (`5 passed, 23 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 91: توحيد سداد ووصول وتجميع طلبات الزيارة الطبية في الكاشير والدمج التلقائي وإلغاء التكرار Doctor & Cashier Unified Visit Checkout, Single Receipt & Consolidated Index Table)
 
 ### Done

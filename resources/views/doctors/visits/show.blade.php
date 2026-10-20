@@ -2087,7 +2087,7 @@
                         <li class="nav-item">
                             <button class="nav-link active py-1 px-2 small fw-semibold" id="side-today-tab" data-bs-toggle="pill" data-bs-target="#side-today-pane" type="button" role="tab">
                                 <i class="fas fa-clipboard-check me-1"></i> طلبات اليوم
-                                <span class="badge bg-primary ms-1">{{ $visit->requests->count() }}</span>
+                                <span class="badge bg-primary ms-1">{{ $visit->requests->where('status', '!=', 'cancelled')->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item">
@@ -2119,9 +2119,11 @@
                             @php
                                 $hasPrescriptions = (isset($prescribedMedications) && $prescribedMedications->count() > 0) || (isset($latestPrescription) && $latestPrescription && $latestPrescription->items->count() > 0);
                                 $medCount = ($latestPrescription && $latestPrescription->items->count() > 0) ? $latestPrescription->items->count() : (isset($prescribedMedications) ? $prescribedMedications->count() : 0);
-                                $todayLabRequests = $visit->requests->where('type', 'lab');
-                                $todayRadRequests = $visit->requests->where('type', 'radiology');
-                                $todayNursingRequests = $visit->requests->where('type', 'nursing');
+                                $activeRequests = $visit->requests->where('status', '!=', 'cancelled');
+                                $cancelledRequests = $visit->requests->where('status', 'cancelled');
+                                $todayLabRequests = $activeRequests->where('type', 'lab');
+                                $todayRadRequests = $activeRequests->where('type', 'radiology');
+                                $todayNursingRequests = $activeRequests->where('type', 'nursing');
                                 $totalTodayCount = $todayLabRequests->count() + $todayRadRequests->count() + $todayNursingRequests->count() + ($hasPrescriptions ? 1 : 0);
                             @endphp
 
@@ -2236,7 +2238,7 @@
                                         </div>
                                     @endif
 
-                                    @foreach($visit->requests as $medRequest)
+                                    @foreach($activeRequests as $medRequest)
                                         @php
                                             $reqDetails = is_string($medRequest->details) ? json_decode($medRequest->details, true) : ($medRequest->details ?? []);
                                             $hasAttachment = !empty($reqDetails['attachment']);
@@ -2245,24 +2247,28 @@
                                             $resultData = is_string($medRequest->result) ? json_decode($medRequest->result, true) : ($medRequest->result ?? []);
                                             $testAttachments = $reqDetails['test_attachments'] ?? ($resultData['test_attachments'] ?? []);
                                             if (!is_array($testAttachments)) $testAttachments = [];
+
+                                            $isPaid = ($medRequest->payment_status ?? 'pending') === 'paid';
+                                            $isCompleted = $medRequest->status === 'completed';
+                                            $cardBorderClass = $isCompleted ? 'border-success' : ($isPaid ? 'border-primary' : 'border-warning');
                                         @endphp
-                                        <div class="today-card-item card border shadow-sm rounded-3 overflow-hidden" data-today-type="{{ $medRequest->type }}">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
+                                        <div class="today-card-item card {{ $cardBorderClass }} shadow-sm rounded-3 overflow-hidden mb-3" id="doctor-request-card-{{ $medRequest->id }}" data-today-type="{{ $medRequest->type }}">
+                                            <div class="card-header py-2 px-3 {{ $isCompleted ? 'bg-success-subtle text-success-emphasis' : ($isPaid ? 'bg-primary-subtle text-primary-emphasis' : 'bg-warning-subtle text-dark') }} d-flex justify-content-between align-items-center">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge bg-{{ $medRequest->type == 'lab' ? 'primary' : ($medRequest->type == 'radiology' ? 'info' : 'success') }}">
+                                                    <span class="badge bg-{{ $medRequest->type == 'lab' ? 'primary' : ($medRequest->type == 'radiology' ? 'info text-dark' : 'success') }}">
                                                         <i class="fas fa-{{ $medRequest->type == 'lab' ? 'microscope' : ($medRequest->type == 'radiology' ? 'x-ray' : 'syringe') }} me-1"></i>
                                                         {{ $medRequest->type_text }}
                                                     </span>
-                                                    <small class="text-muted font-monospace">{{ $medRequest->created_at->format('H:i') }}</small>
+                                                    <small class="text-muted font-monospace"><i class="fas fa-clock me-1"></i>{{ $medRequest->created_at->format('H:i') }}</small>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-1">
-                                                    @if(($medRequest->payment_status ?? 'pending') == 'paid')
-                                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                                    @if($isPaid)
+                                                        <span class="badge bg-success text-white" style="font-size: 0.72rem;">
                                                             <i class="fas fa-check-circle me-1"></i> مدفوع
                                                         </span>
                                                     @else
-                                                        <span class="badge bg-warning-subtle text-danger border border-warning-subtle" style="font-size: 0.72rem;">
-                                                            <i class="fas fa-clock me-1"></i> غير مسدد
+                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-hourglass-half me-1"></i> بانتظار السداد
                                                         </span>
                                                     @endif
                                                     <span class="badge bg-{{ $medRequest->status_color }}" style="font-size: 0.72rem;">
@@ -2271,41 +2277,93 @@
                                                 </div>
                                             </div>
                                             <div class="card-body p-2 p-md-3">
-                                                <!-- تفاصيل العناصر المطلوبة -->
-                                                @php
-                                                    $detailItems = [];
-                                                    if ($medRequest->type === 'lab') {
+                                                <!-- تفاصيل العناصر المطلوبة مع إمكانية حذف فحص مفرد قبل السداد -->
+                                                @if($medRequest->type === 'lab')
+                                                    @php
+                                                        $labItems = [];
                                                         if (!empty($reqDetails['tests']) && is_array($reqDetails['tests'])) {
-                                                            $detailItems = $reqDetails['tests'];
+                                                            $labItems = $reqDetails['tests'];
                                                         } else {
-                                                            $detailItems = [$reqDetails['description'] ?? '-'];
+                                                            $labItems = [$reqDetails['description'] ?? '-'];
                                                         }
-                                                    } elseif ($medRequest->type === 'radiology') {
+                                                    @endphp
+                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
+                                                        @foreach($labItems as $itemIdx => $lItem)
+                                                            <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}" style="font-size: 0.82rem;">
+                                                                <span>{{ $lItem }}</span>
+                                                                @if(!$isPaid && !$isCompleted)
+                                                                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذا التحليل من الطلب" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($lItem) }}', 'req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}')">
+                                                                        <i class="fas fa-times-circle"></i>
+                                                                    </button>
+                                                                @endif
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @elseif($medRequest->type === 'radiology')
+                                                    @php
+                                                        $radItems = [];
                                                         if (!empty($reqDetails['radiology_types']) && is_array($reqDetails['radiology_types'])) {
-                                                            $detailItems = \App\Models\RadiologyType::whereIn('id', $reqDetails['radiology_types'])->pluck('name')->toArray();
-                                                        } else {
-                                                            $detailItems = [$reqDetails['description'] ?? '-'];
+                                                            $radTypesModels = \App\Models\RadiologyType::whereIn('id', $reqDetails['radiology_types'])->get();
+                                                            $radTargets = (array)($reqDetails['radiology_targets'] ?? []);
+                                                            foreach ($radTypesModels as $rt) {
+                                                                $tVal = $radTargets[$rt->id] ?? null;
+                                                                $radItems[] = [
+                                                                    'id' => $rt->id,
+                                                                    'name' => $rt->name . (!empty($tVal) ? " [العضو: {$tVal}]" : ''),
+                                                                ];
+                                                            }
                                                         }
-                                                    } elseif ($medRequest->type === 'nursing') {
+                                                    @endphp
+                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
+                                                        @if(count($radItems) > 0)
+                                                            @foreach($radItems as $radItem)
+                                                                <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}" style="font-size: 0.82rem;">
+                                                                    <span>{{ $radItem['name'] }}</span>
+                                                                    @if(!$isPaid && !$isCompleted)
+                                                                        <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذا الفحص من الطلب" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, {{ $radItem['id'] }}, 'req-item-{{ $medRequest->id }}-rad-{{ $radItem['id'] }}')">
+                                                                            <i class="fas fa-times-circle"></i>
+                                                                        </button>
+                                                                    @endif
+                                                                </span>
+                                                            @endforeach
+                                                        @else
+                                                            <span class="badge bg-light text-dark border font-monospace">{{ $reqDetails['description'] ?? '-' }}</span>
+                                                        @endif
+                                                    </div>
+                                                @elseif($medRequest->type === 'nursing')
+                                                    @php
+                                                        $nursingItems = [];
                                                         if (!empty($reqDetails['nursing_service_names']) && is_array($reqDetails['nursing_service_names'])) {
-                                                            $detailItems = $reqDetails['nursing_service_names'];
+                                                            $nursingItems = $reqDetails['nursing_service_names'];
                                                         } elseif (!empty($reqDetails['nursing_services']) && is_array($reqDetails['nursing_services'])) {
-                                                            $detailItems = \App\Models\EmergencyService::whereIn('id', $reqDetails['nursing_services'])->pluck('name')->toArray();
+                                                            $nursingItems = \App\Models\EmergencyService::whereIn('id', $reqDetails['nursing_services'])->pluck('name')->toArray();
                                                         } else {
-                                                            $detailItems = [$reqDetails['description'] ?? '-'];
+                                                            $nursingItems = [$reqDetails['description'] ?? '-'];
                                                         }
-                                                    } else {
-                                                        $detailItems = [$reqDetails['description'] ?? '-'];
-                                                    }
-                                                @endphp
-                                                
-                                                <div class="d-flex flex-wrap gap-1 mb-2">
-                                                    @foreach($detailItems as $item)
-                                                        <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.8rem;">
-                                                            {{ $item }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
+                                                    @endphp
+                                                    <div class="d-flex flex-wrap gap-1.5 mb-2" id="req-items-container-{{ $medRequest->id }}">
+                                                        @foreach($nursingItems as $nIdx => $nItem)
+                                                            <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1.5 py-1 px-2 font-monospace" id="req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}" style="font-size: 0.82rem;">
+                                                                <span>{{ $nItem }}</span>
+                                                                @if(!$isPaid && !$isCompleted)
+                                                                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none lh-1 ms-1" title="حذف هذه الخدمة" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($nItem) }}', 'req-item-{{ $medRequest->id }}-nursing-{{ $nIdx }}')">
+                                                                        <i class="fas fa-times-circle"></i>
+                                                                    </button>
+                                                                @endif
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <div class="mb-2">
+                                                        <span class="badge bg-light text-dark border font-monospace">{{ $reqDetails['description'] ?? '-' }}</span>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($reqDetails['doctor_notes']))
+                                                    <div class="small text-muted bg-light p-1.5 rounded mb-2 border">
+                                                        <i class="fas fa-comment-medical text-primary me-1"></i> <strong class="text-dark">ملاحظات الطبيب:</strong> {{ $reqDetails['doctor_notes'] }}
+                                                    </div>
+                                                @endif
 
                                                 <!-- المرفقات والنتائج إن وجدت -->
                                                 @if($medRequest->status == 'completed')
@@ -2523,12 +2581,12 @@
                                                     <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
                                                         <span class="text-muted small"><i class="fas fa-clock me-1"></i> بانتظار استلام العينة أو النتائج</span>
                                                         @if(($medRequest->payment_status ?? 'pending') != 'paid')
-                                                            <form action="{{ route('doctor.requests.update', $medRequest) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الطلب؟');">
+                                                            <form action="{{ route('doctor.requests.update', $medRequest) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء كامل هذا الطلب؟');">
                                                                 @csrf
                                                                 @method('PUT')
                                                                 <input type="hidden" name="status" value="cancelled">
                                                                 <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size: 0.72rem;">
-                                                                    <i class="fas fa-times me-1"></i> إلغاء
+                                                                    <i class="fas fa-trash-alt me-1"></i> إلغاء الطلب كاملاً
                                                                 </button>
                                                             </form>
                                                         @endif
@@ -2537,6 +2595,40 @@
                                             </div>
                                         </div>
                                     @endforeach
+
+                                    <!-- قسم أرشيف الطلبات الملغاة (مخفي ومطوي لتجنب تشتيت الطبيب) -->
+                                    @if($cancelledRequests->count() > 0)
+                                        <div class="mt-3 pt-2 border-top">
+                                            <button class="btn btn-sm btn-light w-100 text-muted d-flex justify-content-between align-items-center py-2 px-3 border rounded-3 text-decoration-none shadow-xs" type="button" data-bs-toggle="collapse" data-bs-target="#docCancelledRequestsSection" aria-expanded="false">
+                                                <span class="small fw-semibold text-secondary"><i class="fas fa-archive me-1"></i> أرشيف الطلبات الملغاة (مخفية)</span>
+                                                <span class="badge bg-secondary rounded-pill">{{ $cancelledRequests->count() }}</span>
+                                            </button>
+                                            <div class="collapse mt-2" id="docCancelledRequestsSection">
+                                                <div class="d-flex flex-column gap-2 p-2 bg-light rounded-3 border">
+                                                    @foreach($cancelledRequests as $cReq)
+                                                        @php
+                                                            $cDetails = is_string($cReq->details) ? json_decode($cReq->details, true) : ($cReq->details ?? []);
+                                                        @endphp
+                                                        <div class="p-2 bg-white rounded border border-danger-subtle opacity-75">
+                                                            <div class="d-flex justify-content-between align-items-center small mb-1">
+                                                                <span class="badge bg-secondary">{{ $cReq->type_text }}</span>
+                                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">ملغي</span>
+                                                                <small class="text-muted">{{ $cReq->created_at->format('H:i') }}</small>
+                                                            </div>
+                                                            <div class="small text-muted font-monospace">
+                                                                {{ $cDetails['description'] ?? $cReq->description }}
+                                                            </div>
+                                                            @if(!empty($cDetails['cancellation_reason']))
+                                                                <div class="small text-danger mt-1">
+                                                                    <i class="fas fa-info-circle me-1"></i> {{ $cDetails['cancellation_reason'] }}
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 <div class="text-center py-5 text-muted">
@@ -5729,6 +5821,83 @@ function confirmSurgeryReferral() {
             }
         }
     });
+
+    /**
+     * تمكين الطبيب من حذف فحص/تحليل محدد من الطلب المعلق مباشرة دون تحديث كامل الصفحة
+     */
+    window.doctorRemoveRequestItem = function(requestId, itemValue, elementId) {
+        if (!confirm('هل أنت متأكد من حذف هذا الفحص/الخدمة من الطلب؟')) {
+            return;
+        }
+
+        var el = document.getElementById(elementId);
+        if (el) {
+            el.style.opacity = '0.5';
+            el.style.pointerEvents = 'none';
+        }
+
+        var url = '{{ url("/doctor/requests") }}/' + requestId + '/remove-item';
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+            || document.querySelector('input[name="_token"]')?.value;
+
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                item_value: itemValue
+            })
+        })
+        .then(function(res) {
+            return res.json().then(function(data) {
+                return { ok: res.ok, status: res.status, data: data };
+            });
+        })
+        .then(function(resObj) {
+            if (!resObj.ok || !resObj.data.success) {
+                alert(resObj.data.message || 'تعذر حذف العنصر من الطلب');
+                if (el) {
+                    el.style.opacity = '1';
+                    el.style.pointerEvents = 'auto';
+                }
+                return;
+            }
+
+            // تم الحذف بنجاح
+            if (el) {
+                el.remove();
+            }
+
+            // إذا كان الفحص الأخير وألغي الطلب، يتم إخفاء كارت الطلب بسلاسة
+            if (resObj.data.is_cancelled || resObj.data.remaining_count === 0) {
+                var card = document.getElementById('doctor-request-card-' + requestId);
+                if (card) {
+                    card.style.transition = 'all 0.4s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(function() {
+                        card.remove();
+                        var sideBadge = document.querySelector('#side-today-tab .badge');
+                        if (sideBadge) {
+                            var curr = parseInt(sideBadge.textContent) || 0;
+                            if (curr > 0) sideBadge.textContent = curr - 1;
+                        }
+                    }, 400);
+                }
+            }
+        })
+        .catch(function(err) {
+            console.error('Error removing request item:', err);
+            alert('حدث خطأ في الاتصال أثناء حذف الفحص.');
+            if (el) {
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+            }
+        });
+    };
 </script>
 
 <style>

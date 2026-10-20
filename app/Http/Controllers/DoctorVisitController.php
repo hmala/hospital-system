@@ -1334,6 +1334,174 @@ class DoctorVisitController extends Controller
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
     }
 
+    /**
+     * تمكين الطبيب من حذف فحص/تحليل محدد من الطلب المعلق قبل السداد
+     */
+    public function removeRequestItem(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بتعديل الطلبات الطبية');
+        }
+
+        $request->load('visit');
+        if (!$request->visit) {
+            abort(404, 'الطلب غير مرتبط بزيارة صحيحة');
+        }
+
+        if (!$isAdmin && $request->visit->doctor_id != optional($user->doctor)->id) {
+            abort(403, 'غير مصرح لك بتعديل طلب يخص طبيب آخر');
+        }
+
+        if ($request->payment_status === 'paid') {
+            $msg = 'لا يمكن حذف أو تعديل الفحوصات بعد سداد الوصل في الكاشير لحماية الحسابات المالية.';
+            if ($httpRequest->expectsJson() || $httpRequest->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $itemValue = $httpRequest->input('item_value');
+        $details = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
+        $remainingCount = 0;
+
+        if ($request->type === 'lab') {
+            $tests = (array)($details['tests'] ?? []);
+            $labTestIds = (array)($details['lab_test_ids'] ?? []);
+
+            $newTests = [];
+            foreach ($tests as $t) {
+                if (trim((string)$t) !== trim((string)$itemValue)) {
+                    $newTests[] = $t;
+                }
+            }
+
+            $removedTest = \App\Models\LabTest::where('name', $itemValue)->orWhere('code', $itemValue)->orWhere('id', $itemValue)->first();
+            $removedTestId = $removedTest?->id ?? (is_numeric($itemValue) ? (int)$itemValue : null);
+            $newLabTestIds = [];
+            foreach ($labTestIds as $id) {
+                if ($removedTestId && (int)$id === (int)$removedTestId) {
+                    continue;
+                }
+                $newLabTestIds[] = (int)$id;
+            }
+
+            $details['tests'] = array_values($newTests);
+            $details['lab_test_ids'] = array_values($newLabTestIds);
+            $remainingCount = count($newTests);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الفحوصات من قبل الطبيب';
+            }
+
+            $insuranceType = optional($request->visit->appointment)->insurance_type ?? optional($request->visit->patient)->insurance_type ?? 'none';
+            $copayPct = (float)(optional($request->visit->patient)->copay_percentage ?? 15);
+            $newTotal = 0;
+            foreach ($details['lab_test_ids'] as $tId) {
+                $t = \App\Models\LabTest::find($tId);
+                if ($t) {
+                    $pricing = $t->calculateInsurancePricing($insuranceType, $copayPct);
+                    $newTotal += ($insuranceType === 'none' ? $pricing['approved_price'] : $pricing['patient_share']);
+                }
+            }
+            $details['description'] = !empty($details['tests']) ? ('طلب مختبر: ' . implode(', ', $details['tests'])) : 'طلب مختبر';
+            $details['total_amount'] = $newTotal;
+
+        } elseif ($request->type === 'radiology') {
+            $typeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []);
+            $targets = (array)($details['radiology_targets'] ?? []);
+
+            $typeIdToRemove = is_numeric($itemValue) ? (int)$itemValue : null;
+            if (!$typeIdToRemove) {
+                $foundType = \App\Models\RadiologyType::where('name', $itemValue)->first();
+                $typeIdToRemove = $foundType?->id;
+            }
+
+            $newTypeIds = [];
+            foreach ($typeIds as $tId) {
+                if ($typeIdToRemove && (int)$tId === (int)$typeIdToRemove) {
+                    continue;
+                }
+                $newTypeIds[] = (int)$tId;
+            }
+
+            if ($typeIdToRemove && isset($targets[$typeIdToRemove])) {
+                unset($targets[$typeIdToRemove]);
+            }
+
+            $details['radiology_types'] = array_values($newTypeIds);
+            $details['radiology_type_ids'] = array_values($newTypeIds);
+            $details['radiology_targets'] = $targets;
+            $remainingCount = count($newTypeIds);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الفحوصات من قبل الطبيب';
+            }
+
+            $insuranceType = optional($request->visit->appointment)->insurance_type ?? optional($request->visit->patient)->insurance_type ?? 'none';
+            $copayPct = (float)(optional($request->visit->patient)->copay_percentage ?? 15);
+            $newTotal = 0;
+            foreach ($details['radiology_type_ids'] as $rId) {
+                $r = \App\Models\RadiologyType::find($rId);
+                if ($r) {
+                    $pricing = $r->calculateInsurancePricing($insuranceType, $copayPct);
+                    $newTotal += ($insuranceType === 'none' ? $pricing['approved_price'] : $pricing['patient_share']);
+                }
+            }
+            $radNames = \App\Models\RadiologyType::whereIn('id', $details['radiology_type_ids'])->pluck('name')->toArray();
+            $details['description'] = !empty($radNames) ? ('طلب أشعة: ' . implode(', ', $radNames)) : 'طلب أشعة';
+            $details['total_amount'] = $newTotal;
+
+        } elseif ($request->type === 'nursing') {
+            $services = (array)($details['nursing_services'] ?? []);
+            $serviceNames = (array)($details['nursing_service_names'] ?? []);
+
+            $newServices = [];
+            foreach ($services as $sId) {
+                if ((string)$sId !== (string)$itemValue) {
+                    $newServices[] = $sId;
+                }
+            }
+            $newNames = [];
+            foreach ($serviceNames as $sn) {
+                if (trim((string)$sn) !== trim((string)$itemValue)) {
+                    $newNames[] = $sn;
+                }
+            }
+
+            $details['nursing_services'] = array_values($newServices);
+            $details['nursing_service_names'] = array_values($newNames);
+            $remainingCount = count($newServices);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الخدمات من قبل الطبيب';
+            }
+        }
+
+        $request->details = $details;
+        $request->save();
+
+        $msg = $remainingCount === 0
+            ? 'تم حذف الفحص الأخير وإلغاء الطلب بنجاح'
+            : 'تم حذف الفحص وتحديث الطلب بنجاح';
+
+        if ($httpRequest->expectsJson() || $httpRequest->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'remaining_count' => $remainingCount,
+                'is_cancelled' => ($request->status === 'cancelled'),
+                'new_total' => $request->total_amount,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
     public function showSurgeryForm(Visit $visit)
     {
         $user = Auth::user();

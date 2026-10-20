@@ -399,6 +399,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/visits/{visit}/refer', [DoctorVisitController::class, 'referToDoctor'])->name('visits.refer');
         Route::post('/requests', [DoctorVisitController::class, 'storeRequest'])->name('requests.store');
         Route::match(['post', 'put'], '/requests/{request}', [DoctorVisitController::class, 'updateRequestStatus'])->name('requests.update');
+        Route::delete('/requests/{request}/remove-item', [DoctorVisitController::class, 'removeRequestItem'])->name('requests.remove-item');
         Route::put('/appointments/{appointment}/convert', [DoctorVisitController::class, 'convertAppointmentToVisit'])->name('appointments.convert');
         Route::post('/consultation/{appointment}/respond', [DoctorVisitController::class, 'respondToEmergencyConsultation'])->name('consultation.respond');
         
