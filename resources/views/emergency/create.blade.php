@@ -244,18 +244,6 @@
                                 </div>
                             @endif
 
-                            <div class="col-md-6 mb-3 d-flex align-items-center">
-                                <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input @error('doctor_follow_up') is-invalid @enderror" type="checkbox" id="doctor_follow_up" name="doctor_follow_up" value="1" {{ old('doctor_follow_up') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="doctor_follow_up">
-                                        متابعة الطبيب <span class="text-muted">(+30,000 IQD)</span>
-                                    </label>
-                                </div>
-                                @error('doctor_follow_up')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
-
                             <!-- طريقة الوصول والجهة المحولة لتقرير الطوارئ الرسمي -->
                             <div class="col-md-6 mb-3">
                                 <label for="arrival_mode" class="form-label fw-bold">
