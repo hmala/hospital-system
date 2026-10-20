@@ -349,12 +349,22 @@ $age = $patient?->age ?? null;
                         </div>
                     </div>
 
-                    <!-- إمكانية حذف تحليل قبل الدفع إن وجد -->
+                    <!-- إمكانية حذف وتعديل التحاليل قبل الدفع -->
                     @if($request->status !== 'pending_service_selection' && $request->payment_status != 'paid' && $request->type == 'lab')
                         @php
                             $selectedTests = collect([]);
-                            if (!empty($requestDetails['lab_test_ids'])) {
-                                $selectedTests = \App\Models\LabTest::whereIn('id', $requestDetails['lab_test_ids'])->get();
+                            $testIds = normalizeTestIds($requestDetails['lab_test_ids'] ?? []);
+                            $testNames = normalizeTestsField($requestDetails['tests'] ?? []);
+                            if (!empty($testIds) || !empty($testNames)) {
+                                $selectedTests = \App\Models\LabTest::where(function($q) use ($testIds, $testNames) {
+                                    if (!empty($testIds)) {
+                                        $q->whereIn('id', $testIds);
+                                    }
+                                    if (!empty($testNames)) {
+                                        $q->orWhereIn('name', $testNames)
+                                          ->orWhereIn('code', $testNames);
+                                    }
+                                })->get();
                             }
                         @endphp
                         @if($selectedTests->count() > 0)
@@ -364,12 +374,24 @@ $age = $patient?->age ?? null;
                                     <form action="{{ route('staff.lab-requests.remove-test', [$request, $test]) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا التحليل" onclick="return confirm('هل أنت متأكد من حذف هذا التحليل؟');">
+                                        <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا التحليل من الفاتورة" onclick="return confirm('هل أنت متأكد من حذف فحص ({{ $test->name }}) من طلب المريض؟ سيتم تحديث الفاتورة فورياً.');">
                                             <span style="font-size: 0.75rem;">{{ $test->name }}</span>
                                             <i class="fas fa-times" style="font-size: 0.7rem;"></i>
                                         </button>
                                     </form>
                                 @endforeach
+                                <a href="{{ route('lab.show', [$request, 'append' => 1]) }}#appendTestsSection" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1 ms-auto" title="إضافة فحص إضافي إلى الطلب">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span style="font-size: 0.75rem;">إضافة فحص للطلب</span>
+                                </a>
+                            </div>
+                        @else
+                            <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between">
+                                <span class="text-muted small">لم يتم تسجيل أي فحوصات في هذا الطلب بعد.</span>
+                                <a href="{{ route('lab.show', [$request, 'append' => 1]) }}#appendTestsSection" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span style="font-size: 0.75rem;">إضافة فحص للطلب</span>
+                                </a>
                             </div>
                         @endif
                     @endif

@@ -429,56 +429,103 @@
                 }
             }
 
-            // 3. Requests (Lab, Rad, Pharmacy, Emergency)
-            if ($payment->request) {
-                $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-                if ($payment->request->type === 'lab') {
+            // 3. Requests (Lab, Rad, Pharmacy, Emergency) - دعم الوصل الموحد الشامل لكافة خدمات الزيارة
+            $linkedRequests = \App\Models\Request::where('payment_id', $payment->id)->get();
+            if ($linkedRequests->isEmpty() && $payment->request) {
+                $linkedRequests = collect([$payment->request]);
+            }
+
+            foreach ($linkedRequests as $reqItem) {
+                $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
+                if ($reqItem->type === 'lab') {
                     $packageId = $details['package_id'] ?? null;
                     $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
 
                     if ($pkg) {
-                        $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                        $lineItems[] = ['name' => 'باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)', 'qty' => 1, 'price' => (float)$pkg->price];
+                        $pkgName = 'باقة: ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' تحاليل مشمولة)';
+                        if (!in_array($pkgName, array_column($lineItems, 'name'))) {
+                            $lineItems[] = ['name' => $pkgName, 'qty' => 1, 'price' => (float)$pkg->price];
+                        }
 
+                        $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
                         $allTestIds = $details['lab_test_ids'] ?? [];
                         $extraTestIds = array_diff($allTestIds, $pkgTestIds);
                         foreach ($extraTestIds as $testId) {
                             $test = \App\Models\LabTest::find($testId);
                             if ($test) {
+                                $itemName = 'تحليل إضافي: ' . $test->name;
+                                if (in_array($itemName, array_column($lineItems, 'name'))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
                                 $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
-                                $lineItems[] = ['name' => 'تحليل إضافي: ' . $test->name, 'qty' => 1, 'price' => $price];
+                                $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
                             }
                         }
-                    } elseif (isset($details['lab_test_ids'])) {
-                        foreach ($details['lab_test_ids'] as $testId) {
-                            $test = \App\Models\LabTest::find($testId);
-                            if ($test) {
+                    } else {
+                        $testIds = $details['lab_test_ids'] ?? [];
+                        $testNames = $details['tests'] ?? [];
+                        $foundTestIds = [];
+
+                        if (!empty($testIds)) {
+                            foreach ($testIds as $testId) {
+                                $test = \App\Models\LabTest::find($testId);
+                                if ($test) {
+                                    $itemName = 'تحليل: ' . $test->name;
+                                    if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                                    $foundTestIds[] = $test->id;
+                                    $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                        ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                        : null;
+                                    $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
+                                    $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
+                                }
+                            }
+                        }
+
+                        if (!empty($testNames)) {
+                            foreach ($testNames as $tName) {
+                                $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                if ($test && !in_array($test->id, $foundTestIds)) {
+                                    $itemName = 'تحليل: ' . $test->name;
+                                    if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                                    $foundTestIds[] = $test->id;
+                                    $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                        ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                        : null;
+                                    $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
+                                    $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
+                                } elseif (!$test && !in_array('تحليل: ' . $tName, array_column($lineItems, 'name'))) {
+                                    $lineItems[] = ['name' => 'تحليل: ' . $tName, 'qty' => 1, 'price' => 0];
+                                }
+                            }
+                        }
+                    }
+                } elseif ($reqItem->type === 'radiology') {
+                    $radTypeIds = array_unique(array_filter(array_map('intval', (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []))));
+                    if (!empty($radTypeIds)) {
+                        foreach ($radTypeIds as $typeId) {
+                            $type = \App\Models\RadiologyType::find($typeId);
+                            if ($type) {
+                                $targetName = $details['radiology_targets'][$typeId] ?? null;
+                                $displayName = $targetName ? "أشعة: {$type->name} [العضو: {$targetName}]" : "أشعة: {$type->name}";
+                                if (in_array($displayName, array_column($lineItems, 'name'))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
-                                    ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                    ? $type->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
-                                $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
-                                $lineItems[] = ['name' => 'تحليل: ' . $test->name, 'qty' => 1, 'price' => $price];
+                                $price = $pricing ? (float)$pricing['approved_price'] : ($type->base_price ?? 0);
+                                $lineItems[] = ['name' => $displayName, 'qty' => 1, 'price' => $price];
                             }
                         }
+                    } elseif (!empty($reqItem->description) && !in_array($reqItem->description, array_column($lineItems, 'name'))) {
+                        $lineItems[] = ['name' => $reqItem->description, 'qty' => 1, 'price' => (float)$payment->amount];
                     }
-                } elseif ($payment->request->type === 'radiology' && isset($details['radiology_type_ids'])) {
-                    foreach ($details['radiology_type_ids'] as $typeId) {
-                        $type = \App\Models\RadiologyType::find($typeId);
-                        if ($type) {
-                            $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
-                                ? $type->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
-                                : null;
-                            $price = $pricing ? (float)$pricing['approved_price'] : ($type->base_price ?? 0);
-                            $lineItems[] = ['name' => 'أشعة: ' . $type->name, 'qty' => 1, 'price' => $price];
-                        }
-                    }
-                } elseif ($payment->request->type === 'pharmacy') {
+                } elseif ($reqItem->type === 'pharmacy') {
                     if (isset($details['tests']) && is_array($details['tests'])) {
                         foreach ($details['tests'] as $drugName) {
-                            $lineItems[] = ['name' => 'صيدلية: ' . $drugName, 'qty' => 1, 'price' => 0];
+                            $itemName = 'صيدلية: ' . $drugName;
+                            if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                            $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => 0];
                         }
                     }
                 }

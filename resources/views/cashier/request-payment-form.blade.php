@@ -18,6 +18,7 @@
                 </div>
                 <div class="card-body p-4">
                     @php
+                        $allRequests = collect([$request])->concat($otherPendingRequests ?? collect([]))->unique('id');
                         $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                         $patient = optional($request->visit)->patient;
                         $appointment = optional($request->visit)->appointment;
@@ -36,104 +37,130 @@
                         }
                         $defaultCardNo = ($defaultInsurance !== 'none') ? ($patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '') : '';
                         $items = [];
+                        $seenItemKeys = [];
 
-                        if ($request->type === 'lab') {
-                            $packageId = $details['package_id'] ?? null;
-                            $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
+                        foreach ($allRequests as $reqItem) {
+                            $rDetails = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
 
-                            if ($pkg) {
-                                $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                $items[] = [
-                                    'id' => 'pkg_' . $pkg->id,
-                                    'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
-                                    'code' => $pkg->code ?? 'PKG-' . $pkg->id,
-                                    'type' => 'package',
-                                    'base_price' => (float)$pkg->price,
-                                    'moi_price' => (float)$pkg->price,
-                                    'hi_price' => (float)$pkg->price,
-                                    'is_moi_active' => false,
-                                    'is_hi_active' => false,
-                                ];
+                            if ($reqItem->type === 'lab') {
+                                $packageId = $rDetails['package_id'] ?? null;
+                                $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
 
-                                // أي تحاليل إضافية خارج الباقة فقط
-                                $allTestIds = $details['lab_test_ids'] ?? [];
-                                $extraTestIds = array_diff($allTestIds, $pkgTestIds);
-                                foreach ($extraTestIds as $tId) {
-                                    $test = \App\Models\LabTest::find($tId);
-                                    if ($test) {
+                                if ($pkg) {
+                                    $pkgKey = 'pkg_' . $pkg->id;
+                                    if (!isset($seenItemKeys[$pkgKey])) {
+                                        $seenItemKeys[$pkgKey] = true;
+                                        $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
                                         $items[] = [
-                                            'id' => $test->id,
-                                            'name' => '🔬 ' . $test->name . ' (تحليل إضافي)',
-                                            'code' => $test->code,
-                                            'type' => 'lab',
-                                            'base_price' => (float)$test->getRegularPrice(),
-                                            'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
-                                            'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
-                                            'is_moi_active' => (bool)($test->is_moi_active ?? true),
-                                            'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                            'id' => 'pkg_' . $pkg->id,
+                                            'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
+                                            'code' => $pkg->code ?? 'PKG-' . $pkg->id,
+                                            'type' => 'package',
+                                            'request_id' => $reqItem->id,
+                                            'base_price' => (float)$pkg->price,
+                                            'moi_price' => (float)$pkg->price,
+                                            'hi_price' => (float)$pkg->price,
+                                            'is_moi_active' => false,
+                                            'is_hi_active' => false,
                                         ];
-                                    }
-                                }
-                            } else {
-                                $testIds = $details['lab_test_ids'] ?? [];
-                                if (!empty($testIds)) {
-                                    foreach ($testIds as $tId) {
-                                        $test = \App\Models\LabTest::find($tId);
-                                        if ($test) {
-                                            $items[] = [
-                                                'id' => $test->id,
-                                                'name' => $test->name,
-                                                'code' => $test->code,
-                                                'type' => 'lab',
-                                                'base_price' => (float)$test->getRegularPrice(),
-                                                'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
-                                                'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
-                                                'is_moi_active' => (bool)($test->is_moi_active ?? true),
-                                                'is_hi_active' => (bool)($test->is_hi_active ?? true),
-                                            ];
+
+                                        // أي تحاليل إضافية خارج الباقة فقط
+                                        $allTestIds = $rDetails['lab_test_ids'] ?? [];
+                                        $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                                        foreach ($extraTestIds as $tId) {
+                                            $tKey = 'lab_' . $tId;
+                                            if (isset($seenItemKeys[$tKey])) continue;
+                                            $seenItemKeys[$tKey] = true;
+                                            $test = \App\Models\LabTest::find($tId);
+                                            if ($test) {
+                                                $items[] = [
+                                                    'id' => $test->id,
+                                                    'name' => '🔬 ' . $test->name . ' (تحليل إضافي)',
+                                                    'code' => $test->code,
+                                                    'type' => 'lab',
+                                                    'request_id' => $reqItem->id,
+                                                    'base_price' => (float)$test->getRegularPrice(),
+                                                    'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                                    'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                                    'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                                ];
+                                            }
                                         }
                                     }
-                                } elseif (!empty($details['tests'])) {
-                                    foreach ($details['tests'] as $tName) {
-                                        $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                        if ($test) {
-                                            $items[] = [
-                                                'id' => $test->id,
-                                                'name' => $test->name,
-                                                'code' => $test->code,
-                                                'type' => 'lab',
-                                                'base_price' => (float)$test->getRegularPrice(),
-                                                'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
-                                                'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
-                                                'is_moi_active' => (bool)($test->is_moi_active ?? true),
-                                                'is_hi_active' => (bool)($test->is_hi_active ?? true),
-                                            ];
+                                } else {
+                                    $testIds = $rDetails['lab_test_ids'] ?? [];
+                                    if (!empty($testIds)) {
+                                        foreach ($testIds as $tId) {
+                                            $tKey = 'lab_' . $tId;
+                                            if (isset($seenItemKeys[$tKey])) continue;
+                                            $seenItemKeys[$tKey] = true;
+                                            $test = \App\Models\LabTest::find($tId);
+                                            if ($test) {
+                                                $items[] = [
+                                                    'id' => $test->id,
+                                                    'name' => $test->name,
+                                                    'code' => $test->code,
+                                                    'type' => 'lab',
+                                                    'request_id' => $reqItem->id,
+                                                    'base_price' => (float)$test->getRegularPrice(),
+                                                    'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                                    'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                                    'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                                ];
+                                            }
+                                        }
+                                    } elseif (!empty($rDetails['tests'])) {
+                                        foreach ($rDetails['tests'] as $tName) {
+                                            $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                            if ($test) {
+                                                $tKey = 'lab_' . $test->id;
+                                                if (isset($seenItemKeys[$tKey])) continue;
+                                                $seenItemKeys[$tKey] = true;
+                                                $items[] = [
+                                                    'id' => $test->id,
+                                                    'name' => $test->name,
+                                                    'code' => $test->code,
+                                                    'type' => 'lab',
+                                                    'request_id' => $reqItem->id,
+                                                    'base_price' => (float)$test->getRegularPrice(),
+                                                    'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
+                                                    'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'is_moi_active' => (bool)($test->is_moi_active ?? true),
+                                                    'is_hi_active' => (bool)($test->is_hi_active ?? true),
+                                                ];
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        } elseif ($request->type === 'radiology') {
-                            $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? $details['ultrasound_type_id'] ?? [];
-                            if (!is_array($typeIds)) {
-                                $typeIds = [$typeIds];
-                            }
-                            $radTargets = $details['radiology_targets'] ?? [];
-                            if (!empty($typeIds)) {
-                                foreach ($typeIds as $rId) {
-                                    $rad = \App\Models\RadiologyType::find($rId);
-                                    if ($rad) {
+                            } elseif ($reqItem->type === 'radiology') {
+                                $typeIds = $rDetails['radiology_type_ids'] ?? $rDetails['radiology_types'] ?? $rDetails['radiology_type_id'] ?? $rDetails['ultrasound_type_id'] ?? [];
+                                if (!is_array($typeIds)) {
+                                    $typeIds = [$typeIds];
+                                }
+                                $radTargets = $rDetails['radiology_targets'] ?? [];
+                                if (!empty($typeIds)) {
+                                    foreach ($typeIds as $rId) {
                                         $targetPart = isset($radTargets[$rId]) && !empty($radTargets[$rId]) ? trim($radTargets[$rId]) : null;
-                                        $items[] = [
-                                            'id' => $rad->id,
-                                            'name' => $rad->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
-                                            'code' => $rad->code,
-                                            'type' => 'radiology',
-                                            'base_price' => (float)$rad->getRegularPrice(),
-                                            'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : 0),
-                                            'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : 0),
-                                            'is_moi_active' => (bool)($rad->is_moi_active ?? true),
-                                            'is_hi_active' => (bool)($rad->is_hi_active ?? true),
-                                        ];
+                                        $rKey = 'rad_' . $rId . ($targetPart ? '_' . $targetPart : '');
+                                        if (isset($seenItemKeys[$rKey])) continue;
+                                        $seenItemKeys[$rKey] = true;
+                                        $rad = \App\Models\RadiologyType::find($rId);
+                                        if ($rad) {
+                                            $items[] = [
+                                                'id' => $rad->id,
+                                                'name' => $rad->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
+                                                'code' => $rad->code,
+                                                'type' => 'radiology',
+                                                'request_id' => $reqItem->id,
+                                                'base_price' => (float)$rad->getRegularPrice(),
+                                                'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : 0),
+                                                'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : 0),
+                                                'is_moi_active' => (bool)($rad->is_moi_active ?? true),
+                                                'is_hi_active' => (bool)($rad->is_hi_active ?? true),
+                                            ];
+                                        }
                                     }
                                 }
                             }
@@ -168,6 +195,24 @@
                         }
                     @endphp
 
+                    @if(count($allRequests) > 1)
+                        <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center rounded-3 border-info shadow-sm">
+                            <i class="fas fa-layer-group fa-lg me-3 text-primary"></i>
+                            <div>
+                                <strong class="d-block mb-1">فاتورة موحدة شاملة لخدمات الزيارة:</strong>
+                                <span class="small">
+                                    تشمل هذه الفاتورة طلبات الزيارة غير المسددة معاً (
+                                    @foreach($allRequests as $ar)
+                                        <span class="badge {{ $ar->type === 'lab' ? 'bg-primary' : 'bg-info text-dark' }} me-1">
+                                            {{ $ar->type === 'lab' ? '🔬 مختبر' : '🩻 أشعة' }} #{{ $ar->id }}
+                                        </span>
+                                    @endforeach
+                                    ) ليتم تحصيلها معاً وإصدار <strong>وصل دفع حراري واحد شامل</strong> للمريض.
+                                </span>
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- معلومات الطلب والمريض -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
@@ -178,21 +223,37 @@
                                 </h6>
                                 <div class="mb-2 d-flex justify-content-between">
                                     <span class="text-muted">رقم الطلب:</span>
-                                    <strong>#{{ $request->id }}</strong>
+                                    <div>
+                                        @if(count($allRequests) > 1)
+                                            @foreach($allRequests as $ar)
+                                                <span class="badge bg-dark me-1">#{{ $ar->id }}</span>
+                                            @endforeach
+                                        @else
+                                            <strong>#{{ $request->id }}</strong>
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="mb-2 d-flex justify-content-between">
                                     <span class="text-muted">النوع:</span>
-                                    @if($request->type === 'lab')
-                                        <span class="badge bg-primary">تحاليل مختبرية</span>
-                                    @elseif($request->type === 'radiology')
-                                        <span class="badge bg-info text-dark">فحوصات أشعة / سونار</span>
-                                    @elseif($request->type === 'pharmacy')
-                                        <span class="badge bg-success">صيدلية</span>
-                                    @elseif($request->type === 'emergency')
-                                        <span class="badge bg-danger">طوارئ</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $request->type }}</span>
-                                    @endif
+                                    <div>
+                                        @if(count($allRequests) > 1)
+                                            <span class="badge bg-purple text-white" style="background-color: #6f42c1;">
+                                                <i class="fas fa-layer-group me-1"></i> فاتورة موحدة للزيارة
+                                            </span>
+                                        @else
+                                            @if($request->type === 'lab')
+                                                <span class="badge bg-primary">تحاليل مختبرية</span>
+                                            @elseif($request->type === 'radiology')
+                                                <span class="badge bg-info text-dark">فحوصات أشعة / سونار</span>
+                                            @elseif($request->type === 'pharmacy')
+                                                <span class="badge bg-success">صيدلية</span>
+                                            @elseif($request->type === 'emergency')
+                                                <span class="badge bg-danger">طوارئ</span>
+                                            @else
+                                                <span class="badge bg-secondary">{{ $request->type }}</span>
+                                            @endif
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">التاريخ:</span>
@@ -225,6 +286,10 @@
                     <form action="{{ route('cashier.request.payment.process', $request->id) }}" method="POST" id="requestPaymentForm">
                         @csrf
                         @method('POST')
+
+                        @foreach($allRequests as $ar)
+                            <input type="hidden" name="included_request_ids[]" value="{{ $ar->id }}">
+                        @endforeach
 
                         <!-- قسم الضمان الصحي ونسبة التحمل التلقائية -->
                         <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
@@ -379,6 +444,11 @@
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
                                                             @endif
                                                             <span class="fw-semibold">{{ $item['name'] }}</span>
+                                                            @if(count($allRequests) > 1)
+                                                                <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : 'bg-primary' }} ms-1" style="font-size:0.68rem;">
+                                                                    {{ $item['type'] === 'radiology' ? 'أشعة' : 'مختبر' }}
+                                                                </span>
+                                                            @endif
                                                             <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
                                                                 @if($rowCov)
                                                                     <i class="fas fa-check-circle me-1"></i>مشمول بالضمان

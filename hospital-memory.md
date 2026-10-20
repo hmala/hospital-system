@@ -427,6 +427,28 @@
     - توزيع الفحص السريري (Physical Examination) في الجانب الأيمن، وتفاصيل وتوصيات التشخيص (Clinical Notes & Advice) في الجانب الأيسر بارتفاع متناسق ومساحة مريحة للكتابة.
   * **الاختبارات الآلية الحصينة**:
     - ترقية واجتياز اختبار الميزة [tests/Feature/DoctorIcd10SearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorIcd10SearchTest.php) بنجاح كامل بـ 7 اختبارات تشمل حفظ التشخيص بحقل توصيات فارغ (`7 passed, 28 assertions`).
+- **المرحلة 91:** توحيد سداد ووصول وتجميع طلبات الزيارة الطبية في الكاشير والدمج التلقائي وإلغاء التكرار (Doctor & Cashier Unified Visit Checkout, Single Thermal Receipt & Consolidated Index Table):
+  * **الدمج التلقائي لطلبات الطبيب غير المسددة (`DoctorVisitController`)**:
+    - دمج تلقائي فور حفظ الطبيب لأي فحوصات مخبرية جديدة في نفس الطلب غير المسدد `payment_status === 'pending'`.
+    - دمج تلقائي فور حفظ الطبيب لأي فحوصات شعاعية جديدة في نفس طلب الأشعة غير المسدد لمنع تكرار وتعدد الطلبات المعلقة في النظام.
+  * **تعديل كادر المختبر والأشعة للفحوصات قبل السداد وتثبيتها بعده (`StaffRequestController`)**:
+    - إضافة إمكانية إضافة وحذف تحاليل للمختبر (`appendLabTests`, `removeLabTest`).
+    - إضافة إمكانية إضافة وحذف فحوصات للأشعة (`appendRadiologyTypes`, `removeRadiologyType`).
+    - حظر وإقفال التعديل فور السداد `payment_status === 'paid'` لحماية الحسابات.
+  * **سداد موحد شامل لكافة خدمات الزيارة في الكاشير (`CashierController`)**:
+    - في نافذة سداد الطلبات (`showRequestPaymentForm`): سحب كافة طلبات الزيارة المعلقة (مختبر + أشعة) تلقائياً في فاتورة واحدة شاملة.
+    - في معالجة الدفع (`processRequestPayment`): دفع جميع الطلبات في حركة مالية واحدة وسجل دفع واحد `Payment` وتحديث كافة الطلبات إلى `paid` مع ربطها بنفس `payment_id`.
+  * **وصل حراري 80mm واحد شامل للمريض بدون أي تكرار (`receipt-print.blade.php` & `receipt.blade.php`)**:
+    - طباعة وصل حراري موحد يحمل رقم تسلسلي واحد `REC-...` ويشمل تحاليل المختبر وفحوصات الأشعة معاً.
+    - تطبيق فلترة وإلغاء التكرار الصارم (`Deduplication`) لضمان عدم تكرار اسم أي فحص مهما كانت السجلات القديمة.
+  * **تجميع الطلبات المعلقة في جدول الكاشير (`resources/views/cashier/index.blade.php`)**:
+    - دمج أسطر الطلبات المعلقة لنفس الزيارة في سطر واحد موحد يحمل شارات الأقسام المشتركة `[🔬 تحاليل] [🩻 أشعة] [طلب موحد]`.
+    - استبدال الأزرار المتعددة بزر واحد: `تسديد شامل` يمنع تكرار ظهور نفس المريض بمبالغ متطابقة.
+  * **الاختبارات الآلية الحصينة**:
+    - `tests/Feature/DoctorLabRequestAutoMergeAndLabEditTest.php` (5 passed)
+    - `tests/Feature/DoctorRadiologyRequestAutoMergeAndStaffEditTest.php` (5 passed)
+    - `tests/Feature/UnifiedVisitCheckoutCashierTest.php` (2 passed)
+    - اجتياز كامل للحزمة (`12 passed, 78 assertions`).
 - **المرحلة 85:** محرك البحث الذكي اللحظي لتشخيصات ICD-10 بالأعمدة الثلاثة وترقية تبويب الفحص السريري والتشخيص في عيادات الاستشارية (Doctor Outpatient ICD-10 Live 3-Column Search & Balanced Tab Layout):
   * **محرك البحث اللحظي بالأعمدة الثلاثة (`DoctorVisitController@searchIcd10`)**:
     - بحث ذكي فوري بالرمز الطبي (`code`) أو الاسم العربي (`description_ar`) أو الاسم الإنجليزي (`description`) مع ترتيب الأولوية للمطابقة الدقيقة وبداية النصوص.

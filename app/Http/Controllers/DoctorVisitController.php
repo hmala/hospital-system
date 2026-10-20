@@ -994,6 +994,56 @@ class DoctorVisitController extends Controller
 
         if ($request->type === 'lab' && $request->tests) {
             $details['tests'] = $request->tests;
+            $resolvedIds = \App\Models\LabTest::whereIn('name', (array)$request->tests)
+                ->orWhereIn('code', (array)$request->tests)
+                ->pluck('id')
+                ->toArray();
+            $details['lab_test_ids'] = $resolvedIds;
+
+            // إذا كان هناك طلب مختبر سابق لنفس الزيارة ما زال معلقاً وغير مسدد بالكاشير، ادمج الفحوصات معه في وصل واحد
+            $existingUnpaidLab = MedicalRequest::where('visit_id', $visit->id)
+                ->where('type', 'lab')
+                ->where('payment_status', 'pending')
+                ->whereIn('status', ['pending', 'pending_service_selection'])
+                ->first();
+
+            if ($existingUnpaidLab) {
+                $exDetails = is_string($existingUnpaidLab->details) 
+                    ? json_decode($existingUnpaidLab->details, true) 
+                    : ($existingUnpaidLab->details ?? []);
+
+                $prevTests = $exDetails['tests'] ?? [];
+                $prevIds = $exDetails['lab_test_ids'] ?? [];
+
+                $mergedTests = array_values(array_unique(array_merge((array)$prevTests, (array)$details['tests'])));
+                $mergedIds = array_values(array_unique(array_merge((array)$prevIds, (array)$details['lab_test_ids'])));
+
+                $exDetails['tests'] = $mergedTests;
+                $exDetails['lab_test_ids'] = $mergedIds;
+
+                if (!empty($details['doctor_notes'])) {
+                    $exDetails['doctor_notes'] = !empty($exDetails['doctor_notes'])
+                        ? ($exDetails['doctor_notes'] . " | " . $details['doctor_notes'])
+                        : $details['doctor_notes'];
+                }
+
+                $existingUnpaidLab->details = $exDetails;
+                $existingUnpaidLab->save();
+
+                $mergedSuccessMsg = 'تم دمج وإضافة التحاليل بنجاح إلى وصل المريض الحالي في الكاشير (وصل موحد)';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $mergedSuccessMsg,
+                        'request_count' => $visit->requests()->count(),
+                        'request_id' => $existingUnpaidLab->id,
+                        'requires_payment' => true,
+                        'cashier_url' => route('cashier.request.payment.form', $existingUnpaidLab->id)
+                    ]);
+                }
+
+                return redirect()->back()->with('success', $mergedSuccessMsg);
+            }
         }
         
         if ($request->type === 'nursing' && $request->nursing_services) {
@@ -1012,12 +1062,98 @@ class DoctorVisitController extends Controller
         
         $detectedSubtype = null;
         if ($request->type === 'radiology' && $request->radiology_types) {
-            $details['radiology_types'] = $request->radiology_types;
-            $details['radiology_type_ids'] = $request->radiology_types;
+            $details['radiology_types'] = (array) $request->radiology_types;
+            $details['radiology_type_ids'] = (array) $request->radiology_types;
             
             // استقبال وتخزين الأعضاء/المناطق المستهدفة لكل فحص (مثل: الصدر، الركبة)
             $radiologyTargets = (array) $request->input('radiology_targets', []);
             $details['radiology_targets'] = $radiologyTargets;
+
+            // إذا كان هناك طلب أشعة سابق لنفس الزيارة ما زال معلقاً وغير مسدد بالكاشير، ادمج الفحوصات معه في وصل واحد
+            $existingUnpaidRad = MedicalRequest::where('visit_id', $visit->id)
+                ->where('type', 'radiology')
+                ->where('payment_status', 'pending')
+                ->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
+                ->first();
+
+            if ($existingUnpaidRad) {
+                $exDetails = is_string($existingUnpaidRad->details) 
+                    ? json_decode($existingUnpaidRad->details, true) 
+                    : ($existingUnpaidRad->details ?? []);
+
+                $prevTypeIds = array_map('intval', (array)($exDetails['radiology_type_ids'] ?? $exDetails['radiology_types'] ?? []));
+                $newTypeIds = array_map('intval', (array)$details['radiology_type_ids']);
+                $mergedTypeIds = array_values(array_unique(array_merge($prevTypeIds, $newTypeIds)));
+
+                $exDetails['radiology_types'] = $mergedTypeIds;
+                $exDetails['radiology_type_ids'] = $mergedTypeIds;
+
+                // دمج المناطق المستهدفة targets
+                $prevTargets = (array)($exDetails['radiology_targets'] ?? []);
+                $mergedTargets = array_merge($prevTargets, $radiologyTargets);
+                $exDetails['radiology_targets'] = $mergedTargets;
+
+                // تحديث الوصف وتحديد الـ subtype المدمج
+                $mergedNames = [];
+                $mergedSubtype = $existingUnpaidRad->subtype;
+                foreach ($mergedTypeIds as $tId) {
+                    $rType = \App\Models\RadiologyType::find($tId);
+                    if ($rType) {
+                        $targetPart = isset($mergedTargets[$tId]) ? trim($mergedTargets[$tId]) : null;
+                        $displayName = $rType->name;
+                        if (!empty($targetPart)) {
+                            $displayName .= " [العضو: {$targetPart}]";
+                        }
+                        $mergedNames[] = $displayName;
+
+                        if (!$mergedSubtype) {
+                            $cat = mb_strtolower(trim($rType->main_category ?? ''));
+                            $sub = mb_strtolower(trim($rType->subcategory ?? ''));
+                            $nm = mb_strtolower(trim($rType->name ?? ''));
+                            if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($nm, 'سونار') || str_contains($nm, 'sonar') || str_contains($cat, 'ultrasound')) {
+                                $mergedSubtype = 'ultrasound';
+                            } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($nm, 'رنين') || str_contains($cat, 'mri')) {
+                                $mergedSubtype = 'mri';
+                            } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($nm, 'إيكو') || str_contains($cat, 'echo')) {
+                                $mergedSubtype = 'echo';
+                            } elseif (str_contains($cat, 'مفراس') || str_contains($sub, 'مفراس') || str_contains($nm, 'مفراس') || str_contains($cat, 'ct')) {
+                                $mergedSubtype = 'ct';
+                            } else {
+                                $mergedSubtype = 'general';
+                            }
+                        }
+                    }
+                }
+
+                $exDetails['description'] = !empty($mergedNames) ? ('طلب أشعة: ' . implode(', ', $mergedNames)) : 'طلب أشعة';
+                $existingUnpaidRad->description = $exDetails['description'];
+                if ($mergedSubtype) {
+                    $existingUnpaidRad->subtype = $mergedSubtype;
+                }
+
+                if (!empty($details['doctor_notes'])) {
+                    $exDetails['doctor_notes'] = !empty($exDetails['doctor_notes'])
+                        ? ($exDetails['doctor_notes'] . " | " . $details['doctor_notes'])
+                        : $details['doctor_notes'];
+                }
+
+                $existingUnpaidRad->details = $exDetails;
+                $existingUnpaidRad->save();
+
+                $mergedSuccessMsg = 'تم دمج وإضافة فحوصات الأشعة بنجاح إلى وصل المريض الحالي في الكاشير (وصل موحد)';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $mergedSuccessMsg,
+                        'request_count' => $visit->requests()->count(),
+                        'request_id' => $existingUnpaidRad->id,
+                        'requires_payment' => true,
+                        'cashier_url' => route('cashier.request.payment.form', $existingUnpaidRad->id)
+                    ]);
+                }
+
+                return redirect()->back()->with('success', $mergedSuccessMsg);
+            }
 
             // إنشاء وصف يتضمن أسماء الأشعة والعضو المطلوب وتحديد الفئة الفرعية
             $radiologyTypeNames = [];

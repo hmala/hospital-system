@@ -80,11 +80,19 @@ class Payment extends Model
     }
 
     /**
-     * العلاقة مع الطلب الطبي
+     * العلاقة مع الطلب الطبي الرئيسي
      */
     public function request()
     {
         return $this->belongsTo(Request::class, 'request_id');
+    }
+
+    /**
+     * كافة الطلبات الطبية المرتبطة بهذا الإيصال (في حالة الدفع الموحد للزيارة)
+     */
+    public function requests()
+    {
+        return $this->hasMany(Request::class, 'payment_id');
     }
 
     /**

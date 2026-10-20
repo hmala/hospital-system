@@ -430,6 +430,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/lab-visits', [StaffRequestController::class, 'storeLabVisit'])->name('lab-visits.store');
         Route::post('/lab-requests/{request}/append-tests', [StaffRequestController::class, 'appendLabTests'])->name('lab-requests.append-tests');
         Route::delete('/lab-requests/{request}/tests/{labTest}', [StaffRequestController::class, 'removeLabTest'])->name('lab-requests.remove-test');
+        Route::post('/radiology-requests/{request}/append-types', [StaffRequestController::class, 'appendRadiologyTypes'])->name('radiology-requests.append-types');
+        Route::delete('/radiology-requests/{request}/types/{radiologyType}', [StaffRequestController::class, 'removeRadiologyType'])->name('radiology-requests.remove-type');
         
         // طلبات المختبر للعمليات
         Route::get('/surgery-lab-tests', [StaffRequestController::class, 'surgeryLabTests'])->name('surgery-lab-tests.index');
@@ -487,6 +489,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\RadiologyStaffController::class, 'cancel'])->name('cancel');
+        Route::post('/requests/{request}/append-types', [\App\Http\Controllers\StaffRequestController::class, 'appendRadiologyTypes'])->name('append-types');
+        Route::delete('/requests/{request}/types/{radiologyType}', [\App\Http\Controllers\StaffRequestController::class, 'removeRadiologyType'])->name('remove-type');
     });
 
     // إدارة رموز ICD10

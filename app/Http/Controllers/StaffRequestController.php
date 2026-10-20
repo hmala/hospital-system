@@ -10,6 +10,7 @@ use App\Models\LabTest;
 use App\Models\Surgery;
 use App\Models\SurgeryLabTest;
 use App\Models\SurgeryRadiologyTest;
+use App\Models\RadiologyType;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -705,6 +706,11 @@ class StaffRequestController extends Controller
         if ($request->payment_status !== 'paid') {
             $existingIds = array_map('intval', $details['lab_test_ids'] ?? []);
             $details['lab_test_ids'] = array_values(array_unique(array_merge($existingIds, $extraTestIds)));
+
+            $extraTestNames = \App\Models\LabTest::whereIn('id', $extraTestIds)->pluck('name')->toArray();
+            $existingTests = (array)($details['tests'] ?? []);
+            $details['tests'] = array_values(array_unique(array_merge($existingTests, $extraTestNames)));
+
             $details['services_selected'] = true;
             $details['services_selected_at'] = now()->toDateTimeString();
             $details['services_selected_by'] = $user->id;
@@ -737,6 +743,7 @@ class StaffRequestController extends Controller
             'payment_status' => 'pending',
             'details'        => array_merge([
                 'lab_test_ids'      => $extraTestIds,
+                'tests'             => \App\Models\LabTest::whereIn('id', $extraTestIds)->pluck('name')->toArray(),
                 'services_selected' => true,
                 'added_from_request'=> $request->id,
                 'added_by'          => $user->id,
@@ -796,46 +803,209 @@ class StaffRequestController extends Controller
             $details = [];
         }
 
-        // حذف التحليل من القائمة
+        $modified = false;
+
+        // حذف التحليل من lab_test_ids
         if (isset($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
+            $prevCount = count($details['lab_test_ids']);
             $details['lab_test_ids'] = array_values(
-                array_filter($details['lab_test_ids'], fn($id) => $id != $labTest->id)
+                array_filter($details['lab_test_ids'], fn($id) => (int)$id !== (int)$labTest->id)
             );
-
-            if (empty($details['lab_test_ids'])) {
-                $request->details = $details;
-                $request->status = 'pending_service_selection';
-                $request->payment_status = 'pending';
-                if ($request->visit) {
-                    $request->visit->status = 'scheduled';
-                    $request->visit->save();
-                }
-                $request->save();
-
-                Log::info('تم حذف آخر تحليل من الطلب وأعيد إلى اختيار التحاليل', [
-                    'request_id' => $request->id,
-                    'lab_test_id' => $labTest->id,
-                    'lab_test_name' => $labTest->name,
-                    'by_user' => $user->id,
-                ]);
-
-                return redirect()->back()->with('success', "تم حذف التحليل الأخير ({$labTest->name})، الطلب الآن بانتظار اختيار التحاليل.");
+            if (count($details['lab_test_ids']) !== $prevCount) {
+                $modified = true;
             }
+        }
 
+        // حذف التحليل من tests (بالاسم والكود)
+        if (isset($details['tests']) && is_array($details['tests'])) {
+            $prevCount = count($details['tests']);
+            $details['tests'] = array_values(
+                array_filter($details['tests'], function($t) use ($labTest) {
+                    $tName = trim(strtolower((string)$t));
+                    $isMatch = $tName === trim(strtolower($labTest->name)) 
+                        || ($labTest->code && $tName === trim(strtolower($labTest->code)));
+                    return !$isMatch;
+                })
+            );
+            if (count($details['tests']) !== $prevCount) {
+                $modified = true;
+            }
+        }
+
+        if (!$modified) {
+            return redirect()->back()->with('error', 'لم يتم العثور على التحليل في الطلب');
+        }
+
+        $remainingCount = count($details['lab_test_ids'] ?? []) + count($details['tests'] ?? []);
+        if ($remainingCount === 0) {
             $request->details = $details;
+            $request->status = 'pending_service_selection';
+            $request->payment_status = 'pending';
+            if ($request->visit) {
+                $request->visit->status = 'scheduled';
+                $request->visit->save();
+            }
             $request->save();
 
-            Log::info('تم حذف تحليل من الطلب', [
+            Log::info('تم حذف آخر تحليل من الطلب وأعيد إلى اختيار التحاليل', [
                 'request_id' => $request->id,
                 'lab_test_id' => $labTest->id,
                 'lab_test_name' => $labTest->name,
                 'by_user' => $user->id,
             ]);
 
-            return redirect()->back()->with('success', "تم حذف التحليل ({$labTest->name}) بنجاح");
+            return redirect()->back()->with('success', "تم حذف التحليل الأخير ({$labTest->name})، الطلب الآن بانتظار اختيار التحاليل.");
         }
 
-        return redirect()->back()->with('error', 'لم يتم العثور على التحليل في الطلب');
+        $request->details = $details;
+        $request->save();
+
+        Log::info('تم حذف تحليل من الطلب', [
+            'request_id' => $request->id,
+            'lab_test_id' => $labTest->id,
+            'lab_test_name' => $labTest->name,
+            'by_user' => $user->id,
+        ]);
+
+        return redirect()->back()->with('success', "تم حذف التحليل ({$labTest->name}) بنجاح وتحديث الفاتورة تلقائياً");
+    }
+
+    /**
+     * إضافة فحوصات أشعة للطلب (قبل الدفع)
+     */
+    public function appendRadiologyTypes(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
+            abort(403, 'غير مصرح لك بإضافة فحوصات أشعة');
+        }
+
+        $httpRequest->validate([
+            'extra_radiology_type_ids' => 'nullable|array',
+            'extra_radiology_type_ids.*' => 'integer|exists:radiology_types,id',
+            'radiology_type_ids' => 'nullable|array',
+            'radiology_type_ids.*' => 'integer|exists:radiology_types,id',
+        ]);
+
+        $inputIds = $httpRequest->extra_radiology_type_ids ?? $httpRequest->radiology_type_ids ?? [];
+        $extraTypeIds = array_map('intval', (array)$inputIds);
+        if (empty($extraTypeIds)) {
+            return redirect()->back()->with('error', 'يرجى اختيار فحص أشعة واحد على الأقل.');
+        }
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+
+        if ($request->payment_status !== 'paid') {
+            $prevIds = array_map('intval', (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
+            $mergedIds = array_values(array_unique(array_merge($prevIds, $extraTypeIds)));
+
+            $details['radiology_type_ids'] = $mergedIds;
+            $details['radiology_types'] = $mergedIds;
+            $details['services_selected'] = true;
+            $details['services_selected_at'] = now()->toDateTimeString();
+            $details['services_selected_by'] = $user->id;
+
+            // تحديث الأسماء والوصف
+            $names = [];
+            foreach ($mergedIds as $tId) {
+                $rt = RadiologyType::find($tId);
+                if ($rt) {
+                    $target = $details['radiology_targets'][$tId] ?? null;
+                    $names[] = $target ? "{$rt->name} [العضو: {$target}]" : $rt->name;
+                }
+            }
+            $details['description'] = !empty($names) ? ('طلب أشعة: ' . implode(', ', $names)) : $request->description;
+            $request->description = $details['description'];
+
+            $request->details = $details;
+            $request->status = 'pending';
+            $request->payment_status = 'pending';
+            $request->save();
+
+            if ($request->visit) {
+                $request->visit->status = 'pending_payment';
+                $request->visit->save();
+            }
+
+            Log::info('تمت إضافة فحوصات أشعة إلى الطلب الحالي بنجاح', [
+                'request_id' => $request->id,
+                'added_types' => $extraTypeIds,
+                'by_user' => $user->id,
+            ]);
+
+            return redirect()->back()->with('success', 'تمت إضافة فحوصات الأشعة إلى الطلب الحالي بنجاح وتحديث الفاتورة.');
+        }
+
+        return redirect()->back()->with('error', 'لا يمكن تعديل طلب أشعة تم سداده مسبقاً.');
+    }
+
+    /**
+     * حذف فحص أشعة من الطلب (قبل الدفع فقط)
+     */
+    public function removeRadiologyType(MedicalRequest $request, RadiologyType $radiologyType)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
+            abort(403, 'غير مصرح لك بحذف فحوصات الأشعة');
+        }
+
+        if ($request->payment_status === 'paid') {
+            return redirect()->back()->with('error', 'لا يمكن حذف فحص من طلب أشعة تم سداده مسبقاً لحماية السجل المالي.');
+        }
+
+        if ($request->type !== 'radiology') {
+            return redirect()->back()->with('error', 'هذا الطلب ليس طلب أشعة');
+        }
+
+        $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($details)) $details = [];
+
+        $typeIds = array_map('intval', (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
+        $filteredIds = array_values(array_filter($typeIds, fn($id) => (int)$id !== (int)$radiologyType->id));
+
+        $details['radiology_type_ids'] = $filteredIds;
+        $details['radiology_types'] = $filteredIds;
+
+        if (isset($details['radiology_targets'][(string)$radiologyType->id])) {
+            unset($details['radiology_targets'][(string)$radiologyType->id]);
+        }
+        if (isset($details['radiology_targets'][$radiologyType->id])) {
+            unset($details['radiology_targets'][$radiologyType->id]);
+        }
+
+        if (empty($filteredIds)) {
+            $details['description'] = 'طلب أشعة - بانتظار تحديد الفحوصات';
+            $request->description = $details['description'];
+            $request->status = 'pending_service_selection';
+            if ($request->visit) {
+                $request->visit->status = 'scheduled';
+                $request->visit->save();
+            }
+        } else {
+            $names = [];
+            foreach ($filteredIds as $tId) {
+                $rt = RadiologyType::find($tId);
+                if ($rt) {
+                    $target = $details['radiology_targets'][$tId] ?? null;
+                    $names[] = $target ? "{$rt->name} [العضو: {$target}]" : $rt->name;
+                }
+            }
+            $details['description'] = !empty($names) ? ('طلب أشعة: ' . implode(', ', $names)) : 'طلب أشعة';
+            $request->description = $details['description'];
+        }
+
+        $request->details = $details;
+        $request->save();
+
+        Log::info('تم حذف فحص أشعة من الطلب بنجاح', [
+            'request_id' => $request->id,
+            'radiology_type_id' => $radiologyType->id,
+            'radiology_type_name' => $radiologyType->name,
+            'by_user' => $user->id,
+        ]);
+
+        return redirect()->back()->with('success', "تم حذف فحص الأشعة ({$radiologyType->name}) بنجاح وتحديث الفاتورة فورياً.");
     }
 
     /**
