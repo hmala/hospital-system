@@ -62,6 +62,9 @@
                     <a href="{{ route('nicu.print.wristband', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-light shadow-sm">
                         <i class="fas fa-barcode me-1"></i> طباعة أسورة المعصم
                     </a>
+                    <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-light shadow-sm">
+                        <i class="fas fa-prescription me-1"></i> طباعة الوصفة (RX)
+                    </a>
                 </div>
                 <div>
                     @if($reservation->status === 'admitted')
@@ -105,17 +108,45 @@
                 </li>
                 <li class="nav-item">
                     <button class="nav-link fw-bold text-dark" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitalsPane" type="button">
-                        <i class="fas fa-heartbeat text-danger me-1"></i> محطة التمريض (العلامات والوزن والرضاعة)
+                        <i class="fas fa-heartbeat text-danger me-1"></i> محطة التمريض وإعطاء العلاج (MAR)
+                        @if($reservation->medicationAdministrations->count() > 0)
+                            <span class="badge bg-danger rounded-pill ms-1">{{ $reservation->medicationAdministrations->count() }}</span>
+                        @endif
                     </button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link fw-bold text-dark" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultationsPane" type="button">
                         <i class="fas fa-user-md text-info me-1"></i> استشارات الأطباء (داخلي / خارجي)
+                        @if($reservation->consultations->count() > 0)
+                            <span class="badge bg-info rounded-pill ms-1">{{ $reservation->consultations->count() }}</span>
+                        @endif
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="orders-tab" data-bs-toggle="tab" data-bs-target="#ordersPane" type="button">
-                        <i class="fas fa-vial text-warning me-1"></i> الطلبات السريرية (المختبر والأشعة والأدوية)
+                    <button class="nav-link fw-bold text-dark" id="lab-tab" data-bs-toggle="tab" data-bs-target="#labPane" type="button">
+                        <i class="fas fa-microscope text-primary me-1"></i> 🧪 تحاليل المختبر
+                        @php $labCount = $reservation->medicalOrders->where('order_type', 'lab')->count(); @endphp
+                        @if($labCount > 0)
+                            <span class="badge bg-primary rounded-pill ms-1">{{ $labCount }}</span>
+                        @endif
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark" id="radiology-tab" data-bs-toggle="tab" data-bs-target="#radiologyPane" type="button">
+                        <i class="fas fa-x-ray text-info me-1"></i> 🩻 الأشعة والتصوير
+                        @php $radCount = $reservation->medicalOrders->where('order_type', 'radiology')->count(); @endphp
+                        @if($radCount > 0)
+                            <span class="badge bg-info rounded-pill ms-1">{{ $radCount }}</span>
+                        @endif
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark" id="prescriptions-tab" data-bs-toggle="tab" data-bs-target="#prescriptionsPane" type="button">
+                        <i class="fas fa-pills text-success me-1"></i> 💊 الوصفة والعلاج
+                        @php $medCount = $reservation->medicalOrders->where('order_type', 'medication')->count(); @endphp
+                        @if($medCount > 0)
+                            <span class="badge bg-success rounded-pill ms-1">{{ $medCount }}</span>
+                        @endif
                     </button>
                 </li>
             </ul>
@@ -439,6 +470,141 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- فاصل أنيق بين العلامات الحيوية وجدول إعطاء العلاج MAR -->
+                    <hr class="my-4 border-2">
+
+                    <!-- قسم سجل إعطاء وتطبيق العلاج التمريضي (MAR) -->
+                    <div class="row g-4">
+                        <!-- نموذج توثيق إعطاء الجرعة -->
+                        <div class="col-lg-4">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">
+                                        <i class="fas fa-syringe text-danger me-1"></i>
+                                        توثيق إعطاء جرعة علاجية (MAR)
+                                    </h6>
+                                    <span class="badge bg-danger text-white small">تمريض الحاضنة</span>
+                                </div>
+                                <div class="alert alert-info py-2 px-3 small mb-3 border-0 bg-info bg-opacity-10 text-info-emphasis" style="font-size: 11px;">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>توثيق سريري مباشر:</strong> يُسجل هذا النموذج وقت وطريقة إعطاء الجرعة للطفل بالحاضنة ولا يرتبط بطلب المخزون أو الصيدلية.
+                                </div>
+                                <form action="{{ route('nicu.medications-admin.store', $reservation) }}" method="POST">
+                                    @csrf
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">اسم الدواء أو المادة المعطاة:</label>
+                                        <input type="text" name="medication_name" list="prescribedMedsDatalist" class="form-control form-control-sm" placeholder="اكتب اسم العلاج أو اختر من الوصفة..." required>
+                                        <datalist id="prescribedMedsDatalist">
+                                            @foreach($reservation->medicalOrders->where('order_type', 'medication') as $pMed)
+                                                <option value="{{ $pMed->item_name }}"></option>
+                                            @endforeach
+                                        </datalist>
+                                        <small class="text-muted" style="font-size: 10.5px;">اختر من قائمة أدوية الطفل الموصوفة أو اكتب أي محلول/علاج حر.</small>
+                                    </div>
+
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold">الجرعة المعطاة:</label>
+                                            <input type="text" name="dose" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 1 ml" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold">طريقة الإعطاء (Route):</label>
+                                            <select name="route" class="form-select form-select-sm" required>
+                                                <option value="iv">حقن وريدي (IV)</option>
+                                                <option value="infusion">تسريب وريدي مستمر (IV Infusion)</option>
+                                                <option value="oral">فموي / أنبوب تغذية (Oral / NG)</option>
+                                                <option value="im">حقن عضلي (IM)</option>
+                                                <option value="nebulizer">استنشاق / رذاذ (Nebulizer)</option>
+                                                <option value="drops">قطرات (Drops)</option>
+                                                <option value="sc">تحت الجلد (SC)</option>
+                                                <option value="pr">شرجي (PR)</option>
+                                                <option value="topical">موضعي / دهان (Topical)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">وقت وتاريخ الإعطاء:</label>
+                                        <input type="datetime-local" name="given_at" class="form-control form-control-sm" value="{{ now()->format('Y-m-d\TH:i') }}">
+                                        <small class="text-muted" style="font-size: 10.5px;">محدد تلقائياً على اللحظة الحالية.</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small">ملاحظات التمريض واستجابة الطفل:</label>
+                                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="مثال: تم إعطاؤه ببطء، استجابة جيدة، سلامة الكانيولا...">
+                                    </div>
+
+                                    <button type="submit" class="btn btn-sm btn-danger w-100 fw-bold shadow-sm">
+                                        <i class="fas fa-check-circle me-1"></i> توثيق إعطاء الجرعة
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- جدول سجل إعطاء الأدوية MAR -->
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-history text-danger me-1"></i>
+                                    سجل إعطاء وتطبيق الأدوية التمريضي (MAR Timeline)
+                                </h6>
+                                <span class="badge bg-light text-dark border">
+                                    إجمالي الجرعات المنفذة: {{ $reservation->medicationAdministrations->count() }}
+                                </span>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle border text-center small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>وقت الإعطاء</th>
+                                            <th class="text-start">العلاج الممنوح</th>
+                                            <th>الجرعة</th>
+                                            <th>مسار الإعطاء</th>
+                                            <th>ملاحظات التمريض</th>
+                                            <th>الممرض المنفذ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($reservation->medicationAdministrations->sortByDesc('given_at') as $adm)
+                                            <tr>
+                                                <td class="fw-bold text-dark">
+                                                    {{ $adm->given_at ? $adm->given_at->format('Y-m-d H:i') : '—' }}
+                                                </td>
+                                                <td class="text-start fw-bold text-primary">
+                                                    <i class="fas fa-capsules me-1 text-muted"></i>
+                                                    {{ $adm->medication_name }}
+                                                </td>
+                                                <td class="fw-bold text-dark">{{ $adm->dose }}</td>
+                                                <td>
+                                                    <span class="badge bg-{{ $adm->route_badge_color }}">
+                                                        {{ $adm->route_name }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-start small text-muted">
+                                                    {{ $adm->notes ?? '—' }}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-secondary border">
+                                                        <i class="fas fa-user-nurse me-1 text-danger"></i>
+                                                        {{ optional($adm->nurse)->name ?? 'ممرض الحاضنة' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="6" class="py-4 text-muted">
+                                                    <i class="fas fa-clipboard-list fa-2x mb-2 d-block opacity-25"></i>
+                                                    لم يتم توثيق أي جرعة علاجية معطاة للطفل بعد.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- تبويب 3: استشارات الأطباء (داخلي / خارجي) -->
@@ -627,104 +793,169 @@
                     </div>
                 </div>
 
-                <!-- تبويب 4: الطلبات السريرية (المختبر والأشعة والأدوية) -->
-                <div class="tab-pane fade" id="ordersPane">
+                <!-- تبويب 4: التحاليل والفحوصات المخبرية (Lab Workstation) -->
+                <div class="tab-pane fade" id="labPane">
                     <div class="row g-4">
-                        <div class="col-lg-4">
-                            <div class="card border-0 bg-light p-3 rounded-3">
-                                <h6 class="fw-bold text-dark mb-3">
-                                    <i class="fas fa-file-medical text-warning me-1"></i>
-                                    إصدار طلب فحص مخبري أو أشعة أو علاج
-                                </h6>
-                                <form action="{{ route('nicu.orders.store', $reservation) }}" method="POST">
+                        <!-- عمود تقديم طلب التحاليل المخبرية -->
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-microscope"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-primary mb-0">طلب فحوصات مخبرية</h6>
+                                            <small class="text-muted" style="font-size: 11px;">اختر من الباقات أو ابحث بالاسم واضغط Enter</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill px-2 py-1">مختبر المستشفى</span>
+                                </div>
+
+                                <form action="{{ route('nicu.lab-orders.store', $reservation) }}" method="POST" id="nicuLabOrderForm">
                                     @csrf
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">نوع الطلب:</label>
-                                        <select name="order_type" class="form-select form-select-sm" required>
-                                            <option value="lab">🧪 فحص مخبري وتحاليل (ABG, Bilirubin, CBC...)</option>
-                                            <option value="radiology">🩻 فحص أشعة / سونار (Portable Chest X-Ray...)</option>
-                                            <option value="medication">💊 دواء أو محلول وريدي من الصيدلية</option>
-                                        </select>
+
+                                    <!-- باقات حديثي الولادة والخدج السريعة -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="small fw-bold text-dark">
+                                                <i class="fas fa-bolt text-warning me-1"></i> باقات الخدج السريعة (نقرة واحدة للإدراج):
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Complete Blood Count (CBC)", "Total Serum Bilirubin (TSB)", "C-Reactive Protein (CRP)", "Random Blood Sugar (RBS)", "Blood Group & Rh"]'>
+                                                <i class="fas fa-baby me-1"></i> دخول روتيني (5)
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 nicu-quick-lab-pkg text-dark" data-tests='["Total Serum Bilirubin (TSB)", "Direct Bilirubin", "Indirect Bilirubin", "Blood Group & Rh", "Direct Coombs Test"]'>
+                                                <i class="fas fa-sun me-1"></i> اليرقان والصفار (5)
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Arterial Blood Gases (ABG)", "Serum Electrolytes (Na, K, Cl)", "Blood Lactate"]'>
+                                                <i class="fas fa-lungs me-1"></i> غازات الدم ABG (3)
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Complete Blood Count (CBC)", "Blood Culture", "C-Reactive Protein (CRP)", "Procalcitonin", "Micro-ESR"]'>
+                                                <i class="fas fa-shield-virus me-1"></i> مسح الإنتان Sepsis (5)
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Serum Creatinine", "Blood Urea", "Serum Electrolytes (Na, K, Cl)", "Serum Calcium"]'>
+                                                <i class="fas fa-vial me-1"></i> وظائف الكلى والأملاح (4)
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">اسم الفحص أو العلاج:</label>
-                                        <input type="text" name="item_name" class="form-control form-control-sm" placeholder="مثال: غازات الدم الشرياني ABG" required>
+                                    <!-- مربع البحث التفاعلي الفوري عن التحاليل -->
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-search text-primary me-1"></i> ابحث عن التحليل المخبري:
+                                        </label>
+                                        <div class="input-group input-group-sm shadow-xs">
+                                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                            <input type="text" id="nicuLabSearchInput" class="form-control" placeholder="اكتب اسم التحليل (مثل: CBC, Bilirubin, ABG, CRP...) واضغط Enter..." autocomplete="off">
+                                            <button type="button" class="btn btn-outline-secondary" id="nicuLabClearInputBtn" title="مسح">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div id="nicuLabAutocompleteMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="max-height: 220px; overflow-y: auto; display: none; z-index: 1060;"></div>
                                     </div>
 
+                                    <!-- صينية التحاليل المختارة للإرسال (Chips Tray) -->
+                                    <div id="nicuLabSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="small fw-bold text-primary">
+                                                <i class="fas fa-check-circle me-1"></i> التحاليل المختارة (<span id="nicuLabSelectedCount">0</span>):
+                                            </span>
+                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="nicuLabClearAllBtn">
+                                                <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
+                                            </button>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2" id="nicuLabChipsContainer"></div>
+                                    </div>
+
+                                    <!-- الأولوية وملاحظات الطبيب -->
                                     <div class="row g-2 mb-3">
-                                        <div class="col-6">
-                                            <label class="form-label small fw-bold">الأولوية:</label>
-                                            <select name="priority" class="form-select form-select-sm">
-                                                <option value="urgent">عاجل (Urgent)</option>
-                                                <option value="stat">فوري طارئ (STAT)</option>
-                                                <option value="normal">عادي (Normal)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label small fw-bold">السعر التقديري (د.ع):</label>
-                                            <input type="number" step="1000" name="price" class="form-control form-control-sm" value="0">
+                                        <div class="col-12">
+                                            <label class="form-label small fw-bold">الأولوية والسرعة المطلوبة:</label>
+                                            <div class="d-flex gap-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="labPriNormal" value="normal">
+                                                    <label class="form-check-label small" for="labPriNormal">عادي (Normal)</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="labPriUrgent" value="urgent" checked>
+                                                    <label class="form-check-label small text-warning fw-bold" for="labPriUrgent">عاجل (Urgent)</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="labPriStat" value="stat">
+                                                    <label class="form-check-label small text-danger fw-bold" for="labPriStat">🚨 فوري طارئ (STAT)</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label small">تعليمات إضافية:</label>
-                                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="سحب دم من الوريد، صورة أشعة داخل الحاضنة...">
+                                        <label class="form-label small fw-bold">ملاحظات وتوجيهات الطبيب للمختبر:</label>
+                                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="مثال: عينة كعب قدم دقيقة، فحص عاجل قبل العلاج الضوئي...">
                                     </div>
 
-                                    <button type="submit" class="btn btn-sm btn-warning w-100 fw-bold shadow-sm">
-                                        <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للقسم المعني
+                                    <button type="submit" id="btnSubmitNicuLab" class="btn btn-primary w-100 fw-bold shadow-sm">
+                                        <i class="fas fa-paper-plane me-1"></i> إرسال طلب التحاليل للمختبر
                                     </button>
                                 </form>
                             </div>
                         </div>
 
-                        <div class="col-lg-8">
-                            <h6 class="fw-bold text-dark mb-3">
-                                <i class="fas fa-list-check text-primary me-1"></i>
-                                سجل الطلبات والفحوصات والأدوية
-                            </h6>
+                        <!-- جدول سجل التحاليل المخبرية للطفل -->
+                        <div class="col-lg-7">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-vial text-primary me-1"></i>
+                                    سجل الفحوصات والتحاليل المخبرية (Lab Results)
+                                </h6>
+                                <span class="badge bg-light text-primary border">
+                                    الطلبات: {{ $reservation->medicalOrders->where('order_type', 'lab')->count() }}
+                                </span>
+                            </div>
+
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle border small">
+                                <table class="table table-hover align-middle border text-center small">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>النوع</th>
-                                            <th>الفحص / المادة</th>
-                                            <th>السعر</th>
+                                            <th class="text-start">اسم التحليل</th>
                                             <th>الأولوية</th>
+                                            <th>السعر</th>
                                             <th>النتيجة والتقرير</th>
                                             <th>الحالة</th>
+                                            <th>وقت الطلب</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($reservation->medicalOrders as $ord)
+                                        @forelse($reservation->medicalOrders->where('order_type', 'lab') as $ord)
                                             <tr>
-                                                <td>
-                                                    <span class="badge bg-{{ $ord->order_type == 'lab' ? 'primary' : ($ord->order_type == 'radiology' ? 'info' : 'success') }}">
-                                                        {{ $ord->order_type_name }}
-                                                    </span>
+                                                <td class="text-start fw-bold text-primary">
+                                                    <i class="fas fa-flask text-muted me-1"></i>
+                                                    {{ $ord->item_name }}
+                                                    @if($ord->instructions)
+                                                        <div class="text-muted small" style="font-size: 11px;">{{ $ord->instructions }}</div>
+                                                    @endif
                                                 </td>
-                                                <td class="fw-bold">{{ $ord->item_name }}</td>
-                                                <td class="text-success fw-bold">{{ number_format($ord->price) }} د.ع</td>
                                                 <td>
-                                                    <span class="badge bg-{{ $ord->priority == 'stat' ? 'danger' : 'warning text-dark' }}">
+                                                    <span class="badge bg-{{ $ord->priority == 'stat' ? 'danger' : ($ord->priority == 'urgent' ? 'warning text-dark' : 'secondary') }}">
                                                         {{ $ord->priority }}
                                                     </span>
                                                 </td>
+                                                <td class="text-success fw-bold">{{ number_format($ord->price) }} د.ع</td>
                                                 <td>
                                                     @if($ord->result)
                                                         <span class="text-dark fw-bold">{{ $ord->result }}</span>
                                                     @else
-                                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#completeOrderModal_{{ $ord->id }}">
-                                                            <i class="fas fa-edit"></i> إدخال النتيجة
+                                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeLabModal_{{ $ord->id }}">
+                                                            <i class="fas fa-edit me-1"></i> إدخال النتيجة
                                                         </button>
 
-                                                        <!-- Modal إدخال نتيجة الفحص -->
-                                                        <div class="modal fade" id="completeOrderModal_{{ $ord->id }}" tabindex="-1">
+                                                        <!-- Modal إدخال نتيجة المختبر -->
+                                                        <div class="modal fade text-start" id="completeLabModal_{{ $ord->id }}" tabindex="-1">
                                                             <div class="modal-dialog">
                                                                 <div class="modal-content">
                                                                     <div class="modal-header bg-primary text-white">
-                                                                        <h6 class="modal-title fw-bold">نتيجة: {{ $ord->item_name }}</h6>
+                                                                        <h6 class="modal-title fw-bold">نتيجة تحليل: {{ $ord->item_name }}</h6>
                                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                                     </div>
                                                                     <form action="{{ route('nicu.orders.complete', $ord) }}" method="POST">
@@ -732,8 +963,8 @@
                                                                         @method('PATCH')
                                                                         <div class="modal-body p-3">
                                                                             <div class="mb-3">
-                                                                                <label class="form-label small fw-bold">النتيجة المخبرية / تقرير الأشعة:</label>
-                                                                                <textarea name="result" rows="3" class="form-control" required></textarea>
+                                                                                <label class="form-label small fw-bold">النتيجة المخبرية والقيم المسجلة:</label>
+                                                                                <textarea name="result" rows="3" class="form-control" placeholder="اكتب النتيجة، القيم المرجعية، أو التقرير..." required></textarea>
                                                                             </div>
                                                                             <div class="mb-3">
                                                                                 <label class="form-label small fw-bold">تأكيد السعر النهائي (د.ع):</label>
@@ -741,7 +972,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="modal-footer">
-                                                                            <button type="submit" class="btn btn-sm btn-success fw-bold">اعتماد النتيجة والترحيل المالي</button>
+                                                                            <button type="submit" class="btn btn-sm btn-success fw-bold">اعتماد النتيجة وترحيلها</button>
                                                                         </div>
                                                                     </form>
                                                                 </div>
@@ -751,13 +982,390 @@
                                                 </td>
                                                 <td>
                                                     <span class="badge bg-{{ $ord->status == 'completed' ? 'success' : 'secondary' }}">
-                                                        {{ $ord->status == 'completed' ? 'تم التنفيذ' : 'قيد الانتظار' }}
+                                                        {{ $ord->status == 'completed' ? 'تم الفحص' : 'قيد الانتظار' }}
                                                     </span>
+                                                </td>
+                                                <td class="text-muted small">
+                                                    {{ $ord->ordered_at ? $ord->ordered_at->format('d/m H:i') : $ord->created_at->format('d/m H:i') }}
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="6" class="text-center py-4 text-muted">لا توجد طلبات طبية مسجلة بعد.</td>
+                                                <td colspan="6" class="py-4 text-muted">
+                                                    <i class="fas fa-microscope fa-2x mb-2 d-block opacity-25"></i>
+                                                    لا توجد طلبات تحاليل مخبرية مسجلة بعد لهذا الطفل.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تبويب 5: الفحوصات الشعاعية والتصوير والسونار (Radiology Workstation) -->
+                <div class="tab-pane fade" id="radiologyPane">
+                    <div class="row g-4">
+                        <!-- عمود تقديم طلب الأشعة والسونار -->
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-info text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-x-ray"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-info mb-0">طلب فحص شعاعي / سونار</h6>
+                                            <small class="text-muted" style="font-size: 11px;">أشعة نقالة بالحاضنة، سونار دماغ، إيكو قلب...</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-info text-white rounded-pill px-2 py-1">قسم الأشعة</span>
+                                </div>
+
+                                <form action="{{ route('nicu.radiology-orders.store', $reservation) }}" method="POST" id="nicuRadOrderForm">
+                                    @csrf
+
+                                    <!-- فحوصات التصوير الشائعة لحديثي الولادة -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="small fw-bold text-dark">
+                                                <i class="fas fa-bolt text-warning me-1"></i> تصوير الخدج الشائع (نقرة واحدة للإدراج):
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Portable Chest X-Ray (Incubator)"]'>
+                                                <i class="fas fa-lungs me-1"></i> أشعة صدر نقالة
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Cranial Ultrasound (Neurosonogram)"]'>
+                                                <i class="fas fa-brain me-1"></i> سونار الدماغ واليافوخ
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Pediatric Echocardiogram (PDA Screen)"]'>
+                                                <i class="fas fa-heart me-1"></i> إيكو قلب أطفال
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 nicu-quick-rad-pkg text-dark" data-types='["Portable Abdominal X-Ray (NEC Evaluation)"]'>
+                                                <i class="fas fa-circle-notch me-1"></i> أشعة بطن نقالة
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Babygram (Whole Body X-Ray)"]'>
+                                                <i class="fas fa-child me-1"></i> تصوير كامل (Babygram)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- مربع البحث التفاعلي الفوري عن الفحص الشعاعي -->
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-search text-info me-1"></i> ابحث عن نوع الفحص الشعاعي:
+                                        </label>
+                                        <div class="input-group input-group-sm shadow-xs">
+                                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                            <input type="text" id="nicuRadSearchInput" class="form-control" placeholder="اكتب اسم الفحص (مثل: Chest, Brain, Echo, Abdomen...) واضغط Enter..." autocomplete="off">
+                                            <button type="button" class="btn btn-outline-secondary" id="nicuRadClearInputBtn" title="مسح">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div id="nicuRadAutocompleteMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="max-height: 220px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                                    </div>
+
+                                    <!-- صينية الفحوصات الشعاعية المختارة (Chips Tray) -->
+                                    <div id="nicuRadSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="small fw-bold text-info">
+                                                <i class="fas fa-check-circle me-1"></i> الفحوصات المختارة (<span id="nicuRadSelectedCount">0</span>):
+                                            </span>
+                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="nicuRadClearAllBtn">
+                                                <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
+                                            </button>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2" id="nicuRadChipsContainer"></div>
+                                    </div>
+
+                                    <!-- الأولوية ودواعي الفحص -->
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-12">
+                                            <label class="form-label small fw-bold">الأولوية والسرعة المطلوبة:</label>
+                                            <div class="d-flex gap-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="radPriNormal" value="normal">
+                                                    <label class="form-check-label small" for="radPriNormal">عادي (Normal)</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="radPriUrgent" value="urgent" checked>
+                                                    <label class="form-check-label small text-warning fw-bold" for="radPriUrgent">عاجل (Urgent)</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="priority" id="radPriStat" value="stat">
+                                                    <label class="form-check-label small text-danger fw-bold" for="radPriStat">🚨 فوري طارئ (STAT)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">الدواعي السريرية وتوجيهات التصوير:</label>
+                                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="مثال: تصوير داخل الحاضنة بدون تحريك، تفقد موقع أنبوب الرغامي ETT...">
+                                    </div>
+
+                                    <button type="submit" id="btnSubmitNicuRad" class="btn btn-info text-white w-100 fw-bold shadow-sm">
+                                        <i class="fas fa-paper-plane me-1"></i> إرسال طلب الأشعة لقسم التصوير
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- جدول سجل الفحوصات الشعاعية للطفل -->
+                        <div class="col-lg-7">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-x-ray text-info me-1"></i>
+                                    سجل الفحوصات الشعاعية والتقارير (Radiology Reports)
+                                </h6>
+                                <span class="badge bg-light text-info border">
+                                    الطلبات: {{ $reservation->medicalOrders->where('order_type', 'radiology')->count() }}
+                                </span>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle border text-center small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start">اسم الفحص الشعاعي</th>
+                                            <th>الأولوية</th>
+                                            <th>السعر</th>
+                                            <th>تقرير الأشعة والسونار</th>
+                                            <th>الحالة</th>
+                                            <th>وقت الطلب</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($reservation->medicalOrders->where('order_type', 'radiology') as $ord)
+                                            <tr>
+                                                <td class="text-start fw-bold text-info">
+                                                    <i class="fas fa-film text-muted me-1"></i>
+                                                    {{ $ord->item_name }}
+                                                    @if($ord->instructions)
+                                                        <div class="text-muted small" style="font-size: 11px;">{{ $ord->instructions }}</div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{{ $ord->priority == 'stat' ? 'danger' : ($ord->priority == 'urgent' ? 'warning text-dark' : 'secondary') }}">
+                                                        {{ $ord->priority }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-success fw-bold">{{ number_format($ord->price) }} د.ع</td>
+                                                <td>
+                                                    @if($ord->result)
+                                                        <span class="text-dark fw-bold">{{ $ord->result }}</span>
+                                                    @else
+                                                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeRadModal_{{ $ord->id }}">
+                                                            <i class="fas fa-edit me-1"></i> إدخال التقرير
+                                                        </button>
+
+                                                        <!-- Modal إدخال تقرير الأشعة -->
+                                                        <div class="modal fade text-start" id="completeRadModal_{{ $ord->id }}" tabindex="-1">
+                                                            <div class="modal-dialog">
+                                                                <div class="modal-content">
+                                                                    <div class="modal-header bg-info text-white">
+                                                                        <h6 class="modal-title fw-bold">تقرير أشعة: {{ $ord->item_name }}</h6>
+                                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <form action="{{ route('nicu.orders.complete', $ord) }}" method="POST">
+                                                                        @csrf
+                                                                        @method('PATCH')
+                                                                        <div class="modal-body p-3">
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label small fw-bold">تقرير وتوصيات طبيب الأشعة:</label>
+                                                                                <textarea name="result" rows="4" class="form-control" placeholder="اكتب نتائج الفحص الشعاعي، الملاحظات العيانية، والتوصيات..." required></textarea>
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label small fw-bold">تأكيد السعر النهائي (د.ع):</label>
+                                                                                <input type="number" step="1000" name="price" class="form-control" value="{{ $ord->price }}">
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="modal-footer">
+                                                                            <button type="submit" class="btn btn-sm btn-success fw-bold">اعتماد التقرير وترحيله</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{{ $ord->status == 'completed' ? 'success' : 'secondary' }}">
+                                                        {{ $ord->status == 'completed' ? 'تم الإنجاز' : 'قيد الانتظار' }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-muted small">
+                                                    {{ $ord->ordered_at ? $ord->ordered_at->format('d/m H:i') : $ord->created_at->format('d/m H:i') }}
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="6" class="py-4 text-muted">
+                                                    <i class="fas fa-x-ray fa-2x mb-2 d-block opacity-25"></i>
+                                                    لا توجد طلبات أشعة أو سونار مسجلة بعد لهذا الطفل.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تبويب 6: الوصفة والعلاج الدوائي (E-Prescriptions & Clinical RX) -->
+                <div class="tab-pane fade" id="prescriptionsPane">
+                    <div class="row g-4">
+                        <!-- عمود إنشاء وصياغة الوصفة الطبية -->
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-success text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-prescription"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-success mb-0">الوصفة الطبية والعلاج</h6>
+                                            <small class="text-muted" style="font-size: 11px;">تحديد الجرعات، التكرار، والمسار للخديج</small>
+                                        </div>
+                                    </div>
+                                    <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-print me-1"></i> طباعة RX
+                                    </a>
+                                </div>
+
+                                <form action="{{ route('nicu.prescriptions.store', $reservation) }}" method="POST" id="nicuPrescriptionForm">
+                                    @csrf
+
+                                    <!-- أدوية الوصفة الحالية ديناميكية -->
+                                    <div id="prescriptionRowsContainer">
+                                        <div class="card border bg-white p-2 mb-2 rounded-3 prescription-row" data-row="0">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <strong class="text-success small"><i class="fas fa-pills me-1"></i> الدواء #<span class="row-number">1</span></strong>
+                                            </div>
+
+                                            <div class="mb-2 position-relative">
+                                                <label class="form-label small fw-bold text-dark mb-1">اسم الدواء:</label>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
+                                                    <input type="text" name="medications[0][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي..." autocomplete="off" required>
+                                                </div>
+                                                <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 180px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                                            </div>
+
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold mb-1">الجرعة (Dose):</label>
+                                                    <input type="text" name="medications[0][dose]" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 0.5 ml" required>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold mb-1">مسار الإعطاء:</label>
+                                                    <select name="medications[0][route]" class="form-select form-select-sm">
+                                                        <option value="وريدي IV">وريدي (IV)</option>
+                                                        <option value="تسريب وريدي مستمر Infusion">تسريب وريدي مستمر</option>
+                                                        <option value="فموي Oral">فموي (Oral)</option>
+                                                        <option value="عضلي IM">عضلي (IM)</option>
+                                                        <option value="استنشاق Nebulizer">استنشاق / رذاذ (Nebulizer)</option>
+                                                        <option value="قطرات Drops">قطرات (Drops)</option>
+                                                        <option value="موضعي Topical">موضعي (Topical)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold mb-1">التكرار (Frequency):</label>
+                                                    <select name="medications[0][frequency]" class="form-select form-select-sm">
+                                                        <option value="كل 8 ساعات (TID)">كل 8 ساعات (TID)</option>
+                                                        <option value="كل 12 ساعة (BID)">كل 12 ساعة (BID)</option>
+                                                        <option value="مرة يومياً (OD)">مرة يومياً (OD)</option>
+                                                        <option value="كل 6 ساعات (QID)">كل 6 ساعات (QID)</option>
+                                                        <option value="عند اللزوم (PRN)">عند اللزوم (PRN)</option>
+                                                        <option value="جرعة وحيدة Stat">جرعة وحيدة (Single Dose)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold mb-1">المدة (Duration):</label>
+                                                    <input type="text" name="medications[0][duration]" class="form-control form-control-sm" placeholder="مثال: 5 أيام أو أسبوع">
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-1">
+                                                <label class="form-label small mb-1">تعليمات وتوجيهات الطبيب:</label>
+                                                <input type="text" name="medications[0][instructions]" class="form-control form-control-sm" placeholder="مثال: يُعطى ببطء عبر مضخة المحاليل، يُحفظ بعيداً عن الضوء...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <button type="button" class="btn btn-outline-success btn-sm fw-bold" id="btnAddMedicationRow">
+                                            <i class="fas fa-plus me-1"></i> إضافة دواء آخر للوصفة
+                                        </button>
+                                        <span class="text-muted small" id="prescriptionRowsCount">دواء واحد مضاف</span>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm">
+                                        <i class="fas fa-save me-1"></i> اعتماد وحفظ الوصفة الطبية
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- جدول الأدوية الموصوفة للطفل -->
+                        <div class="col-lg-7">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-pills text-success me-1"></i>
+                                    سجل الأدوية الموصوفة للطفل (Active Prescriptions)
+                                </h6>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-light text-success border">
+                                        الموصوف: {{ $reservation->medicalOrders->where('order_type', 'medication')->count() }}
+                                    </span>
+                                    <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-print me-1"></i> طباعة الوصفة (RX)
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle border text-center small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start">اسم الدواء والعلاج</th>
+                                            <th class="text-start">تفاصيل الجرعة والمسار والتعليمات</th>
+                                            <th>الحالة</th>
+                                            <th>الطبيب الموصي</th>
+                                            <th>وقت الوصف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($reservation->medicalOrders->where('order_type', 'medication') as $ord)
+                                            <tr>
+                                                <td class="text-start fw-bold text-success">
+                                                    <i class="fas fa-capsules text-muted me-1"></i>
+                                                    {{ $ord->item_name }}
+                                                </td>
+                                                <td class="text-start small text-dark">
+                                                    {{ $ord->instructions ?? '—' }}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i> موصوف
+                                                    </span>
+                                                </td>
+                                                <td class="text-muted small">
+                                                    {{ optional($ord->orderedByUser)->name ?? 'طبيب الحاضنة' }}
+                                                </td>
+                                                <td class="text-muted small">
+                                                    {{ $ord->ordered_at ? $ord->ordered_at->format('d/m H:i') : $ord->created_at->format('d/m H:i') }}
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="py-4 text-muted">
+                                                    <i class="fas fa-pills fa-2x mb-2 d-block opacity-25"></i>
+                                                    لا توجد وصفات أو أدوية مسجلة بعد لهذا الطفل.
+                                                </td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -994,6 +1602,465 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // ==================== 1. مختبر الخدج (Lab Workstation) ====================
+    const nicuLabTests = [
+        @foreach($labTests as $t)
+        { id: {{ $t->id }}, name: @json($t->name), code: @json($t->code ?? ''), price: {{ (float)($t->price ?? 0) }} },
+        @endforeach
+    ];
+
+    const selectedLabTests = new Set();
+    const labInput = document.getElementById('nicuLabSearchInput');
+    const labMenu = document.getElementById('nicuLabAutocompleteMenu');
+    const labTray = document.getElementById('nicuLabSelectedTray');
+    const labChips = document.getElementById('nicuLabChipsContainer');
+    const labCountSpan = document.getElementById('nicuLabSelectedCount');
+    const labClearAllBtn = document.getElementById('nicuLabClearAllBtn');
+    const labClearInputBtn = document.getElementById('nicuLabClearInputBtn');
+
+    function updateLabChipsUI() {
+        if (!labTray || !labCountSpan) return;
+        labCountSpan.textContent = selectedLabTests.size;
+        if (selectedLabTests.size > 0) {
+            labTray.classList.remove('d-none');
+        } else {
+            labTray.classList.add('d-none');
+        }
+    }
+
+    function addLabTest(testName, price = 0) {
+        const cleanName = (testName || '').trim();
+        if (!cleanName || selectedLabTests.has(cleanName)) return;
+        selectedLabTests.add(cleanName);
+
+        const chip = document.createElement('span');
+        chip.className = 'badge bg-light text-primary border p-2 d-inline-flex align-items-center gap-1 rounded-pill shadow-xs';
+        chip.setAttribute('data-test-name', cleanName);
+        chip.innerHTML = `
+            <i class="fas fa-vial me-1"></i>
+            <span>${cleanName}</span>
+            <input type="hidden" name="tests[]" value="${cleanName}">
+            <button type="button" class="btn-close ms-1" style="font-size: 8px;" title="إزالة"></button>
+        `;
+        chip.querySelector('.btn-close').addEventListener('click', function() {
+            removeLabTest(cleanName);
+        });
+        if (labChips) labChips.appendChild(chip);
+        updateLabChipsUI();
+    }
+
+    function removeLabTest(testName) {
+        selectedLabTests.delete(testName);
+        if (labChips) {
+            const chip = labChips.querySelector(`[data-test-name="${CSS.escape(testName)}"]`);
+            if (chip) chip.remove();
+        }
+        updateLabChipsUI();
+    }
+
+    function clearAllLabTests() {
+        selectedLabTests.clear();
+        if (labChips) labChips.innerHTML = '';
+        updateLabChipsUI();
+    }
+
+    if (labClearAllBtn) {
+        labClearAllBtn.addEventListener('click', clearAllLabTests);
+    }
+
+    if (labClearInputBtn) {
+        labClearInputBtn.addEventListener('click', function() {
+            if (labInput) {
+                labInput.value = '';
+                labInput.focus();
+            }
+            if (labMenu) labMenu.style.display = 'none';
+        });
+    }
+
+    // أزرار باقات الخدج السريعة
+    document.querySelectorAll('.nicu-quick-lab-pkg').forEach(btn => {
+        btn.addEventListener('click', function() {
+            try {
+                const tests = JSON.parse(this.getAttribute('data-tests') || '[]');
+                tests.forEach(t => addLabTest(t));
+            } catch(e) {
+                console.error('Error parsing tests:', e);
+            }
+        });
+    });
+
+    if (labInput) {
+        labInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            if (!query) {
+                if (labMenu) labMenu.style.display = 'none';
+                return;
+            }
+            const matches = nicuLabTests.filter(t => 
+                (t.name && t.name.toLowerCase().includes(query)) || 
+                (t.code && t.code.toLowerCase().includes(query))
+            ).slice(0, 15);
+
+            if (!labMenu) return;
+            labMenu.innerHTML = '';
+            if (matches.length === 0) {
+                labMenu.innerHTML = `<div class="list-group-item text-muted text-center py-2 small">
+                    <i class="fas fa-info-circle me-1"></i> لا يوجد تحليل مطابق، اضغط Enter لإضافة "${query}" كفحص مخصص
+                </div>`;
+            } else {
+                matches.forEach(m => {
+                    const item = document.createElement('a');
+                    item.href = 'javascript:void(0);';
+                    item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
+                    item.innerHTML = `
+                        <div>
+                            <strong class="text-dark small d-block">${m.name}</strong>
+                            ${m.code ? `<span class="badge bg-secondary-subtle text-secondary me-1" style="font-size: 10px;">${m.code}</span>` : ''}
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary" style="font-size: 10px;">${Number(m.price).toLocaleString()} د.ع</span>
+                    `;
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        addLabTest(m.name, m.price);
+                        labInput.value = '';
+                        labMenu.style.display = 'none';
+                        labInput.focus();
+                    });
+                    labMenu.appendChild(item);
+                });
+            }
+            labMenu.style.display = 'block';
+        });
+
+        labInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = this.value.trim();
+                if (val) {
+                    const firstMatch = nicuLabTests.find(t => 
+                        (t.name && t.name.toLowerCase().includes(val.toLowerCase())) || 
+                        (t.code && t.code.toLowerCase() === val.toLowerCase())
+                    );
+                    if (firstMatch) {
+                        addLabTest(firstMatch.name, firstMatch.price);
+                    } else {
+                        addLabTest(val);
+                    }
+                    this.value = '';
+                    if (labMenu) labMenu.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // ==================== 2. أشعة وسونار الخدج (Radiology Workstation) ====================
+    const nicuRadiologyTypes = [
+        @foreach($radiologyTypes as $r)
+        { id: {{ $r->id }}, name: @json($r->name), price: {{ (float)($r->price ?? 0) }} },
+        @endforeach
+    ];
+
+    const selectedRadExams = new Set();
+    const radInput = document.getElementById('nicuRadSearchInput');
+    const radMenu = document.getElementById('nicuRadAutocompleteMenu');
+    const radTray = document.getElementById('nicuRadSelectedTray');
+    const radChips = document.getElementById('nicuRadChipsContainer');
+    const radCountSpan = document.getElementById('nicuRadSelectedCount');
+    const radClearAllBtn = document.getElementById('nicuRadClearAllBtn');
+    const radClearInputBtn = document.getElementById('nicuRadClearInputBtn');
+
+    function updateRadChipsUI() {
+        if (!radTray || !radCountSpan) return;
+        radCountSpan.textContent = selectedRadExams.size;
+        if (selectedRadExams.size > 0) {
+            radTray.classList.remove('d-none');
+        } else {
+            radTray.classList.add('d-none');
+        }
+    }
+
+    function addRadExam(examName, price = 0) {
+        const cleanName = (examName || '').trim();
+        if (!cleanName || selectedRadExams.has(cleanName)) return;
+        selectedRadExams.add(cleanName);
+
+        const chip = document.createElement('span');
+        chip.className = 'badge bg-light text-info border p-2 d-inline-flex align-items-center gap-1 rounded-pill shadow-xs';
+        chip.setAttribute('data-exam-name', cleanName);
+        chip.innerHTML = `
+            <i class="fas fa-x-ray me-1"></i>
+            <span>${cleanName}</span>
+            <input type="hidden" name="radiology_types[]" value="${cleanName}">
+            <button type="button" class="btn-close ms-1" style="font-size: 8px;" title="إزالة"></button>
+        `;
+        chip.querySelector('.btn-close').addEventListener('click', function() {
+            removeRadExam(cleanName);
+        });
+        if (radChips) radChips.appendChild(chip);
+        updateRadChipsUI();
+    }
+
+    function removeRadExam(examName) {
+        selectedRadExams.delete(examName);
+        if (radChips) {
+            const chip = radChips.querySelector(`[data-exam-name="${CSS.escape(examName)}"]`);
+            if (chip) chip.remove();
+        }
+        updateRadChipsUI();
+    }
+
+    function clearAllRadExams() {
+        selectedRadExams.clear();
+        if (radChips) radChips.innerHTML = '';
+        updateRadChipsUI();
+    }
+
+    if (radClearAllBtn) {
+        radClearAllBtn.addEventListener('click', clearAllRadExams);
+    }
+
+    if (radClearInputBtn) {
+        radClearInputBtn.addEventListener('click', function() {
+            if (radInput) {
+                radInput.value = '';
+                radInput.focus();
+            }
+            if (radMenu) radMenu.style.display = 'none';
+        });
+    }
+
+    // أزرار تصوير الخدج الشائعة
+    document.querySelectorAll('.nicu-quick-rad-pkg').forEach(btn => {
+        btn.addEventListener('click', function() {
+            try {
+                const types = JSON.parse(this.getAttribute('data-types') || '[]');
+                types.forEach(t => addRadExam(t));
+            } catch(e) {
+                console.error('Error parsing rad types:', e);
+            }
+        });
+    });
+
+    if (radInput) {
+        radInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            if (!query) {
+                if (radMenu) radMenu.style.display = 'none';
+                return;
+            }
+            const matches = nicuRadiologyTypes.filter(r => 
+                r.name && r.name.toLowerCase().includes(query)
+            ).slice(0, 15);
+
+            if (!radMenu) return;
+            radMenu.innerHTML = '';
+            if (matches.length === 0) {
+                radMenu.innerHTML = `<div class="list-group-item text-muted text-center py-2 small">
+                    <i class="fas fa-info-circle me-1"></i> اضغط Enter لإضافة "${query}" كفحص شعاعي مخصص
+                </div>`;
+            } else {
+                matches.forEach(m => {
+                    const item = document.createElement('a');
+                    item.href = 'javascript:void(0);';
+                    item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
+                    item.innerHTML = `
+                        <strong class="text-dark small">${m.name}</strong>
+                        <span class="badge bg-info-subtle text-info" style="font-size: 10px;">${Number(m.price).toLocaleString()} د.ع</span>
+                    `;
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        addRadExam(m.name, m.price);
+                        radInput.value = '';
+                        radMenu.style.display = 'none';
+                        radInput.focus();
+                    });
+                    radMenu.appendChild(item);
+                });
+            }
+            radMenu.style.display = 'block';
+        });
+
+        radInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = this.value.trim();
+                if (val) {
+                    const firstMatch = nicuRadiologyTypes.find(r => 
+                        r.name && r.name.toLowerCase().includes(val.toLowerCase())
+                    );
+                    if (firstMatch) {
+                        addRadExam(firstMatch.name, firstMatch.price);
+                    } else {
+                        addRadExam(val);
+                    }
+                    this.value = '';
+                    if (radMenu) radMenu.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // ==================== 3. وصفة أدوية الخدج (Prescription Workstation) ====================
+    const nicuMedicines = [
+        @foreach($medicines as $m)
+        { id: {{ $m->id }}, name: @json($m->name), form: @json($m->dosage_form ?? ''), strength: @json($m->strength ?? '') },
+        @endforeach
+    ];
+
+    let prescriptionRowIndex = 1;
+    const btnAddMedRow = document.getElementById('btnAddMedicationRow');
+    const prescriptionContainer = document.getElementById('prescriptionRowsContainer');
+    const prescriptionCountSpan = document.getElementById('prescriptionRowsCount');
+
+    function updatePrescriptionCount() {
+        if (!prescriptionContainer || !prescriptionCountSpan) return;
+        const rows = prescriptionContainer.querySelectorAll('.prescription-row');
+        rows.forEach((row, idx) => {
+            const numSpan = row.querySelector('.row-number');
+            if (numSpan) numSpan.textContent = idx + 1;
+        });
+        prescriptionCountSpan.textContent = `${rows.length} أدوية مضافة`;
+    }
+
+    function attachMedAutocomplete(row) {
+        const input = row.querySelector('.med-name-input');
+        const menu = row.querySelector('.med-autocomplete-menu');
+        if (!input || !menu) return;
+
+        input.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            if (!query) {
+                menu.style.display = 'none';
+                return;
+            }
+            const matches = nicuMedicines.filter(m => 
+                m.name && m.name.toLowerCase().includes(query)
+            ).slice(0, 15);
+
+            menu.innerHTML = '';
+            if (matches.length === 0) {
+                menu.style.display = 'none';
+                return;
+            }
+            matches.forEach(m => {
+                const item = document.createElement('a');
+                item.href = 'javascript:void(0);';
+                item.className = 'list-group-item list-group-item-action py-2';
+                item.innerHTML = `
+                    <strong class="text-dark small d-block">${m.name}</strong>
+                    <small class="text-muted" style="font-size: 10px;">${m.form} ${m.strength ? '• ' + m.strength : ''}</small>
+                `;
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    input.value = m.name;
+                    menu.style.display = 'none';
+                });
+                menu.appendChild(item);
+            });
+            menu.style.display = 'block';
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                menu.style.display = 'none';
+            }
+        });
+    }
+
+    if (prescriptionContainer) {
+        prescriptionContainer.querySelectorAll('.prescription-row').forEach(row => {
+            attachMedAutocomplete(row);
+        });
+    }
+
+    if (btnAddMedRow && prescriptionContainer) {
+        btnAddMedRow.addEventListener('click', function() {
+            const newRow = document.createElement('div');
+            newRow.className = 'card border bg-white p-2 mb-2 rounded-3 prescription-row';
+            newRow.setAttribute('data-row', prescriptionRowIndex);
+            newRow.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-success small"><i class="fas fa-pills me-1"></i> الدواء #<span class="row-number">${prescriptionRowIndex + 1}</span></strong>
+                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 border-0 btn-remove-med-row" title="حذف الدواء"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div class="mb-2 position-relative">
+                    <label class="form-label small fw-bold text-dark mb-1">اسم الدواء:</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
+                        <input type="text" name="medications[${prescriptionRowIndex}][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي..." autocomplete="off" required>
+                    </div>
+                    <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 180px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">الجرعة (Dose):</label>
+                        <input type="text" name="medications[${prescriptionRowIndex}][dose]" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 0.5 ml" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">مسار الإعطاء:</label>
+                        <select name="medications[${prescriptionRowIndex}][route]" class="form-select form-select-sm">
+                            <option value="وريدي IV">وريدي (IV)</option>
+                            <option value="تسريب وريدي مستمر Infusion">تسريب وريدي مستمر</option>
+                            <option value="فموي Oral">فموي (Oral)</option>
+                            <option value="عضلي IM">عضلي (IM)</option>
+                            <option value="استنشاق Nebulizer">استنشاق / رذاذ (Nebulizer)</option>
+                            <option value="قطرات Drops">قطرات (Drops)</option>
+                            <option value="موضعي Topical">موضعي (Topical)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">التكرار (Frequency):</label>
+                        <select name="medications[${prescriptionRowIndex}][frequency]" class="form-select form-select-sm">
+                            <option value="كل 8 ساعات (TID)">كل 8 ساعات (TID)</option>
+                            <option value="كل 12 ساعة (BID)">كل 12 ساعة (BID)</option>
+                            <option value="مرة يومياً (OD)">مرة يومياً (OD)</option>
+                            <option value="كل 6 ساعات (QID)">كل 6 ساعات (QID)</option>
+                            <option value="عند اللزوم (PRN)">عند اللزوم (PRN)</option>
+                            <option value="جرعة وحيدة Stat">جرعة وحيدة (Single Dose)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">المدة (Duration):</label>
+                        <input type="text" name="medications[${prescriptionRowIndex}][duration]" class="form-control form-control-sm" placeholder="مثال: 5 أيام أو أسبوع">
+                    </div>
+                </div>
+
+                <div class="mb-1">
+                    <label class="form-label small mb-1">تعليمات وتوجيهات الطبيب:</label>
+                    <input type="text" name="medications[${prescriptionRowIndex}][instructions]" class="form-control form-control-sm" placeholder="مثال: يُعطى ببطء عبر مضخة المحاليل، يُحفظ بعيداً عن الضوء...">
+                </div>
+            `;
+
+            newRow.querySelector('.btn-remove-med-row').addEventListener('click', function() {
+                newRow.remove();
+                updatePrescriptionCount();
+            });
+
+            prescriptionContainer.appendChild(newRow);
+            attachMedAutocomplete(newRow);
+            prescriptionRowIndex++;
+            updatePrescriptionCount();
+            newRow.querySelector('.med-name-input').focus();
+        });
+    }
+
+    // إغلاق أي قائمة منسدلة عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#nicuLabSearchInput') && !e.target.closest('#nicuLabAutocompleteMenu')) {
+            if (labMenu) labMenu.style.display = 'none';
+        }
+        if (!e.target.closest('#nicuRadSearchInput') && !e.target.closest('#nicuRadAutocompleteMenu')) {
+            if (radMenu) radMenu.style.display = 'none';
+        }
+        if (!e.target.closest('.med-name-input') && !e.target.closest('.med-autocomplete-menu')) {
+            document.querySelectorAll('.med-autocomplete-menu').forEach(m => m.style.display = 'none');
+        }
+    });
 });
 </script>
 @endpush

@@ -15,6 +15,10 @@ use App\Models\NicuServiceLog;
 use App\Models\NicuVital;
 use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
+use App\Models\LabTest;
+use App\Models\RadiologyType;
+use App\Models\Medicine;
+use App\Models\NicuMedicationAdministration;
 use App\Services\NicuBillingService;
 use Database\Seeders\NicuServicesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -858,6 +862,203 @@ class NicuWorkflowTest extends TestCase
             'reason' => 'استشارة جراحية خارجية',
         ]);
         $postExternal->assertSessionHasErrors(['specialty']);
+    }
+
+    public function test_doctor_can_order_lab_tests_with_auto_pricing(): void
+    {
+        $labTest = LabTest::create([
+            'name' => 'Complete Blood Count (CBC)',
+            'code' => 'CBC-01',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل فحص المختبر',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('nicu.lab-orders.store', $reservation), [
+            'tests' => ['Complete Blood Count (CBC)', 'Arterial Blood Gases (ABG)'],
+            'priority' => 'stat',
+            'instructions' => 'سحب كعب قدم عاجل',
+        ]);
+
+        $response->assertRedirect();
+        $orders = NicuMedicalOrder::where('reservation_id', $reservation->id)
+            ->where('order_type', 'lab')
+            ->get();
+
+        $this->assertCount(2, $orders);
+        $cbcOrder = $orders->firstWhere('item_name', 'Complete Blood Count (CBC)');
+        $this->assertNotNull($cbcOrder);
+        $this->assertEquals(15000, $cbcOrder->price);
+        $this->assertEquals('stat', $cbcOrder->priority);
+        $this->assertEquals('سحب كعب قدم عاجل', $cbcOrder->instructions);
+    }
+
+    public function test_doctor_can_order_radiology_with_auto_pricing(): void
+    {
+        $radType = RadiologyType::create([
+            'name' => 'Portable Chest X-Ray (Incubator)',
+            'code' => 'RAD-CHEST-01',
+            'base_price' => 30000,
+            'is_active' => true,
+        ]);
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل فحص الأشعة',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('nicu.radiology-orders.store', $reservation), [
+            'radiology_types' => ['Portable Chest X-Ray (Incubator)'],
+            'priority' => 'urgent',
+            'instructions' => 'تصوير داخل الحاضنة بدون تحريك',
+        ]);
+
+        $response->assertRedirect();
+        $order = NicuMedicalOrder::where('reservation_id', $reservation->id)
+            ->where('order_type', 'radiology')
+            ->first();
+
+        $this->assertNotNull($order);
+        $this->assertEquals('Portable Chest X-Ray (Incubator)', $order->item_name);
+        $this->assertEquals(30000, $order->price);
+        $this->assertEquals('urgent', $order->priority);
+    }
+
+    public function test_doctor_can_issue_e_prescription_and_print_rx(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل الوصفة الطبية',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('nicu.prescriptions.store', $reservation), [
+            'medications' => [
+                [
+                    'name' => 'Ampicillin 250mg',
+                    'dose' => '50 mg/kg',
+                    'route' => 'وريدي IV',
+                    'frequency' => 'كل 12 ساعة (BID)',
+                    'duration' => '5 أيام',
+                    'instructions' => 'يُعطى ببطء عبر المضخة',
+                ],
+                [
+                    'name' => 'Gentamicin 20mg',
+                    'dose' => '4 mg/kg',
+                    'route' => 'وريدي IV',
+                    'frequency' => 'مرة يومياً (OD)',
+                    'duration' => '3 أيام',
+                    'instructions' => 'مراقبة وظائف الكلى',
+                ]
+            ]
+        ]);
+
+        $response->assertRedirect();
+        $prescriptions = NicuMedicalOrder::where('reservation_id', $reservation->id)
+            ->where('order_type', 'medication')
+            ->get();
+
+        $this->assertCount(2, $prescriptions);
+        $ampicillin = $prescriptions->firstWhere('item_name', 'Ampicillin 250mg');
+        $this->assertNotNull($ampicillin);
+        $this->assertStringContainsString('50 mg/kg', $ampicillin->instructions);
+        $this->assertStringContainsString('وريدي IV', $ampicillin->instructions);
+
+        // Print RX test
+        $printResponse = $this->actingAs($this->admin)->get(route('nicu.print.prescription', $reservation));
+        $printResponse->assertStatus(200);
+        $printResponse->assertSee('Ampicillin 250mg');
+        $printResponse->assertSee('Gentamicin 20mg');
+        $printResponse->assertSee('وصفة طبية إلكترونية');
+    }
+
+    public function test_nurse_can_record_medication_administration_mar_without_affecting_pharmacy(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل توثيق الجرعة MAR',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('nicu.medications-admin.store', $reservation), [
+            'medication_name' => 'Ampicillin 250mg',
+            'route' => 'iv',
+            'dose' => '60 mg',
+            'given_at' => now()->format('Y-m-d H:i:s'),
+            'notes' => 'تم الإعطاء في كانيولا اليد اليسرى ببطء، استجابة طبيعية',
+        ]);
+
+        $response->assertRedirect();
+        $mar = NicuMedicationAdministration::where('reservation_id', $reservation->id)->first();
+        $this->assertNotNull($mar);
+        $this->assertEquals('Ampicillin 250mg', $mar->medication_name);
+        $this->assertEquals('iv', $mar->route);
+        $this->assertEquals('حقن وريدي (IV)', $mar->route_name);
+        $this->assertEquals('danger', $mar->route_badge_color);
+        $this->assertEquals($this->admin->id, $mar->nurse_id);
+
+        // التأكد من عدم إنشاء أي طلب فندقي أو صيدلاني مالي في nicu_medical_orders
+        $medOrder = NicuMedicalOrder::where('reservation_id', $reservation->id)
+            ->where('item_name', 'Ampicillin 250mg')
+            ->first();
+        $this->assertNull($medOrder, 'Nursing MAR must NEVER generate a medical billing order or inventory request!');
+    }
+
+    public function test_nicu_show_renders_all_workstation_tabs_and_mar_table(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل الواجهة السريرية الشاملة',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $response->assertStatus(200);
+
+        // فحص وجود التبويبات الستة
+        $response->assertSee('id="service-tab"', false);
+        $response->assertSee('id="vitals-tab"', false);
+        $response->assertSee('id="consultations-tab"', false);
+        $response->assertSee('id="lab-tab"', false);
+        $response->assertSee('id="radiology-tab"', false);
+        $response->assertSee('id="prescriptions-tab"', false);
+
+        // فحص وجود عناصر محطة المختبر
+        $response->assertSee('id="nicuLabSearchInput"', false);
+        $response->assertSee('id="nicuLabSelectedTray"', false);
+
+        // فحص وجود عناصر محطة الأشعة
+        $response->assertSee('id="nicuRadSearchInput"', false);
+        $response->assertSee('id="nicuRadSelectedTray"', false);
+
+        // فحص وجود عناصر محطة الوصفة والطباعة
+        $response->assertSee('id="prescriptionRowsContainer"', false);
+        $response->assertSee('طباعة الوصفة (RX)');
+
+        // فحص وجود نموذج وجدول إعطاء العلاج MAR التمريضي المستقل
+        $response->assertSee('توثيق إعطاء جرعة علاجية (MAR)');
+        $response->assertSee('سجل إعطاء وتطبيق الأدوية التمريضي (MAR Timeline)');
     }
 }
 

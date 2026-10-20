@@ -9,9 +9,14 @@ use App\Models\NicuServiceLog;
 use App\Models\NicuVital;
 use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
+use App\Models\NicuMedicationAdministration;
+use App\Models\LabTest;
+use App\Models\RadiologyType;
+use App\Models\Medicine;
 use App\Models\Doctor;
 use App\Models\Room;
 use App\Services\NicuBillingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -188,13 +193,39 @@ class NicuController extends Controller
             'consultations.internalDoctor.user',
             'consultations.requestedByUser',
             'medicalOrders.orderedByUser',
+            'medicalOrders.processedByUser',
+            'medicationAdministrations.nurse',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
         $nicuServices = NicuService::active()->get();
         $doctors = Doctor::with('user')->get();
 
-        return view('nicu.show', compact('reservation', 'stayDetails', 'nicuServices', 'doctors'));
+        // جلب قائمة التحاليل والأشعة والأدوية لمحاكاة محطة عمل الطبيب
+        $labTests = LabTest::where('is_active', true)
+            ->select('id', 'name', 'code', 'price', 'category', 'is_hi_active', 'hi_price')
+            ->orderBy('name')
+            ->get();
+
+        $radiologyTypes = RadiologyType::where('is_active', true)
+            ->select('id', 'name', 'code', 'price', 'type', 'is_hi_active', 'hi_price')
+            ->orderBy('name')
+            ->get();
+
+        $medicines = Medicine::select('id', 'name', 'dosage_form', 'strength')
+            ->orderBy('name')
+            ->limit(400)
+            ->get();
+
+        return view('nicu.show', compact(
+            'reservation', 
+            'stayDetails', 
+            'nicuServices', 
+            'doctors',
+            'labTests',
+            'radiologyTypes',
+            'medicines'
+        ));
     }
 
     /**
@@ -399,6 +430,250 @@ class NicuController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'تم توثيق نتيجة الطلب الطبي بنجاح.');
+    }
+
+    /**
+     * طلب فحوصات مخبرية للطفل بنمط محطة الطبيب
+     */
+    public function storeLabOrder(Request $request, IncubatorReservation $reservation)
+    {
+        $request->validate([
+            'tests' => 'nullable|array',
+            'tests.*' => 'string',
+            'item_name' => 'nullable|string|max:255',
+            'priority' => 'required|in:normal,urgent,stat',
+            'instructions' => 'nullable|string|max:1000',
+        ]);
+
+        $testsToCreate = collect();
+        if ($request->filled('tests') && is_array($request->tests)) {
+            foreach ($request->tests as $t) {
+                if (trim($t) !== '') {
+                    $testsToCreate->push(trim($t));
+                }
+            }
+        } elseif ($request->filled('item_name')) {
+            $testsToCreate->push(trim($request->item_name));
+        }
+
+        if ($testsToCreate->isEmpty()) {
+            return redirect()->back()->with('error', 'يرجى اختيار أو كتابة فحص مخبري واحد على الأقل.');
+        }
+
+        // جلب أسعار التحاليل تلقائياً إن وجدت
+        $existingTests = LabTest::whereIn('name', $testsToCreate->all())
+            ->orWhereIn('code', $testsToCreate->all())
+            ->get()
+            ->keyBy(fn($item) => strtolower($item->name));
+
+        $count = 0;
+        foreach ($testsToCreate as $testName) {
+            $matchedTest = $existingTests->get(strtolower($testName));
+            $price = 0;
+            if ($matchedTest) {
+                // إذا كان المريض ضمان، نعتمد تسعيرة الضمان إن كانت فعالة
+                if ($reservation->is_insured && $matchedTest->is_hi_active && $matchedTest->hi_price > 0) {
+                    $price = (float)$matchedTest->hi_price;
+                } else {
+                    $price = (float)$matchedTest->price;
+                }
+            }
+
+            NicuMedicalOrder::create([
+                'reservation_id' => $reservation->id,
+                'order_type' => NicuMedicalOrder::TYPE_LAB,
+                'item_name' => $testName,
+                'price' => $price,
+                'priority' => $request->priority,
+                'instructions' => $request->instructions,
+                'status' => NicuMedicalOrder::STATUS_PENDING,
+                'ordered_by' => Auth::id(),
+                'ordered_at' => now(),
+            ]);
+            $count++;
+        }
+
+        return redirect()->back()->with('success', "تم إرسال {$count} طلب فحص مخبري لقسم التحاليل بنجاح.");
+    }
+
+    /**
+     * طلب فحوصات شعاعية وسونار للطفل بنمط محطة الطبيب
+     */
+    public function storeRadiologyOrder(Request $request, IncubatorReservation $reservation)
+    {
+        $request->validate([
+            'radiology_types' => 'nullable|array',
+            'radiology_types.*' => 'string',
+            'item_name' => 'nullable|string|max:255',
+            'priority' => 'required|in:normal,urgent,stat',
+            'instructions' => 'nullable|string|max:1000',
+        ]);
+
+        $examsToCreate = collect();
+        if ($request->filled('radiology_types') && is_array($request->radiology_types)) {
+            foreach ($request->radiology_types as $r) {
+                if (trim($r) !== '') {
+                    $examsToCreate->push(trim($r));
+                }
+            }
+        } elseif ($request->filled('item_name')) {
+            $examsToCreate->push(trim($request->item_name));
+        }
+
+        if ($examsToCreate->isEmpty()) {
+            return redirect()->back()->with('error', 'يرجى اختيار أو كتابة فحص شعاعي واحد على الأقل.');
+        }
+
+        $existingRad = RadiologyType::whereIn('name', $examsToCreate->all())
+            ->orWhereIn('id', $examsToCreate->all())
+            ->get()
+            ->keyBy(fn($item) => strtolower($item->name));
+
+        $count = 0;
+        foreach ($examsToCreate as $examIdentifier) {
+            $matchedRad = is_numeric($examIdentifier) 
+                ? RadiologyType::find($examIdentifier) 
+                : $existingRad->get(strtolower($examIdentifier));
+
+            $examName = $matchedRad ? $matchedRad->name : $examIdentifier;
+            $price = 0;
+            if ($matchedRad) {
+                if ($reservation->is_insured && $matchedRad->is_hi_active && $matchedRad->hi_price > 0) {
+                    $price = (float)$matchedRad->hi_price;
+                } else {
+                    $price = (float)$matchedRad->price;
+                }
+            }
+
+            NicuMedicalOrder::create([
+                'reservation_id' => $reservation->id,
+                'order_type' => NicuMedicalOrder::TYPE_RADIOLOGY,
+                'item_name' => $examName,
+                'price' => $price,
+                'priority' => $request->priority,
+                'instructions' => $request->instructions,
+                'status' => NicuMedicalOrder::STATUS_PENDING,
+                'ordered_by' => Auth::id(),
+                'ordered_at' => now(),
+            ]);
+            $count++;
+        }
+
+        return redirect()->back()->with('success', "تم إرسال {$count} طلب فحص شعاعي لقسم الأشعة بنجاح.");
+    }
+
+    /**
+     * كتابة واعتماد الوصفة والعلاجات الدوائية للطفل
+     */
+    public function storePrescription(Request $request, IncubatorReservation $reservation)
+    {
+        $request->validate([
+            'medications' => 'nullable|array',
+            'medications.*.name' => 'required_with:medications|string|max:255',
+            'medications.*.dose' => 'nullable|string|max:100',
+            'medications.*.route' => 'nullable|string|max:50',
+            'medications.*.frequency' => 'nullable|string|max:100',
+            'medications.*.duration' => 'nullable|string|max:100',
+            'medications.*.instructions' => 'nullable|string|max:500',
+            // Or single direct item
+            'item_name' => 'nullable|string|max:255',
+            'dose' => 'nullable|string|max:100',
+            'route' => 'nullable|string|max:50',
+            'frequency' => 'nullable|string|max:100',
+            'duration' => 'nullable|string|max:100',
+            'instructions' => 'nullable|string|max:500',
+            'price' => 'nullable|numeric|min:0',
+        ]);
+
+        $medsList = collect();
+        if ($request->filled('medications') && is_array($request->medications)) {
+            foreach ($request->medications as $m) {
+                if (!empty($m['name'])) {
+                    $medsList->push($m);
+                }
+            }
+        } elseif ($request->filled('item_name')) {
+            $medsList->push([
+                'name' => $request->item_name,
+                'dose' => $request->dose,
+                'route' => $request->route,
+                'frequency' => $request->frequency,
+                'duration' => $request->duration,
+                'instructions' => $request->instructions,
+                'price' => $request->price ?? 0,
+            ]);
+        }
+
+        if ($medsList->isEmpty()) {
+            return redirect()->back()->with('error', 'يرجى إدخال اسم الدواء أو العلاج المطلوب.');
+        }
+
+        $count = 0;
+        foreach ($medsList as $med) {
+            $instructionsFormatted = [];
+            if (!empty($med['dose'])) $instructionsFormatted[] = "الجرعة: " . $med['dose'];
+            if (!empty($med['route'])) $instructionsFormatted[] = "طريقة الإعطاء: " . $med['route'];
+            if (!empty($med['frequency'])) $instructionsFormatted[] = "التكرار: " . $med['frequency'];
+            if (!empty($med['duration'])) $instructionsFormatted[] = "المدة: " . $med['duration'];
+            if (!empty($med['instructions'])) $instructionsFormatted[] = "ملاحظات: " . $med['instructions'];
+
+            NicuMedicalOrder::create([
+                'reservation_id' => $reservation->id,
+                'order_type' => NicuMedicalOrder::TYPE_MEDICATION,
+                'item_name' => $med['name'],
+                'price' => isset($med['price']) ? (float)$med['price'] : 0,
+                'priority' => 'urgent',
+                'instructions' => implode(' | ', $instructionsFormatted),
+                'status' => NicuMedicalOrder::STATUS_PENDING,
+                'ordered_by' => Auth::id(),
+                'ordered_at' => now(),
+            ]);
+            $count++;
+        }
+
+        return redirect()->back()->with('success', "تم اعتماد {$count} علاج دوائي في الوصفة الطبية للطفل بنجاح.");
+    }
+
+    /**
+     * تسجيل وتوثيق إعطاء وتطبيق العلاج للطفل في محطة التمريض (MAR)
+     */
+    public function storeMedicationAdministration(Request $request, IncubatorReservation $reservation)
+    {
+        $validated = $request->validate([
+            'medication_name' => 'required|string|max:255',
+            'route' => 'required|string|max:50',
+            'dose' => 'required|string|max:100',
+            'given_at' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $validated['reservation_id'] = $reservation->id;
+        $validated['nurse_id'] = Auth::id();
+        $validated['given_at'] = $request->filled('given_at') 
+            ? Carbon::parse($request->given_at) 
+            : now();
+
+        NicuMedicationAdministration::create($validated);
+
+        return redirect()->back()->with('success', 'تم توثيق إعطاء وتطبيق الجرعة العلاجية في سجل التمريض بنجاح.');
+    }
+
+    /**
+     * طباعة الوصفة الطبية الرسمية للخديج (RX Print)
+     */
+    public function printPrescription(IncubatorReservation $reservation)
+    {
+        $reservation->load([
+            'patient.user',
+            'doctor.user',
+            'incubator.room',
+            'medicalOrders' => function ($q) {
+                $q->where('order_type', NicuMedicalOrder::TYPE_MEDICATION)
+                  ->where('status', '!=', NicuMedicalOrder::STATUS_CANCELLED);
+            }
+        ]);
+
+        return view('nicu.print.prescription', compact('reservation'));
     }
 
     /**

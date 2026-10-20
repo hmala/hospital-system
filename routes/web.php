@@ -708,6 +708,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reservations/{reservation}/consultations', [\App\Http\Controllers\NicuController::class, 'storeConsultation'])->name('consultations.store');
         Route::patch('/consultations/{consultation}/complete', [\App\Http\Controllers\NicuController::class, 'completeConsultation'])->name('consultations.complete');
         Route::post('/reservations/{reservation}/orders', [\App\Http\Controllers\NicuController::class, 'storeMedicalOrder'])->name('orders.store');
+        Route::post('/reservations/{reservation}/lab-orders', [\App\Http\Controllers\NicuController::class, 'storeLabOrder'])->name('lab-orders.store');
+        Route::post('/reservations/{reservation}/radiology-orders', [\App\Http\Controllers\NicuController::class, 'storeRadiologyOrder'])->name('radiology-orders.store');
+        Route::post('/reservations/{reservation}/prescriptions', [\App\Http\Controllers\NicuController::class, 'storePrescription'])->name('prescriptions.store');
+        Route::post('/reservations/{reservation}/medications-admin', [\App\Http\Controllers\NicuController::class, 'storeMedicationAdministration'])->name('medications-admin.store');
+        Route::get('/reservations/{reservation}/print-prescription', [\App\Http\Controllers\NicuController::class, 'printPrescription'])->name('print.prescription');
         Route::patch('/orders/{order}/complete', [\App\Http\Controllers\NicuController::class, 'completeMedicalOrder'])->name('orders.complete');
         Route::post('/reservations/{reservation}/discharge', [\App\Http\Controllers\NicuController::class, 'discharge'])->name('discharge');
         Route::post('/incubators/{incubator}/sterilized', [\App\Http\Controllers\NicuController::class, 'markSterilized'])->name('incubators.sterilized');

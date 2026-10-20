@@ -147,6 +147,14 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * سجل إعطاء وتطبيق العلاجات التمريضية (MAR)
+     */
+    public function medicationAdministrations()
+    {
+        return $this->hasMany(NicuMedicationAdministration::class, 'reservation_id')->orderBy('given_at', 'desc');
+    }
+
+    /**
      * العلاقة مع الطبيب
      */
     public function doctor(): BelongsTo
