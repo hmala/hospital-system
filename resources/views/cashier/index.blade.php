@@ -13,10 +13,28 @@
                             <i class="fas fa-circle fa-xs"></i> مباشر
                         </span>
                     </h2>
-                    <p class="text-muted mb-0">
-                        إدارة المدفوعات والإيصالات - 
-                        <small id="last-update">آخر تحديث: الآن</small>
-                    </p>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                        <p class="text-muted mb-0 small">
+                            إدارة المدفوعات والإيصالات - 
+                            <span id="last-update">آخر تحديث: الآن</span>
+                        </p>
+                        <span class="text-muted d-none d-sm-inline">|</span>
+                        <!-- أداة التحكم بوقت التحديث التلقائي والتحديث الفوري -->
+                        <div class="d-inline-flex align-items-center gap-1 bg-white px-2 py-1 rounded-pill border shadow-sm small">
+                            <i class="fas fa-stopwatch text-primary"></i>
+                            <span class="text-secondary small fw-bold">التحديث:</span>
+                            <select id="refreshIntervalSelect" class="form-select form-select-sm border-0 bg-transparent py-0 ps-1 pe-4 fw-bold text-dark" style="font-size: 0.8rem; width: auto; cursor: pointer;">
+                                <option value="15000">15 ثانية</option>
+                                <option value="30000" selected>30 ثانية</option>
+                                <option value="60000">دقيقة واحدة</option>
+                                <option value="120000">دقيقتين</option>
+                                <option value="0">إيقاف التلقائي</option>
+                            </select>
+                            <button type="button" id="manualRefreshBtn" class="btn btn-sm btn-outline-primary rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px;" title="تحديث فوري الآن">
+                                <i class="fas fa-sync-alt fa-xs" id="refreshIcon"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- فلتر نطاق التاريخ للمقبوضات المعلقة والبحث المباشر -->
@@ -1126,16 +1144,70 @@
 
 @section('scripts')
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني مع الحفاظ على التبويب النشط
-setInterval(function() {
-    // إيقاف التحديث اللحظي إذا كان هناك أي مودال مفتوح لمنع مقاطعة إدخال الكاشير
-    if ($('.modal.show').length > 0 || $('body').hasClass('modal-open') || document.querySelector('.modal.show')) {
-        return;
+// إدارة التحديث التلقائي لمحطة الكاشير (الافتراضي 30 ثانية مع تحكم مرن)
+const defaultRefreshInterval = 30000;
+let savedRefreshInterval = localStorage.getItem('cashier_refresh_interval');
+let refreshInterval = (savedRefreshInterval !== null) ? parseInt(savedRefreshInterval, 10) : defaultRefreshInterval;
+let refreshTimer = null;
+let isRefreshing = false;
+
+function updateLiveIndicatorUI() {
+    const indicator = $('#live-indicator');
+    const select = $('#refreshIntervalSelect');
+    
+    if (select.length) {
+        select.val(refreshInterval);
     }
+    
+    if (refreshInterval === 0) {
+        indicator.removeClass('bg-success').addClass('bg-secondary')
+                 .html('<i class="fas fa-pause fa-xs me-1"></i> متوقف (يدوي)');
+    } else {
+        const seconds = Math.round(refreshInterval / 1000);
+        const label = seconds >= 60 ? (seconds / 60) + ' د' : seconds + ' ث';
+        indicator.removeClass('bg-secondary').addClass('bg-success')
+                 .html('<i class="fas fa-circle fa-xs me-1"></i> مباشر (' + label + ')');
+    }
+}
+
+function scheduleNextRefresh(delay) {
+    if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+    }
+    if (refreshInterval > 0) {
+        refreshTimer = setTimeout(performCashierRefresh, delay !== undefined ? delay : refreshInterval);
+    }
+}
+
+function performCashierRefresh(isManual) {
+    if (isRefreshing) return;
+
+    // إيقاف التحديث اللحظي إذا كان هناك أي مودال مفتوح أو المستند غير مرئي
+    if (!isManual) {
+        if ($('.modal.show').length > 0 || $('body').hasClass('modal-open') || document.querySelector('.modal.show')) {
+            scheduleNextRefresh(10000); // تأجيل في حال وجود نافذة منبثقة مفتوحة
+            return;
+        }
+        if (document.hidden) {
+            scheduleNextRefresh(15000); // تأجيل في حال كان التبويب في الخلفية
+            return;
+        }
+        // إيقاف التحديث إذا كان الكاشير يكتب في حقل بحث أو نموذج
+        if ($('input:focus, textarea:focus, select:focus').length > 0) {
+            scheduleNextRefresh(10000);
+            return;
+        }
+    }
+
+    isRefreshing = true;
+    const refreshIcon = $('#refreshIcon');
+    refreshIcon.addClass('fa-spin text-primary');
 
     $.ajax({
         url: window.location.href,
         type: 'GET',
+        cache: false,
         success: function(response) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(response, 'text/html');
@@ -1160,13 +1232,43 @@ setInterval(function() {
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
                 $('#last-update').text('آخر تحديث: ' + time);
+
+                // مزامنة أداة الاختيار ومؤشر المباشر بعد حقن المحتوى
+                updateLiveIndicatorUI();
             }
         },
         error: function(error) {
-            console.error('خطأ في التحديث:', error);
+            console.error('خطأ في تحديث الكاشير:', error);
+        },
+        complete: function() {
+            isRefreshing = false;
+            refreshIcon.removeClass('fa-spin text-primary');
+            scheduleNextRefresh();
         }
     });
-}, 5000);
+}
+
+// استجابة لتغيير مدة التحديث من القائمة
+$(document).on('change', '#refreshIntervalSelect', function() {
+    const val = parseInt($(this).val(), 10);
+    refreshInterval = isNaN(val) ? defaultRefreshInterval : val;
+    localStorage.setItem('cashier_refresh_interval', refreshInterval);
+    updateLiveIndicatorUI();
+    scheduleNextRefresh();
+});
+
+// زر التحديث اليدوي الفوري
+$(document).on('click', '#manualRefreshBtn', function(e) {
+    e.preventDefault();
+    performCashierRefresh(true);
+});
+
+// استئناف التحديث الذكي عند العودة للتبويب
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && refreshInterval > 0) {
+        scheduleNextRefresh(2000);
+    }
+});
 
 function openRefundModal(requestId, patientName, receiptNo, amount, serviceType, customActionUrl) {
     const modalEl = document.getElementById('medicalRefundModal');
@@ -1204,6 +1306,9 @@ $(document).ready(function() {
     const now = new Date();
     const time = now.toLocaleTimeString('ar-IQ');
     $('#last-update').text('آخر تحديث: ' + time);
+
+    updateLiveIndicatorUI();
+    scheduleNextRefresh();
 
     // restore tab from URL hash if present
     var hash = window.location.hash;
