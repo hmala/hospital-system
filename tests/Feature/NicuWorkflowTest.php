@@ -817,5 +817,47 @@ class NicuWorkflowTest extends TestCase
         $response->assertSee(optional($this->doctor->user)->name);
         $response->assertSee('أخصائي طب الأطفال وحديثي الولادة');
     }
+
+    public function test_internal_consultation_search_box_renders_and_auto_adopts_doctor_specialty(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'رضيع الفحص الاستشاري',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        // 1. فحص الواجهة وظهور مربع البحث وإخفاء التخصص الدقيق في الداخلي
+        $response = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $response->assertStatus(200);
+        $response->assertSee('id="internalDoctorSearchInput"', false);
+        $response->assertSee('id="specialtyDiv"', false);
+        $response->assertSee('d-none', false);
+
+        // 2. إرسال استشارة داخلية بدون تخصص دقيق (يتم جلبه تلقائياً من بيانات الطبيب)
+        $postInternal = $this->actingAs($this->admin)->post(route('nicu.consultations.store', $reservation), [
+            'consultation_type' => 'internal',
+            'doctor_id' => $this->doctor->id,
+            'fee' => 40000,
+            'reason' => 'تقييم فحص استشاري داخلي',
+        ]);
+
+        $postInternal->assertRedirect();
+        $consultation = NicuConsultation::where('reservation_id', $reservation->id)->latest()->first();
+        $this->assertNotNull($consultation);
+        $this->assertEquals($this->doctor->id, $consultation->doctor_id);
+        $this->assertEquals($this->doctor->specialization, $consultation->specialty);
+
+        // 3. إرسال استشارة خارجية بدون تخصص دقيق يجب أن يفشل بالتحقق
+        $postExternal = $this->actingAs($this->admin)->post(route('nicu.consultations.store', $reservation), [
+            'consultation_type' => 'external',
+            'external_doctor_name' => 'د. سمير الخارجي',
+            'fee' => 50000,
+            'reason' => 'استشارة جراحية خارجية',
+        ]);
+        $postExternal->assertSessionHasErrors(['specialty']);
+    }
 }
 

@@ -461,23 +461,62 @@
                                     </div>
 
                                     <div class="mb-3" id="internalDoctorDiv">
-                                        <label class="form-label small fw-bold">اختر طبيب المستشفى الداخلي:</label>
-                                        <select name="doctor_id" class="form-select form-select-sm">
-                                            <option value="">-- اختر الطبيب --</option>
-                                            @foreach($doctors as $doc)
-                                                <option value="{{ $doc->id }}">{{ optional($doc->user)->name }} ({{ $doc->specialization ?? 'أخصائي' }})</option>
-                                            @endforeach
-                                        </select>
+                                        <label class="form-label small fw-bold">
+                                            <i class="fas fa-user-md text-info me-1"></i> اختر طبيب المستشفى الداخلي:
+                                        </label>
+                                        
+                                        <!-- مربع البحث الفوري بدلاً من القائمة المنسدلة -->
+                                        <div id="doctorSearchWrapper" class="position-relative">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                <input type="text" 
+                                                       id="internalDoctorSearchInput" 
+                                                       class="form-control form-control-sm" 
+                                                       placeholder="اكتب اسم الطبيب للبحث بالمقترحات..." 
+                                                       autocomplete="off">
+                                                <button class="btn btn-outline-secondary" type="button" id="toggleAllDoctorsBtn" title="عرض جميع الأطباء">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- قائمة مقترحات الأطباء المنسدلة -->
+                                            <div id="doctorSearchResults" class="list-group position-absolute w-100 shadow-lg mt-1" 
+                                                 style="z-index: 1060; max-height: 220px; overflow-y: auto; display: none;">
+                                            </div>
+                                        </div>
+
+                                        <!-- بطاقة الطبيب المختار -->
+                                        <div id="selectedDoctorCard" class="card border-info bg-white shadow-sm mt-2 p-2" style="display: none;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                        <i class="fas fa-user-md fa-lg"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong class="d-block text-dark small" id="selectedDoctorName"></strong>
+                                                        <span class="text-muted" style="font-size: 11px;" id="selectedDoctorSpecialty"></span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" id="clearSelectedDoctorBtn" title="تغيير الطبيب">
+                                                    <i class="fas fa-times me-1"></i> تغيير
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" name="doctor_id" id="selectedDoctorId" value="{{ old('doctor_id') }}">
+                                        @error('doctor_id')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
 
                                     <div class="mb-3 d-none" id="externalDoctorDiv">
                                         <label class="form-label small fw-bold">اسم الطبيب الزائر الخارجي:</label>
-                                        <input type="text" name="external_doctor_name" class="form-control form-control-sm" placeholder="د. فلان الفلاني">
+                                        <input type="text" name="external_doctor_name" id="externalDoctorNameInput" class="form-control form-control-sm" placeholder="د. فلان الفلاني" value="{{ old('external_doctor_name') }}">
                                     </div>
 
-                                    <div class="mb-3">
+                                    <div class="mb-3 d-none" id="specialtyDiv">
                                         <label class="form-label small fw-bold">التخصص الدقيق:</label>
-                                        <input type="text" name="specialty" class="form-control form-control-sm" placeholder="مثال: جراحة أطفال، قلب أطفال، عيون خدج..." required>
+                                        <input type="text" name="specialty" id="specialtyInput" class="form-control form-control-sm" placeholder="مثال: جراحة أطفال، قلب أطفال، عيون خدج..." value="{{ old('specialty') }}">
                                     </div>
 
                                     <div class="mb-3">
@@ -776,15 +815,186 @@
 
 @push('scripts')
 <script>
+const internalDoctors = [
+    @foreach($doctors as $doc)
+    {
+        id: {{ $doc->id }},
+        name: @json(optional($doc->user)->name ?? 'طبيب'),
+        specialty: @json($doc->specialization ?? 'أخصائي')
+    },
+    @endforeach
+];
+
 function toggleDoctorField(val) {
+    const internalDiv = document.getElementById('internalDoctorDiv');
+    const externalDiv = document.getElementById('externalDoctorDiv');
+    const specialtyDiv = document.getElementById('specialtyDiv');
+    const specialtyInput = document.getElementById('specialtyInput');
+    const externalDoctorNameInput = document.getElementById('externalDoctorNameInput');
+
     if(val === 'internal') {
-        document.getElementById('internalDoctorDiv').classList.remove('d-none');
-        document.getElementById('externalDoctorDiv').classList.add('d-none');
+        if (internalDiv) internalDiv.classList.remove('d-none');
+        if (externalDiv) externalDiv.classList.add('d-none');
+        if (specialtyDiv) specialtyDiv.classList.add('d-none');
+        if (specialtyInput) {
+            specialtyInput.removeAttribute('required');
+        }
+        if (externalDoctorNameInput) {
+            externalDoctorNameInput.removeAttribute('required');
+        }
     } else {
-        document.getElementById('internalDoctorDiv').classList.add('d-none');
-        document.getElementById('externalDoctorDiv').classList.remove('d-none');
+        if (internalDiv) internalDiv.classList.add('d-none');
+        if (externalDiv) externalDiv.classList.remove('d-none');
+        if (specialtyDiv) specialtyDiv.classList.remove('d-none');
+        if (specialtyInput) {
+            specialtyInput.setAttribute('required', 'required');
+        }
+        if (externalDoctorNameInput) {
+            externalDoctorNameInput.setAttribute('required', 'required');
+        }
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('internalDoctorSearchInput');
+    const resultsDiv = document.getElementById('doctorSearchResults');
+    const toggleBtn = document.getElementById('toggleAllDoctorsBtn');
+    const selectedDoctorId = document.getElementById('selectedDoctorId');
+    const selectedDoctorCard = document.getElementById('selectedDoctorCard');
+    const searchWrapper = document.getElementById('doctorSearchWrapper');
+    const selectedDoctorName = document.getElementById('selectedDoctorName');
+    const selectedDoctorSpecialty = document.getElementById('selectedDoctorSpecialty');
+    const clearBtn = document.getElementById('clearSelectedDoctorBtn');
+    const consultationTypeSelect = document.getElementById('consultationTypeSelect');
+
+    // تفعيل الحالة الأولية لنوع الاستشارة (إخفاء التخصص الدقيق في الداخلي)
+    if (consultationTypeSelect) {
+        toggleDoctorField(consultationTypeSelect.value);
+    }
+
+    function renderResults(list) {
+        if (!resultsDiv) return;
+        resultsDiv.innerHTML = '';
+        if (!list || list.length === 0) {
+            resultsDiv.innerHTML = '<div class="list-group-item text-muted text-center py-2 small"><i class="fas fa-search me-1"></i> لا توجد نتائج مطابقة</div>';
+            resultsDiv.style.display = 'block';
+            return;
+        }
+
+        list.forEach(doc => {
+            const item = document.createElement('a');
+            item.href = 'javascript:void(0);';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
+            item.innerHTML = `
+                <div>
+                    <strong class="text-dark small d-block">${doc.name}</strong>
+                    <span class="text-muted" style="font-size: 11px;"><i class="fas fa-stethoscope me-1 text-info"></i>${doc.specialty}</span>
+                </div>
+                <span class="badge bg-light text-primary border" style="font-size: 10px;">اختيار</span>
+            `;
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                chooseDoctor(doc);
+            });
+            resultsDiv.appendChild(item);
+        });
+        resultsDiv.style.display = 'block';
+    }
+
+    function chooseDoctor(doc) {
+        if (!doc) return;
+        selectedDoctorId.value = doc.id;
+        selectedDoctorName.textContent = doc.name;
+        selectedDoctorSpecialty.textContent = doc.specialty;
+        selectedDoctorCard.style.display = 'block';
+        searchWrapper.style.display = 'none';
+        resultsDiv.style.display = 'none';
+    }
+
+    function clearDoctor() {
+        selectedDoctorId.value = '';
+        selectedDoctorCard.style.display = 'none';
+        searchWrapper.style.display = 'block';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+        resultsDiv.style.display = 'none';
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearDoctor);
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            if (query.length === 0) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            const filtered = internalDoctors.filter(d => 
+                (d.name && d.name.toLowerCase().includes(query)) || 
+                (d.specialty && d.specialty.toLowerCase().includes(query))
+            );
+            renderResults(filtered);
+        });
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length > 0) {
+                const query = this.value.trim().toLowerCase();
+                const filtered = internalDoctors.filter(d => 
+                    (d.name && d.name.toLowerCase().includes(query)) || 
+                    (d.specialty && d.specialty.toLowerCase().includes(query))
+                );
+                renderResults(filtered);
+            }
+        });
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (resultsDiv.style.display === 'block') {
+                resultsDiv.style.display = 'none';
+            } else {
+                renderResults(internalDoctors);
+            }
+        });
+    }
+
+    // إخفاء القائمة عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#doctorSearchWrapper')) {
+            if (resultsDiv) resultsDiv.style.display = 'none';
+        }
+    });
+
+    // استرجاع الطبيب المختار مسبقاً إن وجد (مثل old('doctor_id'))
+    if (selectedDoctorId && selectedDoctorId.value) {
+        const found = internalDoctors.find(d => String(d.id) === String(selectedDoctorId.value));
+        if (found) {
+            chooseDoctor(found);
+        }
+    }
+
+    // التحقق عند إرسال النموذج في حالة الاستشارة الداخلية
+    const consultationForm = selectedDoctorId ? selectedDoctorId.closest('form') : null;
+    if (consultationForm) {
+        consultationForm.addEventListener('submit', function(e) {
+            if (consultationTypeSelect && consultationTypeSelect.value === 'internal') {
+                if (!selectedDoctorId.value) {
+                    e.preventDefault();
+                    alert('يرجى اختيار طبيب المستشفى الداخلي أولاً عبر البحث وكتابة الاسم.');
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.classList.add('is-invalid');
+                    }
+                }
+            }
+        });
+    }
+});
 </script>
 @endpush
 @endsection

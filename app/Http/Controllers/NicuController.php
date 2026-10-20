@@ -314,10 +314,18 @@ class NicuController extends Controller
             'consultation_type' => 'required|in:internal,external',
             'doctor_id' => 'nullable|required_if:consultation_type,internal|exists:doctors,id',
             'external_doctor_name' => 'nullable|required_if:consultation_type,external|string|max:200',
-            'specialty' => 'required|string|max:150',
+            'specialty' => 'nullable|required_if:consultation_type,external|string|max:150',
             'fee' => 'required|numeric|min:0',
             'reason' => 'required|string|max:1000',
         ]);
+
+        // في الاستشارة الداخلية يتم اعتماد التخصص الدقيق للطبيب تلقائياً من بياناته المسجلة
+        if ($validated['consultation_type'] === 'internal' && !empty($validated['doctor_id'])) {
+            if (empty($validated['specialty'])) {
+                $doc = Doctor::find($validated['doctor_id']);
+                $validated['specialty'] = $doc?->specialization ?? 'أخصائي استشاري';
+            }
+        }
 
         $validated['reservation_id'] = $reservation->id;
         $validated['requested_by'] = Auth::id();
