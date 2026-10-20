@@ -57,6 +57,25 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-20 — المرحلة 88: اعتماد ومزامنة خدمات الطوارئ الرسمية 96 خدمة وتصحيح الأسعار كاش وضمان واستبعاد الخدمات المكررة والقديمة من واقع ملف الإكسل المعتمد Approved Emergency Services Excel Full Sync & Pricing Reconciliation)
+
+### Done
+- **المزامنة الشاملة لجدول خدمات الطوارئ (`emergency_services`)**:
+  * قراءة واعتماد ملف الإكسل المعتمد `emergncy final.xlsx` الذي يحتوي على 96 خدمة طوارئ منقحة.
+  * إنشاء ملف بيانات رسمي ثابت [database/seeders/approved_emergency_services_data.php](file:///c:/wamp64/www/hospital-system/database/seeders/approved_emergency_services_data.php).
+  * إنشاء مايجريشن آلي قابل للنشر المباشر [database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php) وتنفيذه بنجاح.
+- **تصحيح الأسعار وحالات الضمان والكاش**:
+  * تصحيح الخدمات التي كانت مسجلة بـ 0 د.ع في الداتابيز (مثل: إدخال أنبوب صدر Chest tube بـ 500,000 كاش وضمان، أجور التجبيس للأطراف السفلى بـ 50,000 كاش و 40,000 ضمان، خدمات نقل الإسعاف الداخلي 25,000 والخارجي 50,000، وإعطاء الدم تحت إشراف طبيب مع المطابقة بـ 75,000).
+  * تحديث أسعار الكاش وأسعار الضمان الصحي وحالات التغطية لـ 20 خدمة مختلفة.
+- **إدراج الخدمات المعتمدة الجديدة**:
+  * إضافة خدمة `#114`: `أجور التجبير مع كافة المستلزمات بنوعيه (fiberglass or plaster of paris) نصفي او كامل - الاطراف العليا` (كاش: 50,000 د.ع، ضمان: 30,000 د.ع، مشمول بالضمان).
+  * ضبط خدمة `#66`: `زرق إبرة خارجي` بسعر 25,000 د.ع.
+- **التعطيل الآمن للخدمات القديمة والمكررة (15 خدمة)**:
+  * إيقاف تفعيل (`is_active = 0`, `is_hi_active = 0`) للخدمات الـ 15 غير الموجودة بملف الإكسل المعتمد (مثل تكرارات صوندة المعدة، وتكرارات الغرز القديمة)، لمنع ظهورها في شاشات الاستقبال ومحطة كشف الطوارئ مع حماية السجلات التاريخية.
+- **تحديث السيدر الرسمي والاختبارات الآلية الحصينة**:
+  * تحديث [database/seeders/EmergencyServicesSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/EmergencyServicesSeeder.php).
+  * إنشاء واجتياز اختبار الميزة [tests/Feature/EmergencyServicesApprovedSyncTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyServicesApprovedSyncTest.php) واجتياز حزمة الطوارئ كاملة (`33 passed, 171 assertions`).
+
 ## Session log (2026-10-19 — المرحلة 87: إصلاح باقاتي السريعة للمختبر وتفعيل الفلترة اللحظية الذكية وإلغاء التحديد بالنقر المزدوج Doctor Consultation Quick Lab Packages Fix, Instant Filter & Toggle Deselection)
 
 ### Done

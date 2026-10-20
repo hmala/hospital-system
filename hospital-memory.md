@@ -63,6 +63,21 @@
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
 ### ✅ Completed (المكتمل والمُختبر):
+- **المرحلة 88 (اعتماد ومزامنة خدمات الطوارئ الرسمية 96 خدمة وتصحيح الأسعار كاش وضمان واستبعاد الخدمات المكررة والقديمة من واقع ملف الإكسل المعتمد Approved Emergency Services Excel Full Sync & Pricing Reconciliation):**
+  * **المزامنة الشاملة لجدول خدمات الطوارئ (`emergency_services`)**:
+    - قراءة واعتماد ملف الإكسل المعتمد `emergncy final.xlsx` الذي يحتوي على 96 خدمة طوارئ منقحة.
+    - إنشاء ملف بيانات رسمي ثابت [database/seeders/approved_emergency_services_data.php](file:///c:/wamp64/www/hospital-system/database/seeders/approved_emergency_services_data.php) ومايجريشن آلي قابل للنشر على سيرفر هوستنجر بنقرة واحدة [database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php).
+  * **تصحيح الأسعار الصفرية وحالات الضمان والكاش**:
+    - تصحيح الخدمات التي كانت مسجلة بـ 0 د.ع في الداتابيز (مثل: إدخال أنبوب صدر Chest tube بـ 500,000 كاش وضمان، أجور التجبيس للأطراف السفلى بـ 50,000 كاش و 40,000 ضمان، خدمات نقل الإسعاف الداخلي 25,000 والخارجي 50,000، وإعطاء الدم تحت إشراف طبيب مع المطابقة بـ 75,000).
+    - تحديث أسعار الكاش وأسعار الضمان الصحي وحالات التغطية لـ 20 خدمة مختلفة.
+  * **إدراج الخدمات المعتمدة الجديدة**:
+    - إضافة خدمة `#114`: `أجور التجبير مع كافة المستلزمات بنوعيه (fiberglass or plaster of paris) نصفي او كامل - الاطراف العليا` (كاش: 50,000 د.ع، ضمان: 30,000 د.ع، مشمول بالضمان).
+    - ضبط خدمة `#66`: `زرق إبرة خارجي` بسعر 25,000 د.ع.
+  * **التعطيل الآمن للخدمات القديمة والمكررة (15 خدمة)**:
+    - إيقاف تفعيل (`is_active = 0`, `is_hi_active = 0`) للخدمات الـ 15 غير الموجودة بملف الإكسل المعتمد (مثل تكرارات صوندة المعدة، والخدمات غير المعرفة، وتكرارات الغرز)، مما يمنع ظهورها نهائياً في شاشات الاستقبال ومحطة كشف الطوارئ مع صيانة السجلات والفواتير التاريخية المرتبطة دون كسر أي مفاتيح أجنبية.
+  * **تحديث السيدر الرسمي والاختبارات الآلية الحصينة**:
+    - ترقية [database/seeders/EmergencyServicesSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/EmergencyServicesSeeder.php) ليعتمد على مصفوفة البيانات الرسمية.
+    - بناء واجتياز اختبار الميزة [tests/Feature/EmergencyServicesApprovedSyncTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyServicesApprovedSyncTest.php) واجتياز كامل حزمة اختبارات الطوارئ: `33 passed (171 assertions)`.
 - **المرحلة 81 (منظومة التحكم اللحظي والذكي بتشغيل وإطفاء الفحوصات المختبرية ومطابقة الضمان الصحي Lab Tests Instant Activation & Smart Insurance Bulk Controls):**
   * **التحكم المفرد اللحظي (Single Quick Toggle AJAX)**:
     - إضافة مفتاحي تبديل بأسلوب iOS Switch لكل فحص مختبري في شاشة الكتالوج `/lab-tests`:
