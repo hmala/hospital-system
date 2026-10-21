@@ -418,12 +418,19 @@ class Request extends Model
         $patientName = $this->visit?->patient?->user?->name 
             ?? ($this->visit?->patient?->name ?? 'المريض');
         $reportUrl = $this->getPublicReportUrl();
+        $details = is_string($this->details) ? json_decode($this->details, true) : ($this->details ?? []);
+        $hasAttachments = !empty($details['attachment']) || !empty($details['test_attachments']);
+
+        $attachmentNote = $hasAttachments 
+            ? "📎 ملاحظة: يحتوي تقريركم على مرفقات وتقارير أجهزة طبية يمكنك استعراضها وتحميلها مباشرة من الرابط أعلاه.\n\n" 
+            : "";
 
         $text = "السلام عليكم ورحمة الله وبركاته\n"
               . "الأخ/الأخت: {$patientName} المحترم،\n\n"
               . "نود إعلامكم بأن نتائج الفحوصات المخبرية الخاصة بكم لدى مستشفى الكفاءات الأهلي للطلب رقم (#{$this->id}) جاهزة ومكتملة.\n\n"
               . "📄 يمكنكم الاطلاع على التقرير الطبي والنتائج المعتمدة مباشرة عبر الرابط التالي:\n"
               . "{$reportUrl}\n\n"
+              . $attachmentNote
               . "مع تمنياتنا لكم بالصحة والعافية.\n"
               . "مختبر مستشفى الكفاءات الأهلي 🏥";
 

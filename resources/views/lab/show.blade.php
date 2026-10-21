@@ -785,7 +785,7 @@ $age = $patient?->age ?? null;
                                             <th style="width: 150px;">المدى المرجعي</th>
                                             <th style="width: 90px;" class="text-center">الحالة (Flag)</th>
                                             <th style="width: 250px;" class="text-center">
-                                                <i class="fas fa-paperclip text-primary me-1"></i> المرفق (اختياري)
+                                                <i class="fas fa-paperclip text-primary me-1"></i> تقرير الجهاز / المرفق
                                             </th>
                                         </tr>
                                     </thead>
@@ -797,10 +797,10 @@ $age = $patient?->age ?? null;
                                                 $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                 $hasSpecificAttachment = !empty($testAttachments[$test]);
                                                 
-                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون مرفق ما لم يحدد خلاف ذلك)
+                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون فحص مركب ما لم يحدد خلاف ذلك)
                                                 $entryType = $labTestObj?->result_entry_type;
                                                 if (empty($entryType)) {
-                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
+                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_SUBTESTS : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
                                                 }
                                             @endphp
 
@@ -894,11 +894,11 @@ $age = $patient?->age ?? null;
                                                                     <i class="fas fa-times" style="font-size: 0.65rem;"></i>
                                                                 </label>
                                                             </div>
-                                                        @else
+                                                        @elseif($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
                                                             <div class="pill-upload-wrapper d-inline-block">
-                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير إضافي اختياري">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير الجهاز الخاص بهذا الفحص">
                                                                     <i class="fas fa-paperclip"></i>
-                                                                    <span class="pill-text fw-semibold">مرفق (اختياري)</span>
+                                                                    <span class="pill-text fw-semibold">إرفاق تقرير</span>
                                                                     <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
                                                                 </label>
                                                                 <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
@@ -907,6 +907,8 @@ $age = $patient?->age ?? null;
                                                                     <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
                                                                 </div>
                                                             </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
                                                         @endif
                                                     </td>
                                                 </tr>
@@ -1036,11 +1038,7 @@ $age = $patient?->age ?? null;
                                                                     <i class="fas fa-times" style="font-size: 0.65rem;"></i>
                                                                 </label>
                                                             </div>
-                                                        @elseif($hasAttachment)
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
-                                                                <i class="fas fa-check-circle me-1"></i> ضمن التقرير العام
-                                                            </span>
-                                                        @else
+                                                        @elseif($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
                                                             <div class="pill-upload-wrapper d-inline-block">
                                                                 <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="اضغط لاختيار تقرير هذا الفحص">
                                                                     <i class="fas fa-paperclip"></i>
@@ -1053,6 +1051,8 @@ $age = $patient?->age ?? null;
                                                                     <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
                                                                 </div>
                                                             </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
                                                         @endif
                                                     </td>
                                                 </tr>

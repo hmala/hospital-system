@@ -188,9 +188,13 @@ class LabStaffController extends Controller
     public function attachment(HttpRequest $httpRequest, MedicalRequest $request)
     {
         $user = Auth::user();
+        $token = $httpRequest->query('token');
+        $validToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : null;
+        $isValidToken = $token && $validToken && hash_equals($validToken, (string)$token);
+        $isStaffUser = $user && ($user->hasAnyRole(['admin', 'doctor', 'lab_staff', 'emergency_staff', 'receptionist', 'nurse']) || $user->can('view lab tests'));
 
-        // السماح لكافة الكوادر المعنية (المختبر، الأطباء، الطوارئ، الاستقبال، الإدارة) أو من يملك صلاحية عرض الفحوصات
-        if (!$user->hasAnyRole(['admin', 'doctor', 'lab_staff', 'emergency_staff', 'receptionist', 'nurse']) && !$user->can('view lab tests')) {
+        // السماح لكافة الكوادر الطبية أو للمريض الحامل للرمز المشفر من الواتساب
+        if (!$isStaffUser && !$isValidToken && !$httpRequest->hasValidSignature()) {
             abort(403, 'غير مصرح لك بعرض المرفقات');
         }
 

@@ -512,6 +512,18 @@
   * عزل صلاحيات وسجلات الطوارئ: قصر الدخول على المدير وأطباء الطوارئ، وحصر عرض الحالات للأطباء على مرضاهم فقط (`doctor_id` أو `consultant_doctor_id`) مع عزل الإحصائيات ومنع استعراض مرضى الأطباء الآخرين.
   * إخفاء الحالات الملغاة: إخفاؤها تماماً من تبويب "حالات اليوم" وتبويب "النشطة حالياً"، وإتاحة عرضها في "السجل الكامل" فقط كحالات ملغاة ومغلقة وغير قابلة للفتح (`EmergencyFinancialClearanceAndCancellationTest`: 6 passed, 32 assertions).
 
+- **المرحلة 96:** ربط شاشة المختبر بإعدادات أنماط الإدخال وإلغاء أزرار المرفقات للفحوصات الرقمية المفردة وتمكين المريض من تحميل مرفقات الأجهزة عبر الواتساب (Lab Result Entry Types Integration, Selective Attachment Buttons & Patient WhatsApp Attachment Downloads):
+  * **الالتزام بأنماط إدخال النتائج المعتمدة في شاشة الإعدادات ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+    - حذف كلمة `(اختياري)` من ترويسة الجدول لتصبح `تقرير الجهاز / المرفق`، وإلغاء كلمة `(اختياري)` من أزرار الرفع.
+    - إلغاء ظهور زر `إرفاق تقرير` للفحوصات المحددة كـ `single_value` (قيمة مباشرة مفردة) أو `sub_tests` (قيم فرعية) وإظهار شرطة `—` بدلاً منها لمنع تشويه الجدول.
+    - قصر إظهار زر رفع المرفق حصراً على الفحوصات المحددة في الإعدادات كـ `attachment_only` (مرفق تقرير جهاز) أو `flexible` (مرن) أو الفحوصات التي رُفع لها مرفق مسبقاً.
+  * **تمكين المريض من استعراض وتحميل مرفقات الأجهزة عبر الواتساب والتقرير الطبي ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php) & [app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+    - إضافة بطاقة أنيقة في التقرير الطبي المعتمد تظهر فيها أزرار تحميل وعرض تقارير الأجهزة والملفات المرفقة (العامة والخاصة بكل فحص).
+    - تمكين المريض من فتح وتحميل المرفقات بصورة آمنة ومباشرة عبر التوكن المشفر `?token=...` دون الحاجة لتسجيل دخول، وتخطي حظر 403.
+    - تضمين تنبيه ذكي في نص رسالة الواتساب ينبه المريض بوجود تقارير أجهزة مرفقة يمكنه استعراضها وتحميلها بنقرة زر واحدة ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php)).
+  * **الاختبارات الآلية الحصينة**:
+    - اجتياز كامل لجميع اختبارات حزمة المختبر والواتساب وأنماط الإدخال (`16 passed, 72 assertions`).
+
 - **المرحلة 93:** فصل حفظ مسودة نتائج المختبر عن الاعتماد النهائي والإرسال للطبيب (Lab Draft Saving vs Final Doctor Transmission):
   * **فصل الحفظ كمسودة عن الاعتماد النهائي ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
     - عند اختيار `action === 'draft'` أو `status === 'in_progress'`: حفظ كافة النتائج الرقمية والمدخلات ومرفقات الأجهزة والملاحظات الطبية في قاعدة البيانات وجدول `lab_results`، مع تثبيت حالة الطلب على `in_progress` (مسودة قيد الفحص بالمختبر)، وعدم إرسال أي إشعار تيليجرام، وتوثيق النشاط كمسودة (`save_lab_draft`)، وإبقاء فني المختبر في نفس الصفحة لمتابعة العمل لاحقاً مع رسالة تأكيد خضراء أنيقة.

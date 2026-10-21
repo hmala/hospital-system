@@ -924,7 +924,8 @@
                 margin: 8mm 12mm 10mm 12mm;
             }
 
-            .print-toolbar {
+            .print-toolbar,
+            .print-toolbar-attachments {
                 display: none !important;
             }
 
@@ -1269,7 +1270,50 @@
             $mime = ($ext === 'svg') ? 'image/svg+xml' : (($ext === 'png') ? 'image/png' : 'image/jpeg');
             $hospitalLogoSrc = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($hospitalLogoPath));
         }
+        $hasGeneralAtt = !empty($requestDetails['attachment']);
+        $testAtts = is_array($requestDetails['test_attachments'] ?? null) ? $requestDetails['test_attachments'] : [];
+        $hasAnyAtt = $hasGeneralAtt || count($testAtts) > 0;
+        $publicToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : request('token');
     @endphp
+
+    @if($hasAnyAtt)
+        <!-- Attachments Toolbar for Patient & Staff (Hidden during print) -->
+        <div class="print-toolbar-attachments" style="width: 210mm; max-width: 100%; margin: 12px auto 16px auto; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 12px; padding: 14px 20px; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.12); direction: rtl; font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #e0f2fe; color: #0284c7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                        📎
+                    </div>
+                    <div>
+                        <strong style="color: #0369a1; font-size: 14.5px; display: block; margin-bottom: 2px;">
+                            تقارير الأجهزة والملفات المرفقة (Attached Device Reports)
+                        </strong>
+                        <span style="color: #64748b; font-size: 12px;">
+                            توجد تقارير أجهزة وملفات طبية مرفقة مع هذا الفحص، يمكنك فتحها أو تحميلها مباشرة:
+                        </span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    @if($hasGeneralAtt)
+                        @php
+                            $genUrl = route('lab.attachment', array_filter(['request' => $request, 'token' => $publicToken]));
+                        @endphp
+                        <a href="{{ $genUrl }}" target="_blank" style="background: #0284c7; color: #ffffff; padding: 7px 16px; border-radius: 20px; text-decoration: none; font-size: 12.5px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);">
+                            📄 تقرير الفحص العام المرفق
+                        </a>
+                    @endif
+                    @foreach($testAtts as $tName => $attData)
+                        @php
+                            $attUrl = route('lab.attachment', array_filter(['request' => $request, 'test' => $tName, 'token' => $publicToken]));
+                        @endphp
+                        <a href="{{ $attUrl }}" target="_blank" style="background: #0d9488; color: #ffffff; padding: 7px 16px; border-radius: 20px; text-decoration: none; font-size: 12.5px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(13, 148, 136, 0.3);">
+                            🔬 تقرير: {{ $tName }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
 
     <div class="report-page">
 
