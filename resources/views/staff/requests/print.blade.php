@@ -872,6 +872,55 @@
             break-inside: avoid;
         }
 
+        /* General Urine Examination Dedicated Page & Section Styles */
+        .gue-page-break {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 2px dashed #0284c7;
+        }
+
+        .gue-banner-header {
+            background-color: #005a9c;
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 800;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-align: center;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .gue-category-header {
+            background-color: #f1f5f9;
+            color: #0369a1;
+            font-weight: bold;
+            font-size: 11.5px;
+            padding: 3px 8px;
+            margin-top: 6px;
+            margin-bottom: 2px;
+            border-left: 3px solid #0284c7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .gue-test-card {
+            padding: 2.5px 4px 2.5px 4px;
+            border-bottom: 1px solid #f1f5f9;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .gue-test-card:last-child {
+            border-bottom: 1.5px solid #2b5899;
+        }
+
         /* Footer */
         .report-footer-wrapper {
             width: 100%;
@@ -995,6 +1044,14 @@
             .auth-block {
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
+            }
+
+            .gue-page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                border-top: none !important;
             }
 
             body.letterhead-mode .report-header,
@@ -1454,99 +1511,350 @@
             <!-- Test Items List -->
             @php
                 $currentGroup = null;
+
+                $isGeneralUrine = function($item) {
+                    $parentName = is_object($item) ? ($item->parent_test_name ?? '') : (is_array($item) ? ($item['parent_test_name'] ?? '') : '');
+                    $testName = is_object($item) ? ($item->test_name ?? '') : (is_array($item) ? ($item['name'] ?? $item['test_name'] ?? '') : (string)$item);
+                    $check = mb_strtolower(trim($parentName . ' ' . $testName));
+                    return str_contains($check, 'general urine') || str_contains($check, 'g.u.e') || $check === 'gue' || str_contains($check, 'فحص الإدرار العام') || str_contains($check, 'تحليل البول العام') || str_contains($check, 'فحص البول العام');
+                };
+
+                $classifyUrineTest = function($name) {
+                    $n = mb_strtolower(trim($name));
+                    if (in_array($n, ['color', 'aspect', 'appearance', 'deposit', 'reaction', 'ph', 'specific gravity', 'sp. gravity', 'لون', 'المظهر', 'الترسبات', 'التفاعل', 'الكثافة النوعية'])) {
+                        return 'PHYSICAL EXAMINATION';
+                    }
+                    if (in_array($n, ['protein', 'albumin', 'sugar', 'glucose', 'acetone', 'ketones', 'nitrate', 'nitrite', 'urobilinogen', 'leucocytes', 'leukocytes', 'bilirubin', 'blood', 'hemoglobin', 'بروتين', 'سكر', 'اسيتون', 'نترات', 'يوروبيلينوجين', 'كريات بيض'])) {
+                        return 'CHEMICAL EXAMINATION';
+                    }
+                    return 'MICROSCOPIC EXAMINATION';
+                };
+
+                // استخراج قائمة كافة الفحوصات المطلوبة للزيارة
+                $allOrderedTestNames = [];
+                $seenOrderedNames = [];
+                foreach ($requestedLabTestsList as $item) {
+                    $tName = trim(is_array($item) ? ($item['name'] ?? '') : (is_object($item) ? ($item->name ?? '') : (string)$item));
+                    if ($tName === '') continue;
+                    $norm = mb_strtolower($tName);
+                    if (!isset($seenOrderedNames[$norm])) {
+                        $seenOrderedNames[$norm] = true;
+                        $allOrderedTestNames[] = $tName;
+                    }
+                }
+
+                $standardResults = $labResults->filter(fn($r) => !$isGeneralUrine($r));
+                $urineResults = $labResults->filter(fn($r) => $isGeneralUrine($r));
+
+                // التحقق من الفحوصات المطلوبة غير المسجلة بعد في جدول النتائج (مثل المرفقات CBC أو الفحوصات قيد الإنجاز)
+                $coveredStandardTests = [];
+                foreach ($standardResults as $r) {
+                    if (!empty($r->parent_test_name)) {
+                        $coveredStandardTests[mb_strtolower(trim($r->parent_test_name))] = true;
+                    }
+                    $coveredStandardTests[mb_strtolower(trim($r->test_name))] = true;
+                }
+                $uncoveredStandardOrderedTests = [];
+                foreach ($allOrderedTestNames as $tName) {
+                    if ($isGeneralUrine($tName)) continue;
+                    if (!isset($coveredStandardTests[mb_strtolower(trim($tName))])) {
+                        $uncoveredStandardOrderedTests[] = $tName;
+                    }
+                }
+
+                $hasStandardContent = ($standardResults->count() > 0) || (count($uncoveredStandardOrderedTests) > 0);
+                $hasUrineContent = ($urineResults->count() > 0) || (in_array(true, array_map(fn($t) => $isGeneralUrine($t), $allOrderedTestNames)));
             @endphp
 
-            @if($labResults->count() > 0)
-                @foreach($labResults as $res)
+            @if($labResults->count() > 0 || count($uncoveredStandardOrderedTests) > 0)
+                {{-- 1. الفحوصات العامة القياسية (دم، هرمونات، كيمياء، ومرفقات الأجهزة) --}}
+                @if($hasStandardContent)
+                    <div class="standard-tests-section">
+                        @foreach($standardResults as $res)
+                            @php
+                                $parentName = $res->parent_test_name;
+                                $val = trim($res->value ?? '');
+                                $unit = trim($res->unit ?? '');
+                                $refRange = trim($res->reference_range ?? '');
+                                $prevItems = $findPrevResults($res->test_name);
+
+                                // تقييم الحالة ديناميكياً بدقة
+                                $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
+
+                                $valClass = 'val-normal';
+                                $flagBadge = '';
+                                if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
+                                    $valClass = 'val-high';
+                                    $flagBadge = '<span class="badge-flag high">↑ High</span>';
+                                } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
+                                    $valClass = 'val-low';
+                                    $flagBadge = '<span class="badge-flag low">↓ Low</span>';
+                                } elseif ($status === 'abnormal') {
+                                    $valClass = 'val-abnormal';
+                                    $flagBadge = '<span class="badge-flag high">Abnormal</span>';
+                                }
+                            @endphp
+
+                            @if($parentName && $parentName !== $currentGroup)
+                                @php $currentGroup = $parentName; @endphp
+                                <div class="category-header-row">
+                                    {{ $currentGroup }}
+                                </div>
+                            @endif
+
+                            <div class="test-card">
+                                <div class="test-main-row">
+                                    <div class="test-name">
+                                        {{ $res->test_name }}
+                                    </div>
+                                    <div class="test-value-cell">
+                                        <div class="current-val-line">
+                                            <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
+                                            @if($unit)
+                                                <span class="unit-label">{{ $unit }}</span>
+                                            @endif
+                                        </div>
+                                        @if(!empty($prevItems) && count($prevItems) > 0)
+                                            <div class="prev-vertical-box">
+                                                @foreach($prevItems as $p)
+                                                    @php
+                                                        $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
+                                                        $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                                    @endphp
+                                                    <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                        <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                        <span class="prev-date-text">({{ $p['date_short'] }})</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="test-value-cell right">
+                                        @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
+                                            <span class="val-status-high">High</span>
+                                        @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
+                                            <span class="val-status-low">Low</span>
+                                        @elseif($status === 'abnormal')
+                                            <span class="val-status-high">Abnormal</span>
+                                        @elseif($val !== '' && $val !== '—')
+                                            <span class="val-status-normal">Normal</span>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                @if($refRange)
+                                <div class="test-meta-row">
+                                    <div class="meta-label">Normal Range :</div>
+                                    <div class="meta-conv-range">{{ $refRange }}</div>
+                                    <div class="meta-status-blank"></div>
+                                </div>
+                                @endif
+
+                                <div class="test-device-row">
+                                    By Cobas Integra 400 plus (Roche Diagnostics)
+                                </div>
+                            </div>
+                        @endforeach
+
+                        {{-- إدراج الفحوصات المطلوبة غير المسجلة في جدول النتائج (مثل مرفقات الأجهزة كـ CBC أو الفحوصات المعلقة) --}}
+                        @foreach($uncoveredStandardOrderedTests as $uncoveredName)
+                            @php
+                                $hasAttachment = !empty($testAtts[$uncoveredName]) || !empty($requestDetails['test_attachments'][$uncoveredName]);
+                                $dbTest = \App\Models\LabTest::where('name', $uncoveredName)->first();
+                                $uncoveredUnit = $dbTest?->unit;
+                                $uncoveredRef = $dbTest?->reference_range;
+                            @endphp
+                            <div class="test-card">
+                                <div class="test-main-row">
+                                    <div class="test-name">
+                                        {{ $uncoveredName }}
+                                    </div>
+                                    <div class="test-value-cell">
+                                        @if($hasAttachment)
+                                            <div class="current-val-line">
+                                                <span style="font-weight: 700; color: #0284c7; font-size: 12.5px;">
+                                                    📎 تقرير الجهاز مرفق (Attached Device Report)
+                                                </span>
+                                            </div>
+                                        @else
+                                            <div class="current-val-line">
+                                                <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
+                                                @if($uncoveredUnit)
+                                                    <span class="unit-label">{{ $uncoveredUnit }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="test-value-cell right">
+                                        @if($hasAttachment)
+                                            <span class="badge" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px;">
+                                                Attached
+                                            </span>
+                                        @else
+                                            <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">
+                                                Pending
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                @if($uncoveredRef && !$hasAttachment)
+                                <div class="test-meta-row">
+                                    <div class="meta-label">Normal Range :</div>
+                                    <div class="meta-conv-range">{{ $uncoveredRef }}</div>
+                                    <div class="meta-status-blank"></div>
+                                </div>
+                                @endif
+
+                                <div class="test-device-row">
+                                    @if($hasAttachment)
+                                        Automated Hematology Analyzer / Clinical Device
+                                    @else
+                                        By Cobas Integra 400 plus (Roche Diagnostics)
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+
+                        {{-- اعتماد الصفحة الأولى --}}
+                        <div class="auth-block">
+                            <div class="auth-cell">
+                                <div class="signature-box-empty">
+                                    <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                                    <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                                    <div class="sig-empty-line">(مكان التوقيع والاعتماد)</div>
+                                    <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">التاريخ: {{ now()->format('Y-m-d') }}</div>
+                                </div>
+                            </div>
+                            <div class="auth-cell">
+                                <div class="stamp-circle-box">
+                                    <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                                    <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                                    <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                                    <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- 2. قسم فحص الإدرار العام المستقل دائماً في صفحة منفصلة (General Urine Examination) --}}
+                @if($hasUrineContent)
+                    @if($hasStandardContent)
+                        <div class="gue-page-break">
+                    @endif
+
+                    <div class="gue-banner-header">
+                        GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام
+                    </div>
+
                     @php
-                        $parentName = $res->parent_test_name;
-                        $val = trim($res->value ?? '');
-                        $unit = trim($res->unit ?? '');
-                        $refRange = trim($res->reference_range ?? '');
-                        $prevItems = $findPrevResults($res->test_name);
+                        $urineCategories = [
+                            'PHYSICAL EXAMINATION' => [
+                                'title_ar' => 'الفحص الفيزيائي',
+                                'items' => [],
+                            ],
+                            'CHEMICAL EXAMINATION' => [
+                                'title_ar' => 'الفحص الكيميائي',
+                                'items' => [],
+                            ],
+                            'MICROSCOPIC EXAMINATION' => [
+                                'title_ar' => 'الفحص المجهري',
+                                'items' => [],
+                            ],
+                        ];
 
-                        // تقييم الحالة ديناميكياً بدقة
-                        $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
-
-                        $valClass = 'val-normal';
-                        $flagBadge = '';
-                        if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
-                            $valClass = 'val-high';
-                            $flagBadge = '<span class="badge-flag high">↑ High</span>';
-                        } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
-                            $valClass = 'val-low';
-                            $flagBadge = '<span class="badge-flag low">↓ Low</span>';
-                        } elseif ($status === 'abnormal') {
-                            $valClass = 'val-abnormal';
-                            $flagBadge = '<span class="badge-flag high">Abnormal</span>';
+                        foreach ($urineResults as $uRes) {
+                            $c = $classifyUrineTest($uRes->test_name);
+                            $urineCategories[$c]['items'][] = $uRes;
                         }
                     @endphp
 
-                    @if($parentName && $parentName !== $currentGroup)
-                        @php $currentGroup = $parentName; @endphp
-                        <div class="category-header-row">
-                            {{ $currentGroup }}
-                        </div>
-                    @endif
-
-                    <div class="test-card">
-                        <!-- Main Test Row -->
-                        <div class="test-main-row">
-                            <div class="test-name">
-                                {{ $res->test_name }}
+                    @foreach($urineCategories as $catKey => $catInfo)
+                        @if(count($catInfo['items']) > 0)
+                            <div class="gue-category-header">
+                                {{ $catKey }} ({{ $catInfo['title_ar'] }})
                             </div>
-                            <div class="test-value-cell">
-                                <div class="current-val-line">
-                                    <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
-                                    @if($unit)
-                                        <span class="unit-label">{{ $unit }}</span>
+
+                            @foreach($catInfo['items'] as $uRes)
+                                @php
+                                    $uVal = trim($uRes->value ?? '');
+                                    $uUnit = trim($uRes->unit ?? '');
+                                    $uRef = trim($uRes->reference_range ?? '');
+                                    $uStatus = calcLabStatus($uVal, $uRef, $uRes->status ?? 'normal');
+
+                                    $uClass = 'val-normal';
+                                    if ($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+') {
+                                        $uClass = 'val-high';
+                                    } elseif ($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-') {
+                                        $uClass = 'val-low';
+                                    } elseif ($uStatus === 'abnormal') {
+                                        $uClass = 'val-abnormal';
+                                    }
+                                @endphp
+                                <div class="gue-test-card">
+                                    <div class="test-main-row" style="margin-bottom: 1px;">
+                                        <div class="test-name" style="font-size: 12px;">
+                                            {{ $uRes->test_name }}
+                                        </div>
+                                        <div class="test-value-cell">
+                                            <div class="current-val-line">
+                                                <span class="{{ $uClass }}" style="font-size: 12px;">{{ $uVal ?: '—' }}</span>
+                                                @if($uUnit)
+                                                    <span class="unit-label" style="font-size: 11px;">{{ $uUnit }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="test-value-cell right">
+                                            @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
+                                                <span class="val-status-high" style="font-size: 10px; padding: 0 6px;">Abnormal</span>
+                                            @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
+                                                <span class="val-status-low" style="font-size: 10px; padding: 0 6px;">Low</span>
+                                            @elseif($uVal !== '' && $uVal !== '—')
+                                                <span class="val-status-normal" style="font-size: 10px; padding: 0 6px;">Normal</span>
+                                            @else
+                                                <span class="text-muted" style="font-size: 11px;">—</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @if($uRef)
+                                    <div class="test-meta-row" style="font-size: 10.5px; margin-bottom: 0;">
+                                        <div class="meta-label">Reference Range :</div>
+                                        <div class="meta-conv-range" style="font-size: 10.5px;">{{ $uRef }}</div>
+                                        <div class="meta-status-blank"></div>
+                                    </div>
                                     @endif
                                 </div>
-                                @if(!empty($prevItems) && count($prevItems) > 0)
-                                    <div class="prev-vertical-box">
-                                        @foreach($prevItems as $p)
-                                            @php
-                                                $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
-                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
-                                            @endphp
-                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
-                                                <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
-                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                            <div class="test-value-cell right">
-                                @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
-                                    <span class="val-status-high">High</span>
-                                @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
-                                    <span class="val-status-low">Low</span>
-                                @elseif($status === 'abnormal')
-                                    <span class="val-status-high">Abnormal</span>
-                                @elseif($val !== '' && $val !== '—')
-                                    <span class="val-status-normal">Normal</span>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Reference Range Row -->
-                        @if($refRange)
-                        <div class="test-meta-row">
-                            <div class="meta-label">Normal Range :</div>
-                            <div class="meta-conv-range">{{ $refRange }}</div>
-                            <div class="meta-status-blank"></div>
-                        </div>
+                            @endforeach
                         @endif
+                    @endforeach
 
-                        <!-- Device / Method Row -->
-                        <div class="test-device-row">
-                            By Cobas Integra 400 plus (Roche Diagnostics)
+                    <!-- اعتماد صفحة الإدرار العام -->
+                    <div class="auth-block" style="margin-top: 10px;">
+                        <div class="auth-cell">
+                            <div class="signature-box-empty">
+                                <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                                <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                                <div class="sig-empty-line">(مكان التوقيع والاعتماد)</div>
+                                <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">التاريخ: {{ now()->format('Y-m-d') }}</div>
+                            </div>
+                        </div>
+                        <div class="auth-cell">
+                            <div class="stamp-circle-box">
+                                <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                                <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                                <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                                <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                            </div>
                         </div>
                     </div>
-                @endforeach
+
+                    @if($hasStandardContent)
+                        </div>
+                    @endif
+                @endif
             @elseif(!empty($request->result) && count($savedArr ?? []) > 0)
                 @php
                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;

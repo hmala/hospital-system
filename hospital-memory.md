@@ -512,6 +512,28 @@
   * عزل صلاحيات وسجلات الطوارئ: قصر الدخول على المدير وأطباء الطوارئ، وحصر عرض الحالات للأطباء على مرضاهم فقط (`doctor_id` أو `consultant_doctor_id`) مع عزل الإحصائيات ومنع استعراض مرضى الأطباء الآخرين.
   * إخفاء الحالات الملغاة: إخفاؤها تماماً من تبويب "حالات اليوم" وتبويب "النشطة حالياً"، وإتاحة عرضها في "السجل الكامل" فقط كحالات ملغاة ومغلقة وغير قابلة للفتح (`EmergencyFinancialClearanceAndCancellationTest`: 6 passed, 32 assertions).
 
+- **المرحلة 98:** حل تضارب الباراميترات الفرعية للمختبر وعزل فحص الإدرار العام (G.U.E) في صفحة طباعية مستقلة ومطابقة كافة الفحوصات والمرفقات 100% (Lab Subtest Collision Fix, Dedicated GUE Page Break, Clinical Grouping & 100% Ordered Tests Coverage):
+  * **معالجة تضارب مفاتيح إدخال الباراميترات الفرعية ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) & [resources/views/staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php))**:
+    - تحويل مفاتيح الإدخال للباراميترات الفرعية من اسم الفحص المشترك إلى مفتاح فريد ومميز بمعرف الباراميتر: `test_results[sub_{{ $subTest->id }}][value]`.
+    - حل مشكلة مسح الفحوصات التي تشترك في نفس أسماء المعايير الفرعية (مثل اشتراك FSH و LH في معيار `Men` و `Follicular Phase` الخ) نهائياً ومنع استبدال القيم أثناء الإرسال (`$_POST`).
+    - ترقية استرجاع القيم المحفوظة في الشاشة عبر الفهرسة المتعددة (`$dbResultsBySubId` و `$dbResultsByParentAndName`) لضمان ظهور القيم المحفوظة لجميع التحاليل بدقة متناهية.
+  * **إفراد فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة طباعية مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+    - عزل فحص الإدرار العام (19 فحصاً فرعياً) عن الفحوصات العامة (الهرمونات، الدم، الكيمياء) وتطبيق فاصل صفحات طباعي تلقائي: `.gue-page-break` (`page-break-before: always; break-before: page;`).
+    - إذا كان الطلب يحتوي على G.U.E فقط دون تحاليل أخرى، يُطبع في صفحة واحدة مباشرة دون إحداث صفحة بيضاء سابقة.
+    - تقسيم وتنظيم نتائج فحص الإدرار العام الـ 19 إلى 3 فئات سريرية معتمدة عالمياً:
+      1. **الفحص الفيزيائي (PHYSICAL EXAMINATION)**: Color, Aspect, Deposit, Reaction, Specific Gravity.
+      2. **الفحص الكيميائي (CHEMICAL EXAMINATION)**: Protein, Sugar, Acetone, Nitrate, Urobilinogen, Leucocytes.
+      3. **الفحص المجهري (MICROSCOPIC EXAMINATION)**: Pus cells (W.B.C), R.B.C, Epithelial cells, Casts, Amorphous, Mucus, Crystals, Bacteria.
+    - تزويد كل من صفحة الفحوصات العامة وصفحة فحص الإدرار المستقلة بختم وتوقيع معتمد ومستقل بأعلى معايير الجودة الطبية.
+  * **مطابقة الفحوصات المطلوبة بنسبة 100% وإظهار مرفقات الأجهزة (CBC) والفحوصات المعلقة**:
+    - رصد ومطابقة كافة الفحوصات المطلوبة من قبل الطبيب في التقرير المطبوع.
+    - الفحوصات المرفقة كتقارير أجهزة (مثل Complete blood count & Differential) يظهر لها سطر رسمي بارز ومميز في جدول النتائج المطبوعة: `Complete blood count & Differential` | `📎 تقرير الجهاز مرفق (Attached Device Report)` | شارة `Attached`.
+    - الفحوصات التي لم تُدخل نتائجها بعد تظهر بشارة `Pending (قيد الإنجاز)` ولا تختفي أو تسقط من التقرير.
+  * **تحديث وإكمال نتائج الطلب رقم 285 للمريض جاسم حامد عباس**:
+    - حفظ وتثبيت قيمة فحص FSH للرجال (`3.5 mIU/mL`) بجانب فحص LH (`2.72 mIU/mL`) بنجاح، وظهور كافة الفحوصات الـ 8 للمريض كاملة في شاشة المختبر والتقرير المطبوع.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
+    - بناء واجتياز اختبارات ميزة متكاملة تؤكد منع التضارب بين FSH و LH، وتؤكد عزل G.U.E بفاصل الصفحة وظهور تقرير CBC المرفق وكافة الفحوصات بنجاح (`2 passed, 17 assertions`)، مع اجتياز كامل حزمة فحوصات المختبر (`65 passed, 324 assertions`).
+
 - **المرحلة 97:** مطابقة آلية طلبات طبيب الطوارئ مع الاستشارية: الدمج التلقائي، الحذف الفردي، شريط التقدم السريري، وأرشيف الطلبات الملغاة (Emergency Doctor Request Auto-Merge, Item-Level Removal, Clinical Stepper & Cancelled Archive):
   * **الدمج التلقائي لطلبات المختبر والأشعة للطوارئ ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
     - عند قيام طبيب الطوارئ بطلب تحاليل مختبرية جديدة لحالة طوارئ لديها طلب معلق غير مسدد (`payment_id === null` و `status === 'pending'`)، يتم دمج الفحوصات الجديدة تلقائياً في نفس الطلب عبر `syncWithoutDetaching` بدلاً من تشتيت الكاشير بطلبات متعددة.

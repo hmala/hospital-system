@@ -733,7 +733,12 @@ $age = $patient?->age ?? null;
                     $labTestMap[$alias] = $labTestMap[$targetCode];
                 }
             }
-            $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
+            $allDbResults = \App\Models\LabResult::where('request_id', $request->id)->get();
+            $dbResultsBySubId = $allDbResults->whereNotNull('sub_test_id')->keyBy('sub_test_id');
+            $dbResultsByParentAndName = $allDbResults->keyBy(function($r) {
+                return ($r->parent_test_name ? $r->parent_test_name . '__' : '') . $r->test_name;
+            });
+            $dbResults = $allDbResults->keyBy('test_name');
             
             $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
             $savedTestResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
@@ -915,9 +920,26 @@ $age = $patient?->age ?? null;
                                                 {{-- صفوف الباراميترات الفرعية --}}
                                                 @foreach($labTestObj->subTests as $subIdx => $subTest)
                                                     @php
-                                                        $savedSubVal = $dbResults[$subTest->name]->value ?? '';
-                                                        if ($savedSubVal === '' && isset($savedTestResults[$subTest->name])) {
-                                                            $savedSubVal = is_array($savedTestResults[$subTest->name]) ? ($savedTestResults[$subTest->name]['value'] ?? '') : $savedTestResults[$subTest->name];
+                                                        $subKey = 'sub_' . $subTest->id;
+                                                        $savedSubVal = $dbResultsBySubId[$subTest->id]->value
+                                                            ?? ($dbResultsByParentAndName[$test . '__' . $subTest->name]->value
+                                                            ?? null);
+                                                        if ($savedSubVal === null) {
+                                                            if (isset($savedTestResults[$subKey])) {
+                                                                $savedSubVal = is_array($savedTestResults[$subKey]) ? ($savedTestResults[$subKey]['value'] ?? '') : $savedTestResults[$subKey];
+                                                            } elseif (isset($savedTestResults[$subTest->name])) {
+                                                                $resItem = $savedTestResults[$subTest->name];
+                                                                if (is_array($resItem)) {
+                                                                    if (empty($resItem['parent_test_name']) || $resItem['parent_test_name'] === $test) {
+                                                                        $savedSubVal = $resItem['value'] ?? '';
+                                                                    }
+                                                                } else {
+                                                                    $savedSubVal = $resItem;
+                                                                }
+                                                            }
+                                                        }
+                                                        if ($savedSubVal === null) {
+                                                            $savedSubVal = $dbResults[$subTest->name]->value ?? '';
                                                         }
                                                     @endphp
                                                     <tr class="test-row subtest-item-row" data-test="{{ $subTest->name }}"
@@ -936,16 +958,16 @@ $age = $patient?->age ?? null;
                                                         <td>
                                                             <input type="text"
                                                                    class="form-control form-control-sm test-value font-monospace fw-bold"
-                                                                   name="test_results[{{ $subTest->name }}][value]"
-                                                                   value="{{ old('test_results.' . $subTest->name . '.value', $savedSubVal) }}"
+                                                                   name="test_results[{{ $subKey }}][value]"
+                                                                   value="{{ old('test_results.' . $subKey . '.value', old('test_results.' . $subTest->name . '.value', $savedSubVal)) }}"
                                                                    placeholder="أدخل النتيجة..."
                                                                    data-test="{{ $subTest->name }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][test_name]" value="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][parent_test_name]" value="{{ $test }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][unit]" value="{{ $subTest->unit }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][reference_range]" value="{{ $subTest->reference_range }}">
                                                         </td>
                                                         <td class="text-muted small fw-semibold">{{ $subTest->unit ?: '-' }}</td>
                                                         <td>
