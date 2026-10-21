@@ -228,7 +228,7 @@ class DoctorVisitController extends Controller
                 $otherTreatments = $visit->prescribedMedications()->where('item_type', 'treatment')->get();
                 $hasCompletedRequests = $visit->requests()->where('status', 'completed')->exists();
                 $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
-                $labTests = \App\Models\LabTest::where('is_active', true)->get();
+                $labTests = \App\Models\LabTest::where('is_active', true)->get()->unique(fn($t) => trim(mb_strtolower($t->name)));
                 $radiologyTypes = \App\Models\RadiologyType::where('is_active', true)->get();
                 $icd10Codes = \App\Models\ICD10Code::orderBy('code')->get();
 
@@ -272,7 +272,7 @@ class DoctorVisitController extends Controller
         $hasCompletedRequests = $visit->requests()->where('status', 'completed')->exists();
         $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
 
-        $labTests = \App\Models\LabTest::where('is_active', true)->get();
+        $labTests = \App\Models\LabTest::where('is_active', true)->get()->unique(fn($t) => trim(mb_strtolower($t->name)));
         $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
         $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
         $medicineGroups = \App\Models\UserMedicineGroup::with('medicines')
@@ -993,12 +993,24 @@ class DoctorVisitController extends Controller
         }
 
         if ($request->type === 'lab' && $request->tests) {
-            $details['tests'] = $request->tests;
-            $resolvedIds = \App\Models\LabTest::whereIn('name', (array)$request->tests)
-                ->orWhereIn('code', (array)$request->tests)
-                ->pluck('id')
-                ->toArray();
-            $details['lab_test_ids'] = $resolvedIds;
+            $rawTests = is_array($request->tests) ? $request->tests : [$request->tests];
+            $cleanTests = array_values(array_unique(array_filter(array_map('trim', $rawTests))));
+            $details['tests'] = $cleanTests;
+
+            // جلب المعرف للفحص المفعل فقط ومنع سحب أي فحص معطل أو مكرر
+            $resolvedIds = [];
+            foreach ($cleanTests as $testName) {
+                $activeTest = \App\Models\LabTest::where('is_active', true)
+                    ->where(function($q) use ($testName) {
+                        $q->where('name', $testName)
+                          ->orWhere('code', $testName);
+                    })
+                    ->first();
+                if ($activeTest) {
+                    $resolvedIds[] = $activeTest->id;
+                }
+            }
+            $details['lab_test_ids'] = array_values(array_unique($resolvedIds));
 
             // إذا كان هناك طلب مختبر سابق لنفس الزيارة ما زال معلقاً وغير مسدد بالكاشير، ادمج الفحوصات معه في وصل واحد
             $existingUnpaidLab = MedicalRequest::where('visit_id', $visit->id)
@@ -1377,11 +1389,18 @@ class DoctorVisitController extends Controller
                 }
             }
 
-            $removedTest = \App\Models\LabTest::where('name', $itemValue)->orWhere('code', $itemValue)->orWhere('id', $itemValue)->first();
-            $removedTestId = $removedTest?->id ?? (is_numeric($itemValue) ? (int)$itemValue : null);
+            $matchingTestIds = \App\Models\LabTest::where('name', $itemValue)
+                ->orWhere('code', $itemValue)
+                ->orWhere('id', $itemValue)
+                ->pluck('id')
+                ->toArray();
+            if (is_numeric($itemValue)) {
+                $matchingTestIds[] = (int)$itemValue;
+            }
+
             $newLabTestIds = [];
             foreach ($labTestIds as $id) {
-                if ($removedTestId && (int)$id === (int)$removedTestId) {
+                if (in_array((int)$id, $matchingTestIds, true)) {
                     continue;
                 }
                 $newLabTestIds[] = (int)$id;

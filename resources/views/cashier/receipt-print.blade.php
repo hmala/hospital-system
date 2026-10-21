@@ -459,9 +459,9 @@
                         $extraTestIds = array_diff($allTestIds, $pkgTestIds);
                         foreach ($extraTestIds as $testId) {
                             $test = \App\Models\LabTest::find($testId);
-                            if ($test) {
-                                $itemName = 'تحليل إضافي: ' . $test->name;
-                                if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                            if ($test && $test->is_active) {
+                                $itemName = 'تحليل إضافي: ' . trim($test->name);
+                                if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
@@ -477,9 +477,9 @@
                         if (!empty($testIds)) {
                             foreach ($testIds as $testId) {
                                 $test = \App\Models\LabTest::find($testId);
-                                if ($test) {
-                                    $itemName = 'تحليل: ' . $test->name;
-                                    if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                                if ($test && $test->is_active) {
+                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                         ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
@@ -492,18 +492,22 @@
 
                         if (!empty($testNames)) {
                             foreach ($testNames as $tName) {
-                                $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                $test = \App\Models\LabTest::where('is_active', true)
+                                    ->where(function($q) use ($tName) {
+                                        $q->where('name', $tName)->orWhere('code', $tName);
+                                    })
+                                    ->first();
                                 if ($test && !in_array($test->id, $foundTestIds)) {
-                                    $itemName = 'تحليل: ' . $test->name;
-                                    if (in_array($itemName, array_column($lineItems, 'name'))) continue;
+                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                         ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                         : null;
                                     $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
-                                } elseif (!$test && !in_array('تحليل: ' . $tName, array_column($lineItems, 'name'))) {
-                                    $lineItems[] = ['name' => 'تحليل: ' . $tName, 'qty' => 1, 'price' => 0];
+                                } elseif (!$test && !in_array(mb_strtolower('تحليل: ' . trim($tName)), array_map('mb_strtolower', array_column($lineItems, 'name')))) {
+                                    $lineItems[] = ['name' => 'تحليل: ' . trim($tName), 'qty' => 1, 'price' => 0];
                                 }
                             }
                         }

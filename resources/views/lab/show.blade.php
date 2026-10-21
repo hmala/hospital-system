@@ -94,7 +94,11 @@ if (!function_exists('buildSelectedLabTests')) {
         if (!empty($requestDetails['package_id'])) {
             $pkg = \App\Models\Package::find($requestDetails['package_id']);
             if ($pkg) {
-                $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
+                $pkgTests = $pkg->labTests()->where('is_active', true)->pluck('name')->toArray();
+                if (empty($pkgTests)) {
+                    $pkgTests = $pkg->labTests->pluck('name')->toArray();
+                }
+                $testsList = array_merge($testsList, $pkgTests);
             }
         }
 
@@ -103,19 +107,40 @@ if (!function_exists('buildSelectedLabTests')) {
             foreach ($ids as $testId) {
                 if ($testId === '') continue;
                 $labTest = \App\Models\LabTest::find($testId);
-                if ($labTest) {
-                    $testsList[] = $labTest->name;
+                if ($labTest && $labTest->is_active) {
+                    $testsList[] = trim($labTest->name);
                 }
             }
         }
 
         if (isset($requestDetails['tests'])) {
             $tests = normalizeTestsField($requestDetails['tests']);
-            $testsList = array_merge($testsList, $tests);
+            foreach ($tests as $tName) {
+                $trimmed = trim((string)$tName);
+                if ($trimmed === '') continue;
+                $lt = \App\Models\LabTest::where('name', $trimmed)->orWhere('code', $trimmed)->first();
+                if ($lt && !$lt->is_active) {
+                    continue;
+                }
+                $testsList[] = $trimmed;
+            }
         }
 
         $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
-        return array_values(array_unique($testsList));
+
+        // منع التكرار مع مراعاة الحروف الكبيرة والصغيرة والمسافات
+        $uniqueTests = [];
+        $seen = [];
+        foreach ($testsList as $item) {
+            $key = mb_strtolower(trim((string)$item));
+            if ($key === '') continue;
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $uniqueTests[] = trim((string)$item);
+            }
+        }
+
+        return array_values($uniqueTests);
     }
 }
 
@@ -680,12 +705,16 @@ $age = $patient?->age ?? null;
             }, 'references'])->where(function($query) use ($normalizedSearchTerms) {
                 $query->whereIn('name', $normalizedSearchTerms)
                       ->orWhereIn('code', $normalizedSearchTerms);
-            })->get();
+            })
+            ->orderByRaw('is_active DESC')
+            ->get();
 
             $labTestMap = collect();
             foreach ($rawLabTests as $ltItem) {
-                $labTestMap[$ltItem->name] = $ltItem;
-                if ($ltItem->code) {
+                if (!isset($labTestMap[$ltItem->name]) || $ltItem->is_active) {
+                    $labTestMap[$ltItem->name] = $ltItem;
+                }
+                if ($ltItem->code && (!isset($labTestMap[$ltItem->code]) || $ltItem->is_active)) {
                     $labTestMap[$ltItem->code] = $ltItem;
                 }
             }

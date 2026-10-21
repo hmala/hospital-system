@@ -57,6 +57,26 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 95: حظر الفحوصات المعطلة ومنع تكرار التحاليل في واجهة المختبر والكاشير ومطابقة طلبات الطبيب 1-to-1 دون المساس بسجلات قاعدة البيانات Lab & Cashier Active-Only Filtering, Name Deduplication & 1-to-1 Doctor Order Fidelity)
+
+### Done
+- **مطابقة طلبات الطبيب 1-to-1 وحظر ربط الفحوصات المعطلة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * عرض التحاليل المفعلة فقط والفريدة بالاسم للطبيب في شاشة الكشف الطبي.
+  * عند حفظ طلب الطبيب: الاستعلام حصراً عن الفحوصات المفعلة (`where('is_active', true)`) وأخذ أول معرف مفعل لكل اسم فحص، مما يمنع نهائياً سحب أو تخزين معرفات الفحوصات المعطلة أو المكررة في `details['lab_test_ids']`.
+  * في دالة حذف الفحص الفردي `removeRequestItem`: مطابقة وحذف كافة المعرفات المرتبطة باسم الفحص لضمان خلو الطلب من المعرفات المعلقة.
+- **تصفية واجهة محطة المختبر وإلغاء التكرار الصارم ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * في دالة `buildSelectedLabTests`: استبعاد أي فحص معطل (`!$labTest->is_active`) من الظهور أمام فني المختبر حتى في الطلبات القديمة المسجلة مسبقاً.
+  * إلغاء التكرار الصارم الموحد بالاسم الصافي مع توحيد الأحرف والمسافات (`Normalized Case-Insensitive Unique Name`).
+  * ترتيب التحاليل تنازلياً حسب التفعيل (`orderByRaw('is_active DESC')`) لربط المراجع والقيم الفرعية بالفحص المفعل دائماً.
+- **حماية حسابات الكاشير وطباعة الوصل الحراري 80mm ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * استبعاد الفحوصات المعطلة من الاحتساب المالي ومنع تكرار نفس الفحص عبر مصفوفة التتبع `$seenLabTestNames`.
+  * في طباعة الوصل الحراري 80mm: عدم طباعة أي فحص معطل، وتصفية الأسطر بالاسم الصافي لمنع تكرار الفحص في الوصل.
+  * في نموذج الطلب [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php): جمع أسعار الفحوصات المفعلة واستبعاد التكرارات.
+- **حماية البيانات التاريخية (Zero Data Deletion)**:
+  * الإبقاء الكامل على جميع سجلات جدول `lab_tests` دون حذف أي سطر لحماية التاريخ الطبي والمحاسبي.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php))**:
+  * اجتياز كامل لـ 3 اختبارات ميزة تغطي دورة الفحص كاملة (`3 passed, 13 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 94: تصحيح أسعار الخدمات الفردية في الوصل الحراري 80mm وإلغاء تكرار المجموع الكلي وعرض المبلغ المطلوب من المريض فقط Cashier 80mm Thermal Receipt Line-Item Patient Fee Fix & Grand Total Duplication Removal)
 
 ### Done

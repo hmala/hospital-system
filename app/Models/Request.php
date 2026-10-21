@@ -49,14 +49,21 @@ class Request extends Model
         switch ($this->type) {
             case 'lab':
                 if (!empty($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
-                    return LabTest::whereIn('id', $details['lab_test_ids'])->sum('price');
+                    return LabTest::whereIn('id', $details['lab_test_ids'])->where('is_active', true)->sum('price');
                 }
 
                 if (!empty($details['tests']) && is_array($details['tests'])) {
                     $total = 0;
+                    $seenTests = [];
                     foreach ($details['tests'] as $testName) {
-                        $test = LabTest::where('name', $testName)
-                            ->orWhere('code', $testName)
+                        $normName = mb_strtolower(trim((string)$testName));
+                        if (in_array($normName, $seenTests)) continue;
+                        $seenTests[] = $normName;
+
+                        $test = LabTest::where('is_active', true)
+                            ->where(function($q) use ($testName) {
+                                $q->where('name', $testName)->orWhere('code', $testName);
+                            })
                             ->first();
                         if ($test) {
                             $total += $test->price ?? 0;
