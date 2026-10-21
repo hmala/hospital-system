@@ -11,6 +11,7 @@ class Request extends Model
 {
     protected $fillable = [
         'visit_id',
+        'incubator_reservation_id',
         'type',
         'subtype',
         'description',
@@ -19,7 +20,8 @@ class Request extends Model
         'payment_status',
         'insurance_type',
         'payment_id',
-        'result'
+        'result',
+        'requested_by'
     ];
 
     protected $casts = [
@@ -131,6 +133,21 @@ class Request extends Model
         return $this->belongsTo(Visit::class);
     }
 
+    public function incubatorReservation()
+    {
+        return $this->belongsTo(\App\Models\IncubatorReservation::class, 'incubator_reservation_id');
+    }
+
+    public function getPatientAttribute()
+    {
+        return $this->visit?->patient ?? $this->incubatorReservation?->patient;
+    }
+
+    public function getDoctorAttribute()
+    {
+        return $this->visit?->doctor ?? $this->incubatorReservation?->doctor;
+    }
+
     public function bloodBankRequest()
     {
         return $this->hasOne(\App\Models\BloodBankRequest::class);
@@ -239,6 +256,10 @@ class Request extends Model
      */
     public function isDirectExternal(): bool
     {
+        if ($this->incubator_reservation_id) {
+            return false;
+        }
+
         $details = $this->details;
         if (is_string($details)) {
             $details = json_decode($details, true) ?: [];
@@ -350,7 +371,7 @@ class Request extends Model
      */
     public function getPatientPhone(): ?string
     {
-        $patient = $this->visit?->patient;
+        $patient = $this->patient;
         $patientUser = $patient?->user;
         $details = is_string($this->details) ? json_decode($this->details, true) : $this->details;
         
@@ -408,8 +429,9 @@ class Request extends Model
     public function getWhatsAppShareUrl(): ?string
     {
         $phone = $this->getPatientPhone();
-        $patientName = $this->visit?->patient?->user?->name 
-            ?? ($this->visit?->patient?->name ?? 'المريض');
+        $patientName = $this->incubatorReservation?->baby_title 
+            ?? ($this->visit?->patient?->user?->name 
+            ?? ($this->visit?->patient?->name ?? 'المريض'));
         $reportUrl = $this->getPublicReportUrl();
 
         $text = "السلام عليكم ورحمة الله وبركاته\n"

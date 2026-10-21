@@ -262,6 +262,12 @@
                                             </li>
                                             @endif
                                             <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-nicu-btn" data-bs-toggle="pill" data-bs-target="#tab-nicu" type="button" role="tab">
+                                                    <i class="fas fa-baby me-1 text-primary"></i> الخدج والحاضنات
+                                                    <span class="badge bg-primary ms-1 rounded-pill">{{ $pendingNicuCount ?? 0 }}</span>
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($pendingRefundCount ?? 0) > 0 ? 'text-danger border border-danger' : '' }}" id="tab-refunds-btn" data-bs-toggle="pill" data-bs-target="#tab-refunds" type="button" role="tab">
                                                     <i class="fas fa-undo-alt me-1 text-danger"></i> مستحقات الاسترجاع
                                                     @if(($pendingRefundCount ?? 0) > 0)
@@ -964,6 +970,113 @@
                                         </div>
                                         @endif
 
+                                        <!-- تبويب الخدج والحاضنات (NICU Consolidated Inpatient Folios) -->
+                                        <div class="tab-pane fade" id="tab-nicu" role="tabpanel">
+                                            @if(isset($nicuAccounts) && count($nicuAccounts) > 0)
+                                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                    <div>
+                                                        <strong class="text-dark"><i class="fas fa-baby text-primary me-1"></i> الحسابات المالية الموحدة للحاضنات والخدج</strong>
+                                                        <span class="text-muted small d-block">نظام القيد المالي الديناميكي: تُجمع تلقائياً كافة أجور الإقامة، الفحوصات المخبرية، والأشعة، مع خصم الأمانات المسددة مسبقاً.</span>
+                                                    </div>
+                                                    <span class="badge bg-primary fs-7 px-3 py-2">
+                                                        <i class="fas fa-user-clock me-1"></i> {{ count($nicuAccounts) }} حاضنة نشطة
+                                                    </span>
+                                                </div>
+
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th># الحجز</th>
+                                                                <th>الطفل / المسؤول</th>
+                                                                <th>الحاضنة والباقة</th>
+                                                                <th>تاريخ الدخول</th>
+                                                                <th class="text-end">إجمالي الفاتورة</th>
+                                                                <th class="text-end">المسدد (أمانات)</th>
+                                                                <th class="text-end">الرصيد المتبقي</th>
+                                                                <th class="text-center">الإجراء المالي</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($nicuAccounts as $acc)
+                                                                @php
+                                                                    $res = $acc['reservation'];
+                                                                    $stay = $acc['stay_details'];
+                                                                    $babyName = $res->baby_name ?: 'طفل ' . ($res->patient?->name ?? 'غير محدد');
+                                                                    $parentName = $res->patient?->name ?? 'غير محدد';
+                                                                    $phone = $res->patient?->phone ?? '-';
+                                                                    $isSettled = $acc['net_balance'] <= 0;
+                                                                @endphp
+                                                                <tr class="{{ $isSettled ? 'table-success bg-opacity-25' : '' }}">
+                                                                    <td>
+                                                                        <strong>#{{ $res->id }}</strong>
+                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $babyName }}</div>
+                                                                        <small class="text-muted">المسؤول: {{ $parentName }} • {{ $phone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold">
+                                                                            <i class="fas fa-baby me-1"></i> #{{ $res->incubator?->name ?? $res->incubator_id }}
+                                                                        </span>
+                                                                        <div class="small text-muted mt-1">{{ $res->nicuService?->name ?? 'باقة الخدج' }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="small font-monospace">{{ optional($res->admission_date)->format('Y-m-d') ?: optional($res->created_at)->format('Y-m-d') }}</span>
+                                                                        <small class="text-muted d-block">({{ $stay['billable_days'] ?? 1 }} يوم فندقي)</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-dark">{{ number_format($acc['gross_total'], 0) }} د.ع</strong>
+                                                                        @if(!empty($res->insurance_type) && $res->insurance_type !== 'none')
+                                                                            <small class="text-info d-block" style="font-size:0.75rem;">(حصة المريض بعد الضمان)</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-success">{{ number_format($acc['total_paid'], 0) }} د.ع</strong>
+                                                                        @if($acc['total_paid'] > 0)
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">({{ $res->payments->count() }} دفعات)</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if($isSettled)
+                                                                            <span class="badge bg-success px-2 py-1 fs-7">
+                                                                                <i class="fas fa-check-circle me-1"></i> خالص (0 د.ع)
+                                                                            </span>
+                                                                            @if($acc['excess_deposit'] > 0)
+                                                                                <small class="text-primary d-block fw-bold" style="font-size:0.72rem;">فائض أمانات: +{{ number_format($acc['excess_deposit'], 0) }}</small>
+                                                                            @endif
+                                                                        @else
+                                                                            <strong class="text-danger fs-6">{{ number_format($acc['net_balance'], 0) }} د.ع</strong>
+                                                                            <small class="text-danger d-block" style="font-size:0.72rem;">مستحق بالصندوق</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <div class="btn-group btn-group-sm">
+                                                                            <button type="button" class="btn btn-success fw-bold px-2 py-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuDepositModal{{ $res->id }}" title="قبض سلفة أو تسديد">
+                                                                                <i class="fas fa-hand-holding-usd me-1"></i> قبض دفعة
+                                                                            </button>
+                                                                            <a href="{{ route('cashier.nicu.itemized-receipt.print', $res->id) }}" class="btn btn-outline-info px-2 py-1" target="_blank" title="طباعة كشف حراري تفصيلي بالتحاليل والأشعة">
+                                                                                <i class="fas fa-receipt me-1"></i> وصل تفصيلي
+                                                                            </a>
+                                                                            <a href="{{ route('nicu.statement', $res) }}" class="btn btn-outline-primary px-2 py-1" target="_blank" title="عرض كشف الحساب التراكمي">
+                                                                                <i class="fas fa-file-invoice-dollar me-1"></i> كشف
+                                                                            </a>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-baby fa-3x text-muted opacity-50 mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد حجوزات حاضنات نشطة حالياً في قسم الخدج</p>
+                                                </div>
+                                            @endif
+                                        </div>
+
                                         <!-- تبويب مستحقات الاسترجاع (Refunds) -->
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
                                             @php
@@ -1191,6 +1304,110 @@
         </div>
     </div>
 </div>
+
+<!-- مودالات قبض دفعات وأمانات الخدج والحاضنات (NICU Deposit Modals) -->
+@if(isset($nicuAccounts) && count($nicuAccounts) > 0)
+    @foreach($nicuAccounts as $acc)
+        @php
+            $res = $acc['reservation'];
+            $stay = $acc['stay_details'];
+            $babyName = $res->baby_name ?: 'طفل ' . ($res->patient?->name ?? 'غير محدد');
+            $parentName = $res->patient?->name ?? 'غير محدد';
+            $defaultAmount = $acc['net_balance'] > 0 ? $acc['net_balance'] : 50000;
+        @endphp
+        <div class="modal fade" id="nicuDepositModal{{ $res->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                    <div class="modal-header bg-success text-white p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white text-success rounded-circle p-2 me-2 shadow-xs d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold mb-0">استلام دفعة / سلفة لحاضنة الخدج</h5>
+                                <small class="text-white-50">قيد مالي تراكمي وإصدار وصل رسمي</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ route('cashier.nicu.payment', $res) }}" method="POST">
+                        @csrf
+                        <div class="modal-body p-4 text-end bg-light">
+                            <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="text-dark fs-6">{{ $babyName }}</strong>
+                                    <span class="badge bg-primary">حاضنة #{{ $res->incubator?->name ?? $res->incubator_id }}</span>
+                                </div>
+                                <div class="small text-muted mb-2">المسؤول: {{ $parentName }} • ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</div>
+                                <div class="row g-2 text-center pt-2 border-top">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">إجمالي الحساب</small>
+                                        <span class="fw-bold text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">المسدد (أمانات)</small>
+                                        <span class="fw-bold text-success font-monospace">{{ number_format($acc['total_paid'], 0) }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">الرصيد المتبقي</small>
+                                        <span class="fw-bold {{ $acc['net_balance'] > 0 ? 'text-danger' : 'text-success' }} font-monospace">{{ number_format($acc['net_balance'], 0) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark small">المبلغ المستلم نقداً (IQD) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" name="amount" class="form-control form-control-lg fw-bold font-monospace text-success text-center" value="{{ $defaultAmount }}" min="1" step="any" required>
+                                    <span class="input-group-text fw-bold">د.ع</span>
+                                </div>
+                                <div class="d-flex gap-1 mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '25000'">25,000</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '50000'">50,000</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '100000'">100,000</button>
+                                    @if($acc['net_balance'] > 0)
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '{{ $acc['net_balance'] }}'">كامل المتبقي ({{ number_format($acc['net_balance'], 0) }})</button>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark small">طريقة الدفع</label>
+                                <select name="payment_method" class="form-select">
+                                    <option value="cash" selected>💵 نقداً (Cash)</option>
+                                    <option value="card">💳 بطاقة إلكترونية / POS</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark small">نوع الحركة المالية / السند</label>
+                                <select name="payment_type" class="form-select">
+                                    <option value="deposit" selected>أمانات وسلفة دخول (Advance Deposit)</option>
+                                    <option value="interim">دفعة تحت الحساب أثناء الرقود (Interim Payment)</option>
+                                    <option value="final_settlement">تسديد نهائي وتصفية حساب (Final Settlement)</option>
+                                    @if($acc['excess_deposit'] > 0)
+                                        <option value="refund">↩️ صرف استرجاع فائض أمانات (Refund)</option>
+                                    @endif
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-bold text-dark small">ملاحظات إضافية (اختياري)</label>
+                                <input type="text" name="notes" class="form-control" placeholder="مثال: دفعة من والد الطفل / استلام مع الدخول">
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-white justify-content-between p-3">
+                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm">
+                                <i class="fas fa-check-circle me-1"></i> تأكيد القبض وطباعة الوصل
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endif
 
 @endsection
 

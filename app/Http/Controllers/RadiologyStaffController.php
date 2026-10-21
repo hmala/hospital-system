@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Request as MedicalRequest;
+use App\Models\NicuMedicalOrder;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -154,6 +155,71 @@ class RadiologyStaffController extends Controller
 
         $stats['emergency'] = $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
 
+        // جلب طلبات أشعة وسونار الخدج إن وجدت
+        $nicuRadiologyRequests = collect();
+        $useNicuMedicalRequests = false;
+        if ($isAdmin || $user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo'])) {
+            $nicuRequestsExist = MedicalRequest::where('type', 'radiology')
+                ->whereNotNull('incubator_reservation_id')
+                ->exists();
+
+            if ($nicuRequestsExist) {
+                $useNicuMedicalRequests = true;
+                $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+                $extractSql = $isSqlite ? "json_extract(details, '$.priority')" : "JSON_UNQUOTE(JSON_EXTRACT(details, '$.priority'))";
+                $nicuRadQuery = MedicalRequest::with(['incubatorReservation.patient.user', 'incubatorReservation.incubator', 'incubatorReservation.doctor.user'])
+                    ->where('type', 'radiology')
+                    ->whereNotNull('incubator_reservation_id')
+                    ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                    ->orderByRaw("CASE WHEN {$extractSql} = 'stat' THEN 1 WHEN {$extractSql} = 'urgent' THEN 2 ELSE 3 END")
+                    ->orderBy('created_at', 'desc');
+
+                if ($dateFilter === 'today') {
+                    $nicuRadQuery->whereDate('created_at', today());
+                }
+
+                if (!empty($search)) {
+                    $nicuRadQuery->where(function($nq) use ($search) {
+                        $nq->where('id', $search)
+                           ->orWhere('description', 'like', "%{$search}%")
+                           ->orWhereHas('incubatorReservation', function($rq) use ($search) {
+                               $rq->where('baby_name', 'like', "%{$search}%")
+                                  ->orWhere('id', 'like', "%{$search}%")
+                                  ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$search}%"));
+                           });
+                    });
+                }
+
+                $nicuRadiologyRequests = $nicuRadQuery->get();
+            } else {
+                $nicuRadQuery = NicuMedicalOrder::with(['reservation.patient.user', 'reservation.incubator', 'reservation.doctor.user', 'radiologyType'])
+                    ->where('order_type', 'radiology')
+                    ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                    ->orderByRaw("CASE WHEN priority = 'stat' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
+                    ->orderBy('ordered_at', 'desc');
+
+                if ($dateFilter === 'today') {
+                    $nicuRadQuery->whereDate('ordered_at', today());
+                }
+
+                if (!empty($search)) {
+                    $nicuRadQuery->where(function($nq) use ($search) {
+                        $nq->where('item_name', 'like', "%{$search}%")
+                           ->orWhere('id', 'like', "%{$search}%")
+                           ->orWhereHas('reservation', function($rq) use ($search) {
+                               $rq->where('baby_name', 'like', "%{$search}%")
+                                  ->orWhere('id', 'like', "%{$search}%")
+                                  ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$search}%"));
+                           });
+                    });
+                }
+
+                $nicuRadiologyRequests = $nicuRadQuery->get();
+            }
+        }
+
+        $stats['nicu'] = $nicuRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
+
         // جلب المريض الحالي قيد الفحص بالداخل والمريض قيد النداء
         $currentPatient = $allCategoryRequests->where('status', 'in_progress')->first();
         $callingPatient = $allCategoryRequests->where('status', 'calling')->first();
@@ -174,6 +240,7 @@ class RadiologyStaffController extends Controller
             'inProgressRequests',
             'completedRequests',
             'emergencyRadiologyRequests',
+            'nicuRadiologyRequests',
             'stats',
             'selectedCategory',
             'userCategory',
@@ -181,7 +248,8 @@ class RadiologyStaffController extends Controller
             'search',
             'dateFilter',
             'currentPatient',
-            'callingPatient'
+            'callingPatient',
+            'useNicuMedicalRequests'
         ));
     }
 
@@ -568,7 +636,7 @@ class RadiologyStaffController extends Controller
         }
 
         $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if ($isAdmin) {
+        if ($isAdmin || $request->incubator_reservation_id) {
             return;
         }
 
@@ -625,7 +693,13 @@ class RadiologyStaffController extends Controller
             abort(403, 'هذا الطلب ليس من نوع الأشعة');
         }
 
-        $request->load(['visit.patient.user', 'visit.doctor.user']);
+        $request->load([
+            'visit.patient.user', 
+            'visit.doctor.user',
+            'incubatorReservation.patient.user',
+            'incubatorReservation.incubator.room',
+            'incubatorReservation.doctor.user'
+        ]);
 
         $resultData = [];
         if ($request->result) {
@@ -772,7 +846,7 @@ class RadiologyStaffController extends Controller
             $request->status = $newStatus;
             $request->save();
 
-            $patientName = $request->visit?->patient?->name ?? 'مريض';
+            $patientName = $request->incubatorReservation?->baby_title ?? ($request->visit?->patient?->name ?? 'مريض');
             $cat = $request->subtype ?: 'radiology';
             \App\Services\UserActivityLogger::log(
                 action: 'save_radiology_results',
@@ -782,6 +856,22 @@ class RadiologyStaffController extends Controller
                 isSensitive: false,
                 properties: ['status' => $newStatus, 'subtype' => $cat]
             );
+
+            // Sync with NicuMedicalOrder if exists
+            if ($request->incubator_reservation_id) {
+                NicuMedicalOrder::where('order_group_id', 'REQ-' . $request->id)
+                    ->orWhere(function($q) use ($request) {
+                        $q->where('reservation_id', $request->incubator_reservation_id)
+                          ->where('order_type', 'radiology')
+                          ->where('status', '!=', 'completed');
+                    })
+                    ->update([
+                        'status' => $newStatus,
+                        'result' => $findings . ($impression ? "\nالانطباع: " . $impression : ''),
+                        'completed_at' => $newStatus === 'completed' ? now() : null,
+                        'processed_by' => $user->id,
+                    ]);
+            }
 
             // Sync with RadiologyRequest if exists
             if ($request->visit_id) {
@@ -841,7 +931,14 @@ class RadiologyStaffController extends Controller
      */
     public function print(MedicalRequest $request)
     {
-        $request->load(['visit.patient.user', 'visit.doctor.user', 'visit.department']);
+        $request->load([
+            'visit.patient.user', 
+            'visit.doctor.user', 
+            'visit.department',
+            'incubatorReservation.patient.user',
+            'incubatorReservation.doctor.user',
+            'incubatorReservation.incubator'
+        ]);
 
         // Check if there is an associated RadiologyRequest
         $radiologyReq = null;
@@ -900,8 +997,8 @@ class RadiologyStaffController extends Controller
 
         $radiology = (object)[
             'id' => $request->id,
-            'patient' => $request->visit?->patient ?? $radiologyReq?->patient,
-            'doctor' => $request->visit?->doctor ?? $radiologyReq?->doctor,
+            'patient' => $request->visit?->patient ?? $request->incubatorReservation?->patient ?? $radiologyReq?->patient,
+            'doctor' => $request->visit?->doctor ?? $request->incubatorReservation?->doctor ?? $radiologyReq?->doctor,
             'radiologyType' => $radiologyType,
             'clinical_indication' => $details['clinical_indication'] ?? $request->description ?? $radiologyReq?->clinical_indication ?? '',
             'specific_instructions' => $details['notes'] ?? '',
@@ -1029,5 +1126,77 @@ class RadiologyStaffController extends Controller
         }
 
         return redirect()->route('radiology-staff.index')->with($wasPaid ? 'warning' : 'success', $successMsg);
+    }
+
+    /**
+     * بدء فحص أشعة وسونار الطفل الخديج
+     */
+    public function startNicuOrder(NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'admin'])) {
+            abort(403, 'غير مصرح لك ببدء هذا الفحص');
+        }
+
+        $order->update([
+            'status' => NicuMedicalOrder::STATUS_IN_PROGRESS,
+            'processed_by' => $user->id,
+        ]);
+
+        return redirect()->back()->with('success', "تم بدء فحص الأشعة للطفل الخديج ({$order->item_name}) بنجاح.");
+    }
+
+    /**
+     * إكمال واعتماد تقرير أشعة وسونار الطفل الخديج
+     */
+    public function completeNicuOrder(HttpRequest $request, NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'admin'])) {
+            abort(403, 'غير مصرح لك بكتابة تقرير هذا الفحص');
+        }
+
+        $validated = $request->validate([
+            'result' => 'required|string',
+            'technician_notes' => 'nullable|string|max:1000',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,dcm|max:15360',
+        ]);
+
+        $attachmentPath = $order->attachment_path;
+        $attachmentName = $order->attachment_name;
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $attachmentPath = $file->storeAs('radiology_attachments', $filename, 'public');
+            $attachmentName = $file->getClientOriginalName();
+        }
+
+        $order->update([
+            'result' => $validated['result'],
+            'technician_notes' => $validated['technician_notes'] ?? null,
+            'attachment_path' => $attachmentPath,
+            'attachment_name' => $attachmentName,
+            'status' => NicuMedicalOrder::STATUS_COMPLETED,
+            'processed_by' => $user->id,
+            'completed_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', "تم توثيق واعتماد تقرير الأشعة للطفل الخديج ({$order->item_name}) بنجاح.");
+    }
+
+    /**
+     * طباعة تقرير أشعة وسونار الطفل الخديج الرسمي
+     */
+    public function printNicuOrder(NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'admin', 'doctor', 'nurse', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بطباعة هذا التقرير');
+        }
+
+        $order->load(['reservation.patient.user', 'reservation.incubator', 'reservation.doctor.user', 'processedByUser', 'radiologyType']);
+
+        return view('nicu.print.radiology-result', compact('order'));
     }
 }

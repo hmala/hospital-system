@@ -60,6 +60,7 @@ class Payment extends Model
         'pharmacy' => 'الصيدلية والعلاج',
         'surgery' => 'العمليات الجراحية',
         'emergency' => 'طوارئ وإسعاف',
+        'incubator' => 'الخدج والحاضنات (NICU)',
         'other' => 'أخرى'
     ];
 

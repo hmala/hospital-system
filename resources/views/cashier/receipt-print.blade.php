@@ -295,7 +295,9 @@
             
             // Patient Name
             $patientName = '-';
-            if ($payment->patient && $payment->patient->user) {
+            if ($payment->incubatorReservation) {
+                $patientName = $payment->incubatorReservation->baby_name ?: ('طفل ' . ($payment->incubatorReservation->patient?->name ?? 'غير محدد'));
+            } elseif ($payment->patient && $payment->patient->user) {
                 $patientName = $payment->patient->user->name;
             } elseif ($payment->appointment && $payment->appointment->patient && $payment->appointment->patient->user) {
                 $patientName = $payment->appointment->patient->user->name;
@@ -305,7 +307,9 @@
 
             // Doctor Name
             $doctorName = '';
-            if ($payment->appointment && $payment->appointment->doctor && $payment->appointment->doctor->user) {
+            if ($payment->incubatorReservation && $payment->incubatorReservation->doctor && $payment->incubatorReservation->doctor->user) {
+                $doctorName = $payment->incubatorReservation->doctor->user->name;
+            } elseif ($payment->appointment && $payment->appointment->doctor && $payment->appointment->doctor->user) {
                 $doctorName = $payment->appointment->doctor->user->name;
             } elseif ($payment->request && $payment->request->visit && $payment->request->visit->doctor && $payment->request->visit->doctor->user) {
                 $doctorName = $payment->request->visit->doctor->user->name;
@@ -321,6 +325,10 @@
                     $doctorName = $payment->emergency->consultantDoctor->user->name;
                 } elseif ($payment->emergency->doctor && $payment->emergency->doctor->user) {
                     $doctorName = $payment->emergency->doctor->user->name;
+                }
+            } elseif ($payment->incubatorReservation) {
+                if ($payment->incubatorReservation->doctor && $payment->incubatorReservation->doctor->user) {
+                    $doctorName = $payment->incubatorReservation->doctor->user->name;
                 }
             }
 
@@ -578,6 +586,17 @@
                 }
             }
 
+            // 5. Incubator / NICU
+            if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
+                $res = $payment->incubatorReservation;
+                $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
+                $lineItems[] = [
+                    'name' => $payment->description ?: ("دفعة / أمانات حاضنة الخدج ({$babyTitle})"),
+                    'qty' => 1,
+                    'price' => (float)$payment->amount,
+                ];
+            }
+
             // Fallback if no item matched or refund
             if ((float)$payment->amount < 0) {
                 $lineItems = [
@@ -603,6 +622,9 @@
         <!-- Patient and Doctor Line -->
         <div class="patient-doctor-row">
             اسم المريض: <strong>{{ $patientName }}</strong>
+            @if($payment->incubatorReservation)
+                <br>الحاضنة: <span>#{{ $payment->incubatorReservation->incubator?->incubator_number ?? ($payment->incubatorReservation->incubator?->name ?? $payment->incubatorReservation->incubator_id) }}</span>
+            @endif
             @if($doctorName)
                 <br>الطبيب: <span>د. {{ $doctorName }}</span>
             @endif

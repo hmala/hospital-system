@@ -360,6 +360,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/emergency/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorPayout'])->name('emergency.doctor-payout');
         Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
+        Route::post('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'processNicuPayment'])->name('nicu.payment');
+        Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
+        Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
+        Route::get('/nicu/{reservation}/itemized-receipt/print', [\App\Http\Controllers\CashierController::class, 'printNicuItemizedReceipt'])->name('nicu.itemized-receipt.print');
     });
 
     // مسارات مراجعة أسعار العمليات للمحاسب
@@ -479,6 +483,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\LabStaffController::class, 'cancel'])->name('cancel');
+        Route::post('/nicu-orders/{order}/start', [\App\Http\Controllers\LabStaffController::class, 'startNicuOrder'])->name('nicu-orders.start');
+        Route::match(['POST', 'PUT'], '/nicu-orders/{order}/complete', [\App\Http\Controllers\LabStaffController::class, 'completeNicuOrder'])->name('nicu-orders.complete');
+        Route::get('/nicu-orders/{order}/print', [\App\Http\Controllers\LabStaffController::class, 'printNicuOrder'])->name('nicu-orders.print');
     });
 
     // ======= مسارات قسم الأشعة والتصوير الطبي =======
@@ -496,6 +503,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\RadiologyStaffController::class, 'cancel'])->name('cancel');
         Route::post('/requests/{request}/append-types', [\App\Http\Controllers\StaffRequestController::class, 'appendRadiologyTypes'])->name('append-types');
         Route::delete('/requests/{request}/types/{radiologyType}', [\App\Http\Controllers\StaffRequestController::class, 'removeRadiologyType'])->name('remove-type');
+        Route::post('/nicu-orders/{order}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'startNicuOrder'])->name('nicu-orders.start');
+        Route::match(['POST', 'PUT'], '/nicu-orders/{order}/complete', [\App\Http\Controllers\RadiologyStaffController::class, 'completeNicuOrder'])->name('nicu-orders.complete');
+        Route::get('/nicu-orders/{order}/print', [\App\Http\Controllers\RadiologyStaffController::class, 'printNicuOrder'])->name('nicu-orders.print');
     });
 
     // إدارة رموز ICD10

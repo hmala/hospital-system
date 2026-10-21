@@ -1163,14 +1163,15 @@
             }
         }
 
-        $patientModel = $request->visit?->patient ?? ($request->patient_id ? \App\Models\Patient::find($request->patient_id) : null);
+        $nicuRes = $request->incubatorReservation;
+        $patientModel = $request->visit?->patient ?? $nicuRes?->patient ?? ($request->patient_id ? \App\Models\Patient::find($request->patient_id) : null);
         $patientUser = $patientModel?->user;
 
-        $rawName = $patientUser?->name ?? ($patientModel?->name ?? 'Patient');
+        $rawName = $nicuRes ? $nicuRes->baby_title : ($patientUser?->name ?? ($patientModel?->name ?? 'Patient'));
         $arabicName = $rawName;
         $englishName = transliterateArabicName($rawName);
 
-        $patientAge = $patientModel?->age ?? ($patientUser?->date_of_birth ? \Carbon\Carbon::parse($patientUser->date_of_birth)->age : '');
+        $patientAge = $nicuRes ? ($nicuRes->days_count . ' Days (NICU)') : ($patientModel?->age ?? ($patientUser?->date_of_birth ? \Carbon\Carbon::parse($patientUser->date_of_birth)->age : ''));
         $rawGender = trim(strtolower((string)($patientUser?->gender ?? $patientModel?->gender ?? '')));
         if (in_array($rawGender, ['female', 'f', 'أنثى', 'انثى'], true)) {
             $genderEn = 'Female';
@@ -1180,7 +1181,7 @@
             $genderEn = '—';
         }
 
-        $rawDoctor = $request->visit?->doctor?->user?->name ?? '';
+        $rawDoctor = $request->doctor?->user?->name ?? $nicuRes?->doctor?->user?->name ?? ($request->visit?->doctor?->user?->name ?? '');
         $doctorEn = $rawDoctor ? (str_starts_with($rawDoctor, 'د.') || str_starts_with($rawDoctor, 'الدكتور') ? transliterateArabicName($rawDoctor) : 'Dr. ' . transliterateArabicName($rawDoctor)) : '';
 
         $patientPhone = method_exists($request, 'getPatientPhone') ? $request->getPatientPhone() : ($patientUser?->phone ?? ($patientModel?->phone ?? '—'));

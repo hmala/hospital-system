@@ -46,6 +46,11 @@ class Incubator extends Model
     const STATUS_MAINTENANCE = 'maintenance';
     const STATUS_STERILIZING = 'sterilizing';
 
+    public function getNameAttribute(): string
+    {
+        return $this->incubator_number ?? (string)$this->id;
+    }
+
     /**
      * العلاقة مع الغرفة
      */

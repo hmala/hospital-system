@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
+use App\Models\NicuMedicalOrder;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -89,6 +90,28 @@ class LabStaffController extends Controller
         $emergencyPendingCount = (clone $emergencyBaseQuery)->whereIn('status', ['pending', 'in_progress'])->count();
         $emergencyCompletedCount = (clone $emergencyBaseQuery)->where('status', 'completed')->count();
 
+        // NICU Lab queries & counts
+        $nicuRequestCount = MedicalRequest::where('type', 'lab')
+            ->whereNotNull('incubator_reservation_id')
+            ->whereIn('status', ['pending', 'in_progress', 'completed'])
+            ->count();
+
+        $useNicuMedicalRequests = $nicuRequestCount > 0;
+
+        if ($useNicuMedicalRequests) {
+            $nicuBaseQuery = MedicalRequest::where('type', 'lab')
+                ->whereNotNull('incubator_reservation_id')
+                ->whereIn('status', ['pending', 'in_progress', 'completed']);
+        } else {
+            $nicuBaseQuery = NicuMedicalOrder::where('order_type', 'lab')
+                ->whereIn('status', ['pending', 'in_progress', 'completed']);
+        }
+        $nicuCount = (clone $nicuBaseQuery)->count();
+        $nicuPendingCount = (clone $nicuBaseQuery)->whereIn('status', ['pending', 'in_progress'])->count();
+        $nicuCompletedCount = (clone $nicuBaseQuery)->where('status', 'completed')->count();
+
+        $nicuLabRequests = collect();
+
         if ($sourceFilter === 'emergency') {
             $emergencyQuery = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed']);
@@ -112,7 +135,7 @@ class LabStaffController extends Controller
                 });
             }
 
-            $emergencyLabRequests = $emergencyQuery->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+            $emergencyLabRequests = $emergencyQuery->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'desc')
                 ->paginate(15)
                 ->withQueryString();
@@ -124,9 +147,91 @@ class LabStaffController extends Controller
                 'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
                 'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
                 'emergency' => $emergencyCount,
+                'nicu' => $nicuCount,
                 'pending' => $emergencyPendingCount,
                 'completed' => $emergencyCompletedCount,
                 'tab_total' => $emergencyCount,
+            ];
+        } elseif ($sourceFilter === 'nicu') {
+            if ($useNicuMedicalRequests) {
+                $nicuQuery = MedicalRequest::with(['incubatorReservation.patient.user', 'incubatorReservation.incubator', 'incubatorReservation.doctor.user', 'labResults'])
+                    ->where('type', 'lab')
+                    ->whereNotNull('incubator_reservation_id')
+                    ->whereIn('status', ['pending', 'in_progress', 'completed']);
+
+                if ($statusFilter === 'pending') {
+                    $nicuQuery->whereIn('status', ['pending', 'in_progress']);
+                } elseif ($statusFilter === 'completed') {
+                    $nicuQuery->where('status', 'completed');
+                }
+
+                if ($dateFilter === 'today') {
+                    $nicuQuery->whereDate('created_at', now()->toDateString());
+                }
+
+                if (!empty($s)) {
+                    $nicuQuery->where(function ($nq) use ($s) {
+                        $nq->where('id', $s)
+                           ->orWhere('description', 'like', "%{$s}%")
+                           ->orWhereHas('incubatorReservation', function($rq) use ($s) {
+                               $rq->where('baby_name', 'like', "%{$s}%")
+                                  ->orWhere('id', 'like', "%{$s}%")
+                                  ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$s}%"));
+                           });
+                    });
+                }
+
+                $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+                $extractSql = $isSqlite ? "json_extract(details, '$.priority')" : "JSON_UNQUOTE(JSON_EXTRACT(details, '$.priority'))";
+                $nicuLabRequests = $nicuQuery->orderByRaw("CASE WHEN {$extractSql} = 'stat' THEN 1 WHEN {$extractSql} = 'urgent' THEN 2 ELSE 3 END")
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(15)
+                    ->withQueryString();
+            } else {
+                $nicuQuery = NicuMedicalOrder::with(['reservation.patient.user', 'reservation.incubator', 'reservation.doctor.user', 'labTest.references'])
+                    ->where('order_type', 'lab')
+                    ->whereIn('status', ['pending', 'in_progress', 'completed']);
+
+                if ($statusFilter === 'pending') {
+                    $nicuQuery->whereIn('status', ['pending', 'in_progress']);
+                } elseif ($statusFilter === 'completed') {
+                    $nicuQuery->where('status', 'completed');
+                }
+
+                if ($dateFilter === 'today') {
+                    $nicuQuery->whereDate('ordered_at', now()->toDateString());
+                }
+
+                if (!empty($s)) {
+                    $nicuQuery->where(function ($nq) use ($s) {
+                        $nq->where('item_name', 'like', "%{$s}%")
+                           ->orWhere('id', 'like', "%{$s}%")
+                           ->orWhereHas('reservation', function($rq) use ($s) {
+                               $rq->where('baby_name', 'like', "%{$s}%")
+                                  ->orWhere('id', 'like', "%{$s}%")
+                                  ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$s}%"));
+                           });
+                    });
+                }
+
+                $nicuLabRequests = $nicuQuery->orderByRaw("CASE WHEN priority = 'stat' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
+                    ->orderBy('ordered_at', 'desc')
+                    ->paginate(15)
+                    ->withQueryString();
+            }
+
+            $requests = collect();
+            $emergencyLabRequests = collect();
+
+            $counts = [
+                'all' => (clone $baseCountQuery)->count(),
+                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
+                'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
+                'emergency' => $emergencyCount,
+                'nicu' => $nicuCount,
+                'pending' => $nicuPendingCount,
+                'completed' => $nicuCompletedCount,
+                'tab_total' => $nicuCount,
             ];
         } else {
             $counts = [
@@ -134,6 +239,7 @@ class LabStaffController extends Controller
                 'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
                 'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
                 'emergency' => $emergencyCount,
+                'nicu' => $nicuCount,
                 'pending' => (clone $activeSourceQuery)->whereIn('status', ['pending', 'pending_service_selection', 'in_progress'])->count(),
                 'completed' => (clone $activeSourceQuery)->where('status', 'completed')->count(),
                 'tab_total' => (clone $activeSourceQuery)->count(),
@@ -146,7 +252,7 @@ class LabStaffController extends Controller
             $emergencyLabRequests = collect();
         }
 
-        return view('lab.index', compact('requests', 'emergencyLabRequests', 'counts', 'statusFilter', 'dateFilter', 'sourceFilter'));
+        return view('lab.index', compact('requests', 'emergencyLabRequests', 'nicuLabRequests', 'counts', 'statusFilter', 'dateFilter', 'sourceFilter', 'useNicuMedicalRequests'));
     }
 
     public function show(MedicalRequest $request)
@@ -161,7 +267,13 @@ class LabStaffController extends Controller
             abort(403, 'هذا الطلب ليس من نوع المختبر');
         }
 
-        $request->load(['visit.patient.user', 'visit.doctor.user']);
+        $request->load([
+            'visit.patient.user', 
+            'visit.doctor.user',
+            'incubatorReservation.patient.user',
+            'incubatorReservation.incubator.room',
+            'incubatorReservation.doctor.user'
+        ]);
 
         $bloodBankRequest = null;
         $isBloodBankRequest = $request->type === 'blood_bank';
@@ -418,6 +530,7 @@ class LabStaffController extends Controller
 
                     LabResult::create([
                         'visit_id' => $request->visit_id,
+                        'incubator_reservation_id' => $request->incubator_reservation_id,
                         'request_id' => $request->id,
                         'test_name' => $testName,
                         'parent_test_name' => $parentTestName,
@@ -470,7 +583,7 @@ class LabStaffController extends Controller
         $request->result = json_encode($existingRes);
         $request->save();
 
-        $patientName = $request->visit?->patient?->name ?? 'مريض';
+        $patientName = $request->incubatorReservation?->baby_title ?? ($request->visit?->patient?->name ?? 'مريض');
         $countInfo = $savedResults > 0 ? " ({$savedResults} نتيجة تحليل)" : ($hasNewAttachment ? ' (تقرير جهاز مرفق)' : '');
         \App\Services\UserActivityLogger::log(
             action: 'save_lab_results',
@@ -482,6 +595,20 @@ class LabStaffController extends Controller
         );
 
         if ($targetStatus === 'completed') {
+            if ($request->incubator_reservation_id) {
+                NicuMedicalOrder::where('order_group_id', 'REQ-' . $request->id)
+                    ->orWhere(function($q) use ($request) {
+                        $q->where('reservation_id', $request->incubator_reservation_id)
+                          ->where('order_type', 'lab')
+                          ->where('status', '!=', 'completed');
+                    })
+                    ->update([
+                        'status' => 'completed',
+                        'completed_at' => now(),
+                        'processed_by' => auth()->id(),
+                    ]);
+            }
+
             try {
                 app(\App\Services\TelegramService::class)->sendResultsReady($request);
             } catch (\Throwable $te) {
@@ -512,7 +639,13 @@ class LabStaffController extends Controller
 
     public function print(MedicalRequest $request)
     {
-        $request->load(['visit.patient.user', 'visit.doctor.user']);
+        $request->load([
+            'visit.patient.user', 
+            'visit.doctor.user',
+            'incubatorReservation.patient.user',
+            'incubatorReservation.incubator',
+            'incubatorReservation.doctor.user'
+        ]);
 
         $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         if (!is_array($requestDetails)) $requestDetails = [];
@@ -625,5 +758,83 @@ class LabStaffController extends Controller
         }
 
         return redirect()->route('lab.index')->with($wasPaid ? 'warning' : 'success', $successMsg);
+    }
+
+    /**
+     * بدء فحص تحليل الطفل الخديج
+     */
+    public function startNicuOrder(NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك ببدء هذا الفحص');
+        }
+
+        $order->update([
+            'status' => NicuMedicalOrder::STATUS_IN_PROGRESS,
+            'processed_by' => $user->id,
+        ]);
+
+        return redirect()->back()->with('success', "تم بدء فحص التحليل للطفل الخديج ({$order->item_name}) بنجاح.");
+    }
+
+    /**
+     * إكمال واعتماد نتيجة تحليل الطفل الخديج
+     */
+    public function completeNicuOrder(HttpRequest $request, NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+            abort(403, 'غير مصرح لك بإدخال نتائج هذا الفحص');
+        }
+
+        $validated = $request->validate([
+            'result' => 'required|string',
+            'unit' => 'nullable|string|max:50',
+            'reference_range' => 'nullable|string|max:100',
+            'result_status' => 'nullable|in:normal,high,low,abnormal',
+            'technician_notes' => 'nullable|string|max:1000',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $attachmentPath = $order->attachment_path;
+        $attachmentName = $order->attachment_name;
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $attachmentPath = $file->storeAs('lab_attachments', $filename, 'public');
+            $attachmentName = $file->getClientOriginalName();
+        }
+
+        $order->update([
+            'result' => $validated['result'],
+            'unit' => $validated['unit'] ?? $order->unit,
+            'reference_range' => $validated['reference_range'] ?? $order->reference_range,
+            'result_status' => $validated['result_status'] ?? 'normal',
+            'technician_notes' => $validated['technician_notes'] ?? null,
+            'attachment_path' => $attachmentPath,
+            'attachment_name' => $attachmentName,
+            'status' => NicuMedicalOrder::STATUS_COMPLETED,
+            'processed_by' => $user->id,
+            'completed_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', "تم توثيق واعتماد نتيجة التحليل للطفل الخديج ({$order->item_name}) بنجاح.");
+    }
+
+    /**
+     * طباعة تقرير تحليل الطفل الخديج الرسمي
+     */
+    public function printNicuOrder(NicuMedicalOrder $order)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'receptionist'])) {
+            abort(403, 'غير مصرح لك بطباعة هذا الفحص');
+        }
+
+        $order->load(['reservation.patient.user', 'reservation.incubator', 'reservation.doctor.user', 'processedByUser', 'labTest']);
+
+        return view('nicu.print.lab-result', compact('order'));
     }
 }

@@ -39,20 +39,20 @@
         </div>
     @endif
 
-    <!-- 2. بطاقات الأقسام الثلاثة: الاستشارية، المختبر المباشر، والطوارئ -->
+    <!-- 2. بطاقات الأقسام: الاستشارية، المختبر المباشر، الطوارئ، الخدج والحاضنات، والكل -->
     <div class="row g-2 mb-3">
         <!-- أ. طلبات العيادات الاستشارية -->
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <a href="{{ route('lab.index', ['source' => 'consultation', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'consultation' ? 'border-bottom border-primary border-4 shadow' : '' }}" 
                style="background: #ffffff; transition: all 0.2s ease;">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات العيادات الاستشارية</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">الاستشارية</span>
                         <h4 class="mb-0 fw-bold text-primary font-monospace">{{ $counts['consultation'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.7rem;">تحاليل محولة من الأطباء</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">تحاليل الأطباء</small>
                     </div>
-                    <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                    <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center" style="width: 38px; height: 38px;">
                         <i class="fas fa-user-md fs-5"></i>
                     </div>
                 </div>
@@ -60,17 +60,17 @@
         </div>
 
         <!-- ب. طلبات المختبر المباشرة (الخارجية) -->
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <a href="{{ route('lab.index', ['source' => 'direct', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'direct' ? 'border-bottom border-info border-4 shadow' : '' }}" 
                style="background: #ffffff; transition: all 0.2s ease;">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات المختبر المباشرة</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">المختبر المباشر</span>
                         <h4 class="mb-0 fw-bold text-info font-monospace">{{ $counts['direct'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.7rem;">مراجعي الصندوق والمختبر العام</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">مراجعي الصندوق</small>
                     </div>
-                    <div class="bg-info-subtle text-info p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                    <div class="bg-info-subtle text-info p-2 rounded-circle text-center" style="width: 38px; height: 38px;">
                         <i class="fas fa-vial fs-5"></i>
                     </div>
                 </div>
@@ -78,35 +78,53 @@
         </div>
 
         <!-- ج. تحاليل قسم الطوارئ -->
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <a href="{{ route('lab.index', ['source' => 'emergency', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'emergency' ? 'border-bottom border-danger border-4 shadow' : '' }}" 
                style="background: #ffffff; transition: all 0.2s ease;">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">تحاليل قسم الطوارئ</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">الطوارئ</span>
                         <h4 class="mb-0 fw-bold text-danger font-monospace">{{ $counts['emergency'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.7rem;">حالات الطوارئ الحرجة</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">حالات الطوارئ</small>
                     </div>
-                    <div class="bg-danger-subtle text-danger p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                    <div class="bg-danger-subtle text-danger p-2 rounded-circle text-center" style="width: 38px; height: 38px;">
                         <i class="fas fa-ambulance fs-5"></i>
                     </div>
                 </div>
             </a>
         </div>
 
-        <!-- د. كافة الطلبات (إجمالي) -->
-        <div class="col-xl-3 col-md-6">
+        <!-- د. تحاليل الخدج والحاضنات NICU -->
+        <div class="col-xl col-md-6 col-sm-6">
+            <a href="{{ route('lab.index', ['source' => 'nicu', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? '') == 'nicu' ? 'border-bottom border-success border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">الخدج والحاضنات</span>
+                        <h4 class="mb-0 fw-bold text-success font-monospace">{{ $counts['nicu'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">أطفال الحاضنات NICU</small>
+                    </div>
+                    <div class="bg-success-subtle text-success p-2 rounded-circle text-center" style="width: 38px; height: 38px;">
+                        <i class="fas fa-baby fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- هـ. كافة الطلبات (إجمالي) -->
+        <div class="col-xl col-md-6 col-sm-12">
             <a href="{{ route('lab.index', ['source' => 'all', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                class="card shadow-sm border-0 text-decoration-none h-100 {{ ($sourceFilter ?? 'all') == 'all' ? 'border-bottom border-secondary border-4 shadow' : '' }}" 
                style="background: #ffffff; transition: all 0.2s ease;">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">كافة طلبات المختبر</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">كافة الطلبات</span>
                         <h4 class="mb-0 fw-bold text-dark font-monospace">{{ $counts['all'] ?? 0 }}</h4>
                         <small class="text-muted" style="font-size: 0.7rem;">مكتمل: {{ $counts['completed'] ?? 0 }} • معلق: {{ $counts['pending'] ?? 0 }}</small>
                     </div>
-                    <div class="bg-secondary-subtle text-secondary p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                    <div class="bg-secondary-subtle text-secondary p-2 rounded-circle text-center" style="width: 38px; height: 38px;">
                         <i class="fas fa-layer-group fs-5"></i>
                     </div>
                 </div>
@@ -118,9 +136,9 @@
     <div class="card shadow-sm border-0 bg-white mb-3 rounded-3">
         <div class="card-body p-3">
             <div class="row g-2 align-items-center justify-content-between">
-                <!-- التبويبات العلوية الثلاثية -->
-                <div class="col-lg-7 col-12">
-                    <ul class="nav nav-pills gap-1" id="labRequestsTabs">
+                <!-- التبويبات العلوية -->
+                <div class="col-lg-8 col-12">
+                    <ul class="nav nav-pills gap-1 flex-wrap" id="labRequestsTabs">
                         <li class="nav-item">
                             <a href="{{ route('lab.index', ['source' => 'consultation', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                                class="nav-link {{ ($sourceFilter ?? '') == 'consultation' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2">
@@ -146,6 +164,14 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{{ route('lab.index', ['source' => 'nicu', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
+                               class="nav-link {{ ($sourceFilter ?? '') == 'nicu' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2 text-success">
+                                <i class="fas fa-baby"></i>
+                                <span>الخدج والحاضنات</span>
+                                <span class="badge {{ ($sourceFilter ?? '') == 'nicu' ? 'bg-white text-success' : 'bg-success text-white' }} rounded-pill">{{ $counts['nicu'] ?? 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('lab.index', ['source' => 'all', 'status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" 
                                class="nav-link {{ ($sourceFilter ?? 'all') == 'all' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2">
                                 <i class="fas fa-list"></i>
@@ -157,7 +183,7 @@
                 </div>
 
                 <!-- شريط البحث والفلترة -->
-                <div class="col-lg-5 col-12">
+                <div class="col-lg-4 col-12">
                     <form method="GET" action="{{ route('lab.index') }}" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
                         <input type="hidden" name="source" value="{{ request('source', 'all') }}">
                         <input type="hidden" name="status" value="{{ request('status', 'all') }}">
@@ -319,6 +345,204 @@
                     <div class="text-center py-5">
                         <i class="fas fa-ambulance fa-3x text-muted opacity-50 mb-3"></i>
                         <h6 class="text-dark fw-bold">لا توجد تحاليل طوارئ تطابق هذا الفلتر</h6>
+                        <p class="text-muted small mb-0">يمكنك التبديل بين التبويبات أو إزالة فلتر الحالة للاطلاع على بقية الطلبات.</p>
+                    </div>
+                @endif
+
+            @elseif(($sourceFilter ?? '') === 'nicu')
+                <!-- ج. جدول تحاليل الخدج والحاضنات NICU -->
+                @if(isset($nicuLabRequests) && $nicuLabRequests->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="labNicuTable">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="text-center" style="width: 75px;">#</th>
+                                    <th>الطفل والحاضنة</th>
+                                    <th>التحاليل والفحوصات المطلوبة</th>
+                                    <th style="width: 120px;" class="text-center">الأولوية</th>
+                                    <th style="width: 140px;" class="text-center">حالة الفحص</th>
+                                    <th>النتائج والملاحظات</th>
+                                    <th style="width: 170px;" class="text-center">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($nicuLabRequests as $nicuRequest)
+                                    @php
+                                        $isMedRequest = $nicuRequest instanceof \App\Models\Request;
+                                        $nCompleted = $nicuRequest->status === 'completed';
+                                        $nInProgress = $nicuRequest->status === 'in_progress';
+                                        
+                                        if ($isMedRequest) {
+                                            $res = $nicuRequest->incubatorReservation;
+                                            $babyName = $res?->baby_name ?: ($res?->baby_title ?: ('طفل ' . ($res?->patient?->name ?? 'غير محدد')));
+                                            $incubatorName = '#' . ($res?->incubator?->name ?? $res?->incubator_id);
+                                            $docName = $res?->doctor?->user?->name ?? 'طبيب الخدج المشرف';
+                                            $reqDetails = is_string($nicuRequest->details) ? json_decode($nicuRequest->details, true) : ($nicuRequest->details ?? []);
+                                            $testsList = $reqDetails['tests'] ?? [$nicuRequest->description];
+                                            $priority = $reqDetails['priority'] ?? 'normal';
+                                            $notes = $reqDetails['doctor_notes'] ?? null;
+                                            $orderedAt = $nicuRequest->created_at;
+                                            $resCount = $nicuRequest->labResults?->count() ?? 0;
+                                        } else {
+                                            $babyName = $nicuRequest->reservation?->baby_name ?: ('طفل ' . ($nicuRequest->reservation?->patient?->name ?? 'غير محدد'));
+                                            $incubatorName = $nicuRequest->reservation?->incubator?->name ?? ('حاضنة #' . $nicuRequest->reservation?->incubator_id);
+                                            $docName = $nicuRequest->reservation?->doctor?->user?->name ?? null;
+                                            $testsList = [$nicuRequest->item_name];
+                                            $priority = $nicuRequest->priority;
+                                            $notes = $nicuRequest->instructions;
+                                            $orderedAt = $nicuRequest->ordered_at ?? $nicuRequest->created_at;
+                                            $resCount = 0;
+                                        }
+
+                                        $prioColor = match(strtolower($priority)) {
+                                            'stat', 'critical', 'emergency' => 'danger',
+                                            'urgent' => 'warning text-dark',
+                                            default => 'secondary'
+                                        };
+                                        $prioText = match(strtolower($priority)) {
+                                            'stat', 'critical', 'emergency' => '🚨 طارئ جداً (STAT)',
+                                            'urgent' => '⚡ عاجل (Urgent)',
+                                            default => 'عادي (Normal)'
+                                        };
+                                    @endphp
+                                    <tr style="{{ $nCompleted ? 'border-right: 4px solid #16a34a; background-color: #fafdfb;' : ($nInProgress ? 'border-right: 4px solid #0284c7; background-color: #f0f9ff;' : 'border-right: 4px solid #f59e0b; background-color: #ffffff;') }}">
+                                        <td class="text-center font-monospace fw-bold text-secondary">
+                                            #{{ $nicuRequest->id }}
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-success-subtle text-success p-1 rounded-circle text-center" style="width: 32px; height: 32px; line-height: 24px;">
+                                                    <i class="fas fa-baby"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-dark d-block">{{ $babyName }}</strong>
+                                                    <small class="text-muted">
+                                                        <span class="badge bg-secondary-subtle text-dark border">{{ $incubatorName }}</span>
+                                                        @if($docName)
+                                                            • د. {{ $docName }}
+                                                        @endif
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach($testsList as $tItem)
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
+                                                        <i class="fas fa-vial me-1"></i> {{ $tItem }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            @if($notes)
+                                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                                    <i class="fas fa-comment-medical me-1 text-primary"></i> {{ $notes }}
+                                                </small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-{{ $prioColor }} fw-bold">
+                                                {{ $prioText }}
+                                            </span>
+                                            <small class="d-block text-muted font-monospace mt-1" style="font-size: 0.7rem;">
+                                                {{ $orderedAt?->format('H:i') }}
+                                            </small>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($nCompleted)
+                                                <span class="badge bg-success py-1.5 px-2.5 shadow-sm fw-semibold">
+                                                    <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                                </span>
+                                            @elseif($nInProgress)
+                                                <span class="badge bg-info text-white py-1.5 px-2.5 shadow-sm fw-semibold">
+                                                    <i class="fas fa-spinner fa-spin me-1"></i> قيد الفحص
+                                                </span>
+                                            @else
+                                                <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-sm fw-bold">
+                                                    <i class="fas fa-clock me-1"></i> بانتظار الفحص
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($nCompleted)
+                                                @if($isMedRequest)
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                            <i class="fas fa-check-double me-1"></i> معتمد رسمياً
+                                                        </span>
+                                                        @if($resCount > 0)
+                                                            <small class="text-muted">({{ $resCount }} نتيجة مسجلة)</small>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    <div class="fw-bold font-monospace text-dark">
+                                                        {{ $nicuRequest->result }} <small class="text-muted">{{ $nicuRequest->unit }}</small>
+                                                        @if($nicuRequest->result_status && $nicuRequest->result_status !== 'normal')
+                                                            <span class="badge bg-danger-subtle text-danger border border-danger ms-1">{{ $nicuRequest->result_status }}</span>
+                                                        @endif
+                                                    </div>
+                                                    @if($nicuRequest->reference_range)
+                                                        <small class="text-muted" style="font-size: 0.72rem;">المعدل: {{ $nicuRequest->reference_range }}</small>
+                                                    @endif
+                                                @endif
+                                            @else
+                                                <span class="text-muted small">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($isMedRequest)
+                                                <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                                    <a href="{{ route('lab.show', $nicuRequest->id) }}" class="btn btn-sm btn-primary fw-bold shadow-sm px-2.5 py-1">
+                                                        <i class="fas fa-microscope me-1"></i> {{ $nCompleted ? 'مراجعة النتائج' : 'إدخال النتائج' }}
+                                                    </a>
+                                                    @if($nCompleted)
+                                                        <a href="{{ route('lab.print', $nicuRequest->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-sm" target="_blank" title="طباعة التقرير الرسمي">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            @else
+                                                @if($nicuRequest->status == 'pending')
+                                                    <form action="{{ route('lab.nicu-orders.start', $nicuRequest) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-primary fw-bold shadow-sm px-3">
+                                                            <i class="fas fa-play me-1"></i> بدء الفحص
+                                                        </button>
+                                                    </form>
+                                                @elseif($nicuRequest->status == 'in_progress')
+                                                    <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#completeNicuLabModal{{ $nicuRequest->id }}">
+                                                        <i class="fas fa-check me-1"></i> إدخال النتيجة
+                                                    </button>
+                                                @else
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#completeNicuLabModal{{ $nicuRequest->id }}" title="تعديل النتيجة">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <a href="{{ route('lab.nicu-orders.print', $nicuRequest) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-sm" target="_blank" title="طباعة">
+                                                            <i class="fas fa-print me-1"></i> طباعة
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- الترقيم والصفحات للخدج -->
+                    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">
+                            عرض <strong>{{ $nicuLabRequests->firstItem() ?? 0 }}</strong> إلى <strong>{{ $nicuLabRequests->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $nicuLabRequests->total() }}</strong> فحص خدج
+                        </span>
+                        <div>
+                            {{ $nicuLabRequests->links() }}
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <i class="fas fa-baby fa-3x text-muted opacity-50 mb-3"></i>
+                        <h6 class="text-dark fw-bold">لا توجد طلبات تحاليل للخدج والحاضنات تطابق هذا الفلتر</h6>
                         <p class="text-muted small mb-0">يمكنك التبديل بين التبويبات أو إزالة فلتر الحالة للاطلاع على بقية الطلبات.</p>
                     </div>
                 @endif
@@ -697,6 +921,90 @@
                 </div>
             </div>
             @endif
+        @endforeach
+    @endif
+
+    @if(isset($nicuLabRequests) && $nicuLabRequests->count() > 0)
+        @foreach($nicuLabRequests as $nicuRequest)
+            <div class="modal fade" id="completeNicuLabModal{{ $nicuRequest->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title fw-bold">
+                                <i class="fas fa-microscope me-2"></i> توثيق نتيجة تحليل للطفل الخديج
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form action="{{ route('lab.nicu-orders.complete', $nicuRequest) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="modal-body p-4">
+                                <div class="bg-light p-3 rounded-3 mb-3 border">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <span class="text-muted small d-block">الطفل / المريض:</span>
+                                            <strong class="text-dark">{{ $nicuRequest->reservation?->baby_name ?: 'طفل ' . ($nicuRequest->reservation?->patient?->name ?? 'غير محدد') }}</strong>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="text-muted small d-block">الحاضنة:</span>
+                                            <span class="badge bg-primary">#{{ $nicuRequest->reservation?->incubator?->name ?? $nicuRequest->reservation?->incubator_id }}</span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="text-muted small d-block">الفحص المطلوب:</span>
+                                            <strong class="text-primary">{{ $nicuRequest->item_name }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-dark small">قيمة النتيجة (Result Value) <span class="text-danger">*</span></label>
+                                        <input type="text" name="result" class="form-control fw-bold font-monospace" placeholder="مثال: 12.5 أو Negative أو 7.35" value="{{ $nicuRequest->result }}" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold text-dark small">الوحدة (Unit)</label>
+                                        <input type="text" name="unit" class="form-control" placeholder="مثال: mg/dL, g/dL" value="{{ $nicuRequest->unit ?: ($nicuRequest->labTest?->unit ?? '') }}">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold text-dark small">التقييم السريري</label>
+                                        <select name="result_status" class="form-select">
+                                            <option value="normal" {{ ($nicuRequest->result_status ?? 'normal') == 'normal' ? 'selected' : '' }}>طبيعي (Normal)</option>
+                                            <option value="high" {{ ($nicuRequest->result_status ?? '') == 'high' ? 'selected' : '' }}>مرتفع (High ⬆️)</option>
+                                            <option value="low" {{ ($nicuRequest->result_status ?? '') == 'low' ? 'selected' : '' }}>منخفض (Low ⬇️)</option>
+                                            <option value="abnormal" {{ ($nicuRequest->result_status ?? '') == 'abnormal' ? 'selected' : '' }}>غير طبيعي (Abnormal ⚠️)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-dark small">المعدل الطبيعي والمرجع (Reference Range)</label>
+                                        <input type="text" name="reference_range" class="form-control" placeholder="مثال: 0.2 - 1.2 أو 13.5 - 17.5" value="{{ $nicuRequest->reference_range }}">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-dark small">ملاحظات فني المختبر / توصيات</label>
+                                        <textarea name="technician_notes" class="form-control" rows="2" placeholder="اكتب أي ملاحظات أو تعليق سريري على العينة...">{{ $nicuRequest->technician_notes }}</textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-dark small">مرفق تقرير الجهاز / رسم بياني (اختياري)</label>
+                                        <input type="file" name="attachment" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png">
+                                        @if($nicuRequest->attachment_path)
+                                            <div class="mt-1 small">
+                                                <i class="fas fa-paperclip text-primary me-1"></i> مرفق حالي: 
+                                                <a href="{{ asset('storage/' . $nicuRequest->attachment_path) }}" target="_blank" class="fw-semibold text-primary">
+                                                    {{ $nicuRequest->attachment_name ?: 'عرض المرفق' }}
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-light justify-content-between">
+                                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm">
+                                    <i class="fas fa-check-circle me-1"></i> حفظ واعتماد نتيجة التحليل
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         @endforeach
     @endif
 </div>

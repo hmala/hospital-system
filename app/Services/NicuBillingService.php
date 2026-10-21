@@ -213,6 +213,10 @@ class NicuBillingService
             ]);
         }
 
+        $totalPaid = $reservation->total_paid_amount;
+        $netBalance = max(0, $patientGrandTotal - $totalPaid);
+        $excessDeposit = max(0, $totalPaid - $patientGrandTotal);
+
         return [
             'total_hours' => $totalHours,
             'calculated_days' => $billableDays['days'],
@@ -236,6 +240,10 @@ class NicuBillingService
             'grand_total' => $grandTotal,
             'patient_grand_total' => $patientGrandTotal,
             'insurance_grand_total' => $insuranceGrandTotal,
+            'total_paid' => $totalPaid,
+            'net_balance' => $netBalance,
+            'excess_deposit' => $excessDeposit,
+            'payments' => $reservation->payments()->with('cashier')->latest()->get(),
             'start_datetime' => $admissionDateTime,
             'end_datetime' => $endDateTime,
         ];

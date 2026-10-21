@@ -237,6 +237,43 @@
             </div>
         @endif
 
+        <!-- 4. جدول الأمانات والمدفوعات المسددة في الصندوق -->
+        @if(isset($stayDetails['payments']) && $stayDetails['payments']->isNotEmpty())
+            <h5 class="fw-bold text-success mb-2">4. سجل الأمانات والمدفوعات المسددة في الصندوق (Advance Deposits & Payments)</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-success bg-opacity-10">
+                        <tr>
+                            <th>رقم الإيصال</th>
+                            <th>تاريخ ووقت القبض</th>
+                            <th>الكاشير المستلم</th>
+                            <th>طريقة الدفع والغرض</th>
+                            <th class="text-end">المبلغ المسدد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($stayDetails['payments'] as $pmt)
+                            <tr>
+                                <td class="fw-bold font-monospace text-primary">#{{ $pmt->receipt_number }}</td>
+                                <td class="small">{{ optional($pmt->paid_at)->format('Y-m-d H:i') ?: $pmt->created_at->format('Y-m-d H:i') }}</td>
+                                <td>{{ $pmt->cashier?->name ?? 'كاشير الصندوق' }}</td>
+                                <td class="small text-muted">
+                                    {!! $pmt->payment_type_badge !!}
+                                    <span class="badge bg-light text-dark border">{{ $pmt->payment_method == 'cash' ? 'نقداً' : 'بطاقة' }}</span>
+                                    <span class="d-block mt-1">{{ $pmt->notes ?: $pmt->payment_type_name }}</span>
+                                </td>
+                                <td class="text-end fw-bold text-success font-monospace">{{ number_format($pmt->amount) }} د.ع</td>
+                            </tr>
+                        @endforeach
+                        <tr class="table-light">
+                            <td colspan="4" class="fw-bold text-end text-success">مجموع المبالغ المسددة (أمانات وسلف):</td>
+                            <td class="text-end fw-bold text-success fs-6">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
         <!-- الخلاصة المالية النهائية -->
         <div class="row justify-content-end mb-4">
             <div class="col-md-6">
@@ -265,7 +302,7 @@
                     </div>
                     <hr class="my-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fs-6 fw-bold text-muted">إجمالي المطالبة الكاملة:</span>
+                        <span class="fs-6 fw-bold text-muted">إجمالي الفاتورة الكاملة:</span>
                         <span class="fs-5 fw-bold text-dark">{{ number_format($stayDetails['grand_total']) }} د.ع</span>
                     </div>
                     @if($stayDetails['is_insured'])
@@ -273,14 +310,26 @@
                             <span class="fw-bold text-success"><i class="fas fa-file-invoice me-1"></i> مطالبة هيئة الضمان الصحي:</span>
                             <span class="fs-5 fw-bold text-success">{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</span>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center p-2 bg-primary bg-opacity-10 rounded">
-                            <span class="fs-5 fw-bold text-primary"><i class="fas fa-hand-holding-usd me-1"></i> المستحق نقداً على المريض (الصندوق):</span>
-                            <span class="fs-4 fw-bold text-primary">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-primary bg-opacity-10 rounded mb-2">
+                            <span class="fw-bold text-primary"><i class="fas fa-user me-1"></i> حصة المريض الإجمالية:</span>
+                            <span class="fs-5 fw-bold text-primary">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                        </div>
+                    @endif
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded border">
+                        <span class="fw-bold text-success"><i class="fas fa-money-bill-wave me-1"></i> إجمالي المسدد (أمانات وسلف):</span>
+                        <span class="fs-5 fw-bold text-success">{{ number_format($stayDetails['total_paid'] ?? 0) }} د.ع</span>
+                    </div>
+
+                    @if(($stayDetails['excess_deposit'] ?? 0) > 0)
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-info bg-opacity-10 rounded border border-info">
+                            <span class="fs-5 fw-bold text-info"><i class="fas fa-undo-alt me-1"></i> فائض أمانات مستحق للإرجاع:</span>
+                            <span class="fs-4 fw-bold text-info">{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
                         </div>
                     @else
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fs-5 fw-bold text-dark">المبلغ المستحق للدفع:</span>
-                            <span class="fs-4 fw-bold text-success">{{ number_format($stayDetails['grand_total']) }} د.ع</span>
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-danger bg-opacity-10 rounded border border-danger">
+                            <span class="fs-5 fw-bold text-danger"><i class="fas fa-balance-scale me-1"></i> الصافي المستحق للدفع بالصندوق:</span>
+                            <span class="fs-4 fw-bold text-danger">{{ number_format($stayDetails['net_balance'] ?? 0) }} د.ع</span>
                         </div>
                     @endif
                 </div>

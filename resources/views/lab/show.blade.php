@@ -129,11 +129,13 @@ $testAttachments = is_array($requestDetails['test_attachments'] ?? null) ? $requ
 $hasAnyAttachment = $hasAttachment || count($testAttachments) > 0;
 
 $testsList = buildSelectedLabTests($requestDetails);
-$patient = $request->visit?->patient;
+$nicuRes = $request->incubatorReservation;
+$patient = $request->visit?->patient ?? $nicuRes?->patient;
 $patientUser = $patient?->user;
+$patientName = $nicuRes ? $nicuRes->baby_title : ($patientUser?->name ?? 'غير محدد');
 $patientPhone = $patientUser?->phone ?: ($patient?->phone ?? ($requestDetails['patient_phone'] ?? ($request->visit?->emergency?->emergencyPatient?->phone ?? null)));
 $gender = $patientUser?->gender ?? ($patient?->gender ?? 'male');
-$age = $patient?->age ?? null;
+$age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->age ?? null);
 @endphp
 
 @section('content')
@@ -242,11 +244,18 @@ $age = $patient?->age ?? null;
                         <div class="col-xl-3 col-md-6">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="bg-primary-subtle text-primary rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
-                                    <i class="fas fa-user"></i>
+                                    <i class="fas {{ $nicuRes ? 'fa-baby text-success' : 'fa-user' }}"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">اسم المريض</small>
-                                    <strong class="text-dark fs-6">{{ $patientUser?->name ?? 'غير محدد' }}</strong>
+                                    <small class="text-muted d-block">{{ $nicuRes ? 'اسم الطفل الخديج' : 'اسم المريض' }}</small>
+                                    <strong class="text-dark fs-6">{{ $patientName }}</strong>
+                                    @if($nicuRes)
+                                        <div class="small mt-0.5">
+                                            <span class="badge bg-secondary-subtle text-dark border" style="font-size: 0.7rem;">
+                                                <i class="fas fa-procedures me-1"></i> {{ $nicuRes->incubator?->name ?? ('حاضنة #' . $nicuRes->incubator_id) }}
+                                            </span>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -291,7 +300,7 @@ $age = $patient?->age ?? null;
                                 <div>
                                     <small class="text-muted d-block">العمر / الجنس</small>
                                     <strong class="text-dark">
-                                        {{ $age ? ($age . ' سنة') : 'غير محدد' }} / 
+                                        {{ $nicuRes ? $age : ($age ? ($age . ' سنة') : 'غير محدد') }} / 
                                         {{ $gender === 'male' ? 'ذكر' : ($gender === 'female' ? 'أنثى' : 'غير محدد') }}
                                     </strong>
                                 </div>
@@ -318,11 +327,11 @@ $age = $patient?->age ?? null;
                                     <i class="fas fa-user-md"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">الطبيب والعيادة</small>
+                                    <small class="text-muted d-block">{{ $nicuRes ? 'طبيب الخدج المشرف' : 'الطبيب والعيادة' }}</small>
                                     <strong class="text-dark">
-                                        {{ $request->visit?->doctor?->user?->name ? 'د. ' . $request->visit->doctor->user->name : 'غير محدد' }}
+                                        {{ $request->doctor?->user?->name ? 'د. ' . $request->doctor->user->name : ($nicuRes?->doctor?->user?->name ? 'د. ' . $nicuRes->doctor->user->name : ($request->visit?->doctor?->user?->name ? 'د. ' . $request->visit->doctor->user->name : 'غير محدد')) }}
                                     </strong>
-                                    <small class="text-muted d-block">{{ $request->visit?->doctor?->specialization ?? '' }}</small>
+                                    <small class="text-muted d-block">{{ $nicuRes ? 'قسم الخدج والحاضنات' : ($request->visit?->doctor?->specialization ?? '') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -335,7 +344,11 @@ $age = $patient?->age ?? null;
                                 </div>
                                 <div>
                                     <small class="text-muted d-block">حالة الدفع</small>
-                                    @if(($request->payment_status ?? 'pending') == 'paid')
+                                    @if($nicuRes)
+                                        <span class="badge bg-info-subtle text-primary border border-info-subtle fw-bold">
+                                            <i class="fas fa-file-invoice-dollar me-1"></i> حساب الحاضنة (كاشير الخدج)
+                                        </span>
+                                    @elseif(($request->payment_status ?? 'pending') == 'paid')
                                         <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
                                             <i class="fas fa-check-circle me-1"></i> مسدد بالكامل
                                         </span>

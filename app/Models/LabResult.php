@@ -9,6 +9,7 @@ class LabResult extends Model
 {
     protected $fillable = [
         'visit_id',
+        'incubator_reservation_id',
         'request_id',
         'test_name',
         'parent_test_name',
@@ -22,6 +23,14 @@ class LabResult extends Model
         'lab_test_id',
         'sub_test_id'
     ];
+
+    /**
+     * العلاقة مع حجز الحاضنة (الخدج)
+     */
+    public function incubatorReservation(): BelongsTo
+    {
+        return $this->belongsTo(IncubatorReservation::class, 'incubator_reservation_id');
+    }
 
     /**
      * العلاقة مع الزيارة

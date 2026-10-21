@@ -147,11 +147,58 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * الطلبات الطبية المركزية الموحدة (مختبر / أشعة)
+     */
+    public function medicalRequests()
+    {
+        return $this->hasMany(\App\Models\Request::class, 'incubator_reservation_id')->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * نتائج التحاليل المخبرية التفصيلية المرتبطة بالحاضنة
+     */
+    public function labResults()
+    {
+        return $this->hasMany(\App\Models\LabResult::class, 'incubator_reservation_id')->orderBy('created_at', 'desc');
+    }
+
+    /**
      * سجل إعطاء وتطبيق العلاجات التمريضية (MAR)
      */
     public function medicationAdministrations()
     {
         return $this->hasMany(NicuMedicationAdministration::class, 'reservation_id')->orderBy('given_at', 'desc');
+    }
+
+    /**
+     * المدفوعات والأمانات المسددة في الصندوق (جدول nicu_payments المستقل)
+     */
+    public function payments()
+    {
+        return $this->hasMany(NicuPayment::class, 'incubator_reservation_id')->orderBy('paid_at', 'desc');
+    }
+
+    public function nicuPayments()
+    {
+        return $this->hasMany(NicuPayment::class, 'incubator_reservation_id')->orderBy('paid_at', 'desc');
+    }
+
+    /**
+     * إجمالي المبالغ المدفوعة والأمانات
+     */
+    public function getTotalPaidAmountAttribute(): float
+    {
+        $paid = (float) $this->payments()
+            ->where('financial_status', 'paid')
+            ->where('payment_type', '!=', NicuPayment::TYPE_REFUND)
+            ->sum('amount');
+
+        $refunded = (float) $this->payments()
+            ->where('financial_status', 'paid')
+            ->where('payment_type', NicuPayment::TYPE_REFUND)
+            ->sum('amount');
+
+        return max(0, $paid - $refunded);
     }
 
     /**
@@ -168,6 +215,17 @@ class IncubatorReservation extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * الحصول على مسمى الطفل الخديج المعتمد
+     */
+    public function getBabyTitleAttribute(): string
+    {
+        if (!empty($this->baby_name)) {
+            return $this->baby_name;
+        }
+        return 'طفل ' . ($this->patient?->name ?? 'غير محدد');
     }
 
     /**

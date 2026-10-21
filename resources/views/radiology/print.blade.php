@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
-        $patient = $radiology->patient ?? optional(optional($radiology)->medical_request)->visit?->patient;
+        $nicuRes = optional($radiology)->medical_request?->incubatorReservation;
+        $patient = $radiology->patient ?? optional(optional($radiology)->medical_request)->visit?->patient ?? $nicuRes?->patient;
         $patientUser = optional($patient)->user;
-        $patientName = $patientUser->name ?? optional($patient)->name ?? 'مريض غير محدد';
+        $patientName = $nicuRes ? $nicuRes->baby_title : ($patientUser->name ?? optional($patient)->name ?? 'مريض غير محدد');
         $patientPhone = $patientUser->phone ?? optional($patient)->phone ?? '—';
-        $patientAge = optional($patient)->age ?? '—';
+        $patientAge = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : (optional($patient)->age ?? '—');
         $patientGender = optional($patient)->gender === 'male' ? 'ذكر' : (optional($patient)->gender === 'female' ? 'أنثى' : '—');
         $patientMedNo = optional($patient)->medical_number ?? (optional($patient)->id ? '#' . optional($patient)->id : '—');
 
-        $doctor = $radiology->doctor ?? optional(optional($radiology)->medical_request)->visit?->doctor;
+        $doctor = $radiology->doctor ?? optional(optional($radiology)->medical_request)->visit?->doctor ?? $nicuRes?->doctor;
         $doctorName = optional(optional($doctor)->user)->name ?? optional($doctor)->name ?? 'الاستشارية';
-        $departmentName = optional(optional(optional($radiology)->medical_request)->visit)->department?->name ?? 'العيادات الاستشارية';
+        $departmentName = $nicuRes ? ('قسم الخدج والحاضنات (' . ($nicuRes->incubator?->name ?? 'حاضنة') . ')') : (optional(optional(optional($radiology)->medical_request)->visit)->department?->name ?? 'العيادات الاستشارية');
 
         $scanName = optional($radiology->radiologyType)->name ?? ($radiology->clinical_indication ?: 'فحص السونار والتصوير الطبي');
         $scanCode = optional($radiology->radiologyType)->code ?? ('RAD-' . $radiology->id);

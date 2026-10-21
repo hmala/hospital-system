@@ -15,6 +15,8 @@ use App\Models\RadiologyType;
 use App\Models\Medicine;
 use App\Models\Doctor;
 use App\Models\Room;
+use App\Models\Request as MedicalRequest;
+use App\Models\LabResult;
 use App\Services\NicuBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -195,6 +197,9 @@ class NicuController extends Controller
             'medicalOrders.orderedByUser',
             'medicalOrders.processedByUser',
             'medicationAdministrations.nurse',
+            'medicalRequests.labResults',
+            'medicalRequests.payments',
+            'labResults',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
@@ -416,11 +421,19 @@ class NicuController extends Controller
     {
         $validated = $request->validate([
             'result' => 'required|string',
+            'unit' => 'nullable|string|max:50',
+            'reference_range' => 'nullable|string|max:100',
+            'result_status' => 'nullable|in:normal,high,low,abnormal',
+            'technician_notes' => 'nullable|string|max:1000',
             'price' => 'nullable|numeric|min:0',
         ]);
 
         $order->update([
             'result' => $validated['result'],
+            'unit' => $validated['unit'] ?? $order->unit,
+            'reference_range' => $validated['reference_range'] ?? $order->reference_range,
+            'result_status' => $validated['result_status'] ?? ($order->result_status ?: 'normal'),
+            'technician_notes' => $validated['technician_notes'] ?? $order->technician_notes,
             'price' => $validated['price'] ?? $order->price,
             'status' => NicuMedicalOrder::STATUS_COMPLETED,
             'processed_by' => Auth::id(),
@@ -458,40 +471,92 @@ class NicuController extends Controller
             return redirect()->back()->with('error', 'يرجى اختيار أو كتابة فحص مخبري واحد على الأقل.');
         }
 
-        // جلب أسعار التحاليل تلقائياً إن وجدت
+        // جلب أسعار ومطابقة التحاليل تلقائياً إن وجدت
         $existingTests = LabTest::whereIn('name', $testsToCreate->all())
             ->orWhereIn('code', $testsToCreate->all())
+            ->with('references')
             ->get()
             ->keyBy(fn($item) => strtolower($item->name));
 
-        $count = 0;
+        $testNames = [];
+        $testIds = [];
+        $totalPrice = 0;
+        $orderItemsData = [];
+
         foreach ($testsToCreate as $testName) {
             $matchedTest = $existingTests->get(strtolower($testName));
             $price = 0;
+            $unit = null;
+            $refRange = null;
+
             if ($matchedTest) {
-                // إذا كان المريض ضمان، نعتمد تسعيرة الضمان إن كانت فعالة
                 if ($reservation->is_insured && $matchedTest->is_hi_active && $matchedTest->hi_price > 0) {
                     $price = (float)$matchedTest->hi_price;
                 } else {
                     $price = (float)$matchedTest->price;
                 }
+                $unit = $matchedTest->unit;
+                $refObj = $matchedTest->references->first();
+                $refRange = $refObj ? ($refObj->range_display ?: ($refObj->ref_min . ' - ' . $refObj->ref_max)) : null;
+                $testIds[] = $matchedTest->id;
+                $testNames[] = $matchedTest->name;
+            } else {
+                $testNames[] = $testName;
             }
 
+            $totalPrice += $price;
+
+            $orderItemsData[] = [
+                'name' => $matchedTest ? $matchedTest->name : $testName,
+                'lab_test_id' => $matchedTest?->id,
+                'price' => $price,
+                'unit' => $unit,
+                'ref_range' => $refRange,
+            ];
+        }
+
+        // 1. إنشاء الطلب الطبي المركزي الموحد في جدول requests (مطابق لطلب الطبيب الاستشاري)
+        $medReq = MedicalRequest::create([
+            'incubator_reservation_id' => $reservation->id,
+            'visit_id' => null,
+            'type' => 'lab',
+            'subtype' => null,
+            'description' => 'تحاليل خديج: ' . implode(', ', $testNames),
+            'details' => [
+                'tests' => $testNames,
+                'lab_test_ids' => $testIds,
+                'priority' => $request->priority,
+                'doctor_notes' => $request->instructions,
+                'total_amount' => $totalPrice,
+                'incubator_reservation_id' => $reservation->id,
+            ],
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'insurance_type' => $reservation->insurance_type ?? 'none',
+            'requested_by' => Auth::id(),
+        ]);
+
+        // 2. إنشاء السجلات التوافقية في nicu_medical_orders
+        $groupId = 'REQ-' . $medReq->id;
+        foreach ($orderItemsData as $item) {
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
                 'order_type' => NicuMedicalOrder::TYPE_LAB,
-                'item_name' => $testName,
-                'price' => $price,
+                'item_name' => $item['name'],
+                'lab_test_id' => $item['lab_test_id'],
+                'price' => $item['price'],
                 'priority' => $request->priority,
                 'instructions' => $request->instructions,
+                'order_group_id' => $groupId,
+                'unit' => $item['unit'],
+                'reference_range' => $item['ref_range'],
                 'status' => NicuMedicalOrder::STATUS_PENDING,
                 'ordered_by' => Auth::id(),
                 'ordered_at' => now(),
             ]);
-            $count++;
         }
 
-        return redirect()->back()->with('success', "تم إرسال {$count} طلب فحص مخبري لقسم التحاليل بنجاح.");
+        return redirect()->back()->with('success', "تم إرسال طلب الفحوصات المخبرية (" . count($testNames) . " فحص) لقسم التحاليل المركزي بنجاح (طلب #{$medReq->id}).");
     }
 
     /**
@@ -527,7 +592,12 @@ class NicuController extends Controller
             ->get()
             ->keyBy(fn($item) => strtolower($item->name));
 
-        $count = 0;
+        $radNames = [];
+        $radTypeIds = [];
+        $totalPrice = 0;
+        $orderItemsData = [];
+        $detectedSubtype = 'general';
+
         foreach ($examsToCreate as $examIdentifier) {
             $matchedRad = is_numeric($examIdentifier) 
                 ? RadiologyType::find($examIdentifier) 
@@ -541,23 +611,76 @@ class NicuController extends Controller
                 } else {
                     $price = (float)$matchedRad->price;
                 }
+                $radTypeIds[] = $matchedRad->id;
+                $radNames[] = $matchedRad->name;
+
+                // كشف الفئة الفرعية (سونار، إيكو، رنين، مفراس، أشعة)
+                $cat = mb_strtolower(trim($matchedRad->main_category ?? ''));
+                $sub = mb_strtolower(trim($matchedRad->subcategory ?? ''));
+                $nm = mb_strtolower(trim($matchedRad->name ?? ''));
+                if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($nm, 'سونار') || str_contains($nm, 'sonar') || str_contains($nm, 'ultrasound')) {
+                    $detectedSubtype = 'ultrasound';
+                } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($nm, 'إيكو') || str_contains($nm, 'echo')) {
+                    $detectedSubtype = 'echo';
+                } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($nm, 'رنين') || str_contains($nm, 'mri')) {
+                    $detectedSubtype = 'mri';
+                } elseif (str_contains($cat, 'مفراس') || str_contains($sub, 'مفراس') || str_contains($nm, 'مفراس') || str_contains($nm, 'ct')) {
+                    $detectedSubtype = 'ct';
+                }
+            } else {
+                $radNames[] = $examName;
             }
 
+            $totalPrice += $price;
+
+            $orderItemsData[] = [
+                'name' => $examName,
+                'radiology_type_id' => $matchedRad?->id,
+                'price' => $price,
+            ];
+        }
+
+        // 1. إنشاء الطلب المركزي الموحد في جدول requests
+        $medReq = MedicalRequest::create([
+            'incubator_reservation_id' => $reservation->id,
+            'visit_id' => null,
+            'type' => 'radiology',
+            'subtype' => $detectedSubtype,
+            'description' => 'طلب أشعة وسونار خديج: ' . implode(', ', $radNames),
+            'details' => [
+                'radiology_types' => $radTypeIds,
+                'radiology_type_ids' => $radTypeIds,
+                'radiology_names' => $radNames,
+                'priority' => $request->priority,
+                'doctor_notes' => $request->instructions,
+                'total_amount' => $totalPrice,
+                'incubator_reservation_id' => $reservation->id,
+            ],
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'insurance_type' => $reservation->insurance_type ?? 'none',
+            'requested_by' => Auth::id(),
+        ]);
+
+        // 2. إنشاء السجلات التوافقية في nicu_medical_orders
+        $groupId = 'REQ-' . $medReq->id;
+        foreach ($orderItemsData as $item) {
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
                 'order_type' => NicuMedicalOrder::TYPE_RADIOLOGY,
-                'item_name' => $examName,
-                'price' => $price,
+                'item_name' => $item['name'],
+                'radiology_type_id' => $item['radiology_type_id'],
+                'price' => $item['price'],
                 'priority' => $request->priority,
                 'instructions' => $request->instructions,
+                'order_group_id' => $groupId,
                 'status' => NicuMedicalOrder::STATUS_PENDING,
                 'ordered_by' => Auth::id(),
                 'ordered_at' => now(),
             ]);
-            $count++;
         }
 
-        return redirect()->back()->with('success', "تم إرسال {$count} طلب فحص شعاعي لقسم الأشعة بنجاح.");
+        return redirect()->back()->with('success', "تم إرسال طلب الفحص الشعاعي (" . count($radNames) . " فحص) لقسم الأشعة والتصوير الطبي بنجاح (طلب #{$medReq->id}).");
     }
 
     /**
