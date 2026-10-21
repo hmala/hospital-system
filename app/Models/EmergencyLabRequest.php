@@ -12,6 +12,7 @@ class EmergencyLabRequest extends Model
     protected $fillable = [
         'emergency_id',
         'patient_id',
+        'payment_id',
         'status',
         'priority',
         'notes',

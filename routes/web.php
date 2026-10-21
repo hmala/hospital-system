@@ -747,6 +747,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');
+        Route::delete('/{emergency}/remove-request-item', [\App\Http\Controllers\EmergencyController::class, 'removeRequestItem'])->name('remove-request-item');
         Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
         Route::post('/{emergency}/transfer-to-admission', [\App\Http\Controllers\EmergencyController::class, 'transferToAdmission'])->name('transfer-to-admission');
         Route::post('/{emergency}/discharge', [\App\Http\Controllers\EmergencyController::class, 'discharge'])->name('discharge');

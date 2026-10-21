@@ -1413,27 +1413,57 @@ class EmergencyController extends Controller
             return redirect()->back()->with('error', 'لا يمكن إنشاء طلب تحاليل لحالة بدون مريض مسجل');
         }
 
-        // إنشاء طلب تحاليل طوارئ
-        $labRequest = \App\Models\EmergencyLabRequest::create([
-            'emergency_id' => $emergency->id,
-            'patient_id' => $emergency->patient_id,
-            'status' => 'pending',
-            'priority' => $request->priority,
-            'notes' => $request->notes,
-            'requested_at' => now()
-        ]);
+        // تصفية المعرفات الفعالة فقط لمنع إدراج فحوصات معطلة
+        $validLabTestIds = \App\Models\LabTest::where('is_active', true)
+            ->whereIn('id', (array)$request->lab_test_ids)
+            ->pluck('id')
+            ->toArray();
 
-        // ربط التحاليل بالطلب
-        $labRequest->labTests()->attach($request->lab_test_ids);
+        if (empty($validLabTestIds)) {
+            return redirect()->back()->with('error', 'الفحوصات المختارة غير مفعلة في النظام.');
+        }
+
+        // الدمج التلقائي: إذا كان هناك طلب تحاليل معلق وغير مسدد لنفس الحالة، تُدمج الفحوصات فيه تلقائياً لمنع التشتيت
+        $existingLabRequest = \App\Models\EmergencyLabRequest::where('emergency_id', $emergency->id)
+            ->where('status', 'pending')
+            ->whereNull('payment_id')
+            ->latest('id')
+            ->first();
+
+        if ($existingLabRequest) {
+            $existingLabRequest->labTests()->syncWithoutDetaching($validLabTestIds);
+            if ($request->filled('notes')) {
+                $existingLabRequest->notes = $existingLabRequest->notes 
+                    ? ($existingLabRequest->notes . ' | ' . $request->notes) 
+                    : $request->notes;
+            }
+            if ($request->priority === 'critical') {
+                $existingLabRequest->priority = 'critical';
+            }
+            $existingLabRequest->save();
+            $successMsg = 'تم دمج التحاليل الإضافية بنجاح في طلب المختبر المعلق وتحديث الرسوم للكاشير';
+        } else {
+            // إنشاء طلب تحاليل طوارئ جديد
+            $labRequest = \App\Models\EmergencyLabRequest::create([
+                'emergency_id' => $emergency->id,
+                'patient_id' => $emergency->patient_id,
+                'status' => 'pending',
+                'priority' => $request->priority,
+                'notes' => $request->notes,
+                'requested_at' => now()
+            ]);
+            $labRequest->labTests()->attach($validLabTestIds);
+            $successMsg = 'تم إنشاء طلب التحاليل بنجاح وإضافة الرسوم للكاشير';
+        }
 
         // دمج الرسوم في فاتورة طوارئ واحدة
         $this->upsertUnifiedEmergencyPayment($emergency);
 
-        return redirect()->back()->with('success', 'تم إنشاء طلب التحاليل بنجاح وإضافة الرسوم للكاشير');
+        return redirect()->back()->with('success', $successMsg);
     }
 
     /**
-     * طلب أشعة لحالة طوارئ
+     * طلب أشعة لحالة طوارئ (مع الدمج التلقائي للطلبات المعلقة)
      */
     public function requestRadiology(Request $request, Emergency $emergency)
     {
@@ -1481,23 +1511,170 @@ class EmergencyController extends Controller
             return redirect()->back()->with('error', 'لا يمكن إنشاء طلب أشعة لحالة بدون مريض مسجل');
         }
 
-        // إنشاء طلب أشعة طوارئ
-        $radiologyRequest = \App\Models\EmergencyRadiologyRequest::create([
-            'emergency_id' => $emergency->id,
-            'patient_id' => $emergency->patient_id,
-            'status' => 'pending',
-            'priority' => $request->priority,
-            'notes' => $request->notes,
-            'requested_at' => now()
-        ]);
+        // تصفية المعرفات الفعالة فقط
+        $validRadTypeIds = \App\Models\RadiologyType::where('is_active', true)
+            ->whereIn('id', (array)$request->radiology_type_ids)
+            ->pluck('id')
+            ->toArray();
 
-        // ربط أنواع الأشعة بالطلب
-        $radiologyRequest->radiologyTypes()->attach($request->radiology_type_ids);
+        if (empty($validRadTypeIds)) {
+            return redirect()->back()->with('error', 'فحوصات الأشعة المختارة غير مفعلة في النظام.');
+        }
+
+        // الدمج التلقائي: إذا كان هناك طلب أشعة معلق وغير مسدد لنفس الحالة، تُدمج الفحوصات فيه تلقائياً
+        $existingRadRequest = \App\Models\EmergencyRadiologyRequest::where('emergency_id', $emergency->id)
+            ->where('status', 'pending')
+            ->whereNull('payment_id')
+            ->latest('id')
+            ->first();
+
+        if ($existingRadRequest) {
+            $existingRadRequest->radiologyTypes()->syncWithoutDetaching($validRadTypeIds);
+            if ($request->filled('notes')) {
+                $existingRadRequest->notes = $existingRadRequest->notes 
+                    ? ($existingRadRequest->notes . ' | ' . $request->notes) 
+                    : $request->notes;
+            }
+            if ($request->priority === 'critical') {
+                $existingRadRequest->priority = 'critical';
+            }
+            $existingRadRequest->save();
+            $successMsg = 'تم دمج فحوصات الأشعة بنجاح في طلب الأشعة المعلق وتحديث الرسوم للكاشير';
+        } else {
+            // إنشاء طلب أشعة طوارئ جديد
+            $radiologyRequest = \App\Models\EmergencyRadiologyRequest::create([
+                'emergency_id' => $emergency->id,
+                'patient_id' => $emergency->patient_id,
+                'status' => 'pending',
+                'priority' => $request->priority,
+                'notes' => $request->notes,
+                'requested_at' => now()
+            ]);
+            $radiologyRequest->radiologyTypes()->attach($validRadTypeIds);
+            $successMsg = 'تم إنشاء طلب الأشعة بنجاح وإضافة الرسوم للكاشير';
+        }
 
         // دمج الرسوم في فاتورة طوارئ واحدة
         $this->upsertUnifiedEmergencyPayment($emergency);
 
-        return redirect()->back()->with('success', 'تم إنشاء طلب الأشعة بنجاح وإضافة الرسوم للكاشير');
+        return redirect()->back()->with('success', $successMsg);
+    }
+
+    /**
+     * تمكين طبيب الطوارئ من حذف وتعديل الفحوصات الفردية من الطلب المعلق قبل السداد
+     */
+    public function removeRequestItem(Request $request, Emergency $emergency)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super-admin']) || $user->can('manage emergencies'));
+        $doctor = $user->doctor ?? Doctor::where('user_id', $user->id)->first();
+        $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
+
+        if (!$isAdmin && !$isDoctor && !$user->can('create medical requests') && !$user->hasRole(['nurse', 'emergency_staff'])) {
+            $msg = 'غير مصرح لك بتعديل طلبات الطوارئ';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 403);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        if (!$isAdmin && $isDoctor && $doctor) {
+            if ($emergency->doctor_id && $emergency->doctor_id !== $doctor->id && $emergency->consultant_doctor_id !== $doctor->id) {
+                $msg = 'غير مصرح لك بتعديل طلبات حالة تخص طبيباً آخر';
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $msg], 403);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+        }
+
+        $type = $request->input('type'); // 'lab' or 'radiology'
+        $requestId = $request->input('request_id');
+        $itemId = $request->input('item_id');
+
+        if (!$type || !$requestId || !$itemId) {
+            $msg = 'بيانات الحذف غير مكتملة';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $isEmergencyPaid = ($emergency->payment_status === 'paid' || $emergency->payment_status === 'waived');
+
+        if ($type === 'lab') {
+            $labReq = \App\Models\EmergencyLabRequest::where('emergency_id', $emergency->id)->find($requestId);
+            if (!$labReq) {
+                return response()->json(['success' => false, 'message' => 'طلب المختبر غير موجود'], 404);
+            }
+
+            if ($labReq->payment_id !== null || $isEmergencyPaid) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.'
+                ], 422);
+            }
+
+            if ($labReq->status === 'completed') {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في المختبر.'
+                ], 422);
+            }
+
+            // فك ارتباط الفحص من جدول الربط
+            $labReq->labTests()->detach($itemId);
+            $remainingCount = $labReq->labTests()->count();
+
+            if ($remainingCount === 0) {
+                $labReq->update([
+                    'status' => 'cancelled',
+                    'notes' => trim(($labReq->notes ?? '') . ' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب')
+                ]);
+            }
+        } elseif ($type === 'radiology') {
+            $radReq = \App\Models\EmergencyRadiologyRequest::where('emergency_id', $emergency->id)->find($requestId);
+            if (!$radReq) {
+                return response()->json(['success' => false, 'message' => 'طلب الأشعة غير موجود'], 404);
+            }
+
+            if ($radReq->payment_id !== null || $isEmergencyPaid) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.'
+                ], 422);
+            }
+
+            if ($radReq->status === 'completed') {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في قسم الأشعة.'
+                ], 422);
+            }
+
+            // فك ارتباط نوع الأشعة من جدول الربط
+            $radReq->radiologyTypes()->detach($itemId);
+            $remainingCount = $radReq->radiologyTypes()->count();
+
+            if ($remainingCount === 0) {
+                $radReq->update([
+                    'status' => 'cancelled',
+                    'notes' => trim(($radReq->notes ?? '') . ' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب')
+                ]);
+            }
+        } else {
+            return response()->json(['success' => false, 'message' => 'نوع الطلب غير صالح'], 422);
+        }
+
+        // تحديث رسوم فاتورة الطوارئ الموحدة لدى الكاشير تلقائياً
+        $this->upsertUnifiedEmergencyPayment($emergency);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف الفحص بنجاح وتحديث حسابات الكاشير',
+            'remaining_count' => $remainingCount,
+            'is_cancelled' => ($remainingCount === 0),
+        ]);
     }
 
     /**

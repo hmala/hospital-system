@@ -57,6 +57,26 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 97: مطابقة آلية طلبات طبيب الطوارئ مع الاستشارية: الدمج التلقائي، الحذف الفردي، شريط التقدم السريري، وأرشيف الطلبات الملغاة Emergency Doctor Request Auto-Merge, Item-Level Removal, Clinical Stepper & Cancelled Archive)
+
+### Done
+- **الدمج التلقائي لطلبات المختبر والأشعة للطوارئ ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * عند قيام طبيب الطوارئ بطلب تحاليل مختبرية جديدة لحالة طوارئ لديها طلب معلق غير مسدد (`payment_id === null` و `status === 'pending'`)، يتم دمج الفحوصات الجديدة تلقائياً في نفس الطلب عبر `syncWithoutDetaching` بدلاً من تشتيت الكاشير بطلبات متعددة.
+  * نفس الدمج التلقائي الذكي يطبق على طلبات الأشعة والسونار غير المسددة.
+  * تحديث وحساب المبالغ المستحقة للكاشير تلقائياً بعد كل دمج عبر `upsertUnifiedEmergencyPayment`.
+- **تمكين طبيب الطوارئ من حذف وتعديل الفحوصات الفردية ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) & [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار ودالة الحذف الفردي `DELETE /emergency/{emergency}/remove-request-item`.
+  * قفل وحظر الحذف التام إذا كان الطلب مسدداً لدى الكاشير (`payment_id !== null` أو حالة الطلب مسدد) لحماية الصندوق والحسابات برمز `422 Unprocessable Entity`.
+  * فك ارتباط الفحص المطلوب فقط من جدول الربط الوسيط (`detach`).
+  * في حال حذف الفحص الأخير المتبقي في الطلب، يتم تحويل حالة الطلب تلقائياً إلى ملغي (`cancelled`) وتوثيق سبب الإلغاء، مع تحديث استحقاق الكاشير.
+- **ترقية شاشة الطوارئ بواجهة الاستشارية الحديثة ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * **شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper)**: شريط مصغر بأعلى كل بطاقة يوضح مراحل الإنجاز: `[ 1. طلب الطبيب ⬅️ 2. عند الكاشير / سُدّد ⬅️ 3. قيد الفحص بالمختبر/الأشعة ⬅️ 4. النتيجة جاهزة ]` مع شارات وألوان تفاعلية.
+  * **الجدول السريري المصغر (Clinical Mini-Table)**: استبدال طريقة العرض القديمة بجدول سطر منظم وأنيق يعرض: رقم التسلسل، اسم الفحص، شارة الحالة الحية، وزر الحذف `[ × ]` التفاعلي للأطباء قبل السداد عبر AJAX سلس دون إعادة تحميل الصفحة.
+  * **أرشيف الطلبات الملغاة**: عزل وإخفاء الطلبات الملغاة من القائمة النشطة ووضعها داخل أكورديون مطوي أنيق: `[ 📁 أرشيف طلبات المختبر/الأشعة الملغاة (مخفية) ]`.
+  * تصفية اللوحة الجانبية لمريض الطوارئ (`side-cur-pane`) لإخفاء الطلبات الملغاة من قائمة الإجراءات النشطة.
+- **الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php))**:
+  * بناء واجتياز 7 اختبارات ميزة متكاملة تغطي الدمج التلقائي للمختبر والأشعة، الحذف الفردي، تحول الطلب لملغي عند إفراغه، حظر الحذف بعد السداد، وظهور الـ Stepper والجدول المصغر وأرشيف الملغاة (`7 passed, 38 assertions`)، مع اجتياز كامل حزمة الطوارئ بنجاح (`40 passed, 209 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 96: ربط شاشة المختبر بإعدادات أنماط الإدخال وإلغاء أزرار المرفقات للفحوصات الرقمية المفردة وتمكين المريض من تحميل مرفقات الأجهزة عبر الواتساب Lab Result Entry Types Integration, Selective Attachment Buttons & Patient WhatsApp Attachment Downloads)
 
 ### Done
