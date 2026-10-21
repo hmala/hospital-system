@@ -10,7 +10,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 8mm 12mm 10mm 12mm;
         }
 
         * {
@@ -31,12 +31,101 @@
             width: 210mm;
             max-width: 210mm;
             min-height: 297mm;
-            margin: 0 auto;
+            margin: 0 auto 20px auto;
             background: #ffffff;
-            padding: 16mm 20mm 35mm 20mm;
+            padding: 10mm 15mm 14mm 15mm;
             position: relative;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .report-main-content {
+            flex: 1 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-bottom-block {
+            margin-top: auto;
+            position: relative;
+            z-index: 1;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Repeating Table Architecture for Multi-Page Printing */
+        .report-print-container {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-print-container thead {
+            display: table-header-group;
+        }
+
+        .report-print-container tfoot {
+            display: table-footer-group;
+        }
+
+        .report-print-container tbody {
+            display: table-row-group;
+        }
+
+        .print-table-cell-header,
+        .print-table-cell-body,
+        .print-table-cell-footer {
+            border: none;
+            padding: 0;
+            margin: 0;
+            vertical-align: top;
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 6px;
+            }
+            .report-page {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                padding: 12mm 6mm 25mm 6mm !important;
+                box-shadow: none !important;
+            }
+            .print-toolbar {
+                right: 50% !important;
+                transform: translateX(50%) !important;
+                width: 94% !important;
+                justify-content: center !important;
+                font-size: 12px !important;
+            }
+            .header-top-row {
+                flex-direction: column !important;
+                gap: 8px !important;
+                text-align: center !important;
+            }
+            .hospital-logo-side, .hospital-title-side, .clinical-lab-center {
+                min-width: 0 !important;
+                text-align: center !important;
+            }
+            .hospital-logo-img {
+                height: 55px !important;
+            }
+            .hospital-name-ar {
+                font-size: 15px !important;
+            }
+            .clinical-lab-banner {
+                font-size: 20px !important;
+            }
+            .patient-info-grid {
+                grid-template-columns: 1fr !important;
+                gap: 4px !important;
+            }
         }
 
         /* Watermark Background */
@@ -46,9 +135,9 @@
             inset: 0;
             background-image: url('{{ asset('images/1.jpg') }}');
             background-repeat: no-repeat;
-            background-position: center 52%;
-            background-size: 52% auto;
-            opacity: 0.06;
+            background-position: center 50%;
+            background-size: 45% auto;
+            opacity: 0.045;
             pointer-events: none;
             z-index: 0;
         }
@@ -58,29 +147,30 @@
             z-index: 1;
         }
 
-        /* Decorative Border */
+        /* Decorative Border (Matching Emergency & Radiology) */
         .decorative-border {
             position: absolute;
-            top: 8mm;
-            right: 8mm;
-            bottom: 8mm;
-            left: 8mm;
-            border: 1.5px solid #1e7e8f;
+            top: 6mm;
+            right: 6mm;
+            bottom: 6mm;
+            left: 6mm;
+            border: 1px solid #7dd3fc;
             pointer-events: none;
             z-index: 0;
+            border-radius: 2px;
         }
 
         .corner-pattern {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            opacity: 0.18;
+            width: 45px;
+            height: 45px;
+            opacity: 0.15;
         }
 
         .corner-pattern.top-right {
             top: 0;
             right: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%231e7e8f"/></svg>');
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%23005a9c"/></svg>');
         }
 
         :root {
@@ -90,6 +180,7 @@
 
         /* Letterhead Mode Styles (for pre-printed official hospital letterhead paper) */
         body.letterhead-mode .report-header,
+        body.letterhead-mode .document-title-banner,
         body.letterhead-mode .decorative-border,
         body.letterhead-mode .corner-pattern,
         body.letterhead-mode .hospital-contact-line,
@@ -105,6 +196,27 @@
             padding-top: var(--letterhead-top, 45mm) !important;
             padding-bottom: var(--letterhead-bottom, 25mm) !important;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* Ensure Public View always shows the full header, borders, and footer regardless of print mode */
+        body.is-public-report .report-header,
+        body.is-public-report.letterhead-mode .report-header,
+        body.is-public-report .document-title-banner,
+        body.is-public-report.letterhead-mode .document-title-banner,
+        body.is-public-report .decorative-border,
+        body.is-public-report.letterhead-mode .decorative-border,
+        body.is-public-report .corner-pattern,
+        body.is-public-report.letterhead-mode .corner-pattern,
+        body.is-public-report .hospital-contact-line,
+        body.is-public-report.letterhead-mode .hospital-contact-line,
+        body.is-public-report .report-footer-wrapper,
+        body.is-public-report.letterhead-mode .report-footer-wrapper {
+            display: block !important;
+        }
+
+        body.is-public-report.letterhead-mode .report-page {
+            padding-top: 16mm !important;
+            padding-bottom: 35mm !important;
         }
 
         /* Print Toolbar (Hidden during print) */
@@ -200,122 +312,304 @@
             font-size: 13px;
         }
 
-        /* Header Section */
+        /* Header Layout (Matching Emergency & Radiology) */
         .report-header {
-            text-align: center;
-            margin-bottom: 22px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #1e7e8f;
-        }
-
-        .header-top-row {
             display: flex;
-            align-items: center;
+            direction: rtl;
             justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
             margin-bottom: 8px;
-            position: relative;
+            border-bottom: 2px solid #005a9c;
         }
 
-        .hospital-logo-side {
-            text-align: left;
-            min-width: 180px;
+        .header-hospital-ar {
+            text-align: right;
+            flex: 1;
+            direction: rtl;
+        }
+        .header-hospital-ar h2 {
+            font-size: 16px;
+            font-weight: 900;
+            color: #005a9c;
+            margin: 0 0 1px 0;
+            line-height: 1.2;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .header-hospital-ar h4 {
+            font-size: 12px;
+            font-weight: 800;
+            color: #0284c7;
+            margin: 0 0 1px 0;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .header-hospital-ar p {
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
         }
 
-        .hospital-logo-img {
-            height: 85px;
-            max-width: 180px;
+        .header-logo {
+            text-align: center;
+            width: 110px;
+            padding: 0 8px;
+        }
+        .header-logo img, .hospital-logo-img {
+            max-width: 90px;
+            max-height: 72px;
             object-fit: contain;
         }
 
-        .clinical-lab-center {
-            text-align: center;
-            flex-grow: 1;
+        .header-hospital-en {
+            text-align: left;
+            direction: ltr;
+            flex: 1;
         }
-
-        .hospital-title-side {
-            text-align: right;
-            min-width: 190px;
-        }
-
-        .hospital-name-ar {
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e3a5f;
-            font-family: 'Tajawal', 'Cairo', 'Tahoma', sans-serif;
-            margin-bottom: 2px;
-            direction: rtl;
-            line-height: 1.25;
-        }
-
-        .hospital-name-en {
-            font-size: 9.5px;
-            color: #555555;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        .header-hospital-en h2 {
+            font-size: 14.5px;
+            font-weight: 900;
+            color: #005a9c;
+            margin: 0 0 1px 0;
             line-height: 1.2;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .header-hospital-en h4 {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0284c7;
+            margin: 0 0 1px 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .header-hospital-en p {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
         }
 
-        .clinical-lab-banner {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 30px;
-            font-weight: bold;
-            font-style: italic;
-            color: #1e4b88;
-            letter-spacing: 0.5px;
+        /* Document Title Banner (Matching Emergency & Radiology) */
+        .document-title-banner {
+            background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%);
+            color: #ffffff;
+            text-align: center;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .document-title-banner h3 {
+            font-size: 12.5px;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: 0.3px;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .report-code-badge {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            direction: ltr;
         }
 
-        /* Patient Info Grid (Matching image exactly) */
-        .patient-info-grid {
+        /* Patient Info Card (Upgraded 3-Zone Grey Clinical Card with QR) */
+        .patient-info-card {
+            background-color: #f8fafc;
+            border: 1.2px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin-bottom: 8px;
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 6px 30px;
-            margin-bottom: 18px;
-            font-size: 13px;
+            grid-template-columns: 1.35fr 1.25fr 85px;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .patient-zone-main, .patient-zone-order {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .patient-zone-qr {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px dashed #cbd5e1;
+            padding-left: 8px;
+        }
+
+        .qr-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-img {
+            width: 62px;
+            height: 62px;
+            background: #ffffff;
+            padding: 2px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .qr-tag {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #005a9c;
+            margin-top: 2px;
+            letter-spacing: 0.4px;
+            direction: ltr;
+        }
+
+        .qr-caption {
+            font-size: 7.5px;
+            color: #64748b;
+            font-weight: 700;
+            margin-top: 1px;
+            white-space: nowrap;
+        }
+
+        .badge-coverage {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 800;
+        }
+        .badge-insurance {
+            background-color: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .badge-cash {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
         }
 
         .info-row {
             display: flex;
             align-items: center;
-            line-height: 1.5;
-            margin-bottom: 4px;
+            line-height: 1.35;
+            font-size: 11.5px;
         }
 
         .info-pill {
             background-color: #e5e8ec;
-            color: #1a1a1a;
+            color: #1e293b;
             font-weight: bold;
-            font-size: 12.5px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            min-width: 120px;
+            font-size: 10.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            min-width: 88px;
             display: inline-block;
         }
 
         .info-colon {
-            margin: 0 8px;
+            margin: 0 4px;
             font-weight: bold;
-            color: #333;
+            color: #475569;
         }
 
         .val-arabic-name {
-            color: #1e4b88;
+            color: #005a9c;
             font-weight: bold;
-            font-size: 14.5px;
+            font-size: 12.5px;
             font-family: 'Tahoma', Arial, sans-serif;
             direction: rtl;
         }
 
         .val-english-name {
-            color: #8b0000;
+            color: #334155;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 11.5px;
         }
 
         .info-val-text {
-            color: #111;
+            color: #0f172a;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 11px;
+        }
+
+        /* Official Authentication & Signatures Block */
+        .auth-block {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            background-color: #f8fafc;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 15px;
+            align-items: center;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .auth-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .signature-box-empty {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sig-empty-line {
+            width: 85%;
+            height: 26px;
+            border-bottom: 1.5px dashed #005a9c;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 10px;
+            font-style: italic;
+        }
+        .sig-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #005a9c;
+            margin-bottom: 2px;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+        }
+        .sig-subtitle {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .stamp-circle-box {
+            width: 64px;
+            height: 64px;
+            border: 1.5px dashed #005a9c;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #005a9c;
+            background: #ffffff;
+            padding: 3px;
         }
 
         /* Test Table Column Headers (Matching image double blue line) */
@@ -324,14 +618,14 @@
             grid-template-columns: 2.2fr 1fr 1fr;
             border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
-            padding: 6px 4px;
-            margin-bottom: 8px;
+            padding: 4px 4px;
+            margin-bottom: 4px;
         }
 
         .header-col {
             color: #1e4b88;
             font-weight: bold;
-            font-size: 13.5px;
+            font-size: 12.5px;
         }
 
         .header-col.center {
@@ -345,8 +639,10 @@
 
         /* Test Item Card */
         .test-card {
-            padding: 6px 4px 8px 4px;
+            padding: 4px 4px 5px 4px;
             border-bottom: 1px solid #e1e4e8;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .test-card:last-child {
@@ -356,30 +652,83 @@
         .test-main-row {
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
-            align-items: baseline;
-            margin-bottom: 3px;
+            align-items: flex-start;
+            margin-bottom: 2px;
         }
 
         .test-name {
             font-weight: bold;
             color: #000;
-            font-size: 13.5px;
+            font-size: 12.5px;
         }
 
         .test-value-cell {
             text-align: center;
-            font-size: 13px;
+            font-size: 12.5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .current-val-line {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: center;
+        }
+
+        .prev-vertical-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2px;
+            padding-top: 2px;
+            border-top: 1px dashed #cbd5e1;
+            width: 88%;
+            gap: 2px;
+        }
+
+        .prev-vertical-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+
+        .prev-val-chip {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #1e4b88;
+        }
+
+        .prev-val-chip.high {
+            color: #b91c1c;
+        }
+
+        .prev-val-chip.low {
+            color: #b45309;
+        }
+
+        .prev-date-text {
+            font-size: 8.5px;
+            color: #64748b;
+            font-weight: 600;
         }
 
         .test-value-cell.right {
             text-align: center;
             padding-right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .val-normal {
             color: #1e4b88;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .val-high {
@@ -388,9 +737,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -401,9 +750,9 @@
             color: #b45309;
             border: 1px solid #fcd34d;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -414,9 +763,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: bold;
-            font-size: 13.5px;
-            padding: 1px 7px;
-            border-radius: 4px;
+            font-size: 12.5px;
+            padding: 1px 6px;
+            border-radius: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -427,9 +776,9 @@
             color: #b91c1c;
             border: 1px solid #fca5a5;
             font-weight: 800;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -441,9 +790,9 @@
             color: #b45309;
             border: 1px solid #fcd34d;
             font-weight: 800;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -455,18 +804,18 @@
             color: #15803d;
             border: 1px solid #bbf7d0;
             font-weight: 700;
-            font-size: 12px;
-            padding: 1px 12px;
-            border-radius: 4px;
+            font-size: 11px;
+            padding: 1px 10px;
+            border-radius: 3px;
             letter-spacing: 0.4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .badge-flag {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
-            margin-left: 5px;
+            margin-left: 4px;
             vertical-align: middle;
         }
         .badge-flag.high { color: #b91c1c; }
@@ -474,7 +823,7 @@
 
         .unit-label {
             color: #333;
-            font-size: 12.5px;
+            font-size: 11.5px;
             margin-left: 4px;
         }
 
@@ -482,9 +831,9 @@
             display: grid;
             grid-template-columns: 2.2fr 1fr 1fr;
             align-items: baseline;
-            font-size: 12.5px;
+            font-size: 11.5px;
             color: #444;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .meta-label {
@@ -495,13 +844,17 @@
         .meta-conv-range {
             text-align: center;
             color: #444;
-            font-size: 12.5px;
+            font-size: 11.5px;
+        }
+
+        .meta-status-blank {
+            display: block;
         }
 
         .test-device-row {
-            font-size: 12px;
+            font-size: 10.5px;
             color: #1e4b88;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         /* Category Header */
@@ -509,37 +862,36 @@
             background-color: #f1f4f8;
             color: #1e4b88;
             font-weight: bold;
-            font-size: 13px;
-            padding: 5px 8px;
-            margin-top: 8px;
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-top: 6px;
             border-left: 3px solid #1e4b88;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* Footer */
         .report-footer-wrapper {
-            position: absolute !important;
-            bottom: 14mm;
-            left: 20mm;
-            right: 20mm;
-            width: auto;
+            width: 100%;
+            margin-top: 6px;
             z-index: 10;
         }
 
         .report-footer {
             border-top: 1px solid #dee2e6;
-            padding-top: 8px;
+            padding-top: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #333;
             font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
         }
 
         .footer-printed-by {
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #333;
         }
 
@@ -549,7 +901,7 @@
         }
 
         .footer-datetime {
-            font-size: 11.5px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #444;
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -558,49 +910,51 @@
 
         .hospital-contact-line {
             text-align: center;
-            font-size: 10px;
+            font-size: 9.5px;
             color: #555;
-            margin-top: 6px;
+            margin-top: 4px;
             font-family: 'Segoe UI', 'Tajawal', Tahoma, sans-serif;
             direction: rtl;
         }
 
         /* Print Media Styles */
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm 12mm 10mm 12mm;
+            }
+
             .print-toolbar {
                 display: none !important;
             }
 
             body {
-                background: #fff;
-                padding: 0;
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                background: #fff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .report-page {
                 box-shadow: none !important;
-                margin: 0 auto !important;
-                padding: 16mm 20mm 35mm 20mm !important;
-                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
-                min-height: 297mm !important;
+                min-height: auto !important;
                 position: relative !important;
                 box-sizing: border-box !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
                 page-break-after: auto;
             }
 
             .decorative-border {
-                display: block !important;
-                position: absolute;
-                top: 8mm;
-                right: 8mm;
-                bottom: 8mm;
-                left: 8mm;
-                border: 1.5px solid #1e7e8f;
+                display: none !important;
             }
 
             .report-page::before {
@@ -609,24 +963,37 @@
                 opacity: 0.04;
             }
 
+            .report-main-content {
+                flex: 1 0 auto !important;
+            }
+
+            .report-bottom-block {
+                margin-top: auto !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
             .report-footer-wrapper {
-                position: absolute !important;
-                bottom: 14mm !important;
-                left: 20mm !important;
-                right: 20mm !important;
-                width: auto !important;
+                position: static !important;
+                width: 100% !important;
+                margin-top: 6px !important;
                 z-index: 9999;
                 background: transparent !important;
             }
 
             .test-card {
-                break-inside: avoid;
-                page-break-inside: avoid;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
             }
 
-            .patient-info-grid {
-                break-inside: avoid;
-                page-break-inside: avoid;
+            .patient-info-card, .patient-info-grid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            .auth-block {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
             }
 
             body.letterhead-mode .report-header,
@@ -645,41 +1012,59 @@
                 padding-top: var(--letterhead-top, 45mm) !important;
                 padding-bottom: var(--letterhead-bottom, 25mm) !important;
             }
-
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
         }
     </style>
 </head>
-<body>
+<body class="{{ !empty($isPublicView) ? 'is-public-report' : '' }}">
 
-    <!-- Action Toolbar (Hidden during print) -->
-    <div class="print-toolbar">
-        <button class="toolbar-btn btn-print" onclick="window.print()">
-            🖨️ طباعة التقرير
-        </button>
-
-        <div class="mode-toggle-group">
-            <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
-                📄 ورق مروس (Letterhead)
-            </button>
-            <button type="button" class="mode-btn" id="btnModeFull" onclick="setPrintMode('full')">
-                📑 ورق أبيض كامل (Full)
+    @if(!empty($isPublicView))
+        <!-- Public Patient Toolbar (Hidden during print) -->
+        <div class="print-toolbar" style="background: rgba(16, 185, 129, 0.95); right: 50%; transform: translateX(50%); border-radius: 30px; padding: 8px 20px; gap: 15px;">
+            <span style="color: #fff; font-weight: bold; font-size: 13.5px;">
+                🏥 مستشفى الكفاءات الأهلي — التقرير الطبي المعتمد
+            </span>
+            <button class="toolbar-btn btn-print" onclick="window.print()" style="background: #ffffff; color: #047857; font-weight: 800; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                📥 تحميل / حفظ كـ PDF
             </button>
         </div>
+    @else
+        <!-- Action Toolbar for Staff (Hidden during print) -->
+        <div class="print-toolbar">
+            <button class="toolbar-btn btn-print" onclick="window.print()">
+                🖨️ طباعة التقرير
+            </button>
 
-        <div class="margin-control-group" id="marginControls">
-            <label for="topMarginInput">المسافة العلوية:</label>
-            <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
-            <span>مم</span>
+            @can('send lab whatsapp')
+                @php
+                    $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                @endphp
+                @if($waShareUrl)
+                    <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
+                        💬 إرسال واتساب للمريض
+                    </a>
+                @endif
+            @endcan
+
+            <div class="mode-toggle-group">
+                <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
+                    📄 ورق مروس (Letterhead)
+                </button>
+                <button type="button" class="mode-btn" id="btnModeFull" onclick="setPrintMode('full')">
+                    📑 ورق أبيض كامل (Full)
+                </button>
+            </div>
+
+            <div class="margin-control-group" id="marginControls">
+                <label for="topMarginInput">المسافة العلوية:</label>
+                <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
+                <span>مم</span>
+            </div>
+
+            <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
+                ✕ رجوع
+            </button>
         </div>
-
-        <button class="toolbar-btn btn-close-window" onclick="window.history.back()">
-            ✕ رجوع
-        </button>
-    </div>
+    @endif
 
     @php
         // Helper: Convert Arabic Name to English Transliteration
@@ -778,16 +1163,29 @@
             }
         }
 
-        $rawName = $request->visit?->patient?->user?->name ?? 'Patient';
+        $patientModel = $request->visit?->patient ?? ($request->patient_id ? \App\Models\Patient::find($request->patient_id) : null);
+        $patientUser = $patientModel?->user;
+
+        $rawName = $patientUser?->name ?? ($patientModel?->name ?? 'Patient');
         $arabicName = $rawName;
         $englishName = transliterateArabicName($rawName);
 
-        $patientAge = $request->visit?->patient?->age ?? '';
-        $rawGender = strtolower($request->visit?->patient?->gender ?? '');
-        $genderEn = ($rawGender === 'female' || $rawGender === 'أنثى') ? 'Female' : 'Male';
+        $patientAge = $patientModel?->age ?? ($patientUser?->date_of_birth ? \Carbon\Carbon::parse($patientUser->date_of_birth)->age : '');
+        $rawGender = trim(strtolower((string)($patientUser?->gender ?? $patientModel?->gender ?? '')));
+        if (in_array($rawGender, ['female', 'f', 'أنثى', 'انثى'], true)) {
+            $genderEn = 'Female';
+        } elseif (in_array($rawGender, ['male', 'm', 'ذكر'], true)) {
+            $genderEn = 'Male';
+        } else {
+            $genderEn = '—';
+        }
 
         $rawDoctor = $request->visit?->doctor?->user?->name ?? '';
         $doctorEn = $rawDoctor ? (str_starts_with($rawDoctor, 'د.') || str_starts_with($rawDoctor, 'الدكتور') ? transliterateArabicName($rawDoctor) : 'Dr. ' . transliterateArabicName($rawDoctor)) : '';
+
+        $patientPhone = method_exists($request, 'getPatientPhone') ? $request->getPatientPhone() : ($patientUser?->phone ?? ($patientModel?->phone ?? '—'));
+        $isInsured = ($patientModel?->insurance_type && $patientModel->insurance_type !== 'none') || ($request->insurance_type && $request->insurance_type !== 'none') || !empty($patientModel?->insurance_card_no) || !empty($patientModel?->insurance_number);
+        $verifyUrl = method_exists($request, 'getPublicReportUrl') ? $request->getPublicReportUrl() : url('/lab/results/view/' . $request->id);
 
         $sampleNo = 'IQ' . ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->id, 7, '0', STR_PAD_LEFT);
         $patientNo = ($request->created_at ? $request->created_at->format('y') : date('y')) . '/' . str_pad($request->visit?->patient_id ?? $request->patient_id ?? $request->id, 7, '0', STR_PAD_LEFT);
@@ -797,6 +1195,18 @@
 
         $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
         $testsCount = $labResults->count();
+
+        $prevResultsMap = method_exists($request, 'getPreviousLabResultsMap') ? $request->getPreviousLabResultsMap() : [];
+        $findPrevResults = function($testName) use ($prevResultsMap) {
+            $norm = mb_strtolower(trim((string)$testName));
+            if (isset($prevResultsMap[$norm])) return $prevResultsMap[$norm];
+            $clean = mb_strtolower(trim(preg_replace('/\s*\(.*?\)\s*/', '', (string)$testName)));
+            if (!empty($clean) && isset($prevResultsMap[$clean])) return $prevResultsMap[$clean];
+            foreach ($prevResultsMap as $k => $list) {
+                if ($k === $norm || $k === $clean) return $list;
+            }
+            return [];
+        };
 
         if ($testsCount === 0 && !empty($request->result)) {
             $parsedRes = is_string($request->result) ? json_decode($request->result, true) : $request->result;
@@ -848,6 +1258,17 @@
         $isBloodBankRequest = $isBloodBankRequest ?? ($request->type === 'blood_bank' || data_get($request->details, 'blood_bank', false));
         $badgeText = $isBloodBankRequest ? 'Blood Bank' : 'Clinical Laboratory';
         $badgeIcon = $isBloodBankRequest ? 'blood-bank-icon.svg' : 'lab-icon.svg';
+
+        $hospitalLogoPath = public_path('images/1.jpg');
+        if (!file_exists($hospitalLogoPath)) {
+            $hospitalLogoPath = public_path('images/hospital-logo.svg');
+        }
+        $hospitalLogoSrc = asset('images/1.jpg');
+        if (file_exists($hospitalLogoPath)) {
+            $ext = pathinfo($hospitalLogoPath, PATHINFO_EXTENSION);
+            $mime = ($ext === 'svg') ? 'image/svg+xml' : (($ext === 'png') ? 'image/png' : 'image/jpeg');
+            $hospitalLogoSrc = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($hospitalLogoPath));
+        }
     @endphp
 
     <div class="report-page">
@@ -858,87 +1279,115 @@
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-        <!-- Header Section -->
-        <div class="report-header">
-            <div class="header-top-row">
-                <!-- Left: Hospital Logo (in place of Lab Icon badge) -->
-                <div class="hospital-logo-side">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo" class="hospital-logo-img">
-                </div>
+    <table class="report-print-container">
+        <thead>
+            <tr>
+                <td class="print-table-cell-header">
+                    <!-- Header Section (Matching Emergency & Radiology) -->
+                    <div class="report-header" style="direction: rtl;">
+                        <div class="header-hospital-ar">
+                            <h2>مستشفى الكفاءات الأهلي</h2>
+                            <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
+                            <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
+                        </div>
+                        <div class="header-logo">
+                            <img src="{!! $hospitalLogoSrc !!}" 
+                                 alt="Hospital Logo" 
+                                 class="hospital-logo-img" 
+                                 onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                                 style="max-height: 80px; max-width: 100px; object-fit: contain;">
+                        </div>
+                        <div class="header-hospital-en">
+                            <h2>Al-Kafa'at Private Hospital</h2>
+                            <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
+                            <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
+                        </div>
+                    </div>
 
-                <!-- Center: Clinical Laboratory Title -->
-                <div class="clinical-lab-center">
-                    <div class="clinical-lab-banner">Clinical Laboratory</div>
-                </div>
+                    <!-- Document Title Banner (Matching Emergency & Radiology) -->
+                    <div class="document-title-banner">
+                        <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' }}</h3>
+                        <div class="report-code-badge">
+                            LAB-#{{ $request->id }}
+                        </div>
+                    </div>
 
-                <!-- Right: Hospital Name in Arabic & English -->
-                <div class="hospital-title-side">
-                    <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
-                    <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-                </div>
-            </div>
-        </div>
+                    <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
+                    <div class="patient-info-card">
+                        <!-- Left Zone: Patient Demographics -->
+                        <div class="patient-zone-main">
+                            <div class="info-row">
+                                <span class="info-pill">Patient Name</span>
+                                <span class="info-colon">:</span>
+                                <span class="val-arabic-name">{{ $arabicName }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Patient Name</span>
+                                <span class="info-colon">:</span>
+                                <span class="val-english-name">{{ $englishName }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Age / Sex</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Phone No.</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
+                            </div>
+                        </div>
 
-        <!-- Patient Info Box -->
-        <div class="patient-info-grid">
-            <!-- Left Column -->
-            <div>
-                <div class="info-row">
-                    <span class="info-pill">Patient Name</span>
-                    <span class="info-colon">:</span>
-                    <span class="val-arabic-name">{{ $arabicName }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Patient Name</span>
-                    <span class="info-colon">:</span>
-                    <span class="val-english-name">{{ $englishName }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Age</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Sex</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $genderEn }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Consultant</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
-                </div>
-            </div>
+                        <!-- Middle Zone: Order, Doctor & Coverage -->
+                        <div class="patient-zone-order">
+                            <div class="info-row">
+                                <span class="info-pill">Consultant</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Sample No.</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Date / Time</span>
+                                <span class="info-colon">:</span>
+                                <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-pill">Coverage</span>
+                                <span class="info-colon">:</span>
+                                <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
+                                    {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                                </span>
+                            </div>
+                        </div>
 
-            <!-- Right Column -->
-            <div>
-                <div class="info-row">
-                    <span class="info-pill">Sample No.</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleNo }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Patient No.</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $patientNo }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Sample Date</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleDate }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Sample Time</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $sampleTime }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-pill">Number Of Tests</span>
-                    <span class="info-colon">:</span>
-                    <span class="info-val-text">{{ $testsCount }}</span>
-                </div>
-            </div>
-        </div>
+                        <!-- Right Zone: Direct QR Code -->
+                        <div class="patient-zone-qr">
+                            <div class="qr-box">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
+                                <span class="qr-tag">LAB-#{{ $request->id }}</span>
+                                <span class="qr-caption">مسح للنتائج</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if(!isset($isBloodBankRequest) || !$isBloodBankRequest)
+                        <!-- Column Headers -->
+                        <div class="tests-header-bar">
+                            <div class="header-col">Laboratory Test Results</div>
+                            <div class="header-col center">Conventional Units</div>
+                            <div class="header-col right">Status</div>
+                        </div>
+                    @endif
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="print-table-cell-body">
 
         @if(isset($isBloodBankRequest) && $isBloodBankRequest)
             <!-- Blood Bank Specialized Table -->
@@ -958,13 +1407,6 @@
                 @endif
             </div>
         @else
-            <!-- Column Headers -->
-            <div class="tests-header-bar">
-                <div class="header-col">Laboratory Test Results</div>
-                <div class="header-col center">Conventional Units</div>
-                <div class="header-col right">Status</div>
-            </div>
-
             <!-- Test Items List -->
             @php
                 $currentGroup = null;
@@ -977,6 +1419,7 @@
                         $val = trim($res->value ?? '');
                         $unit = trim($res->unit ?? '');
                         $refRange = trim($res->reference_range ?? '');
+                        $prevItems = $findPrevResults($res->test_name);
 
                         // تقييم الحالة ديناميكياً بدقة
                         $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
@@ -1009,9 +1452,25 @@
                                 {{ $res->test_name }}
                             </div>
                             <div class="test-value-cell">
-                                <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
-                                @if($unit)
-                                    <span class="unit-label">{{ $unit }}</span>
+                                <div class="current-val-line">
+                                    <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
+                                    @if($unit)
+                                        <span class="unit-label">{{ $unit }}</span>
+                                    @endif
+                                </div>
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-vertical-box">
+                                        @foreach($prevItems as $p)
+                                            @php
+                                                $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
+                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                            @endphp
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
@@ -1054,6 +1513,7 @@
                         $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : $tVal;
                         $unitStr = is_array($tVal) ? ($tVal['unit'] ?? '') : '';
                         $refStr = is_array($tVal) ? ($tVal['reference_range'] ?? '') : '';
+                        $prevItems = $findPrevResults($tName);
                         $statusStr = calcLabStatus($valStr, $refStr, is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal');
 
                         $valClass = 'val-normal';
@@ -1073,8 +1533,24 @@
                         <div class="test-main-row">
                             <div class="test-name">{{ is_numeric($tName) ? 'Test #' . ($tName + 1) : $tName }}</div>
                             <div class="test-value-cell">
-                                <span class="{{ $valClass }}">{{ $valStr }}</span>
-                                @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
+                                <div class="current-val-line">
+                                    <span class="{{ $valClass }}">{{ $valStr }}</span>
+                                    @if($unitStr) <span class="unit-label">{{ $unitStr }}</span> @endif
+                                </div>
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-vertical-box">
+                                        @foreach($prevItems as $p)
+                                            @php
+                                                $pStatus = calcLabStatus($p['value'], $refStr, $p['status'] ?? 'normal');
+                                                $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos')) ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low')) ? 'low' : '');
+                                            @endphp
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
                             <div class="test-value-cell right">
                                 @if($statusStr === 'high' || $statusStr === 'positive' || str_contains($statusStr, 'high') || str_contains($statusStr, 'pos'))
@@ -1113,6 +1589,7 @@
                         $tUnit = is_array($reqTestItem) ? ($reqTestItem['unit'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->unit ?? '') : '');
                         $tRef = is_array($reqTestItem) ? ($reqTestItem['reference_range'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->reference_range ?? '') : '');
                         $tCat = is_array($reqTestItem) ? ($reqTestItem['category'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->category ?? '') : '');
+                        $prevItems = $findPrevResults($tName);
 
                         if (empty($tUnit) || empty($tRef)) {
                             $dbTest = \App\Models\LabTest::where('name', $tName)->first();
@@ -1138,9 +1615,21 @@
                                 {{ $tName }}
                             </div>
                             <div class="test-value-cell">
-                                <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
-                                @if($tUnit)
-                                    <span class="unit-label">{{ $tUnit }}</span>
+                                <div class="current-val-line">
+                                    <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
+                                    @if($tUnit)
+                                        <span class="unit-label">{{ $tUnit }}</span>
+                                    @endif
+                                </div>
+                                @if(!empty($prevItems) && count($prevItems) > 0)
+                                    <div class="prev-vertical-box">
+                                        @foreach($prevItems as $p)
+                                            <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                <span class="prev-val-chip">{{ $p['value'] }}</span>
+                                                <span class="prev-date-text">({{ $p['date_short'] }})</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 @endif
                             </div>
                             <div class="test-value-cell right">
@@ -1170,26 +1659,68 @@
             @endif
         @endif
 
-        <!-- Footer: Always at the bottom of every page on print and bottom on screen -->
-        <div class="report-footer-wrapper">
-            <div class="report-footer">
-                <div class="footer-printed-by">
-                    Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+            <!-- Official Authentication & Signatures Block (مكان التوقيع فارغ للاختبار) -->
+            <div class="auth-block">
+                <!-- 1. Specialist / Medical Lab Scientist Signature -->
+                <div class="auth-cell">
+                    <div class="signature-box-empty">
+                        <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                        <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                        <div class="sig-empty-line">
+                            (مكان التوقيع والاعتماد)
+                        </div>
+                        <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">
+                            التاريخ: {{ now()->format('Y-m-d') }}
+                        </div>
+                    </div>
                 </div>
-                <div class="footer-datetime">
-                    <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
-                </div>
-            </div>
 
-            <div class="hospital-contact-line">
-                📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+                <!-- 2. Official Hospital / Dept Stamp -->
+                <div class="auth-cell">
+                    <div class="stamp-circle-box">
+                        <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                        <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                        <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                        <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                    </div>
+                </div>
             </div>
-        </div>
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td class="print-table-cell-footer">
+                    <!-- Footer: Always at the bottom of EVERY page on print -->
+                    <div class="report-footer-wrapper">
+                        <div class="report-footer">
+                            <div class="footer-printed-by">
+                                Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+                            </div>
+                            <div class="footer-datetime">
+                                <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="hospital-contact-line">
+                            📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
 
     </div>
 
     <script>
         function setPrintMode(mode) {
+            @if(!empty($isPublicView))
+                // Always keep full header for patient/public report
+                document.body.classList.remove('letterhead-mode');
+                return;
+            @endif
+
             const body = document.body;
             const btnLetterhead = document.getElementById('btnModeLetterhead');
             const btnFull = document.getElementById('btnModeFull');
@@ -1208,7 +1739,7 @@
             }
 
             try {
-                localStorage.setItem('lab_print_mode', mode);
+                localStorage.setItem('lab_print_mode_v2', mode);
             } catch (e) {}
         }
 
@@ -1222,19 +1753,23 @@
 
         // Initialize user preference on load
         (function() {
-            let savedMode = 'letterhead';
-            let savedTop = 45;
-            try {
-                savedMode = localStorage.getItem('lab_print_mode') || 'letterhead';
-                savedTop = parseInt(localStorage.getItem('lab_print_top_margin')) || 45;
-            } catch (e) {}
+            @if(!empty($isPublicView))
+                setPrintMode('full');
+            @else
+                let savedMode = 'full'; // Default is FULL: with complete hospital header & logo
+                let savedTop = 45;
+                try {
+                    savedMode = localStorage.getItem('lab_print_mode_v2') || 'full';
+                    savedTop = parseInt(localStorage.getItem('lab_print_top_margin')) || 45;
+                } catch (e) {}
 
-            const topInput = document.getElementById('topMarginInput');
-            if (topInput) {
-                topInput.value = savedTop;
-            }
-            changeTopMargin(savedTop);
-            setPrintMode(savedMode);
+                const topInput = document.getElementById('topMarginInput');
+                if (topInput) {
+                    topInput.value = savedTop;
+                }
+                changeTopMargin(savedTop);
+                setPrintMode(savedMode);
+            @endif
         })();
     </script>
 </body>

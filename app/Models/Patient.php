@@ -143,6 +143,56 @@ class Patient extends Model
             \Carbon\Carbon::parse($this->user->date_of_birth)->age : null;
     }
 
+    public function getGenderAttribute(): ?string
+    {
+        return $this->attributes['gender'] ?? ($this->user?->gender ?? null);
+    }
+
+    public function getGenderDisplayAttribute(): string
+    {
+        $g = strtolower((string) ($this->gender ?? ''));
+        if (in_array($g, ['male', 'm', 'ذكر'], true)) {
+            return 'ذكر';
+        }
+        if (in_array($g, ['female', 'f', 'أنثى', 'انثى'], true)) {
+            return 'أنثى';
+        }
+        return 'غير محدد';
+    }
+
+    /**
+     * فحص الحقول الأساسية الإلزامية لمريض الضمان الصحي
+     */
+    public function getMissingInsuranceFields(): array
+    {
+        $missing = [];
+        $insNum = $this->insurance_card_no ?: ($this->insurance_number ?: $this->insurance_booklet_number);
+        if (empty($insNum)) {
+            $missing['insurance_number'] = 'رقم بطاقة / دفتر الضمان';
+        }
+        if (empty($this->national_id)) {
+            $missing['national_id'] = 'البطاقة الموحدة / الرقم الوطني';
+        }
+        if (empty($this->user?->phone)) {
+            $missing['phone'] = 'رقم الهاتف';
+        }
+        if (empty($this->user?->gender)) {
+            $missing['gender'] = 'الجنس';
+        }
+        if (empty($this->user?->date_of_birth)) {
+            $missing['date_of_birth'] = 'تاريخ الميلاد';
+        }
+        return $missing;
+    }
+
+    /**
+     * هل بيانات الضمان مكتملة بنسبة 100%؟
+     */
+    public function isInsuranceDataComplete(): bool
+    {
+        return count($this->getMissingInsuranceFields()) === 0;
+    }
+
     // دالة للحصول على آخر زيارة
     public function getLastVisit()
     {

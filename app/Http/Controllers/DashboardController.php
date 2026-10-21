@@ -18,8 +18,13 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        // توجيه موظف الضمان مباشرة إلى شاشة المرضى
+        if ($user && $user->hasRole('thaman')) {
+            return redirect()->route('patients.index');
+        }
+
         // توجيه الطبيب مباشرة إلى محطة زيارات الاستشارية وقائمة المرضى
-        if ($user->hasRole('doctor')) {
+        if ($user && $user->hasRole('doctor')) {
             return redirect()->route('doctor.visits.index');
         }
 

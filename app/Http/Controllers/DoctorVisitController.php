@@ -583,7 +583,7 @@ class DoctorVisitController extends Controller
         // إذا كانت البيانات تحتوي على تشخيص، فتتحقق منه
         if ($request->has('diagnosis')) {
             $rules['diagnosis'] = 'required|array';
-            $rules['diagnosis.description'] = 'required|string|max:1000';
+            $rules['diagnosis.description'] = 'nullable|string|max:1000';
             $rules['diagnosis.code'] = 'nullable|string';
             $rules['diagnosis.custom_code'] = 'nullable|string|max:10';
         }
@@ -616,7 +616,7 @@ class DoctorVisitController extends Controller
         $request->validate($rules);
 
         // إذا كان هناك تشخيص واختير "أخرى"، تأكد من وجود custom_code
-        if ($request->has('diagnosis') && $request->diagnosis['code'] === 'other' && empty($request->diagnosis['custom_code'])) {
+        if ($request->has('diagnosis') && ($request->diagnosis['code'] === 'other' || ($request->diagnosis['actual_code'] ?? '') === 'other') && empty($request->diagnosis['custom_code'])) {
             return back()->withErrors(['diagnosis.custom_code' => 'يرجى إدخال رمز ICD مخصص عند اختيار "أخرى".']);
         }
 
@@ -632,7 +632,11 @@ class DoctorVisitController extends Controller
         }
 
         if ($request->has('diagnosis')) {
-            $updateData['diagnosis'] = $request->diagnosis;
+            $diag = $request->diagnosis;
+            if (empty($diag['description']) && !empty($diag['code'])) {
+                $diag['description'] = $diag['code'];
+            }
+            $updateData['diagnosis'] = $diag;
         }
 
         if ($request->has('treatment_plan')) {
@@ -990,6 +994,56 @@ class DoctorVisitController extends Controller
 
         if ($request->type === 'lab' && $request->tests) {
             $details['tests'] = $request->tests;
+            $resolvedIds = \App\Models\LabTest::whereIn('name', (array)$request->tests)
+                ->orWhereIn('code', (array)$request->tests)
+                ->pluck('id')
+                ->toArray();
+            $details['lab_test_ids'] = $resolvedIds;
+
+            // إذا كان هناك طلب مختبر سابق لنفس الزيارة ما زال معلقاً وغير مسدد بالكاشير، ادمج الفحوصات معه في وصل واحد
+            $existingUnpaidLab = MedicalRequest::where('visit_id', $visit->id)
+                ->where('type', 'lab')
+                ->where('payment_status', 'pending')
+                ->whereIn('status', ['pending', 'pending_service_selection'])
+                ->first();
+
+            if ($existingUnpaidLab) {
+                $exDetails = is_string($existingUnpaidLab->details) 
+                    ? json_decode($existingUnpaidLab->details, true) 
+                    : ($existingUnpaidLab->details ?? []);
+
+                $prevTests = $exDetails['tests'] ?? [];
+                $prevIds = $exDetails['lab_test_ids'] ?? [];
+
+                $mergedTests = array_values(array_unique(array_merge((array)$prevTests, (array)$details['tests'])));
+                $mergedIds = array_values(array_unique(array_merge((array)$prevIds, (array)$details['lab_test_ids'])));
+
+                $exDetails['tests'] = $mergedTests;
+                $exDetails['lab_test_ids'] = $mergedIds;
+
+                if (!empty($details['doctor_notes'])) {
+                    $exDetails['doctor_notes'] = !empty($exDetails['doctor_notes'])
+                        ? ($exDetails['doctor_notes'] . " | " . $details['doctor_notes'])
+                        : $details['doctor_notes'];
+                }
+
+                $existingUnpaidLab->details = $exDetails;
+                $existingUnpaidLab->save();
+
+                $mergedSuccessMsg = 'تم دمج وإضافة التحاليل بنجاح إلى وصل المريض الحالي في الكاشير (وصل موحد)';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $mergedSuccessMsg,
+                        'request_count' => $visit->requests()->count(),
+                        'request_id' => $existingUnpaidLab->id,
+                        'requires_payment' => true,
+                        'cashier_url' => route('cashier.request.payment.form', $existingUnpaidLab->id)
+                    ]);
+                }
+
+                return redirect()->back()->with('success', $mergedSuccessMsg);
+            }
         }
         
         if ($request->type === 'nursing' && $request->nursing_services) {
@@ -1008,12 +1062,98 @@ class DoctorVisitController extends Controller
         
         $detectedSubtype = null;
         if ($request->type === 'radiology' && $request->radiology_types) {
-            $details['radiology_types'] = $request->radiology_types;
-            $details['radiology_type_ids'] = $request->radiology_types;
+            $details['radiology_types'] = (array) $request->radiology_types;
+            $details['radiology_type_ids'] = (array) $request->radiology_types;
             
             // استقبال وتخزين الأعضاء/المناطق المستهدفة لكل فحص (مثل: الصدر، الركبة)
             $radiologyTargets = (array) $request->input('radiology_targets', []);
             $details['radiology_targets'] = $radiologyTargets;
+
+            // إذا كان هناك طلب أشعة سابق لنفس الزيارة ما زال معلقاً وغير مسدد بالكاشير، ادمج الفحوصات معه في وصل واحد
+            $existingUnpaidRad = MedicalRequest::where('visit_id', $visit->id)
+                ->where('type', 'radiology')
+                ->where('payment_status', 'pending')
+                ->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
+                ->first();
+
+            if ($existingUnpaidRad) {
+                $exDetails = is_string($existingUnpaidRad->details) 
+                    ? json_decode($existingUnpaidRad->details, true) 
+                    : ($existingUnpaidRad->details ?? []);
+
+                $prevTypeIds = array_map('intval', (array)($exDetails['radiology_type_ids'] ?? $exDetails['radiology_types'] ?? []));
+                $newTypeIds = array_map('intval', (array)$details['radiology_type_ids']);
+                $mergedTypeIds = array_values(array_unique(array_merge($prevTypeIds, $newTypeIds)));
+
+                $exDetails['radiology_types'] = $mergedTypeIds;
+                $exDetails['radiology_type_ids'] = $mergedTypeIds;
+
+                // دمج المناطق المستهدفة targets
+                $prevTargets = (array)($exDetails['radiology_targets'] ?? []);
+                $mergedTargets = array_merge($prevTargets, $radiologyTargets);
+                $exDetails['radiology_targets'] = $mergedTargets;
+
+                // تحديث الوصف وتحديد الـ subtype المدمج
+                $mergedNames = [];
+                $mergedSubtype = $existingUnpaidRad->subtype;
+                foreach ($mergedTypeIds as $tId) {
+                    $rType = \App\Models\RadiologyType::find($tId);
+                    if ($rType) {
+                        $targetPart = isset($mergedTargets[$tId]) ? trim($mergedTargets[$tId]) : null;
+                        $displayName = $rType->name;
+                        if (!empty($targetPart)) {
+                            $displayName .= " [العضو: {$targetPart}]";
+                        }
+                        $mergedNames[] = $displayName;
+
+                        if (!$mergedSubtype) {
+                            $cat = mb_strtolower(trim($rType->main_category ?? ''));
+                            $sub = mb_strtolower(trim($rType->subcategory ?? ''));
+                            $nm = mb_strtolower(trim($rType->name ?? ''));
+                            if (str_contains($cat, 'سونار') || str_contains($sub, 'سونار') || str_contains($nm, 'سونار') || str_contains($nm, 'sonar') || str_contains($cat, 'ultrasound')) {
+                                $mergedSubtype = 'ultrasound';
+                            } elseif (str_contains($cat, 'رنين') || str_contains($sub, 'رنين') || str_contains($nm, 'رنين') || str_contains($cat, 'mri')) {
+                                $mergedSubtype = 'mri';
+                            } elseif (str_contains($cat, 'إيكو') || str_contains($sub, 'إيكو') || str_contains($nm, 'إيكو') || str_contains($cat, 'echo')) {
+                                $mergedSubtype = 'echo';
+                            } elseif (str_contains($cat, 'مفراس') || str_contains($sub, 'مفراس') || str_contains($nm, 'مفراس') || str_contains($cat, 'ct')) {
+                                $mergedSubtype = 'ct';
+                            } else {
+                                $mergedSubtype = 'general';
+                            }
+                        }
+                    }
+                }
+
+                $exDetails['description'] = !empty($mergedNames) ? ('طلب أشعة: ' . implode(', ', $mergedNames)) : 'طلب أشعة';
+                $existingUnpaidRad->description = $exDetails['description'];
+                if ($mergedSubtype) {
+                    $existingUnpaidRad->subtype = $mergedSubtype;
+                }
+
+                if (!empty($details['doctor_notes'])) {
+                    $exDetails['doctor_notes'] = !empty($exDetails['doctor_notes'])
+                        ? ($exDetails['doctor_notes'] . " | " . $details['doctor_notes'])
+                        : $details['doctor_notes'];
+                }
+
+                $existingUnpaidRad->details = $exDetails;
+                $existingUnpaidRad->save();
+
+                $mergedSuccessMsg = 'تم دمج وإضافة فحوصات الأشعة بنجاح إلى وصل المريض الحالي في الكاشير (وصل موحد)';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $mergedSuccessMsg,
+                        'request_count' => $visit->requests()->count(),
+                        'request_id' => $existingUnpaidRad->id,
+                        'requires_payment' => true,
+                        'cashier_url' => route('cashier.request.payment.form', $existingUnpaidRad->id)
+                    ]);
+                }
+
+                return redirect()->back()->with('success', $mergedSuccessMsg);
+            }
 
             // إنشاء وصف يتضمن أسماء الأشعة والعضو المطلوب وتحديد الفئة الفرعية
             $radiologyTypeNames = [];
@@ -1192,6 +1332,174 @@ class DoctorVisitController extends Controller
         }
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
+    }
+
+    /**
+     * تمكين الطبيب من حذف فحص/تحليل محدد من الطلب المعلق قبل السداد
+     */
+    public function removeRequestItem(HttpRequest $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (!$isAdmin && (!$user || !$user->can('manage own visits'))) {
+            abort(403, 'غير مصرح لك بتعديل الطلبات الطبية');
+        }
+
+        $request->load('visit');
+        if (!$request->visit) {
+            abort(404, 'الطلب غير مرتبط بزيارة صحيحة');
+        }
+
+        if (!$isAdmin && $request->visit->doctor_id != optional($user->doctor)->id) {
+            abort(403, 'غير مصرح لك بتعديل طلب يخص طبيب آخر');
+        }
+
+        if ($request->payment_status === 'paid') {
+            $msg = 'لا يمكن حذف أو تعديل الفحوصات بعد سداد الوصل في الكاشير لحماية الحسابات المالية.';
+            if ($httpRequest->expectsJson() || $httpRequest->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $itemValue = $httpRequest->input('item_value');
+        $details = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
+        $remainingCount = 0;
+
+        if ($request->type === 'lab') {
+            $tests = (array)($details['tests'] ?? []);
+            $labTestIds = (array)($details['lab_test_ids'] ?? []);
+
+            $newTests = [];
+            foreach ($tests as $t) {
+                if (trim((string)$t) !== trim((string)$itemValue)) {
+                    $newTests[] = $t;
+                }
+            }
+
+            $removedTest = \App\Models\LabTest::where('name', $itemValue)->orWhere('code', $itemValue)->orWhere('id', $itemValue)->first();
+            $removedTestId = $removedTest?->id ?? (is_numeric($itemValue) ? (int)$itemValue : null);
+            $newLabTestIds = [];
+            foreach ($labTestIds as $id) {
+                if ($removedTestId && (int)$id === (int)$removedTestId) {
+                    continue;
+                }
+                $newLabTestIds[] = (int)$id;
+            }
+
+            $details['tests'] = array_values($newTests);
+            $details['lab_test_ids'] = array_values($newLabTestIds);
+            $remainingCount = count($newTests);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الفحوصات من قبل الطبيب';
+            }
+
+            $insuranceType = optional($request->visit->appointment)->insurance_type ?? optional($request->visit->patient)->insurance_type ?? 'none';
+            $copayPct = (float)(optional($request->visit->patient)->copay_percentage ?? 15);
+            $newTotal = 0;
+            foreach ($details['lab_test_ids'] as $tId) {
+                $t = \App\Models\LabTest::find($tId);
+                if ($t) {
+                    $pricing = $t->calculateInsurancePricing($insuranceType, $copayPct);
+                    $newTotal += ($insuranceType === 'none' ? $pricing['approved_price'] : $pricing['patient_share']);
+                }
+            }
+            $details['description'] = !empty($details['tests']) ? ('طلب مختبر: ' . implode(', ', $details['tests'])) : 'طلب مختبر';
+            $details['total_amount'] = $newTotal;
+
+        } elseif ($request->type === 'radiology') {
+            $typeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []);
+            $targets = (array)($details['radiology_targets'] ?? []);
+
+            $typeIdToRemove = is_numeric($itemValue) ? (int)$itemValue : null;
+            if (!$typeIdToRemove) {
+                $foundType = \App\Models\RadiologyType::where('name', $itemValue)->first();
+                $typeIdToRemove = $foundType?->id;
+            }
+
+            $newTypeIds = [];
+            foreach ($typeIds as $tId) {
+                if ($typeIdToRemove && (int)$tId === (int)$typeIdToRemove) {
+                    continue;
+                }
+                $newTypeIds[] = (int)$tId;
+            }
+
+            if ($typeIdToRemove && isset($targets[$typeIdToRemove])) {
+                unset($targets[$typeIdToRemove]);
+            }
+
+            $details['radiology_types'] = array_values($newTypeIds);
+            $details['radiology_type_ids'] = array_values($newTypeIds);
+            $details['radiology_targets'] = $targets;
+            $remainingCount = count($newTypeIds);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الفحوصات من قبل الطبيب';
+            }
+
+            $insuranceType = optional($request->visit->appointment)->insurance_type ?? optional($request->visit->patient)->insurance_type ?? 'none';
+            $copayPct = (float)(optional($request->visit->patient)->copay_percentage ?? 15);
+            $newTotal = 0;
+            foreach ($details['radiology_type_ids'] as $rId) {
+                $r = \App\Models\RadiologyType::find($rId);
+                if ($r) {
+                    $pricing = $r->calculateInsurancePricing($insuranceType, $copayPct);
+                    $newTotal += ($insuranceType === 'none' ? $pricing['approved_price'] : $pricing['patient_share']);
+                }
+            }
+            $radNames = \App\Models\RadiologyType::whereIn('id', $details['radiology_type_ids'])->pluck('name')->toArray();
+            $details['description'] = !empty($radNames) ? ('طلب أشعة: ' . implode(', ', $radNames)) : 'طلب أشعة';
+            $details['total_amount'] = $newTotal;
+
+        } elseif ($request->type === 'nursing') {
+            $services = (array)($details['nursing_services'] ?? []);
+            $serviceNames = (array)($details['nursing_service_names'] ?? []);
+
+            $newServices = [];
+            foreach ($services as $sId) {
+                if ((string)$sId !== (string)$itemValue) {
+                    $newServices[] = $sId;
+                }
+            }
+            $newNames = [];
+            foreach ($serviceNames as $sn) {
+                if (trim((string)$sn) !== trim((string)$itemValue)) {
+                    $newNames[] = $sn;
+                }
+            }
+
+            $details['nursing_services'] = array_values($newServices);
+            $details['nursing_service_names'] = array_values($newNames);
+            $remainingCount = count($newServices);
+
+            if ($remainingCount === 0) {
+                $request->status = 'cancelled';
+                $details['cancellation_reason'] = 'تم حذف جميع الخدمات من قبل الطبيب';
+            }
+        }
+
+        $request->details = $details;
+        $request->save();
+
+        $msg = $remainingCount === 0
+            ? 'تم حذف الفحص الأخير وإلغاء الطلب بنجاح'
+            : 'تم حذف الفحص وتحديث الطلب بنجاح';
+
+        if ($httpRequest->expectsJson() || $httpRequest->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'remaining_count' => $remainingCount,
+                'is_cancelled' => ($request->status === 'cancelled'),
+                'new_total' => $request->total_amount,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function showSurgeryForm(Visit $visit)
@@ -1520,4 +1828,52 @@ class DoctorVisitController extends Controller
             ]);
         }
     }
+
+    /**
+     * البحث الذكي اللحظي فائق السرعة في رموز وتشخيصات ICD-10
+     * يبحث في الأعمدة الثلاثة: الرمز (code)، الوصف العربي (description_ar)، والوصف الإنجليزي (description)
+     * مع تحسينات الأداء لمنع أي ثقل أو بطء عند الكتابة
+     */
+    public function searchIcd10(HttpRequest $request)
+    {
+        $q = trim($request->get('q', ''));
+        $len = mb_strlen($q);
+        if ($len < 1) {
+            return response()->json([]);
+        }
+
+        // تحسين أداء وسرعة الاستعلام:
+        // إذا كان حرفاً أو حرفين: نعتمد المطابقة بالبدايات (Prefix Match) لتجنب فحص آلاف السجلات
+        // إذا كان 3 أحرف فأكثر: بحث شامل مع أولوية البدايات، مع حد أقصى 15 نتيجة فائقة السرعة
+        $query = \App\Models\ICD10Code::query();
+
+        if ($len <= 2) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('code', 'LIKE', "{$q}%")
+                    ->orWhere('description_ar', 'LIKE', "{$q}%")
+                    ->orWhere('description', 'LIKE', "{$q}%");
+            });
+        } else {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('code', 'LIKE', "{$q}%")
+                    ->orWhere('description_ar', 'LIKE', "%{$q}%")
+                    ->orWhere('description', 'LIKE', "%{$q}%");
+            });
+        }
+
+        $results = $query->orderByRaw("
+                CASE 
+                    WHEN code = ? THEN 1
+                    WHEN code LIKE ? THEN 2
+                    WHEN description_ar LIKE ? THEN 3
+                    WHEN description LIKE ? THEN 4
+                    ELSE 5
+                END
+            ", [$q, "{$q}%", "{$q}%", "{$q}%"])
+            ->limit(15)
+            ->get(['id', 'code', 'description', 'description_ar', 'category']);
+
+        return response()->json($results);
+    }
 }
+

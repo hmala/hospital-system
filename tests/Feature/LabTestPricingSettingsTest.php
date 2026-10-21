@@ -34,7 +34,7 @@ class LabTestPricingSettingsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($admin)->get(route('lab-tests.pricing-settings.index'));
+        $response = $this->actingAs($admin)->get(route('lab-tests.pricing-settings.index', ['q' => 'Complete Blood Count']));
 
         $response->assertStatus(200);
         $response->assertSee('Complete Blood Count');

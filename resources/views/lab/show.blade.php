@@ -12,101 +12,111 @@ $labTest = LabTestResult::where('visit_id', $request->visit_id)
 // الحصول على جميع التحاليل النشطة للاستخدام في JavaScript
 $labTests = LabTest::active()->get()->keyBy('name');
 
-function getTestIcon($testName) {
-    $name = strtolower($testName);
+if (!function_exists('getTestIcon')) {
+    function getTestIcon($testName) {
+        $name = strtolower($testName);
 
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
-        return 'fas fa-heartbeat text-danger';
-    } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
-        return 'fas fa-oil-can text-warning';
-    } elseif (strpos($name, 'دم') !== false || strpos($name, 'blood') !== false || strpos($name, 'cbc') !== false) {
-        return 'fas fa-tint text-danger';
-    } elseif (strpos($name, 'بول') !== false || strpos($name, 'urine') !== false) {
-        return 'fas fa-flask text-warning';
-    } elseif (strpos($name, 'كبد') !== false || strpos($name, 'liver') !== false || strpos($name, 'sgot') !== false || strpos($name, 'sgpt') !== false) {
-        return 'fas fa-lungs text-success';
-    } elseif (strpos($name, 'كلى') !== false || strpos($name, 'kidney') !== false || strpos($name, 'urea') !== false || strpos($name, 'creatinine') !== false) {
-        return 'fas fa-kidney text-info';
-    } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false || strpos($name, 'tsh') !== false) {
-        return 'fas fa-atom text-purple';
-    } elseif (strpos($name, 'فيروس') !== false || strpos($name, 'virus') !== false) {
-        return 'fas fa-virus text-danger';
-    } elseif (strpos($name, 'بكتيريا') !== false || strpos($name, 'bacteria') !== false) {
-        return 'fas fa-bacterium text-success';
-    } else {
-        return 'fas fa-vial text-primary';
-    }
-}
-
-function getTestUnit($testName, $labTests) {
-    if (isset($labTests[$testName]) && !empty($labTests[$testName]->unit)) {
-        return $labTests[$testName]->unit;
-    }
-    $name = strtolower($testName);
-    if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) return 'mg/dL';
-    if (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) return 'mg/dL';
-    if (strpos($name, 'بيليروبين') !== false || strpos($name, 'bilirubin') !== false) return 'mg/dL';
-    if (strpos($name, 'كرياتينين') !== false || strpos($name, 'creatinine') !== false) return 'mg/dL';
-    if (strpos($name, 'يوريا') !== false || strpos($name, 'urea') !== false) return 'mg/dL';
-    if (strpos($name, 'sgot') !== false || strpos($name, 'ast') !== false || strpos($name, 'sgpt') !== false || strpos($name, 'alt') !== false) return 'U/L';
-    if (strpos($name, 'هيموغلوبين') !== false || strpos($name, 'hemoglobin') !== false || strpos($name, 'hb') !== false) return 'g/dL';
-    if (strpos($name, 'wbc') !== false || strpos($name, 'platelets') !== false) return '/µL';
-    return '';
-}
-
-function normalizeTestIds($testIds) {
-    if (empty($testIds)) return [];
-    if (is_string($testIds)) {
-        $decoded = json_decode($testIds, true);
-        if (is_array($decoded)) return $decoded;
-        return array_filter(array_map('trim', explode(',', $testIds)), fn($item) => $item !== '');
-    }
-    if (is_array($testIds)) return $testIds;
-    return [];
-}
-
-function normalizeTestsField($tests) {
-    if (empty($tests)) return [];
-    if (is_string($tests)) {
-        $decoded = json_decode($tests, true);
-        if (is_array($decoded)) return $decoded;
-        return array_filter(array_map('trim', explode(',', $tests)), fn($item) => $item !== '');
-    }
-    if (is_array($tests)) return $tests;
-    return [];
-}
-
-function buildSelectedLabTests($requestDetails) {
-    $testsList = [];
-    if (!is_array($requestDetails)) return $testsList;
-
-    if (!empty($requestDetails['package_id'])) {
-        $pkg = \App\Models\Package::find($requestDetails['package_id']);
-        if ($pkg) {
-            $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
+        if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) {
+            return 'fas fa-tint text-danger';
+        } elseif (strpos($name, 'ضغط') !== false || strpos($name, 'pressure') !== false) {
+            return 'fas fa-heartbeat text-danger';
+        } elseif (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) {
+            return 'fas fa-oil-can text-warning';
+        } elseif (strpos($name, 'دم') !== false || strpos($name, 'blood') !== false || strpos($name, 'cbc') !== false) {
+            return 'fas fa-tint text-danger';
+        } elseif (strpos($name, 'بول') !== false || strpos($name, 'urine') !== false) {
+            return 'fas fa-flask text-warning';
+        } elseif (strpos($name, 'كبد') !== false || strpos($name, 'liver') !== false || strpos($name, 'sgot') !== false || strpos($name, 'sgpt') !== false) {
+            return 'fas fa-lungs text-success';
+        } elseif (strpos($name, 'كلى') !== false || strpos($name, 'kidney') !== false || strpos($name, 'urea') !== false || strpos($name, 'creatinine') !== false) {
+            return 'fas fa-kidney text-info';
+        } elseif (strpos($name, 'هرمون') !== false || strpos($name, 'hormone') !== false || strpos($name, 'tsh') !== false) {
+            return 'fas fa-atom text-purple';
+        } elseif (strpos($name, 'فيروس') !== false || strpos($name, 'virus') !== false) {
+            return 'fas fa-virus text-danger';
+        } elseif (strpos($name, 'بكتيريا') !== false || strpos($name, 'bacteria') !== false) {
+            return 'fas fa-bacterium text-success';
+        } else {
+            return 'fas fa-vial text-primary';
         }
     }
+}
 
-    if (!empty($requestDetails['lab_test_ids'])) {
-        $ids = normalizeTestIds($requestDetails['lab_test_ids']);
-        foreach ($ids as $testId) {
-            if ($testId === '') continue;
-            $labTest = \App\Models\LabTest::find($testId);
-            if ($labTest) {
-                $testsList[] = $labTest->name;
+if (!function_exists('getTestUnit')) {
+    function getTestUnit($testName, $labTests) {
+        if (isset($labTests[$testName]) && !empty($labTests[$testName]->unit)) {
+            return $labTests[$testName]->unit;
+        }
+        $name = strtolower($testName);
+        if (strpos($name, 'سكر') !== false || strpos($name, 'glucose') !== false) return 'mg/dL';
+        if (strpos($name, 'كوليسترول') !== false || strpos($name, 'cholesterol') !== false) return 'mg/dL';
+        if (strpos($name, 'بيليروبين') !== false || strpos($name, 'bilirubin') !== false) return 'mg/dL';
+        if (strpos($name, 'كرياتينين') !== false || strpos($name, 'creatinine') !== false) return 'mg/dL';
+        if (strpos($name, 'يوريا') !== false || strpos($name, 'urea') !== false) return 'mg/dL';
+        if (strpos($name, 'sgot') !== false || strpos($name, 'ast') !== false || strpos($name, 'sgpt') !== false || strpos($name, 'alt') !== false) return 'U/L';
+        if (strpos($name, 'هيموغلوبين') !== false || strpos($name, 'hemoglobin') !== false || strpos($name, 'hb') !== false) return 'g/dL';
+        if (strpos($name, 'wbc') !== false || strpos($name, 'platelets') !== false) return '/µL';
+        return '';
+    }
+}
+
+if (!function_exists('normalizeTestIds')) {
+    function normalizeTestIds($testIds) {
+        if (empty($testIds)) return [];
+        if (is_string($testIds)) {
+            $decoded = json_decode($testIds, true);
+            if (is_array($decoded)) return $decoded;
+            return array_filter(array_map('trim', explode(',', $testIds)), fn($item) => $item !== '');
+        }
+        if (is_array($testIds)) return $testIds;
+        return [];
+    }
+}
+
+if (!function_exists('normalizeTestsField')) {
+    function normalizeTestsField($tests) {
+        if (empty($tests)) return [];
+        if (is_string($tests)) {
+            $decoded = json_decode($tests, true);
+            if (is_array($decoded)) return $decoded;
+            return array_filter(array_map('trim', explode(',', $tests)), fn($item) => $item !== '');
+        }
+        if (is_array($tests)) return $tests;
+        return [];
+    }
+}
+
+if (!function_exists('buildSelectedLabTests')) {
+    function buildSelectedLabTests($requestDetails) {
+        $testsList = [];
+        if (!is_array($requestDetails)) return $testsList;
+
+        if (!empty($requestDetails['package_id'])) {
+            $pkg = \App\Models\Package::find($requestDetails['package_id']);
+            if ($pkg) {
+                $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
             }
         }
-    }
 
-    if (isset($requestDetails['tests'])) {
-        $tests = normalizeTestsField($requestDetails['tests']);
-        $testsList = array_merge($testsList, $tests);
-    }
+        if (!empty($requestDetails['lab_test_ids'])) {
+            $ids = normalizeTestIds($requestDetails['lab_test_ids']);
+            foreach ($ids as $testId) {
+                if ($testId === '') continue;
+                $labTest = \App\Models\LabTest::find($testId);
+                if ($labTest) {
+                    $testsList[] = $labTest->name;
+                }
+            }
+        }
 
-    $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
-    return array_values(array_unique($testsList));
+        if (isset($requestDetails['tests'])) {
+            $tests = normalizeTestsField($requestDetails['tests']);
+            $testsList = array_merge($testsList, $tests);
+        }
+
+        $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
+        return array_values(array_unique($testsList));
+    }
 }
 
 $requestDetails = is_string($request->details) ? json_decode($request->details, true) : ($request->details ?? []);
@@ -121,6 +131,7 @@ $hasAnyAttachment = $hasAttachment || count($testAttachments) > 0;
 $testsList = buildSelectedLabTests($requestDetails);
 $patient = $request->visit?->patient;
 $patientUser = $patient?->user;
+$patientPhone = $patientUser?->phone ?: ($patient?->phone ?? ($requestDetails['patient_phone'] ?? ($request->visit?->emergency?->emergencyPatient?->phone ?? null)));
 $gender = $patientUser?->gender ?? ($patient?->gender ?? 'male');
 $age = $patient?->age ?? null;
 @endphp
@@ -154,6 +165,16 @@ $age = $patient?->age ?? null;
                         <a href="{{ route('lab.print', $request) }}" target="_blank" class="btn btn-outline-dark fw-bold shadow-sm px-3" title="طباعة قائمة التحاليل المطلوبة / تقرير النتائج">
                             <i class="fas fa-print me-1 text-primary"></i> طباعة {{ $request->status === 'completed' ? 'التقرير' : 'طلب التحاليل' }}
                         </a>
+                    @can('send lab whatsapp')
+                        @php
+                            $waShareUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                        @endphp
+                        @if($waShareUrl)
+                            <a href="{{ $waShareUrl }}" target="_blank" class="btn fw-bold shadow-sm px-3 text-white" style="background-color: #25d366; border-color: #20ba5a;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
+                                <i class="fab fa-whatsapp me-1"></i> إرسال النتيجة عبر واتساب
+                            </a>
+                        @endif
+                    @endcan
                     @endif
 
                     @if(!$isBloodBankRequest)
@@ -230,8 +251,39 @@ $age = $patient?->age ?? null;
                             </div>
                         </div>
 
+                        <!-- رقم الهاتف -->
+                        <div class="col-xl-2 col-md-6 col-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-success-subtle text-success rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">رقم الهاتف</small>
+                                    @if($patientPhone)
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="انقر للاتصال">
+                                                {{ $patientPhone }}
+                                            </a>
+                                            @can('send lab whatsapp')
+                                                @php
+                                                    $waDirectUrl = method_exists($request, 'getWhatsAppShareUrl') ? $request->getWhatsAppShareUrl() : null;
+                                                @endphp
+                                                @if($waDirectUrl)
+                                                    <a href="{{ $waDirectUrl }}" target="_blank" class="badge rounded-pill text-white text-decoration-none px-2 py-1 ms-1 shadow-2xs" style="background-color: #25d366; font-size: 0.70rem;" title="مراسلة المريض عبر واتساب">
+                                                        <i class="fab fa-whatsapp"></i> واتساب
+                                                    </a>
+                                                @endif
+                                            @endcan
+                                        </div>
+                                    @else
+                                        <span class="text-muted small">غير مسجل</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- العمر والجنس -->
-                        <div class="col-xl-2 col-md-3 col-6">
+                        <div class="col-xl-2 col-md-4 col-6">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="bg-info-subtle text-info rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas {{ $gender === 'female' ? 'fa-venus text-danger' : 'fa-mars text-primary' }}"></i>
@@ -247,22 +299,22 @@ $age = $patient?->age ?? null;
                         </div>
 
                         <!-- فصيلة الدم -->
-                        <div class="col-xl-2 col-md-3 col-6">
+                        <div class="col-xl-1 col-md-2 col-6">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="bg-danger-subtle text-danger rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas fa-tint"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">فصيلة الدم</small>
-                                    <strong class="text-danger fw-bold">{{ $patient?->blood_type ?: 'غير مسجلة' }}</strong>
+                                    <small class="text-muted d-block">الفصيلة</small>
+                                    <strong class="text-danger fw-bold">{{ $patient?->blood_type ?: '—' }}</strong>
                                 </div>
                             </div>
                         </div>
 
                         <!-- الطبيب المرسل -->
-                        <div class="col-xl-3 col-md-6">
+                        <div class="col-xl-2 col-md-6">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="bg-success-subtle text-success rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
+                                <div class="bg-primary-subtle text-primary rounded-circle p-2 text-center" style="width: 38px; height: 38px;">
                                     <i class="fas fa-user-md"></i>
                                 </div>
                                 <div>
@@ -297,12 +349,22 @@ $age = $patient?->age ?? null;
                         </div>
                     </div>
 
-                    <!-- إمكانية حذف تحليل قبل الدفع إن وجد -->
+                    <!-- إمكانية حذف وتعديل التحاليل قبل الدفع -->
                     @if($request->status !== 'pending_service_selection' && $request->payment_status != 'paid' && $request->type == 'lab')
                         @php
                             $selectedTests = collect([]);
-                            if (!empty($requestDetails['lab_test_ids'])) {
-                                $selectedTests = \App\Models\LabTest::whereIn('id', $requestDetails['lab_test_ids'])->get();
+                            $testIds = normalizeTestIds($requestDetails['lab_test_ids'] ?? []);
+                            $testNames = normalizeTestsField($requestDetails['tests'] ?? []);
+                            if (!empty($testIds) || !empty($testNames)) {
+                                $selectedTests = \App\Models\LabTest::where(function($q) use ($testIds, $testNames) {
+                                    if (!empty($testIds)) {
+                                        $q->whereIn('id', $testIds);
+                                    }
+                                    if (!empty($testNames)) {
+                                        $q->orWhereIn('name', $testNames)
+                                          ->orWhereIn('code', $testNames);
+                                    }
+                                })->get();
                             }
                         @endphp
                         @if($selectedTests->count() > 0)
@@ -312,12 +374,24 @@ $age = $patient?->age ?? null;
                                     <form action="{{ route('staff.lab-requests.remove-test', [$request, $test]) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا التحليل" onclick="return confirm('هل أنت متأكد من حذف هذا التحليل؟');">
+                                        <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا التحليل من الفاتورة" onclick="return confirm('هل أنت متأكد من حذف فحص ({{ $test->name }}) من طلب المريض؟ سيتم تحديث الفاتورة فورياً.');">
                                             <span style="font-size: 0.75rem;">{{ $test->name }}</span>
                                             <i class="fas fa-times" style="font-size: 0.7rem;"></i>
                                         </button>
                                     </form>
                                 @endforeach
+                                <a href="{{ route('lab.show', [$request, 'append' => 1]) }}#appendTestsSection" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1 ms-auto" title="إضافة فحص إضافي إلى الطلب">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span style="font-size: 0.75rem;">إضافة فحص للطلب</span>
+                                </a>
+                            </div>
+                        @else
+                            <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between">
+                                <span class="text-muted small">لم يتم تسجيل أي فحوصات في هذا الطلب بعد.</span>
+                                <a href="{{ route('lab.show', [$request, 'append' => 1]) }}#appendTestsSection" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span style="font-size: 0.75rem;">إضافة فحص للطلب</span>
+                                </a>
                             </div>
                         @endif
                     @endif
@@ -591,9 +665,35 @@ $age = $patient?->age ?? null;
             $patientGender = $gender ?? 'both';
             $patientAge    = (int) ($age ?? 0);
             $testsList = buildSelectedLabTests($requestDetails);
-            $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
+            
+            // خريطة أسماء بديلة واختصارات شائعة لربط التحاليل بدقة
+            $codeAliases = [
+                'CBC' => 'CBC_3DIFF',
+            ];
+            $normalizedSearchTerms = array_values(array_unique(array_merge(
+                $testsList,
+                array_map(fn($t) => $codeAliases[$t] ?? $t, $testsList)
+            )));
+
+            $rawLabTests = \App\Models\LabTest::with(['subTests' => function($q) {
                 $q->orderBy('sort_order')->orderBy('id');
-            }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
+            }, 'references'])->where(function($query) use ($normalizedSearchTerms) {
+                $query->whereIn('name', $normalizedSearchTerms)
+                      ->orWhereIn('code', $normalizedSearchTerms);
+            })->get();
+
+            $labTestMap = collect();
+            foreach ($rawLabTests as $ltItem) {
+                $labTestMap[$ltItem->name] = $ltItem;
+                if ($ltItem->code) {
+                    $labTestMap[$ltItem->code] = $ltItem;
+                }
+            }
+            foreach ($codeAliases as $alias => $targetCode) {
+                if (isset($labTestMap[$targetCode]) && !isset($labTestMap[$alias])) {
+                    $labTestMap[$alias] = $labTestMap[$targetCode];
+                }
+            }
             $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
             
             $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);

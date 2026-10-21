@@ -27,7 +27,13 @@ use Illuminate\Support\Facades\Auth;
 Route::pattern('radiology', '[0-9]+');
 
 Route::get('/', function () {
-    return Auth::check() ? redirect('/dashboard') : redirect('/login');
+    if (Auth::check()) {
+        if (Auth::user()->hasRole('thaman')) {
+            return redirect()->route('patients.index');
+        }
+        return redirect('/dashboard');
+    }
+    return redirect('/login');
 });
 
 // Test route
@@ -62,6 +68,10 @@ Route::get('/baby-cam/{token}', [\App\Http\Controllers\NicuController::class, 'b
 // التحقق العام من صحة التقرير الطبي لحالات الطوارئ عبر الـ QR Code
 Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\EmergencyController::class, 'verifyReport'])
     ->name('emergency.verify-report');
+
+// التقرير الطبي العام المعتمد لنتائج المختبر (متاح للمريض عبر الواتساب برابط مشفر وآمن)
+Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReportController::class, 'view'])
+    ->name('lab.public-report');
 
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
@@ -185,6 +195,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/consultant-availability/bulk-update', [ConsultantAvailabilityController::class, 'bulkUpdate'])->name('consultant-availability.bulk-update');
     
     // إدارة المرضى
+    Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');
     Route::resource('patients', PatientController::class);
     Route::get('/patients/search', [PatientController::class, 'search'])->name('patients.search');
@@ -241,6 +252,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inquiry/documents/{document}/file', [InquiryController::class, 'serveDocumentFile'])->name('inquiry.documents.file');
     Route::delete('/inquiry/documents/{document}', [InquiryController::class, 'deletePatientDocument'])->name('inquiry.documents.delete');
     Route::get('/inquiry/check-active-booking', [InquiryController::class, 'checkActiveBooking'])->name('inquiry.check-active-booking');
+    Route::post('/inquiry/notify-insurance-incomplete', [InquiryController::class, 'notifyInsuranceIncomplete'])->name('inquiry.notify-insurance-incomplete');
     Route::resource('inquiry', InquiryController::class);
     
     // إدارة المشتريات والمستودع
@@ -391,6 +403,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/visits/{visit}/refer', [DoctorVisitController::class, 'referToDoctor'])->name('visits.refer');
         Route::post('/requests', [DoctorVisitController::class, 'storeRequest'])->name('requests.store');
         Route::match(['post', 'put'], '/requests/{request}', [DoctorVisitController::class, 'updateRequestStatus'])->name('requests.update');
+        Route::delete('/requests/{request}/remove-item', [DoctorVisitController::class, 'removeRequestItem'])->name('requests.remove-item');
         Route::put('/appointments/{appointment}/convert', [DoctorVisitController::class, 'convertAppointmentToVisit'])->name('appointments.convert');
         Route::post('/consultation/{appointment}/respond', [DoctorVisitController::class, 'respondToEmergencyConsultation'])->name('consultation.respond');
         
@@ -400,6 +413,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/visits/{visit}/appointment/print', [DoctorVisitController::class, 'printAppointment'])->name('visits.appointment.print');
         Route::get('/visits/{visit}/substitution-requests', [DoctorVisitController::class, 'getSubstitutionRequests'])->name('visits.substitution-requests');
         Route::post('/prescriptions/items/{item}/respond-substitution', [DoctorVisitController::class, 'respondToSubstitution'])->name('prescriptions.items.respond-substitution');
+        Route::get('/icd10/search', [DoctorVisitController::class, 'searchIcd10'])->name('icd10.search');
     });
     
     // مسارات المريض للزيارات
@@ -421,6 +435,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/lab-visits', [StaffRequestController::class, 'storeLabVisit'])->name('lab-visits.store');
         Route::post('/lab-requests/{request}/append-tests', [StaffRequestController::class, 'appendLabTests'])->name('lab-requests.append-tests');
         Route::delete('/lab-requests/{request}/tests/{labTest}', [StaffRequestController::class, 'removeLabTest'])->name('lab-requests.remove-test');
+        Route::post('/radiology-requests/{request}/append-types', [StaffRequestController::class, 'appendRadiologyTypes'])->name('radiology-requests.append-types');
+        Route::delete('/radiology-requests/{request}/types/{radiologyType}', [StaffRequestController::class, 'removeRadiologyType'])->name('radiology-requests.remove-type');
         
         // طلبات المختبر للعمليات
         Route::get('/surgery-lab-tests', [StaffRequestController::class, 'surgeryLabTests'])->name('surgery-lab-tests.index');
@@ -478,6 +494,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/requests/{request}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'start'])->name('start');
         Route::put('/requests/{request}', [\App\Http\Controllers\RadiologyStaffController::class, 'update'])->name('update');
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\RadiologyStaffController::class, 'cancel'])->name('cancel');
+        Route::post('/requests/{request}/append-types', [\App\Http\Controllers\StaffRequestController::class, 'appendRadiologyTypes'])->name('append-types');
+        Route::delete('/requests/{request}/types/{radiologyType}', [\App\Http\Controllers\StaffRequestController::class, 'removeRadiologyType'])->name('remove-type');
     });
 
     // إدارة رموز ICD10
@@ -576,6 +594,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{labTest}/edit', [\App\Http\Controllers\LabTestController::class, 'edit'])->name('edit');
         Route::put('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'update'])->name('update');
         Route::delete('/{labTest}', [\App\Http\Controllers\LabTestController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-toggle-status', [\App\Http\Controllers\LabTestController::class, 'bulkToggleStatus'])->name('bulk-toggle-status');
+        Route::post('/bulk-disable-non-insurance', [\App\Http\Controllers\LabTestController::class, 'bulkDisableNonInsurance'])->name('bulk-disable-non-insurance');
+        Route::post('/{labTest}/quick-toggle', [\App\Http\Controllers\LabTestController::class, 'quickToggle'])->name('quick-toggle');
         Route::post('/{labTest}/toggle-status', [\App\Http\Controllers\LabTestController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/{labTest}/toggle-favorite', [\App\Http\Controllers\LabTestController::class, 'toggleFavorite'])->name('toggle-favorite');
 

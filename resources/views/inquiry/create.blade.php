@@ -85,7 +85,13 @@
                         </div>
                     </div>
 
-                    @if($patient->insurance_type && $patient->insurance_type !== 'none')
+                    @php
+                        $isInsured = $patient->insurance_type && $patient->insurance_type !== 'none';
+                        $missingInsuranceFields = $isInsured ? $patient->getMissingInsuranceFields() : [];
+                        $isInsuranceLocked = count($missingInsuranceFields) > 0;
+                    @endphp
+
+                    @if($isInsured)
                         <div class="row mt-2 pt-2 border-top">
                             <div class="col-12">
                                 <div class="d-flex align-items-center flex-wrap gap-2">
@@ -115,8 +121,36 @@
                                             رقم الهوية / الدفتر: {{ $patient->insurance_card_no ?: $patient->insurance_booklet_number }}
                                         </span>
                                     @endif
-                                    <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>سيتم تحويل الحجز للكاشير بنظام التغطية والتسعير المعتمد</small>
+                                    @if(!$isInsuranceLocked)
+                                        <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>بيانات الضمان مكتملة ومدققة ✓</small>
+                                    @endif
                                 </div>
+
+                                @if($isInsuranceLocked)
+                                    <div class="alert alert-danger border-2 border-danger rounded-3 shadow-sm p-3 mt-3 mb-1">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <div class="rounded-circle bg-danger text-white p-2 text-center d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                                <i class="fas fa-lock fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <strong class="text-danger fs-6 d-block">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    قفل حجز الضمان الصحي 🔒: بيانات المريض غير مكتملة لدى شعبة الضمان
+                                                </strong>
+                                                <div class="text-dark small mt-1">
+                                                    لا يمكن حجز هذا المريض تحت مظلة الضمان الصحي لوجود نواقص في الملف:
+                                                    <span class="badge bg-danger text-white fw-bold fs-7 ms-1">
+                                                        {{ implode(' • ', $missingInsuranceFields) }}
+                                                    </span>
+                                                </div>
+                                                <div class="text-secondary small mt-2 pt-2 border-top border-danger border-opacity-25">
+                                                    <i class="fas fa-arrow-circle-left text-danger me-1"></i>
+                                                    <strong>التوجيه الإداري لموظف الاستعلامات:</strong> يرجى توجيه المريض إلى <strong>[ مكتب تسجيل المرضى وشعبة الضمان الصحي ]</strong> لإكمال وتدقيق بياناته وتفعيل حسابه أولاً، أو اختيار خيار <strong>(حجز نقدي كاش)</strong> أدناه للمتابعة فوراً على نفقته الخاصة.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @else
@@ -656,34 +690,144 @@
                             </div>
 
 
-                            @if($patient->insurance_type && $patient->insurance_type !== 'none')
+                            @if($isInsured)
                             <div class="row mt-3" id="insuranceCoverageSection">
                                 <div class="col-12">
-                                    <div class="p-3 border rounded-3 bg-light">
-                                        <label class="form-label fw-bold d-flex align-items-center gap-2 mb-2">
+                                    <div class="p-3 border rounded-3 {{ $isInsuranceLocked ? 'bg-danger-subtle bg-opacity-25 border-danger border-opacity-50' : 'bg-light' }}">
+                                        <label class="form-label fw-bold d-flex align-items-center gap-2 mb-3 fs-6">
                                             <i class="fas fa-shield-alt text-primary"></i>
-                                            تغطية الضمان لهذا الحجز:
+                                            نوع تغطية الحجز للمريض:
                                         </label>
-                                        <div class="d-flex flex-wrap gap-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
-                                                <label class="form-check-label fw-semibold text-success" for="apply_insurance_yes">
-                                                    <i class="fas fa-check-circle me-1"></i>
-                                                    حجز تحت مظلة الضمان ({{ $patient->insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي' }})
-                                                </label>
+
+                                        <!-- بطاقات الاختيار التفاعلية (Interactive Selectable Cards) -->
+                                        <div class="row g-3">
+                                            <!-- بطاقة الضمان الصحي -->
+                                            <div class="col-md-6">
+                                                <div class="card h-100 p-3 rounded-3 border-2 transition-all position-relative {{ $isInsuranceLocked ? 'border-danger-subtle bg-danger-subtle bg-opacity-25 opacity-75' : (old('apply_insurance', '1') == '1' ? 'border-success bg-white shadow-sm' : 'border-light-subtle bg-white') }}" 
+                                                     id="cardInsuranceYes"
+                                                     style="{{ $isInsuranceLocked ? 'cursor: not-allowed;' : 'cursor: pointer;' }}"
+                                                     onclick="{{ $isInsuranceLocked ? 'return false;' : 'selectInsuranceMode(1)' }}">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="p-2 rounded-circle {{ $isInsuranceLocked ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }} fs-5">
+                                                                <i class="fas {{ $isInsuranceLocked ? 'fa-lock' : 'fa-shield-alt' }}"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="fw-bold mb-0 {{ $isInsuranceLocked ? 'text-danger' : 'text-dark' }}">
+                                                                    حجز تحت مظلة الضمان الصحي
+                                                                </h6>
+                                                                <small class="text-muted">
+                                                                    {{ $patient->insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي' }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <input class="form-check-input mt-0" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" 
+                                                            {{ $isInsuranceLocked ? 'disabled' : (old('apply_insurance', '1') == '1' ? 'checked' : '') }}
+                                                            onchange="selectInsuranceMode(1)"
+                                                            style="transform: scale(1.3); cursor: pointer;">
+                                                    </div>
+                                                    <p class="text-muted small mb-2">
+                                                        يتم احتساب نسبة التحمل المقررة نقداً وتغطية المبلغ المتبقي عبر هيئة الضمان.
+                                                    </p>
+                                                    @if($isInsuranceLocked)
+                                                        <div class="mt-auto">
+                                                            <span class="badge bg-danger text-white py-1 px-2 fs-8">
+                                                                <i class="fas fa-lock me-1"></i> مقفل 🔒 (نواقص بملف الضمان)
+                                                            </span>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
-                                                <label class="form-check-label fw-semibold text-secondary" for="apply_insurance_no">
-                                                    <i class="fas fa-money-bill-wave me-1"></i>
-                                                    حجز نقدي خاص (دون استهلاك رصيد الضمان للمريض)
-                                                </label>
+
+                                            <!-- بطاقة الدفع النقدي (كاش) -->
+                                            <div class="col-md-6">
+                                                <div class="card h-100 p-3 rounded-3 border-2 transition-all position-relative {{ ($isInsuranceLocked || old('apply_insurance') === '0') ? 'border-primary bg-white shadow-sm' : 'border-light-subtle bg-white' }}" 
+                                                     id="cardInsuranceNo"
+                                                     style="cursor: pointer;"
+                                                     onclick="selectInsuranceMode(0)">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="p-2 rounded-circle bg-primary-subtle text-primary fs-5">
+                                                                <i class="fas fa-money-bill-wave"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="fw-bold mb-0 text-dark">
+                                                                    حجز نقدي خاص (كاش)
+                                                                </h6>
+                                                                <small class="text-muted">
+                                                                    دفع كامل الأجور نقدياً دون استهلاك رصيد الضمان
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <input class="form-check-input mt-0" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" 
+                                                            {{ ($isInsuranceLocked || old('apply_insurance') === '0') ? 'checked' : '' }}
+                                                            onchange="selectInsuranceMode(0)"
+                                                            style="transform: scale(1.3); cursor: pointer;">
+                                                    </div>
+                                                    <p class="text-muted small mb-2">
+                                                        دفع كامل أجور الكشفية أو الخدمة مباشرة في الكاشير دون ربطها بحساب أو شروط الضمان.
+                                                    </p>
+                                                    @if($isInsuranceLocked)
+                                                        <div class="mt-auto">
+                                                            <span class="badge bg-success text-white py-1 px-2 fs-8">
+                                                                <i class="fas fa-check-circle me-1"></i> متاح للمتابعة الفورية
+                                                            </span>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
                                         </div>
-                                        <small class="text-muted d-block mt-2">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            سيظهر اختيارك هذا تلقائياً في شاشة الكاشير عند المحاسبة.
-                                        </small>
+
+                                        @if($isInsuranceLocked)
+                                            <!-- تنبيه بارز ومفصل ومكتوب بوضوح تام لموظف الاستقبال -->
+                                            <div class="alert alert-danger border-2 border-danger rounded-3 p-3 mt-3 shadow-sm mb-0">
+                                                <div class="d-flex align-items-start gap-3">
+                                                    <div class="text-danger fs-2 lh-1 mt-1">
+                                                        <i class="fas fa-shield-virus"></i>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="fw-bold text-danger mb-2 fs-6">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                                            تنبيه هام: تم قفل الحجز بنظام الضمان الصحي لوجود نواقص بملف المريض
+                                                        </h6>
+                                                        <p class="mb-2 text-dark small" style="line-height: 1.7;">
+                                                            لا يمكن إصدار الحجز تحت مظلة الضمان الصحي حالياً؛ لأن ملف المريض تنقصه البيانات الإلزامية التالية:
+                                                        </p>
+                                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                                            @foreach($missingInsuranceFields as $fKey => $fTitle)
+                                                                <span class="badge bg-danger text-white fs-7 py-2 px-3 shadow-sm">
+                                                                    <i class="fas fa-times-circle me-1"></i> {{ $fTitle }}
+                                                                </span>
+                                                            @endforeach
+                                                        </div>
+                                                        <div class="p-3 bg-white border border-danger-subtle rounded-3">
+                                                            <strong class="text-dark d-block mb-1 small">
+                                                                <i class="fas fa-user-check text-success me-1"></i> التوجيه الإداري لموظف الاستعلامات:
+                                                            </strong>
+                                                            <ul class="mb-0 ps-3 small text-secondary" style="line-height: 1.8;">
+                                                                <li><strong>للمتابعة الفورية للمريض الآن:</strong> استخدم خيار <strong>(حجز نقدي كاش)</strong> المفعّل بالأزرق أعلاه للمتابعة وسداد الكشفية نقداً في الكاشير.</li>
+                                                                <li><strong>للاستفادة من الضمان الصحي:</strong> اطلب من المريض التوجه أولاً إلى <strong>(مكتب التسجيل والضمان)</strong> لإكمال وتدقيق بياناته ثم العودة للحجز.</li>
+                                                            </ul>
+                                                            <div class="mt-3 pt-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                                                <div class="text-muted small">
+                                                                    <i class="fas fa-paper-plane text-danger me-1"></i>
+                                                                    <span>توجيه المريض: يمكنك تنبيه موظف الضمان والتسجيل رقمياً الآن لإكمال النواقص فور وصوله:</span>
+                                                                </div>
+                                                                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 py-2 fw-bold shadow-sm" id="btnNotifyInsurance" onclick="sendInsuranceIncompleteAlert({{ $patient->id }})">
+                                                                    <i class="fas fa-bell me-1"></i>
+                                                                    <span id="btnNotifyInsuranceText">إرسال تنبيه عاجل لمكتب الضمان والتسجيل</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-info-circle me-1 text-primary"></i>
+                                                سيظهر نوع الحجز المختار تلقائياً في شاشة الكاشير لتطبيق السعر والخصم المناسبين فوراً.
+                                            </small>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -1081,10 +1225,95 @@ function updateInsuranceVisibility() {
     if (isDirectUltrasound) {
         insuranceRow.style.display = 'none';
         const noRadio = document.getElementById('apply_insurance_no');
-        if (noRadio) noRadio.checked = true;
+        if (noRadio) {
+            noRadio.checked = true;
+            selectInsuranceMode(0);
+        }
     } else {
         insuranceRow.style.display = 'block';
     }
+}
+
+function selectInsuranceMode(mode) {
+    const isLocked = {{ $isInsuranceLocked ? 'true' : 'false' }};
+    if (mode === 1 && isLocked) return;
+
+    const radioYes = document.getElementById('apply_insurance_yes');
+    const radioNo = document.getElementById('apply_insurance_no');
+    const cardYes = document.getElementById('cardInsuranceYes');
+    const cardNo = document.getElementById('cardInsuranceNo');
+
+    if (mode === 1) {
+        if (radioYes) radioYes.checked = true;
+        if (cardYes) {
+            cardYes.classList.remove('border-light-subtle');
+            cardYes.classList.add('border-success', 'shadow-sm');
+        }
+        if (cardNo) {
+            cardNo.classList.remove('border-primary', 'shadow-sm');
+            cardNo.classList.add('border-light-subtle');
+        }
+    } else {
+        if (radioNo) radioNo.checked = true;
+        if (cardNo) {
+            cardNo.classList.remove('border-light-subtle');
+            cardNo.classList.add('border-primary', 'shadow-sm');
+        }
+        if (cardYes && !isLocked) {
+            cardYes.classList.remove('border-success', 'shadow-sm');
+            cardYes.classList.add('border-light-subtle');
+        }
+    }
+}
+
+function sendInsuranceIncompleteAlert(patientId) {
+    const btn = document.getElementById('btnNotifyInsurance');
+    const textSpan = document.getElementById('btnNotifyInsuranceText');
+    if (!btn || btn.disabled) return;
+
+    btn.disabled = true;
+    const originalText = textSpan ? textSpan.innerHTML : btn.innerHTML;
+    if (textSpan) textSpan.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري إرسال التنبيه الرقمي...';
+
+    fetch('{{ route("inquiry.notify-insurance-incomplete") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ patient_id: patientId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-success');
+            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم إرسال التنبيه لشعبة الضمان والتسجيل بنجاح ✓';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم إرسال التنبيه العاجل بنجاح!',
+                    text: data.message,
+                    confirmButtonText: 'حسناً',
+                    customClass: { confirmButton: 'btn btn-primary' }
+                });
+            } else {
+                alert(data.message);
+            }
+        } else {
+            btn.disabled = false;
+            if (textSpan) textSpan.innerHTML = originalText;
+            alert(data.message || 'حدث خطأ أثناء إرسال التنبيه');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        btn.disabled = false;
+        if (textSpan) textSpan.innerHTML = originalText;
+        alert('تعذر الاتصال بالخادم لإرسال التنبيه، يرجى إعادة المحاولة.');
+    });
 }
 
 function updateRadiologyCategoryInfo() {
@@ -1277,6 +1506,15 @@ function updateDetailsForm() {
 
 // التحقق قبل الإرسال
 document.getElementById('requestForm').addEventListener('submit', function(e) {
+    // التحقق من قفل الضمان عند وجود نواقص بالبيانات
+    const isInsuranceLocked = {{ $isInsuranceLocked ? 'true' : 'false' }};
+    const selectedInsuranceOption = document.querySelector('input[name="apply_insurance"]:checked')?.value;
+    if (isInsuranceLocked && selectedInsuranceOption === '1') {
+        e.preventDefault();
+        alert('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية (رقم الضمان، البطاقة الموحدة، الهاتف، الجنس، أو المواليد).\nيرجى توجيه المريض لموظف التسجيل والضمان لإكمال النواقص أو اختيار (حجز نقدي كاش).');
+        return false;
+    }
+
     if (selectedTypes.size === 0) {
         e.preventDefault();
         alert('يرجى اختيار نوع الخدمة أولاً');
@@ -1409,6 +1647,13 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
 const btnConfirmDuplicate = document.getElementById('btnConfirmDuplicate');
 if (btnConfirmDuplicate) {
     btnConfirmDuplicate.addEventListener('click', function() {
+        const isInsuranceLocked = {{ $isInsuranceLocked ? 'true' : 'false' }};
+        const selectedInsuranceOption = document.querySelector('input[name="apply_insurance"]:checked')?.value;
+        if (isInsuranceLocked && selectedInsuranceOption === '1') {
+            alert('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية.\nيرجى توجيه المريض لموظف التسجيل والضمان أو اختيار (حجز نقدي كاش).');
+            return;
+        }
+
         const confirmInput = document.getElementById('confirm_duplicate_booking');
         if (confirmInput) {
             confirmInput.value = '1';

@@ -40,7 +40,9 @@ class CashierController extends Controller
         }
 
         $today = Carbon::today();
-        $dateFilter = request('date_filter', 'today'); // 'today' (default), 'previous', 'all'
+        $dateFilter = request('date_filter', 'today'); // 'today' (default), 'previous', 'all', 'custom'
+        $customDate = request('custom_date');
+        $search = trim(request('search', ''));
 
         // إجمالي المعلقات السابقة (قبل اليوم)
         $previousPendingAptsCount = Appointment::where('payment_status', 'pending')
@@ -83,11 +85,27 @@ class CashierController extends Controller
             $pendingAppointmentsQuery->whereDate('appointment_date', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingAppointmentsQuery->whereDate('appointment_date', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingAppointmentsQuery->whereDate('appointment_date', $customDate);
+        }
+
+        if ($search) {
+            $pendingAppointmentsQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhereHas('patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('patient', function($qp) use ($search) {
+                      $qp->where('national_id', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingAppointments = $pendingAppointmentsQuery
             ->orderBy('appointment_date', 'asc')
-            ->paginate(15, ['*'], 'appointments_page');
+            ->paginate(15, ['*'], 'appointments_page')
+            ->appends(request()->query());
 
         // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
         $pendingRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
@@ -117,11 +135,28 @@ class CashierController extends Controller
             $pendingRequestsQuery->whereDate('created_at', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingRequestsQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingRequestsQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $pendingRequestsQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('visit.patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('visit.patient', function($qp) use ($search) {
+                      $qp->where('national_id', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingRequests = $pendingRequestsQuery
             ->orderBy('created_at', 'desc')
-            ->paginate(15, ['*'], 'requests_page');
+            ->paginate(15, ['*'], 'requests_page')
+            ->appends(request()->query());
 
         // جلب خدمات الطوارئ المعلقة الدفع
         $pendingEmergencyQuery = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
@@ -134,11 +169,29 @@ class CashierController extends Controller
             $pendingEmergencyQuery->whereDate('created_at', $today);
         } elseif ($dateFilter === 'previous') {
             $pendingEmergencyQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingEmergencyQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $pendingEmergencyQuery->where(function($q) use ($search) {
+                $q->where('id', $search)
+                  ->orWhere('emergency_id', $search)
+                  ->orWhereHas('emergency.patient.user', function($qu) use ($search) {
+                      $qu->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('emergency.emergencyPatient', function($qe) use ($search) {
+                      $qe->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
         }
 
         $pendingEmergencyPayments = $pendingEmergencyQuery
             ->orderBy('created_at', 'desc')
-            ->paginate(15, ['*'], 'emergency_page');
+            ->paginate(15, ['*'], 'emergency_page')
+            ->appends(request()->query());
 
         // إحصائيات اليوم المحسنة
         $todayPayments = Payment::whereDate('paid_at', $today)
@@ -234,6 +287,8 @@ class CashierController extends Controller
             'todayPayments', 
             'monthlyStats', 
             'dateFilter', 
+            'customDate',
+            'search',
             'previousPendingCount'
         ));
     }
@@ -527,7 +582,14 @@ class CashierController extends Controller
                 ->with('error', 'الطلب غير مرتبط بأي زيارة ولا يمكن عرضه.');
         }
 
-        return view('cashier.request-payment-form', compact('request'));
+        // جلب أي طلبات أخرى غير مدفوعة تابعة لنفس الزيارة لتوحيدها في فاتورة واحدة للمريض
+        $otherPendingRequests = MedicalRequest::where('visit_id', $request->visit_id)
+            ->where('id', '!=', $request->id)
+            ->where('payment_status', 'pending')
+            ->where('status', '!=', 'cancelled')
+            ->get();
+
+        return view('cashier.request-payment-form', compact('request', 'otherPendingRequests'));
     }
 
     /**
@@ -591,39 +653,50 @@ class CashierController extends Controller
             $copayPercentage = (float)$httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
             $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
 
-            $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+            // الطلبات المتضمنة في الدفع الموحد للزيارة
+            $includedRequestIds = (array)$httpRequest->input('included_request_ids', [$request->id]);
+            $includedRequestIds = array_unique(array_filter(array_map('intval', $includedRequestIds)));
+            if (!in_array($request->id, $includedRequestIds)) {
+                $includedRequestIds[] = $request->id;
+            }
+
+            $allRequestsToPay = MedicalRequest::whereIn('id', $includedRequestIds)
+                ->where('visit_id', $request->visit_id)
+                ->where('payment_status', 'pending')
+                ->get();
+
+            if ($allRequestsToPay->isEmpty()) {
+                $allRequestsToPay = collect([$request]);
+            }
+
             $computedTotal = 0;
             $computedPatientShare = 0;
             $computedInsuranceShare = 0;
             $hasCoveredItem = false;
-
+            $descParts = [];
             $package = null;
-            if ($request->type === 'lab') {
-                $packageId = $details['package_id'] ?? null;
-                $package = $packageId ? \App\Models\Package::find($packageId) : null;
+            $seenLabTestIds = [];
+            $seenRadKeys = [];
 
-                if ($package) {
-                    $pkgPrice = (float)$package->price;
-                    $computedTotal += $pkgPrice;
-                    $computedPatientShare += $pkgPrice;
+            foreach ($allRequestsToPay as $reqItem) {
+                $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
 
-                    $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
-                    $allTestIds = $details['lab_test_ids'] ?? [];
-                    $extraTestIds = array_diff($allTestIds, $pkgTestIds);
-                    foreach ($extraTestIds as $testId) {
-                        $test = LabTest::find($testId);
-                        if ($test) {
-                            $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
-                            $computedTotal += $p['total_amount'];
-                            $computedPatientShare += $p['patient_share'];
-                            $computedInsuranceShare += $p['insurance_share'];
-                            if ($p['is_covered']) $hasCoveredItem = true;
-                        }
-                    }
-                } else {
-                    $labTestIds = $details['lab_test_ids'] ?? [];
-                    if (!empty($labTestIds)) {
-                        foreach ($labTestIds as $testId) {
+                if ($reqItem->type === 'lab') {
+                    $packageId = $details['package_id'] ?? null;
+                    $package = $packageId ? \App\Models\Package::find($packageId) : null;
+
+                    if ($package) {
+                        $pkgPrice = (float)$package->price;
+                        $computedTotal += $pkgPrice;
+                        $computedPatientShare += $pkgPrice;
+                        $descParts[] = 'باقة مختبر (' . $package->name . ')';
+
+                        $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                        $allTestIds = $details['lab_test_ids'] ?? [];
+                        $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                        foreach ($extraTestIds as $testId) {
+                            if (in_array($testId, $seenLabTestIds)) continue;
+                            $seenLabTestIds[] = $testId;
                             $test = LabTest::find($testId);
                             if ($test) {
                                 $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
@@ -633,11 +706,49 @@ class CashierController extends Controller
                                 if ($p['is_covered']) $hasCoveredItem = true;
                             }
                         }
-                    } elseif (!empty($details['tests'])) {
-                        foreach ($details['tests'] as $testName) {
-                            $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
-                            if ($test) {
-                                $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                    } else {
+                        $labTestIds = $details['lab_test_ids'] ?? [];
+                        if (!empty($labTestIds)) {
+                            foreach ($labTestIds as $testId) {
+                                if (in_array($testId, $seenLabTestIds)) continue;
+                                $seenLabTestIds[] = $testId;
+                                $test = LabTest::find($testId);
+                                if ($test) {
+                                    $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) $hasCoveredItem = true;
+                                }
+                            }
+                        } elseif (!empty($details['tests'])) {
+                            foreach ($details['tests'] as $testName) {
+                                $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                                if ($test) {
+                                    if (in_array($test->id, $seenLabTestIds)) continue;
+                                    $seenLabTestIds[] = $test->id;
+                                    $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) $hasCoveredItem = true;
+                                }
+                            }
+                        }
+                        $descParts[] = 'مختبر #' . $reqItem->id;
+                    }
+                } elseif ($reqItem->type === 'radiology') {
+                    $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
+                    $radTargets = $details['radiology_targets'] ?? [];
+                    if (!empty($radTypeIds)) {
+                        foreach ($radTypeIds as $typeId) {
+                            $targetPart = isset($radTargets[$typeId]) ? trim($radTargets[$typeId]) : '';
+                            $radKey = $typeId . '_' . $targetPart;
+                            if (in_array($radKey, $seenRadKeys)) continue;
+                            $seenRadKeys[] = $radKey;
+                            $type = RadiologyType::find($typeId);
+                            if ($type) {
+                                $p = $type->calculateInsurancePricing($insuranceType, $copayPercentage);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
                                 $computedInsuranceShare += $p['insurance_share'];
@@ -645,20 +756,7 @@ class CashierController extends Controller
                             }
                         }
                     }
-                }
-            } elseif ($request->type === 'radiology') {
-                $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
-                if (!empty($radTypeIds)) {
-                    foreach ($radTypeIds as $typeId) {
-                        $type = RadiologyType::find($typeId);
-                        if ($type) {
-                            $p = $type->calculateInsurancePricing($insuranceType, $copayPercentage);
-                            $computedTotal += $p['total_amount'];
-                            $computedPatientShare += $p['patient_share'];
-                            $computedInsuranceShare += $p['insurance_share'];
-                            if ($p['is_covered']) $hasCoveredItem = true;
-                        }
-                    }
+                    $descParts[] = 'أشعة #' . $reqItem->id;
                 }
             }
 
@@ -667,6 +765,11 @@ class CashierController extends Controller
             $patientShare = $patientPaidAmount;
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
+            $paymentType = in_array('radiology', $allRequestsToPay->pluck('type')->toArray()) && !in_array('lab', $allRequestsToPay->pluck('type')->toArray()) ? 'radiology' : 'lab';
+            $paymentDescription = count($allRequestsToPay) > 1
+                ? ('دفع رسوم موحدة للزيارة (' . implode(' + ', $descParts) . ')')
+                : (!empty($package) ? ('دفع رسوم باقة: ' . $package->name . ' - طلب #' . $request->id) : ('دفع رسوم طلب ' . $request->type . ' #' . $request->id));
 
             // إنشاء سجل الدفع مع تجميد الأرقام المالية الثلاثة
             \Log::info('Creating payment record with insurance snapshot...');
@@ -684,21 +787,23 @@ class CashierController extends Controller
                 'copay_percentage' => $hasCoveredItem ? $copayPercentage : 0,
                 'claim_status' => $claimStatus,
                 'payment_method' => $httpRequest->payment_method,
-                'payment_type' => 'lab', // استخدام 'lab' بدلاً من 'request' لأن الـ enum لا يحتوي على 'request'
-                'description' => !empty($package) ? ('دفع رسوم باقة: ' . $package->name . ' - طلب #' . $request->id) : ('دفع رسوم طلب ' . $request->type . ' #' . $request->id),
+                'payment_type' => $paymentType,
+                'description' => $paymentDescription,
                 'notes' => $httpRequest->notes,
                 'paid_at' => Carbon::now()
             ]);
 
             \Log::info('Payment created successfully: #' . $payment->id);
 
-            // تحديث حالة الدفع للطلب
-            $request->update([
-                'payment_status' => 'paid',
-                'payment_id' => $payment->id
-            ]);
+            // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الموحد
+            foreach ($allRequestsToPay as $reqItem) {
+                $reqItem->update([
+                    'payment_status' => 'paid',
+                    'payment_id' => $payment->id
+                ]);
+            }
 
-            \Log::info('Request updated to paid');
+            \Log::info('All included requests (' . $allRequestsToPay->pluck('id')->join(',') . ') updated to paid');
 
             // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة (فقط للزيارات قيد انتظار الدفع)
             if ($request->visit) {
@@ -771,28 +876,28 @@ class CashierController extends Controller
                 \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
             }
 
-            // إذا كان الطلب أشعة، إنشاء سجل في radiology_requests إن لم يكن موجوداً
-            if ($request->type === 'radiology') {
-                \Log::info('Processing radiology request payment, request_id: ' . $request->id);
+            // إذا كان أي من الطلبات المدفوعة أشعة، إنشاء سجلات في radiology_requests إن لم تكن موجودة
+            foreach ($allRequestsToPay->where('type', 'radiology') as $radReq) {
+                \Log::info('Processing radiology request payment, request_id: ' . $radReq->id);
 
-                $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                \Log::info('Request details: ' . json_encode($details));
+                $radDetails = is_string($radReq->details) ? json_decode($radReq->details, true) : $radReq->details;
+                \Log::info('Request details: ' . json_encode($radDetails));
 
                 $radiologyTypeIds = [];
-                if (isset($details['radiology_type_ids']) && !empty($details['radiology_type_ids'])) {
-                    $radiologyTypeIds = $details['radiology_type_ids'];
-                } elseif (isset($details['radiology_types']) && !empty($details['radiology_types'])) {
-                    $radiologyTypeIds = $details['radiology_types'];
+                if (isset($radDetails['radiology_type_ids']) && !empty($radDetails['radiology_type_ids'])) {
+                    $radiologyTypeIds = $radDetails['radiology_type_ids'];
+                } elseif (isset($radDetails['radiology_types']) && !empty($radDetails['radiology_types'])) {
+                    $radiologyTypeIds = $radDetails['radiology_types'];
                 }
 
                 if (!empty($radiologyTypeIds)) {
-                    if (!$request->visit) {
-                        \Log::warning('Skipping radiology request creation, visit missing for request #' . $request->id);
+                    if (!$radReq->visit) {
+                        \Log::warning('Skipping radiology request creation, visit missing for request #' . $radReq->id);
                     } else {
                         \Log::info('Found radiology type ids: ' . json_encode($radiologyTypeIds));
 
                         foreach ($radiologyTypeIds as $radiologyTypeId) {
-                            $exists = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)
+                            $exists = \App\Models\RadiologyRequest::where('visit_id', $radReq->visit_id)
                                 ->where('radiology_type_id', $radiologyTypeId)
                                 ->exists();
 
@@ -800,21 +905,21 @@ class CashierController extends Controller
                                 try {
                                     $radiologyType = \App\Models\RadiologyType::find($radiologyTypeId);
 
-                                    $doctorId = $request->visit->doctor_id;
-                                    if (!$doctorId && $request->visit->department_id) {
-                                        $doctor = \App\Models\Doctor::where('department_id', $request->visit->department_id)->first();
+                                    $doctorId = $radReq->visit->doctor_id;
+                                    if (!$doctorId && $radReq->visit->department_id) {
+                                        $doctor = \App\Models\Doctor::where('department_id', $radReq->visit->department_id)->first();
                                         $doctorId = $doctor ? $doctor->id : null;
                                     }
 
                                     $radiologyRequest = \App\Models\RadiologyRequest::create([
-                                        'visit_id' => $request->visit_id,
-                                        'patient_id' => $request->visit->patient_id,
+                                        'visit_id' => $radReq->visit_id,
+                                        'patient_id' => $radReq->visit->patient_id,
                                         'doctor_id' => $doctorId,
                                         'radiology_type_id' => $radiologyTypeId,
-                                        'requested_date' => $request->created_at ?? now(),
+                                        'requested_date' => $radReq->created_at ?? now(),
                                         'status' => 'pending',
-                                        'priority' => $details['priority'] ?? 'normal',
-                                        'clinical_indication' => $request->description ?? 'طلب من الاستعلامات',
+                                        'priority' => $radDetails['priority'] ?? 'normal',
+                                        'clinical_indication' => $radReq->description ?? 'طلب من الاستعلامات',
                                         'total_cost' => $radiologyType ? $radiologyType->base_price : null,
                                     ]);
 
@@ -823,12 +928,12 @@ class CashierController extends Controller
                                     \Log::error('Failed to create radiology_request: ' . $e->getMessage());
                                 }
                             } else {
-                                \Log::info('Radiology request already exists for visit_id: ' . $request->visit_id . ', type_id: ' . $radiologyTypeId);
+                                \Log::info('Radiology request already exists for visit_id: ' . $radReq->visit_id . ', type_id: ' . $radiologyTypeId);
                             }
                         }
                     }
                 } else {
-                    \Log::warning('No radiology_type_ids found in request details for request #' . $request->id);
+                    \Log::warning('No radiology_type_ids found in request details for request #' . $radReq->id);
                 }
             }
 

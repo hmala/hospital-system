@@ -430,7 +430,16 @@
                                                         <label class="form-label fw-bold"><i class="fas fa-vial text-secondary me-1"></i>سكر الدم (mg/dL)</label>
                                                         <input type="number" class="form-control" name="blood_glucose" placeholder="110" min="1" max="1000">
                                                     </div>
-                                                    <div class="col-12 mt-4">
+                                                    <div class="col-sm-12">
+                                                        <label class="form-label fw-bold"><i class="fas fa-brain text-info me-1"></i>مستوى الوعي (GCS - Glasgow Coma Scale)</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-white"><i class="fas fa-brain text-info"></i></span>
+                                                            <input type="text" class="form-control fw-bold" name="gcs" placeholder="15/15" value="{{ old('gcs', $emergency->gcs ?? '15/15') }}">
+                                                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="this.previousElementSibling.value='15/15'">طبيعي (15/15)</button>
+                                                        </div>
+                                                        <small class="text-muted">مستوى الوعي في استمارة الطوارئ الرسمية (القيمة الطبيعية: 15/15)</small>
+                                                    </div>
+                                                    <div class="col-12 mt-3">
                                                         <button type="submit" class="btn btn-danger w-100 fw-bold py-2 shadow-sm">
                                                             <i class="fas fa-save me-1"></i> حفظ وتحديث العلامات الحيوية
                                                         </button>
@@ -521,12 +530,25 @@
                                             </div>
                                             <div class="card-body p-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-bold">التشخيص الطبي والسريري (Diagnosis)</label>
-                                                    <textarea class="form-control" name="diagnosis" rows="5" placeholder="اكتب التشخيص الطبي للحالة وتوصيات الرعاية...">{{ old('diagnosis', $emergency->diagnosis) }}</textarea>
+                                                    <label class="form-label fw-bold"><i class="fas fa-file-medical text-primary me-1"></i>الشكوى الرئيسية (Chief Complaint)</label>
+                                                    <input type="text" class="form-control" name="symptoms" placeholder="مثال: ألم حاد في البطن، ضيق تنفس، قيء..." value="{{ old('symptoms', $emergency->symptoms) }}">
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-bold">الخطة العلاجية المقترحة (Treatment Plan)</label>
-                                                    <textarea class="form-control" name="treatment_plan" rows="3" placeholder="ملاحظات متابعة الخطة العلاجية...">{{ old('treatment_plan', $emergency->treatment_plan) }}</textarea>
+                                                    <label class="form-label fw-bold"><i class="fas fa-notes-medical text-info me-1"></i>تاريخ المريض الحالي History of Present Illness (HPI)</label>
+                                                    <textarea class="form-control" name="hpi" rows="2" placeholder="اكتب التاريخ المرضي الحالي وتطور الأعراض بالتفصيل...">{{ old('hpi', $emergency->hpi) }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold"><i class="fas fa-stethoscope text-danger me-1"></i>التشخيص الطبي والسريري (Diagnosis)</label>
+                                                    <textarea class="form-control" name="diagnosis" rows="2" placeholder="اكتب التشخيص الطبي للحالة وتوصيات الرعاية...">{{ old('diagnosis', $emergency->diagnosis) }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold text-dark"><i class="fas fa-balance-scale text-warning me-1"></i>الملاحظات الطبية - العدلية (Medico-Legal Notes) ⚖️</label>
+                                                    <textarea class="form-control" name="medico_legal_notes" rows="2" placeholder="توثيق الإصابة والشبهة الجنائية (مثل: حادث سير، مشاجرة، أو: لا توجد شبهة جنائية / حادث عرضي)...">{{ old('medico_legal_notes', $emergency->medico_legal_notes) }}</textarea>
+                                                    <small class="text-muted">تظهر في الوجه الثاني من التقرير الطبي الرسمي</small>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold"><i class="fas fa-clipboard-list text-secondary me-1"></i>ملاحظات إضافية (Additional Notes)</label>
+                                                    <textarea class="form-control" name="notes" rows="2" placeholder="أي ملاحظات أو إرشادات سريرية إضافية...">{{ old('notes', $emergency->notes) }}</textarea>
                                                 </div>
                                             </div>
                                         </div>
@@ -548,6 +570,18 @@
                                                         @endif
                                                     </div>
                                                 </div>
+                                                <!-- أزرار الفلترة السريعة للخدمات (الكل / ضمان / كاش) -->
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2">
+                                                    <div class="btn-group btn-group-sm" role="group" id="serviceFilterGroup">
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 active service-filter-btn" data-filter="all" style="font-size: 0.75rem;">الكل</button>
+                                                        <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 service-filter-btn" data-filter="insurance" style="font-size: 0.75rem;">
+                                                            <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 service-filter-btn text-dark" data-filter="cash" style="font-size: 0.75rem;">
+                                                            <i class="fas fa-money-bill me-1"></i>كاش فقط
+                                                        </button>
+                                                    </div>
+                                                </div>
                                                 <div class="input-group input-group-sm mb-2">
                                                     <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
                                                     <input type="text" id="serviceSearchInput" class="form-control" placeholder="ابحث باسم الخدمة الطبية أو التمريضية...">
@@ -561,8 +595,9 @@
                                                         @php
                                                             $isPaid = isset($paidServiceMap[$service->id]);
                                                             $isSelected = in_array($service->id, $selectedServiceIds);
+                                                            $isSrvInsurance = ($service->is_hi_active ?? true) && ($service->hi_price > 0);
                                                         @endphp
-                                                        <div class="col-12 service-item">
+                                                        <div class="col-12 service-item" data-is-insurance="{{ $isSrvInsurance ? '1' : '0' }}">
                                                             <div class="form-check d-flex justify-content-between align-items-center p-2 rounded {{ $isPaid ? 'bg-success-subtle bg-opacity-25 border border-success-subtle' : ($isSelected ? 'bg-light border' : '') }}">
                                                                 <div>
                                                                     @if($isPaid)
@@ -573,6 +608,15 @@
                                                                     @endif
                                                                     <label class="form-check-label fw-bold service-name {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
                                                                         {{ $service->name }}
+                                                                        @if($isSrvInsurance)
+                                                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.68rem;">
+                                                                                <i class="fas fa-shield-alt"></i> ضمان {{ number_format($service->hi_price) }} د.ع
+                                                                            </span>
+                                                                        @else
+                                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.68rem;">
+                                                                                كاش فقط
+                                                                            </span>
+                                                                        @endif
                                                                         @if($isPaid)
                                                                             <span class="badge bg-success text-white ms-2" style="font-size: 0.72rem;">
                                                                                 <i class="fas fa-check-circle me-1"></i> مسددة (إيصال #{{ $paidServiceMap[$service->id] }})
@@ -637,6 +681,18 @@
                                                                 <label class="form-label small fw-bold mb-0">التحاليل المطلوبة</label>
                                                                 <span id="labSelectedCount" class="badge bg-primary-subtle text-primary border border-primary-subtle small d-none">0 محدد</span>
                                                             </div>
+                                                            <!-- أزرار الفلترة السريعة للتحاليل (الكل / ضمان / كاش) -->
+                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2">
+                                                                <div class="btn-group btn-group-sm" role="group" id="labFilterGroup">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 active lab-filter-btn" data-filter="all" style="font-size: 0.75rem;">الكل</button>
+                                                                    <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 lab-filter-btn" data-filter="insurance" style="font-size: 0.75rem;">
+                                                                        <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 lab-filter-btn text-dark" data-filter="cash" style="font-size: 0.75rem;">
+                                                                        <i class="fas fa-money-bill me-1"></i>كاش فقط
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                             <div class="input-group input-group-sm mb-2">
                                                                 <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
                                                                 <input type="text" id="labSearchInput" class="form-control" placeholder="ابحث باسم التحليل أو الفحص...">
@@ -644,10 +700,24 @@
                                                             </div>
                                                             <div class="border rounded p-2 bg-white" id="labTestsContainer" style="max-height: 200px; overflow-y: auto;">
                                                                 @foreach($labTests as $test)
-                                                                <div class="form-check lab-test-item py-1 border-bottom border-light">
+                                                                @php
+                                                                    $isLabInsurance = ($test->is_hi_active ?? true) && ($test->hi_price > 0);
+                                                                @endphp
+                                                                <div class="form-check lab-test-item py-1 border-bottom border-light" data-is-insurance="{{ $isLabInsurance ? '1' : '0' }}">
                                                                     <input class="form-check-input lab-checkbox" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_chk_{{ $test->id }}">
-                                                                    <label class="form-check-label small d-flex justify-content-between cursor-pointer w-100 mb-0" for="lab_chk_{{ $test->id }}">
-                                                                        <span class="lab-name fw-medium">{{ $test->name }}</span>
+                                                                    <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="lab_chk_{{ $test->id }}">
+                                                                        <div>
+                                                                            <span class="lab-name fw-medium">{{ $test->name }}</span>
+                                                                            @if($isLabInsurance)
+                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
+                                                                                    <i class="fas fa-shield-alt"></i> ضمان {{ number_format($test->hi_price) }} د.ع
+                                                                                </span>
+                                                                            @else
+                                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
+                                                                                    كاش فقط
+                                                                                </span>
+                                                                            @endif
+                                                                        </div>
                                                                         <span class="text-muted">({{ number_format($test->price) }} IQD)</span>
                                                                     </label>
                                                                 </div>
@@ -797,6 +867,18 @@
                                                                 <label class="form-label small fw-bold mb-0">أنواع الفحوصات المطلوبة</label>
                                                                 <span id="radSelectedCount" class="badge bg-info-subtle text-info border border-info-subtle small d-none">0 محدد</span>
                                                             </div>
+                                                            <!-- أزرار الفلترة السريعة للأشعة (الكل / ضمان / كاش) -->
+                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2">
+                                                                <div class="btn-group btn-group-sm" role="group" id="radFilterGroup">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 active rad-filter-btn" data-filter="all" style="font-size: 0.75rem;">الكل</button>
+                                                                    <button type="button" class="btn btn-outline-info btn-sm py-0 px-2 rad-filter-btn" data-filter="insurance" style="font-size: 0.75rem;">
+                                                                        <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 rad-filter-btn text-dark" data-filter="cash" style="font-size: 0.75rem;">
+                                                                        <i class="fas fa-money-bill me-1"></i>كاش فقط
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                             <div class="input-group input-group-sm mb-2">
                                                                 <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
                                                                 <input type="text" id="radSearchInput" class="form-control" placeholder="ابحث بنوع الأشعة أو السونار...">
@@ -804,10 +886,24 @@
                                                             </div>
                                                             <div class="border rounded p-2 bg-white" id="radTypesContainer" style="max-height: 200px; overflow-y: auto;">
                                                                 @foreach($radiologyTypes as $radType)
-                                                                <div class="form-check rad-type-item py-1 border-bottom border-light">
+                                                                @php
+                                                                    $isRadInsurance = ($radType->is_hi_active ?? true) && ($radType->hi_price > 0);
+                                                                @endphp
+                                                                <div class="form-check rad-type-item py-1 border-bottom border-light" data-is-insurance="{{ $isRadInsurance ? '1' : '0' }}">
                                                                     <input class="form-check-input rad-checkbox" type="checkbox" name="radiology_type_ids[]" value="{{ $radType->id }}" id="rad_chk_{{ $radType->id }}">
-                                                                    <label class="form-check-label small d-flex justify-content-between cursor-pointer w-100 mb-0" for="rad_chk_{{ $radType->id }}">
-                                                                        <span class="rad-name fw-medium">{{ $radType->name }}</span>
+                                                                    <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="rad_chk_{{ $radType->id }}">
+                                                                        <div>
+                                                                            <span class="rad-name fw-medium">{{ $radType->name }}</span>
+                                                                            @if($isRadInsurance)
+                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
+                                                                                    <i class="fas fa-shield-alt"></i> ضمان {{ number_format($radType->hi_price) }} د.ع
+                                                                                </span>
+                                                                            @else
+                                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
+                                                                                    كاش فقط
+                                                                                </span>
+                                                                            @endif
+                                                                        </div>
                                                                         <span class="text-muted">({{ number_format($radType->price) }} IQD)</span>
                                                                     </label>
                                                                 </div>
@@ -2373,15 +2469,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // البحث التفاعلي المباشر لتحاليل المختبر والأشعة
 (function() {
-    function initLiveFilter(inputId, clearBtnId, itemSelector, nameSelector, emptyId, countId, chkSelector) {
+    function initLiveFilter(inputId, clearBtnId, itemSelector, nameSelector, emptyId, countId, chkSelector, filterBtnSelector) {
         const input = document.getElementById(inputId);
         const clearBtn = document.getElementById(clearBtnId);
         const items = document.querySelectorAll(itemSelector);
         const emptyMsg = document.getElementById(emptyId);
         const countBadge = document.getElementById(countId);
         const checkboxes = document.querySelectorAll(chkSelector);
+        const filterBtns = filterBtnSelector ? document.querySelectorAll(filterBtnSelector) : [];
+        let activeFilter = 'all';
 
-        if (!input) return;
+        if (!input && !filterBtns.length) return;
 
         function normalizeArabic(text) {
             return (text || '')
@@ -2393,20 +2491,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 .trim();
         }
 
-        input.addEventListener('input', function() {
-            const query = normalizeArabic(this.value);
+        function applyFilter() {
+            const query = input ? normalizeArabic(input.value) : '';
             let visibleCount = 0;
 
-            if (clearBtn) {
-                clearBtn.classList.toggle('d-none', !this.value);
+            if (clearBtn && input) {
+                clearBtn.classList.toggle('d-none', !input.value);
             }
 
             items.forEach(item => {
                 const nameEl = item.querySelector(nameSelector);
                 const name = normalizeArabic(nameEl ? nameEl.textContent : '');
                 const chk = item.querySelector('input[type="checkbox"]');
-                
-                if (!query || name.includes(query) || (chk && chk.checked)) {
+                const isInsurance = item.getAttribute('data-is-insurance') === '1';
+
+                const matchesQuery = !query || name.includes(query) || (chk && chk.checked);
+                let matchesCategory = true;
+                if (activeFilter === 'insurance') {
+                    matchesCategory = isInsurance || (chk && chk.checked);
+                } else if (activeFilter === 'cash') {
+                    matchesCategory = !isInsurance || (chk && chk.checked);
+                }
+
+                if (matchesQuery && matchesCategory) {
                     item.classList.remove('d-none');
                     visibleCount++;
                 } else {
@@ -2417,13 +2524,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (emptyMsg) {
                 emptyMsg.classList.toggle('d-none', visibleCount > 0);
             }
-        });
+        }
 
-        if (clearBtn) {
+        if (input) {
+            input.addEventListener('input', applyFilter);
+        }
+
+        if (clearBtn && input) {
             clearBtn.addEventListener('click', function() {
                 input.value = '';
-                input.dispatchEvent(new Event('input'));
+                applyFilter();
                 input.focus();
+            });
+        }
+
+        if (filterBtns.length) {
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    activeFilter = this.getAttribute('data-filter') || 'all';
+                    applyFilter();
+                });
             });
         }
 
@@ -2442,9 +2564,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelected();
     }
 
-    initLiveFilter('serviceSearchInput', 'clearServiceSearch', '.service-item', '.service-name', 'noServicesFound', 'serviceSelectedCount', '.service-checkbox');
-    initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox');
-    initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox');
+    initLiveFilter('serviceSearchInput', 'clearServiceSearch', '.service-item', '.service-name', 'noServicesFound', 'serviceSelectedCount', '.service-checkbox', '.service-filter-btn');
+    initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox', '.lab-filter-btn');
+    initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox', '.rad-filter-btn');
 })();
 </script>
 @endpush

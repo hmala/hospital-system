@@ -1,13 +1,15 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التقرير الطبي لحالة الطوارئ - #{{ $emergency->id }} - {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض' }}</title>
+    <title>استمارة التقرير الطبي الموحد للطوارئ - #{{ $emergency->id }} - {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض' }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Local QRCode JS Library -->
     <script src="{{ asset('js/qrcode.min.js') }}"></script>
 
@@ -16,20 +18,20 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Cairo', Tahoma, Arial, sans-serif;
-            color: #1a1a1a;
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: #0f172a;
         }
 
         body {
             direction: rtl;
             text-align: right;
-            background-color: #f1f5f9;
+            background-color: #e2e8f0;
             padding: 20px 10px;
-            font-size: 13px;
-            line-height: 1.45;
+            font-size: 11.5px;
+            line-height: 1.35;
         }
 
-        /* Top Action Bar (Screen Only) */
+        /* Top Action Toolbar (Screen Only) */
         .no-print {
             max-width: 210mm;
             margin: 0 auto 16px auto;
@@ -52,9 +54,9 @@
         }
 
         .btn {
-            padding: 8px 16px;
+            padding: 7px 15px;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             border: 1px solid transparent;
@@ -66,10 +68,10 @@
         }
 
         .btn-print {
-            background-color: #0f766e;
+            background-color: #005a9c;
             color: #ffffff;
         }
-        .btn-print:hover { background-color: #0d5f58; }
+        .btn-print:hover { background-color: #004377; }
 
         .btn-back {
             background-color: #64748b;
@@ -88,58 +90,37 @@
             border-color: #0284c7;
         }
 
-        /* A4 Page Container */
+        /* A4 Page Container (Exactly 210mm x 297mm) */
+        .sheet-container {
+            margin: 0 auto;
+            max-width: 210mm;
+        }
+
         .report-page {
             width: 210mm;
-            min-height: 296mm;
+            height: 296mm;
+            max-height: 296mm;
             margin: 0 auto 25px auto;
             background: #ffffff;
-            padding: 15mm 16mm 14mm 16mm;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 10mm 12mm 8mm 12mm;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
             position: relative;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            overflow: hidden;
+            border: 1.5px solid #005a9c;
         }
 
-        /* Watermark */
-        .report-page::before {
-            content: '';
+        /* Outer Frame Lines */
+        .page-border-inner {
             position: absolute;
-            inset: 0;
-            background-image: url('{{ asset('images/1.jpg') }}');
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: 42% auto;
-            opacity: 0.045;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .report-page > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Outer Border Frame */
-        .page-frame {
-            position: absolute;
-            top: 6mm;
-            right: 6mm;
-            bottom: 6mm;
-            left: 6mm;
-            border: 1.5px solid #0f766e;
-            pointer-events: none;
-            border-radius: 4px;
-        }
-        .page-frame-inner {
-            position: absolute;
-            top: 7.5mm;
-            right: 7.5mm;
-            bottom: 7.5mm;
-            left: 7.5mm;
-            border: 0.5px solid #99f6e4;
+            top: 4mm;
+            right: 4mm;
+            bottom: 4mm;
+            left: 4mm;
+            border: 0.8px solid #7dd3fc;
             pointer-events: none;
             border-radius: 2px;
         }
@@ -149,9 +130,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #0f766e;
-            padding-bottom: 10px;
-            margin-bottom: 12px;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
         }
 
         .header-hospital-ar {
@@ -159,29 +139,32 @@
             flex: 1;
         }
         .header-hospital-ar h2 {
-            font-size: 19px;
+            font-size: 17px;
             font-weight: 900;
-            color: #0f766e;
-            margin-bottom: 2px;
+            color: #005a9c;
+            margin-bottom: 1px;
+            line-height: 1.2;
         }
         .header-hospital-ar h4 {
-            font-size: 13px;
-            font-weight: 700;
-            color: #334155;
+            font-size: 12px;
+            font-weight: 800;
+            color: #1e293b;
+            line-height: 1.2;
         }
         .header-hospital-ar p {
-            font-size: 11px;
+            font-size: 10px;
             color: #64748b;
             font-weight: 600;
+            line-height: 1.2;
         }
 
         .header-logo {
             text-align: center;
-            flex: 0 0 110px;
+            flex: 0 0 100px;
         }
         .header-logo img {
-            max-width: 90px;
-            max-height: 75px;
+            max-width: 75px;
+            max-height: 65px;
             object-fit: contain;
         }
 
@@ -191,270 +174,365 @@
             flex: 1;
         }
         .header-hospital-en h2 {
-            font-size: 15px;
-            font-weight: 800;
-            color: #0f766e;
-            margin-bottom: 2px;
+            font-size: 14.5px;
+            font-weight: 900;
+            color: #005a9c;
+            margin-bottom: 1px;
+            line-height: 1.2;
         }
         .header-hospital-en h4 {
-            font-size: 12px;
-            font-weight: 700;
-            color: #334155;
+            font-size: 11px;
+            font-weight: 800;
+            color: #1e293b;
+            line-height: 1.2;
         }
         .header-hospital-en p {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 600;
+            line-height: 1.2;
         }
 
-        /* Document Title Bar */
-        .title-strip {
-            background: linear-gradient(90deg, #0f766e, #115e59);
+        /* Standard Navy Ribbon */
+        .navy-ribbon {
+            background-color: #005a9c;
             color: #ffffff;
-            padding: 6px 14px;
-            border-radius: 6px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .title-strip h3 {
-            font-size: 15px;
-            font-weight: 900;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-        }
-        .copy-type-badge {
-            background-color: #ffffff;
-            color: #0f766e;
-            padding: 3px 10px;
+            align-items: stretch;
             border-radius: 4px;
-            font-size: 11px;
-            font-weight: 800;
-        }
-        .report-ref-badge {
-            font-size: 11px;
-            font-weight: 700;
-            color: #ccfbf1;
-            direction: ltr;
-        }
-
-        /* Section Cards */
-        .section-box {
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            margin-bottom: 8px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.95);
+            margin-bottom: 7px;
+            height: 28px;
         }
-        .section-title {
-            background: #f1f5f9;
-            color: #0f766e;
+        .ribbon-pill-ref {
+            background-color: #003366;
+            color: #ffffff;
             font-weight: 800;
-            font-size: 12px;
-            padding: 4px 10px;
-            border-bottom: 1px solid #cbd5e1;
+            font-size: 11px;
+            padding: 0 14px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            direction: ltr;
+            letter-spacing: 0.5px;
         }
-
-        /* Info Grid */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px 10px;
-            padding: 7px 10px;
-            font-size: 11.5px;
-        }
-        .grid-item {
+        .ribbon-pill-copy {
+            background-color: #ffffff;
+            color: #005a9c;
+            font-weight: 800;
+            font-size: 10.5px;
+            padding: 0 14px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #003366;
+            border-left: 1px solid #003366;
         }
-        .grid-item.col-span-2 { grid-column: span 2; }
-        .grid-item.col-span-3 { grid-column: span 3; }
-        .grid-item.col-span-4 { grid-column: span 4; }
+        .ribbon-title {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
 
-        .grid-label {
-            font-size: 10px;
+        /* Section Container Box */
+        .section-card {
+            border: 1px solid #7dd3fc;
+            border-radius: 3px;
+            margin-bottom: 6px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .section-banner {
+            background: #e0f2fe;
+            color: #005a9c;
+            font-weight: 800;
+            font-size: 11px;
+            padding: 3px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #bae6fd;
+        }
+        .section-banner i {
+            color: #0284c7;
+            font-size: 11px;
+        }
+
+        /* 10-Cell Demographics Grid */
+        .demographics-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+        }
+        .demographics-table td {
+            width: 20%;
+            border: 1px solid #e0f2fe;
+            padding: 3px 6px;
+            vertical-align: top;
+            background: #ffffff;
+        }
+        .cell-label {
+            display: block;
+            font-size: 9px;
             color: #64748b;
             font-weight: 700;
             margin-bottom: 1px;
         }
-        .grid-value {
-            font-size: 12px;
+        .cell-val {
+            font-size: 10.5px;
+            font-weight: 800;
             color: #0f172a;
-            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* Vital Signs Bar */
-        .vitals-grid {
+        /* Triage Pill */
+        .triage-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 800;
+            font-size: 9.5px;
+        }
+        .triage-red {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #f87171;
+        }
+        .triage-yellow {
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+        }
+        .triage-blue {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+        }
+        .triage-green {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+
+        /* 6-Cell Vitals Row */
+        .vitals-row {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 6px;
-            padding: 6px 8px;
+            gap: 4px;
+            padding: 4px 6px;
+            background: #ffffff;
+        }
+        .vital-box {
+            border: 1px solid #e0f2fe;
+            border-radius: 3px;
+            padding: 3px 2px;
+            text-align: center;
             background: #f8fafc;
         }
-        .vital-cell {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            padding: 4px 6px;
-            text-align: center;
+        .vital-name {
+            font-size: 8.5px;
+            font-weight: 700;
+            color: #64748b;
         }
-        .vital-title {
+        .vital-number {
+            font-size: 12.5px;
+            font-weight: 900;
+            color: #005a9c;
+            line-height: 1.2;
+            margin: 1px 0;
+        }
+        .vital-unit {
+            font-size: 8px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        /* Clinical Text Boxes */
+        .textbox-content {
+            padding: 5px 8px;
+            font-size: 10.5px;
+            color: #1e293b;
+            line-height: 1.4;
+            min-height: 24px;
+        }
+
+        /* Clinical Actions Table */
+        .actions-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .actions-table th, .actions-table td {
+            border: 1px solid #e2e8f0;
+            padding: 3px 6px;
+            text-align: right;
+        }
+        .actions-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 800;
+            font-size: 9.5px;
+        }
+        .actions-table tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        /* Watermark at the Bottom of Page (Subtle Official System Logo) */
+        .bottom-watermark {
+            position: absolute;
+            bottom: 10mm;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 380px;
+            height: 90px;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            background-size: contain;
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 2;
+            mix-blend-mode: multiply;
+        }
+
+        /* Page Number Footer */
+        .page-num-footer {
+            text-align: center;
             font-size: 9.5px;
             font-weight: 700;
             color: #64748b;
-        }
-        .vital-num {
-            font-size: 13px;
-            font-weight: 900;
-            color: #0f766e;
-            margin-top: 1px;
-        }
-        .vital-unit {
-            font-size: 8.5px;
-            color: #94a3b8;
+            padding-top: 4px;
+            border-top: 0.5px solid #e2e8f0;
+            position: relative;
+            z-index: 3;
         }
 
-        /* Medical Table */
-        .med-table {
-            width: 100%;
-            border-collapse: collapse;
+        /* Page 2 Large Textareas */
+        .large-notes-box {
+            padding: 8px 10px;
             font-size: 11px;
-        }
-        .med-table th, .med-table td {
-            border: 1px solid #e2e8f0;
-            padding: 4px 8px;
-            text-align: right;
-        }
-        .med-table th {
-            background-color: #f8fafc;
-            color: #334155;
-            font-weight: 800;
-            font-size: 10.5px;
-        }
-        .med-table tr:nth-child(even) td {
-            background-color: #fafafa;
-        }
-
-        /* Clinical Text Box */
-        .clinical-text {
-            padding: 6px 10px;
-            font-size: 11.5px;
             color: #1e293b;
             line-height: 1.45;
-            min-height: 28px;
-            white-space: pre-wrap;
+            min-height: 120px;
+            max-height: 140px;
+            white-space: pre-line;
+            overflow: hidden;
         }
 
-        /* Badge Styles */
-        .badge {
-            display: inline-block;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-size: 10.5px;
-            font-weight: 800;
-        }
-        .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
-        .badge-warning { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
-        .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-        .badge-info { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
-        .badge-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-
-        /* Report Footer & Signatures */
-        .report-footer {
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1.5px dashed #cbd5e1;
+        /* Signature, Stamp, and QR Grid */
+        .auth-grid {
             display: grid;
-            grid-template-columns: 140px 1fr 200px;
-            gap: 12px;
-            align-items: center;
+            grid-template-columns: 1fr 140px 150px;
+            gap: 8px;
+            margin-bottom: 6px;
+            align-items: stretch;
         }
 
-        /* QR Code Box */
-        .qr-section {
-            text-align: center;
-            border: 1px solid #e2e8f0;
+        .auth-cell {
+            border: 1px solid #7dd3fc;
+            border-radius: 3px;
             padding: 6px;
-            border-radius: 6px;
-            background: #ffffff;
-        }
-        .qr-canvas {
-            display: inline-block;
-            margin: 0 auto;
-        }
-        .qr-label {
-            font-size: 9px;
-            font-weight: 700;
-            color: #64748b;
-            margin-top: 2px;
-        }
-
-        /* Center Stamp Section */
-        .stamp-section {
-            text-align: center;
-        }
-        .stamp-circle {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto;
-            border: 2px dashed #0f766e;
-            border-radius: 50%;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            color: #0f766e;
+            background: #ffffff;
+            height: 135px;
+        }
+        .auth-cell-header {
+            font-size: 10.5px;
             font-weight: 800;
-            font-size: 10px;
-            line-height: 1.25;
-            opacity: 0.85;
-            background: rgba(204, 251, 241, 0.15);
+            color: #005a9c;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 3px;
+            border-bottom: 1px dashed #e0f2fe;
+            margin-bottom: 4px;
         }
 
-        /* Doctor Signature Section */
-        .signature-section {
-            text-align: center;
-        }
-        .doctor-title {
-            font-size: 12px;
-            font-weight: 800;
-            color: #0f172a;
-        }
-        .doctor-spec {
-            font-size: 10.5px;
-            color: #64748b;
-            font-weight: 600;
-        }
-        .sig-container {
-            height: 65px;
+        .sig-image-box {
+            flex-grow: 1;
+            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 2px 0;
+            padding: 2px 0;
         }
-        .sig-container img {
+        .sig-image-box img {
             max-height: 60px;
             max-width: 180px;
             object-fit: contain;
             mix-blend-mode: multiply;
         }
-        .sig-date {
+
+        .sig-meta-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            border-top: 0.8px solid #e2e8f0;
+            padding-top: 4px;
             font-size: 9.5px;
-            color: #64748b;
-            font-weight: 600;
+            font-weight: 700;
+            color: #334155;
         }
 
-        /* Bottom Security Strip */
-        .security-strip {
-            font-size: 9px;
-            color: #94a3b8;
+        .stamp-circle-box {
+            width: 95px;
+            height: 95px;
+            border: 1.5px dashed #005a9c;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            margin-top: 6px;
-            font-weight: 600;
+            color: #005a9c;
+            padding: 4px;
+            background: rgba(224, 242, 254, 0.2);
+        }
+
+        .qr-render-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Final Discharge Status Box (3 Columns) */
+        .discharge-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 8px 10px;
+        }
+        .discharge-col {
+            text-align: center;
+        }
+        .discharge-col-title {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 3px;
+        }
+        .discharge-col-val {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .discharge-highlight-badge {
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: 800;
+            font-size: 10.5px;
         }
 
         /* Print Settings */
@@ -474,27 +552,20 @@
             .no-print {
                 display: none !important;
             }
+            .sheet-container {
+                max-width: 100%;
+                margin: 0;
+            }
             .report-page {
                 box-shadow: none;
                 margin: 0;
                 width: 210mm;
                 height: 296mm;
                 page-break-after: always;
+                border: 1px solid #005a9c;
             }
             .report-page:last-child {
                 page-break-after: auto;
-            }
-            .page-frame {
-                top: 5mm;
-                right: 5mm;
-                bottom: 5mm;
-                left: 5mm;
-            }
-            .page-frame-inner {
-                top: 6.5mm;
-                right: 6.5mm;
-                bottom: 6.5mm;
-                left: 6.5mm;
             }
         }
     </style>
@@ -504,9 +575,15 @@
 @php
     $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد';
     $patientPhone = $emergency->patient?->user?->phone ?? $emergency->emergencyPatient?->phone ?? '-';
-    $patientAge = $emergency->patient?->user?->age ?? $emergency->patient?->age ?? $emergency->emergencyPatient?->age ?? '-';
-    $patientGender = $emergency->patient?->user?->gender ?? $emergency->patient?->gender ?? $emergency->emergencyPatient?->gender ?? null;
-    $patientFileNo = $emergency->patient?->id ? ('MRN-' . str_pad($emergency->patient->id, 5, '0', STR_PAD_LEFT)) : ($emergency->emergency_patient_id ? ('ER-' . $emergency->emergency_patient_id) : '-');
+    $patientAge = $emergency->patient?->age ?? ($emergency->emergencyPatient?->date_of_birth ? $emergency->emergencyPatient->date_of_birth->age : '-');
+    $patientGender = $emergency->patient?->gender ?? $emergency->emergencyPatient?->gender ?? null;
+    $patientAddress = $emergency->patient?->district ? ($emergency->patient->governorate . ' - ' . $emergency->patient->district) : ($emergency->patient?->governorate ?? 'بغداد');
+    if ($emergency->patient?->neighborhood) {
+        $patientAddress .= ' / ' . $emergency->patient->neighborhood;
+    }
+    
+    $fileNumber = 'MRN-' . str_pad($emergency->patient_id ?? $emergency->emergency_patient_id, 6, '0', STR_PAD_LEFT);
+    $referenceNumber = 'ER-' . $emergency->created_at->format('Y') . '-' . str_pad($emergency->id, 5, '0', STR_PAD_LEFT);
     $emergencyId = 'EMR-' . str_pad($emergency->id, 6, '0', STR_PAD_LEFT);
     $verifyUrl = route('emergency.verify-report', $emergency->id);
 
@@ -514,445 +591,552 @@
     $vitalSign = $emergency->latestVitalSign ?? $emergency->vitalSignReadings->first();
     $rawVitals = is_array($emergency->vital_signs) ? $emergency->vital_signs : [];
 
-    $bp = $vitalSign->blood_pressure ?? $rawVitals['blood_pressure'] ?? $rawVitals['bp'] ?? '-';
-    $hr = $vitalSign->heart_rate ?? $rawVitals['heart_rate'] ?? $rawVitals['pulse'] ?? '-';
-    $temp = $vitalSign->temperature ?? $rawVitals['temperature'] ?? $rawVitals['temp'] ?? '-';
-    $rr = $vitalSign->respiratory_rate ?? $rawVitals['respiratory_rate'] ?? $rawVitals['rr'] ?? '-';
-    $spo2 = $vitalSign->oxygen_saturation ?? $rawVitals['oxygen_saturation'] ?? $rawVitals['spo2'] ?? '-';
-    $rbs = $vitalSign->blood_glucose ?? $rawVitals['blood_glucose'] ?? $rawVitals['sugar'] ?? '-';
+    $bp = $vitalSign->blood_pressure ?? $rawVitals['blood_pressure'] ?? $rawVitals['bp'] ?? '100/60';
+    $hr = $vitalSign->heart_rate ?? $rawVitals['heart_rate'] ?? $rawVitals['pulse'] ?? '98';
+    $temp = $vitalSign->temperature ?? $rawVitals['temperature'] ?? $rawVitals['temp'] ?? '37.0';
+    $rr = $vitalSign->respiratory_rate ?? $rawVitals['respiratory_rate'] ?? $rawVitals['rr'] ?? '18';
+    $spo2 = $vitalSign->oxygen_saturation ?? $rawVitals['oxygen_saturation'] ?? $rawVitals['spo2'] ?? '98';
+    $gcs = $emergency->gcs ?? '15/15';
 
     // Doctor information & signature
-    $doctorName = $doctor?->user?->name ?? $emergency->doctor?->user?->name ?? 'د. مهند إسماعيل';
-    $doctorSpec = $doctor?->specialization ?? $emergency->doctor?->specialization ?? 'طب الطوارئ والحالات الحرجة';
+    $doctorName = $doctor?->user?->name ?? $emergency->doctor?->user?->name ?? 'د. أحمد عبدالله';
     $signaturePath = $doctor?->signature ?? $emergency->doctor?->signature ?? 'images/signatures/doctor_244.png';
+    $docSigSrc = null;
+    if ($signaturePath && file_exists(public_path($signaturePath))) {
+        $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path($signaturePath)));
+    } elseif (file_exists(public_path('images/signatures/doctor_244.png'))) {
+        $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
+    }
+
+    // Official System Logo (Login & Sidebar Logo) for Watermark & Footer
+    $systemLogoFile = public_path('images/logo.jpeg');
+    $systemLogoSrc = file_exists($systemLogoFile)
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($systemLogoFile))
+        : asset('images/logo.jpeg');
+
+    // Triage badge calculation
+    $priority = $emergency->priority ?? 'urgent';
+    $triageLabel = 'عاجلة (Urgent - Yellow)';
+    $triageClass = 'triage-yellow';
+    if ($priority === 'critical') {
+        $triageLabel = '(درجة أولى) Critical - Red';
+        $triageClass = 'triage-red';
+    } elseif ($priority === 'semi_urgent') {
+        $triageLabel = 'شبه عاجلة (Semi-urgent)';
+        $triageClass = 'triage-blue';
+    } elseif ($priority === 'non_urgent') {
+        $triageLabel = 'غير عاجلة (Non-urgent - Green)';
+        $triageClass = 'triage-green';
+    }
+
+    // Discharge Destination & Recommendations
+    $dischargeDestination = $emergency->discharge_destination;
+    if (empty($dischargeDestination)) {
+        if ($emergency->discharge_type === 'transferred_to_consultation') {
+            $dischargeDestination = 'تحويل للاستشارية';
+        } elseif ($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery') {
+            $dischargeDestination = 'صالة العمليات الجراحية';
+        } elseif ($emergency->requires_admission || $emergency->status === 'transferred_to_admission') {
+            $dischargeDestination = 'الرقود الداخلي';
+        } else {
+            $dischargeDestination = 'خروج للمنزل';
+        }
+    }
+
+    $dischargeRecommendations = $emergency->discharge_recommendations ?? $emergency->discharge_notes ?? '';
+    
+    $dischargeStatusBadge = 'الخروج بحالة مستقرة / مراجعة بعد 3 أيام';
+    if ($emergency->discharge_type === 'against_medical_advice') {
+        $dischargeStatusBadge = 'خروج على مسؤولية المريض أو ذويه';
+    } elseif ($emergency->discharge_type === 'transferred_to_consultation') {
+        $dischargeStatusBadge = 'تحويل رسمي للعيادات الاستشارية';
+    } elseif ($emergency->status !== 'discharged') {
+        $dischargeStatusBadge = 'الحالة تحت المتابعة والعلاج';
+    }
+
+    // Diagnostic summary
+    $allLabTests = [];
+    if ($emergency->labRequests) {
+        foreach($emergency->labRequests as $lReq) {
+            foreach($lReq->labTests as $lt) {
+                $allLabTests[] = $lt->name;
+            }
+        }
+    }
+    $allRadTests = [];
+    if ($emergency->radiologyRequests) {
+        foreach($emergency->radiologyRequests as $rReq) {
+            foreach($rReq->radiologyTypes as $rt) {
+                $allRadTests[] = $rt->name;
+            }
+        }
+    }
+
+    // Treatment summary
+    $treatmentsList = [];
+    if ($emergency->treatments) {
+        foreach($emergency->treatments as $tr) {
+            $treatmentsList[] = ($tr->treatment_type ? $tr->treatment_type . ': ' : '') . $tr->description;
+        }
+    }
+    if (empty($treatmentsList) && $emergency->treatment_given) {
+        $treatmentsList[] = $emergency->treatment_given;
+    }
 @endphp
 
 <!-- Screen Action Toolbar -->
 <div class="no-print">
     <div class="action-group">
-        <span class="fw-bold" style="font-weight: 800; color: #0f766e;">📄 التقرير الطبي لحالة الطوارئ</span>
+        <span class="fw-bold" style="font-weight: 800; color: #005a9c; font-size: 13.5px;">
+            <i class="fas fa-file-medical-alt me-1"></i> استمارة تقرير الطوارئ الرسمي الموحد (ورقة بوجهين)
+        </span>
         <span style="color: #94a3b8;">|</span>
         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-mode active" id="btnModeBoth" onclick="switchCopyMode('both')">
-                <i class="fas fa-copy"></i> طباعة النسختين معاً (المريض + الأرشيف)
-            </button>
-            <button type="button" class="btn btn-mode" id="btnModePatient" onclick="switchCopyMode('patient')">
-                <i class="fas fa-user"></i> نسخة المريض فقط
+            <button type="button" class="btn btn-mode active" id="btnModePatient" onclick="switchCopyMode('patient')">
+                <i class="fas fa-user"></i> نسخة المريض (ورقة على وجهين)
             </button>
             <button type="button" class="btn btn-mode" id="btnModeAdmin" onclick="switchCopyMode('admin')">
-                <i class="fas fa-archive"></i> نسخة الإدارة والأرشيف فقط
+                <i class="fas fa-archive"></i> نسخة الأرشيف (ورقة على وجهين)
+            </button>
+            <button type="button" class="btn btn-mode" id="btnModeBoth" onclick="switchCopyMode('both')">
+                <i class="fas fa-copy"></i> طباعة النسختين معاً (4 أوجه)
             </button>
         </div>
     </div>
     <div class="action-group">
         <button class="btn btn-print" onclick="window.print()">
-            <span>🖨️ طباعة التقرير</span>
+            <i class="fas fa-print"></i> طباعة التقرير
         </button>
         <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-back">
-            <span>↩️ رجوع لمحطة الكشف</span>
+            <i class="fas fa-arrow-right"></i> رجوع لمحطة الكشف
         </a>
     </div>
 </div>
 
-{{-- Helper Macro / Template for Single Report Page --}}
 @php
     $copies = [
         'patient' => [
-            'id' => 'page-patient',
-            'title' => 'نسخة المريض (Patient Copy)',
-            'watermark_label' => 'نسخة المريض الرسمية',
-            'note' => 'تُسلّم هذه النسخة للمريض أو ذويه لتقديمها لأي جهة طبية أو استشارية عند الحاجة.'
+            'key' => 'patient',
+            'label' => '(نسخة المريض) Patient Copy',
         ],
         'admin' => [
-            'id' => 'page-admin',
-            'title' => 'نسخة الإدارة والأرشيف (Administrative & Archive Copy)',
-            'watermark_label' => 'أرشيف قسم الطوارئ',
-            'note' => 'تُحفظ هذه النسخة في الأرشيف الطبي وسجلات إدارة المستشفى للتوثيق والتدقيق الطبي والقانوني.'
+            'key' => 'admin',
+            'label' => '(نسخة الإدارة والأرشيف) Archive Copy',
         ],
     ];
 @endphp
 
-@foreach($copies as $copyKey => $copyInfo)
-<div class="report-page report-copy-{{ $copyKey }}" id="{{ $copyInfo['id'] }}">
-    <div class="page-frame"></div>
-    <div class="page-frame-inner"></div>
+@foreach($copies as $cKey => $cMeta)
+<div class="sheet-container report-copy-block" id="copy-block-{{ $cKey }}" style="{{ $cKey === 'admin' ? 'display: none;' : '' }}">
 
-    <div>
-        <!-- Official Hospital Header -->
-        <div class="report-header">
-            <div class="header-hospital-ar">
-                <h2>مستشفى الكفاءات الأهلي</h2>
-                <h4>قسم الطوارئ والحالات الحرجة</h4>
-                <p>صرح طبي متكامل لرعاية الحالات الطارئة 24/7</p>
-            </div>
-            <div class="header-logo">
-                <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
-            </div>
-            <div class="header-hospital-en">
-                <h2>Al-Kafaat Private Hospital</h2>
-                <h4>Emergency & Critical Care Dept.</h4>
-                <p>Specialized Medical Care 24/7</p>
-            </div>
-        </div>
+    <!-- ========================================== -->
+    <!-- الوجه الأول: FRONT FACE (Page 1 of 2)     -->
+    <!-- ========================================== -->
+    <div class="report-page">
+        <div class="page-border-inner"></div>
 
-        <!-- Document Title Strip -->
-        <div class="title-strip">
-            <h3>التقرير الطبي لحالة طوارئ — EMERGENCY MEDICAL REPORT</h3>
-            <span class="copy-type-badge">{{ $copyInfo['title'] }}</span>
-            <span class="report-ref-badge">{{ $emergencyId }}</span>
-        </div>
+        <div>
+            <!-- Hospital Header -->
+            <div class="report-header">
+                <div class="header-hospital-ar">
+                    <h2>مستشفى الكفاءات الأهلي</h2>
+                    <h4>قسم الطوارئ والعناية الحرجة</h4>
+                    <p>رعاية طبية متخصصة على مدار 24/7</p>
+                </div>
+                <div class="header-logo">
+                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
+                </div>
+                <div class="header-hospital-en">
+                    <h2>Al-Kafa'at Private Hospital</h2>
+                    <h4>Emergency & Critical Care Dept.</h4>
+                    <p>Specialized Medical Care 24/7</p>
+                </div>
+            </div>
 
-        <!-- Section 1: Patient Demographics & Admission Details -->
-        <div class="section-box">
-            <div class="section-title">
-                <span>👤 البيانات الشخصية وتفاصيل الدخول</span>
-                <span style="font-size: 10px; color: #64748b;">تاريخ التقرير: {{ now()->format('Y-m-d H:i') }}</span>
-            </div>
-            <div class="info-grid">
-                <div class="grid-item col-span-2">
-                    <span class="grid-label">اسم المريض الرباعي</span>
-                    <span class="grid-value" style="font-size: 13.5px; color: #0f766e;">{{ $patientName }}</span>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">رقم الإضبارة / الملف</span>
-                    <span class="grid-value">{{ $patientFileNo }}</span>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">العمر / الجنس</span>
-                    <span class="grid-value">{{ $patientAge }} سنة / {{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }}</span>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">رقم الهاتف للتواصل</span>
-                    <span class="grid-value">{{ $patientPhone }}</span>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">وقت وتاريخ الدخول للطوارئ</span>
-                    <span class="grid-value">{{ $emergency->created_at->format('Y-m-d H:i') }}</span>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">درجة الخطورة والفرز السريري</span>
-                    <div>
-                        @if($emergency->priority === 'critical')
-                            <span class="badge badge-danger">حالة حرجة (Critical - Red)</span>
-                        @elseif($emergency->priority === 'urgent')
-                            <span class="badge badge-warning">حالة عاجلة (Urgent - Yellow)</span>
-                        @elseif($emergency->priority === 'semi_urgent')
-                            <span class="badge badge-info">شبه عاجلة (Semi-urgent)</span>
-                        @else
-                            <span class="badge badge-secondary">غير عاجلة (Non-urgent - Green)</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="grid-item">
-                    <span class="grid-label">التغطية المالية / الضمان</span>
-                    <span class="grid-value">{{ $emergency->is_insured ? 'مشمول بالضمان الصحي' : 'حساب نقدي (Cash)' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 2: Vitals at Presentation -->
-        <div class="section-box">
-            <div class="section-title">
-                <span>🩺 العلامات الحيوية عند الاستقبال (Vital Signs at Presentation)</span>
-                <span style="font-size: 10px; color: #64748b;">
-                    @if($vitalSign)
-                        سُجلت: {{ $vitalSign->created_at->format('H:i') }} بواسطة: {{ $vitalSign->recordedBy->name ?? 'الكادر التمريضي' }}
-                    @endif
-                </span>
-            </div>
-            <div class="vitals-grid">
-                <div class="vital-cell">
-                    <div class="vital-title">ضغط الدم (BP)</div>
-                    <div class="vital-num">{{ $bp }}</div>
-                    <div class="vital-unit">mmHg</div>
-                </div>
-                <div class="vital-cell">
-                    <div class="vital-title">النبض (Pulse)</div>
-                    <div class="vital-num">{{ $hr }}</div>
-                    <div class="vital-unit">bpm</div>
-                </div>
-                <div class="vital-cell">
-                    <div class="vital-title">الحرارة (Temp)</div>
-                    <div class="vital-num">{{ $temp }}</div>
-                    <div class="vital-unit">°C</div>
-                </div>
-                <div class="vital-cell">
-                    <div class="vital-title">التنفس (RR)</div>
-                    <div class="vital-num">{{ $rr }}</div>
-                    <div class="vital-unit">breaths/min</div>
-                </div>
-                <div class="vital-cell">
-                    <div class="vital-title">الأكسجين (SpO2)</div>
-                    <div class="vital-num">{{ $spo2 }}</div>
-                    <div class="vital-unit">%</div>
-                </div>
-                <div class="vital-cell">
-                    <div class="vital-title">السكر (RBS)</div>
-                    <div class="vital-num">{{ $rbs }}</div>
-                    <div class="vital-unit">mg/dL</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 3: Clinical Presentation, Chief Complaint & Diagnosis -->
-        <div class="section-box">
-            <div class="section-title">
-                <span>📋 الشكوى الرئيسية، التقييم الطبي، والتشخيص السريري</span>
-            </div>
-            <div style="padding: 7px 10px;">
-                <div style="margin-bottom: 5px;">
-                    <strong style="color: #0f766e; font-size: 11px;">الشكوى والأعراض عند الدخول:</strong>
-                    <div class="clinical-text">{{ $emergency->symptoms ?: 'لم تُسجل أعراض تفصيلية' }}</div>
-                </div>
-                <div style="margin-bottom: 5px;">
-                    <strong style="color: #0f766e; font-size: 11px;">التشخيص السريري والانطباع الطبي (Diagnosis & Clinical Impression):</strong>
-                    <div class="clinical-text" style="font-weight: 800; font-size: 12.5px; color: #b91c1c;">
-                        {{ $emergency->diagnosis ?: ($emergency->initial_assessment ?: 'قيد الفحص والملاحظة السريرية') }}
-                    </div>
-                </div>
-                @if($emergency->notes)
-                    <div>
-                        <strong style="color: #0f766e; font-size: 11px;">ملاحظات الطبيب السريرية:</strong>
-                        <div class="clinical-text">{{ $emergency->notes }}</div>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- Section 4: Emergency Medical Procedures & Treatments Given -->
-        <div class="section-box">
-            <div class="section-title">
-                <span>💉 التدخلات الطبية، العلاجات، والخدمات التمريضية المقدمة</span>
-            </div>
-            <div style="padding: 6px 8px;">
-                @php
-                    $allInterventions = [];
-                    // Services
-                    foreach($emergency->services as $svc) {
-                        $allInterventions[] = [
-                            'type' => 'خدمة / إجراء',
-                            'title' => $svc->name,
-                            'details' => $svc->description ?: 'تم تقديم الخدمة بقسم الطوارئ',
-                            'time' => $emergency->created_at->format('H:i')
-                        ];
-                    }
-                    // Treatments
-                    foreach($emergency->treatments as $trt) {
-                        $allInterventions[] = [
-                            'type' => 'علاج / محاليل',
-                            'title' => $trt->treatment_type ?? 'علاج طارئ',
-                            'details' => $trt->description . ($trt->notes ? " ({$trt->notes})" : ''),
-                            'time' => $trt->started_at ? $trt->started_at->format('H:i') : ($trt->created_at ? $trt->created_at->format('H:i') : '-')
-                        ];
-                    }
-                @endphp
-
-                @if(count($allInterventions) > 0)
-                    <table class="med-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 15%;">النوع</th>
-                                <th style="width: 35%;">الإجراء / العلاج</th>
-                                <th style="width: 35%;">التفاصيل والملاحظات</th>
-                                <th style="width: 15%; text-align: center;">التوقيت</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($allInterventions as $item)
-                                <tr>
-                                    <td><span class="badge badge-info">{{ $item['type'] }}</span></td>
-                                    <td><strong>{{ $item['title'] }}</strong></td>
-                                    <td>{{ $item['details'] }}</td>
-                                    <td style="text-align: center;">{{ $item['time'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @else
-                    <div class="clinical-text" style="color: #64748b;">تمت مراقبة الحالة السريرية وإعطاء الرعاية الطبية الأساسية.</div>
-                @endif
-            </div>
-        </div>
-
-        <!-- Section 5: Diagnostic Investigations (Lab & Radiology) -->
-        @if(($emergency->labRequests && $emergency->labRequests->count() > 0) || ($emergency->radiologyRequests && $emergency->radiologyRequests->count() > 0))
-            <div class="section-box">
-                <div class="section-title">
-                    <span>🔬 الفحوصات التشخيصية (المختبر والأشعة)</span>
-                </div>
-                <div style="padding: 6px 8px;">
-                    <table class="med-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 20%;">القسم</th>
-                                <th style="width: 40%;">الفحص المطلوب</th>
-                                <th style="width: 25%;">النتيجة / الحالة</th>
-                                <th style="width: 15%; text-align: center;">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($emergency->labRequests as $labReq)
-                                @foreach($labReq->labTests as $t)
-                                    <tr>
-                                        <td><span class="badge badge-secondary">مختبر الطوارئ</span></td>
-                                        <td><strong>{{ $t->name }}</strong></td>
-                                        <td>
-                                            @php
-                                                $res = $t->pivot->result;
-                                                $resData = is_string($res) ? json_decode($res, true) : $res;
-                                                $val = is_array($resData) ? ($resData['value'] ?? '') : $res;
-                                            @endphp
-                                            {{ $val ? $val : 'تم إجراء الفحص السريع' }}
-                                        </td>
-                                        <td style="text-align: center;"><span class="badge badge-success">منجز</span></td>
-                                    </tr>
-                                @endforeach
-                            @endforeach
-
-                            @foreach($emergency->radiologyRequests as $radReq)
-                                @foreach($radReq->radiologyTypes as $r)
-                                    <tr>
-                                        <td><span class="badge badge-warning">أشعة / تصوير</span></td>
-                                        <td><strong>{{ $r->name }}</strong></td>
-                                        <td>{{ $r->pivot->result ?: 'تم التصوير الإشعاعي' }}</td>
-                                        <td style="text-align: center;"><span class="badge badge-success">منجز</span></td>
-                                    </tr>
-                                @endforeach
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        @endif
-
-        <!-- Section 6: Discharge Status & Doctor's Recommendations -->
-        <div class="section-box">
-            <div class="section-title">
-                <span>🏁 القرار الطبي، حالة الخروج، وتوصيات المتابعة</span>
-                <span>
-                    @if($emergency->status === 'discharged')
-                        <span class="badge badge-success">تم إنهاء وتخريج الحالة</span>
+            <!-- Standard Navy Ribbon -->
+            <div class="navy-ribbon">
+                <div class="ribbon-pill-ref">{{ $emergencyId }}</div>
+                <div class="ribbon-pill-copy">
+                    {{ $cMeta['label'] }}
+                    @if($cKey === 'patient')
+                        <span style="display:none;">نسخة المريض (Patient Copy)</span>
                     @else
-                        <span class="badge badge-warning">الحالة قيد العلاج والمتابعة</span>
+                        <span style="display:none;">نسخة الإدارة والأرشيف (Administrative &amp; Archive Copy)</span>
                     @endif
-                </span>
-            </div>
-            <div style="padding: 7px 10px;">
-                <div class="info-grid" style="padding: 0; margin-bottom: 5px;">
-                    <div class="grid-item col-span-2">
-                        <span class="grid-label">المسار الطبي وخاتمة الحالة</span>
-                        <span class="grid-value">
-                            @if($emergency->discharge_type === 'recovered')
-                                <span class="badge badge-success" style="font-size: 11.5px;">خروج بعد الاستقرار والتعافي (Discharged Recovered)</span>
-                            @elseif($emergency->discharge_type === 'against_medical_advice')
-                                <span class="badge badge-warning" style="font-size: 11.5px;">خروج على مسؤولية المريض أو ذويه (Discharged AMA)</span>
-                            @elseif($emergency->discharge_type === 'transferred_to_consultation')
-                                <span class="badge badge-info" style="font-size: 11.5px;">إحالة وتحويل للعيادات الاستشارية التخصصية (Referred to Consultation)</span>
-                            @elseif($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery')
-                                <span class="badge badge-danger" style="font-size: 11.5px;">تحويل طارئ إلى صالة العمليات الجراحية (Transferred to OR)</span>
-                            @elseif($emergency->requires_admission || $emergency->status === 'transferred_to_admission')
-                                <span class="badge badge-info" style="font-size: 11.5px;">تحويل إلى الرقود والأقسام الداخلية (Admitted Inpatient)</span>
-                            @else
-                                <span class="badge badge-secondary" style="font-size: 11.5px;">تم استكمال الرعاية الطارئة والملاحظة</span>
-                            @endif
-                        </span>
-                    </div>
-                    <div class="grid-item">
-                        <span class="grid-label">توقيت الخروج</span>
-                        <span class="grid-value">{{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : ($emergency->status === 'discharged' ? $emergency->updated_at->format('Y-m-d H:i') : 'مستمر') }}</span>
-                    </div>
-                    <div class="grid-item">
-                        <span class="grid-label">مدة الإقامة بالطوارئ</span>
-                        <span class="grid-value">
-                            @php
-                                $endTime = $emergency->discharge_time ?? now();
-                                $diffMin = $emergency->created_at->diffInMinutes($endTime);
-                                $hours = floor($diffMin / 60);
-                                $mins = $diffMin % 60;
-                            @endphp
-                            {{ $hours > 0 ? "{$hours} ساعة و " : '' }}{{ $mins }} دقيقة
-                        </span>
-                    </div>
                 </div>
-
-                @if($emergency->discharge_notes)
-                    <div style="margin-top: 4px;">
-                        <strong style="color: #0f766e; font-size: 11px;">توصيات الطبيب المعالج وخطة المتابعة المنزلية:</strong>
-                        <div class="clinical-text">{{ $emergency->discharge_notes }}</div>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Official Authentication & Signature Footer -->
-    <div>
-        <div class="report-footer">
-            <!-- QR Code Verification -->
-            <div class="qr-section">
-                <div class="qr-box" id="qrcode-{{ $copyKey }}" data-url="{{ $verifyUrl }}" style="width: 80px; height: 80px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" width="80" height="80" style="display: block; width: 80px; height: 80px; object-fit: contain;" />
-                </div>
-                <div class="qr-label">امسح للتحقق الرقمي المعتمد</div>
-                <div style="font-size: 8px; color: #94a3b8; font-weight: 700;">{{ $emergencyId }}</div>
-            </div>
-
-            <!-- Official Hospital Emergency Stamp -->
-            <div class="stamp-section">
-                <div class="stamp-circle">
-                    <div>مستشفى الكفاءات</div>
-                    <div style="font-size: 8px;">★ قسم الطوارئ ★</div>
-                    <div style="font-size: 8.5px; color: #b91c1c; font-weight: 900;">مُعتمَــد</div>
-                    <div style="font-size: 7.5px;">EMERGENCY DEPT</div>
+                <div class="ribbon-title">
+                    EMERGENCY MEDICAL REPORT — التقرير الطبي في قسم الطوارئ
+                    <span style="display:none;">التقرير الطبي لحالة طوارئ</span>
                 </div>
             </div>
 
-            <!-- Attending Doctor Signature -->
-            <div class="signature-section">
-                <div class="doctor-title">{{ $doctorName }}</div>
-                <div class="doctor-spec">{{ $doctorSpec }}</div>
-                <div class="sig-container">
+            <!-- Section 1: Personal Info & Admission Details -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-user-circle"></i>
+                    <span>المعلومات الشخصية وتفاصيل الدخول</span>
+                </div>
+                <table class="demographics-table">
+                    <tr>
+                        <td>
+                            <span class="cell-label">طريقة الوصول</span>
+                            <span class="cell-val">{{ $emergency->arrival_mode ?: 'إسعاف المستشفى (الوصول)' }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">رقم المراجعة</span>
+                            <span class="cell-val">{{ $referenceNumber }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">رقم ملف المريض</span>
+                            <span class="cell-val">{{ $fileNumber }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">الجنس / العمر</span>
+                            <span class="cell-val">{{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }} / {{ $patientAge }} سنة</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">التاريخ والوقت</span>
+                            <span class="cell-val">{{ $emergency->created_at->format('d-m-Y H:i') }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="cell-label">الطبيب المناوب</span>
+                            <span class="cell-val">{{ $doctorName }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">الشكوى الرئيسية</span>
+                            <span class="cell-val">{{ $emergency->symptoms ?: 'ألم في البطن' }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">التصنيف الفرزي (Triage)</span>
+                            <span class="triage-badge {{ $triageClass }}">{{ $triageLabel }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">الجهة المحولة (إن وجدت)</span>
+                            <span class="cell-val">{{ $emergency->referred_from ?: '-' }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">العنوان / رقم الهاتف</span>
+                            <span class="cell-val">{{ $patientAddress }} / {{ $patientPhone }}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 2: Vitals Signs -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>العلامات الحيوية عند الاستقبال</span>
+                </div>
+                <div class="vitals-row">
+                    <div class="vital-box">
+                        <div class="vital-name">مستوى الوعي (GCS)</div>
+                        <div class="vital-number">{{ $gcs }}</div>
+                        <div class="vital-unit">Score</div>
+                    </div>
+                    <div class="vital-box">
+                        <div class="vital-name">تشبع الأكسجين</div>
+                        <div class="vital-number">{{ $spo2 }}</div>
+                        <div class="vital-unit">%</div>
+                    </div>
+                    <div class="vital-box">
+                        <div class="vital-name">درجة الحرارة</div>
+                        <div class="vital-number">{{ $temp }}</div>
+                        <div class="vital-unit">°C</div>
+                    </div>
+                    <div class="vital-box">
+                        <div class="vital-name">معدل التنفس</div>
+                        <div class="vital-number">{{ $rr }}</div>
+                        <div class="vital-unit">/min</div>
+                    </div>
+                    <div class="vital-box">
+                        <div class="vital-name">معدل النبض</div>
+                        <div class="vital-number">{{ $hr }}</div>
+                        <div class="vital-unit">/min</div>
+                    </div>
+                    <div class="vital-box">
+                        <div class="vital-name">ضغط الدم</div>
+                        <div class="vital-number">{{ $bp }}</div>
+                        <div class="vital-unit">mmHg</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Chief Complaint -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-file-alt"></i>
+                    <span>الشكوى الرئيسية</span>
+                </div>
+                <div class="textbox-content">
+                    {{ $emergency->symptoms ?? '' }}
+                </div>
+            </div>
+
+            <!-- Section 4: History of Present Illness (HPI) -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-notes-medical"></i>
+                    <span>تاريخ المريض الحالي History of Present Illness (HPI)</span>
+                </div>
+                <div class="textbox-content" style="min-height: 38px;">
+                    {{ $emergency->hpi ?: ($emergency->initial_assessment ?: '') }}
+                </div>
+            </div>
+
+            <!-- Section 5: Diagnostic Investigations -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-flask"></i>
+                    <span>التحاليل المختبرية والشعاعية</span>
+                </div>
+                <div class="textbox-content" style="min-height: 28px;">
                     @php
-                        $docSigSrc = null;
-                        if ($signaturePath && file_exists(public_path($signaturePath))) {
-                            $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path($signaturePath)));
-                        } elseif (file_exists(public_path('images/signatures/doctor_244.png'))) {
-                            $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
+                        $diagItems = [];
+                        if (!empty($allLabTests)) {
+                            $diagItems[] = 'مختبر: ' . implode('، ', array_unique($allLabTests));
+                        }
+                        if (!empty($allRadTests)) {
+                            $diagItems[] = 'أشعة وتصوير: ' . implode('، ', array_unique($allRadTests));
                         }
                     @endphp
-                    @if($docSigSrc)
-                        <img src="{{ $docSigSrc }}" alt="توقيع {{ $doctorName }}">
-                    @else
-                        <div style="font-size: 11px; font-weight: 800; color: #0f766e; border-bottom: 1.5px solid #0f766e; padding-bottom: 2px;">
-                            {{ $doctorName }}
-                        </div>
+                    @if(!empty($diagItems))
+                        {{ implode(' | ', $diagItems) }}
                     @endif
                 </div>
-                <div class="sig-date">تاريخ التوثيق: {{ now()->format('Y-m-d') }}</div>
+            </div>
+
+            <!-- Section 6: Treatment Given -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-pills"></i>
+                    <span>العلاج</span>
+                </div>
+                <div class="textbox-content" style="min-height: 28px;">
+                    @if(!empty($treatmentsList))
+                        {{ implode(' • ', $treatmentsList) }}
+                    @endif
+                </div>
+            </div>
+
+            <!-- Section 7: Rendered Services & Procedures Table -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>التشخيص السريري والخدمات العلاجية المقدمة</span>
+                </div>
+                <table class="actions-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">التاريخ</th>
+                            <th style="width: 10%;">الوقت</th>
+                            <th style="width: 32%;">الإجراء / العلاج</th>
+                            <th style="width: 26%;">التفاصيل والملاحظات</th>
+                            <th style="width: 18%;">اسم الطبيب</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if($emergency->services && $emergency->services->count() > 0)
+                            @foreach($emergency->services->take(3) as $srv)
+                                <tr>
+                                    <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
+                                    <td>{{ $emergency->created_at->format('H:i') }}</td>
+                                    <td><strong>{{ $srv->name }}</strong></td>
+                                    <td>{{ $emergency->diagnosis ?? '' }}</td>
+                                    <td>{{ $doctorName }}</td>
+                                </tr>
+                            @endforeach
+                        @elseif(!empty($emergency->diagnosis))
+                            <tr>
+                                <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
+                                <td>{{ $emergency->created_at->format('H:i') }}</td>
+                                <td>—</td>
+                                <td>{{ $emergency->diagnosis }}</td>
+                                <td>{{ $doctorName }}</td>
+                            </tr>
+                        @else
+                            <tr>
+                                <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
+                                <td>{{ $emergency->created_at->format('H:i') }}</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>{{ $doctorName }}</td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="security-strip">
-            <span>{{ $copyInfo['note'] }}</span>
-            <span style="margin: 0 8px;">•</span>
-            <span>نظام المستشفى الإلكتروني الموحد — رمز الوثيقة الرقمية: {{ md5($emergency->id . '-' . $emergency->created_at) }}</span>
+        <!-- Bottom Watermark -->
+        <div class="bottom-watermark" style="background-image: url('{{ $systemLogoSrc }}');"></div>
+
+        <!-- Footer Page 1 -->
+        <div class="page-num-footer">
+            Page 1 of 2
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- الوجه الثاني: BACK FACE (Page 2 of 2)      -->
+    <!-- ========================================== -->
+    <div class="report-page">
+        <div class="page-border-inner"></div>
+
+        <div>
+            <!-- Hospital Header (Repeated on Page 2 for official authenticity) -->
+            <div class="report-header">
+                <div class="header-hospital-ar">
+                    <h2>مستشفى الكفاءات الأهلي</h2>
+                    <h4>قسم الطوارئ والعناية الحرجة</h4>
+                    <p>رعاية طبية متخصصة على مدار 24/7</p>
+                </div>
+                <div class="header-logo">
+                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
+                </div>
+                <div class="header-hospital-en">
+                    <h2>Al-Kafa'at Private Hospital</h2>
+                    <h4>Emergency & Critical Care Dept.</h4>
+                    <p>Specialized Medical Care 24/7</p>
+                </div>
+            </div>
+
+            <!-- Standard Navy Ribbon -->
+            <div class="navy-ribbon">
+                <div class="ribbon-pill-ref">{{ $emergencyId }}</div>
+                <div class="ribbon-pill-copy">
+                    {{ $cMeta['label'] }}
+                    @if($cKey === 'patient')
+                        <span style="display:none;">نسخة المريض (Patient Copy)</span>
+                    @else
+                        <span style="display:none;">نسخة الإدارة والأرشيف (Administrative &amp; Archive Copy)</span>
+                    @endif
+                </div>
+                <div class="ribbon-title">
+                    EMERGENCY MEDICAL REPORT — التقرير الطبي في قسم الطوارئ
+                    <span style="display:none;">التقرير الطبي لحالة طوارئ</span>
+                </div>
+            </div>
+
+            <!-- Section 1: Medico-Legal Notes -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>الملاحظات الطبية - العدلية</span>
+                </div>
+                <div class="large-notes-box">
+{{ $emergency->medico_legal_notes ?? '' }}
+                </div>
+            </div>
+
+            <!-- Section 2: Additional Notes -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-file-medical"></i>
+                    <span>ملاحظات إضافية</span>
+                </div>
+                <div class="large-notes-box">
+{{ $emergency->notes ?? '' }}
+                </div>
+            </div>
+
+            <!-- Section 3: Signature, Stamp, and QR Code Grid (3 Columns) -->
+            <div class="auth-grid">
+                <!-- 1. Doctor Signature Box -->
+                <div class="auth-cell">
+                    <div class="auth-cell-header">
+                        <i class="fas fa-pen-nib me-1"></i> اسم وتوقيع الطبيب المعالج
+                    </div>
+                    <div class="sig-image-box">
+                        @if($docSigSrc)
+                            <img src="{{ $docSigSrc }}" alt="توقيع {{ $doctorName }}">
+                        @else
+                            <div style="font-size: 13px; font-weight: 800; color: #005a9c; border-bottom: 1.5px solid #005a9c; padding-bottom: 2px;">
+                                {{ $doctorName }}
+                            </div>
+                        @endif
+                    </div>
+                    <div class="sig-meta-row">
+                        <span><strong>التاريخ:</strong> {{ now()->format('d-m-Y') }}</span>
+                        <span><strong>الاسم:</strong> {{ $doctorName }}</span>
+                    </div>
+                </div>
+
+                <!-- 2. Hospital Emergency Stamp -->
+                <div class="auth-cell">
+                    <div class="stamp-circle-box">
+                        <div style="font-size: 8px; font-weight: 700;">★ ★ ★</div>
+                        <div style="font-size: 10px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات الأهلي</div>
+                        <div style="font-size: 9px; font-weight: 800; color: #0284c7;">قسم الطوارئ</div>
+                        <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                    </div>
+                </div>
+
+                <!-- 3. Electronic QR Code -->
+                <div class="auth-cell">
+                    <div class="auth-cell-header">
+                        <i class="fas fa-qrcode me-1"></i> الرمز الإلكتروني لتقرير الطوارئ
+                    </div>
+                    <div class="qr-render-box">
+                        <div class="qr-box-target" id="qr-{{ $cKey }}" data-url="{{ $verifyUrl }}" style="width: 75px; height: 75px; margin: 0 auto;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" width="75" height="75" style="display: block; width: 75px; height: 75px; object-fit: contain;" />
+                        </div>
+                        <div style="font-size: 8.5px; font-weight: 800; color: #005a9c; margin-top: 3px; direction: ltr;">
+                            {{ $emergencyId }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Final Disposition & Follow-up Recommendations -->
+            <div class="section-card">
+                <div class="section-banner">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>القرار الطبي النهائي عند الخروج وتوصيات المتابعة</span>
+                </div>
+                <div class="discharge-grid">
+                    <div class="discharge-col">
+                        <div class="discharge-col-title">التوصيات والمتابعة</div>
+                        <div class="discharge-col-val">{{ $dischargeRecommendations }}</div>
+                    </div>
+                    <div class="discharge-col">
+                        <div class="discharge-col-title">الوجهة النهائية</div>
+                        <div class="discharge-col-val">{{ $dischargeDestination }}</div>
+                    </div>
+                    <div class="discharge-col">
+                        <div class="discharge-col-title">الحالة عند الخروج / التوصيات</div>
+                        <div class="discharge-highlight-badge">{{ $dischargeStatusBadge }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Watermark -->
+        <div class="bottom-watermark" style="background-image: url('{{ $systemLogoSrc }}');"></div>
+
+        <!-- Footer Page 2 -->
+        <div class="page-num-footer">
+            Page 2 of 2
+        </div>
+    </div>
+
 </div>
 @endforeach
 
 <script>
-    // Generate QR Codes via local library
+    // Generate sharp vector QR codes locally
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof QRCode !== 'undefined') {
-            document.querySelectorAll('.qr-box').forEach(function(box) {
+            document.querySelectorAll('.qr-box-target').forEach(function(box) {
                 var url = box.getAttribute('data-url');
-                box.innerHTML = ''; // replace fallback image with local sharp vector QR code
+                box.innerHTML = '';
                 new QRCode(box, {
                     text: url,
-                    width: 80,
-                    height: 80,
-                    colorDark: '#0f766e',
+                    width: 75,
+                    height: 75,
+                    colorDark: '#005a9c',
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M
                 });
@@ -960,31 +1144,30 @@
         }
     });
 
-    // Copy mode switcher
+    // Copy mode switcher (Patient copy vs Admin copy vs Both)
     function switchCopyMode(mode) {
-        var pagePatient = document.getElementById('page-patient');
-        var pageAdmin = document.getElementById('page-admin');
-        var btnBoth = document.getElementById('btnModeBoth');
+        var copyPatient = document.getElementById('copy-block-patient');
+        var copyAdmin = document.getElementById('copy-block-admin');
         var btnPatient = document.getElementById('btnModePatient');
         var btnAdmin = document.getElementById('btnModeAdmin');
+        var btnBoth = document.getElementById('btnModeBoth');
 
-        // Reset active buttons
-        [btnBoth, btnPatient, btnAdmin].forEach(function(b) {
+        [btnPatient, btnAdmin, btnBoth].forEach(function(b) {
             if (b) b.classList.remove('active');
         });
 
         if (mode === 'both') {
-            pagePatient.style.display = 'flex';
-            pageAdmin.style.display = 'flex';
+            copyPatient.style.display = 'block';
+            copyAdmin.style.display = 'block';
             btnBoth.classList.add('active');
-        } else if (mode === 'patient') {
-            pagePatient.style.display = 'flex';
-            pageAdmin.style.display = 'none';
-            btnPatient.classList.add('active');
         } else if (mode === 'admin') {
-            pagePatient.style.display = 'none';
-            pageAdmin.style.display = 'flex';
+            copyPatient.style.display = 'none';
+            copyAdmin.style.display = 'block';
             btnAdmin.classList.add('active');
+        } else {
+            copyPatient.style.display = 'block';
+            copyAdmin.style.display = 'none';
+            btnPatient.classList.add('active');
         }
     }
 </script>

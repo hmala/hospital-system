@@ -149,6 +149,7 @@ class PatientController extends Controller
                     if (empty($p->user?->phone)) $missingFields[] = 'phone';
                     if (empty($p->national_id)) $missingFields[] = 'national_id';
                     if (empty($p->user?->gender)) $missingFields[] = 'gender';
+                    if (empty($p->age)) $missingFields[] = 'age';
                     if ($p->insurance_type === 'hi' && empty($insNum)) $missingFields[] = 'insurance_number';
                     $isIncomplete = count($missingFields) > 0;
 
@@ -161,6 +162,7 @@ class PatientController extends Controller
                             'gender' => $p->user->gender,
                         ] : null,
                         'age'                  => $p->age,
+                        'dob'                  => $p->user?->date_of_birth ? $p->user->date_of_birth->format('Y-m-d') : null,
                         'blood_type'           => $p->blood_type,
                         'emergency_contact'    => $p->emergency_contact,
                         'national_id'          => $p->national_id,
@@ -224,7 +226,75 @@ class PatientController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return view('patients.index', compact('patients', 'creators', 'kpis'));
+        // جلب تنبيهات إكمال نواقص الضمان النشطة لعرضها أعلى جدول المرضى
+        $user = auth()->user();
+        $pendingInsuranceAlerts = collect();
+        if ($user && ($user->hasRole(['thaman', 'receptionist', 'admin', 'admin-hsop', 'hospital_admin']) || $user->can('view patients'))) {
+            $pendingInsuranceAlerts = \App\Models\Notification::where('type', 'App\Notifications\InsuranceIncompleteAlertNotification')
+                ->whereNull('read_at')
+                ->where('created_at', '>=', Carbon::now()->subHours(24))
+                ->latest()
+                ->get()
+                ->unique(function ($n) {
+                    $data = is_string($n->data) ? json_decode($n->data, true) : $n->data;
+                    return $data['patient_id'] ?? $n->id;
+                });
+        }
+
+        return view('patients.index', compact('patients', 'creators', 'kpis', 'pendingInsuranceAlerts'));
+    }
+
+    /**
+     * استطلاع فوري لتنبيهات نواقص مرضى الضمان النشطة (AJAX Polling Fallback)
+     */
+    public function insuranceAlertsPoll()
+    {
+        $user = auth()->user();
+        if (!$user || (!$user->hasRole(['thaman', 'receptionist', 'admin', 'admin-hsop', 'hospital_admin']) && !$user->can('view patients'))) {
+            return response()->json(['success' => false, 'alerts' => []]);
+        }
+
+        $alerts = \App\Models\Notification::where('type', 'App\Notifications\InsuranceIncompleteAlertNotification')
+            ->whereNull('read_at')
+            ->where('created_at', '>=', Carbon::now()->subHours(24))
+            ->latest()
+            ->get()
+            ->unique(function ($n) {
+                $data = is_string($n->data) ? json_decode($n->data, true) : $n->data;
+                return $data['patient_id'] ?? $n->id;
+            })
+            ->values()
+            ->map(function ($n) {
+                $data = is_string($n->data) ? json_decode($n->data, true) : $n->data;
+                $patient = Patient::with('user')->find($data['patient_id'] ?? null);
+                $patientUser = $patient?->user;
+                $insNum = $patient ? ($patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number)) : '';
+
+                return [
+                    'id' => $n->id,
+                    'patient_id' => $data['patient_id'] ?? null,
+                    'patient_name' => $data['patient_name'] ?? ($patientUser?->name ?? 'مريض غير معروف'),
+                    'missing_fields' => $data['missing_fields'] ?? [],
+                    'time_ago' => $n->created_at->diffForHumans(),
+                    'patient' => [
+                        'id' => $patient?->id ?? ($data['patient_id'] ?? null),
+                        'name' => $patientUser?->name ?? ($data['patient_name'] ?? 'مريض غير معروف'),
+                        'phone' => $patientUser?->phone ?? '',
+                        'gender' => $patientUser?->gender ?? '',
+                        'age' => $patient?->age ?? '',
+                        'dob' => $patientUser?->date_of_birth ? Carbon::parse($patientUser->date_of_birth)->format('Y-m-d') : '',
+                        'national_id' => $patient?->national_id ?? '',
+                        'insurance_number' => $insNum,
+                        'category' => ($patient && $patient->insurance_type === 'hi') ? 'ضمان صحي' : 'كاش / عام',
+                    ],
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'count' => $alerts->count(),
+            'alerts' => $alerts,
+        ]);
     }
 
     public function create()
@@ -521,11 +591,13 @@ class PatientController extends Controller
             'national_id' => ['nullable', 'regex:/^[0-9]+$/', 'unique:patients,national_id,' . $patient->id],
             'insurance_number' => 'nullable|string|max:100',
             'date_of_birth' => 'nullable|date',
+            'age' => 'nullable|integer|min:0|max:130',
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'gender.required' => 'تحديد الجنس مطلوب',
             'national_id.unique' => 'رقم البطاقة الموحدة مستخدم من قبل لمريض آخر',
             'national_id.regex' => 'رقم البطاقة الموحدة يجب أن يحتوي على أرقام فقط',
+            'age.integer' => 'العمر يجب أن يكون رقماً صحيحاً',
         ]);
 
         // تحديث جدول users
@@ -535,7 +607,11 @@ class PatientController extends Controller
         ];
         if ($request->filled('date_of_birth')) {
             $userData['date_of_birth'] = $request->input('date_of_birth');
+        } elseif ($request->filled('age') && is_numeric($request->input('age')) && (int)$request->input('age') >= 0) {
+            $ageInt = (int)$request->input('age');
+            $userData['date_of_birth'] = Carbon::now()->subYears($ageInt)->format('Y-07-01');
         }
+
         if ($patient->user) {
             $patient->user->update($userData);
         }
@@ -557,6 +633,12 @@ class PatientController extends Controller
 
         $patient->load(['user', 'healthInsuranceCategory']);
 
+        // تمييز أي إشعارات عاجلة معلقة خاصة بهذا المريض كمقروءة تلقائياً لإخفاء شريط التنبيه
+        \App\Models\Notification::where('type', 'App\Notifications\InsuranceIncompleteAlertNotification')
+            ->whereNull('read_at')
+            ->where('data', 'like', '%"patient_id":' . $patient->id . '%')
+            ->update(['read_at' => now()]);
+
         return response()->json([
             'success' => true,
             'message' => 'تم حفظ وإكمال بيانات المريض بنجاح!',
@@ -565,6 +647,8 @@ class PatientController extends Controller
                 'name' => $patient->user?->name,
                 'phone' => $patient->user?->phone,
                 'gender' => $patient->user?->gender,
+                'age' => $patient->age,
+                'date_of_birth' => $patient->user?->date_of_birth ? $patient->user->date_of_birth->format('Y-m-d') : null,
                 'national_id' => $patient->national_id,
                 'insurance_number' => $patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number),
             ]

@@ -521,9 +521,34 @@ function getTestUnit($testName, $labTests) {
 
                         $patientGender = $request->visit->patient?->gender ?? 'both';
                         $patientAge    = (int) ($request->visit->patient?->age ?? 0);
-                        $labTestMap = \App\Models\LabTest::with(['subTests' => function($q) {
+                        // خريطة أسماء بديلة واختصارات شائعة لربط التحاليل بدقة
+                        $codeAliases = [
+                            'CBC' => 'CBC_3DIFF',
+                        ];
+                        $normalizedSearchTerms = array_values(array_unique(array_merge(
+                            $testsList,
+                            array_map(fn($t) => $codeAliases[$t] ?? $t, $testsList)
+                        )));
+
+                        $rawLabTests = \App\Models\LabTest::with(['subTests' => function($q) {
                             $q->orderBy('sort_order')->orderBy('id');
-                        }, 'references'])->whereIn('name', $testsList)->get()->keyBy('name');
+                        }, 'references'])->where(function($query) use ($normalizedSearchTerms) {
+                            $query->whereIn('name', $normalizedSearchTerms)
+                                  ->orWhereIn('code', $normalizedSearchTerms);
+                        })->get();
+
+                        $labTestMap = collect();
+                        foreach ($rawLabTests as $ltItem) {
+                            $labTestMap[$ltItem->name] = $ltItem;
+                            if ($ltItem->code) {
+                                $labTestMap[$ltItem->code] = $ltItem;
+                            }
+                        }
+                        foreach ($codeAliases as $alias => $targetCode) {
+                            if (isset($labTestMap[$targetCode]) && !isset($labTestMap[$alias])) {
+                                $labTestMap[$alias] = $labTestMap[$targetCode];
+                            }
+                        }
                         $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
                     @endphp
                     <div class="row mb-4">

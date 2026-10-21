@@ -164,11 +164,9 @@
                     <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
                 </button>
             @endif
-            @if($hasResult)
-                <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn btn-outline-success px-3 py-2 fw-semibold">
-                    <i class="fas fa-print me-1"></i> طباعة التقرير الطبي
-                </a>
-            @endif
+            <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn {{ $hasResult ? 'btn-outline-success' : 'btn-outline-primary' }} px-3 py-2 fw-semibold">
+                <i class="fas fa-print me-1"></i> {{ $hasResult ? 'طباعة التقرير الطبي المعتمد' : 'معاينة / طباعة استمارة التقرير' }}
+            </a>
             <a href="{{ route('radiology-staff.index') }}" class="btn btn-light border px-3 py-2 text-secondary fw-semibold">
                 <i class="fas fa-arrow-right me-1"></i> العودة لطابور الفحص
             </a>
@@ -231,12 +229,42 @@
 
             <div class="col-lg-3 col-sm-6 text-lg-end">
                 <div class="text-muted small mb-1">الفحوصات المقررة</div>
-                <div class="d-flex flex-wrap gap-1 justify-content-lg-end">
-                    @foreach($radNames as $rn)
-                        <span class="badge bg-light text-dark border px-2 py-1">
-                            <i class="fas fa-x-ray text-primary me-1"></i> {{ $rn }}
-                        </span>
-                    @endforeach
+                <div class="d-flex flex-wrap gap-1 justify-content-lg-end align-items-center">
+                    @php
+                        $radTypeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []);
+                        $selectedRadTypes = !empty($radTypeIds) ? \App\Models\RadiologyType::whereIn('id', $radTypeIds)->get() : collect([]);
+                    @endphp
+                    @if($request->payment_status !== 'paid' && $selectedRadTypes->count() > 0)
+                        @foreach($selectedRadTypes as $rt)
+                            @php
+                                $targetName = $details['radiology_targets'][$rt->id] ?? null;
+                            @endphp
+                            <form action="{{ route('radiology-staff.remove-type', [$request, $rt]) }}" method="POST" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا الفحص من الفاتورة" onclick="return confirm('هل أنت متأكد من حذف فحص ({{ $rt->name }}) من طلب المريض؟ سيتم تحديث الفاتورة فورياً.');">
+                                    <span style="font-size: 0.75rem;">{{ $rt->name }}{{ $targetName ? ' ['.$targetName.']' : '' }}</span>
+                                    <i class="fas fa-times" style="font-size: 0.7rem;"></i>
+                                </button>
+                            </form>
+                        @endforeach
+                        <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="إضافة فحص إضافي إلى الطلب">
+                            <i class="fas fa-plus-circle"></i>
+                            <span style="font-size: 0.75rem;">إضافة فحص</span>
+                        </a>
+                    @else
+                        @foreach($radNames as $rn)
+                            <span class="badge bg-light text-dark border px-2 py-1">
+                                <i class="fas fa-x-ray text-primary me-1"></i> {{ $rn }}
+                            </span>
+                        @endforeach
+                        @if($request->payment_status !== 'paid')
+                            <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="إضافة فحص إضافي إلى الطلب">
+                                <i class="fas fa-plus-circle"></i>
+                                <span style="font-size: 0.75rem;">إضافة فحص</span>
+                            </a>
+                        @endif
+                    @endif
                 </div>
             </div>
         </div>
@@ -261,7 +289,8 @@
     @endif
 
     @php
-        $needsSelection = ($request->status === 'pending_service_selection') || empty($request->radiology_names);
+        $showAppend = request()->query('append') == '1';
+        $needsSelection = ($request->status === 'pending_service_selection') || empty($request->radiology_names) || $showAppend;
         $roleNameAr = match($userCategory) {
             'radiology', 'general' => 'الأشعة العادية (X-Ray)',
             'ultrasound' => 'السونار (Ultrasound)',
@@ -281,7 +310,7 @@
                         <i class="fas fa-search-plus fs-6"></i>
                     </span>
                     <div>
-                        <h6 class="fw-bold text-dark mb-0">تحديد نوع الفحص الإشعاعي المطلوب</h6>
+                        <h6 class="fw-bold text-dark mb-0">{{ $showAppend ? 'إضافة فحوصات إضافية لطلب الأشعة' : 'تحديد نوع الفحص الإشعاعي المطلوب' }}</h6>
                         <small class="text-muted">
                             القسم المختص: <strong class="text-primary">{{ $roleNameAr }}</strong>
                             <span class="mx-1">•</span>
@@ -289,14 +318,24 @@
                         </small>
                     </div>
                 </div>
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
-                    <i class="fas fa-exclamation-triangle me-1"></i> بانتظار تحديد الفحص للدفع
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    @if($showAppend)
+                        <a href="{{ route('radiology-staff.show', $request) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                            <i class="fas fa-times me-1"></i> إغلاق
+                        </a>
+                    @else
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
+                            <i class="fas fa-exclamation-triangle me-1"></i> بانتظار تحديد الفحص للدفع
+                        </span>
+                    @endif
+                </div>
             </div>
 
-            <form action="{{ route('radiology-staff.update', $request) }}" method="POST" id="selectRadiologyTypeForm">
+            <form action="{{ $showAppend ? route('radiology-staff.append-types', $request) : route('radiology-staff.update', $request) }}" method="POST" id="selectRadiologyTypeForm">
                 @csrf
-                @method('PUT')
+                @if(!$showAppend)
+                    @method('PUT')
+                @endif
 
                 <!-- حقل البحث الذكي الفوري -->
                 <div class="position-relative mb-2">

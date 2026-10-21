@@ -62,6 +62,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -124,6 +125,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -286,6 +288,12 @@ class RoleManagementController extends Controller
                 'icon' => 'fa-procedures',
                 'color' => 'warning',
                 'description' => 'محطات الجراح والتخدير والتمريض والمقيم، صالات العمليات، وإدارة الأسرّة والغرف'
+            ],
+            'whatsapp' => [
+                'name' => 'خدمات ومراسلات الواتساب (WhatsApp)',
+                'icon' => 'fab fa-whatsapp',
+                'color' => 'success',
+                'description' => 'إرسال ومشاركة التقارير والنتائج الطبية مع المرضى عبر واتساب للأقسام المختلفة'
             ],
             'system_admin' => [
                 'name' => 'إدارة النظام والإعدادات',
@@ -454,11 +462,19 @@ class RoleManagementController extends Controller
             'view activity logs' => ['label' => 'عرض سجل حركات ونشاط الموظفين والرقابة الإدارية', 'action' => 'عرض', 'badge' => 'info'],
             'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
             'manage database sync' => ['label' => 'مزامنة وسحب ورفع قواعد البيانات السحابية', 'action' => 'إدارة', 'badge' => 'danger'],
+
+            // 📲 10. خدمات ومراسلات الواتساب (WhatsApp)
+            'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل المخبرية للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
         ];
     }
 
     private function permissionGroup(string $permissionName): string
     {
+        // 0. WhatsApp Services
+        if (str_contains($permissionName, 'whatsapp')) {
+            return 'whatsapp';
+        }
+
         // 1. Inquiry & Bookings (All Reception & Inpatient Booking Types)
         if (str_starts_with($permissionName, 'inquiry.') || in_array($permissionName, [
             'view inquiries', 'create inquiries', 'manage inquiries', 

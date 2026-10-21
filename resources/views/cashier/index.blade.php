@@ -13,29 +13,74 @@
                             <i class="fas fa-circle fa-xs"></i> مباشر
                         </span>
                     </h2>
-                    <p class="text-muted mb-0">
-                        إدارة المدفوعات والإيصالات - 
-                        <small id="last-update">آخر تحديث: الآن</small>
-                    </p>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                        <p class="text-muted mb-0 small">
+                            إدارة المدفوعات والإيصالات - 
+                            <span id="last-update">آخر تحديث: الآن</span>
+                        </p>
+                        <span class="text-muted d-none d-sm-inline">|</span>
+                        <!-- أداة التحكم بوقت التحديث التلقائي والتحديث الفوري -->
+                        <div class="d-inline-flex align-items-center gap-1 bg-white px-2 py-1 rounded-pill border shadow-sm small">
+                            <i class="fas fa-stopwatch text-primary"></i>
+                            <span class="text-secondary small fw-bold">التحديث:</span>
+                            <select id="refreshIntervalSelect" class="form-select form-select-sm border-0 bg-transparent py-0 ps-1 pe-4 fw-bold text-dark" style="font-size: 0.8rem; width: auto; cursor: pointer;">
+                                <option value="15000">15 ثانية</option>
+                                <option value="30000" selected>30 ثانية</option>
+                                <option value="60000">دقيقة واحدة</option>
+                                <option value="120000">دقيقتين</option>
+                                <option value="0">إيقاف التلقائي</option>
+                            </select>
+                            <button type="button" id="manualRefreshBtn" class="btn btn-sm btn-outline-primary rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px;" title="تحديث فوري الآن">
+                                <i class="fas fa-sync-alt fa-xs" id="refreshIcon"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- فلتر نطاق التاريخ للمقبوضات المعلقة -->
-                <div class="btn-group bg-white p-1 rounded-pill shadow-sm border" role="group">
-                    <a href="{{ route('cashier.index', ['date_filter' => 'today']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? 'today') === 'today' ? 'btn-primary text-white' : 'btn-light text-dark' }}">
-                        <i class="fas fa-calendar-day me-1"></i> معلقات اليوم
-                    </a>
-                    <a href="{{ route('cashier.index', ['date_filter' => 'previous']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'previous' ? 'btn-warning text-dark' : 'btn-light text-dark' }}">
-                        <i class="fas fa-history me-1"></i> المعلقات السابقة
-                        @if(($previousPendingCount ?? 0) > 0)
-                            <span class="badge bg-danger rounded-pill ms-1">{{ $previousPendingCount }}</span>
+                <!-- فلتر نطاق التاريخ للمقبوضات المعلقة والبحث المباشر -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-2">
+                        <input type="hidden" name="date_filter" value="{{ $dateFilter ?? 'today' }}">
+                        <div class="input-group input-group-sm shadow-sm" style="min-width: 240px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" name="search" class="form-control border-start-0" placeholder="بحث باسم المريض، الهاتف، رقم الوصل..." value="{{ $search ?? '' }}">
+                            @if(!empty($search))
+                                <a href="{{ route('cashier.index', ['date_filter' => $dateFilter ?? 'today', 'custom_date' => $customDate ?? '']) }}" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
+                            @endif
+                            <button type="submit" class="btn btn-primary fw-bold px-3">بحث</button>
+                        </div>
+                    </form>
+
+                    <div class="btn-group bg-white p-1 rounded-pill shadow-sm border" role="group">
+                        <a href="{{ route('cashier.index', ['date_filter' => 'today', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? 'today') === 'today' ? 'btn-primary text-white' : 'btn-light text-dark' }}">
+                            <i class="fas fa-calendar-day me-1"></i> معلقات اليوم
+                        </a>
+                        <a href="{{ route('cashier.index', ['date_filter' => 'previous', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'previous' ? 'btn-warning text-dark' : 'btn-light text-dark' }}">
+                            <i class="fas fa-history me-1"></i> المعلقات السابقة
+                            @if(($previousPendingCount ?? 0) > 0)
+                                <span class="badge bg-danger rounded-pill ms-1">{{ $previousPendingCount }}</span>
+                            @endif
+                        </a>
+                        <a href="{{ route('cashier.index', ['date_filter' => 'all', 'search' => $search ?? '']) }}" 
+                           class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'all' ? 'btn-secondary text-white' : 'btn-light text-dark' }}">
+                            <i class="fas fa-infinity me-1"></i> كافة التواريخ
+                        </a>
+                    </div>
+
+                    <!-- اختيار تأريخ محدد -->
+                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-1 bg-white p-1 rounded-pill border shadow-sm">
+                        <input type="hidden" name="date_filter" value="custom">
+                        @if(!empty($search))
+                            <input type="hidden" name="search" value="{{ $search }}">
                         @endif
-                    </a>
-                    <a href="{{ route('cashier.index', ['date_filter' => 'all']) }}" 
-                       class="btn btn-sm rounded-pill px-3 fw-bold {{ ($dateFilter ?? '') === 'all' ? 'btn-secondary text-white' : 'btn-light text-dark' }}">
-                        <i class="fas fa-infinity me-1"></i> كافة التواريخ
-                    </a>
+                        <span class="ps-2 text-muted small"><i class="fas fa-calendar-alt text-primary"></i></span>
+                        <input type="date" name="custom_date" class="form-control form-control-sm border-0 bg-transparent" style="max-width: 140px; font-size: 0.8rem;" value="{{ $customDate ?? request('custom_date') }}" onchange="this.form.submit()">
+                        @if(($dateFilter ?? '') === 'custom' && !empty($customDate))
+                            <span class="badge bg-success rounded-pill me-1"><i class="fas fa-check"></i></span>
+                        @endif
+                    </form>
                 </div>
             </div>
         </div>
@@ -314,144 +359,166 @@
 
                                                             {{-- الطلبات الطبية --}}
                                                             @if($canMedicalRequests)
+                                                                @php $seenVisitsTabAll = []; @endphp
                                                                 @foreach($pendingMedicalRequests ?? [] as $request)
+                                                                    @if($request->visit_id && in_array($request->visit_id, $seenVisitsTabAll))
+                                                                        @continue
+                                                                    @endif
+                                                                    @if($request->visit_id)
+                                                                        @php $seenVisitsTabAll[] = $request->visit_id; @endphp
+                                                                    @endif
+
                                                                     @php
-                                                                        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                                        $siblingRequests = $request->visit_id 
+                                                                            ? \App\Models\Request::where('visit_id', $request->visit_id)
+                                                                                ->where('payment_status', 'pending')
+                                                                                ->where('status', '!=', 'cancelled')
+                                                                                ->get()
+                                                                            : collect([$request]);
+                                                                        if ($siblingRequests->isEmpty()) {
+                                                                            $siblingRequests = collect([$request]);
+                                                                        }
+
                                                                         $reqPatient = optional(optional($request->visit)->patient);
                                                                         $reqAppt = optional(optional($request->visit)->appointment);
-                                                                        $isDirectVisit = empty($reqAppt->doctor_id) && (in_array(optional($request->visit)->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry'])));
-                                                                        
-                                                                        if ($isDirectVisit) {
-                                                                            $insType = 'none';
-                                                                        } else {
-                                                                            $insType = $request->insurance_type ?? optional($reqAppt)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none';
-                                                                        }
-                                                                        
                                                                         $docName = optional(optional(optional($request->visit)->doctor)->user)->name;
-                                                                        $isIns = in_array($insType, ['hi', 'moi']);
-                                                                        
-                                                                        $computedApproved = 0;
-                                                                        $computedPatient = 0;
-                                                                        $hasComputedItems = false;
-                                                                        $copayPct = ($insType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($request->type) : (float)($reqPatient->copay_percentage ?? 15);
 
-                                                                        if ($request->type === 'lab') {
-                                                                            $packageId = $details['package_id'] ?? null;
-                                                                            $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
-                                                                            
-                                                                            if ($pkg) {
-                                                                                $hasComputedItems = true;
-                                                                                $pkgPrice = (float)$pkg->price;
-                                                                                $computedApproved += $pkgPrice;
-                                                                                $computedPatient += $pkgPrice;
-                                                                                
-                                                                                $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
-                                                                                $allTestIds = $details['lab_test_ids'] ?? [];
-                                                                                $extraTestIds = array_diff($allTestIds, $pkgTestIds);
-                                                                                foreach ($extraTestIds as $tId) {
-                                                                                    $t = \App\Models\LabTest::find($tId);
-                                                                                    if ($t) {
-                                                                                        $p = $t->calculateInsurancePricing($insType, $copayPct);
-                                                                                        $computedApproved += $p['approved_price'];
-                                                                                        $computedPatient += $p['patient_share'];
-                                                                                    }
-                                                                                }
-                                                                            } else {
-                                                                                $testIds = $details['lab_test_ids'] ?? [];
-                                                                                if (!empty($testIds)) {
-                                                                                    foreach ($testIds as $tId) {
+                                                                        $totalComputedApproved = 0;
+                                                                        $totalComputedPatient = 0;
+                                                                        $hasAnyComputedItems = false;
+                                                                        $typesPresent = [];
+                                                                        $detailsSummaries = [];
+                                                                        $primaryInsType = 'none';
+                                                                        $primaryCopayPct = 15;
+
+                                                                        foreach ($siblingRequests as $subReq) {
+                                                                            $subDetails = is_string($subReq->details) ? json_decode($subReq->details, true) : $subReq->details;
+                                                                            $subIsDirect = empty($reqAppt->doctor_id) && (in_array(optional($subReq->visit)->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($subDetails['direct_lab_visit']) || !empty($subDetails['direct_radiology_visit']) || !empty($subDetails['created_at_inquiry'])));
+                                                                            $subInsType = $subIsDirect ? 'none' : ($subReq->insurance_type ?? optional($reqAppt)->insurance_type ?? optional($reqPatient)->insurance_type ?? 'none');
+                                                                            $primaryInsType = $subInsType;
+                                                                            $subIsIns = in_array($subInsType, ['hi', 'moi']);
+                                                                            $subCopayPct = ($subInsType === 'hi' && $reqPatient) ? $reqPatient->getCopayPercentageFor($subReq->type) : (float)($reqPatient->copay_percentage ?? 15);
+                                                                            $primaryCopayPct = $subCopayPct;
+
+                                                                            if (!in_array($subReq->type, $typesPresent)) {
+                                                                                $typesPresent[] = $subReq->type;
+                                                                            }
+
+                                                                            if ($subReq->type === 'lab') {
+                                                                                $pkgId = $subDetails['package_id'] ?? null;
+                                                                                $pkg = $pkgId ? \App\Models\Package::find($pkgId) : null;
+                                                                                if ($pkg) {
+                                                                                    $hasAnyComputedItems = true;
+                                                                                    $pkgPrice = (float)$pkg->price;
+                                                                                    $totalComputedApproved += $pkgPrice;
+                                                                                    $totalComputedPatient += $pkgPrice;
+                                                                                    $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
+                                                                                    $allTestIds = $subDetails['lab_test_ids'] ?? [];
+                                                                                    $extraTestIds = array_diff($allTestIds, $pkgTestIds);
+                                                                                    foreach ($extraTestIds as $tId) {
                                                                                         $t = \App\Models\LabTest::find($tId);
                                                                                         if ($t) {
-                                                                                            $hasComputedItems = true;
-                                                                                            $p = $t->calculateInsurancePricing($insType, $copayPct);
-                                                                                            $computedApproved += $p['approved_price'];
-                                                                                            $computedPatient += $p['patient_share'];
+                                                                                            $p = $t->calculateInsurancePricing($subInsType, $subCopayPct);
+                                                                                            $totalComputedApproved += $p['approved_price'];
+                                                                                            $totalComputedPatient += $p['patient_share'];
                                                                                         }
                                                                                     }
-                                                                                } elseif (!empty($details['tests'])) {
-                                                                                    foreach ($details['tests'] as $tName) {
-                                                                                        $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
-                                                                                        if ($t) {
-                                                                                            $hasComputedItems = true;
-                                                                                            $p = $t->calculateInsurancePricing($insType, $copayPct);
-                                                                                            $computedApproved += $p['approved_price'];
-                                                                                            $computedPatient += $p['patient_share'];
+                                                                                    $detailsSummaries[] = '<span class="text-primary fw-semibold"><i class="fas fa-box text-warning me-1"></i> ' . ($subDetails['package_name'] ?? $pkg->name) . '</span>';
+                                                                                } else {
+                                                                                    $testIds = $subDetails['lab_test_ids'] ?? [];
+                                                                                    if (!empty($testIds)) {
+                                                                                        $hasAnyComputedItems = true;
+                                                                                        foreach ($testIds as $tId) {
+                                                                                            $t = \App\Models\LabTest::find($tId);
+                                                                                            if ($t) {
+                                                                                                $p = $t->calculateInsurancePricing($subInsType, $subCopayPct);
+                                                                                                $totalComputedApproved += $p['approved_price'];
+                                                                                                $totalComputedPatient += $p['patient_share'];
+                                                                                            }
+                                                                                        }
+                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($testIds) . ' تحليل</span>';
+                                                                                    } elseif (!empty($subDetails['tests'])) {
+                                                                                        $hasAnyComputedItems = true;
+                                                                                        foreach ($subDetails['tests'] as $tName) {
+                                                                                            $t = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                                                                            if ($t) {
+                                                                                                $p = $t->calculateInsurancePricing($subInsType, $subCopayPct);
+                                                                                                $totalComputedApproved += $p['approved_price'];
+                                                                                                $totalComputedPatient += $p['patient_share'];
+                                                                                            }
+                                                                                        }
+                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($subDetails['tests']) . ' تحليل</span>';
+                                                                                    } else {
+                                                                                        $detailsSummaries[] = e($subReq->description ?? 'تحاليل مخبرية');
+                                                                                    }
+                                                                                }
+                                                                            } elseif ($subReq->type === 'radiology') {
+                                                                                $typeIds = $subDetails['radiology_type_ids'] ?? $subDetails['radiology_types'] ?? $subDetails['radiology_type_id'] ?? $subDetails['ultrasound_type_id'] ?? [];
+                                                                                if (!is_array($typeIds)) $typeIds = [$typeIds];
+                                                                                if (!empty($typeIds)) {
+                                                                                    $hasAnyComputedItems = true;
+                                                                                    foreach ($typeIds as $rId) {
+                                                                                        $r = \App\Models\RadiologyType::find($rId);
+                                                                                        if ($r) {
+                                                                                            $p = $r->calculateInsurancePricing($subInsType, $subCopayPct);
+                                                                                            $totalComputedApproved += $p['approved_price'];
+                                                                                            $totalComputedPatient += $p['patient_share'];
                                                                                         }
                                                                                     }
+                                                                                    $detailsSummaries[] = '<span class="text-info"><i class="fas fa-camera me-1"></i> ' . count($typeIds) . ' فحص أشعة</span>';
+                                                                                } else {
+                                                                                    $detailsSummaries[] = e($subReq->description ?? 'فحص شعاعي');
                                                                                 }
-                                                                            }
-                                                                        } elseif ($request->type === 'radiology') {
-                                                                            $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? $details['ultrasound_type_id'] ?? [];
-                                                                            if (!is_array($typeIds)) $typeIds = [$typeIds];
-                                                                            if (!empty($typeIds)) {
-                                                                                foreach ($typeIds as $rId) {
-                                                                                    $r = \App\Models\RadiologyType::find($rId);
-                                                                                    if ($r) {
-                                                                                        $hasComputedItems = true;
-                                                                                        $p = $r->calculateInsurancePricing($insType, $copayPct);
-                                                                                        $computedApproved += $p['approved_price'];
-                                                                                        $computedPatient += $p['patient_share'];
-                                                                                    }
+                                                                            } else {
+                                                                                if ($subReq->total_amount > 0) {
+                                                                                    $totalComputedApproved += $subReq->total_amount;
+                                                                                    $totalComputedPatient += $subReq->total_amount;
                                                                                 }
+                                                                                $detailsSummaries[] = e($subReq->description ?? $subReq->type);
                                                                             }
                                                                         }
+                                                                        $isIns = in_array($primaryInsType, ['hi', 'moi']);
                                                                     @endphp
                                                                     <tr>
-                                                                        <td><strong>#{{ $request->id }}</strong></td>
                                                                         <td>
-                                                                            @if($request->type === 'lab')
-                                                                                <span class="badge bg-primary"><i class="fas fa-flask me-1"></i> تحاليل</span>
-                                                                            @elseif($request->type === 'radiology')
-                                                                                <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة</span>
-                                                                            @elseif($request->type === 'pharmacy')
-                                                                                <span class="badge bg-success"><i class="fas fa-pills me-1"></i> صيدلية</span>
-                                                                            @else
-                                                                                <span class="badge bg-secondary">{{ $request->type }}</span>
+                                                                            <strong>#{{ $siblingRequests->pluck('id')->implode(', #') }}</strong>
+                                                                        </td>
+                                                                        <td>
+                                                                            @foreach($typesPresent as $tp)
+                                                                                @if($tp === 'lab')
+                                                                                    <span class="badge bg-primary mb-1"><i class="fas fa-flask me-1"></i> تحاليل</span>
+                                                                                @elseif($tp === 'radiology')
+                                                                                    <span class="badge bg-info text-dark mb-1"><i class="fas fa-x-ray me-1"></i> أشعة</span>
+                                                                                @elseif($tp === 'pharmacy')
+                                                                                    <span class="badge bg-success mb-1"><i class="fas fa-pills me-1"></i> صيدلية</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary mb-1">{{ $tp }}</span>
+                                                                                @endif
+                                                                            @endforeach
+                                                                            @if($siblingRequests->count() > 1)
+                                                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-block mt-1" style="font-size: 0.7rem;"><i class="fas fa-link me-1"></i> طلب موحد ({{ $siblingRequests->count() }})</span>
                                                                             @endif
                                                                         </td>
                                                                         <td>
                                                                             <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
-                                                                                @if($insType === 'moi')
+                                                                                @if($primaryInsType === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
-                                                                                @elseif($insType === 'hi')
+                                                                                @elseif($primaryInsType === 'hi')
                                                                                     <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
                                                                                 @endif
                                                                             </div>
                                                                             <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
                                                                         </td>
                                                                         <td>
-                                                                            @if($request->type === 'lab')
-                                                                                @if(!empty($details['package_id']))
-                                                                                    @php $pkgName = $details['package_name'] ?? optional(\App\Models\Package::find($details['package_id']))->name ?? 'باقة مختبر'; @endphp
-                                                                                    <div class="fw-semibold text-primary"><i class="fas fa-box text-warning me-1"></i> {{ $pkgName }}</div>
-                                                                                    <small class="text-muted">({{ count($details['lab_test_ids'] ?? []) }} تحاليل مشمولة)</small>
-                                                                                @elseif(isset($details['lab_test_ids']))
-                                                                                    <small class="text-muted">
-                                                                                        <i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل
-                                                                                    </small>
-                                                                                @else
-                                                                                    <small class="text-muted">{{ $request->description }}</small>
-                                                                                @endif
-                                                                                @if($docName) <br><small class="text-muted">طلب: د. {{ $docName }}</small> @endif
-                                                                            @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
-                                                                                <small class="text-muted">
-                                                                                    <i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص شعاعي
-                                                                                    @if($docName) <br>طلب: د. {{ $docName }} @endif
-                                                                                </small>
-                                                                            @else
-                                                                                <small class="text-muted">{{ $request->description }}</small>
-                                                                            @endif
+                                                                            {!! implode(' <span class="text-muted mx-1">+</span> ', $detailsSummaries) !!}
+                                                                            @if($docName) <br><small class="text-muted">طلب: د. {{ $docName }}</small> @endif
                                                                         </td>
                                                                         <td class="text-end">
-                                                                            @if($isIns && $hasComputedItems)
-                                                                                <div class="text-success fw-bold">{{ number_format($computedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
-                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($computedApproved) }} د.ع</small>
-                                                                            @elseif($isIns && $request->total_amount > 0)
-                                                                                @php $pShare = round($request->total_amount * ($copayPct / 100)); @endphp
-                                                                                <div class="text-success fw-bold">{{ number_format($pShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$copayPct }}%</span></div>
-                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($request->total_amount) }} د.ع</small>
+                                                                            @if($isIns && $hasAnyComputedItems)
+                                                                                <div class="text-success fw-bold">{{ number_format($totalComputedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">تحمل {{ (float)$primaryCopayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">معتمد: {{ number_format($totalComputedApproved) }} د.ع</small>
                                                                             @else
-                                                                                <span class="text-success fw-bold">{{ $request->total_amount !== null ? number_format($request->total_amount) . ' د.ع' : ($hasComputedItems ? number_format($computedApproved) . ' د.ع' : 'يحدد عند التسديد') }}</span>
+                                                                                <span class="text-success fw-bold">{{ $hasAnyComputedItems ? number_format($totalComputedApproved) . ' د.ع' : 'يحدد عند التسديد' }}</span>
                                                                             @endif
                                                                         </td>
                                                                         <td>
@@ -460,7 +527,7 @@
                                                                         </td>
                                                                         <td class="text-center">
                                                                             <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                                <i class="fas fa-money-bill-wave me-1"></i> تسديد
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> {{ $siblingRequests->count() > 1 ? 'تسديد شامل (' . $siblingRequests->count() . ')' : 'تسديد' }}
                                                                             </a>
                                                                         </td>
                                                                     </tr>
@@ -501,6 +568,29 @@
                                                             @endif
                                                         </tbody>
                                                     </table>
+                                                </div>
+                                                <div class="p-3 border-top bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                    <div class="small text-muted">
+                                                        <i class="fas fa-info-circle text-primary me-1"></i>
+                                                        يعرض تبويب <strong>الكل</strong> أحدث المعاملات المجمعة. لتصفح كامل الصفحات المقسمة والمفهرسة، اختر التبويب المطلوب:
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        @if($canConsultation)
+                                                            <button type="button" class="btn btn-outline-warning btn-sm fw-bold px-2 py-1 text-dark" onclick="document.getElementById('tab-appointments-btn').click()">
+                                                                <i class="fas fa-calendar-check me-1"></i> كشفية الاستشارية ({{ $appointmentsCount }})
+                                                            </button>
+                                                        @endif
+                                                        @if($canMedicalRequests)
+                                                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-requests-btn').click()">
+                                                                <i class="fas fa-flask me-1"></i> التحاليل والأشعة ({{ $requestsCount }})
+                                                            </button>
+                                                        @endif
+                                                        @if($canEmergency)
+                                                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-emergency-btn').click()">
+                                                                <i class="fas fa-ambulance me-1"></i> الطوارئ ({{ $emergencyCount }})
+                                                            </button>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             @else
                                                 <div class="text-center py-5">
@@ -582,6 +672,12 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                @if(isset($pendingAppointments) && $pendingAppointments->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">عرض {{ $pendingAppointments->firstItem() }} إلى {{ $pendingAppointments->lastItem() }} من أصل {{ $pendingAppointments->total() }} موعد</span>
+                                                        {{ $pendingAppointments->links() }}
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -610,8 +706,25 @@
                                                             </tr>
                                                         </thead>
                                                         <tbody>
+                                                            @php $seenVisitsTabRequests = []; @endphp
                                                             @foreach($pendingMedicalRequests ?? [] as $request)
+                                                                @if($request->visit_id && in_array($request->visit_id, $seenVisitsTabRequests))
+                                                                    @continue
+                                                                @endif
+                                                                @if($request->visit_id)
+                                                                    @php $seenVisitsTabRequests[] = $request->visit_id; @endphp
+                                                                @endif
+
                                                                 @php
+                                                                    $siblingRequests = $request->visit_id 
+                                                                        ? \App\Models\Request::where('visit_id', $request->visit_id)
+                                                                            ->where('payment_status', 'pending')
+                                                                            ->where('status', '!=', 'cancelled')
+                                                                            ->get()
+                                                                        : collect([$request]);
+                                                                    if ($siblingRequests->isEmpty()) {
+                                                                        $siblingRequests = collect([$request]);
+                                                                    }
                                                                     $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
                                                                     $reqPatient = optional(optional($request->visit)->patient);
                                                                     $reqAppt = optional(optional($request->visit)->appointment);
@@ -693,16 +806,29 @@
                                                                     }
                                                                 @endphp
                                                                 <tr>
-                                                                    <td><strong>#{{ $request->id }}</strong></td>
+                                                                    <td><strong>#{{ $siblingRequests->pluck('id')->implode(', #') }}</strong></td>
                                                                     <td>
-                                                                        @if($request->type === 'lab')
-                                                                            <span class="badge bg-primary px-2 py-1"><i class="fas fa-flask me-1"></i> المختبر</span>
-                                                                        @elseif($request->type === 'radiology')
-                                                                            <span class="badge bg-info text-dark px-2 py-1"><i class="fas fa-x-ray me-1"></i> الأشعة</span>
-                                                                        @elseif($request->type === 'pharmacy')
-                                                                            <span class="badge bg-success px-2 py-1"><i class="fas fa-pills me-1"></i> الصيدلية</span>
+                                                                        @if($siblingRequests->count() > 1)
+                                                                            @foreach($siblingRequests->pluck('type')->unique() as $stp)
+                                                                                @if($stp === 'lab')
+                                                                                    <span class="badge bg-primary px-2 py-1 mb-1"><i class="fas fa-flask me-1"></i> المختبر</span>
+                                                                                @elseif($stp === 'radiology')
+                                                                                    <span class="badge bg-info text-dark px-2 py-1 mb-1"><i class="fas fa-x-ray me-1"></i> الأشعة</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary px-2 py-1 mb-1">{{ $stp }}</span>
+                                                                                @endif
+                                                                            @endforeach
+                                                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-block mt-1" style="font-size: 0.7rem;"><i class="fas fa-link me-1"></i> طلب موحد</span>
                                                                         @else
-                                                                            <span class="badge bg-secondary px-2 py-1">{{ $request->type }}</span>
+                                                                            @if($request->type === 'lab')
+                                                                                <span class="badge bg-primary px-2 py-1"><i class="fas fa-flask me-1"></i> المختبر</span>
+                                                                            @elseif($request->type === 'radiology')
+                                                                                <span class="badge bg-info text-dark px-2 py-1"><i class="fas fa-x-ray me-1"></i> الأشعة</span>
+                                                                            @elseif($request->type === 'pharmacy')
+                                                                                <span class="badge bg-success px-2 py-1"><i class="fas fa-pills me-1"></i> الصيدلية</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary px-2 py-1">{{ $request->type }}</span>
+                                                                            @endif
                                                                         @endif
                                                                     </td>
                                                                     <td>
@@ -750,7 +876,7 @@
                                                                     <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الفحوصات
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ $siblingRequests->count() > 1 ? 'تسديد شامل (' . $siblingRequests->count() . ')' : 'تسديد الفحوصات' }}
                                                                         </a>
                                                                     </td>
                                                                 </tr>
@@ -758,6 +884,12 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                @if(isset($pendingMedicalRequests) && $pendingMedicalRequests->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">عرض {{ $pendingMedicalRequests->firstItem() }} إلى {{ $pendingMedicalRequests->lastItem() }} من أصل {{ $pendingMedicalRequests->total() }} طلب</span>
+                                                        {{ $pendingMedicalRequests->links() }}
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -771,52 +903,58 @@
                                         @if($canEmergency)
                                         <div class="tab-pane fade" id="tab-emergency" role="tabpanel">
                                             @if($emergencyCount > 0)
-                                                <div class="table-responsive">
-                                                    <table class="table table-hover align-middle mb-0">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th>رقم الإشعار</th>
-                                                                <th>المريض</th>
-                                                                <th>درجة الخطورة</th>
-                                                                <th>الخدمات</th>
-                                                                <th class="text-end">المبلغ المطلوب</th>
-                                                                <th>التاريخ والوقت</th>
-                                                                <th class="text-center">الإجراء</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            @foreach($pendingEmergencyPayments ?? [] as $payment)
-                                                                @php
-                                                                    $em = $payment->emergency;
-                                                                    $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
-                                                                    $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
-                                                                @endphp
-                                                                <tr>
-                                                                    <td><strong>#{{ $payment->id }}</strong></td>
-                                                                    <td>
-                                                                        <div class="fw-semibold">{{ $patientName }}</div>
-                                                                        <small class="text-muted">{{ $patientId }}</small>
-                                                                    </td>
-                                                                    <td>
-                                                                        <span class="badge bg-{{ $payment->emergency->priority_color }} px-2 py-1">
-                                                                            {{ $payment->emergency->priority_text }}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
-                                                                    </td>
-                                                                    <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
-                                                                    <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
-                                                                    <td class="text-center">
-                                                                        <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الطوارئ
-                                                                        </a>
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                 <div class="table-responsive">
+                                                     <table class="table table-hover align-middle mb-0">
+                                                         <thead class="table-light">
+                                                             <tr>
+                                                                 <th>رقم الإشعار</th>
+                                                                 <th>المريض</th>
+                                                                 <th>درجة الخطورة</th>
+                                                                 <th>الخدمات</th>
+                                                                 <th class="text-end">المبلغ المطلوب</th>
+                                                                 <th>التاريخ والوقت</th>
+                                                                 <th class="text-center">الإجراء</th>
+                                                             </tr>
+                                                         </thead>
+                                                         <tbody>
+                                                             @foreach($pendingEmergencyPayments ?? [] as $payment)
+                                                                 @php
+                                                                     $em = $payment->emergency;
+                                                                     $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                     $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                 @endphp
+                                                                 <tr>
+                                                                     <td><strong>#{{ $payment->id }}</strong></td>
+                                                                     <td>
+                                                                         <div class="fw-semibold">{{ $patientName }}</div>
+                                                                         <small class="text-muted">{{ $patientId }}</small>
+                                                                     </td>
+                                                                     <td>
+                                                                         <span class="badge bg-{{ $payment->emergency->priority_color }} px-2 py-1">
+                                                                             {{ $payment->emergency->priority_text }}
+                                                                         </span>
+                                                                     </td>
+                                                                     <td>
+                                                                         <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                     </td>
+                                                                     <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
+                                                                     <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
+                                                                     <td class="text-center">
+                                                                         <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                             <i class="fas fa-money-bill-wave me-1"></i> تسديد الطوارئ
+                                                                         </a>
+                                                                     </td>
+                                                                 </tr>
+                                                             @endforeach
+                                                         </tbody>
+                                                     </table>
+                                                 </div>
+                                                 @if(isset($pendingEmergencyPayments) && $pendingEmergencyPayments->hasPages())
+                                                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                         <span class="small text-muted">عرض {{ $pendingEmergencyPayments->firstItem() }} إلى {{ $pendingEmergencyPayments->lastItem() }} من أصل {{ $pendingEmergencyPayments->total() }} حالة</span>
+                                                         {{ $pendingEmergencyPayments->links() }}
+                                                     </div>
+                                                 @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -1058,16 +1196,70 @@
 
 @section('scripts')
 <script>
-// تحديث تلقائي للصفحة كل 5 ثواني مع الحفاظ على التبويب النشط
-setInterval(function() {
-    // إيقاف التحديث اللحظي إذا كان هناك أي مودال مفتوح لمنع مقاطعة إدخال الكاشير
-    if ($('.modal.show').length > 0 || $('body').hasClass('modal-open') || document.querySelector('.modal.show')) {
-        return;
+// إدارة التحديث التلقائي لمحطة الكاشير (الافتراضي 30 ثانية مع تحكم مرن)
+const defaultRefreshInterval = 30000;
+let savedRefreshInterval = localStorage.getItem('cashier_refresh_interval');
+let refreshInterval = (savedRefreshInterval !== null) ? parseInt(savedRefreshInterval, 10) : defaultRefreshInterval;
+let refreshTimer = null;
+let isRefreshing = false;
+
+function updateLiveIndicatorUI() {
+    const indicator = $('#live-indicator');
+    const select = $('#refreshIntervalSelect');
+    
+    if (select.length) {
+        select.val(refreshInterval);
     }
+    
+    if (refreshInterval === 0) {
+        indicator.removeClass('bg-success').addClass('bg-secondary')
+                 .html('<i class="fas fa-pause fa-xs me-1"></i> متوقف (يدوي)');
+    } else {
+        const seconds = Math.round(refreshInterval / 1000);
+        const label = seconds >= 60 ? (seconds / 60) + ' د' : seconds + ' ث';
+        indicator.removeClass('bg-secondary').addClass('bg-success')
+                 .html('<i class="fas fa-circle fa-xs me-1"></i> مباشر (' + label + ')');
+    }
+}
+
+function scheduleNextRefresh(delay) {
+    if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+    }
+    if (refreshInterval > 0) {
+        refreshTimer = setTimeout(performCashierRefresh, delay !== undefined ? delay : refreshInterval);
+    }
+}
+
+function performCashierRefresh(isManual) {
+    if (isRefreshing) return;
+
+    // إيقاف التحديث اللحظي إذا كان هناك أي مودال مفتوح أو المستند غير مرئي
+    if (!isManual) {
+        if ($('.modal.show').length > 0 || $('body').hasClass('modal-open') || document.querySelector('.modal.show')) {
+            scheduleNextRefresh(10000); // تأجيل في حال وجود نافذة منبثقة مفتوحة
+            return;
+        }
+        if (document.hidden) {
+            scheduleNextRefresh(15000); // تأجيل في حال كان التبويب في الخلفية
+            return;
+        }
+        // إيقاف التحديث إذا كان الكاشير يكتب في حقل بحث أو نموذج
+        if ($('input:focus, textarea:focus, select:focus').length > 0) {
+            scheduleNextRefresh(10000);
+            return;
+        }
+    }
+
+    isRefreshing = true;
+    const refreshIcon = $('#refreshIcon');
+    refreshIcon.addClass('fa-spin text-primary');
 
     $.ajax({
         url: window.location.href,
         type: 'GET',
+        cache: false,
         success: function(response) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(response, 'text/html');
@@ -1092,13 +1284,43 @@ setInterval(function() {
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
                 $('#last-update').text('آخر تحديث: ' + time);
+
+                // مزامنة أداة الاختيار ومؤشر المباشر بعد حقن المحتوى
+                updateLiveIndicatorUI();
             }
         },
         error: function(error) {
-            console.error('خطأ في التحديث:', error);
+            console.error('خطأ في تحديث الكاشير:', error);
+        },
+        complete: function() {
+            isRefreshing = false;
+            refreshIcon.removeClass('fa-spin text-primary');
+            scheduleNextRefresh();
         }
     });
-}, 5000);
+}
+
+// استجابة لتغيير مدة التحديث من القائمة
+$(document).on('change', '#refreshIntervalSelect', function() {
+    const val = parseInt($(this).val(), 10);
+    refreshInterval = isNaN(val) ? defaultRefreshInterval : val;
+    localStorage.setItem('cashier_refresh_interval', refreshInterval);
+    updateLiveIndicatorUI();
+    scheduleNextRefresh();
+});
+
+// زر التحديث اليدوي الفوري
+$(document).on('click', '#manualRefreshBtn', function(e) {
+    e.preventDefault();
+    performCashierRefresh(true);
+});
+
+// استئناف التحديث الذكي عند العودة للتبويب
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && refreshInterval > 0) {
+        scheduleNextRefresh(2000);
+    }
+});
 
 function openRefundModal(requestId, patientName, receiptNo, amount, serviceType, customActionUrl) {
     const modalEl = document.getElementById('medicalRefundModal');
@@ -1136,6 +1358,9 @@ $(document).ready(function() {
     const now = new Date();
     const time = now.toLocaleTimeString('ar-IQ');
     $('#last-update').text('آخر تحديث: ' + time);
+
+    updateLiveIndicatorUI();
+    scheduleNextRefresh();
 
     // restore tab from URL hash if present
     var hash = window.location.hash;

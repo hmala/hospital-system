@@ -20,7 +20,7 @@
             <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
                 <i class="fas fa-print me-1"></i> طباعة الوصل
             </a>
-            <a href="{{ auth()->user()->hasRole('consultation_receptionist') && !auth()->user()->hasRole('admin') ? route('consultant-availability.index') : route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
+            <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
                 <i class="fas fa-arrow-right me-1"></i> العودة للكاشير
             </a>
         </div>
@@ -79,12 +79,17 @@
             ];
         }
 
-        // 2. طلبات الفحوصات الطبية
-        if ($payment->request) {
-            $details = is_string($payment->request->details) ? json_decode($payment->request->details, true) : $payment->request->details;
-            $doctorName = $payment->request->visit?->doctor?->user?->name ? ('د. ' . $payment->request->visit->doctor->user->name) : 'المختبر / الأشعة';
+        // 2. طلبات الفحوصات الطبية الموحدة
+        $linkedRequests = \App\Models\Request::where('payment_id', $payment->id)->get();
+        if ($linkedRequests->isEmpty() && $payment->request) {
+            $linkedRequests = collect([$payment->request]);
+        }
 
-            if ($payment->request->type === 'lab') {
+        foreach ($linkedRequests as $reqItem) {
+            $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
+            $doctorName = $reqItem->visit?->doctor?->user?->name ? ('د. ' . $reqItem->visit->doctor->user->name) : 'المختبر / الأشعة';
+
+            if ($reqItem->type === 'lab') {
                 $packageId = $details['package_id'] ?? null;
                 $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
 
@@ -135,14 +140,17 @@
                         }
                     }
                 }
-            } elseif ($payment->request->type === 'radiology' && isset($details['radiology_type_ids'])) {
-                foreach ($details['radiology_type_ids'] as $typeId) {
+            } elseif ($reqItem->type === 'radiology') {
+                $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
+                $radTargets = $details['radiology_targets'] ?? [];
+                foreach ($typeIds as $typeId) {
                     $type = \App\Models\RadiologyType::find($typeId);
                     if ($type) {
                         $base = (float)$type->base_price;
                         $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $targetPart = isset($radTargets[$typeId]) && !empty($radTargets[$typeId]) ? trim($radTargets[$typeId]) : null;
                         $lineItems[] = [
-                            'name' => 'أشعة: ' . $type->name,
+                            'name' => 'أشعة: ' . $type->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
                             'category' => 'فحص إشعاعي',
                             'doctor' => $doctorName,
                             'approved' => $base,

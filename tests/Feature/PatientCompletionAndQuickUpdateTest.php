@@ -133,19 +133,54 @@ class PatientCompletionAndQuickUpdateTest extends TestCase
                 'gender' => 'male',
                 'insurance_number' => 'CARD-12345',
                 'national_id' => '200012345678',
+                'date_of_birth' => '1995-05-15',
             ]
         ]);
 
-        $this->assertDatabaseHas('users', [
-            'id' => $user->id,
-            'phone' => '07801122334',
-            'gender' => 'male',
-        ]);
+        $user->refresh();
+        $this->assertEquals('07801122334', $user->phone);
+        $this->assertEquals('male', $user->gender);
+        $this->assertEquals('1995-05-15', \Carbon\Carbon::parse($user->date_of_birth)->format('Y-m-d'));
 
         $this->assertDatabaseHas('patients', [
             'id' => $patient->id,
             'national_id' => '200012345678',
             'insurance_card_no' => 'CARD-12345',
         ]);
+    }
+
+    public function test_quick_update_calculates_dob_from_age_input(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'سارة كريم',
+            'phone' => null,
+            'gender' => null,
+            'role' => 'patient',
+        ]);
+        $patient = Patient::create([
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->patchJson(
+            route('patients.quick-update', $patient),
+            [
+                'phone' => '07705544332',
+                'gender' => 'female',
+                'age' => 30,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'patient' => [
+                'id' => $patient->id,
+                'age' => 30,
+            ]
+        ]);
+
+        $user->refresh();
+        $this->assertNotNull($user->date_of_birth);
+        $this->assertEquals(30, $patient->fresh()->age);
     }
 }

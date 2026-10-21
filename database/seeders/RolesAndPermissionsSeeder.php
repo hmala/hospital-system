@@ -120,6 +120,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'toggle lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            'send lab whatsapp',
             
             // صلاحيات الطلبات الطبية العامة
             'view medical requests',
@@ -375,6 +376,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             'process lab requests',
             'manage surgery lab tests',
+            'send lab whatsapp',
             // أضفنا صلاحيات إدارة الباقات لموظفي المختبر
             'view packages',
             'create packages',

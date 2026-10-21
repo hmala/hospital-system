@@ -143,7 +143,7 @@
                                         <div class="d-flex justify-content-between align-items-center w-100 me-3 flex-wrap gap-2">
                                             <div class="d-flex align-items-center">
                                                 <div class="rounded-3 bg-{{ $moduleInfo['color'] }} bg-opacity-10 text-{{ $moduleInfo['color'] }} p-2 me-3 fs-5">
-                                                    <i class="fas {{ $moduleInfo['icon'] }}"></i>
+                                                    <i class="{{ str_contains($moduleInfo['icon'], 'fab') || str_contains($moduleInfo['icon'], 'fa-brands') ? $moduleInfo['icon'] : 'fas ' . $moduleInfo['icon'] }}"></i>
                                                 </div>
                                                 <div>
                                                     <div class="d-flex align-items-center gap-2">
