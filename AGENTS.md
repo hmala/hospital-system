@@ -57,6 +57,25 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 93: فصل حفظ مسودة نتائج المختبر عن الاعتماد النهائي والإرسال للطبيب Lab Draft Saving vs Final Doctor Transmission)
+
+### Done
+- **فصل الحفظ كمسودة عن الاعتماد النهائي ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * عند اختيار `action === 'draft'` أو `status === 'in_progress'`: حفظ النتائج الرقمية والمدخلات ومرفقات الأجهزة والملاحظات كمسودة في قاعدة البيانات وجدول `lab_results`.
+  * تثبيت حالة الطلب على `in_progress` (قيد الفحص بالمختبر) لضمان عدم وصول إشعار للطبيب أو تقدم مسار الطلب لديه قبل اكتمال التحاليل.
+  * توثيق النشاط المكتبي كمسودة `save_lab_draft` وإبقاء فني المختبر في نفس الشاشة مع رسالة نجاح خضراء لتسهيل إكمال باقي الفحوصات لاحقاً.
+  * عند اختيار `action === 'complete'`: اعتماد النتائج نهائياً، تحويل حالة الطلب إلى `completed`، إرسال إشعار التيليجرام، وتوثيق النشاط `save_lab_results`، والتحويل إلى القائمة الرئيسية للمختبر.
+- **شريط الإجراءات المزدوج وشارات الحالة في واجهة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * إضافة زرين مميزين في الترويسة العلوية وفي شريط أسفل النتائج:
+    1. `[ 💾 حفظ مؤقت (مسودة) ]`: بلون تحذيري دافئ ومميز.
+    2. `[ 🚀 اعتماد نهائي وإرسال للطبيب ]`: بلون أخضر رسمي.
+  * شارة ذكية أعلى الصفحة `[ ✏️ مسودة قيد الفحص ]` توضح لفني المختبر حالة الطلب الحالية بوضوح، وبطاقة تنبيه سفلية تبين وضع الطلب.
+  * ضبط دالة JavaScript `submitLabForm` لتحديد نوع الإجراء والحالة بدقة وسلاسة.
+- **حماية واجهة الطبيب والبيانات (Zero Doctor Disruption & Zero Data Loss)**:
+  * الإبقاء الكامل على واجهة كشف الطبيب دون أي تغيير؛ تظل تعرض مرحلة `[ 🔬 تنفيذ الفحص بالمختبر ]` طالما أن الطلب مسودة، ولا تنتقل إلى `[ ✅ النتيجة جاهزة ]` إلا بعد الاعتماد النهائي.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabDraftResultSaveTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabDraftResultSaveTest.php))**:
+  * اجتياز كامل لـ 3 اختبارات ميزة تغطي حفظ المسودة، والاعتماد النهائي، ووجود الأزرار الثنائية (`3 passed, 20 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 95: حظر الفحوصات المعطلة ومنع تكرار التحاليل في واجهة المختبر والكاشير ومطابقة طلبات الطبيب 1-to-1 دون المساس بسجلات قاعدة البيانات Lab & Cashier Active-Only Filtering, Name Deduplication & 1-to-1 Doctor Order Fidelity)
 
 ### Done

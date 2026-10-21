@@ -177,7 +177,13 @@ $age = $patient?->age ?? null;
                             <h5 class="mb-0 fw-bold text-dark">
                                 طلب المختبر #{{ $request->id }}
                             </h5>
-                            <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
+                            @if($request->status === 'in_progress')
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="الطلب محفوظ كمسودة قيد الفحص بالمختبر ولم يُرسل للطبيب بعد">
+                                    <i class="fas fa-edit me-1 text-warning"></i> مسودة قيد الفحص
+                                </span>
+                            @else
+                                <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
+                            @endif
                         </div>
                         <small class="text-muted">
                             <i class="fas fa-calendar-alt me-1"></i> {{ $request->created_at->format('Y-m-d H:i') }}
@@ -203,8 +209,12 @@ $age = $patient?->age ?? null;
                     @endif
 
                     @if(!$isBloodBankRequest)
-                        <button type="submit" form="labResultForm" class="btn btn-primary fw-bold shadow-sm px-3">
-                            <i class="fas fa-check-circle me-1"></i> حفظ واعتماد النتائج
+                        <button type="submit" form="labResultForm" name="action" value="draft" onclick="submitLabForm('draft')" class="btn btn-warning text-dark fw-bold shadow-sm px-3 border-warning" title="حفظ النتائج والمدخلات كمسودة في المختبر دون إرسالها للطبيب">
+                            <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                        </button>
+
+                        <button type="submit" form="labResultForm" name="action" value="complete" onclick="submitLabForm('complete')" class="btn btn-success fw-bold shadow-sm px-3" title="اعتماد النتائج نهائياً وإرسالها لعيادة الطبيب">
+                            <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال للطبيب
                         </button>
                     @endif
 
@@ -746,8 +756,8 @@ $age = $patient?->age ?? null;
         <form action="{{ route('lab.update', $request) }}" method="POST" enctype="multipart/form-data" id="labResultForm">
             @csrf
             @method('PUT')
-            <input type="hidden" name="status" value="completed">
-            <input type="hidden" name="action" value="complete">
+            <input type="hidden" name="status" value="completed" id="labFormStatus">
+            <input type="hidden" name="action" value="complete" id="labFormAction">
 
             <div class="row g-3 mb-3">
                 <!-- العمود الأيمن (8 أعمدة): جدول النتائج الرقمية والمديات المرجعية -->
@@ -1117,12 +1127,57 @@ $age = $patient?->age ?? null;
                 </div>
             </div>
 
+            <!-- شريط أزرار الحفظ والاعتماد السفلي -->
+            <div class="card shadow-sm border-0 bg-white rounded-3 p-3 mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        @if($request->status === 'in_progress')
+                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3 fs-6">
+                                <i class="fas fa-info-circle me-1 text-warning"></i> هذا الطلب محفوظ كـ <strong>مسودة قيد الفحص بالمختبر</strong> (لم يُرسل للطبيب بعد)
+                            </span>
+                        @elseif($request->status === 'completed')
+                            <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3 fs-6">
+                                <i class="fas fa-check-double me-1 text-success"></i> هذا الطلب <strong>معتمد ومكتمل ومُرسل للطبيب</strong>
+                            </span>
+                        @else
+                            <span class="badge bg-secondary-subtle text-secondary py-2 px-3 fs-6">
+                                <i class="fas fa-clock me-1"></i> حالة الطلب الحالية: {{ $request->status_text }}
+                            </span>
+                        @endif
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" name="action" value="draft" onclick="submitLabForm('draft')" class="btn btn-warning text-dark fw-bold shadow-sm px-4 py-2 border-warning" title="حفظ النتائج والمدخلات كمسودة في المختبر دون إرسالها للطبيب">
+                            <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                        </button>
+
+                        <button type="submit" name="action" value="complete" onclick="submitLabForm('complete')" class="btn btn-success fw-bold shadow-sm px-4 py-2" title="اعتماد النتائج نهائياً وإرسالها لعيادة الطبيب">
+                            <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال للطبيب
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </form>
     @endif
 
 </div>
 
 <script>
+// ──────────────── دالة ضبط نوع الإجراء (مسودة أو اعتماد نهائي) ────────────────
+function submitLabForm(actionType) {
+    const actionInput = document.getElementById('labFormAction');
+    const statusInput = document.getElementById('labFormStatus');
+    
+    if (actionType === 'draft') {
+        if (actionInput) actionInput.value = 'draft';
+        if (statusInput) statusInput.value = 'in_progress';
+    } else {
+        if (actionInput) actionInput.value = 'complete';
+        if (statusInput) statusInput.value = 'completed';
+    }
+}
+
 // ──────────────── دوال رفع المرفقات بنمط الكبسولة الأنيقة ────────────────
 function handlePillUpload(input) {
     const wrapper = input.closest('.pill-upload-wrapper');

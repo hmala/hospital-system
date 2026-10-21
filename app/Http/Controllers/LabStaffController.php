@@ -436,7 +436,17 @@ class LabStaffController extends Controller
             }
         }
 
-        $targetStatus = $httpRequest->status ?? ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment']) || !empty($details['test_attachments']) ? 'completed' : $request->status);
+        $action = $httpRequest->input('action', 'complete');
+        $isDraft = ($action === 'draft') || ($httpRequest->input('status') === 'in_progress');
+
+        if ($isDraft) {
+            $targetStatus = 'in_progress';
+        } else {
+            $targetStatus = $httpRequest->input('status', 'completed');
+            if ($targetStatus !== 'completed' && ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment']) || !empty($details['test_attachments']))) {
+                $targetStatus = 'completed';
+            }
+        }
         $request->status = $targetStatus;
 
         $existingRes = is_string($request->result) ? (json_decode($request->result, true) ?: []) : ($request->result ?: []);
@@ -472,13 +482,18 @@ class LabStaffController extends Controller
 
         $patientName = $request->visit?->patient?->name ?? 'مريض';
         $countInfo = $savedResults > 0 ? " ({$savedResults} نتيجة تحليل)" : ($hasNewAttachment ? ' (تقرير جهاز مرفق)' : '');
+        $logAction = $isDraft ? 'save_lab_draft' : 'save_lab_results';
+        $logDesc = $isDraft
+            ? "حفظ مسودة مؤقتة لنتائج التحاليل للمريض: {$patientName}{$countInfo} - طلب #{$request->id} (قيد الفحص بالمختبر - لم تُرسل للطبيب)"
+            : "حفظ واعتماد نهائي لنتائج التحاليل وإرسالها للطبيب للمريض: {$patientName}{$countInfo} - طلب #{$request->id}";
+
         \App\Services\UserActivityLogger::log(
-            action: 'save_lab_results',
+            action: $logAction,
             category: 'lab',
-            description: "حفظ واعتماد نتائج التحاليل المخبرية للمريض: {$patientName}{$countInfo} - طلب #{$request->id}",
+            description: $logDesc,
             subject: $request,
             isSensitive: false,
-            properties: ['saved_results' => $savedResults, 'status' => $targetStatus]
+            properties: ['saved_results' => $savedResults, 'status' => $targetStatus, 'action' => $action]
         );
 
         if ($targetStatus === 'completed') {
@@ -498,16 +513,19 @@ class LabStaffController extends Controller
             }
         }
 
+        if ($isDraft) {
+            $draftMsg = $savedResults > 0
+                ? "تم حفظ مسودة النتائج ({$savedResults} نتيجة فحص) بنجاح. الطلب لا يزال قيد الفحص بالمختبر ولم يتم إرساله للطبيب بعد."
+                : ($hasNewAttachment ? "تم حفظ تقارير الأجهزة كمسودة بنجاح." : "تم حفظ مسودة نتائج الفحص بنجاح.");
+
+            return redirect()->route('lab.show', $request)->with('success', $draftMsg);
+        }
+
         $msg = $savedResults > 0
             ? "تم حفظ {$savedResults} نتيجة تحليل" . ($hasNewAttachment ? " مع تقارير الأجهزة المرفقة" : "") . " بنجاح"
             : ($hasNewAttachment ? "تم حفظ وإرفاق تقارير الأجهزة بنجاح" : "تم حفظ بيانات وتفاصيل الفحص بنجاح");
 
-        // إذا تم الاعتماد الكامل ننتقل للقائمة، وإذا كان حفظ مسودة نبقى في نفس الصفحة
-        if ($targetStatus === 'completed' && $httpRequest->action === 'complete') {
-            return redirect()->route('lab.index')->with('success', $msg . ' وتم اعتماد وإنهاء الفحص.');
-        }
-
-        return redirect()->route('lab.show', $request)->with('success', $msg);
+        return redirect()->route('lab.index')->with('success', $msg . ' وتم الاعتماد النهائي والإرسال لعيادة الطبيب.');
     }
 
     public function print(MedicalRequest $request)
