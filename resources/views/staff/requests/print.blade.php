@@ -1519,17 +1519,6 @@
                     return str_contains($check, 'general urine') || str_contains($check, 'g.u.e') || $check === 'gue' || str_contains($check, 'فحص الإدرار العام') || str_contains($check, 'تحليل البول العام') || str_contains($check, 'فحص البول العام');
                 };
 
-                $classifyUrineTest = function($name) {
-                    $n = mb_strtolower(trim($name));
-                    if (in_array($n, ['color', 'aspect', 'appearance', 'deposit', 'reaction', 'ph', 'specific gravity', 'sp. gravity', 'لون', 'المظهر', 'الترسبات', 'التفاعل', 'الكثافة النوعية'])) {
-                        return 'PHYSICAL EXAMINATION';
-                    }
-                    if (in_array($n, ['protein', 'albumin', 'sugar', 'glucose', 'acetone', 'ketones', 'nitrate', 'nitrite', 'urobilinogen', 'leucocytes', 'leukocytes', 'bilirubin', 'blood', 'hemoglobin', 'بروتين', 'سكر', 'اسيتون', 'نترات', 'يوروبيلينوجين', 'كريات بيض'])) {
-                        return 'CHEMICAL EXAMINATION';
-                    }
-                    return 'MICROSCOPIC EXAMINATION';
-                };
-
                 // استخراج قائمة كافة الفحوصات المطلوبة للزيارة
                 $allOrderedTestNames = [];
                 $seenOrderedNames = [];
@@ -1576,7 +1565,36 @@
                                 $val = trim($res->value ?? '');
                                 $unit = trim($res->unit ?? '');
                                 $refRange = trim($res->reference_range ?? '');
-                                $prevItems = $findPrevResults($res->test_name);
+
+                                // التحقق مما إذا كان الفحص عبارة عن فئة مرجعية ديموغرافية لهرمون أو فحص مفرد (مثل Men, Follicular Phase...)
+                                $isDemographicSub = in_array(mb_strtolower(trim($res->test_name)), [
+                                    'men', 'man', 'male', 'women', 'woman', 'female',
+                                    'follicular phase', 'ovulation phase', 'luteal phase', 'postmenopause', 'post-menopause',
+                                    'mid-cycle', 'pregnant', 'non-pregnant', 'رجال', 'نساء'
+                                ]);
+
+                                if ($isDemographicSub && !empty($parentName)) {
+                                    $displayName = $parentName;
+                                    $displayRef = $refRange ? ($refRange . ' (' . $res->test_name . ')') : $refRange;
+                                    $currentGroup = null; // لا يتم فتح ترويسة تصنيف ولا يتم دمج التحاليل التالية
+                                    $showHeader = false;
+                                } elseif (!empty($parentName)) {
+                                    $displayName = $res->test_name;
+                                    $displayRef = $refRange;
+                                    if ($parentName !== $currentGroup) {
+                                        $currentGroup = $parentName;
+                                        $showHeader = true;
+                                    } else {
+                                        $showHeader = false;
+                                    }
+                                } else {
+                                    $displayName = $res->test_name;
+                                    $displayRef = $refRange;
+                                    $currentGroup = null; // إغلاق وتصفير الترويسة السابقة فوراً
+                                    $showHeader = false;
+                                }
+
+                                $prevItems = $findPrevResults($displayName);
 
                                 // تقييم الحالة ديناميكياً بدقة
                                 $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
@@ -1595,8 +1613,7 @@
                                 }
                             @endphp
 
-                            @if($parentName && $parentName !== $currentGroup)
-                                @php $currentGroup = $parentName; @endphp
+                            @if(!empty($showHeader))
                                 <div class="category-header-row">
                                     {{ $currentGroup }}
                                 </div>
@@ -1605,7 +1622,7 @@
                             <div class="test-card">
                                 <div class="test-main-row">
                                     <div class="test-name">
-                                        {{ $res->test_name }}
+                                        {{ $displayName }}
                                     </div>
                                     <div class="test-value-cell">
                                         <div class="current-val-line">
@@ -1644,10 +1661,10 @@
                                     </div>
                                 </div>
 
-                                @if($refRange)
+                                @if($displayRef)
                                 <div class="test-meta-row">
                                     <div class="meta-label">Normal Range :</div>
-                                    <div class="meta-conv-range">{{ $refRange }}</div>
+                                    <div class="meta-conv-range">{{ $displayRef }}</div>
                                     <div class="meta-status-blank"></div>
                                 </div>
                                 @endif
@@ -1750,85 +1767,61 @@
                         GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام
                     </div>
 
-                    @php
-                        $urineCategories = [
-                            'PHYSICAL EXAMINATION' => [
-                                'title_ar' => 'الفحص الفيزيائي',
-                                'items' => [],
-                            ],
-                            'CHEMICAL EXAMINATION' => [
-                                'title_ar' => 'الفحص الكيميائي',
-                                'items' => [],
-                            ],
-                            'MICROSCOPIC EXAMINATION' => [
-                                'title_ar' => 'الفحص المجهري',
-                                'items' => [],
-                            ],
-                        ];
+                    <div class="tests-header-bar">
+                        <div class="header-col">Test Description</div>
+                        <div class="header-col center">Result</div>
+                        <div class="header-col right">Status</div>
+                    </div>
 
-                        foreach ($urineResults as $uRes) {
-                            $c = $classifyUrineTest($uRes->test_name);
-                            $urineCategories[$c]['items'][] = $uRes;
-                        }
-                    @endphp
+                    @foreach($urineResults as $uRes)
+                        @php
+                            $uVal = trim($uRes->value ?? '');
+                            $uUnit = trim($uRes->unit ?? '');
+                            $uRef = trim($uRes->reference_range ?? '');
+                            $uStatus = calcLabStatus($uVal, $uRef, $uRes->status ?? 'normal');
 
-                    @foreach($urineCategories as $catKey => $catInfo)
-                        @if(count($catInfo['items']) > 0)
-                            <div class="gue-category-header">
-                                {{ $catKey }} ({{ $catInfo['title_ar'] }})
-                            </div>
-
-                            @foreach($catInfo['items'] as $uRes)
-                                @php
-                                    $uVal = trim($uRes->value ?? '');
-                                    $uUnit = trim($uRes->unit ?? '');
-                                    $uRef = trim($uRes->reference_range ?? '');
-                                    $uStatus = calcLabStatus($uVal, $uRef, $uRes->status ?? 'normal');
-
-                                    $uClass = 'val-normal';
-                                    if ($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+') {
-                                        $uClass = 'val-high';
-                                    } elseif ($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-') {
-                                        $uClass = 'val-low';
-                                    } elseif ($uStatus === 'abnormal') {
-                                        $uClass = 'val-abnormal';
-                                    }
-                                @endphp
-                                <div class="gue-test-card">
-                                    <div class="test-main-row" style="margin-bottom: 1px;">
-                                        <div class="test-name" style="font-size: 12px;">
-                                            {{ $uRes->test_name }}
-                                        </div>
-                                        <div class="test-value-cell">
-                                            <div class="current-val-line">
-                                                <span class="{{ $uClass }}" style="font-size: 12px;">{{ $uVal ?: '—' }}</span>
-                                                @if($uUnit)
-                                                    <span class="unit-label" style="font-size: 11px;">{{ $uUnit }}</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="test-value-cell right">
-                                            @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
-                                                <span class="val-status-high" style="font-size: 10px; padding: 0 6px;">Abnormal</span>
-                                            @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
-                                                <span class="val-status-low" style="font-size: 10px; padding: 0 6px;">Low</span>
-                                            @elseif($uVal !== '' && $uVal !== '—')
-                                                <span class="val-status-normal" style="font-size: 10px; padding: 0 6px;">Normal</span>
-                                            @else
-                                                <span class="text-muted" style="font-size: 11px;">—</span>
-                                            @endif
-                                        </div>
+                            $uClass = 'val-normal';
+                            if ($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+') {
+                                $uClass = 'val-high';
+                            } elseif ($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-') {
+                                $uClass = 'val-low';
+                            } elseif ($uStatus === 'abnormal') {
+                                $uClass = 'val-abnormal';
+                            }
+                        @endphp
+                        <div class="test-card" style="padding: 2.5px 4px;">
+                            <div class="test-main-row" style="margin-bottom: 1px;">
+                                <div class="test-name" style="font-size: 12px;">
+                                    {{ $uRes->test_name }}
+                                </div>
+                                <div class="test-value-cell">
+                                    <div class="current-val-line">
+                                        <span class="{{ $uClass }}" style="font-size: 12px;">{{ $uVal ?: '—' }}</span>
+                                        @if($uUnit)
+                                            <span class="unit-label" style="font-size: 11px;">{{ $uUnit }}</span>
+                                        @endif
                                     </div>
-                                    @if($uRef)
-                                    <div class="test-meta-row" style="font-size: 10.5px; margin-bottom: 0;">
-                                        <div class="meta-label">Reference Range :</div>
-                                        <div class="meta-conv-range" style="font-size: 10.5px;">{{ $uRef }}</div>
-                                        <div class="meta-status-blank"></div>
-                                    </div>
+                                </div>
+                                <div class="test-value-cell right">
+                                    @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
+                                        <span class="val-status-high" style="font-size: 10px; padding: 0 6px;">Abnormal</span>
+                                    @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
+                                        <span class="val-status-low" style="font-size: 10px; padding: 0 6px;">Low</span>
+                                    @elseif($uVal !== '' && $uVal !== '—')
+                                        <span class="val-status-normal" style="font-size: 10px; padding: 0 6px;">Normal</span>
+                                    @else
+                                        <span class="text-muted" style="font-size: 11px;">—</span>
                                     @endif
                                 </div>
-                            @endforeach
-                        @endif
+                            </div>
+                            @if($uRef)
+                            <div class="test-meta-row" style="font-size: 10.5px; margin-bottom: 0;">
+                                <div class="meta-label">Reference Range :</div>
+                                <div class="meta-conv-range" style="font-size: 10.5px;">{{ $uRef }}</div>
+                                <div class="meta-status-blank"></div>
+                            </div>
+                            @endif
+                        </div>
                     @endforeach
 
                     <!-- اعتماد صفحة الإدرار العام -->

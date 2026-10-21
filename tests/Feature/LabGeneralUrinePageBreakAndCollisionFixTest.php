@@ -303,12 +303,12 @@ class LabGeneralUrinePageBreakAndCollisionFixTest extends TestCase
         $this->assertStringContainsString('Ferritin', $html);
         $this->assertStringContainsString('105.0', $html);
 
-        // 3. GUE page break and clinical categories appear
+        // 3. GUE page break and tests appear directly without sub-categorization
         $this->assertStringContainsString('gue-page-break', $html);
         $this->assertStringContainsString('GENERAL URINE EXAMINATION (G.U.E)', $html);
-        $this->assertStringContainsString('PHYSICAL EXAMINATION', $html);
-        $this->assertStringContainsString('CHEMICAL EXAMINATION', $html);
-        $this->assertStringContainsString('MICROSCOPIC EXAMINATION', $html);
+        $this->assertStringNotContainsString('PHYSICAL EXAMINATION', $html);
+        $this->assertStringNotContainsString('CHEMICAL EXAMINATION', $html);
+        $this->assertStringNotContainsString('MICROSCOPIC EXAMINATION', $html);
 
         // 4. Urine subtests appear under GUE
         $this->assertStringContainsString('Color', $html);

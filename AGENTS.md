@@ -67,11 +67,11 @@ Consult these files before making changes or proposing fixes:
 - **إفراد فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة طباعية مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
   * عزل فحص الإدرار العام (19 فحصاً فرعياً) عن الفحوصات العامة (الهرمونات، الدم، الكيمياء) وتطبيق فاصل صفحات طباعي تلقائي: `.gue-page-break` (`page-break-before: always; break-before: page;`).
   * إذا كان الطلب يحتوي على G.U.E فقط دون تحاليل أخرى، يُطبع في صفحة واحدة مباشرة دون إحداث صفحة بيضاء سابقة.
-  * تقسيم وتنظيم نتائج فحص الإدرار العام الـ 19 إلى 3 فئات سريرية معتمدة عالمياً:
-    1. **الفحص الفيزيائي (PHYSICAL EXAMINATION)**: Color, Aspect, Deposit, Reaction, Specific Gravity.
-    2. **الفحص الكيميائي (CHEMICAL EXAMINATION)**: Protein, Sugar, Acetone, Nitrate, Urobilinogen, Leucocytes.
-    3. **الفحص المجهري (MICROSCOPIC EXAMINATION)**: Pus cells (W.B.C), R.B.C, Epithelial cells, Casts, Amorphous, Mucus, Crystals, Bacteria.
+  * عرض نتائج فحص الإدرار الـ 19 مباشرة وبشكل سلس في جدول الصفحة المخصصة بدون أي تقسيمات فرعية متكلفة مع ترويسة أعمدة واضحة `[ Test Description | Result | Status ]`.
   * تزويد كل من صفحة الفحوصات العامة وصفحة فحص الإدرار المستقلة بختم وتوقيع معتمد ومستقل بأعلى معايير الجودة الطبية.
+- **عزل وفصل فحوصات الهرمونات والتحاليل الفردية ومنع التصنيف العالق (Category Bleed Fix)**:
+  * التحقق من الفئات المرجعية الديموغرافية (مثل Men, Follicular Phase) وعرض الاسم الطبي الحقيقي للفحص (`Follicular-stimulating hormone` و `Luteinizing hormone`) في عمود Test Description، وإلحاق اسم الفئة بالمعدل الطبيعي: `1.7 - 8.6 (Men)`.
+  * تصفية وإلغاء التصنيف العالق فوراً (`$currentGroup = null`) بحيث تظهر التحاليل المستقلة التالية (`Prolactin`, `Thyroid stimulating hormone`, `25-OH Vitamin`) في سطور وبطاقات مستقلة تماماً ومفصولة بخطوط واضحة دون أي دمج خاطئ.
 - **مطابقة الفحوصات المطلوبة بنسبة 100% وإظهار مرفقات الأجهزة (CBC) والفحوصات المعلقة**:
   * رصد ومطابقة كافة الفحوصات المطلوبة من قبل الطبيب في التقرير المطبوع.
   * الفحوصات المرفقة كتقارير أجهزة (مثل Complete blood count & Differential) يظهر لها سطر رسمي بارز ومميز في جدول النتائج المطبوعة: `Complete blood count & Differential` | `📎 تقرير الجهاز مرفق (Attached Device Report)` | شارة `Attached`.
