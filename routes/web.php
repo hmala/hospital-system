@@ -69,6 +69,10 @@ Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\Emerge
 Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReportController::class, 'view'])
     ->name('lab.public-report');
 
+// مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمريض الحامل للرمز المشفر)
+Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])
+    ->name('lab.attachment');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -465,8 +469,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
-    // مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمختبر)
-    Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('lab.attachment');
 
     // ======= مسارات قسم المختبر =======
     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
