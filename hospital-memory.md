@@ -549,6 +549,16 @@
   * **الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php))**:
     - بناء واجتياز 7 اختبارات ميزة متكاملة تغطي الدمج التلقائي للمختبر والأشعة، الحذف الفردي، تحول الطلب لملغي عند إفراغه، حظر الحذف بعد السداد، وظهور الـ Stepper والجدول المصغر وأرشيف الملغاة (`7 passed, 38 assertions`)، مع اجتياز كامل حزمة الطوارئ بنجاح (`40 passed, 209 assertions`).
 
+- **المرحلة 100:** تصحيح هيدر تقرير المختبر وتنسيق Flexbox للشاشات العامة وإلغاء صندوق المرفقات العلوي من صفحة التقرير (Lab Report Public View Header Layout Fix, Spacing Optimization & Top Attachment Box Removal):
+  * **تصحيح هيدر تقرير المختبر للشاشات العامة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+    - إعادة تفعيل تنسيق `display: flex !important; direction: rtl !important; justify-content: space-between !important; align-items: center !important;` للهيدر الرئيسي `.report-header` وهيدر صفحة الإدرار `.page2-header` في وضع التقرير العام للمريض (`body.is-public-report`).
+    - معالجة مشكلة تكسر وتكدس عناصر الترويسة الرأسي (ظهور العنوان العربي بالأعلى ثم الشعار تحته ثم العنوان الإنجليزي بالأسفل)، وإعادتها فوراً لسطر أفقي أنيق ومتناسق بمحاذاة مثالية.
+    - ضبط التباعد العلوي للتقرير العام `body.is-public-report { padding-top: 65px !important; }` مع تصفيره عند الطباعة الورقية (`padding: 0 !important;`) لمنع تداخل شريط الحفظ والتحميل العائم مع التقرير.
+  * **إلغاء شريط وصندوق المرفقات العلوي من صفحة التقرير الطبي**:
+    - حذف حاوية `print-toolbar-attachments` بالكامل من واجهة التقرير بناءً على توجيهات الطبيب والاتفاق المسبق على إرسال ملفات وتقارير الأجهزة الطبية الأصلية (PDF) مباشرة عبر رسائل الواتساب للمريض.
+  * **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
+    - تحديث وتأكيد اختبارات الميزة لضمان عدم ظهور صندوق المرفقات أو أسطر الأجهزة المكررة مع اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`65 passed, 324 assertions`).
+
 - **المرحلة 99:** عزل صفحات تقرير المختبر وتثبيت الفوتر لكل صفحة، إلغاء السطر التقديري لتقارير الأجهزة وحفظ النتائج السابقة وهيدر الفحوصات (Lab Report Isolated Page Containers, Dedicated Footers, Removal of Placeholder Device Rows, and 100% Previous Results & Header Fidelity):
   * **عزل الصفحات الطباعية بحاويات مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
     - استبدال جدول `report-print-container` بحاويات صفحات مستقلة كلياً `.report-page.page-1` و `.report-page.page-2.gue-page-break` تعمل بنظام CSS Flexbox مع تثبيت الفوتر أسفل كل صفحة على حدة عبر `.report-bottom-block`.

@@ -295,9 +295,9 @@ class LabGeneralUrinePageBreakAndCollisionFixTest extends TestCase
 
         $html = $response->getContent();
 
-        // 1. Attached device report for CBC appears in standard section
-        $this->assertStringContainsString('Complete blood count', $html);
-        $this->assertStringContainsString('Attached Device Report', $html);
+        // 1. Placeholder device row is removed from table and attachments toolbar is excluded
+        $this->assertStringNotContainsString('Attached Device Report', $html);
+        $this->assertStringNotContainsString('print-toolbar-attachments', $html);
 
         // 2. Ferritin appears
         $this->assertStringContainsString('Ferritin', $html);
