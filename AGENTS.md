@@ -57,6 +57,23 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 99: عزل صفحات تقرير المختبر وتثبيت الفوتر لكل صفحة، إلغاء السطر التقديري لتقارير الأجهزة وحفظ النتائج السابقة وهيدر الفحوصات Lab Report Isolated Page Containers, Dedicated Footers, Removal of Placeholder Device Rows, and 100% Previous Results & Header Fidelity)
+
+### Done
+- **عزل الصفحات الطباعية بحاويات مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * استبدال جدول `report-print-container` بحاويات صفحات مستقلة كلياً `.report-page.page-1` و `.report-page.page-2.gue-page-break` بنظام CSS Flexbox مع تثبيت الفوتر أسفل كل صفحة على حدة عبر `.report-bottom-block`.
+  * حل مشكلة الصفحة الأولى بدون فوتر نهائياً؛ تظهر بيانات الطباعة والتاريخ وعنوان المستشفى أسفل الصفحة 1 وأسفل الصفحة 2 بدقة متناهية.
+  * ضبط ارتفاع حاوية الطباعة إلى `min-height: 270mm !important;` مع `page-break-after: always !important;` للصفحة الأولى و `page-break-after: auto !important;` لآخر صفحة لمنع توليد أي صفحة ثالثة بيضاء أو تجاوزات نهائياً.
+- **إلغاء السطر التقديري لمرفقات الأجهزة في جدول التحاليل**:
+  * حذف إدراج أسطر تقديرية للفحوصات المرفقة كـ CBC داخل جدول الكيمياء الحيوية (إلغاء سطر `📎 تقرير الجهاز مرفق` و `Automated Hematology Analyzer / Clinical Device`) بناءً على توجيهات الطبيب، والاعتماد الكامل على بطاقة وأزرار تحميل تقارير الأجهزة الأصلية (PDF) في شريط المرفقات ورسائل الواتساب.
+- **ترويسة مدمجة وخفيفة لصفحة فحص الإدرار العام (G.U.E)**:
+  * تزويد الصفحة الثانية بترويسة مستشفى مصغرة وشريط مختصر لمعلومات المريض (الاسم، العمر، الجنس، رقم العينة، والتاريخ) مع جدول النتائج الـ 19 المضغوط المكون من 4 أعمدة، بحيث تتسع كافة الفحوصات وتوقيع وخاتم المختبر والفوتر المعتمد بأريحية تامة دون أي تزاحم.
+- **الحفاظ بنسبة 100% على النتائج السابقة وهيدر كل تحليل**:
+  * الحفاظ الكامل على دالة استرجاع السجلات التاريخية للمريض `$findPrevResults` وعرض مربع النتائج السابقة الرأسي والرقائق الملونة وتواريخ الفحوصات السابقة أسفل القيمة الحالية لكل تحليل.
+  * الحفاظ على بانر العنوان المستقل لكل فحص (`category-header-row`) لمنع أي تداخل بين التحاليل.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
+  * اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`65 passed, 324 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 98: حل تضارب الباراميترات الفرعية للمختبر وعزل فحص الإدرار العام (G.U.E) في صفحة طباعية مستقلة ومطابقة كافة الفحوصات والمرفقات 100% Lab Subtest Collision Fix, Dedicated GUE Page Break, Clinical Grouping & 100% Ordered Tests Coverage)
 
 ### Done

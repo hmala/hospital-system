@@ -857,68 +857,106 @@
             margin-top: 1px;
         }
 
-        /* Category Header */
+        /* Category & Test Header */
         .category-header-row {
-            background-color: #f1f4f8;
-            color: #1e4b88;
-            font-weight: bold;
-            font-size: 12px;
-            padding: 4px 8px;
+            background-color: #f0f4f8;
+            color: #005a9c;
+            font-weight: 800;
+            font-size: 11.5px;
+            padding: 3.5px 8px;
             margin-top: 6px;
-            border-left: 3px solid #1e4b88;
+            margin-bottom: 2px;
+            border-left: 3.5px solid #005a9c;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             page-break-inside: avoid;
             break-inside: avoid;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         /* General Urine Examination Dedicated Page & Section Styles */
         .gue-page-break {
-            margin-top: 25px;
-            padding-top: 15px;
+            margin-top: 15px;
+            padding-top: 8px;
             border-top: 2px dashed #0284c7;
         }
 
         .gue-banner-header {
             background-color: #005a9c;
             color: #ffffff;
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-weight: 800;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border-radius: 4px;
             text-align: center;
-            letter-spacing: 0.8px;
-            margin-bottom: 8px;
+            letter-spacing: 0.6px;
+            margin-bottom: 4px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .gue-category-header {
-            background-color: #f1f5f9;
-            color: #0369a1;
-            font-weight: bold;
-            font-size: 11.5px;
-            padding: 3px 8px;
-            margin-top: 6px;
-            margin-bottom: 2px;
-            border-left: 3px solid #0284c7;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            page-break-inside: avoid;
-            break-inside: avoid;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        .gue-table-container {
+            width: 100%;
+            margin-bottom: 6px;
         }
 
-        .gue-test-card {
-            padding: 2.5px 4px 2.5px 4px;
-            border-bottom: 1px solid #f1f5f9;
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-
-        .gue-test-card:last-child {
+        .gue-table-header {
+            display: grid;
+            grid-template-columns: 2.2fr 1.3fr 1.3fr 0.9fr;
+            border-top: 1.5px solid #2b5899;
             border-bottom: 1.5px solid #2b5899;
+            padding: 3px 4px;
+            font-weight: 800;
+            color: #1e4b88;
+            font-size: 11.5px;
+        }
+
+        .gue-table-row {
+            display: grid;
+            grid-template-columns: 2.2fr 1.3fr 1.3fr 0.9fr;
+            align-items: center;
+            padding: 2px 4px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 11px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            min-height: 19px;
+        }
+
+        .gue-table-row:nth-child(even) {
+            background-color: #f8fafc;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .gue-table-row:last-child {
+            border-bottom: 1.5px solid #2b5899;
+        }
+
+        .gue-col-desc {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .gue-col-val {
+            text-align: center;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        .gue-col-ref {
+            text-align: center;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .gue-col-status {
+            text-align: center;
         }
 
         /* Footer */
@@ -992,7 +1030,7 @@
                 padding: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                min-height: auto !important;
+                min-height: 270mm !important;
                 position: relative !important;
                 box-sizing: border-box !important;
                 -webkit-print-color-adjust: exact !important;
@@ -1000,7 +1038,13 @@
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
-                page-break-after: auto;
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+
+            .report-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
             }
 
             .decorative-border {
@@ -1055,6 +1099,7 @@
             }
 
             body.letterhead-mode .report-header,
+            body.letterhead-mode .page2-header,
             body.letterhead-mode .decorative-border,
             body.letterhead-mode .corner-pattern,
             body.letterhead-mode .hospital-contact-line,
@@ -1372,405 +1417,281 @@
         </div>
     @endif
 
-    <div class="report-page">
+    @php
+        $isGeneralUrine = function($item) {
+            $parentName = is_object($item) ? ($item->parent_test_name ?? '') : (is_array($item) ? ($item['parent_test_name'] ?? '') : '');
+            $testName = is_object($item) ? ($item->test_name ?? '') : (is_array($item) ? ($item['name'] ?? $item['test_name'] ?? '') : (string)$item);
+            $check = mb_strtolower(trim($parentName . ' ' . $testName));
+            return str_contains($check, 'general urine') || str_contains($check, 'g.u.e') || $check === 'gue' || str_contains($check, 'فحص الإدرار العام') || str_contains($check, 'تحليل البول العام') || str_contains($check, 'فحص البول العام');
+        };
 
+        $standardResults = $labResults->filter(fn($r) => !$isGeneralUrine($r));
+        $urineResults = $labResults->filter(fn($r) => $isGeneralUrine($r));
+
+        $hasStandardContent = ($standardResults->count() > 0);
+        $hasUrineContent = ($urineResults->count() > 0);
+        $hasSavedResults = empty($hasStandardContent) && empty($hasUrineContent) && !empty($request->result) && count($savedArr ?? []) > 0;
+        $hasWorkOrder = empty($hasStandardContent) && empty($hasUrineContent) && empty($hasSavedResults) && count($requestedLabTestsList ?? []) > 0;
+    @endphp
+
+    {{-- =========================================================================
+         PAGE 1: Standard Laboratory Tests (or Full G.U.E if it's the only test)
+         ========================================================================= --}}
+    @if($hasStandardContent || !$hasUrineContent)
+    <div class="report-page page-1">
         <!-- Decorative Border -->
         <div class="decorative-border">
             <div class="corner-pattern top-right"></div>
             <div class="corner-pattern bottom-left"></div>
         </div>
 
-    <table class="report-print-container">
-        <thead>
-            <tr>
-                <td class="print-table-cell-header">
-                    <!-- Header Section (Matching Emergency & Radiology) -->
-                    <div class="report-header" style="direction: rtl;">
-                        <div class="header-hospital-ar">
-                            <h2>مستشفى الكفاءات الأهلي</h2>
-                            <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
-                            <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
-                        </div>
-                        <div class="header-logo">
-                            <img src="{!! $hospitalLogoSrc !!}" 
-                                 alt="Hospital Logo" 
-                                 class="hospital-logo-img" 
-                                 onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
-                                 style="max-height: 80px; max-width: 100px; object-fit: contain;">
-                        </div>
-                        <div class="header-hospital-en">
-                            <h2>Al-Kafa'at Private Hospital</h2>
-                            <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
-                            <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Document Title Banner (Matching Emergency & Radiology) -->
-                    <div class="document-title-banner">
-                        <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' }}</h3>
-                        <div class="report-code-badge">
-                            LAB-#{{ $request->id }}
-                        </div>
-                    </div>
-
-                    <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
-                    <div class="patient-info-card">
-                        <!-- Left Zone: Patient Demographics -->
-                        <div class="patient-zone-main">
-                            <div class="info-row">
-                                <span class="info-pill">Patient Name</span>
-                                <span class="info-colon">:</span>
-                                <span class="val-arabic-name">{{ $arabicName }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Patient Name</span>
-                                <span class="info-colon">:</span>
-                                <span class="val-english-name">{{ $englishName }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Age / Sex</span>
-                                <span class="info-colon">:</span>
-                                <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Phone No.</span>
-                                <span class="info-colon">:</span>
-                                <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Middle Zone: Order, Doctor & Coverage -->
-                        <div class="patient-zone-order">
-                            <div class="info-row">
-                                <span class="info-pill">Consultant</span>
-                                <span class="info-colon">:</span>
-                                <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Sample No.</span>
-                                <span class="info-colon">:</span>
-                                <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Date / Time</span>
-                                <span class="info-colon">:</span>
-                                <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-pill">Coverage</span>
-                                <span class="info-colon">:</span>
-                                <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                                    {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Right Zone: Direct QR Code -->
-                        <div class="patient-zone-qr">
-                            <div class="qr-box">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
-                                <span class="qr-tag">LAB-#{{ $request->id }}</span>
-                                <span class="qr-caption">مسح للنتائج</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if(!isset($isBloodBankRequest) || !$isBloodBankRequest)
-                        <!-- Column Headers -->
-                        <div class="tests-header-bar">
-                            <div class="header-col">Laboratory Test Results</div>
-                            <div class="header-col center">Conventional Units</div>
-                            <div class="header-col right">Status</div>
-                        </div>
-                    @endif
-                </td>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="print-table-cell-body">
-
-        @if(isset($isBloodBankRequest) && $isBloodBankRequest)
-            <!-- Blood Bank Specialized Table -->
-            <div style="margin-top: 20px;">
-                <div class="category-header-row">Blood Bank Request Details</div>
-                @if(isset($bloodBankRequest) && $bloodBankRequest)
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-                        <tbody>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; width: 40%; padding: 6px;">Request ID</td><td>{{ $request->id }}</td></tr>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Status</td><td>{{ $bloodBankRequest->status }}</td></tr>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Donor Group</td><td>{{ $bloodBankRequest->donor_group ?? '-' }}</td></tr>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Patient Group</td><td>{{ $bloodBankRequest->patient_group ?? '-' }}</td></tr>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Compatibility</td><td>{{ $bloodBankRequest->compatibility ?? '-' }}</td></tr>
-                            <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Bottle No</td><td>{{ $bloodBankRequest->bottle_no ?? '-' }}</td></tr>
-                        </tbody>
-                    </table>
-                @endif
+        <div class="report-main-content">
+            <!-- Full Header Section (Matching Emergency & Radiology) -->
+            <div class="report-header" style="direction: rtl;">
+                <div class="header-hospital-ar">
+                    <h2>مستشفى الكفاءات الأهلي</h2>
+                    <h4>{{ $isBloodBankRequest ? 'قسم مصرف الدم ونقل الدم' : 'قسم المختبر والتحاليل الطبية' }}</h4>
+                    <p>{{ $isBloodBankRequest ? 'خدمات فحص ومطابقة وتوفير الدم ومشتقاته' : 'الفحوصات السريرية والتشخيصية المعتمدة' }}</p>
+                </div>
+                <div class="header-logo">
+                    <img src="{!! $hospitalLogoSrc !!}" 
+                         alt="Hospital Logo" 
+                         class="hospital-logo-img" 
+                         onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                         style="max-height: 80px; max-width: 100px; object-fit: contain;">
+                </div>
+                <div class="header-hospital-en">
+                    <h2>Al-Kafa'at Private Hospital</h2>
+                    <h4>{{ $isBloodBankRequest ? 'Blood Bank & Transfusion Dept.' : 'Clinical Laboratory Dept.' }}</h4>
+                    <p>{{ $isBloodBankRequest ? 'Blood Screening & Transfusion Services' : 'Diagnostic & Pathology Services' }}</p>
+                </div>
             </div>
-        @else
-            <!-- Test Items List -->
-            @php
-                $currentGroup = null;
 
-                $isGeneralUrine = function($item) {
-                    $parentName = is_object($item) ? ($item->parent_test_name ?? '') : (is_array($item) ? ($item['parent_test_name'] ?? '') : '');
-                    $testName = is_object($item) ? ($item->test_name ?? '') : (is_array($item) ? ($item['name'] ?? $item['test_name'] ?? '') : (string)$item);
-                    $check = mb_strtolower(trim($parentName . ' ' . $testName));
-                    return str_contains($check, 'general urine') || str_contains($check, 'g.u.e') || $check === 'gue' || str_contains($check, 'فحص الإدرار العام') || str_contains($check, 'تحليل البول العام') || str_contains($check, 'فحص البول العام');
-                };
+            <!-- Document Title Banner -->
+            <div class="document-title-banner">
+                <h3>{{ $isBloodBankRequest ? 'استمارة فحص ومطابقة مصرف الدم (Blood Bank Report)' : ($hasStandardContent ? 'تقرير نتائج الفحوصات المخبرية (Clinical Laboratory Report)' : 'تقرير نتائج فحص الإدرار العام (General Urine Examination)') }}</h3>
+                <div class="report-code-badge">
+                    LAB-#{{ $request->id }}
+                </div>
+            </div>
 
-                // استخراج قائمة كافة الفحوصات المطلوبة للزيارة
-                $allOrderedTestNames = [];
-                $seenOrderedNames = [];
-                foreach ($requestedLabTestsList as $item) {
-                    $tName = trim(is_array($item) ? ($item['name'] ?? '') : (is_object($item) ? ($item->name ?? '') : (string)$item));
-                    if ($tName === '') continue;
-                    $norm = mb_strtolower($tName);
-                    if (!isset($seenOrderedNames[$norm])) {
-                        $seenOrderedNames[$norm] = true;
-                        $allOrderedTestNames[] = $tName;
-                    }
-                }
+            <!-- Patient Info Card (3-Zone Grey Clinical Card with QR) -->
+            <div class="patient-info-card">
+                <!-- Left Zone: Patient Demographics -->
+                <div class="patient-zone-main">
+                    <div class="info-row">
+                        <span class="info-pill">Patient Name</span>
+                        <span class="info-colon">:</span>
+                        <span class="val-arabic-name">{{ $arabicName }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Patient Name</span>
+                        <span class="info-colon">:</span>
+                        <span class="val-english-name">{{ $englishName }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Age / Sex</span>
+                        <span class="info-colon">:</span>
+                        <span class="info-val-text">{{ $patientAge ? $patientAge . ' Year(s)' : '—' }} &nbsp;•&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Phone No.</span>
+                        <span class="info-colon">:</span>
+                        <span class="info-val-text" style="direction: ltr; text-align: right;">{{ $patientPhone ?: '—' }}</span>
+                    </div>
+                </div>
 
-                $standardResults = $labResults->filter(fn($r) => !$isGeneralUrine($r));
-                $urineResults = $labResults->filter(fn($r) => $isGeneralUrine($r));
+                <!-- Middle Zone: Order, Doctor & Coverage -->
+                <div class="patient-zone-order">
+                    <div class="info-row">
+                        <span class="info-pill">Consultant</span>
+                        <span class="info-colon">:</span>
+                        <span class="info-val-text">{{ $doctorEn ?: '—' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Sample No.</span>
+                        <span class="info-colon">:</span>
+                        <span class="info-val-text" style="color: #005a9c; font-weight: 800;">{{ $sampleNo }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Date / Time</span>
+                        <span class="info-colon">:</span>
+                        <span class="info-val-text">{{ $sampleDate }} &nbsp;•&nbsp; {{ $sampleTime }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-pill">Coverage</span>
+                        <span class="info-colon">:</span>
+                        <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
+                            {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                        </span>
+                    </div>
+                </div>
 
-                // التحقق من الفحوصات المطلوبة غير المسجلة بعد في جدول النتائج (مثل المرفقات CBC أو الفحوصات قيد الإنجاز)
-                $coveredStandardTests = [];
-                foreach ($standardResults as $r) {
-                    if (!empty($r->parent_test_name)) {
-                        $coveredStandardTests[mb_strtolower(trim($r->parent_test_name))] = true;
-                    }
-                    $coveredStandardTests[mb_strtolower(trim($r->test_name))] = true;
-                }
-                $uncoveredStandardOrderedTests = [];
-                foreach ($allOrderedTestNames as $tName) {
-                    if ($isGeneralUrine($tName)) continue;
-                    if (!isset($coveredStandardTests[mb_strtolower(trim($tName))])) {
-                        $uncoveredStandardOrderedTests[] = $tName;
-                    }
-                }
+                <!-- Right Zone: Direct QR Code -->
+                <div class="patient-zone-qr">
+                    <div class="qr-box">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
+                        <span class="qr-tag">LAB-#{{ $request->id }}</span>
+                        <span class="qr-caption">مسح للنتائج</span>
+                    </div>
+                </div>
+            </div>
 
-                $hasStandardContent = ($standardResults->count() > 0) || (count($uncoveredStandardOrderedTests) > 0);
-                $hasUrineContent = ($urineResults->count() > 0) || (in_array(true, array_map(fn($t) => $isGeneralUrine($t), $allOrderedTestNames)));
-            @endphp
+            @if(isset($isBloodBankRequest) && $isBloodBankRequest)
+                <!-- Blood Bank Specialized Table -->
+                <div style="margin-top: 20px;">
+                    <div class="category-header-row">Blood Bank Request Details</div>
+                    @if(isset($bloodBankRequest) && $bloodBankRequest)
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; width: 40%; padding: 6px;">Request ID</td><td>{{ $request->id }}</td></tr>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Status</td><td>{{ $bloodBankRequest->status }}</td></tr>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Donor Group</td><td>{{ $bloodBankRequest->donor_group ?? '-' }}</td></tr>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Patient Group</td><td>{{ $bloodBankRequest->patient_group ?? '-' }}</td></tr>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Compatibility</td><td>{{ $bloodBankRequest->compatibility ?? '-' }}</td></tr>
+                                <tr style="border-bottom: 1px solid #ddd; padding: 6px 0;"><td style="font-weight: bold; padding: 6px;">Bottle No</td><td>{{ $bloodBankRequest->bottle_no ?? '-' }}</td></tr>
+                            </tbody>
+                        </table>
+                    @endif
+                </div>
+            @elseif($hasStandardContent)
+                <!-- Standard Tests Column Headers -->
+                <div class="tests-header-bar">
+                    <div class="header-col">Laboratory Test Results</div>
+                    <div class="header-col center">Conventional Units</div>
+                    <div class="header-col right">Status</div>
+                </div>
 
-            @if($labResults->count() > 0 || count($uncoveredStandardOrderedTests) > 0)
-                {{-- 1. الفحوصات العامة القياسية (دم، هرمونات، كيمياء، ومرفقات الأجهزة) --}}
-                @if($hasStandardContent)
-                    <div class="standard-tests-section">
-                        @foreach($standardResults as $res)
-                            @php
-                                $parentName = $res->parent_test_name;
-                                $val = trim($res->value ?? '');
-                                $unit = trim($res->unit ?? '');
-                                $refRange = trim($res->reference_range ?? '');
+                @php $currentGroup = null; @endphp
+                <div class="standard-tests-section">
+                    @foreach($standardResults as $res)
+                        @php
+                            $parentName = $res->parent_test_name;
+                            $val = trim($res->value ?? '');
+                            $unit = trim($res->unit ?? '');
+                            $refRange = trim($res->reference_range ?? '');
 
-                                // التحقق مما إذا كان الفحص عبارة عن فئة مرجعية ديموغرافية لهرمون أو فحص مفرد (مثل Men, Follicular Phase...)
-                                $isDemographicSub = in_array(mb_strtolower(trim($res->test_name)), [
-                                    'men', 'man', 'male', 'women', 'woman', 'female',
-                                    'follicular phase', 'ovulation phase', 'luteal phase', 'postmenopause', 'post-menopause',
-                                    'mid-cycle', 'pregnant', 'non-pregnant', 'رجال', 'نساء'
-                                ]);
+                            // التحقق مما إذا كان الفحص عبارة عن فئة مرجعية ديموغرافية لهرمون أو فحص مفرد (مثل Men, Follicular Phase...)
+                            $isDemographicSub = in_array(mb_strtolower(trim($res->test_name)), [
+                                'men', 'man', 'male', 'women', 'woman', 'female',
+                                'follicular phase', 'ovulation phase', 'luteal phase', 'postmenopause', 'post-menopause',
+                                'mid-cycle', 'pregnant', 'non-pregnant', 'رجال', 'نساء'
+                            ]);
 
-                                if ($isDemographicSub && !empty($parentName)) {
-                                    $displayName = $parentName;
-                                    $displayRef = $refRange ? ($refRange . ' (' . $res->test_name . ')') : $refRange;
-                                    $currentGroup = null; // لا يتم فتح ترويسة تصنيف ولا يتم دمج التحاليل التالية
-                                    $showHeader = false;
-                                } elseif (!empty($parentName)) {
-                                    $displayName = $res->test_name;
-                                    $displayRef = $refRange;
-                                    if ($parentName !== $currentGroup) {
-                                        $currentGroup = $parentName;
-                                        $showHeader = true;
-                                    } else {
-                                        $showHeader = false;
-                                    }
-                                } else {
-                                    $displayName = $res->test_name;
-                                    $displayRef = $refRange;
-                                    $currentGroup = null; // إغلاق وتصفير الترويسة السابقة فوراً
-                                    $showHeader = false;
-                                }
+                            if ($isDemographicSub && !empty($parentName)) {
+                                $headerTitle = $parentName;
+                                $displayName = $parentName;
+                                $displayRef = $refRange ? ($refRange . ' (' . $res->test_name . ')') : $refRange;
+                            } elseif (!empty($parentName)) {
+                                $headerTitle = $parentName;
+                                $displayName = $res->test_name;
+                                $displayRef = $refRange;
+                            } else {
+                                $headerTitle = $res->test_name;
+                                $displayName = $res->test_name;
+                                $displayRef = $refRange;
+                            }
 
-                                $prevItems = $findPrevResults($displayName);
+                            if ($headerTitle !== $currentGroup) {
+                                $currentGroup = $headerTitle;
+                                $showHeader = true;
+                            } else {
+                                $showHeader = false;
+                            }
 
-                                // تقييم الحالة ديناميكياً بدقة
-                                $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
+                            $prevItems = $findPrevResults($displayName);
 
-                                $valClass = 'val-normal';
-                                $flagBadge = '';
-                                if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
-                                    $valClass = 'val-high';
-                                    $flagBadge = '<span class="badge-flag high">↑ High</span>';
-                                } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
-                                    $valClass = 'val-low';
-                                    $flagBadge = '<span class="badge-flag low">↓ Low</span>';
-                                } elseif ($status === 'abnormal') {
-                                    $valClass = 'val-abnormal';
-                                    $flagBadge = '<span class="badge-flag high">Abnormal</span>';
-                                }
-                            @endphp
+                            // تقييم الحالة ديناميكياً بدقة
+                            $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
 
-                            @if(!empty($showHeader))
-                                <div class="category-header-row">
-                                    {{ $currentGroup }}
-                                </div>
-                            @endif
+                            $valClass = 'val-normal';
+                            $flagBadge = '';
+                            if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
+                                $valClass = 'val-high';
+                                $flagBadge = '<span class="badge-flag high">↑ High</span>';
+                            } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
+                                $valClass = 'val-low';
+                                $flagBadge = '<span class="badge-flag low">↓ Low</span>';
+                            } elseif ($status === 'abnormal') {
+                                $valClass = 'val-abnormal';
+                                $flagBadge = '<span class="badge-flag high">Abnormal</span>';
+                            }
+                        @endphp
 
-                            <div class="test-card">
-                                <div class="test-main-row">
-                                    <div class="test-name">
-                                        {{ $displayName }}
-                                    </div>
-                                    <div class="test-value-cell">
-                                        <div class="current-val-line">
-                                            <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
-                                            @if($unit)
-                                                <span class="unit-label">{{ $unit }}</span>
-                                            @endif
-                                        </div>
-                                        @if(!empty($prevItems) && count($prevItems) > 0)
-                                            <div class="prev-vertical-box">
-                                                @foreach($prevItems as $p)
-                                                    @php
-                                                        $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
-                                                        $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
-                                                    @endphp
-                                                    <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
-                                                        <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
-                                                        <span class="prev-date-text">({{ $p['date_short'] }})</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <div class="test-value-cell right">
-                                        @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
-                                            <span class="val-status-high">High</span>
-                                        @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
-                                            <span class="val-status-low">Low</span>
-                                        @elseif($status === 'abnormal')
-                                            <span class="val-status-high">Abnormal</span>
-                                        @elseif($val !== '' && $val !== '—')
-                                            <span class="val-status-normal">Normal</span>
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                @if($displayRef)
-                                <div class="test-meta-row">
-                                    <div class="meta-label">Normal Range :</div>
-                                    <div class="meta-conv-range">{{ $displayRef }}</div>
-                                    <div class="meta-status-blank"></div>
-                                </div>
-                                @endif
-
-                                <div class="test-device-row">
-                                    By Cobas Integra 400 plus (Roche Diagnostics)
-                                </div>
+                        @if(!empty($showHeader))
+                            <div class="category-header-row">
+                                {{ $currentGroup }}
                             </div>
-                        @endforeach
+                        @endif
 
-                        {{-- إدراج الفحوصات المطلوبة غير المسجلة في جدول النتائج (مثل مرفقات الأجهزة كـ CBC أو الفحوصات المعلقة) --}}
-                        @foreach($uncoveredStandardOrderedTests as $uncoveredName)
-                            @php
-                                $hasAttachment = !empty($testAtts[$uncoveredName]) || !empty($requestDetails['test_attachments'][$uncoveredName]);
-                                $dbTest = \App\Models\LabTest::where('name', $uncoveredName)->first();
-                                $uncoveredUnit = $dbTest?->unit;
-                                $uncoveredRef = $dbTest?->reference_range;
-                            @endphp
-                            <div class="test-card">
-                                <div class="test-main-row">
-                                    <div class="test-name">
-                                        {{ $uncoveredName }}
-                                    </div>
-                                    <div class="test-value-cell">
-                                        @if($hasAttachment)
-                                            <div class="current-val-line">
-                                                <span style="font-weight: 700; color: #0284c7; font-size: 12.5px;">
-                                                    📎 تقرير الجهاز مرفق (Attached Device Report)
-                                                </span>
-                                            </div>
-                                        @else
-                                            <div class="current-val-line">
-                                                <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
-                                                @if($uncoveredUnit)
-                                                    <span class="unit-label">{{ $uncoveredUnit }}</span>
-                                                @endif
-                                            </div>
+                        <div class="test-card">
+                            <div class="test-main-row">
+                                <div class="test-name">
+                                    {{ $displayName }}
+                                </div>
+                                <div class="test-value-cell">
+                                    <div class="current-val-line">
+                                        <span class="{{ $valClass }}">{{ $val ?: '—' }}</span>
+                                        @if($unit)
+                                            <span class="unit-label">{{ $unit }}</span>
                                         @endif
                                     </div>
-                                    <div class="test-value-cell right">
-                                        @if($hasAttachment)
-                                            <span class="badge" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px;">
-                                                Attached
-                                            </span>
-                                        @else
-                                            <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">
-                                                Pending
-                                            </span>
-                                        @endif
-                                    </div>
+                                    @if(!empty($prevItems) && count($prevItems) > 0)
+                                        <div class="prev-vertical-box">
+                                            @foreach($prevItems as $p)
+                                                @php
+                                                    $pStatus = calcLabStatus($p['value'], $refRange, $p['status'] ?? 'normal');
+                                                    $pClass = ($pStatus === 'high' || $pStatus === 'positive' || str_contains($pStatus, 'high') || str_contains($pStatus, 'pos') || $pStatus === '+') ? 'high' : (($pStatus === 'low' || str_contains($pStatus, 'low') || $pStatus === '-') ? 'low' : '');
+                                                @endphp
+                                                <div class="prev-vertical-row" title="التاريخ: {{ $p['date'] }}">
+                                                    <span class="prev-val-chip {{ $pClass }}">{{ $p['value'] }}</span>
+                                                    <span class="prev-date-text">({{ $p['date_short'] }})</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </div>
-
-                                @if($uncoveredRef && !$hasAttachment)
-                                <div class="test-meta-row">
-                                    <div class="meta-label">Normal Range :</div>
-                                    <div class="meta-conv-range">{{ $uncoveredRef }}</div>
-                                    <div class="meta-status-blank"></div>
-                                </div>
-                                @endif
-
-                                <div class="test-device-row">
-                                    @if($hasAttachment)
-                                        Automated Hematology Analyzer / Clinical Device
+                                <div class="test-value-cell right">
+                                    @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
+                                        <span class="val-status-high">High</span>
+                                    @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
+                                        <span class="val-status-low">Low</span>
+                                    @elseif($status === 'abnormal')
+                                        <span class="val-status-high">Abnormal</span>
+                                    @elseif($val !== '' && $val !== '—')
+                                        <span class="val-status-normal">Normal</span>
                                     @else
-                                        By Cobas Integra 400 plus (Roche Diagnostics)
+                                        <span class="text-muted">—</span>
                                     @endif
                                 </div>
                             </div>
-                        @endforeach
 
-                        {{-- اعتماد الصفحة الأولى --}}
-                        <div class="auth-block">
-                            <div class="auth-cell">
-                                <div class="signature-box-empty">
-                                    <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
-                                    <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
-                                    <div class="sig-empty-line">(مكان التوقيع والاعتماد)</div>
-                                    <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">التاريخ: {{ now()->format('Y-m-d') }}</div>
-                                </div>
+                            @if($displayRef)
+                            <div class="test-meta-row">
+                                <div class="meta-label">Normal Range :</div>
+                                <div class="meta-conv-range">{{ $displayRef }}</div>
+                                <div class="meta-status-blank"></div>
                             </div>
-                            <div class="auth-cell">
-                                <div class="stamp-circle-box">
-                                    <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                                    <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
-                                    <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
-                                    <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
-                                </div>
+                            @endif
+
+                            <div class="test-device-row">
+                                By Cobas Integra 400 plus (Roche Diagnostics)
                             </div>
                         </div>
-                    </div>
-                @endif
+                    @endforeach
+                </div>
+            @elseif($hasUrineContent)
+                {{-- فحص الإدرار العام كفحص وحيد على الصفحة الأولى --}}
+                <div class="gue-banner-header" style="margin-top: 10px; margin-bottom: 6px;">
+                    GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام
+                </div>
 
-                {{-- 2. قسم فحص الإدرار العام المستقل دائماً في صفحة منفصلة (General Urine Examination) --}}
-                @if($hasUrineContent)
-                    @if($hasStandardContent)
-                        <div class="gue-page-break">
-                    @endif
-
-                    <div class="gue-banner-header">
-                        GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام
-                    </div>
-
-                    <div class="tests-header-bar">
-                        <div class="header-col">Test Description</div>
-                        <div class="header-col center">Result</div>
-                        <div class="header-col right">Status</div>
+                <div class="gue-table-container">
+                    <div class="gue-table-header">
+                        <div class="gue-col-desc">Test Description</div>
+                        <div class="gue-col-val">Result</div>
+                        <div class="gue-col-ref">Reference Range</div>
+                        <div class="gue-col-status">Status</div>
                     </div>
 
                     @foreach($urineResults as $uRes)
@@ -1779,6 +1700,7 @@
                             $uUnit = trim($uRes->unit ?? '');
                             $uRef = trim($uRes->reference_range ?? '');
                             $uStatus = calcLabStatus($uVal, $uRef, $uRes->status ?? 'normal');
+                            $uPrev = $findPrevResults($uRes->test_name);
 
                             $uClass = 'val-normal';
                             if ($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+') {
@@ -1789,70 +1711,48 @@
                                 $uClass = 'val-abnormal';
                             }
                         @endphp
-                        <div class="test-card" style="padding: 2.5px 4px;">
-                            <div class="test-main-row" style="margin-bottom: 1px;">
-                                <div class="test-name" style="font-size: 12px;">
-                                    {{ $uRes->test_name }}
-                                </div>
-                                <div class="test-value-cell">
-                                    <div class="current-val-line">
-                                        <span class="{{ $uClass }}" style="font-size: 12px;">{{ $uVal ?: '—' }}</span>
-                                        @if($uUnit)
-                                            <span class="unit-label" style="font-size: 11px;">{{ $uUnit }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="test-value-cell right">
-                                    @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
-                                        <span class="val-status-high" style="font-size: 10px; padding: 0 6px;">Abnormal</span>
-                                    @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
-                                        <span class="val-status-low" style="font-size: 10px; padding: 0 6px;">Low</span>
-                                    @elseif($uVal !== '' && $uVal !== '—')
-                                        <span class="val-status-normal" style="font-size: 10px; padding: 0 6px;">Normal</span>
-                                    @else
-                                        <span class="text-muted" style="font-size: 11px;">—</span>
-                                    @endif
-                                </div>
+                        <div class="gue-table-row">
+                            <div class="gue-col-desc">
+                                {{ $uRes->test_name }}
                             </div>
-                            @if($uRef)
-                            <div class="test-meta-row" style="font-size: 10.5px; margin-bottom: 0;">
-                                <div class="meta-label">Reference Range :</div>
-                                <div class="meta-conv-range" style="font-size: 10.5px;">{{ $uRef }}</div>
-                                <div class="meta-status-blank"></div>
+                            <div class="gue-col-val">
+                                <span class="{{ $uClass }}">{{ $uVal ?: '—' }}</span>
+                                @if($uUnit)
+                                    <span class="unit-label" style="font-size: 10px;">{{ $uUnit }}</span>
+                                @endif
+                                @if(!empty($uPrev) && count($uPrev) > 0)
+                                    <span class="prev-val-chip" style="font-size: 9px; margin-right: 3px;" title="السابق: {{ $uPrev[0]['date'] }}">
+                                        ({{ $uPrev[0]['value'] }})
+                                    </span>
+                                @endif
                             </div>
-                            @endif
+                            <div class="gue-col-ref">
+                                {{ $uRef ?: '—' }}
+                            </div>
+                            <div class="gue-col-status">
+                                @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
+                                    <span class="val-status-high" style="font-size: 9px; padding: 0 4px;">Abnormal</span>
+                                @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
+                                    <span class="val-status-low" style="font-size: 9px; padding: 0 4px;">Low</span>
+                                @elseif($uVal !== '' && $uVal !== '—')
+                                    <span class="val-status-normal" style="font-size: 9px; padding: 0 4px;">Normal</span>
+                                @else
+                                    <span class="text-muted" style="font-size: 10px;">—</span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
-
-                    <!-- اعتماد صفحة الإدرار العام -->
-                    <div class="auth-block" style="margin-top: 10px;">
-                        <div class="auth-cell">
-                            <div class="signature-box-empty">
-                                <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
-                                <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
-                                <div class="sig-empty-line">(مكان التوقيع والاعتماد)</div>
-                                <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">التاريخ: {{ now()->format('Y-m-d') }}</div>
-                            </div>
-                        </div>
-                        <div class="auth-cell">
-                            <div class="stamp-circle-box">
-                                <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                                <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
-                                <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
-                                <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if($hasStandardContent)
-                        </div>
-                    @endif
-                @endif
-            @elseif(!empty($request->result) && count($savedArr ?? []) > 0)
+                </div>
+            @elseif($hasSavedResults)
                 @php
                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
                     $testResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
                 @endphp
+                <div class="tests-header-bar">
+                    <div class="header-col">Laboratory Test Results</div>
+                    <div class="header-col center">Conventional Units</div>
+                    <div class="header-col right">Status</div>
+                </div>
                 @foreach($testResults as $tName => $tVal)
                     @php
                         $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : $tVal;
@@ -1862,16 +1762,12 @@
                         $statusStr = calcLabStatus($valStr, $refStr, is_array($tVal) ? ($tVal['status'] ?? 'normal') : 'normal');
 
                         $valClass = 'val-normal';
-                        $flagBadge = '';
                         if ($statusStr === 'high' || $statusStr === 'positive' || str_contains($statusStr, 'high') || str_contains($statusStr, 'pos')) {
                             $valClass = 'val-high';
-                            $flagBadge = '<span class="badge-flag high">↑ High</span>';
                         } elseif ($statusStr === 'low' || str_contains($statusStr, 'low')) {
                             $valClass = 'val-low';
-                            $flagBadge = '<span class="badge-flag low">↓ Low</span>';
                         } elseif ($statusStr === 'abnormal') {
                             $valClass = 'val-abnormal';
-                            $flagBadge = '<span class="badge-flag high">Abnormal</span>';
                         }
                     @endphp
                     <div class="test-card">
@@ -1921,13 +1817,14 @@
                         <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
                     </div>
                 @endforeach
-            @elseif(count($requestedLabTestsList ?? []) > 0)
-                <!-- Requisition / Work Order Mode: Requested Tests before entering results -->
+            @elseif($hasWorkOrder)
+                <!-- Requisition / Work Order Mode -->
                 <div style="background: #f8fafc; border: 1px dashed #0284c7; border-radius: 6px; padding: 6px 12px; margin-bottom: 12px; font-size: 13px; color: #0369a1; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fas fa-clipboard-list me-1"></i> قائمة التحاليل المطلوبة (أمر عمل المختبر / Test Work Order)</span>
                     <span class="badge bg-primary px-2 py-1">بانتظار إدخال النتائج</span>
                 </div>
 
+                @php $currentGroup = null; @endphp
                 @foreach($requestedLabTestsList as $reqTestItem)
                     @php
                         $tName = is_array($reqTestItem) ? ($reqTestItem['name'] ?? '') : (is_object($reqTestItem) ? $reqTestItem->name : (string)$reqTestItem);
@@ -1954,17 +1851,12 @@
                     @endif
 
                     <div class="test-card">
-                        <!-- Main Test Row -->
                         <div class="test-main-row">
-                            <div class="test-name">
-                                {{ $tName }}
-                            </div>
+                            <div class="test-name">{{ $tName }}</div>
                             <div class="test-value-cell">
                                 <div class="current-val-line">
                                     <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
-                                    @if($tUnit)
-                                        <span class="unit-label">{{ $tUnit }}</span>
-                                    @endif
+                                    @if($tUnit) <span class="unit-label">{{ $tUnit }}</span> @endif
                                 </div>
                                 @if(!empty($prevItems) && count($prevItems) > 0)
                                     <div class="prev-vertical-box">
@@ -1981,8 +1873,6 @@
                                 <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">Pending</span>
                             </div>
                         </div>
-
-                        <!-- Reference Range Row -->
                         @if($tRef)
                         <div class="test-meta-row">
                             <div class="meta-label">Normal Range :</div>
@@ -1990,11 +1880,7 @@
                             <div class="meta-status-blank"></div>
                         </div>
                         @endif
-
-                        <!-- Device / Method Row -->
-                        <div class="test-device-row">
-                            By Cobas Integra 400 plus (Roche Diagnostics)
-                        </div>
+                        <div class="test-device-row">By Cobas Integra 400 plus (Roche Diagnostics)</div>
                     </div>
                 @endforeach
             @else
@@ -2002,61 +1888,199 @@
                     No laboratory tests or results recorded for this request yet.
                 </div>
             @endif
-        @endif
+        </div>
 
-            <!-- Official Authentication & Signatures Block (مكان التوقيع فارغ للاختبار) -->
-            <div class="auth-block">
-                <!-- 1. Specialist / Medical Lab Scientist Signature -->
+        <!-- Pinned Bottom Block for Page 1 -->
+        <div class="report-bottom-block">
+            @if(!$hasUrineContent)
+                <!-- Official Authentication & Signatures Block (مكان التوقيع للاعتماد) -->
+                <div class="auth-block">
+                    <div class="auth-cell">
+                        <div class="signature-box-empty">
+                            <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                            <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
+                            <div class="sig-empty-line">(مكان التوقيع والاعتماد)</div>
+                            <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">التاريخ: {{ now()->format('Y-m-d') }}</div>
+                        </div>
+                    </div>
+                    <div class="auth-cell">
+                        <div class="stamp-circle-box">
+                            <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                            <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
+                            <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                            <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Pinned Footer on Page 1 -->
+            <div class="report-footer-wrapper">
+                <div class="report-footer">
+                    <div class="footer-printed-by">
+                        Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+                    </div>
+                    <div class="footer-datetime">
+                        <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
+                    </div>
+                </div>
+
+                <div class="hospital-contact-line">
+                    📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- =========================================================================
+         PAGE 2: Dedicated General Urine Examination (G.U.E) Page
+         ========================================================================= --}}
+    @if($hasUrineContent && $hasStandardContent)
+    <div class="report-page page-2 gue-page-break">
+        <!-- Decorative Border -->
+        <div class="decorative-border">
+            <div class="corner-pattern top-right"></div>
+            <div class="corner-pattern bottom-left"></div>
+        </div>
+
+        <div class="report-main-content">
+            <!-- Page 2 Compact Hospital Header for G.U.E -->
+            <div class="report-header page2-header" style="direction: rtl; padding-bottom: 4px; margin-bottom: 6px;">
+                <div class="header-hospital-ar">
+                    <h2 style="font-size: 14px; margin: 0; color: #005a9c; font-weight: 900;">مستشفى الكفاءات الأهلي</h2>
+                    <h4 style="font-size: 11px; margin: 0; color: #0284c7; font-weight: 800;">قسم المختبر والتحاليل الطبية</h4>
+                </div>
+                <div class="header-logo" style="width: 70px; text-align: center;">
+                    <img src="{!! $hospitalLogoSrc !!}" 
+                         alt="Hospital Logo" 
+                         class="hospital-logo-img" 
+                         onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                         style="max-height: 48px; max-width: 65px; object-fit: contain;">
+                </div>
+                <div class="header-hospital-en">
+                    <h2 style="font-size: 13px; margin: 0; color: #005a9c; font-weight: 900;">Al-Kafa'at Private Hospital</h2>
+                    <h4 style="font-size: 10px; margin: 0; color: #0284c7; font-weight: 800;">Clinical Laboratory Dept.</h4>
+                </div>
+            </div>
+
+            <!-- Page 2 Compact Patient Bar -->
+            <div class="patient-compact-bar" style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <div><strong>Patient:</strong> <span style="color: #005a9c; font-weight: bold;">{{ $arabicName }}</span> <span style="color: #64748b;">({{ $englishName }})</span></div>
+                <div><strong>Age / Sex:</strong> {{ $patientAge ? $patientAge . ' Y' : '—' }} &nbsp;|&nbsp; <strong style="color: #005a9c;">{{ $genderEn }}</strong></div>
+                <div><strong>Sample No:</strong> <span style="color: #005a9c; font-weight: bold;">{{ $sampleNo }}</span></div>
+                <div><strong>Date:</strong> {{ $sampleDate }}</div>
+            </div>
+
+            <!-- GUE Banner Header -->
+            <div class="gue-banner-header" style="margin-bottom: 4px; padding: 3px 8px; font-size: 11.5px;">
+                GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام
+            </div>
+
+            <!-- Compact GUE 4-Column Table -->
+            <div class="gue-table-container">
+                <div class="gue-table-header" style="padding: 2.5px 4px; font-size: 11px;">
+                    <div class="gue-col-desc">Test Description</div>
+                    <div class="gue-col-val">Result</div>
+                    <div class="gue-col-ref">Reference Range</div>
+                    <div class="gue-col-status">Status</div>
+                </div>
+
+                @foreach($urineResults as $uRes)
+                    @php
+                        $uVal = trim($uRes->value ?? '');
+                        $uUnit = trim($uRes->unit ?? '');
+                        $uRef = trim($uRes->reference_range ?? '');
+                        $uStatus = calcLabStatus($uVal, $uRef, $uRes->status ?? 'normal');
+                        $uPrev = $findPrevResults($uRes->test_name);
+
+                        $uClass = 'val-normal';
+                        if ($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+') {
+                            $uClass = 'val-high';
+                        } elseif ($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-') {
+                            $uClass = 'val-low';
+                        } elseif ($uStatus === 'abnormal') {
+                            $uClass = 'val-abnormal';
+                        }
+                    @endphp
+                    <div class="gue-table-row" style="padding: 1.5px 4px; min-height: 18px; font-size: 10.5px;">
+                        <div class="gue-col-desc">
+                            {{ $uRes->test_name }}
+                        </div>
+                        <div class="gue-col-val">
+                            <span class="{{ $uClass }}">{{ $uVal ?: '—' }}</span>
+                            @if($uUnit)
+                                <span class="unit-label" style="font-size: 9.5px;">{{ $uUnit }}</span>
+                            @endif
+                            @if(!empty($uPrev) && count($uPrev) > 0)
+                                <span class="prev-val-chip" style="font-size: 8.5px; margin-right: 3px;" title="السابق: {{ $uPrev[0]['date'] }}">
+                                    ({{ $uPrev[0]['value'] }})
+                                </span>
+                            @endif
+                        </div>
+                        <div class="gue-col-ref">
+                            {{ $uRef ?: '—' }}
+                        </div>
+                        <div class="gue-col-status">
+                            @if($uStatus === 'high' || $uStatus === 'positive' || str_contains($uStatus, 'high') || str_contains($uStatus, 'pos') || $uStatus === '+')
+                                <span class="val-status-high" style="font-size: 9px; padding: 0 4px;">Abnormal</span>
+                            @elseif($uStatus === 'low' || str_contains($uStatus, 'low') || $uStatus === '-')
+                                <span class="val-status-low" style="font-size: 9px; padding: 0 4px;">Low</span>
+                            @elseif($uVal !== '' && $uVal !== '—')
+                                <span class="val-status-normal" style="font-size: 9px; padding: 0 4px;">Normal</span>
+                            @else
+                                <span class="text-muted" style="font-size: 10px;">—</span>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Pinned Bottom Block for Page 2 -->
+        <div class="report-bottom-block">
+            <!-- Official Authentication & Signatures Block on Page 2 -->
+            <div class="auth-block" style="padding: 4px 10px; margin-top: 4px; margin-bottom: 2px;">
                 <div class="auth-cell">
                     <div class="signature-box-empty">
                         <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
                         <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
-                        <div class="sig-empty-line">
+                        <div class="sig-empty-line" style="height: 20px;">
                             (مكان التوقيع والاعتماد)
                         </div>
-                        <div style="font-size: 9.5px; color: #64748b; font-weight: 700; margin-top: 1px;">
+                        <div style="font-size: 9px; color: #64748b; font-weight: 700; margin-top: 1px;">
                             التاريخ: {{ now()->format('Y-m-d') }}
                         </div>
                     </div>
                 </div>
-
-                <!-- 2. Official Hospital / Dept Stamp -->
                 <div class="auth-cell">
-                    <div class="stamp-circle-box">
-                        <div style="font-size: 7.5px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                        <div style="font-size: 9px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
-                        <div style="font-size: 8px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
-                        <div style="font-size: 7.5px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                    <div class="stamp-circle-box" style="width: 56px; height: 56px; padding: 2px;">
+                        <div style="font-size: 7px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
+                        <div style="font-size: 8.5px; font-weight: 900; line-height: 1.1;">مستشفى الكفاءات</div>
+                        <div style="font-size: 7.5px; font-weight: 800; color: #0284c7;">المختبر والتحاليل</div>
+                        <div style="font-size: 7px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
                     </div>
                 </div>
             </div>
-            </td>
-        </tr>
-        </tbody>
-        <tfoot>
-            <tr>
-                <td class="print-table-cell-footer">
-                    <!-- Footer: Always at the bottom of EVERY page on print -->
-                    <div class="report-footer-wrapper">
-                        <div class="report-footer">
-                            <div class="footer-printed-by">
-                                Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
-                            </div>
-                            <div class="footer-datetime">
-                                <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
-                            </div>
-                        </div>
 
-                        <div class="hospital-contact-line">
-                            📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
-                        </div>
+            <!-- Pinned Footer on Page 2 -->
+            <div class="report-footer-wrapper">
+                <div class="report-footer">
+                    <div class="footer-printed-by">
+                        Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
                     </div>
-                </td>
-            </tr>
-        </tfoot>
-    </table>
+                    <div class="footer-datetime">
+                        <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
+                    </div>
+                </div>
 
+                <div class="hospital-contact-line">
+                    📍 بغداد - الحارثية - شارع الكندي &nbsp;|&nbsp; 📞 +964 (0) 778 050 7060 &nbsp;|&nbsp; 📧 info@alkafaathospital.com
+                </div>
+            </div>
+        </div>
     </div>
+    @endif
 
     <script>
         function setPrintMode(mode) {
