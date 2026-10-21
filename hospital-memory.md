@@ -426,7 +426,16 @@
   * **الصف الثنائي المتوازن للملاحظات السريرية**:
     - توزيع الفحص السريري (Physical Examination) في الجانب الأيمن، وتفاصيل وتوصيات التشخيص (Clinical Notes & Advice) في الجانب الأيسر بارتفاع متناسق ومساحة مريحة للكتابة.
   * **الاختبارات الآلية الحصينة**:
-    - ترقية واجتياز اختبار الميزة [tests/Feature/DoctorIcd10SearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorIcd10SearchTest.php) بنجاح كامل بـ 7 اختبارات تشمل حفظ التشخيص بحقل توصيات فارغ (`7 passed, 28 assertions`).
+- **المرحلة 94 (2026-10-21):** تصحيح أسعار الخدمات الفردية في الوصل الحراري 80mm وإلغاء تكرار المجموع الكلي وعرض المبلغ المطلوب من المريض فقط (Cashier 80mm Thermal Receipt Line-Item Patient Fee Fix & Grand Total Duplication Removal):
+  * **معالجة تكرار المجموع الإجمالي أمام كل خدمة (`resources/views/cashier/receipt-print.blade.php`)**:
+    - إلغاء الشرط القديم `empty($payment->patient_share) ? $item['price'] : $payment->amount` الذي كان يطبع المجموع الكلي للوصل مكرراً في عمود المبلغ أمام كل خدمة عند وجود حصة مريض (الضمان الصحي).
+    - طباعة السعر الفعلي لكل خدمة في عمود المبلغ `$item['price']` والمطابق لما يدفعه المريض لكل فحص في كاشير النظام.
+  * **حساب حصة المريض الدقيقة لكافة الخدمات الفردية في الوصل**:
+    - تحاليل المختبر وفحوصات الأشعة الإضافية والمنفردة: احتساب `calculateInsurancePricing()['patient_share']` بدلاً من السعر المعتمد الكامل.
+    - باقات المختبر واستشارات الطوارئ وخدمات الطوارئ: تطبيق نسبة التحمل بدقة متناهية (`copay_percentage`).
+    - النتيجة: مجموع أسطر الخدمات في جدول الوصل يطابق تماماً "المبلغ المدفوع" في قاع الوصل بدون أي زيادة أو نقص.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
+    - بناء واجتياز اختبار ميزة متكامل يتحقق من ظهور الأجور الفردية المطلوبة من المريض حصراً أمام كل فحص وعدم تكرار المجموع الإجمالي في أسطر الجدول (`1 passed, 7 assertions`).
 - **المرحلة 92 (2026-10-21):** تمكين الطبيب من حذف وتعديل الفحوصات الفردية من الطلبات غير المسددة وإخفاء وطي الطلبات الملغاة من قائمة اليوم (Doctor Item-Level Request Modification & Cancelled Archive Accordion):
   * **تمكين الطبيب من حذف فحص فردي من الطلب (`DoctorVisitController@removeRequestItem`)**:
     - إضافة مسار آمن `DELETE /doctor/requests/{request}/remove-item`.

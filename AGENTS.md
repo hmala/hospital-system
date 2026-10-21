@@ -57,6 +57,19 @@ Consult these files before making changes or proposing fixes:
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
 
 
+## Session log (2026-10-21 — المرحلة 94: تصحيح أسعار الخدمات الفردية في الوصل الحراري 80mm وإلغاء تكرار المجموع الكلي وعرض المبلغ المطلوب من المريض فقط Cashier 80mm Thermal Receipt Line-Item Patient Fee Fix & Grand Total Duplication Removal)
+
+### Done
+- **معالجة تكرار المجموع الإجمالي أمام كل خدمة ([resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إلغاء الشرط القديم `empty($payment->patient_share) ? $item['price'] : $payment->amount` الذي كان يتسبب في تكرار المجموع الإجمالي في كل أسطر الجدول لمرضى الضمان الصحي.
+  * ضبط عمود المبلغ ليعرض السعر الفعلي لكل خدمة المطلوب من المريض فقط `$item['price']`.
+- **حساب حصة المريض الدقيقة لكافة الخدمات الفردية في الوصل**:
+  * تحاليل المختبر وفحوصات الأشعة: استدعاء `calculateInsurancePricing` وسحب `patient_share` بدلاً من السعر المعتمد الكامل.
+  * باقات المختبر واستشارات الطوارئ وخدمات الطوارئ: تطبيق نسبة التحمل بدقة متناهية (`copay_percentage`).
+  * مطابقة رياضية بنسبة 100% بين مجموع أسطر الخدمات وسطر "المبلغ المدفوع" في قاع الوصل.
+- **الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
+  * إنشاء واجتياز اختبار ميزة متكامل يتحقق من ظهور الأجور الفردية المطلوبة من المريض حصراً أمام كل فحص وعدم تكرار المجموع الإجمالي في أسطر الجدول (`1 passed, 7 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 92: تمكين الطبيب من حذف الفحوصات الفردية وإخفاء الطلبات الملغاة وإلغاء عرض الأسعار لمنع التشتيت Doctor Item-Level Request Modification, Clean Clean UI & Cancelled Requests Archive)
 
 ### Done

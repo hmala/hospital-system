@@ -332,6 +332,9 @@
             // 1. Consultation / Appointment Service
             if ($payment->appointment || $payment->payment_type === 'appointment' || $payment->payment_type === 'consultation') {
                 $consultFee = $payment->appointment->consultation_fee ?? ($payment->total_amount ?: $payment->amount);
+                if ($payment->insurance_type && $payment->insurance_type !== 'none') {
+                    $consultFee = (float)($payment->patient_share ?: round((float)$consultFee * ((float)($payment->copay_percentage ?? 0) / 100)));
+                }
                 
                 $serviceTitle = 'اجور كشف استشارية';
                 $scanType = null;
@@ -354,7 +357,7 @@
                     $serviceTitle = $payment->appointment->reason;
                 }
 
-                $lineItems[] = ['name' => $serviceTitle, 'qty' => 1, 'price' => $consultFee];
+                $lineItems[] = ['name' => $serviceTitle, 'qty' => 1, 'price' => (float)$consultFee];
             }
 
             // 2. Surgery
@@ -444,7 +447,11 @@
                     if ($pkg) {
                         $pkgName = 'باقة: ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' تحاليل مشمولة)';
                         if (!in_array($pkgName, array_column($lineItems, 'name'))) {
-                            $lineItems[] = ['name' => $pkgName, 'qty' => 1, 'price' => (float)$pkg->price];
+                            $pkgPrice = (float)$pkg->price;
+                            if ($payment->insurance_type && $payment->insurance_type !== 'none') {
+                                $pkgPrice = round($pkgPrice * ((float)($payment->copay_percentage ?? 0) / 100));
+                            }
+                            $lineItems[] = ['name' => $pkgName, 'qty' => 1, 'price' => $pkgPrice];
                         }
 
                         $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
@@ -458,7 +465,7 @@
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
-                                $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
+                                $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                 $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
                             }
                         }
@@ -477,7 +484,7 @@
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                         ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                         : null;
-                                    $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
+                                    $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
                                 }
                             }
@@ -493,7 +500,7 @@
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                         ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                         : null;
-                                    $price = $pricing ? (float)$pricing['approved_price'] : ($test->price ?? 0);
+                                    $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
                                 } elseif (!$test && !in_array('تحليل: ' . $tName, array_column($lineItems, 'name'))) {
                                     $lineItems[] = ['name' => 'تحليل: ' . $tName, 'qty' => 1, 'price' => 0];
@@ -513,7 +520,7 @@
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $type->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
-                                $price = $pricing ? (float)$pricing['approved_price'] : ($type->base_price ?? 0);
+                                $price = $pricing ? (float)$pricing['patient_share'] : ($type->base_price ?? 0);
                                 $lineItems[] = ['name' => $displayName, 'qty' => 1, 'price' => $price];
                             }
                         }
@@ -536,10 +543,15 @@
                 $paidServices = \DB::table('emergency_emergency_service')
                     ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                     ->where('emergency_emergency_service.payment_id', $payment->id)
-                    ->select('emergency_services.name', 'emergency_services.price')
+                    ->select('emergency_services.*')
                     ->get();
                 foreach ($paidServices as $svc) {
-                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => 1, 'price' => $svc->price ?? 0];
+                    $esModel = \App\Models\EmergencyService::find($svc->id);
+                    $pricing = $esModel && $payment->insurance_type && $payment->insurance_type !== 'none'
+                        ? $esModel->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                        : null;
+                    $price = $pricing ? (float)$pricing['patient_share'] : ($svc->price ?? 0);
+                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => 1, 'price' => $price];
                 }
 
                 // استشارات الطوارئ للأطباء الاستشاريين
@@ -551,6 +563,9 @@
                 foreach ($emergencyAppointments as $apt) {
                     $docTitle = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
                     $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
+                    if ($payment->insurance_type && $payment->insurance_type !== 'none') {
+                        $fee = round($fee * ((float)($payment->copay_percentage ?? 0) / 100));
+                    }
                     $lineItems[] = [
                         'name' => 'استشارة طبية طوارئ: ' . $docTitle,
                         'qty' => 1,
@@ -562,14 +577,22 @@
                 $paidLabs = $payment->emergency->labRequests()->where('payment_id', $payment->id)->with('labTests')->get();
                 foreach ($paidLabs as $labReq) {
                     foreach ($labReq->labTests as $lt) {
-                        $lineItems[] = ['name' => 'تحليل طوارئ: ' . $lt->name, 'qty' => 1, 'price' => $lt->price ?? 0];
+                        $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                            ? $lt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                            : null;
+                        $price = $pricing ? (float)$pricing['patient_share'] : ($lt->price ?? 0);
+                        $lineItems[] = ['name' => 'تحليل طوارئ: ' . $lt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
                 $paidRads = $payment->emergency->radiologyRequests()->where('payment_id', $payment->id)->with('radiologyTypes')->get();
                 foreach ($paidRads as $radReq) {
                     foreach ($radReq->radiologyTypes as $rt) {
-                        $lineItems[] = ['name' => 'أشعة طوارئ: ' . $rt->name, 'qty' => 1, 'price' => $rt->base_price ?? 0];
+                        $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                            ? $rt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                            : null;
+                        $price = $pricing ? (float)$pricing['patient_share'] : ($rt->base_price ?? 0);
+                        $lineItems[] = ['name' => 'أشعة طوارئ: ' . $rt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
@@ -624,10 +647,16 @@
             </thead>
             <tbody>
                 @foreach($lineItems as $item)
+                    @php
+                        $rowPrice = (float)($item['price'] ?? 0);
+                        if ($rowPrice == 0 && count($lineItems) === 1) {
+                            $rowPrice = abs((float)$payment->amount);
+                        }
+                    @endphp
                     <tr>
                         <td class="col-service">{{ $item['name'] }}</td>
                         <td class="col-qty">{{ $item['qty'] }}</td>
-                        <td class="col-price">{{ number_format((float)$payment->amount < 0 ? abs((float)$payment->amount) : ($item['price'] > 0 && empty($payment->patient_share) ? $item['price'] : $payment->amount), 0) }}</td>
+                        <td class="col-price">{{ number_format($rowPrice, 0) }}</td>
                     </tr>
                 @endforeach
 
