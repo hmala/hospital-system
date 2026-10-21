@@ -176,4 +176,23 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
         $showResponse->assertDontSee('https://wa.me/9647701234567', false);
         $showResponse->assertDontSee('إرسال النتيجة عبر واتساب');
     }
+
+    public function test_public_report_shows_attachment_buttons_in_toolbar(): void
+    {
+        $this->labRequest->update([
+            'details' => array_merge($this->labRequest->details ?? [], [
+                'attachment' => 'lab_attachments/sample.pdf',
+                'test_attachments' => [
+                    'CBC' => ['path' => 'lab_attachments/cbc.pdf'],
+                ],
+            ]),
+        ]);
+
+        $publicUrl = $this->labRequest->getPublicReportUrl();
+        $response = $this->get($publicUrl);
+
+        $response->assertStatus(200);
+        $response->assertSee('تقرير الجهاز المرفق (PDF)');
+        $response->assertDontSee('<div class="decorative-border">', false);
+    }
 }

@@ -33,13 +33,15 @@
             min-height: 297mm;
             margin: 0 auto 20px auto;
             background: #ffffff;
-            padding: 10mm 15mm 14mm 15mm;
+            padding: 8mm 12mm 10mm 12mm;
             position: relative;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            border: 1.5px solid #005a9c;
+            border-radius: 4px;
         }
 
         .report-main-content {
@@ -147,30 +149,10 @@
             z-index: 1;
         }
 
-        /* Decorative Border (Matching Emergency & Radiology) */
-        .decorative-border {
-            position: absolute;
-            top: 6mm;
-            right: 6mm;
-            bottom: 6mm;
-            left: 6mm;
-            border: 1px solid #7dd3fc;
-            pointer-events: none;
-            z-index: 0;
-            border-radius: 2px;
-        }
-
+        /* Decorative Floating Border Disabled in favor of Unified Container Border */
+        .decorative-border,
         .corner-pattern {
-            position: absolute;
-            width: 45px;
-            height: 45px;
-            opacity: 0.15;
-        }
-
-        .corner-pattern.top-right {
-            top: 0;
-            right: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z" fill="%23005a9c"/></svg>');
+            display: none !important;
         }
 
         :root {
@@ -211,10 +193,6 @@
 
         body.is-public-report .document-title-banner,
         body.is-public-report.letterhead-mode .document-title-banner,
-        body.is-public-report .decorative-border,
-        body.is-public-report.letterhead-mode .decorative-border,
-        body.is-public-report .corner-pattern,
-        body.is-public-report.letterhead-mode .corner-pattern,
         body.is-public-report .hospital-contact-line,
         body.is-public-report.letterhead-mode .hospital-contact-line,
         body.is-public-report .report-footer-wrapper,
@@ -229,6 +207,7 @@
         body.is-public-report.letterhead-mode .report-page {
             padding-top: 16mm !important;
             padding-bottom: 35mm !important;
+            border: none !important;
         }
 
         /* Print Toolbar (Hidden during print) */
@@ -1039,7 +1018,7 @@
             .report-page {
                 box-shadow: none !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 6mm 10mm 6mm 10mm !important;
                 width: 100% !important;
                 max-width: 100% !important;
                 min-height: 270mm !important;
@@ -1052,6 +1031,8 @@
                 justify-content: space-between !important;
                 page-break-after: always !important;
                 break-after: page !important;
+                border: 1.5px solid #005a9c !important;
+                border-radius: 4px !important;
             }
 
             .report-page:last-child {
@@ -1059,8 +1040,13 @@
                 break-after: auto !important;
             }
 
-            .decorative-border {
+            .decorative-border,
+            .corner-pattern {
                 display: none !important;
+            }
+
+            body.letterhead-mode .report-page {
+                border: none !important;
             }
 
             .report-page::before {
@@ -1132,15 +1118,40 @@
 </head>
 <body class="{{ !empty($isPublicView) ? 'is-public-report' : '' }}">
 
+    @php
+        $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
+        if (!is_array($requestDetails)) $requestDetails = [];
+        $hasGeneralAtt = !empty($requestDetails['attachment']);
+        $testAtts = is_array($requestDetails['test_attachments'] ?? null) ? $requestDetails['test_attachments'] : [];
+        $hasAnyAtt = $hasGeneralAtt || count($testAtts) > 0;
+        $publicToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : request('token');
+    @endphp
+
     @if(!empty($isPublicView))
         <!-- Public Patient Toolbar (Hidden during print) -->
-        <div class="print-toolbar" style="background: rgba(16, 185, 129, 0.95); right: 50%; transform: translateX(50%); border-radius: 30px; padding: 8px 20px; gap: 15px;">
-            <span style="color: #fff; font-weight: bold; font-size: 13.5px;">
+        <div class="print-toolbar" style="background: rgba(16, 185, 129, 0.95); right: 50%; transform: translateX(50%); border-radius: 30px; padding: 8px 18px; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 95vw;">
+            <span style="color: #fff; font-weight: bold; font-size: 13.5px; white-space: nowrap;">
                 🏥 مستشفى الكفاءات الأهلي — التقرير الطبي المعتمد
             </span>
-            <button class="toolbar-btn btn-print" onclick="window.print()" style="background: #ffffff; color: #047857; font-weight: 800; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <button class="toolbar-btn btn-print" onclick="window.print()" style="background: #ffffff; color: #047857; font-weight: 800; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); white-space: nowrap;">
                 📥 تحميل / حفظ كـ PDF
             </button>
+            @if($hasGeneralAtt)
+                @php
+                    $genUrl = route('lab.attachment', array_filter(['request' => $request, 'token' => $publicToken]));
+                @endphp
+                <a href="{{ $genUrl }}" target="_blank" class="toolbar-btn" style="background: #0284c7; color: #ffffff; font-weight: 800; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
+                    📄 تقرير الجهاز المرفق (PDF)
+                </a>
+            @endif
+            @foreach($testAtts as $tName => $attData)
+                @php
+                    $attUrl = route('lab.attachment', array_filter(['request' => $request, 'test' => $tName, 'token' => $publicToken]));
+                @endphp
+                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #ffffff; font-weight: 800; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
+                    🔬 تقرير: {{ $tName }} (PDF)
+                </a>
+            @endforeach
         </div>
     @else
         <!-- Action Toolbar for Staff (Hidden during print) -->
@@ -1159,6 +1170,23 @@
                     </a>
                 @endif
             @endcan
+
+            @if($hasGeneralAtt)
+                @php
+                    $genUrl = route('lab.attachment', array_filter(['request' => $request, 'token' => $publicToken]));
+                @endphp
+                <a href="{{ $genUrl }}" target="_blank" class="toolbar-btn" style="background: #0284c7; color: #fff; font-size: 11.5px; padding: 6px 12px;" title="فتح تقرير الفحص العام المرفق">
+                    📄 تقرير الجهاز المرفق
+                </a>
+            @endif
+            @foreach($testAtts as $tName => $attData)
+                @php
+                    $attUrl = route('lab.attachment', array_filter(['request' => $request, 'test' => $tName, 'token' => $publicToken]));
+                @endphp
+                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;" title="فتح تقرير {{ $tName }} المرفق">
+                    🔬 تقرير: {{ $tName }}
+                </a>
+            @endforeach
 
             <div class="mode-toggle-group">
                 <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
@@ -1414,11 +1442,6 @@
          ========================================================================= --}}
     @if($hasStandardContent || !$hasUrineContent)
     <div class="report-page page-1">
-        <!-- Decorative Border -->
-        <div class="decorative-border">
-            <div class="corner-pattern top-right"></div>
-            <div class="corner-pattern bottom-left"></div>
-        </div>
 
         <div class="report-main-content">
             <!-- Full Header Section (Matching Emergency & Radiology) -->
@@ -1913,11 +1936,6 @@
          ========================================================================= --}}
     @if($hasUrineContent && $hasStandardContent)
     <div class="report-page page-2 gue-page-break">
-        <!-- Decorative Border -->
-        <div class="decorative-border">
-            <div class="corner-pattern top-right"></div>
-            <div class="corner-pattern bottom-left"></div>
-        </div>
 
         <div class="report-main-content">
             <!-- Page 2 Compact Hospital Header for G.U.E -->
