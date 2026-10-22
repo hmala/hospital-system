@@ -1359,19 +1359,23 @@
                                 </div>
 
                                 <!-- 2.5 حقل ملاحظات وتوجيهات الطبيب لقسم الأشعة والتصوير -->
-                                <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border">
+                                <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border border-info-subtle">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
                                         <label for="docRadDoctorNotes" class="form-label small fw-bold text-dark mb-0">
-                                            <i class="fas fa-comment-medical text-info me-1"></i> ملاحظات وتوجيهات الطبيب لقسم الأشعة (اختياري):
+                                            <i class="fas fa-comment-medical text-info me-1"></i> ملاحظات وتوجيهات الطبيب لقسم الأشعة <span class="text-danger fw-bold">* (مطلوب)</span>:
                                         </label>
                                         <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>تظهر مباشرة لفني الأشعة في شاشة الفحص وطابور العمل</span>
                                     </div>
-                                    <textarea class="form-control form-control-sm bg-white" 
+                                    <textarea class="form-control form-control-sm bg-white @error('doctor_notes') is-invalid @enderror" 
                                               id="docRadDoctorNotes" 
                                               name="doctor_notes" 
                                               rows="2" 
-                                              placeholder="اكتب أي توجيه أو ملاحظة سريرية (مثل: الشك السريري بكسر في الساق اليمنى، تركيز السونار على الكلية اليمنى، المريض لا يستطيع الوقوف، إلخ)..." 
-                                              style="resize: vertical;"></textarea>
+                                              required
+                                              placeholder="اكتب التوجيه السريري أو سبب الفحص لقسم الأشعة (مطلوب - مثل: الشك السريري بكسر في الساق اليمنى، تركيز السونار على الكلية اليمنى، المريض لا يستطيع الوقوف، إلخ)..." 
+                                              style="resize: vertical;">{{ old('doctor_notes') }}</textarea>
+                                    @error('doctor_notes')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
 
                                 <!-- 3. تبويبات تصفية الأقسام والتصوير -->
@@ -3444,6 +3448,18 @@
                             لا توجد فحوصات أشعة متاحة حالياً
                         </div>
                     @endif
+
+                    <div class="mt-3 p-2 bg-light rounded-3 border">
+                        <label for="radiologyModalNotes" class="form-label small fw-bold text-dark mb-1">
+                            <i class="fas fa-comment-medical text-info me-1"></i> ملاحظات وتوجيهات الطبيب لقسم الأشعة <span class="text-danger fw-bold">* (مطلوب)</span>:
+                        </label>
+                        <textarea class="form-control form-control-sm bg-white" 
+                                  id="radiologyModalNotes" 
+                                  name="doctor_notes" 
+                                  rows="2" 
+                                  required
+                                  placeholder="اكتب أي توجيه أو ملاحظة سريرية (مطلوب)..."></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -5575,12 +5591,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const doctorNotes = document.getElementById('docRadDoctorNotes');
+            if (!doctorNotes || !doctorNotes.value.trim()) {
+                e.preventDefault();
+                alert('يرجى كتابة ملاحظات وتوجيهات الطبيب لقسم الأشعة والتصوير (مطلوب)');
+                if (doctorNotes) {
+                    doctorNotes.focus();
+                    doctorNotes.classList.add('is-invalid');
+                }
+                return;
+            }
+
             const submitBtn = radForm.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جارٍ الإرسال...';
             }
         });
+
+        const docNotesInput = document.getElementById('docRadDoctorNotes');
+        if (docNotesInput) {
+            docNotesInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
 
         // التهيئة الأولية
         radCheckboxes.forEach(chk => {

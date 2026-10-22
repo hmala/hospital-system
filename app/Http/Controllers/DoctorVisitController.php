@@ -962,11 +962,11 @@ class DoctorVisitController extends Controller
             abort(403, 'غير مصرح لك بطلب الفحوصات الطبية');
         }
 
-        $request->validate([
+        $rules = [
             'visit_id' => 'required|exists:visits,id',
             'type' => 'required|in:lab,radiology,pharmacy,nursing',
             'description' => 'nullable|string|max:1000',
-            'doctor_notes' => 'nullable|string|max:1000',
+            'doctor_notes' => $request->type === 'radiology' ? 'required|string|max:1000' : 'nullable|string|max:1000',
             'priority' => 'nullable|in:normal,urgent,emergency',
             'tests' => 'nullable|array',
             'tests.*' => 'string',
@@ -974,7 +974,13 @@ class DoctorVisitController extends Controller
             'radiology_types.*' => 'integer|exists:radiology_types,id',
             'nursing_services' => 'nullable|array',
             'nursing_services.*' => 'integer|exists:emergency_services,id'
-        ]);
+        ];
+
+        $messages = [
+            'doctor_notes.required' => 'يرجى كتابة ملاحظات وتوجيهات الطبيب لقسم الأشعة والتصوير (مطلوب)',
+        ];
+
+        $request->validate($rules, $messages);
 
         $visit = Visit::findOrFail($request->visit_id);
 

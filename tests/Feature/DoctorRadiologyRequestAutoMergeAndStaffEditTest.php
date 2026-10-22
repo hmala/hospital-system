@@ -209,6 +209,7 @@ class DoctorRadiologyRequestAutoMergeAndStaffEditTest extends TestCase
             'visit_id' => $this->visit->id,
             'type' => 'radiology',
             'radiology_types' => [$this->radChest->id, $this->radKnee->id],
+            'doctor_notes' => 'ملاحظة فحص الصدر والركبة',
         ]);
 
         $request = MedicalRequest::where('visit_id', $this->visit->id)->first();
@@ -237,6 +238,7 @@ class DoctorRadiologyRequestAutoMergeAndStaffEditTest extends TestCase
             'visit_id' => $this->visit->id,
             'type' => 'radiology',
             'radiology_types' => [$this->radChest->id],
+            'doctor_notes' => 'ملاحظة فحص الصدر',
         ]);
 
         $request = MedicalRequest::where('visit_id', $this->visit->id)->first();
@@ -262,6 +264,7 @@ class DoctorRadiologyRequestAutoMergeAndStaffEditTest extends TestCase
             'visit_id' => $this->visit->id,
             'type' => 'radiology',
             'radiology_types' => [$this->radChest->id],
+            'doctor_notes' => 'ملاحظة فحص الصدر الأولي',
         ]);
 
         $request = MedicalRequest::where('visit_id', $this->visit->id)->first();
@@ -283,5 +286,30 @@ class DoctorRadiologyRequestAutoMergeAndStaffEditTest extends TestCase
 
         $this->assertContains($this->radChest->id, $details['radiology_type_ids']);
         $this->assertContains($this->radSonar->id, $details['radiology_type_ids']);
+    }
+
+    public function test_doctor_radiology_request_strictly_requires_doctor_notes()
+    {
+        // 1. Without doctor_notes: should fail validation
+        $responseWithoutNotes = $this->actingAs($this->doctorUser)->post(route('doctor.requests.store'), [
+            'visit_id' => $this->visit->id,
+            'type' => 'radiology',
+            'radiology_types' => [$this->radChest->id],
+            'doctor_notes' => '',
+        ]);
+
+        $responseWithoutNotes->assertSessionHasErrors(['doctor_notes']);
+        $this->assertDatabaseCount('requests', 0);
+
+        // 2. With doctor_notes: should succeed
+        $responseWithNotes = $this->actingAs($this->doctorUser)->post(route('doctor.requests.store'), [
+            'visit_id' => $this->visit->id,
+            'type' => 'radiology',
+            'radiology_types' => [$this->radChest->id],
+            'doctor_notes' => 'يرجى التركيز على الرئة اليمنى',
+        ]);
+
+        $responseWithNotes->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('requests', 1);
     }
 }

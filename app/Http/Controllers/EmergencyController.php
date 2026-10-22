@@ -2220,16 +2220,6 @@ class EmergencyController extends Controller
 
         // الطبيب المسؤول عن التقرير والتوقيع
         $doctor = $emergency->doctor;
-        if (!$doctor || empty($doctor->signature)) {
-            $emergencyDoc = Doctor::with('user')->find(244);
-            if ($emergencyDoc) {
-                if (!$doctor) {
-                    $doctor = $emergencyDoc;
-                } elseif (empty($doctor->signature)) {
-                    $doctor->signature = $emergencyDoc->signature;
-                }
-            }
-        }
 
         return view('emergency.medical-report', compact('emergency', 'doctor'));
     }
@@ -2246,16 +2236,6 @@ class EmergencyController extends Controller
         ]);
 
         $doctor = $emergency->doctor;
-        if (!$doctor || empty($doctor->signature)) {
-            $emergencyDoc = Doctor::with('user')->find(244);
-            if ($emergencyDoc) {
-                if (!$doctor) {
-                    $doctor = $emergencyDoc;
-                } elseif (empty($doctor->signature)) {
-                    $doctor->signature = $emergencyDoc->signature;
-                }
-            }
-        }
 
         return view('emergency.verify-report', compact('emergency', 'doctor'));
     }

@@ -128,4 +128,48 @@ class EmergencyMedicalReportTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_other_doctor_without_signature_does_not_inherit_mohanad_signature()
+    {
+        $otherDoctorUser = User::factory()->create(['name' => 'د. سرمد علي']);
+        $otherDoctorUser->assignRole('doctor');
+
+        $otherDoctor = Doctor::create([
+            'user_id' => $otherDoctorUser->id,
+            'department_id' => $this->doctor->department_id,
+            'specialization' => 'جراحة عامة',
+            'qualification' => 'بورد',
+            'consultation_fee' => 10000,
+            'license_number' => 'DOC-SUR-99',
+            'status' => 'active',
+            'signature' => null, // No signature
+        ]);
+
+        $emergencyWithOtherDoctor = Emergency::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $otherDoctor->id,
+            'admission_time' => now(),
+            'emergency_type' => 'surgical',
+            'priority' => 'urgent',
+            'status' => 'discharged',
+            'discharge_type' => 'recovered',
+            'discharge_time' => now(),
+            'symptoms' => 'ألم حاد في البطن',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('emergency.medical-report', $emergencyWithOtherDoctor));
+
+        $response->assertStatus(200);
+        $response->assertSee('د. سرمد علي');
+        $response->assertDontSee('د. مهند إسماعيل');
+        $response->assertDontSee('images/signatures/doctor_244.png');
+        $response->assertSee('التوقيع اليدوي');
+
+        // Verify report
+        $verifyResponse = $this->get(route('emergency.verify-report', $emergencyWithOtherDoctor));
+        $verifyResponse->assertStatus(200);
+        $verifyResponse->assertSee('د. سرمد علي');
+        $verifyResponse->assertDontSee('د. مهند إسماعيل');
+        $verifyResponse->assertSee('توقيع معتمد يدوياً');
+    }
 }
