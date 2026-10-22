@@ -320,12 +320,16 @@ class CashierController extends Controller
                 'excess_deposit' => (float)$stayDetails['excess_deposit'],
             ];
         })->filter(function($item) {
-            // الحالات المنومة أو المعلقة تظهر دائماً، أما الحالات التي خرجت فتظهر فقط إذا كان بذمتها رصيد متبقي لم يسدد
+            // الحالات المنومة أو المعلقة تظهر دائماً، أما الحالات التي خرجت فتظهر إذا كان بذمتها رصيد متبقي أو لها فائض أمانات مستحق للإرجاع
             if (in_array($item['reservation']->status, ['admitted', 'pending'])) {
                 return true;
             }
-            return $item['net_balance'] > 0;
+            return $item['net_balance'] > 0 || $item['excess_deposit'] > 0;
         })->values();
+
+        $nicuRefundAccounts = $nicuAccounts->filter(fn($item) => $item['excess_deposit'] > 0)->values();
+        $pendingNicuRefundCount = $nicuRefundAccounts->count();
+        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount;
 
         $pendingNicuCount = $nicuAccounts->count();
         $todayStats['pending_nicu_count'] = $pendingNicuCount;
@@ -341,6 +345,8 @@ class CashierController extends Controller
             'pendingEmergencyRefunds',
             'pendingRefundCount',
             'nicuAccounts',
+            'nicuRefundAccounts',
+            'pendingNicuRefundCount',
             'pendingNicuCount',
             'todayStats', 
             'todayPayments', 
@@ -613,14 +619,14 @@ class CashierController extends Controller
     }
 
     /**
-     * معالجة استلام دفعة أو أمانة تحت الحساب لحاضنة الخدج
+     * معالجة استلام دفعة أو أمانة تحت الحساب أو صرف استرجاع فائض أمانات لحاضنة الخدج
      */
     public function processNicuPayment(Request $request, IncubatorReservation $reservation)
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier'))) {
-            abort(403, 'غير مصرح لك باستلام الدفعات');
+        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process payments') && !$user->can('process refunds')))) {
+            abort(403, 'غير مصرح لك باستلام الدفعات أو صرف الاسترجاعات');
         }
 
         $request->validate([
@@ -633,10 +639,30 @@ class CashierController extends Controller
 
         $amount = (float) $request->amount;
         $paymentType = $request->payment_type ?: NicuPayment::TYPE_DEPOSIT;
+
+        // التحقق الدقيق الحصري لحالة استرجاع فائض الأمانات
+        if ($paymentType === NicuPayment::TYPE_REFUND) {
+            $billingService = app(\App\Services\NicuBillingService::class);
+            $stayDetails = $billingService->calculateStayDetails($reservation);
+            $excessDeposit = (float) $stayDetails['excess_deposit'];
+
+            if ($excessDeposit <= 0) {
+                return redirect()->back()->with('error', 'لا يوجد أي فائض أمانات متبقي للاسترجاع في حساب هذه الحاضنة.');
+            }
+
+            if ($amount > $excessDeposit) {
+                return redirect()->back()->with('error', 'المبلغ المطلوب استرجاعه (' . number_format($amount) . ' د.ع) يتجاوز الحد الأقصى لفائض الأمانات المتوفر (' . number_format($excessDeposit) . ' د.ع).');
+            }
+        }
+
         $receiptNumber = NicuPayment::generateReceiptNumber();
         $babyTitle = $reservation->baby_name ?: ('طفل ' . ($reservation->patient?->name ?? ''));
         $typeLabel = NicuPayment::PAYMENT_TYPES[$paymentType] ?? 'دفعة حاضنة';
-        $desc = $request->payment_purpose ?: "{$typeLabel} لحاضنة الخدج #{$reservation->id} - {$babyTitle}";
+        
+        $defaultDesc = ($paymentType === NicuPayment::TYPE_REFUND)
+            ? "صرف استرجاع فائض أمانات لحاضنة الخدج #{$reservation->id} - {$babyTitle}"
+            : "{$typeLabel} لحاضنة الخدج #{$reservation->id} - {$babyTitle}";
+        $desc = $request->payment_purpose ?: ($request->notes ?: $defaultDesc);
 
         $payment = NicuPayment::create([
             'incubator_reservation_id' => $reservation->id,
@@ -647,20 +673,29 @@ class CashierController extends Controller
             'amount' => $amount,
             'payment_method' => $request->payment_method,
             'financial_status' => 'paid',
-            'notes' => $request->notes ?: $desc,
+            'notes' => $desc,
             'paid_at' => now(),
         ]);
 
+        $actionName = ($paymentType === NicuPayment::TYPE_REFUND) ? 'nicu_refund_processed' : 'nicu_payment_received';
+        $logDesc = ($paymentType === NicuPayment::TYPE_REFUND)
+            ? "صرف واسترجاع فائض أمانات لحاضنة الخدج #{$reservation->id} بمبلغ " . number_format($amount) . " د.ع برقم سند {$receiptNumber}"
+            : "استلام {$typeLabel} لحاضنة الخدج #{$reservation->id} بمبلغ " . number_format($amount) . " د.ع برقم وصل {$receiptNumber}";
+
         \App\Services\UserActivityLogger::log(
-            action: 'nicu_payment_received',
+            action: $actionName,
             category: 'cashier',
-            description: "استلام {$typeLabel} لحاضنة الخدج #{$reservation->id} بمبلغ " . number_format($amount) . " د.ع برقم وصل {$receiptNumber}",
+            description: $logDesc,
             subject: $payment,
             isSensitive: false
         );
 
+        $successMsg = ($paymentType === NicuPayment::TYPE_REFUND)
+            ? "تم صرف واسترجاع مبلغ " . number_format($amount) . " د.ع بنجاح لوالد الطفل برقم سند استرجاع: {$receiptNumber}"
+            : "تم استلام مبلغ " . number_format($amount) . " د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}";
+
         return redirect()->route('cashier.nicu.receipt', $payment->id)
-            ->with('success', "تم استلام مبلغ " . number_format($amount) . " د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}");
+            ->with('success', $successMsg);
     }
 
     /**

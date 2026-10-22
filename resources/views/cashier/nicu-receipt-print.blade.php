@@ -234,7 +234,11 @@
         <div class="header-box">
             <div class="ar-title">مستشفى الكفاءات التخصصي</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
-            <div class="sub-title">سند قبض أمانات - قسم الخدج والحاضنات (NICU)</div>
+            @if($nicuPayment->payment_type === 'refund')
+                <div class="sub-title">سند صرف واسترجاع أمانات - قسم الخدج (NICU)</div>
+            @else
+                <div class="sub-title">سند قبض أمانات - قسم الخدج والحاضنات (NICU)</div>
+            @endif
         </div>
 
         <!-- بيانات السند والكاشير -->
@@ -267,11 +271,11 @@
             </div>
         </div>
 
-        <!-- صندوق المبلغ المقبوض -->
+        <!-- صندوق المبلغ المقبوض / المصروف -->
         <div class="amount-box">
-            <div class="amount-title">المبلغ المقبوض في الصندوق (نقداً)</div>
-            <div class="amount-val">{{ number_format($nicuPayment->amount) }} د.ع</div>
-            <small style="font-size: 11px; font-weight: 700;">طريقة القبض: {{ $nicuPayment->payment_method === 'cash' ? 'نقدي' : 'بطاقة' }}</small>
+            <div class="amount-title">{{ $nicuPayment->payment_type === 'refund' ? 'المبلغ المصروف والمسترجع نقداً للمريض' : 'المبلغ المقبوض في الصندوق (نقداً)' }}</div>
+            <div class="amount-val">{{ $nicuPayment->payment_type === 'refund' ? '-' : '' }}{{ number_format($nicuPayment->amount) }} د.ع</div>
+            <small style="font-size: 11px; font-weight: 700;">طريقة {{ $nicuPayment->payment_type === 'refund' ? 'الصرف' : 'القبض' }}: {{ $nicuPayment->payment_method === 'cash' ? 'نقدي' : 'بطاقة' }}</small>
         </div>
 
         <!-- جدول الموقف المالي التراكمي -->
@@ -301,9 +305,15 @@
                     <td style="text-align: left;">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</td>
                 </tr>
                 <tr>
-                    <td>إجمالي الأمانات المسددة:</td>
+                    <td>صافي الأمانات بعد التسوية:</td>
                     <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
                 </tr>
+                @if(($stayDetails['excess_deposit'] ?? 0) > 0)
+                    <tr>
+                        <td>فائض أمانات متبقي للأهل:</td>
+                        <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['excess_deposit']) }} د.ع</td>
+                    </tr>
+                @endif
                 <tr class="total-row">
                     <td>الصافي المتبقي بذمة المريض:</td>
                     <td style="text-align: left; font-size: 13px;">{{ number_format($stayDetails['net_balance']) }} د.ع</td>
@@ -314,7 +324,7 @@
         <div class="dotted-divider"></div>
 
         <div class="footer">
-            <div>وصل قبض مالي رسمي صادر من قسم حسابات المستشفى</div>
+            <div>{{ $nicuPayment->payment_type === 'refund' ? 'سند صرف واسترجاع مالي رسمي صادر من قسم حسابات المستشفى' : 'وصل قبض مالي رسمي صادر من قسم حسابات المستشفى' }}</div>
             <div style="font-size: 10px; margin-top: 2px;">تمنياتنا للطفل الخديج بدوام الصحة والسلامة والشفاء العاجل</div>
         </div>
     </div>

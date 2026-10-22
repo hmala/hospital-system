@@ -355,4 +355,78 @@ class NicuLabRadiologyCashierWorkflowTest extends TestCase
         $itemizedPrintRes->assertSee($this->radType->name);
         $itemizedPrintRes->assertSee('100,000');
     }
+
+    /**
+     * اختبار استرجاع وصرف فائض الأمانات للخدج في الكاشير وسند الاسترجاع الرسمي
+     */
+    public function test_cashier_can_refund_excess_deposits_for_nicu_reservation(): void
+    {
+        // 1. دفع أمانات كبيرة (مثلاً 500,000 د.ع)
+        $depositRes = $this->actingAs($this->cashier)->post(route('cashier.nicu.payment', $this->reservation), [
+            'amount' => 500000,
+            'payment_method' => 'cash',
+            'payment_type' => 'deposit',
+            'notes' => 'أمانات وسلفة دخول كبيرة',
+        ]);
+        $depositRes->assertSessionHasNoErrors();
+
+        $billingService = app(\App\Services\NicuBillingService::class);
+        $stayDetails = $billingService->calculateStayDetails($this->reservation);
+        $this->assertGreaterThan(0, $stayDetails['excess_deposit']);
+        $excessAmount = $stayDetails['excess_deposit'];
+
+        // 2. التحقق من ظهور حالة فائض الأمانات وزر إرجاع الأمانات في لوحة الكاشير
+        $cashierRes = $this->actingAs($this->cashier)->get(route('cashier.index'));
+        $cashierRes->assertOk();
+        $cashierRes->assertSee('إرجاع الأمانات');
+        $cashierRes->assertSee('فائض: +' . number_format($excessAmount, 0));
+
+        // 3. محاولة صرف استرجاع يتجاوز الفائض المتوفر (يجب أن يتم رفضه)
+        $invalidRefundRes = $this->actingAs($this->cashier)->post(route('cashier.nicu.payment', $this->reservation), [
+            'amount' => $excessAmount + 50000,
+            'payment_method' => 'cash',
+            'payment_type' => 'refund',
+            'notes' => 'محاولة استرجاع مبلغ زائد',
+        ]);
+        $invalidRefundRes->assertSessionHas('error');
+
+        // 4. صرف كامل فائض الأمانات بشكل صحيح
+        $validRefundRes = $this->actingAs($this->cashier)->post(route('cashier.nicu.payment', $this->reservation), [
+            'amount' => $excessAmount,
+            'payment_method' => 'cash',
+            'payment_type' => 'refund',
+            'notes' => 'صرف واسترجاع كامل فائض الأمانات لوالد الطفل الخديج',
+        ]);
+        $validRefundRes->assertSessionHasNoErrors();
+        $validRefundRes->assertSessionHas('success');
+
+        // التحقق من إنشاء قيد استرجاع بنوع refund
+        $this->assertDatabaseHas('nicu_payments', [
+            'incubator_reservation_id' => $this->reservation->id,
+            'amount' => $excessAmount,
+            'payment_type' => 'refund',
+            'cashier_id' => $this->cashier->id,
+        ]);
+
+        $refundPayment = NicuPayment::where('incubator_reservation_id', $this->reservation->id)
+            ->where('payment_type', 'refund')
+            ->first();
+        $this->assertNotNull($refundPayment);
+
+        // 5. التحقق من أن فائض الأمانات أصبح صفراً بعد الصرف التام
+        $freshStay = $billingService->calculateStayDetails($this->reservation->fresh());
+        $this->assertEquals(0, $freshStay['excess_deposit']);
+        $this->assertEquals(0, $freshStay['net_balance']);
+
+        // 6. التحقق من سند الاسترجاع الرسمي وصفحة الطباعة
+        $receiptRes = $this->actingAs($this->cashier)->get(route('cashier.nicu.receipt', $refundPayment->id));
+        $receiptRes->assertOk();
+        $receiptRes->assertSee('سند استرجاع فائض أمانات');
+        $receiptRes->assertSee(number_format($excessAmount, 0));
+
+        $printRes = $this->actingAs($this->cashier)->get(route('cashier.nicu.receipt.print', $refundPayment->id));
+        $printRes->assertOk();
+        $printRes->assertSee('سند صرف واسترجاع أمانات');
+        $printRes->assertSee(number_format($excessAmount, 0));
+    }
 }

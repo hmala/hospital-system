@@ -56,10 +56,20 @@
 
                 <div class="card-body p-4">
                     <!-- تفاصيل السند المالية -->
-                    <div class="text-center py-4 bg-light rounded-4 mb-4 border">
-                        <span class="text-muted d-block small mb-1">المبلغ المقبوض في الصندوق</span>
-                        <h1 class="display-5 fw-black text-success mb-1">{{ number_format($nicuPayment->amount) }} <span class="fs-4">د.ع</span></h1>
-                        <span class="badge bg-secondary px-3 py-1">{{ $nicuPayment->payment_method === 'cash' ? 'نقدي (كاش)' : 'بطاقة دفع إلكتروني' }}</span>
+                    <div class="text-center py-4 bg-light rounded-4 mb-4 border {{ $nicuPayment->payment_type === 'refund' ? 'border-danger-subtle bg-danger-subtle bg-opacity-10' : '' }}">
+                        <span class="text-muted d-block small mb-1">
+                            @if($nicuPayment->payment_type === 'refund')
+                                المبلغ المصروف والمسترجع للمريض (نقداً)
+                            @else
+                                المبلغ المقبوض في الصندوق
+                            @endif
+                        </span>
+                        <h1 class="display-5 fw-black {{ $nicuPayment->payment_type === 'refund' ? 'text-danger' : 'text-success' }} mb-1">
+                            {{ $nicuPayment->payment_type === 'refund' ? '-' : '' }}{{ number_format($nicuPayment->amount) }} <span class="fs-4">د.ع</span>
+                        </h1>
+                        <span class="badge {{ $nicuPayment->payment_type === 'refund' ? 'bg-danger text-white' : 'bg-secondary' }} px-3 py-1">
+                            {{ $nicuPayment->payment_type === 'refund' ? 'طريقة الصرف: ' : 'طريقة القبض: ' }}{{ $nicuPayment->payment_method === 'cash' ? 'نقدي (كاش)' : 'بطاقة دفع إلكتروني' }}
+                        </span>
                     </div>
 
                     <!-- شبكة بيانات الحاضنة والطفل -->
@@ -84,13 +94,13 @@
                         </div>
                         <div class="col-sm-6">
                             <div class="p-3 border rounded-3 bg-white h-100">
-                                <span class="text-muted small d-block mb-1">الكاشير المستلم:</span>
+                                <span class="text-muted small d-block mb-1">{{ $nicuPayment->payment_type === 'refund' ? 'الكاشير الصارف:' : 'الكاشير المستلم:' }}</span>
                                 <strong class="fs-6 text-dark"><i class="fas fa-cash-register text-warning me-1"></i>{{ $nicuPayment->cashier?->name ?? 'الكاشير' }}</strong>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="p-3 border rounded-3 bg-white h-100">
-                                <span class="text-muted small d-block mb-1">تاريخ ووقت القبض:</span>
+                                <span class="text-muted small d-block mb-1">{{ $nicuPayment->payment_type === 'refund' ? 'تاريخ ووقت الصرف:' : 'تاريخ ووقت القبض:' }}</span>
                                 <strong>{{ $nicuPayment->paid_at ? $nicuPayment->paid_at->format('Y/m/d h:i A') : now()->format('Y/m/d h:i A') }}</strong>
                             </div>
                         </div>

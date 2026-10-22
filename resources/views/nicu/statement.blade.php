@@ -262,11 +262,13 @@
                                     <span class="badge bg-light text-dark border">{{ $pmt->payment_method == 'cash' ? 'نقداً' : 'بطاقة' }}</span>
                                     <span class="d-block mt-1">{{ $pmt->notes ?: $pmt->payment_type_name }}</span>
                                 </td>
-                                <td class="text-end fw-bold text-success font-monospace">{{ number_format($pmt->amount) }} د.ع</td>
+                                <td class="text-end fw-bold font-monospace {{ $pmt->payment_type === 'refund' ? 'text-danger' : 'text-success' }}">
+                                    {{ $pmt->payment_type === 'refund' ? '-' : '' }}{{ number_format($pmt->amount) }} د.ع
+                                </td>
                             </tr>
                         @endforeach
                         <tr class="table-light">
-                            <td colspan="4" class="fw-bold text-end text-success">مجموع المبالغ المسددة (أمانات وسلف):</td>
+                            <td colspan="4" class="fw-bold text-end text-success">صافي الأمانات المسددة بعد التسوية والاسترجاع:</td>
                             <td class="text-end fw-bold text-success fs-6">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
                         </tr>
                     </tbody>
