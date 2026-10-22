@@ -1337,6 +1337,14 @@
         $sampleTime = $request->created_at ? $request->created_at->format('H:i A') : date('H:i A');
 
         $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
+        // Defensive deduplication of lab results by test identity
+        $seenResultKeys = [];
+        $labResults = $labResults->filter(function($r) use (&$seenResultKeys) {
+            $key = ($r->parent_test_name ?: '') . '::' . ($r->test_name ?: '') . '::' . ($r->sub_test_id ?: '');
+            if (isset($seenResultKeys[$key])) return false;
+            $seenResultKeys[$key] = true;
+            return true;
+        });
         $testsCount = $labResults->count();
 
         $prevResultsMap = method_exists($request, 'getPreviousLabResultsMap') ? $request->getPreviousLabResultsMap() : [];
@@ -1357,15 +1365,40 @@
             $testsCount = count($savedArr);
         }
 
-        // إذا لم تكن هناك نتائج مدخلة بعد، نستخرج قائمة التحاليل المطلوبة (Requisition / Work Order)
+        // إذا لم تكن هناك نتائج مدخلة بعد، نستخرج قائمة التحاليل المطلوبة (Requisition / Work Order) دون أي تكرار
         $requestedLabTestsList = [];
+        $seenTestKeys = [];
         $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         if (!is_array($requestDetails)) $requestDetails = [];
 
+        $addDistinctTest = function($testData) use (&$requestedLabTestsList, &$seenTestKeys) {
+            $id = is_array($testData) ? ($testData['id'] ?? null) : (is_object($testData) ? ($testData->id ?? null) : null);
+            $name = is_array($testData) ? ($testData['name'] ?? $testData['test_name'] ?? '') : (is_object($testData) ? ($testData->name ?? $testData->test_name ?? '') : (string)$testData);
+            $nameNorm = mb_strtolower(trim(preg_replace('/\s+/', ' ', (string)$name)));
+
+            if ($id && isset($seenTestKeys['id_' . $id])) {
+                return;
+            }
+            if ($nameNorm !== '' && isset($seenTestKeys['name_' . $nameNorm])) {
+                return;
+            }
+
+            if ($id) {
+                $seenTestKeys['id_' . $id] = true;
+            }
+            if ($nameNorm !== '') {
+                $seenTestKeys['name_' . $nameNorm] = true;
+            }
+
+            $requestedLabTestsList[] = is_object($testData) ? $testData->toArray() : (is_array($testData) ? $testData : ['name' => trim($name)]);
+        };
+
         if (!empty($requestDetails['package_id'])) {
             $pkg = \App\Models\Package::find($requestDetails['package_id']);
-            if ($pkg) {
-                $requestedLabTestsList = array_merge($requestedLabTestsList, $pkg->labTests->toArray());
+            if ($pkg && $pkg->labTests) {
+                foreach ($pkg->labTests as $pTest) {
+                    $addDistinctTest($pTest);
+                }
             }
         }
 
@@ -1377,7 +1410,7 @@
                 if ($testId === '') continue;
                 $labTestModel = \App\Models\LabTest::find($testId);
                 if ($labTestModel) {
-                    $requestedLabTestsList[] = $labTestModel->toArray();
+                    $addDistinctTest($labTestModel);
                 }
             }
         }
@@ -1387,9 +1420,15 @@
             $testsArr = is_string($rawTests) ? (json_decode($rawTests, true) ?: explode(',', $rawTests)) : (is_array($rawTests) ? $rawTests : []);
             foreach ($testsArr as $tItem) {
                 if (is_array($tItem)) {
-                    $requestedLabTestsList[] = $tItem;
+                    $addDistinctTest($tItem);
                 } elseif (is_string($tItem) && trim($tItem) !== '') {
-                    $requestedLabTestsList[] = ['name' => trim($tItem)];
+                    $nameTrim = trim($tItem);
+                    $dbTest = \App\Models\LabTest::where('name', $nameTrim)->first();
+                    if ($dbTest) {
+                        $addDistinctTest($dbTest);
+                    } else {
+                        $addDistinctTest(['name' => $nameTrim]);
+                    }
                 }
             }
         }
