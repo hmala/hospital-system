@@ -1474,12 +1474,34 @@
         $hasUrineContent = ($urineResults->count() > 0);
         $hasSavedResults = empty($hasStandardContent) && empty($hasUrineContent) && !empty($request->result) && count($savedArr ?? []) > 0;
         $hasWorkOrder = empty($hasStandardContent) && empty($hasUrineContent) && empty($hasSavedResults) && count($requestedLabTestsList ?? []) > 0;
+
+        // حصر الفحوصات المطلوبة التي لم تكتمل نتائجها بعد (مثل الزرع المخبري urine for c/s أو مرفقات الأجهزة قيد الانتظار)
+        $handledTestNames = $urineResults->pluck('parent_test_name')->filter()->unique()->toArray();
+        $handledTestNames = array_merge(
+            $handledTestNames,
+            $standardResults->pluck('test_name')->toArray(),
+            $standardResults->pluck('parent_test_name')->filter()->toArray()
+        );
+        if ($hasUrineContent) {
+            $handledTestNames[] = 'General Urine Examination';
+            $handledTestNames[] = 'GUE';
+            $handledTestNames[] = 'G.U.E';
+            $handledTestNames[] = 'تحليل البول العام';
+            $handledTestNames[] = 'فحص الإدرار العام';
+        }
+        $pendingTests = collect($requestedLabTestsList ?? [])->filter(function($item) use ($handledTestNames) {
+            $name = is_array($item) ? ($item['name'] ?? '') : (is_object($item) ? $item->name : (string)$item);
+            foreach ($handledTestNames as $hn) {
+                if (strcasecmp(trim($hn), trim($name)) === 0) return false;
+            }
+            return true;
+        });
     @endphp
 
     {{-- =========================================================================
          PAGE 1: Standard Laboratory Tests (or Full G.U.E if it's the only test)
          ========================================================================= --}}
-    @if($hasStandardContent || !$hasUrineContent)
+    @if($hasStandardContent || $hasUrineContent || $hasSavedResults || $hasWorkOrder || $isBloodBankRequest)
     <div class="report-page page-1">
 
         <div class="report-main-content">
@@ -1780,6 +1802,30 @@
                         </div>
                     @endforeach
                 </div>
+
+                @if($pendingTests->count() > 0)
+                    {{-- قسم الفحوصات المطلوبة وقيد الإجراء / الزرع المخبري --}}
+                    <div class="pending-tests-container" style="margin-top: 10px; margin-bottom: 8px; border: 1.2px dashed #0284c7; border-radius: 6px; padding: 6px 12px; background: #f0f9ff;">
+                        <div style="font-size: 11px; font-weight: 800; color: #0369a1; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                            <span><i class="fas fa-hourglass-half me-1"></i> فحص قيد الإجراء / الزرع المخبري (In Progress / Culture Pending):</span>
+                            <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 9.5px; border: 1px solid #bae6fd;">النتيجة تصدر لاحقاً</span>
+                        </div>
+                        @foreach($pendingTests as $pTest)
+                            @php
+                                $pName = is_array($pTest) ? ($pTest['name'] ?? '') : (is_object($pTest) ? $pTest->name : (string)$pTest);
+                                $hasAtt = !empty($testAtts[$pName]);
+                            @endphp
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 3px; font-size: 11px;">
+                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pName }}</span>
+                                @if($hasAtt)
+                                    <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 10px; border: 1px solid #bbf7d0;">✓ التقرير مرفق مع الفحص</span>
+                                @else
+                                    <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 10px; border: 1px solid #fde68a;">⏳ قيد الزرع / الفحص المخبري (Culture / Test In Progress)</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             @elseif($hasSavedResults)
                 @php
                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
@@ -1929,7 +1975,7 @@
 
         <!-- Pinned Bottom Block for Page 1 -->
         <div class="report-bottom-block">
-            @if(!$hasUrineContent)
+            @if(!($hasUrineContent && $hasStandardContent))
                 <!-- Official Authentication & Signatures Block (مكان التوقيع للاعتماد) -->
                 <div class="auth-block">
                     <div class="auth-cell">
