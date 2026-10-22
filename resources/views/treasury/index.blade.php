@@ -97,22 +97,22 @@
     <div class="row g-3 mb-4">
         <!-- 1. رصيد الخزينة الإجمالي الفعلي اللحظي -->
         <div class="col-12 col-md-4 col-xl-2">
-            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff;">
-                <div class="card-body p-3 position-relative d-flex flex-column justify-content-between">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                <div class="card-body p-3 border-start border-4 border-dark d-flex flex-column justify-content-between">
                     <div>
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-uppercase fw-bold text-white-50" style="font-size: 0.72rem;">الرصيد الفعلي بالخزينة</span>
-                            <div class="rounded-circle p-1 bg-white bg-opacity-10 text-warning" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">الرصيد الفعلي بالخزينة</span>
+                            <div class="rounded-circle p-1 bg-dark bg-opacity-10 text-dark" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
                                 <i class="fas fa-vault" style="font-size: 0.8rem;"></i>
                             </div>
                         </div>
-                        <h4 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
-                            {{ number_format($currentTreasuryBalance) }} <small class="fs-7 text-white-50">د.ع</small>
+                        <h4 class="fw-bold mb-1 text-dark">
+                            {{ number_format($currentTreasuryBalance) }} <small class="fs-7 text-muted">د.ع</small>
                         </h4>
                     </div>
-                    <div class="small text-white-50 mt-2 pt-1 border-top border-secondary border-opacity-25" style="font-size: 0.7rem;">
-                        <span class="badge bg-secondary text-white-50 border border-secondary w-100 py-1 mb-1">تراكمي شامل كل الفترات</span>
-                        <div class="d-flex justify-content-between">
+                    <div class="mt-2 pt-1 border-top" style="font-size: 0.72rem;">
+                        <span class="badge bg-light text-dark border w-100 py-1 mb-1 fw-bold">تراكمي شامل كل الفترات</span>
+                        <div class="d-flex justify-content-between text-muted">
                             <span>وارد: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
                             <span>صادر: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
                         </div>
