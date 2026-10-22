@@ -93,114 +93,152 @@
         </div>
     @endif
 
-    <!-- بطاقات المؤشرات المالية العامة (KPI Cards) - هيكلية الـ 5 كروت المتقدمة -->
+    <!-- بطاقات المؤشرات المالية العامة (KPI Cards) - هيكلية الـ 6 كروت التنفيذية الشاملة -->
     <div class="row g-3 mb-4">
         <!-- 1. رصيد الخزينة الإجمالي الفعلي اللحظي -->
-        <div class="col-12 col-md-6 col-xl">
+        <div class="col-12 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff;">
-                <div class="card-body p-3 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="text-uppercase fw-bold text-white-50 small">الرصيد الفعلي بالخزينة</span>
-                        <div class="rounded-circle p-1.5 bg-white bg-opacity-10 text-warning">
-                            <i class="fas fa-vault"></i>
+                <div class="card-body p-3 position-relative d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-white-50" style="font-size: 0.72rem;">الرصيد الفعلي بالخزينة</span>
+                            <div class="rounded-circle p-1 bg-white bg-opacity-10 text-warning" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-vault" style="font-size: 0.8rem;"></i>
+                            </div>
                         </div>
+                        <h4 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
+                            {{ number_format($currentTreasuryBalance) }} <small class="fs-7 text-white-50">د.ع</small>
+                        </h4>
                     </div>
-                    <h3 class="fw-bold mb-1 {{ $currentTreasuryBalance >= 0 ? 'text-warning' : 'text-danger' }}">
-                        {{ number_format($currentTreasuryBalance) }} <small class="fs-6 text-white-50">د.ع</small>
-                    </h3>
-                    <div class="small text-white-50 mt-2 d-flex justify-content-between pt-1 border-top border-secondary border-opacity-25" style="font-size: 0.75rem;">
-                        <span>وارد كلي: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
-                        <span>صادر كلي: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
+                    <div class="small text-white-50 mt-2 pt-1 border-top border-secondary border-opacity-25" style="font-size: 0.7rem;">
+                        <span class="badge bg-secondary text-white-50 border border-secondary w-100 py-1 mb-1">تراكمي شامل كل الفترات</span>
+                        <div class="d-flex justify-content-between">
+                            <span>وارد: <strong class="text-success">{{ number_format($totalAllTimeInflow) }}</strong></span>
+                            <span>صادر: <strong class="text-danger">{{ number_format($totalAllTimeOutflow) }}</strong></span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2. إجمالي المقبوضات للفترة -->
-        <div class="col-12 col-md-6 col-xl">
+        <!-- 2. إجمالي المقبوض نقداً للفترة -->
+        <div class="col-12 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3 border-start border-4 border-success">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="text-uppercase fw-bold text-muted small">إجمالي الوارد (الفترة)</span>
-                        <div class="rounded-circle p-1.5 bg-success bg-opacity-10 text-success">
-                            <i class="fas fa-arrow-down"></i>
+                <div class="card-body p-3 border-start border-4 border-success d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">المقبوض نقداً (الفترة)</span>
+                            <div class="rounded-circle p-1 bg-success bg-opacity-10 text-success" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-arrow-down" style="font-size: 0.8rem;"></i>
+                            </div>
                         </div>
+                        <h4 class="fw-bold text-success mb-1">
+                            + {{ number_format($periodInflow) }} <small class="fs-7 text-muted">د.ع</small>
+                        </h4>
                     </div>
-                    <h3 class="fw-bold text-success mb-1">
-                        + {{ number_format($periodInflow) }} <small class="fs-6 text-muted">د.ع</small>
-                    </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
-                        <span>إيرادات الأقسام والكاشير</span>
-                        <span class="badge bg-success-subtle text-success">وارد (+)</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                        <span>نقد الصندوق الفعلي</span>
+                        <span class="badge bg-success-subtle text-success">نقد (+)</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. كارت مخصص ومستقل: المبالغ المسترجعة للمرضى (Refunds) -->
-        <div class="col-12 col-md-6 col-xl">
+        <!-- 3. كارت مخصص: مطالبات الضمان الصحي للفترة -->
+        <div class="col-12 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3 border-start border-4 border-warning">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="text-uppercase fw-bold text-muted small">المبالغ المسترجعة للمرضى</span>
-                        <div class="rounded-circle p-1.5 bg-warning bg-opacity-10 text-warning">
-                            <i class="fas fa-undo-alt"></i>
+                <div class="card-body p-3 border-start border-4 border-info d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">مطالبات الضمان (الفترة)</span>
+                            <div class="rounded-circle p-1 bg-info bg-opacity-10 text-info" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-file-invoice-dollar" style="font-size: 0.8rem;"></i>
+                            </div>
                         </div>
+                        <h4 class="fw-bold text-info mb-1">
+                            + {{ number_format($periodInsuranceClaims) }} <small class="fs-7 text-muted">د.ع</small>
+                        </h4>
                     </div>
-                    <h3 class="fw-bold text-warning mb-1">
-                        - {{ number_format($periodRefunds) }} <small class="fs-6 text-muted">د.ع</small>
-                    </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
-                        <span>إلغاء كشفيات وسونار</span>
-                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle">
-                            {{ $periodRefundsCount }} {{ $periodRefundsCount == 1 ? 'حركة استرجاع' : 'حركات استرجاع' }}
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                        <span>ذمم مدينة مؤجلة</span>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                            {{ $periodInsuranceClaimsCount }} مطالبة
                         </span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. المصروفات ومستحقات الأطباء (Expenses) -->
-        <div class="col-12 col-md-6 col-xl">
+        <!-- 4. المبالغ المسترجعة للمرضى -->
+        <div class="col-12 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3 border-start border-4 border-danger">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="text-uppercase fw-bold text-muted small">المصروفات ومستحقات الأطباء</span>
-                        <div class="rounded-circle p-1.5 bg-danger bg-opacity-10 text-danger">
-                            <i class="fas fa-arrow-up"></i>
+                <div class="card-body p-3 border-start border-4 border-warning d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">المسترجع للمرضى</span>
+                            <div class="rounded-circle p-1 bg-warning bg-opacity-10 text-warning" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-undo-alt" style="font-size: 0.8rem;"></i>
+                            </div>
                         </div>
+                        <h4 class="fw-bold text-warning mb-1">
+                            - {{ number_format($periodRefunds) }} <small class="fs-7 text-muted">د.ع</small>
+                        </h4>
                     </div>
-                    <h3 class="fw-bold text-danger mb-1">
-                        - {{ number_format($periodExpenses) }} <small class="fs-6 text-muted">د.ع</small>
-                    </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
-                        <span>أطباء ومشتريات وتشغيلي</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                        <span>إلغاء كشفيات وفحوصات</span>
+                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle">
+                            {{ $periodRefundsCount }} حركات
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. المصروفات المنفذة -->
+        <div class="col-12 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                <div class="card-body p-3 border-start border-4 border-danger d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">المصروفات المنفذة</span>
+                            <div class="rounded-circle p-1 bg-danger bg-opacity-10 text-danger" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-arrow-up" style="font-size: 0.8rem;"></i>
+                            </div>
+                        </div>
+                        <h4 class="fw-bold text-danger mb-1">
+                            - {{ number_format($periodExpenses) }} <small class="fs-7 text-muted">د.ع</small>
+                        </h4>
+                    </div>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                        <span title="مستحقات أطباء معلقة قيد الصرف">معلقة: <strong class="text-warning">{{ number_format($periodPendingDoctorDues) }}</strong></span>
                         <span class="badge bg-danger-subtle text-danger">صرف (-)</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 5. صافي حركة الفترة (Net Period Balance) -->
+        <!-- 6. صافي حركة الفترة (Net Period Balance) -->
         @php
             $netPeriod = $periodInflow - $periodOutflow;
         @endphp
-        <div class="col-12 col-md-6 col-xl">
+        <div class="col-12 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                <div class="card-body p-3 border-start border-4 {{ $netPeriod >= 0 ? 'border-primary' : 'border-danger' }}">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="text-uppercase fw-bold text-muted small">الصافي الفعلي للفترة</span>
-                        <div class="rounded-circle p-1.5 {{ $netPeriod >= 0 ? 'bg-primary bg-opacity-10 text-primary' : 'bg-danger bg-opacity-10 text-danger' }}">
-                            <i class="fas fa-scale-balanced"></i>
+                <div class="card-body p-3 border-start border-4 {{ $netPeriod >= 0 ? 'border-primary' : 'border-danger' }} d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem;">صافي سيولة الفترة</span>
+                            <div class="rounded-circle p-1 {{ $netPeriod >= 0 ? 'bg-primary bg-opacity-10 text-primary' : 'bg-danger bg-opacity-10 text-danger' }}" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-scale-balanced" style="font-size: 0.8rem;"></i>
+                            </div>
                         </div>
+                        <h4 class="fw-bold {{ $netPeriod >= 0 ? 'text-primary' : 'text-danger' }} mb-1">
+                            {{ $netPeriod >= 0 ? '+' : '' }}{{ number_format($netPeriod) }} <small class="fs-7 text-muted">د.ع</small>
+                        </h4>
                     </div>
-                    <h3 class="fw-bold {{ $netPeriod >= 0 ? 'text-primary' : 'text-danger' }} mb-1">
-                        {{ $netPeriod >= 0 ? '+' : '' }}{{ number_format($netPeriod) }} <small class="fs-6 text-muted">د.ع</small>
-                    </h3>
-                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
-                        <span>الوارد - (المسترجع + المصروف)</span>
+                    <div class="small text-muted mt-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                        <span>الوارد - المنصرف</span>
                         <span class="badge {{ $netPeriod >= 0 ? 'bg-primary-subtle text-primary' : 'bg-danger-subtle text-danger' }}">
-                            {{ $netPeriod >= 0 ? 'فائض نقدي' : 'عجز' }}
+                            {{ $netPeriod >= 0 ? 'فائض سيولة' : 'عجز سيولة' }}
                         </span>
                     </div>
                 </div>
@@ -248,9 +286,30 @@
                         <label class="form-label small fw-bold text-muted mb-1">البند / التصنيف</label>
                         <select name="category" class="form-select form-select-sm">
                             <option value="all">كافة التصنيفات والأقسام</option>
-                            @foreach($categories as $key => $name)
-                                <option value="{{ $key }}" {{ request('category') === $key ? 'selected' : '' }}>{{ $name }}</option>
-                            @endforeach
+                            <optgroup label="الأقسام والخدمات الطبية">
+                                <option value="consultation" {{ request('category') === 'consultation' ? 'selected' : '' }}>العيادات الاستشارية</option>
+                                <option value="radiology_sonar" {{ request('category') === 'radiology_sonar' ? 'selected' : '' }}>السونار (Ultrasound)</option>
+                                <option value="radiology_xray" {{ request('category') === 'radiology_xray' ? 'selected' : '' }}>الأشعة السينية (X-Ray)</option>
+                                <option value="radiology_mri" {{ request('category') === 'radiology_mri' ? 'selected' : '' }}>الرنين المغناطيسي (MRI)</option>
+                                <option value="radiology_ct" {{ request('category') === 'radiology_ct' ? 'selected' : '' }}>المفراس الحلزوني (CT Scan)</option>
+                                <option value="radiology_echo" {{ request('category') === 'radiology_echo' ? 'selected' : '' }}>إيكو القلب (Echo)</option>
+                                <option value="lab" {{ request('category') === 'lab' ? 'selected' : '' }}>المختبر والتحاليل الطبية</option>
+                                <option value="surgery" {{ request('category') === 'surgery' ? 'selected' : '' }}>العمليات الجراحية والرقود</option>
+                                <option value="emergency" {{ request('category') === 'emergency' ? 'selected' : '' }}>قسم الطوارئ والإسعاف</option>
+                                <option value="pharmacy" {{ request('category') === 'pharmacy' ? 'selected' : '' }}>الصيدلية والعلاج</option>
+                                <option value="general_income" {{ request('category') === 'general_income' ? 'selected' : '' }}>إيرادات وتحصيلات عامة</option>
+                            </optgroup>
+                            <optgroup label="المصروفات والمسترجعات">
+                                <option value="refund" {{ request('category') === 'refund' ? 'selected' : '' }}>استرجاع مالي للمرضى</option>
+                                <option value="doctor_payout" {{ request('category') === 'doctor_payout' ? 'selected' : '' }}>صرف مستحقات أطباء</option>
+                                <option value="purchase" {{ request('category') === 'purchase' ? 'selected' : '' }}>فواتير مشتريات ومورّدين</option>
+                                <option value="salary" {{ request('category') === 'salary' ? 'selected' : '' }}>رواتب ومكافآت موظفين</option>
+                                <option value="maintenance" {{ request('category') === 'maintenance' ? 'selected' : '' }}>صيانة وأجهزة طبية</option>
+                                <option value="utilities" {{ request('category') === 'utilities' ? 'selected' : '' }}>كهرباء، ماء، ومولدات</option>
+                                <option value="medical_supplies" {{ request('category') === 'medical_supplies' ? 'selected' : '' }}>مستلزمات ومستهلكات طبية</option>
+                                <option value="operational" {{ request('category') === 'operational' ? 'selected' : '' }}>مصاريف ونثريات تشغيلية</option>
+                                <option value="other" {{ request('category') === 'other' ? 'selected' : '' }}>أخرى</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="col-12 col-md-3">
@@ -325,11 +384,11 @@
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5" id="deptChartModeBadge">
                                     <i class="fas fa-chart-column me-1"></i>أعمدة رأسية
                                 </span>
-                                <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">إجمالي الوارد: {{ number_format($periodInflow) }} د.ع</span>
+                                <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">إجمالي الاستحقاق: {{ number_format($totalHospitalAccrual ?? $periodInflow) }} د.ع</span>
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            @if(count($deptChartData) > 0 && $periodInflow > 0)
+                            @if(count($deptChartData) > 0 && ($periodInflow > 0 || ($totalHospitalAccrual ?? 0) > 0))
                                 <div id="deptChartContainer" style="position: relative; height: 340px; width: 100%;">
                                     <canvas id="deptChartCanvas"></canvas>
                                 </div>
@@ -472,80 +531,103 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-4" style="width: 50px;">#</th>
-                                <th style="width: 250px;">القسم / المركز الطبي</th>
-                                <th class="text-center" style="width: 140px;">عدد الوصولات / الحالات</th>
-                                <th class="text-end" style="width: 180px;">إجمالي المقبوض (Gross)</th>
-                                <th class="text-end" style="width: 180px;">حصص الأطباء / التكاليف</th>
-                                <th class="text-end" style="width: 180px;">صافي عائد المستشفى (Net)</th>
-                                <th style="width: 180px;">النسبة من الدخل العام</th>
-                                <th class="text-center pe-4" style="width: 120px;">الإجراء</th>
+                                <th class="ps-3" style="width: 35px;">#</th>
+                                <th style="min-width: 200px;">القسم / الخدمة الطبية</th>
+                                <th class="text-center" style="width: 100px;">الوصولات</th>
+                                <th class="text-end" style="min-width: 130px;">المقبوض نقداً</th>
+                                <th class="text-end" style="min-width: 130px;">مطالبات الضمان</th>
+                                <th class="text-end" style="min-width: 140px;">إجمالي الاستحقاق</th>
+                                <th class="text-end" style="min-width: 130px;">حصص الأطباء / التكاليف</th>
+                                <th class="text-end" style="min-width: 140px;">صافي المستشفى</th>
+                                <th style="width: 130px;">النسبة</th>
+                                <th class="text-center pe-3" style="width: 90px;">الإجراء</th>
                             </tr>
                         </thead>
                         <tbody>
                             @php
                                 $totalDeptCount = 0;
-                                $totalDeptGross = 0;
+                                $totalDeptCash = 0;
+                                $totalDeptInsurance = 0;
+                                $totalDeptAccrual = 0;
                                 $totalDeptCosts = 0;
                                 $totalDeptNet = 0;
                                 $counter = 1;
                             @endphp
                             @foreach($departmentStats as $deptKey => $dept)
+                                @if($deptKey === 'radiology' && $dept['count'] == 0 && $dept['cash_gross'] == 0)
+                                    @continue
+                                @endif
                                 @php
                                     $totalDeptCount += $dept['count'];
-                                    $totalDeptGross += $dept['gross'];
+                                    $totalDeptCash += $dept['cash_gross'];
+                                    $totalDeptInsurance += $dept['insurance_claims'];
+                                    $totalDeptAccrual += $dept['accrual_gross'];
                                     $totalDeptCosts += $dept['costs'];
                                     $totalDeptNet += $dept['net'];
                                 @endphp
                                 <tr>
-                                    <td class="ps-4 text-muted small font-monospace">{{ $counter++ }}</td>
+                                    <td class="ps-3 text-muted small font-monospace">{{ $counter++ }}</td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2.5">
-                                            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center shadow-xs" 
-                                                 style="width: 38px; height: 38px; background-color: {{ $dept['color'] }}15; color: {{ $dept['color'] }};">
-                                                <i class="fas {{ $dept['icon'] }} fs-5"></i>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-3 p-1.5 d-flex align-items-center justify-content-center shadow-xs" 
+                                                 style="width: 34px; height: 34px; background-color: {{ $dept['color'] }}15; color: {{ $dept['color'] }};">
+                                                <i class="fas {{ $dept['icon'] }} fs-6"></i>
                                             </div>
                                             <div>
-                                                <strong class="text-dark d-block">{{ $dept['name'] }}</strong>
-                                                <small class="text-muted font-monospace">{{ $deptKey }}</small>
+                                                <strong class="text-dark d-block" style="font-size: 0.88rem;">{{ $dept['name'] }}</strong>
+                                                <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $deptKey }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge {{ $dept['count'] > 0 ? 'bg-light text-dark border' : 'bg-secondary-subtle text-muted' }} px-3 py-1.5 font-monospace fs-7">
-                                            {{ number_format($dept['count']) }} حالة
+                                        <span class="badge {{ $dept['count'] > 0 ? 'bg-light text-dark border' : 'bg-secondary-subtle text-muted' }} px-2 py-1 font-monospace fs-7">
+                                            {{ number_format($dept['count']) }}
                                         </span>
                                     </td>
                                     <td class="text-end">
-                                        <strong class="font-monospace fs-6 text-dark">
-                                            {{ number_format($dept['gross']) }} <small class="fs-8 text-muted">د.ع</small>
+                                        <strong class="font-monospace fs-7 text-dark">
+                                            {{ number_format($dept['cash_gross']) }} <small class="fs-8 text-muted">د.ع</small>
                                         </strong>
                                     </td>
                                     <td class="text-end">
-                                        <span class="font-monospace text-muted">
+                                        @if($dept['insurance_claims'] > 0)
+                                            <span class="font-monospace fs-7 text-info fw-bold">
+                                                + {{ number_format($dept['insurance_claims']) }} <small class="fs-8 text-muted">د.ع</small>
+                                            </span>
+                                        @else
+                                            <span class="text-muted font-monospace fs-7">0</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="font-monospace fs-7 text-primary">
+                                            {{ number_format($dept['accrual_gross']) }} <small class="fs-8 text-muted">د.ع</small>
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="font-monospace text-muted fs-7">
                                             {{ $dept['costs'] > 0 ? ('- ' . number_format($dept['costs'])) : '0' }} <small class="fs-8 text-muted">د.ع</small>
                                         </span>
                                     </td>
                                     <td class="text-end">
-                                        <strong class="font-monospace fs-6 text-success">
+                                        <strong class="font-monospace fs-7 text-success">
                                             {{ number_format($dept['net']) }} <small class="fs-8 text-muted">د.ع</small>
                                         </strong>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-grow-1" style="height: 7px;">
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <div class="progress flex-grow-1" style="height: 6px;">
                                                 <div class="progress-bar" role="progressbar" style="width: {{ $dept['percentage'] }}%; background-color: {{ $dept['color'] }};"></div>
                                             </div>
-                                            <span class="font-monospace small fw-bold" style="width: 42px; text-align: left; color: {{ $dept['color'] }};">
+                                            <span class="font-monospace small fw-bold" style="width: 36px; text-align: left; color: {{ $dept['color'] }}; font-size: 0.72rem;">
                                                 {{ $dept['percentage'] }}%
                                             </span>
                                         </div>
                                     </td>
-                                    <td class="text-center pe-4">
+                                    <td class="text-center pe-3">
                                         @if($deptKey === 'consultation')
                                             <div class="d-flex justify-content-center gap-1">
-                                                <button type="button" class="btn btn-xs btn-primary px-2.5 py-1 rounded-pill shadow-xs" onclick="switchToDoctorTab()" title="عرض تفاصيل كشوفات الأطباء والتحويلات">
-                                                    <i class="fas fa-user-md me-1"></i> تحليل الأطباء
+                                                <button type="button" class="btn btn-xs btn-primary px-2 py-1 rounded-pill shadow-xs" onclick="switchToDoctorTab()" title="عرض تفاصيل كشوفات الأطباء والتحويلات">
+                                                    <i class="fas fa-user-md"></i>
                                                 </button>
                                                 <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
                                                    class="btn btn-xs btn-outline-secondary px-2 py-1 rounded-pill" title="عرض وصولات الاستشارية">
@@ -554,8 +636,8 @@
                                             </div>
                                         @else
                                             <a href="{{ route('treasury.index', array_merge(request()->query(), ['category' => $deptKey])) }}#ledger" 
-                                               class="btn btn-xs btn-outline-primary px-2.5 py-1 rounded-pill" title="عرض قيود هذا القسم">
-                                                <i class="fas fa-filter me-1"></i> تصفية
+                                               class="btn btn-xs btn-outline-primary px-2 py-1 rounded-pill" title="تصفية قيود هذا القسم">
+                                                <i class="fas fa-filter"></i>
                                             </a>
                                         @endif
                                     </td>
@@ -563,24 +645,30 @@
                             @endforeach
                         </tbody>
                         <tfoot class="table-light border-top border-2">
-                            <tr class="fw-bold">
-                                <td colspan="2" class="ps-4 py-3 fs-6 text-dark">
-                                    <i class="fas fa-calculator text-primary me-2"></i> المجموع العام لإيرادات الأقسام
+                            <tr class="fw-bold fs-7">
+                                <td colspan="2" class="ps-3 py-2.5 text-dark">
+                                    <i class="fas fa-calculator text-primary me-1"></i> المجموع العام للخدمات:
                                 </td>
-                                <td class="text-center font-monospace fs-6 py-3">
-                                    <span class="badge bg-primary px-3 py-1.5 fs-7">{{ number_format($totalDeptCount) }} معاملة</span>
+                                <td class="text-center font-monospace py-2.5">
+                                    <span class="badge bg-primary px-2 py-1 fs-7">{{ number_format($totalDeptCount) }}</span>
                                 </td>
-                                <td class="text-end font-monospace fs-6 py-3 text-dark">
-                                    {{ number_format($totalDeptGross) }} د.ع
+                                <td class="text-end font-monospace py-2.5 text-dark">
+                                    {{ number_format($totalDeptCash) }} د.ع
                                 </td>
-                                <td class="text-end font-monospace fs-6 py-3 text-danger">
-                                    - {{ number_format($totalDeptCosts) }} د.ع
+                                <td class="text-end font-monospace py-2.5 text-info">
+                                    {{ number_format($totalDeptInsurance) }} د.ع
                                 </td>
-                                <td class="text-end font-monospace fs-6 py-3 text-success">
+                                <td class="text-end font-monospace py-2.5 text-primary">
+                                    {{ number_format($totalDeptAccrual) }} د.ع
+                                </td>
+                                <td class="text-end font-monospace py-2.5 text-danger">
+                                    {{ $totalDeptCosts > 0 ? ('- ' . number_format($totalDeptCosts)) : '0' }} د.ع
+                                </td>
+                                <td class="text-end font-monospace py-2.5 text-success">
                                     {{ number_format($totalDeptNet) }} د.ع
                                 </td>
-                                <td class="py-3 font-monospace fw-bold text-dark">100%</td>
-                                <td class="pe-4 text-center"></td>
+                                <td class="py-2.5 font-monospace fw-bold text-dark">100%</td>
+                                <td class="pe-3 text-center"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -746,15 +834,19 @@
                     <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
                         <div class="card-body p-3.5 border-start border-4 border-success">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small fw-bold text-muted text-uppercase">إجمالي الدخل وصافي المستشفى</span>
+                                <span class="small fw-bold text-muted text-uppercase">إجمالي الدخل الاستحقاقي للأطباء</span>
                                 <div class="rounded-circle p-2 bg-success bg-opacity-10 text-success">
                                     <i class="fas fa-hand-holding-dollar fa-lg"></i>
                                 </div>
                             </div>
-                            <h3 class="fw-bold text-success mb-1 font-monospace">
-                                {{ number_format($doctorSummaryTotals['total_hosp_share']) }} <small class="fs-6 text-muted">د.ع (صافي)</small>
+                            <h3 class="fw-bold text-dark mb-1 font-monospace">
+                                {{ number_format($doctorSummaryTotals['total_gross']) }} <small class="fs-6 text-muted">د.ع</small>
                             </h3>
                             <div class="small text-muted d-flex justify-content-between mt-2 pt-2 border-top">
+                                <span>صافي المستشفى: <strong class="text-success">{{ number_format($doctorSummaryTotals['total_hosp_share']) }} د.ع</strong></span>
+                                <span>حصص الأطباء: <strong class="text-danger">{{ number_format($doctorSummaryTotals['total_doc_share']) }} د.ع</strong></span>
+                            </div>
+                            <div class="small text-muted d-flex justify-content-between mt-1 pt-1 border-top" style="font-size: 0.75rem;">
                                 <span>نقد الدرج: <strong class="text-dark">{{ number_format($doctorSummaryTotals['total_cash_revenue'] + $doctorSummaryTotals['total_insurance_copay']) }}</strong></span>
                                 <span>مطالبة الضمان: <strong class="text-info">{{ number_format($doctorSummaryTotals['total_insurance_claim']) }}</strong></span>
                             </div>

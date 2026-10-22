@@ -66,7 +66,38 @@ class HospitalTreasuryController extends Controller
 
         // فلتر البند / التصنيف
         if ($request->filled('category') && $request->category !== 'all') {
-            $query->where('category', $request->category);
+            if (str_starts_with($request->category, 'radiology_')) {
+                $sub = str_replace('radiology_', '', $request->category);
+                $subtypes = match($sub) {
+                    'sonar' => ['ultrasound', 'sonar', 'سونار'],
+                    'xray' => ['general', 'xray', 'x-ray', 'radiology', 'أشعة', 'اشعة'],
+                    'mri' => ['mri', 'رنين'],
+                    'ct' => ['ct', 'مفراس'],
+                    'echo' => ['echo', 'إيكو', 'ايكو'],
+                    default => [$sub]
+                };
+                $query->where('category', 'radiology')
+                      ->where(function($q) use ($subtypes, $sub) {
+                          $q->whereHasMorph('related', [Payment::class], function($pQ) use ($subtypes, $sub) {
+                              if ($sub === 'xray') {
+                                  $pQ->where(function($pxQ) use ($subtypes) {
+                                      $pxQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                          ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                          ->orWhere(function($noRQ) {
+                                              $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
+                                          });
+                                  });
+                              } else {
+                                  $pQ->where(function($pxQ) use ($subtypes) {
+                                      $pxQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                          ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subtypes));
+                                  });
+                              }
+                          });
+                      });
+            } else {
+                $query->where('category', $request->category);
+            }
         }
 
         // فلتر طريقة الدفع
@@ -114,8 +145,28 @@ class HospitalTreasuryController extends Controller
             'operational', 'salary', 'maintenance', 'utilities', 'medical_supplies', 'other'
         ])->sum('amount');
 
-        // 4. مصفوفة إعداد وتوزيع الأقسام (Modular Config-Driven Departments)
-        // إذا أردت إضافة أي قسم بالمستقبل، يكفي إضافة سطر واحد هنا
+        // مطالبات الضمان الصحي للفترة (ذمم مدينة مؤجلة قيد التحصيل)
+        $insClaimsQuery = Payment::whereNotNull('paid_at')->where('insurance_share', '>', 0);
+        if ($request->filled('from_date')) {
+            $insClaimsQuery->whereDate('paid_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $insClaimsQuery->whereDate('paid_at', '<=', $request->to_date);
+        }
+        $periodInsuranceClaims = (float) $insClaimsQuery->sum('insurance_share');
+        $periodInsuranceClaimsCount = (int) $insClaimsQuery->count();
+
+        // مستحقات الأطباء المعلقة (التزامات غير مدفوعة حتى الآن)
+        $pendingDuesQuery = DoctorDue::where('status', 'pending');
+        if ($request->filled('from_date')) {
+            $pendingDuesQuery->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $pendingDuesQuery->whereDate('created_at', '<=', $request->to_date);
+        }
+        $periodPendingDoctorDues = (float) $pendingDuesQuery->sum('amount');
+
+        // 4. مصفوفة إعداد وتوزيع الأقسام (Modular Config-Driven Departments) مع تفكيك وسائط الأشعة والتصوير
         $departmentsConfig = [
             'consultation' => [
                 'name' => 'العيادات الاستشارية',
@@ -132,6 +183,51 @@ class HospitalTreasuryController extends Controller
                 'bg_class' => 'bg-info-subtle',
                 'text_class' => 'text-info',
                 'border_class' => 'border-info-subtle',
+            ],
+            'radiology_sonar' => [
+                'name' => 'السونار (Ultrasound)',
+                'icon' => 'fa-wave-square',
+                'color' => '#0d9488', // Teal
+                'bg_class' => 'bg-teal-subtle',
+                'text_class' => 'text-teal',
+                'border_class' => 'border-teal-subtle',
+                'subtypes' => ['ultrasound', 'sonar', 'سونار'],
+            ],
+            'radiology_xray' => [
+                'name' => 'الأشعة السينية (X-Ray)',
+                'icon' => 'fa-x-ray',
+                'color' => '#2563eb', // Blue
+                'bg_class' => 'bg-info-subtle',
+                'text_class' => 'text-info',
+                'border_class' => 'border-info-subtle',
+                'subtypes' => ['general', 'xray', 'x-ray', 'radiology', 'أشعة', 'اشعة'],
+            ],
+            'radiology_mri' => [
+                'name' => 'الرنين المغناطيسي (MRI)',
+                'icon' => 'fa-magnet',
+                'color' => '#4f46e5', // Indigo
+                'bg_class' => 'bg-indigo-subtle',
+                'text_class' => 'text-indigo',
+                'border_class' => 'border-indigo-subtle',
+                'subtypes' => ['mri', 'رنين'],
+            ],
+            'radiology_ct' => [
+                'name' => 'المفراس الحلزوني (CT Scan)',
+                'icon' => 'fa-circle-notch',
+                'color' => '#ea580c', // Orange
+                'bg_class' => 'bg-orange-subtle',
+                'text_class' => 'text-warning',
+                'border_class' => 'border-warning-subtle',
+                'subtypes' => ['ct', 'مفراس'],
+            ],
+            'radiology_echo' => [
+                'name' => 'إيكو القلب (Echo)',
+                'icon' => 'fa-heart-pulse',
+                'color' => '#e11d48', // Rose
+                'bg_class' => 'bg-danger-subtle',
+                'text_class' => 'text-danger',
+                'border_class' => 'border-danger-subtle',
+                'subtypes' => ['echo', 'إيكو', 'ايكو'],
             ],
             'lab' => [
                 'name' => 'المختبر والتحاليل الطبية',
@@ -180,18 +276,59 @@ class HospitalTreasuryController extends Controller
         $deptChartLabels = [];
         $deptChartData = [];
         $deptChartColors = [];
+        $totalHospitalAccrual = 0;
 
         foreach ($departmentsConfig as $catKey => $config) {
-            $catQuery = (clone $basePeriodQuery)->where('category', $catKey)->inflow();
-            $count = (int) $catQuery->count();
-            $gross = (float) $catQuery->sum('amount');
-            $percentage = $periodInflow > 0 ? round(($gross / $periodInflow) * 100, 1) : 0;
+            if ($catKey === 'radiology') {
+                $catQuery = (clone $basePeriodQuery)->where('category', 'radiology')->inflow()
+                    ->where(function($q) {
+                        $q->whereNull('related_type')
+                          ->orWhere('related_type', '!=', Payment::class)
+                          ->orWhereDoesntHaveMorph('related', [Payment::class], function($pQ) {
+                              $pQ->whereHas('request', fn($rQ) => $rQ->whereNotNull('subtype'))
+                                 ->orWhereHas('requests', fn($rQ) => $rQ->whereNotNull('subtype'));
+                          });
+                    });
+                $count = (int) $catQuery->count();
+                $cashGross = (float) $catQuery->sum('amount');
+                $insuranceClaims = 0;
+                $accrualGross = $cashGross;
+                $costs = 0;
+                $net = $accrualGross;
+            } elseif (str_starts_with($catKey, 'radiology_')) {
+                $subs = $config['subtypes'];
+                $radPayQ = Payment::where('payment_type', 'radiology')->whereNotNull('paid_at');
+                if ($request->filled('from_date')) {
+                    $radPayQ->whereDate('paid_at', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $radPayQ->whereDate('paid_at', '<=', $request->to_date);
+                }
+                if ($catKey === 'radiology_xray') {
+                    $radPayQ->where(function($subQ) use ($subs) {
+                        $subQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subs))
+                             ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subs))
+                             ->orWhere(function($noRQ) {
+                                 $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
+                             });
+                    });
+                } else {
+                    $radPayQ->where(function($subQ) use ($subs) {
+                        $subQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subs))
+                             ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subs));
+                    });
+                }
+                $count = (int) $radPayQ->count();
+                $cashGross = (float) $radPayQ->sum('amount');
+                $insuranceClaims = (float) $radPayQ->sum('insurance_share');
+                $accrualGross = $cashGross + $insuranceClaims;
+                $costs = 0;
+                $net = $accrualGross;
+            } elseif ($catKey === 'consultation') {
+                $catQuery = (clone $basePeriodQuery)->where('category', 'consultation')->inflow();
+                $count = (int) $catQuery->count();
+                $cashGross = (float) $catQuery->sum('amount');
 
-            // حصص وتكاليف القسم
-            $costs = 0;
-            $net = $gross;
-
-            if ($catKey === 'consultation') {
                 $crQuery = ConsultationRevenue::query();
                 if ($request->filled('from_date')) {
                     $crQuery->whereDate('revenue_date', '>=', $request->from_date);
@@ -201,26 +338,75 @@ class HospitalTreasuryController extends Controller
                 }
                 $docShare = (float) $crQuery->sum('doctor_share');
                 $hospShare = (float) $crQuery->sum('hospital_share');
-                if ($docShare > 0) {
-                    $costs = $docShare;
-                    $net = $hospShare;
+                $totalRev = (float) $crQuery->sum('total_amount');
+
+                $insPayQ = Payment::where('payment_type', 'appointment')->whereNotNull('paid_at');
+                if ($request->filled('from_date')) {
+                    $insPayQ->whereDate('paid_at', '>=', $request->from_date);
                 }
+                if ($request->filled('to_date')) {
+                    $insPayQ->whereDate('paid_at', '<=', $request->to_date);
+                }
+                $insuranceClaims = (float) $insPayQ->sum('insurance_share');
+
+                $accrualGross = $totalRev > 0 ? $totalRev : ($cashGross + $insuranceClaims);
+                $costs = $docShare;
+                $net = $hospShare > 0 ? $hospShare : max(0.0, $accrualGross - $costs);
+            } else {
+                $catQuery = (clone $basePeriodQuery)->where('category', $catKey)->inflow();
+                $count = (int) $catQuery->count();
+                $cashGross = (float) $catQuery->sum('amount');
+
+                $deptPayType = match($catKey) {
+                    'lab' => 'lab',
+                    'surgery' => 'surgery',
+                    'emergency' => 'emergency',
+                    'pharmacy' => 'pharmacy',
+                    default => null
+                };
+                $insuranceClaims = 0;
+                if ($deptPayType) {
+                    $deptPayQ = Payment::where('payment_type', $deptPayType)->whereNotNull('paid_at');
+                    if ($request->filled('from_date')) {
+                        $deptPayQ->whereDate('paid_at', '>=', $request->from_date);
+                    }
+                    if ($request->filled('to_date')) {
+                        $deptPayQ->whereDate('paid_at', '<=', $request->to_date);
+                    }
+                    $insuranceClaims = (float) $deptPayQ->sum('insurance_share');
+                }
+                $accrualGross = $cashGross + $insuranceClaims;
+                $costs = 0;
+                $net = $accrualGross;
             }
+
+            $totalHospitalAccrual += $accrualGross;
 
             $departmentStats[$catKey] = array_merge($config, [
                 'count' => $count,
-                'gross' => $gross,
+                'cash_gross' => $cashGross,
+                'insurance_claims' => $insuranceClaims,
+                'accrual_gross' => $accrualGross,
+                'gross' => $cashGross, // للحفاظ على التوافق مع أي شاشة تطلب gross
                 'costs' => $costs,
                 'net' => $net,
-                'percentage' => $percentage,
+                'percentage' => 0,
             ]);
+        }
 
-            if ($gross > 0) {
-                $deptChartLabels[] = $config['name'];
-                $deptChartData[] = $gross;
-                $deptChartColors[] = $config['color'];
+        // حساب نسبة كل قسم من إجمالي الإيراد الاستحقاقي
+        foreach ($departmentStats as $catKey => &$stats) {
+            $stats['percentage'] = $totalHospitalAccrual > 0 
+                ? round(($stats['accrual_gross'] / $totalHospitalAccrual) * 100, 1) 
+                : 0;
+
+            if ($stats['accrual_gross'] > 0) {
+                $deptChartLabels[] = $stats['name'];
+                $deptChartData[] = $stats['accrual_gross'];
+                $deptChartColors[] = $stats['color'];
             }
         }
+        unset($stats);
 
         // 5. بيانات المنحنى البياني الزمني (Daily Cash Flow Trend)
         $trendStartDate = $request->filled('from_date') 
@@ -459,6 +645,10 @@ class HospitalTreasuryController extends Controller
             'periodDoctorPayouts',
             'periodPurchases',
             'periodOperational',
+            'periodInsuranceClaims',
+            'periodInsuranceClaimsCount',
+            'periodPendingDoctorDues',
+            'totalHospitalAccrual',
             'departmentStats',
             'departmentsConfig',
             'deptChartLabels',
