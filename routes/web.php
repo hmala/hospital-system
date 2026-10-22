@@ -332,6 +332,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/api/all', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'getCategoriesJson'])->name('api.all');
     });
 
+    // مسارات مطالبات وسجلات الضمان الصحي
+    Route::prefix('insurance-claims')->name('insurance.claims.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\HealthInsuranceClaimController::class, 'index'])->name('index');
+        Route::get('/export', [\App\Http\Controllers\HealthInsuranceClaimController::class, 'export'])->name('export');
+    });
+
     // مسارات الكاشير (Cashier Routes)
     Route::prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/', [\App\Http\Controllers\CashierController::class, 'index'])->name('index');

@@ -846,7 +846,7 @@
                         ])
                         @php
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
-                            $isInsuranceActive = request()->routeIs('health-insurance-categories.*');
+                            $isInsuranceActive = request()->routeIs('health-insurance-categories.*') || request()->routeIs('insurance.claims.*');
                             $isConsultantAccountsActive = request()->routeIs('admin.doctor-commission-settings.*') ||
                                                    request()->routeIs('consultant-availability.financial-movements') ||
                                                    request()->routeIs('cashier.statements') ||
@@ -879,7 +879,7 @@
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
                                 <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
                                 @php
-                                    $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
+                                     $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
                                 @endphp
                                 @if($pendingPriceReviews > 0)
                                     <span class="badge bg-warning text-dark ms-2">{{ $pendingPriceReviews }}</span>
@@ -890,7 +890,12 @@
 
                         @can('manage health insurance')
                         <li class="nav-item">
-                            <a class="nav-link {{ $isInsuranceActive ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
+                            <a class="nav-link {{ request()->routeIs('insurance.claims.*') ? 'active' : '' }}" href="{{ route('insurance.claims.index') }}">
+                                <i class="fas fa-file-medical-alt text-primary"></i><span class="fw-bold"> مطالبات وسجلات الضمان</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
                                 <i class="fas fa-shield-alt text-info"></i><span> نسب استقطاع الضمان</span>
                             </a>
                         </li>
