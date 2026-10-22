@@ -55,6 +55,38 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
+## Session log (2026-10-22 — المرحلة 107: تعريب وتوحيد مسميات الأدوار والصلاحيات بالكامل، وإعادة تصميم لوحة الأدوار التنفيذية، وإضافة صلاحية التحكم بمطالبات الضمان الصحي Complete Roles & Permissions Arabic Localization, Executive Roles Hub Redesign, Unified Role Labels Engine, Zero Untranslated Permissions & Insurance Claims Access Control)
+
+### Done
+- **إدراج واجهة مطالبات وسجلات الضمان الصحي في نظام الأدوار والصلاحيات**:
+  * استحداث صلاحية مستقلة ومخصصة باسم `view insurance claims` (عرض ومتابعة كشوفات وسجلات مطالبات الضمان وتصديرها).
+  * إضافة مايجريشن مخصص `database/migrations/2026_10_22_150000_add_view_insurance_claims_permission.php` وتثبيتها في قاعدة البيانات ومنحها لأدوار الإدارة والمحاسب.
+  * حماية مسارات وواجهة `HealthInsuranceClaimController` بميدلوير يمنع الدخول (403 Forbidden) إلا لمن يملك صلاحية `view insurance claims` أو `manage health insurance` أو إدارة المستشفى.
+  * إتاحة التحكم بها وتفعيلها/تعطيلها بسهولة عبر بطاقة "الحسابات العامة والمالية" في شاشة إدارة وتعديل الأدوار `/roles/{role}/edit`.
+- **تعريب وتوحيد منظومة مسميات الأدوار بالكامل (Unified Role Labels Engine)**:
+  * تطوير دالة مركزية موحدة `RoleManagementController::getRoleLabel($roleName)` تشكل المصدر المعتمد لترجمة وتخصيص أي دور (المسمى العربي، الوصف، الأيقونة، ولون الشارة).
+  * تغطية كافة الأدوار الـ 26 المسجلة في النظام بما فيها الأدوار التي كانت تظهر باللغة الإنجليزية:
+    * `accountant` ⬅️ **المحاسب المالي** (أيقونة الحاسبة واللون الأزرق).
+    * `admin-hsop` / `hospital_admin` ⬅️ **مدير المستشفى**.
+    * `thaman` ⬅️ **هيئة الضمان الصحي**.
+    * `gh&est` ⬅️ **كادر الجراحة والاستشارية**.
+    * `staff` ⬅️ **كادر إداري عام**.
+  * تصنيف الأدوار إلى 6 قطاعات وظيفية ذكية عبر `getRoleCategory()`:
+    * `الطبية والجراحية`، `المالية والكاشير`، `التشخيصية`، `الاستقبال والطوارئ`، `الصيدلية والمستودع`، `الإدارة والأنظمة`.
+  * تعميم الدالة الموحدة على شاشات: قائمة الأدوار (`roles.index`)، شاشة تعديل الصلاحيات (`roles.edit`)، إضافة دور (`roles.create`)، وإدارة المستخدمين (`users.index`, `users.create`, `users.edit`).
+- **إعادة تصميم وهيكلة لوحة إدارة الأدوار (`resources/views/roles/index.blade.php`)**:
+  * شريط كروت مؤشرات تنفيذية علوي (إجمالي الأدوار، الكادر المعين، إجمالي الصلاحيات، الأدوار الشاغرة).
+  * شريط تبويبات وفلاتر سريعة للقطاعات الوظيفية (Category Filter Pills) لتصفية الأدوار بنقرة زر واحدة.
+  * بحث لحظي ذكي (Live Search) بالاسم العربي أو الإنجليزي أو الوصف.
+  * مبدل عرض مزدوج (Dual View Mode): عرض البطاقات الحديثة (Cards Grid) مع شريط نسبة تغطية الصلاحيات ووسوم الأقسام البارزة، وعرض الجدول المضغوط (Compact Table).
+  * نافذة تفاعلية منبثقة سريعة (Role Users Modal) عبر AJAX لمعاينة جميع الموظفين المعينين لأي دور بضغطة زر دون مغادرة الصفحة.
+- **تعريب 100% من صلاحيات النظام (Zero Untranslated Permissions)**:
+  * تدقيق كامل الـ 145 صلاحية في قاعدة البيانات وسد النواقص لضمان عدم ظهور أي كود برمجي إنجليزي في الواجهات (إضافة `inquiry.create.radiology` والصلاحيات التراثية المخفية).
+  * تعريب الأقسام الرئيسية في شاشة الصلاحيات (`permissions.index`) وفق بطاقات النظام العشرة.
+- **حزمة الاختبارات الآلية الحصينة**:
+  * اجتياز اختبارات صلاحيات الضمان الصحي في [HealthInsuranceClaimsReportTest](file:///c:/wamp64/www/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php) بـ 8 اختبارات ناجحة (`8 passed, 26 assertions`).
+  * اجتياز كامل اختبارات مصفوفة الأدوار والصلاحيات في [RolePermissionsMatrixTest](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بـ 11 اختباراً ناجحاً (`11 passed, 182 assertions`).
+
 ## Session log (2026-10-22 — المرحلة 106: منظومة إلغاء طلبات فحوصات الطوارئ ودورة الاسترجاع المالي لدى الكاشير وإصدار السندات السالبة ومعالجة حالة المريضة نسيمه عطب سلمان Emergency Request Cancellation, Doctor Action, Cashier Refund Processing, Negative Voucher Invoicing & Patient #47 Refund Execution)
 
 ### Done

@@ -47,31 +47,7 @@
                         <option value="">كل الصلاحيات</option>
                         @foreach($roles as $role)
                             <option value="{{ $role->name }}" {{ request('role') == $role->name ? 'selected' : '' }}>
-                                @switch($role->name)
-                                    @case('admin') مدير النظام @break
-                                    @case('doctor') طبيب @break
-                                    @case('patient') مريض @break
-                                    @case('receptionist') موظف استقبال @break
-                                    @case('lab_staff') موظف مختبر @break
-                                    @case('radiology_staff') موظف أشعة @break
-                                    @case('pharmacy_staff') موظف صيدلية @break
-                                    @case('inventory_manager') موظف مخزن @break
-                                    @case('consultation_receptionist') موظف استعلامات استشارية @break
-                                    @case('surgery_staff') موظف عمليات @break
-                                    @case('cashier') موظف كاشير @break
-                                    @case('emergency_staff') موظف طوارئ @break
-                                    @case('inquiry_staff') موظف استعلامات @break
-                                    @case('nurse') ممرض @break
-                                    @case('radiology_echo') موظف إيكو @break
-                                    @case('radiology_general') موظف أشعة عامة @break
-                                    @case('radiology_mri') موظف رنين مغناطيسي @break
-                                    @case('radiology_ultrasound') موظف سونار @break
-                                    @case('staff') موظف عام @break
-                                    @case('resident') طبيب مقيم @break
-                                    @case('التخدير') مقيم تخدير @break
-                                    @case('الجراح') جراح @break
-                                    @default {{ $role->name }}
-                                @endswitch
+                                {{ \App\Http\Controllers\RoleManagementController::getRoleLabel($role->name)['label'] }}
                             </option>
                         @endforeach
                     </select>
@@ -138,28 +114,12 @@
                             </td>
                             <td>
                                 @foreach($user->roles as $role)
-                                 <span class="badge bg-{{ 
-                                     $role->name == 'admin' ? 'danger' : 
-                                     ($role->name == 'doctor' || $role->name == 'resident' ? 'success' : 
-                                     ($role->name == 'patient' ? 'info' : 
-                                     ($role->name == 'receptionist' ? 'warning' : 
-                                     ($role->name == 'consultation_receptionist' ? 'info' : 'secondary')))) 
-                                 }}">
-                                    @switch($role->name)
-                                        @case('admin') مدير النظام @break
-                                        @case('doctor') طبيب @break
-                                        @case('patient') مريض @break
-                                        @case('receptionist') موظف استقبال @break
-                                        @case('lab_staff') موظف مختبر @break
-                                        @case('radiology_staff') موظف أشعة @break
-                                        @case('pharmacy_staff') موظف صيدلية @break
-                                        @case('inventory_manager') موظف مخزن @break
-                                        @case('consultation_receptionist') موظف استعلامات استشارية @break
-                                        @case('surgery_staff') موظف عمليات @break
-                                        @case('resident') طبيب مقيم @break
-                                        @default {{ $role->name }}
-                                    @endswitch
-                                </span>
+                                 @php
+                                     $rInfo = \App\Http\Controllers\RoleManagementController::getRoleLabel($role->name);
+                                 @endphp
+                                 <span class="badge bg-{{ $rInfo['color'] }}">
+                                     <i class="fas fa-{{ $rInfo['icon'] }} me-1"></i> {{ $rInfo['label'] }}
+                                 </span>
                                 @endforeach
                             </td>
                             <td>

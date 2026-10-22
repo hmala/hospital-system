@@ -28,6 +28,7 @@ class HealthInsuranceClaimsReportTest extends TestCase
             ['address' => 'بغداد', 'phone' => '07700000000', 'email' => 'info@example.com', 'owner_name' => 'المدير العام', 'license_number' => 'HOSP-12345']
         );
         Permission::findOrCreate('manage health insurance', 'web');
+        Permission::findOrCreate('view insurance claims', 'web');
         Permission::findOrCreate('view account statements', 'web');
     }
 
@@ -267,5 +268,22 @@ class HealthInsuranceClaimsReportTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('منير عبد الله');
         $response->assertDontSee('أحمد قاسم');
+    }
+
+    public function test_user_without_permission_is_forbidden()
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('insurance.claims.index'));
+        $response->assertStatus(403);
+    }
+
+    public function test_user_with_view_insurance_claims_permission_can_access()
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('view insurance claims');
+
+        $response = $this->actingAs($user)->get(route('insurance.claims.index'));
+        $response->assertStatus(200);
     }
 }

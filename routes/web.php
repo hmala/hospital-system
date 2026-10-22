@@ -224,6 +224,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{role}', [RoleManagementController::class, 'rolesUpdate'])->name('update');
         Route::delete('/{role}', [RoleManagementController::class, 'rolesDestroy'])->name('destroy');
         Route::post('/{role}/toggle-permission', [RoleManagementController::class, 'togglePermission'])->name('toggle-permission');
+        Route::get('/{role}/users', [RoleManagementController::class, 'roleUsers'])->name('users');
     });
 
     Route::prefix('permissions')->name('permissions.')->group(function () {

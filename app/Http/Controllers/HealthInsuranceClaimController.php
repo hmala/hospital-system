@@ -13,6 +13,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class HealthInsuranceClaimController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $user = auth()->user();
+            $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+            if (! $isAdmin && (! $user || (! $user->can('view insurance claims') && ! $user->can('manage health insurance')))) {
+                abort(403, 'غير مصرح لك بالوصول إلى مطالبات وسجلات الضمان الصحي.');
+            }
+
+            return $next($request);
+        });
+    }
+
     /**
      * عرض جدول وسجلات مطالبات الضمان الصحي مع الفلاتر والمؤشرات التنفيذية
      */

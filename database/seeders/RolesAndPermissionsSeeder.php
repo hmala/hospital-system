@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -21,20 +21,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'create patients',
             'edit patients',
             'delete patients',
-            
+
             // صلاحيات الأطباء
             'view doctors',
             'create doctors',
             'edit doctors',
             'delete doctors',
             'manage own visits',
-            
+
             // صلاحيات العيادات
             'view departments',
             'create departments',
             'edit departments',
             'delete departments',
-            
+
             // صلاحيات المواعيد
             'view appointments',
             'create appointments',
@@ -59,6 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
             'manage health insurance',        // إدارة فئات ونسب استقطاع الضمان الصحي الوطني
+            'view insurance claims',          // عرض ومتابعة مطالبات وسجلات الضمان الصحي وتصديرها
             'manage doctor commissions',      // إعدادات وتخصيص عمولات ونسب الأطباء
             'view treasury',                  // عرض خزينة المستشفى المركزية وحركة الصناديق
             'manage treasury',                // تسجيل إيرادات ومصروفات وسندات الخزينة
@@ -70,14 +71,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view emergency statements',      // عرض كشوفات حسابات الطوارئ
             'view emergency doctor accounts', // عرض وصرف حسابات أطباء الطوارئ
             'view diagnostic analytics',      // عرض تحليلات وإحصاءات المختبر والأشعة والمفراس
-            
+
             // صلاحيات الزيارات
             'view visits',
             'create visits',
             'edit visits',
             'delete visits',
             'view own visits',
-            
+
             // صلاحيات العمليات
             'view surgeries',
             'create surgeries',
@@ -100,7 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nursing station',
             'manage medical devices',
             'view medical devices',
-            
+
             // صلاحيات الإشعة
             'view radiology',
             'create radiology',
@@ -111,7 +112,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit radiology types',
             'delete radiology types',
             'process radiology requests',
-            
+
             // صلاحيات المختبر
             'view lab tests',
             'create lab tests',
@@ -121,7 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'process lab requests',
             'manage surgery lab tests',
             'send lab whatsapp',
-            
+
             // صلاحيات الطلبات الطبية العامة
             'view medical requests',
             'create medical requests',
@@ -173,7 +174,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'import medicines',
             'dispense medications',
             'process pharmacy requests',
-            
+
             // صلاحيات الاستعلامات
             'view inquiries',
             'create inquiries',
@@ -188,10 +189,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'inquiry.create.pharmacy',
             'inquiry.create.checkup',
             'inquiry.create.blood_bank',
-            
+
             // صلاحيات توفر الأطباء الاستشاريين
             'manage consultant availability',
-            
+
             // صلاحيات إدارة النظام والرقابة الإدارية
             'manage users',
             'manage roles',
@@ -199,7 +200,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view activity logs',
             'delete activity logs',
             'manage database sync',
-            
+
             // صلاحيات الطوارئ
             'view emergencies',
             'create emergencies',
@@ -347,6 +348,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view patients',
             'review surgery prices',
             'manage health insurance',
+            'view insurance claims',
         ]);
 
         // دور موظف استعلامات الاستشارية (Consultation Receptionist)

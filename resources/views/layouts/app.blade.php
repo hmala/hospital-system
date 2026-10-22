@@ -834,6 +834,7 @@
                         @canany([
                             'review surgery prices', 
                             'manage health insurance', 
+                            'view insurance claims',
                             'manage doctor commissions',
                             'view consultant financial movements', 
                             'view account statements', 
@@ -888,12 +889,15 @@
                         </li>
                         @endcan
 
-                        @can('manage health insurance')
+                        @canany(['manage health insurance', 'view insurance claims'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('insurance.claims.*') ? 'active' : '' }}" href="{{ route('insurance.claims.index') }}">
                                 <i class="fas fa-file-medical-alt text-primary"></i><span class="fw-bold"> مطالبات وسجلات الضمان</span>
                             </a>
                         </li>
+                        @endcanany
+
+                        @can('manage health insurance')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
                                 <i class="fas fa-shield-alt text-info"></i><span> نسب استقطاع الضمان</span>
