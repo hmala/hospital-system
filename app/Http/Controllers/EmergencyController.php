@@ -2,24 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Emergency;
-use App\Models\EmergencyService;
-use App\Models\Patient;
-use App\Models\Doctor;
-use App\Models\EmergencyTreatment;
-use App\Models\User;
-use App\Models\Payment;
 use App\Models\Appointment;
+use App\Models\Doctor;
+use App\Models\Emergency;
 use App\Models\EmergencyPatient;
+use App\Models\EmergencyService;
+use App\Models\EmergencyTreatment;
 use App\Models\ICD10Code;
 use App\Models\Medicine;
+use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
-use App\Notifications\EmergencyPatientMigratedNotification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 class EmergencyController extends Controller
@@ -41,7 +39,7 @@ class EmergencyController extends Controller
         $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
 
         // التحقق من الصلاحيات: جدول الطوارئ مخصص حصراً للمدير ولأطباء الطوارئ
-        if (!$isAdmin && !$isDoctor) {
+        if (! $isAdmin && ! $isDoctor) {
             abort(403, 'غير مصرح لك بالوصول إلى جدول حالات الطوارئ.');
         }
 
@@ -56,19 +54,19 @@ class EmergencyController extends Controller
             'treatments',
             'latestSurgery.room',
             'latestBedReservation.room',
-            'prescriptions' => function($q) {
+            'prescriptions' => function ($q) {
                 $q->where('status', 'pending')->with('items');
             },
-            'vitalSignReadings' => function($query) {
+            'vitalSignReadings' => function ($query) {
                 $query->latest()->with('recordedBy')->limit(5);
-            }
+            },
         ]);
 
         // إذا كان المستخدم طبيباً وغير مدير: يرى مرضاه فقط
-        if (!$isAdmin && $isDoctor && $doctor) {
-            $query->where(function($q) use ($doctor) {
+        if (! $isAdmin && $isDoctor && $doctor) {
+            $query->where(function ($q) use ($doctor) {
                 $q->where('doctor_id', $doctor->id)
-                  ->orWhere('consultant_doctor_id', $doctor->id);
+                    ->orWhere('consultant_doctor_id', $doctor->id);
             });
         }
 
@@ -77,11 +75,11 @@ class EmergencyController extends Controller
 
         if ($date) {
             $query->whereDate('admission_time', $date)
-                  ->where('status', '!=', 'cancelled');
+                ->where('status', '!=', 'cancelled');
         } else {
             if ($filter === 'today') {
                 $query->whereDate('admission_time', today())
-                      ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             } elseif ($filter === 'active') {
                 $query->whereIn('status', ['waiting', 'in_progress']);
             } elseif ($filter === 'discharged') {
@@ -93,14 +91,14 @@ class EmergencyController extends Controller
         }
 
         if ($search = request('search')) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhereHas('patient.user', function($q2) use ($search) {
-                      $q2->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('emergencyPatient', function($q2) use ($search) {
-                      $q2->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('patient.user', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('emergencyPatient', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -119,10 +117,10 @@ class EmergencyController extends Controller
             ->withQueryString();
 
         $statsQuery = Emergency::query();
-        if (!$isAdmin && $isDoctor && $doctor) {
-            $statsQuery->where(function($q) use ($doctor) {
+        if (! $isAdmin && $isDoctor && $doctor) {
+            $statsQuery->where(function ($q) use ($doctor) {
                 $q->where('doctor_id', $doctor->id)
-                  ->orWhere('consultant_doctor_id', $doctor->id);
+                    ->orWhere('consultant_doctor_id', $doctor->id);
             });
         }
 
@@ -193,7 +191,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('create emergencies') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
@@ -203,7 +201,7 @@ class EmergencyController extends Controller
 
         if (request('from_referral_id')) {
             $referralRequest = \App\Models\Request::with(['visit.patient.user', 'visit.doctor.user'])->find(request('from_referral_id'));
-            if ($referralRequest && !$selectedPatientId && $referralRequest->visit?->patient_id) {
+            if ($referralRequest && ! $selectedPatientId && $referralRequest->visit?->patient_id) {
                 $selectedPatientId = $referralRequest->visit->patient_id;
             }
         }
@@ -227,10 +225,10 @@ class EmergencyController extends Controller
             ->where('is_active', true)
             ->where('is_available_today', true)
             ->whereJsonContains('working_days', [$todayArabic])
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('specialization', 'LIKE', '%طوارئ%')
-                      ->orWhere('specialization', 'LIKE', '%emergency%')
-                      ->orWhere('type', 'emergency');
+                    ->orWhere('specialization', 'LIKE', '%emergency%')
+                    ->orWhere('type', 'emergency');
             })
             ->get();
 
@@ -238,10 +236,10 @@ class EmergencyController extends Controller
         if ($doctors->isEmpty()) {
             $doctors = Doctor::has('user')->with('user')
                 ->where('is_active', true)
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->where('specialization', 'LIKE', '%طوارئ%')
-                          ->orWhere('specialization', 'LIKE', '%emergency%')
-                          ->orWhere('type', 'emergency');
+                        ->orWhere('specialization', 'LIKE', '%emergency%')
+                        ->orWhere('type', 'emergency');
                 })
                 ->get();
         }
@@ -270,14 +268,14 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401, 'غير مسجل الدخول');
         }
 
-        if (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && 
-            !$user->can('create emergencies') && 
-            !$user->can('view emergencies') && 
-            !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
+        if (! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) &&
+            ! $user->can('create emergencies') &&
+            ! $user->can('view emergencies') &&
+            ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
             abort(403, 'غير مصرح لك بالبحث عن المرضى');
         }
 
@@ -287,17 +285,17 @@ class EmergencyController extends Controller
         }
 
         $patients = Patient::with(['user', 'healthInsuranceCategory'])
-            ->where(function($pQuery) use ($query) {
+            ->where(function ($pQuery) use ($query) {
                 $pQuery->where('national_id', 'LIKE', "%{$query}%")
-                       ->orWhere('id', $query)
-                       ->orWhereHas('user', function($q) use ($query) {
-                           $q->where('name', 'LIKE', "%{$query}%")
-                             ->orWhere('phone', 'LIKE', "%{$query}%");
-                       });
+                    ->orWhere('id', $query)
+                    ->orWhereHas('user', function ($q) use ($query) {
+                        $q->where('name', 'LIKE', "%{$query}%")
+                            ->orWhere('phone', 'LIKE', "%{$query}%");
+                    });
             })
             ->limit(15)
             ->get()
-            ->map(function($patient) {
+            ->map(function ($patient) {
                 $u = $patient->user;
                 $dob = $u->date_of_birth ?? null;
                 $age = null;
@@ -308,8 +306,9 @@ class EmergencyController extends Controller
                         $age = null;
                     }
                 }
-                $isInsurance = ($patient->insurance_type && $patient->insurance_type !== 'none') || (bool)$patient->health_insurance_category_id;
+                $isInsurance = ($patient->insurance_type && $patient->insurance_type !== 'none') || (bool) $patient->health_insurance_category_id;
                 $insuranceName = $patient->healthInsuranceCategory?->name ?? ($isInsurance ? 'ضمان صحي' : null);
+
                 return [
                     'id' => $patient->id,
                     'name' => $u->name ?? 'مريض بدون اسم',
@@ -333,7 +332,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('create emergencies') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء حالات طوارئ');
         }
 
@@ -364,7 +363,7 @@ class EmergencyController extends Controller
         }
         $request->validate($rules);
 
-        if ($request->boolean('doctor_follow_up') && !$request->filled('doctor_id')) {
+        if ($request->boolean('doctor_follow_up') && ! $request->filled('doctor_id')) {
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['doctor_follow_up' => 'يرجى اختيار الطبيب قبل تفعيل متابعة الطبيب.']);
@@ -437,18 +436,18 @@ class EmergencyController extends Controller
             if ($ref) {
                 $ref->update([
                     'status' => 'completed',
-                    'notes' => 'تم قبول الإحالة واستقبال الحالة في الطوارئ برقم #' . $emergency->id
+                    'notes' => 'تم قبول الإحالة واستقبال الحالة في الطوارئ برقم #'.$emergency->id,
                 ]);
 
                 // ترحيل وربط الخدمات التمريضية المطلوبة من الطبيب الاستشاري تلقائياً بسجل الطوارئ
                 $refDetails = is_string($ref->details) ? json_decode($ref->details, true) : ($ref->details ?? []);
                 $nursingServiceIds = $refDetails['nursing_services'] ?? [];
-                
-                if (!empty($nursingServiceIds)) {
+
+                if (! empty($nursingServiceIds)) {
                     $emergency->services()->syncWithoutDetaching($nursingServiceIds);
                 }
 
-                if (empty($emergency->symptoms) && !empty($ref->description)) {
+                if (empty($emergency->symptoms) && ! empty($ref->description)) {
                     $emergency->update(['symptoms' => $ref->description]);
                 }
 
@@ -462,23 +461,23 @@ class EmergencyController extends Controller
         // 1. إذا كان موظف طوارئ أو يملك صلاحية عرض الطوارئ
         if ($user->hasRole(['emergency_staff', 'doctor', 'nurse']) || $user->can('view emergencies') || $returnTo === 'emergency') {
             return redirect()->route('emergency.index')
-                ->with('success', '✅ تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة (رقم الحالة #' . $emergency->id . ')');
+                ->with('success', '✅ تم إنشاء حالة الطوارئ بنجاح واستقبال الإحالة (رقم الحالة #'.$emergency->id.')');
         }
 
         // 2. إذا كان موظف استعلامات عامة
         if ($user->can('view inquiries')) {
             return redirect()->route('inquiry.index')
-                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #'.$emergency->id.')');
         }
 
         // 3. إذا كان موظف استعلامات استشارية
         if ($user->can('view consultant availability') || $user->hasRole('consultation_receptionist')) {
             return redirect()->route('consultant-availability.index')
-                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+                ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #'.$emergency->id.')');
         }
 
         return redirect()->route('home')
-            ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #' . $emergency->id . ')');
+            ->with('success', '✅ تم حجز حالة الطوارئ وتوجيه المريض لقسم الطوارئ بنجاح (رقم الحالة #'.$emergency->id.')');
     }
 
     /**
@@ -492,12 +491,12 @@ class EmergencyController extends Controller
         $doctor = $user->doctor ?? Doctor::where('user_id', $user->id)->first();
         $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
 
-        if (!$isAdmin && !$isDoctor) {
+        if (! $isAdmin && ! $isDoctor) {
             abort(403, 'غير مصرح لك بعرض حالات الطوارئ.');
         }
 
         // إذا كان طبيباً وغير مدير: يرى مرضاه فقط
-        if (!$isAdmin && $isDoctor && $doctor) {
+        if (! $isAdmin && $isDoctor && $doctor) {
             if ($emergency->doctor_id !== $doctor->id && $emergency->consultant_doctor_id !== $doctor->id) {
                 abort(403, 'غير مصرح لك باستعراض حالة خاصة بطبيب آخر.');
             }
@@ -523,9 +522,9 @@ class EmergencyController extends Controller
             'treatments.creator',
             'appointments.doctor.user',
             'appointments.department',
-            'vitalSignReadings' => function($query) {
+            'vitalSignReadings' => function ($query) {
                 $query->latest()->with('recordedBy');
-            }
+            },
         ]);
 
         $availableMedicines = Medicine::where('is_active', true)
@@ -558,13 +557,13 @@ class EmergencyController extends Controller
         $consultantDoctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
             ->where('is_available_today', true)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('type', 'consultant')
-                  ->orWhere('type', 'sonar')
-                  ->orWhere('specialization', 'LIKE', '%سونار%');
+                    ->orWhere('type', 'sonar')
+                    ->orWhere('specialization', 'LIKE', '%سونار%');
             })
             ->get()
-            ->filter(function($doc) use ($currentDayArabic) {
+            ->filter(function ($doc) use ($currentDayArabic) {
                 return $doc->isWorkingOnDay($currentDayArabic);
             })
             ->values();
@@ -606,7 +605,7 @@ class EmergencyController extends Controller
 
         // جلب جميع التحاليل السابقة للمريض
         $pastLabRequests = $patientId
-            ? \App\Models\Request::whereHas('visit', fn($q) => $q->where('patient_id', $patientId))
+            ? \App\Models\Request::whereHas('visit', fn ($q) => $q->where('patient_id', $patientId))
                 ->where('type', 'lab')
                 ->with(['visit.doctor.user'])
                 ->latest()
@@ -616,7 +615,7 @@ class EmergencyController extends Controller
 
         // جلب جميع فحوصات الأشعة السابقة للمريض
         $pastRadiologyRequests = $patientId
-            ? \App\Models\Request::whereHas('visit', fn($q) => $q->where('patient_id', $patientId))
+            ? \App\Models\Request::whereHas('visit', fn ($q) => $q->where('patient_id', $patientId))
                 ->where('type', 'radiology')
                 ->with(['visit.doctor.user'])
                 ->latest()
@@ -635,11 +634,11 @@ class EmergencyController extends Controller
         $isPaid = ($unpaidAmount <= 0 || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived');
 
         return view('emergency.show', compact(
-            'emergency', 
-            'availableMedicines', 
-            'emergencyServices', 
-            'labTests', 
-            'radiologyTypes', 
+            'emergency',
+            'availableMedicines',
+            'emergencyServices',
+            'labTests',
+            'radiologyTypes',
             'consultantDoctors',
             'pastVisits',
             'pastSurgeries',
@@ -660,17 +659,17 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with('user')
             ->where('is_active', true)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('specialization', 'LIKE', '%طوارئ%')
-                      ->orWhere('specialization', 'LIKE', '%emergency%')
-                      ->orWhere('type', 'emergency');
+                    ->orWhere('specialization', 'LIKE', '%emergency%')
+                    ->orWhere('type', 'emergency');
             })
             ->get();
 
@@ -686,7 +685,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -711,11 +710,11 @@ class EmergencyController extends Controller
         $emergency->update($request->only([
             'priority', 'status', 'vital_signs',
             'doctor_id', 'nurse_id', 'room_assigned', 'initial_assessment',
-            'treatment_given', 'notes', 'requires_surgery'
+            'treatment_given', 'notes', 'requires_surgery',
         ]));
 
         // إذا تم تغيير الحالة إلى مغادرة، أضف وقت المغادرة
-        if ($request->status === 'discharged' && !$emergency->discharge_time) {
+        if ($request->status === 'discharged' && ! $emergency->discharge_time) {
             $emergency->update(['discharge_time' => now()]);
         }
 
@@ -730,7 +729,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('delete emergencies')) {
+        if (! $user->hasRole('admin') && ! $user->can('delete emergencies')) {
             abort(403, 'غير مصرح لك بحذف حالات الطوارئ');
         }
 
@@ -747,7 +746,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتحديث علامات الحياة');
         }
 
@@ -786,7 +785,7 @@ class EmergencyController extends Controller
     public function updateMedical(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتحديث معلومات الطوارئ');
         }
         $request->validate([
@@ -805,11 +804,21 @@ class EmergencyController extends Controller
             'service_ids.*' => 'exists:emergency_services,id',
         ]);
         $vitals = $emergency->vital_signs ?? [];
-        if ($request->filled('blood_pressure')) $vitals['blood_pressure'] = $request->blood_pressure;
-        if ($request->filled('heart_rate')) $vitals['heart_rate'] = $request->heart_rate;
-        if ($request->filled('temperature')) $vitals['temperature'] = $request->temperature;
-        if ($request->filled('respiratory_rate')) $vitals['respiratory_rate'] = $request->respiratory_rate;
-        if ($request->filled('oxygen_saturation')) $vitals['oxygen_saturation'] = $request->oxygen_saturation;
+        if ($request->filled('blood_pressure')) {
+            $vitals['blood_pressure'] = $request->blood_pressure;
+        }
+        if ($request->filled('heart_rate')) {
+            $vitals['heart_rate'] = $request->heart_rate;
+        }
+        if ($request->filled('temperature')) {
+            $vitals['temperature'] = $request->temperature;
+        }
+        if ($request->filled('respiratory_rate')) {
+            $vitals['respiratory_rate'] = $request->respiratory_rate;
+        }
+        if ($request->filled('oxygen_saturation')) {
+            $vitals['oxygen_saturation'] = $request->oxygen_saturation;
+        }
         $vitals['updated_at'] = now()->toISOString();
 
         $medicalUpdate = [
@@ -840,7 +849,7 @@ class EmergencyController extends Controller
             ->whereNotNull('payment_id')
             ->get();
 
-        $paidServiceIds = $existingPaidServices->pluck('emergency_service_id')->map(fn($id) => (int)$id)->toArray();
+        $paidServiceIds = $existingPaidServices->pluck('emergency_service_id')->map(fn ($id) => (int) $id)->toArray();
         $submittedServiceIds = array_map('intval', $request->input('service_ids', []));
 
         // التأكد من الحفاظ الصارم على كافة الخدمات المسددة مسبقاً
@@ -872,7 +881,7 @@ class EmergencyController extends Controller
     public function storeTreatment(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->can('manage emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتسجيل علاج الطوارئ');
         }
 
@@ -886,11 +895,13 @@ class EmergencyController extends Controller
 
         foreach ($rawItems as $item) {
             $name = $item['name'] ?? $item['medicine_name'] ?? $item['description'] ?? null;
-            if (empty($name)) continue;
+            if (empty($name)) {
+                continue;
+            }
 
             $dosageForm = mb_strtolower($item['dosage_form'] ?? $item['form'] ?? '');
             $rawType = $item['type'] ?? $item['treatment_type'] ?? null;
-            if (!$rawType) {
+            if (! $rawType) {
                 if (str_contains($dosageForm, 'infusion') || str_contains($dosageForm, 'drip') || str_contains($dosageForm, 'محلول') || str_contains($dosageForm, 'مغذي')) {
                     $rawType = 'drip';
                 } elseif (str_contains($dosageForm, 'inj') || str_contains($dosageForm, 'vial') || str_contains($dosageForm, 'amp') || str_contains($dosageForm, 'حقن') || str_contains($dosageForm, 'إبر')) {
@@ -909,7 +920,7 @@ class EmergencyController extends Controller
 
             $dosage = $item['dosage'] ?? '';
             $freq = $item['frequency'] ?? $item['frequency_per_day'] ?? 1;
-            $freqInt = is_numeric($freq) ? (int)$freq : 1;
+            $freqInt = is_numeric($freq) ? (int) $freq : 1;
             $duration = $item['duration'] ?? '';
             $times = $item['times'] ?? '';
             $instructions = $item['instructions'] ?? $item['notes'] ?? '';
@@ -924,13 +935,13 @@ class EmergencyController extends Controller
                 'notes' => $notes ?: null,
                 'frequency_per_day' => $freqInt,
                 'status' => $item['status'] ?? 'completed',
-                'started_at' => !empty($item['started_at']) ? $item['started_at'] : now(),
-                'completed_at' => !empty($item['completed_at']) ? $item['completed_at'] : null,
+                'started_at' => ! empty($item['started_at']) ? $item['started_at'] : now(),
+                'completed_at' => ! empty($item['completed_at']) ? $item['completed_at'] : null,
             ]);
 
             // ────── ربط الصنف بدليل الأدوية ──────
             $medId = $item['medicine_id'] ?? null;
-            if (!$medId && !empty($name)) {
+            if (! $medId && ! empty($name)) {
                 $matched = Medicine::where('name', $name)
                     ->orWhere('generic_name', $name)
                     ->first();
@@ -940,22 +951,22 @@ class EmergencyController extends Controller
             // ────── إضافة إلى الوصفة الإلكترونية لقسم الطوارئ ──────
             if ($dbType === 'medication' || $dbType === 'injection' || $dbType === 'drip') {
                 $prescriptionItems[] = [
-                    'medicine_id'      => $medId,
-                    'medicine_name'    => $name,
-                    'quantity'         => (float)($item['quantity'] ?? 1) ?: 1,
-                    'unit_type'        => $item['unit_type'] ?? 'main_unit',
+                    'medicine_id' => $medId,
+                    'medicine_name' => $name,
+                    'quantity' => (float) ($item['quantity'] ?? 1) ?: 1,
+                    'unit_type' => $item['unit_type'] ?? 'main_unit',
                     'dosage_frequency' => trim("{$dosage} x{$freqInt} {$duration}"),
-                    'duration_days'    => is_numeric($duration) ? (int)$duration : null,
-                    'instructions'     => $instructions ?: ($dbType === 'injection' ? 'حقن' : ($dbType === 'drip' ? 'محلول وريدي STAT' : null)),
-                    'status'           => 'pending',
+                    'duration_days' => is_numeric($duration) ? (int) $duration : null,
+                    'instructions' => $instructions ?: ($dbType === 'injection' ? 'حقن' : ($dbType === 'drip' ? 'محلول وريدي STAT' : null)),
+                    'status' => 'pending',
                 ];
             }
 
-            $createdDescriptions[] = $name . ($dosage ? " ({$dosage})" : '');
+            $createdDescriptions[] = $name.($dosage ? " ({$dosage})" : '');
         }
 
         // ────── إنشاء الوصفة الإلكترونية الموحدة للصيدلية ──────
-        if (!empty($prescriptionItems)) {
+        if (! empty($prescriptionItems)) {
             $diagnosisText = $emergency->diagnosis ?? '🚨 علاج طوارئ (STAT)';
             $emergency->load('doctor');
             $doctorId = $emergency->doctor_id ?? null;
@@ -966,17 +977,17 @@ class EmergencyController extends Controller
                 ['emergency_id' => $emergency->id, 'status' => 'pending'],
                 [
                     'patient_id' => $patientId,
-                    'doctor_id'  => $doctorId,
-                    'diagnosis'  => $diagnosisText,
-                    'notes'      => '🚨 طلب أدوية ومحاليل طوارئ (STAT)',
+                    'doctor_id' => $doctorId,
+                    'diagnosis' => $diagnosisText,
+                    'notes' => '🚨 طلب أدوية ومحاليل طوارئ (STAT)',
                 ]
             );
 
             // تحديث التشخيص إذا تغيّر
             $prescription->update([
                 'patient_id' => $patientId,
-                'doctor_id'  => $doctorId,
-                'diagnosis'  => $diagnosisText,
+                'doctor_id' => $doctorId,
+                'diagnosis' => $diagnosisText,
             ]);
 
             // إضافة الأصناف الجديدة فقط (لا نمسح القديمة)
@@ -985,10 +996,10 @@ class EmergencyController extends Controller
             }
         }
 
-        if (!empty($createdDescriptions)) {
-            $currentGiven = $emergency->treatment_given ? $emergency->treatment_given . '، ' : '';
+        if (! empty($createdDescriptions)) {
+            $currentGiven = $emergency->treatment_given ? $emergency->treatment_given.'، ' : '';
             $emergency->update([
-                'treatment_given' => $currentGiven . implode('، ', $createdDescriptions),
+                'treatment_given' => $currentGiven.implode('، ', $createdDescriptions),
                 'status' => $emergency->status === 'waiting' ? 'in_progress' : $emergency->status,
             ]);
         }
@@ -1002,7 +1013,7 @@ class EmergencyController extends Controller
     public function destroyTreatment(Emergency $emergency, EmergencyTreatment $treatment)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->can('manage emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بحذف علاج الطوارئ');
         }
 
@@ -1041,7 +1052,7 @@ class EmergencyController extends Controller
             ->latest()
             ->first();
 
-        if (!$prescription) {
+        if (! $prescription) {
             return response()->json(['success' => true, 'count' => 0, 'requests' => []]);
         }
 
@@ -1051,21 +1062,21 @@ class EmergencyController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'id'                     => $item->id,
+                    'id' => $item->id,
                     'original_medicine_name' => $item->medicine?->name ?? $item->medicine_name,
-                    'suggested_medicine_id'  => $item->suggested_medicine_id,
-                    'suggested_medicine_name'=> $item->suggestedMedicine?->name ?? 'بديل غير محدد',
-                    'suggested_generic'      => $item->suggestedMedicine?->generic_name ?? '',
-                    'suggested_form'         => $item->suggestedMedicine?->dosage_form ?? '',
-                    'suggested_strength'     => $item->suggestedMedicine?->strength ?? '',
-                    'quantity'               => $item->quantity,
-                    'substitution_reason'    => $item->substitution_reason ?? 'عدم توفر الصنف الأصلي في صيدلية المستشفى',
+                    'suggested_medicine_id' => $item->suggested_medicine_id,
+                    'suggested_medicine_name' => $item->suggestedMedicine?->name ?? 'بديل غير محدد',
+                    'suggested_generic' => $item->suggestedMedicine?->generic_name ?? '',
+                    'suggested_form' => $item->suggestedMedicine?->dosage_form ?? '',
+                    'suggested_strength' => $item->suggestedMedicine?->strength ?? '',
+                    'quantity' => $item->quantity,
+                    'substitution_reason' => $item->substitution_reason ?? 'عدم توفر الصنف الأصلي في صيدلية المستشفى',
                 ];
             });
 
         return response()->json([
-            'success'  => true,
-            'count'    => $pendingRequests->count(),
+            'success' => true,
+            'count' => $pendingRequests->count(),
             'requests' => $pendingRequests,
         ]);
     }
@@ -1076,8 +1087,8 @@ class EmergencyController extends Controller
     public function respondToEmergencySubstitution(Request $request, Emergency $emergency)
     {
         $request->validate([
-            'item_id'        => 'required|integer|exists:prescription_items,id',
-            'action'         => 'required|in:approve,reject',
+            'item_id' => 'required|integer|exists:prescription_items,id',
+            'action' => 'required|in:approve,reject',
             'response_notes' => 'nullable|string|max:255',
         ]);
 
@@ -1089,37 +1100,37 @@ class EmergencyController extends Controller
         }
 
         $action = $request->input('action');
-        $notes  = $request->input('response_notes');
+        $notes = $request->input('response_notes');
 
         if ($action === 'approve') {
             $suggestedMed = $item->suggestedMedicine;
-            if (!$suggestedMed) {
+            if (! $suggestedMed) {
                 return response()->json(['success' => false, 'message' => 'لم يتم العثور على الدواء البديل المقترح.'], 422);
             }
 
             $item->update([
-                'medicine_id'                => $suggestedMed->id,
-                'substitution_status'        => 'approved',
-                'substitution_response_notes'=> $notes ?? 'تمت موافقة طبيب الطوارئ على البديل',
-                'substitution_responded_at'  => now(),
+                'medicine_id' => $suggestedMed->id,
+                'substitution_status' => 'approved',
+                'substitution_response_notes' => $notes ?? 'تمت موافقة طبيب الطوارئ على البديل',
+                'substitution_responded_at' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => "✅ تمت الموافقة — سيصرف البديل ({$suggestedMed->name}) من الصيدلية.",
-                'item'    => ['id' => $item->id, 'medicine_name' => $suggestedMed->name, 'substitution_status' => 'approved'],
+                'item' => ['id' => $item->id, 'medicine_name' => $suggestedMed->name, 'substitution_status' => 'approved'],
             ]);
         } else {
             $item->update([
-                'substitution_status'        => 'rejected',
-                'substitution_response_notes'=> $notes ?? 'تم رفض البديل من قبل طبيب الطوارئ',
-                'substitution_responded_at'  => now(),
+                'substitution_status' => 'rejected',
+                'substitution_response_notes' => $notes ?? 'تم رفض البديل من قبل طبيب الطوارئ',
+                'substitution_responded_at' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => '❌ تم رفض البديل. ستبحث الصيدلية عن الصنف الأصلي.',
-                'item'    => ['id' => $item->id, 'substitution_status' => 'rejected'],
+                'item' => ['id' => $item->id, 'substitution_status' => 'rejected'],
             ]);
         }
     }
@@ -1131,7 +1142,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('view emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة تحكم الطوارئ');
         }
 
@@ -1196,7 +1207,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->can('manage emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -1219,7 +1230,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->can('manage emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بتعديل حالات الطوارئ');
         }
 
@@ -1243,7 +1254,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create appointments') && !$user->can('manage emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('create appointments') && ! $user->can('manage emergencies') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإنشاء مواعيد استشارية');
         }
 
@@ -1261,21 +1272,21 @@ class EmergencyController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        $appointmentDateTime = $request->appointment_date . ' ' . $request->appointment_time . ':00';
+        $appointmentDateTime = $request->appointment_date.' '.$request->appointment_time.':00';
         $selectedDoctorIds = collect($request->doctor_ids)->unique();
         $appointmentsCreated = 0;
 
         foreach ($selectedDoctorIds as $doctorId) {
             $doctor = Doctor::find($doctorId);
-            if (!$doctor) {
+            if (! $doctor) {
                 return redirect()->back()->with('error', 'تم اختيار طبيب غير موجود');
             }
 
-            if (!in_array($doctor->type, ['consultant', 'sonar']) && !str_contains($doctor->specialization ?? '', 'سونار')) {
+            if (! in_array($doctor->type, ['consultant', 'sonar']) && ! str_contains($doctor->specialization ?? '', 'سونار')) {
                 return redirect()->back()->with('error', 'يجب اختيار أطباء استشاريين فقط');
             }
 
-            if (!$doctor->is_available_today) {
+            if (! $doctor->is_available_today) {
                 return redirect()->back()->with('error', "الطبيب {$doctor->user?->name} غير متاح اليوم");
             }
 
@@ -1296,12 +1307,12 @@ class EmergencyController extends Controller
         }
 
         // migrate emergency patient to main table if necessary
-        if ($emergency->emergency_patient_id && !$emergency->patient_migrated) {
+        if ($emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
             // create user and main patient
             $userAccount = User::create([
                 'name' => $emergencyPatient->name,
-                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
                 'role' => 'patient',
                 'password' => bcrypt(Str::random(12)),
             ]);
@@ -1327,7 +1338,7 @@ class EmergencyController extends Controller
 
         foreach ($selectedDoctorIds as $doctorId) {
             $doctor = Doctor::find($doctorId);
-            if (!$doctor) {
+            if (! $doctor) {
                 continue;
             }
 
@@ -1342,7 +1353,7 @@ class EmergencyController extends Controller
                 'consultation_fee' => $emergencyConsultationFee,
                 'duration' => 30,
                 'status' => 'scheduled',
-                'payment_status' => 'pending'
+                'payment_status' => 'pending',
             ]);
 
             $createdAppointmentIds[] = $appointment->id;
@@ -1371,7 +1382,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create medical requests') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('create medical requests') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بطلب تحاليل');
         }
 
@@ -1383,12 +1394,12 @@ class EmergencyController extends Controller
         ]);
 
         // ترحيل المريض من emergencyPatient إلى patient الرئيسي إذا لم يتم بعد
-        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+        if (! $emergency->patient_id && $emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
             // إنشاء حساب مستخدم ومريض رئيسي
             $userAccount = \App\Models\User::create([
                 'name' => $emergencyPatient->name,
-                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
                 'role' => 'patient',
                 'password' => bcrypt(\Illuminate\Support\Str::random(12)),
             ]);
@@ -1409,13 +1420,13 @@ class EmergencyController extends Controller
         }
 
         // التحقق من وجود patient_id بعد المحاولة
-        if (!$emergency->patient_id) {
+        if (! $emergency->patient_id) {
             return redirect()->back()->with('error', 'لا يمكن إنشاء طلب تحاليل لحالة بدون مريض مسجل');
         }
 
         // تصفية المعرفات الفعالة فقط لمنع إدراج فحوصات معطلة
         $validLabTestIds = \App\Models\LabTest::where('is_active', true)
-            ->whereIn('id', (array)$request->lab_test_ids)
+            ->whereIn('id', (array) $request->lab_test_ids)
             ->pluck('id')
             ->toArray();
 
@@ -1433,8 +1444,8 @@ class EmergencyController extends Controller
         if ($existingLabRequest) {
             $existingLabRequest->labTests()->syncWithoutDetaching($validLabTestIds);
             if ($request->filled('notes')) {
-                $existingLabRequest->notes = $existingLabRequest->notes 
-                    ? ($existingLabRequest->notes . ' | ' . $request->notes) 
+                $existingLabRequest->notes = $existingLabRequest->notes
+                    ? ($existingLabRequest->notes.' | '.$request->notes)
                     : $request->notes;
             }
             if ($request->priority === 'critical') {
@@ -1450,7 +1461,7 @@ class EmergencyController extends Controller
                 'status' => 'pending',
                 'priority' => $request->priority,
                 'notes' => $request->notes,
-                'requested_at' => now()
+                'requested_at' => now(),
             ]);
             $labRequest->labTests()->attach($validLabTestIds);
             $successMsg = 'تم إنشاء طلب التحاليل بنجاح وإضافة الرسوم للكاشير';
@@ -1469,7 +1480,7 @@ class EmergencyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('admin') && !$user->can('create medical requests') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('create medical requests') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بطلب أشعة');
         }
 
@@ -1481,12 +1492,12 @@ class EmergencyController extends Controller
         ]);
 
         // ترحيل المريض من emergencyPatient إلى patient الرئيسي إذا لم يتم بعد
-        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+        if (! $emergency->patient_id && $emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
             // إنشاء حساب مستخدم ومريض رئيسي
             $userAccount = \App\Models\User::create([
                 'name' => $emergencyPatient->name,
-                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
                 'role' => 'patient',
                 'password' => bcrypt(\Illuminate\Support\Str::random(12)),
             ]);
@@ -1507,13 +1518,13 @@ class EmergencyController extends Controller
         }
 
         // التحقق من وجود patient_id بعد المحاولة
-        if (!$emergency->patient_id) {
+        if (! $emergency->patient_id) {
             return redirect()->back()->with('error', 'لا يمكن إنشاء طلب أشعة لحالة بدون مريض مسجل');
         }
 
         // تصفية المعرفات الفعالة فقط
         $validRadTypeIds = \App\Models\RadiologyType::where('is_active', true)
-            ->whereIn('id', (array)$request->radiology_type_ids)
+            ->whereIn('id', (array) $request->radiology_type_ids)
             ->pluck('id')
             ->toArray();
 
@@ -1531,8 +1542,8 @@ class EmergencyController extends Controller
         if ($existingRadRequest) {
             $existingRadRequest->radiologyTypes()->syncWithoutDetaching($validRadTypeIds);
             if ($request->filled('notes')) {
-                $existingRadRequest->notes = $existingRadRequest->notes 
-                    ? ($existingRadRequest->notes . ' | ' . $request->notes) 
+                $existingRadRequest->notes = $existingRadRequest->notes
+                    ? ($existingRadRequest->notes.' | '.$request->notes)
                     : $request->notes;
             }
             if ($request->priority === 'critical') {
@@ -1548,7 +1559,7 @@ class EmergencyController extends Controller
                 'status' => 'pending',
                 'priority' => $request->priority,
                 'notes' => $request->notes,
-                'requested_at' => now()
+                'requested_at' => now(),
             ]);
             $radiologyRequest->radiologyTypes()->attach($validRadTypeIds);
             $successMsg = 'تم إنشاء طلب الأشعة بنجاح وإضافة الرسوم للكاشير';
@@ -1570,20 +1581,22 @@ class EmergencyController extends Controller
         $doctor = $user->doctor ?? Doctor::where('user_id', $user->id)->first();
         $isDoctor = $user->hasRole('doctor') || ($doctor !== null);
 
-        if (!$isAdmin && !$isDoctor && !$user->can('create medical requests') && !$user->hasRole(['nurse', 'emergency_staff'])) {
+        if (! $isAdmin && ! $isDoctor && ! $user->can('create medical requests') && ! $user->hasRole(['nurse', 'emergency_staff'])) {
             $msg = 'غير مصرح لك بتعديل طلبات الطوارئ';
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $msg], 403);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
-        if (!$isAdmin && $isDoctor && $doctor) {
+        if (! $isAdmin && $isDoctor && $doctor) {
             if ($emergency->doctor_id && $emergency->doctor_id !== $doctor->id && $emergency->consultant_doctor_id !== $doctor->id) {
                 $msg = 'غير مصرح لك بتعديل طلبات حالة تخص طبيباً آخر';
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json(['success' => false, 'message' => $msg], 403);
                 }
+
                 return redirect()->back()->with('error', $msg);
             }
         }
@@ -1592,11 +1605,12 @@ class EmergencyController extends Controller
         $requestId = $request->input('request_id');
         $itemId = $request->input('item_id');
 
-        if (!$type || !$requestId || !$itemId) {
+        if (! $type || ! $requestId || ! $itemId) {
             $msg = 'بيانات الحذف غير مكتملة';
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
@@ -1604,21 +1618,21 @@ class EmergencyController extends Controller
 
         if ($type === 'lab') {
             $labReq = \App\Models\EmergencyLabRequest::where('emergency_id', $emergency->id)->find($requestId);
-            if (!$labReq) {
+            if (! $labReq) {
                 return response()->json(['success' => false, 'message' => 'طلب المختبر غير موجود'], 404);
             }
 
             if ($labReq->payment_id !== null || $isEmergencyPaid) {
                 return response()->json([
-                    'success' => false, 
-                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.'
+                    'success' => false,
+                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.',
                 ], 422);
             }
 
             if ($labReq->status === 'completed') {
                 return response()->json([
-                    'success' => false, 
-                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في المختبر.'
+                    'success' => false,
+                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في المختبر.',
                 ], 422);
             }
 
@@ -1629,26 +1643,26 @@ class EmergencyController extends Controller
             if ($remainingCount === 0) {
                 $labReq->update([
                     'status' => 'cancelled',
-                    'notes' => trim(($labReq->notes ?? '') . ' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب')
+                    'notes' => trim(($labReq->notes ?? '').' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب'),
                 ]);
             }
         } elseif ($type === 'radiology') {
             $radReq = \App\Models\EmergencyRadiologyRequest::where('emergency_id', $emergency->id)->find($requestId);
-            if (!$radReq) {
+            if (! $radReq) {
                 return response()->json(['success' => false, 'message' => 'طلب الأشعة غير موجود'], 404);
             }
 
             if ($radReq->payment_id !== null || $isEmergencyPaid) {
                 return response()->json([
-                    'success' => false, 
-                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.'
+                    'success' => false,
+                    'message' => 'لا يمكن حذف أو تعديل الفحص بعد سداد الرسوم في الكاشير لحماية الحسابات المالية.',
                 ], 422);
             }
 
             if ($radReq->status === 'completed') {
                 return response()->json([
-                    'success' => false, 
-                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في قسم الأشعة.'
+                    'success' => false,
+                    'message' => 'لا يمكن حذف فحص تم إنجازه واعتماده بالفعل في قسم الأشعة.',
                 ], 422);
             }
 
@@ -1659,7 +1673,7 @@ class EmergencyController extends Controller
             if ($remainingCount === 0) {
                 $radReq->update([
                     'status' => 'cancelled',
-                    'notes' => trim(($radReq->notes ?? '') . ' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب')
+                    'notes' => trim(($radReq->notes ?? '').' | تم إلغاء الطلب لحذف كافة الفحوصات من قبل الطبيب'),
                 ]);
             }
         } else {
@@ -1674,6 +1688,54 @@ class EmergencyController extends Controller
             'message' => 'تم حذف الفحص بنجاح وتحديث حسابات الكاشير',
             'remaining_count' => $remainingCount,
             'is_cancelled' => ($remainingCount === 0),
+        ]);
+    }
+
+    /**
+     * إلغاء طلب فحص طوارئ (أشعة أو مختبر) وإرسال مستحقاته للاسترجاع في الكاشير إذا كان مسدداً
+     */
+    public function cancelEmergencyRequest(Request $request, Emergency $emergency)
+    {
+        $request->validate([
+            'type' => 'required|in:radiology,lab',
+            'request_id' => 'required|integer',
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $type = $request->input('type');
+        $requestId = $request->input('request_id');
+        $reason = $request->input('reason', 'طلب إلغاء من قبل الطبيب / المريض');
+
+        if ($type === 'radiology') {
+            $req = \App\Models\EmergencyRadiologyRequest::where('emergency_id', $emergency->id)->find($requestId);
+            $typeName = 'فحص الأشعة';
+        } else {
+            $req = \App\Models\EmergencyLabRequest::where('emergency_id', $emergency->id)->find($requestId);
+            $typeName = 'التحليل المخبري';
+        }
+
+        if (! $req) {
+            return response()->json(['success' => false, 'message' => "طلب {$typeName} غير موجود"], 404);
+        }
+
+        if ($req->status === 'completed') {
+            return response()->json(['success' => false, 'message' => "لا يمكن إلغاء {$typeName} بعد اكتماله واعتماده."], 422);
+        }
+
+        $wasPaid = ! empty($req->payment_id) || $req->payment_status === 'paid';
+
+        $req->update([
+            'status' => 'cancelled',
+            'notes' => trim(($req->notes ?? '')." | ألغي بطلب الطبيب/المريض: {$reason}".($wasPaid ? ' (بانتظار استرجاع المبلغ في الكاشير)' : '')),
+        ]);
+
+        // تحديث رسوم فاتورة الطوارئ الموحدة لدى الكاشير تلقائياً
+        $this->upsertUnifiedEmergencyPayment($emergency);
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم إلغاء {$typeName} بنجاح".($wasPaid ? ' وإدراجه في قائمة مستحقات الاسترجاع بالكاشير' : ''),
+            'was_paid' => $wasPaid,
         ]);
     }
 
@@ -1697,7 +1759,7 @@ class EmergencyController extends Controller
             ->where('emergency_id', $emergency->id)
             ->whereNull('payment_id')
             ->pluck('emergency_service_id');
-        
+
         $isInsurance = false;
         if (isset($emergency->is_insured)) {
             $isInsurance = (bool) $emergency->is_insured;
@@ -1711,8 +1773,8 @@ class EmergencyController extends Controller
         }
 
         $emergencyCopay = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
-        $labCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
-        $radCopay       = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
+        $labCopay = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay = $isInsurance ? ($emergency->patient?->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
 
         $unpaidServices = $emergency->services->whereIn('id', $unpaidServiceIds);
         $totalServicesAmount = 0.0;
@@ -1722,9 +1784,9 @@ class EmergencyController extends Controller
 
         foreach ($unpaidServices as $service) {
             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
-            $totalServicesAmount += (float)$pricing['total_amount'];
-            $servicesPatientShare += (float)$pricing['patient_share'];
-            $servicesInsuranceShare += (float)$pricing['insurance_share'];
+            $totalServicesAmount += (float) $pricing['total_amount'];
+            $servicesPatientShare += (float) $pricing['patient_share'];
+            $servicesInsuranceShare += (float) $pricing['insurance_share'];
 
             if ($pricing['is_covered'] && $pricing['patient_share'] <= 0) {
                 $fullyCoveredServiceIds[] = $service->id;
@@ -1739,9 +1801,9 @@ class EmergencyController extends Controller
         foreach ($unpaidLabRequests as $request) {
             foreach ($request->labTests as $test) {
                 $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
-                $totalLabAmount += (float)$pricing['total_amount'];
-                $labPatientShare += (float)$pricing['patient_share'];
-                $labInsuranceShare += (float)$pricing['insurance_share'];
+                $totalLabAmount += (float) $pricing['total_amount'];
+                $labPatientShare += (float) $pricing['patient_share'];
+                $labInsuranceShare += (float) $pricing['insurance_share'];
             }
         }
 
@@ -1753,9 +1815,9 @@ class EmergencyController extends Controller
         foreach ($unpaidRadiologyRequests as $request) {
             foreach ($request->radiologyTypes as $rad) {
                 $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
-                $totalRadiologyAmount += (float)$pricing['total_amount'];
-                $radiologyPatientShare += (float)$pricing['patient_share'];
-                $radiologyInsuranceShare += (float)$pricing['insurance_share'];
+                $totalRadiologyAmount += (float) $pricing['total_amount'];
+                $radiologyPatientShare += (float) $pricing['patient_share'];
+                $radiologyInsuranceShare += (float) $pricing['insurance_share'];
             }
         }
 
@@ -1765,12 +1827,12 @@ class EmergencyController extends Controller
             ->sum('consultation_fee');
 
         // رسوم المتابعة تُحسب فقط إذا لم تُدفع بعد
-        $followUpFee = ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) 
-            ? $emergency->doctor_follow_up_fee 
+        $followUpFee = ($emergency->doctor_follow_up_fee > 0 && ! $emergency->follow_up_payment_id)
+            ? $emergency->doctor_follow_up_fee
             : 0;
         $followUpPatientShare = $isInsurance ? round($followUpFee * ($emergencyCopay / 100.0), 2) : $followUpFee;
         $followUpInsuranceShare = round($followUpFee - $followUpPatientShare, 2);
-            
+
         $totalAmount = $totalServicesAmount + $totalLabAmount + $totalRadiologyAmount + $consultationAmount + $followUpFee;
         $patientShare = $servicesPatientShare + $labPatientShare + $radiologyPatientShare + $consultationAmount + $followUpPatientShare;
         $insuranceShare = $servicesInsuranceShare + $labInsuranceShare + $radiologyInsuranceShare + $followUpInsuranceShare;
@@ -1783,7 +1845,7 @@ class EmergencyController extends Controller
             ->latest('id')
             ->first();
 
-        if (!$hasPendingAmount) {
+        if (! $hasPendingAmount) {
             if ($existingPayment) {
                 $existingPayment->delete();
                 $emergency->update([
@@ -1791,6 +1853,7 @@ class EmergencyController extends Controller
                     'payment_id' => null,
                 ]);
             }
+
             return $existingPayment;
         }
 
@@ -1800,7 +1863,7 @@ class EmergencyController extends Controller
             ->pluck('name')
             ->filter()
             ->values();
-            
+
         $labNames = $emergency->labRequests
             ->whereNull('payment_id')
             ->flatMap(function ($request) {
@@ -1809,7 +1872,7 @@ class EmergencyController extends Controller
             ->filter()
             ->unique()
             ->values();
-            
+
         $radiologyNames = $emergency->radiologyRequests
             ->whereNull('payment_id')
             ->flatMap(function ($request) {
@@ -1821,13 +1884,13 @@ class EmergencyController extends Controller
 
         $descriptionParts = [];
         if ($serviceNames->isNotEmpty()) {
-            $descriptionParts[] = 'خدمات طوارئ: ' . $serviceNames->implode('، ');
+            $descriptionParts[] = 'خدمات طوارئ: '.$serviceNames->implode('، ');
         }
         if ($labNames->isNotEmpty()) {
-            $descriptionParts[] = 'تحاليل: ' . $labNames->implode('، ');
+            $descriptionParts[] = 'تحاليل: '.$labNames->implode('، ');
         }
         if ($radiologyNames->isNotEmpty()) {
-            $descriptionParts[] = 'أشعة: ' . $radiologyNames->implode('، ');
+            $descriptionParts[] = 'أشعة: '.$radiologyNames->implode('، ');
         }
 
         if ($consultationAmount > 0) {
@@ -1839,7 +1902,7 @@ class EmergencyController extends Controller
                 ->unique()
                 ->values();
 
-            $descriptionParts[] = 'استشارة: ' . ($consultationNames->isNotEmpty() ? $consultationNames->implode('، ') : 'استشارة طوارئ');
+            $descriptionParts[] = 'استشارة: '.($consultationNames->isNotEmpty() ? $consultationNames->implode('، ') : 'استشارة طوارئ');
         }
 
         if ($followUpFee > 0) {
@@ -1867,7 +1930,7 @@ class EmergencyController extends Controller
                 'payment_type' => 'emergency',
                 'payment_method' => 'insurance',
                 'claim_status' => 'claimed',
-                'description' => $description . ' (مغطاة بالكامل بالضمان الصحي)',
+                'description' => $description.' (مغطاة بالكامل بالضمان الصحي)',
                 'paid_at' => now(),
             ];
 
@@ -1893,7 +1956,7 @@ class EmergencyController extends Controller
                 $req->update(['payment_id' => $payment->id]);
             }
 
-            if ($emergency->doctor_follow_up_fee > 0 && !$emergency->follow_up_payment_id) {
+            if ($emergency->doctor_follow_up_fee > 0 && ! $emergency->follow_up_payment_id) {
                 $emergency->update(['follow_up_payment_id' => $payment->id]);
             }
 
@@ -1926,6 +1989,7 @@ class EmergencyController extends Controller
                 'payment_status' => 'pending',
                 'payment_id' => $existingPayment->id,
             ]);
+
             return $existingPayment;
         }
 
@@ -1977,7 +2041,7 @@ class EmergencyController extends Controller
     {
         // التحقق من الصلاحيات
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('edit emergencies') && !$user->hasRole(['nurse', 'emergency_staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('edit emergencies') && ! $user->hasRole(['nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1988,11 +2052,11 @@ class EmergencyController extends Controller
 
         // تحديث الحالة
         $validated = request()->validate([
-            'status' => 'required|in:pending,in_progress,completed,cancelled'
+            'status' => 'required|in:pending,in_progress,completed,cancelled',
         ]);
 
         $request->update([
-            'status' => $validated['status']
+            'status' => $validated['status'],
         ]);
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
@@ -2004,8 +2068,8 @@ class EmergencyController extends Controller
     public function transferToSurgery(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('create surgeries') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
-            !$user->isDoctor() && !$user->isNurse()) {
+        if (! $user->hasRole('admin') && ! $user->can('manage emergencies') && ! $user->can('create surgeries') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) &&
+            ! $user->isDoctor() && ! $user->isNurse()) {
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
 
@@ -2014,16 +2078,17 @@ class EmergencyController extends Controller
         $unpaidAmount = $emergency->getUnpaidAmount();
         if ($unpaidAmount > 0) {
             $formattedAmount = number_format($unpaidAmount, 0);
+
             return redirect()->back()->with('error', "لا يمكن تحويل المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
         }
 
         // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
-        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+        if (! $emergency->patient_id && $emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
-            
+
             $userAccount = \App\Models\User::create([
                 'name' => $emergencyPatient->name,
-                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
                 'role' => 'patient',
                 'password' => bcrypt(\Illuminate\Support\Str::random(12)),
             ]);
@@ -2043,7 +2108,7 @@ class EmergencyController extends Controller
             $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
         }
 
-        if (!$emergency->patient_id) {
+        if (! $emergency->patient_id) {
             return redirect()->back()->with('error', 'فشل تحويل الحالة: لم يتم العثور على مريض مسجل.');
         }
 
@@ -2063,8 +2128,8 @@ class EmergencyController extends Controller
     public function transferToAdmission(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('create surgeries') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) && 
-            !$user->isDoctor() && !$user->isNurse()) {
+        if (! $user->hasRole('admin') && ! $user->can('manage emergencies') && ! $user->can('create surgeries') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff', 'surgery_staff']) &&
+            ! $user->isDoctor() && ! $user->isNurse()) {
             abort(403, 'غير مصرح لك بإجراء التحويل');
         }
 
@@ -2073,16 +2138,17 @@ class EmergencyController extends Controller
         $unpaidAmount = $emergency->getUnpaidAmount();
         if ($unpaidAmount > 0) {
             $formattedAmount = number_format($unpaidAmount, 0);
+
             return redirect()->back()->with('error', "لا يمكن تحويل المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
         }
 
         // 1. ترحيل المريض إلى الجدول الرئيسي إذا لم يكن مرحلاً
-        if (!$emergency->patient_id && $emergency->emergency_patient_id && !$emergency->patient_migrated) {
+        if (! $emergency->patient_id && $emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
-            
+
             $userAccount = \App\Models\User::create([
                 'name' => $emergencyPatient->name,
-                'email' => 'emergency_' . time() . '_' . rand(1000,9999) . '@example.com',
+                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
                 'role' => 'patient',
                 'password' => bcrypt(\Illuminate\Support\Str::random(12)),
             ]);
@@ -2102,7 +2168,7 @@ class EmergencyController extends Controller
             $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
         }
 
-        if (!$emergency->patient_id) {
+        if (! $emergency->patient_id) {
             return redirect()->back()->with('error', 'فشل تحويل الحالة: لم يتم العثور على مريض مسجل.');
         }
 
@@ -2121,8 +2187,8 @@ class EmergencyController extends Controller
     public function discharge(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('manage emergencies') && !$user->can('edit emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff']) && 
-            !$user->isDoctor() && !$user->isNurse()) {
+        if (! $user->hasRole('admin') && ! $user->can('manage emergencies') && ! $user->can('edit emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff', 'receptionist', 'inquiry_staff', 'staff']) &&
+            ! $user->isDoctor() && ! $user->isNurse()) {
             abort(403, 'غير مصرح لك بتسجيل خروج المريض');
         }
 
@@ -2131,12 +2197,13 @@ class EmergencyController extends Controller
         $unpaidAmount = $emergency->getUnpaidAmount();
         if ($unpaidAmount > 0) {
             $formattedAmount = number_format($unpaidAmount, 0);
+
             return redirect()->back()->with('error', "لا يمكن تخريج المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
         }
 
         $request->validate([
             'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation',
-            'discharge_notes' => 'nullable|string|max:1000', 
+            'discharge_notes' => 'nullable|string|max:1000',
             'discharge_destination' => 'nullable|string|max:100',
             'discharge_recommendations' => 'nullable|string|max:1000',
         ]);
@@ -2180,6 +2247,7 @@ class EmergencyController extends Controller
             'transferred_to_consultation' => 'تحويل للاستشارية',
         ];
         $typeLabel = $typeLabels[$request->discharge_type] ?? 'تخريج المريض';
+
         return redirect()->back()->with('success', "تم تسجيل خروج المريض بنجاح ({$typeLabel}).");
     }
 
@@ -2189,7 +2257,7 @@ class EmergencyController extends Controller
     public function medicalReport(Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole('admin') && !$user->can('view emergencies') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
+        if (! $user->hasRole('admin') && ! $user->can('view emergencies') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'emergency_staff', 'staff'])) {
             abort(403, 'غير مصرح لك باستعراض التقرير الطبي للحالة');
         }
 
@@ -2212,7 +2280,7 @@ class EmergencyController extends Controller
             'treatments.doctor.user',
             'treatments.nurse',
             'prescriptions.items',
-            'vitalSignReadings' => function($q) {
+            'vitalSignReadings' => function ($q) {
                 $q->latest()->with('recordedBy');
             },
             'appointments.doctor.user',
@@ -2246,7 +2314,7 @@ class EmergencyController extends Controller
     public function cancel(Request $request, Emergency $emergency)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && !$user->can('manage emergencies') && !$user->can('delete emergencies') && !$user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
+        if (! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']) && ! $user->can('manage emergencies') && ! $user->can('delete emergencies') && ! $user->hasRole(['doctor', 'nurse', 'emergency_staff'])) {
             abort(403, 'غير مصرح لك بإلغاء حالة الطوارئ');
         }
 
@@ -2271,13 +2339,13 @@ class EmergencyController extends Controller
 
         DB::beginTransaction();
         try {
-            $logNote = "\n[تم إلغاء الحالة بواسطة: {$user->name} بتأريخ " . now()->format('Y-m-d H:i') . " | السبب: {$cancelReason}" . ($hasPaid ? " | مسدد مسبقاً: " . number_format($paidAmount) . " د.ع (بانتظار استرجاع الكاشير)" : "") . "]";
+            $logNote = "\n[تم إلغاء الحالة بواسطة: {$user->name} بتأريخ ".now()->format('Y-m-d H:i')." | السبب: {$cancelReason}".($hasPaid ? ' | مسدد مسبقاً: '.number_format($paidAmount).' د.ع (بانتظار استرجاع الكاشير)' : '').']';
 
             $emergency->update([
                 'status' => 'cancelled',
                 'payment_status' => 'cancelled',
                 'is_active' => false,
-                'notes' => trim(($emergency->notes ?? '') . $logNote),
+                'notes' => trim(($emergency->notes ?? '').$logNote),
             ]);
 
             // إلغاء أي فواتير طوارئ معلقة غير مدفوعة
@@ -2294,7 +2362,7 @@ class EmergencyController extends Controller
             if (class_exists(\App\Services\UserActivityLogger::class)) {
                 \App\Services\UserActivityLogger::log(
                     'emergency',
-                    "إلغاء حالة طوارئ #{$emergency->id} للمريض " . ($emergency->patient?->user?->name ?? 'غير محدد') . " (السبب: {$cancelReason})",
+                    "إلغاء حالة طوارئ #{$emergency->id} للمريض ".($emergency->patient?->user?->name ?? 'غير محدد')." (السبب: {$cancelReason})",
                     $emergency
                 );
             }
@@ -2302,13 +2370,14 @@ class EmergencyController extends Controller
             DB::commit();
 
             if ($hasPaid) {
-                return redirect()->route('emergency.index', ['filter' => 'all'])->with('warning', '⚠️ تم إلغاء حالة الطوارئ بنجاح. نظراً لأن المريض سدد مسبقاً في الكاشير مبلغ ' . number_format($paidAmount) . ' د.ع، تم تحويله لمستحقات الاسترجاع في الكاشير لصرفه للمريض.');
+                return redirect()->route('emergency.index', ['filter' => 'all'])->with('warning', '⚠️ تم إلغاء حالة الطوارئ بنجاح. نظراً لأن المريض سدد مسبقاً في الكاشير مبلغ '.number_format($paidAmount).' د.ع، تم تحويله لمستحقات الاسترجاع في الكاشير لصرفه للمريض.');
             }
 
             return redirect()->route('emergency.index', ['filter' => 'all'])->with('success', 'تم إلغاء حالة الطوارئ بنجاح.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء إلغاء حالة الطوارئ: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء إلغاء حالة الطوارئ: '.$e->getMessage());
         }
     }
 }

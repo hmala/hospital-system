@@ -75,7 +75,7 @@ class HealthInsuranceClaimsReportTest extends TestCase
             'department_id' => $dept->id,
             'specialization' => 'باطنية',
             'qualification' => 'بورد',
-            'license_number' => 'DOC-' . uniqid(),
+            'license_number' => 'DOC-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -183,5 +183,89 @@ class HealthInsuranceClaimsReportTest extends TestCase
         $this->assertTrue(
             str_contains($response->headers->get('content-disposition') ?? '', 'insurance_claims_')
         );
+    }
+
+    public function test_insurance_claims_display_multiple_services_grouped_by_patient_with_subtotals()
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage health insurance');
+
+        $patientUser = User::factory()->create(['name' => 'المريض المجمّع']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'INS-GROUPED-99',
+        ]);
+
+        Payment::create([
+            'receipt_number' => 'REC-SERV-1',
+            'patient_id' => $patient->id,
+            'payment_type' => 'appointment',
+            'amount' => 2500,
+            'insurance_share' => 22500,
+            'paid_at' => now(),
+            'description' => 'استشارية باطنية',
+        ]);
+
+        Payment::create([
+            'receipt_number' => 'REC-SERV-2',
+            'patient_id' => $patient->id,
+            'payment_type' => 'lab',
+            'amount' => 5000,
+            'insurance_share' => 15000,
+            'paid_at' => now(),
+            'description' => 'تحليل دم كامل',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('insurance.claims.index', ['view_mode' => 'patient_grouped']));
+
+        $response->assertStatus(200);
+        $response->assertSee('المريض المجمّع');
+        $response->assertSee('REC-SERV-1');
+        $response->assertSee('REC-SERV-2');
+        $response->assertSee('إجمالي الخدمات: 2');
+        $response->assertSee('مجموع استحقاقات المريض');
+    }
+
+    public function test_insurance_claims_can_be_searched_by_patient_name()
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage health insurance');
+
+        $user1 = User::factory()->create(['name' => 'منير عبد الله']);
+        $patient1 = Patient::create([
+            'user_id' => $user1->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'INS-MUNEER-1',
+        ]);
+        Payment::create([
+            'receipt_number' => 'REC-MUN-1',
+            'patient_id' => $patient1->id,
+            'payment_type' => 'appointment',
+            'amount' => 2500,
+            'insurance_share' => 22500,
+            'paid_at' => now(),
+        ]);
+
+        $user2 = User::factory()->create(['name' => 'أحمد قاسم']);
+        $patient2 = Patient::create([
+            'user_id' => $user2->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'INS-AHMED-2',
+        ]);
+        Payment::create([
+            'receipt_number' => 'REC-AHM-2',
+            'patient_id' => $patient2->id,
+            'payment_type' => 'appointment',
+            'amount' => 2500,
+            'insurance_share' => 22500,
+            'paid_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('insurance.claims.index', ['search' => 'منير']));
+
+        $response->assertStatus(200);
+        $response->assertSee('منير عبد الله');
+        $response->assertDontSee('أحمد قاسم');
     }
 }

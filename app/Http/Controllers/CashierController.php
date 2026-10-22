@@ -4,19 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\ConsultationRevenue;
-use App\Models\Payment;
-use App\Models\Patient;
-use App\Models\Request as MedicalRequest;
-use App\Models\Visit;
-use App\Models\LabTest;
-use App\Models\RadiologyType;
-use App\Models\Surgery;
 use App\Models\Emergency;
+use App\Models\LabTest;
+use App\Models\Payment;
+use App\Models\RadiologyType;
+use App\Models\Request as MedicalRequest;
+use App\Models\Surgery;
+use App\Models\Visit;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
-use Carbon\Carbon;
 
 class CashierController extends Controller
 {
@@ -33,9 +32,9 @@ class CashierController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $canFullMedical = $isAdmin || ($user && $user->can('process medical requests payments'));
-        $canUltrasoundOnly = !$canFullMedical && ($user && $user->can('process ultrasound payments'));
+        $canUltrasoundOnly = ! $canFullMedical && ($user && $user->can('process ultrasound payments'));
 
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process consultation payments') && !$canFullMedical && !$canUltrasoundOnly && !$user->can('process emergency payments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process consultation payments') && ! $canFullMedical && ! $canUltrasoundOnly && ! $user->can('process emergency payments')))) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 
@@ -59,10 +58,10 @@ class CashierController extends Controller
             ->whereDoesntHave('visit.surgery');
 
         if ($canUltrasoundOnly) {
-            $previousPendingReqsQuery->where(function($q) {
-                $q->where(function($sq) {
+            $previousPendingReqsQuery->where(function ($q) {
+                $q->where(function ($sq) {
                     $sq->where('subtype', 'ultrasound')
-                       ->orWhere('description', 'LIKE', '%سونار%');
+                        ->orWhere('description', 'LIKE', '%سونار%');
                 })->where('details', 'LIKE', '%created_at_inquiry%');
             });
         }
@@ -76,7 +75,7 @@ class CashierController extends Controller
             ->where('payment_status', 'pending')
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->whereNull('emergency_id')
-            ->whereDoesntHave('visit.requests', function($q) {
+            ->whereDoesntHave('visit.requests', function ($q) {
                 $q->whereIn('type', ['radiology', 'lab', 'blood_bank']);
             })
             ->whereHas('patient');
@@ -90,15 +89,15 @@ class CashierController extends Controller
         }
 
         if ($search) {
-            $pendingAppointmentsQuery->where(function($q) use ($search) {
+            $pendingAppointmentsQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhereHas('patient.user', function($qu) use ($search) {
-                      $qu->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('patient', function($qp) use ($search) {
-                      $qp->where('national_id', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('patient', function ($qp) use ($search) {
+                        $qp->where('national_id', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -111,22 +110,22 @@ class CashierController extends Controller
         $pendingRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
-            ->whereHas('visit', function($q) {
+            ->whereHas('visit', function ($q) {
                 $q->where('status', '!=', 'cancelled')
-                  ->where(function($query) {
-                      $query->where('visit_type', '!=', 'surgery')
+                    ->where(function ($query) {
+                        $query->where('visit_type', '!=', 'surgery')
                             ->orWhereNull('visit_type');
-                  });
+                    });
             })
             ->whereHas('visit.patient')
             ->whereDoesntHave('visit.surgery');
 
         if ($canUltrasoundOnly) {
             // تصفية حصرية لطلبات السونار الخارجي المباشر فقط (المحجوزة من الاستعلامات)
-            $pendingRequestsQuery->where(function($q) {
-                $q->where(function($sq) {
+            $pendingRequestsQuery->where(function ($q) {
+                $q->where(function ($sq) {
                     $sq->where('subtype', 'ultrasound')
-                       ->orWhere('description', 'LIKE', '%سونار%');
+                        ->orWhere('description', 'LIKE', '%سونار%');
                 })->where('details', 'LIKE', '%created_at_inquiry%');
             });
         }
@@ -140,16 +139,16 @@ class CashierController extends Controller
         }
 
         if ($search) {
-            $pendingRequestsQuery->where(function($q) use ($search) {
+            $pendingRequestsQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhereHas('visit.patient.user', function($qu) use ($search) {
-                      $qu->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('visit.patient', function($qp) use ($search) {
-                      $qp->where('national_id', 'like', "%{$search}%");
-                  });
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('visit.patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('visit.patient', function ($qp) use ($search) {
+                        $qp->where('national_id', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -174,17 +173,17 @@ class CashierController extends Controller
         }
 
         if ($search) {
-            $pendingEmergencyQuery->where(function($q) use ($search) {
+            $pendingEmergencyQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('emergency_id', $search)
-                  ->orWhereHas('emergency.patient.user', function($qu) use ($search) {
-                      $qu->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('emergency.emergencyPatient', function($qe) use ($search) {
-                      $qe->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                    ->orWhere('emergency_id', $search)
+                    ->orWhereHas('emergency.patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('emergency.emergencyPatient', function ($qe) use ($search) {
+                        $qe->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -271,22 +270,52 @@ class CashierController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count();
+        // جلب فحوصات الأشعة في الطوارئ الملغاة بعد السداد والمستحقة للاسترجاع
+        $pendingEmergencyRadRefunds = \App\Models\EmergencyRadiologyRequest::with([
+            'emergency.patient.user',
+            'emergency.emergencyPatient',
+            'emergency.doctor.user',
+            'radiologyTypes',
+            'payment',
+        ])
+            ->where('status', 'cancelled')
+            ->whereNotNull('payment_id')
+            ->where('payment_status', '!=', 'refunded')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        // جلب تحاليل المختبر في الطوارئ الملغاة بعد السداد والمستحقة للاسترجاع
+        $pendingEmergencyLabRefunds = \App\Models\EmergencyLabRequest::with([
+            'emergency.patient.user',
+            'emergency.emergencyPatient',
+            'emergency.doctor.user',
+            'labTests',
+            'payment',
+        ])
+            ->where('status', 'cancelled')
+            ->whereNotNull('payment_id')
+            ->where('payment_status', '!=', 'refunded')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingEmergencyRadRefunds->count() + $pendingEmergencyLabRefunds->count();
 
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
 
         return view('cashier.index', compact(
-            'pendingAppointments', 
-            'pendingMedicalRequests', 
-            'pendingEmergencyPayments', 
+            'pendingAppointments',
+            'pendingMedicalRequests',
+            'pendingEmergencyPayments',
             'pendingRefundRequests',
             'pendingEmergencyRefunds',
+            'pendingEmergencyRadRefunds',
+            'pendingEmergencyLabRefunds',
             'pendingRefundCount',
-            'todayStats', 
-            'todayPayments', 
-            'monthlyStats', 
-            'dateFilter', 
+            'todayStats',
+            'todayPayments',
+            'monthlyStats',
+            'dateFilter',
             'customDate',
             'search',
             'previousPendingCount'
@@ -300,7 +329,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process consultation payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process consultation payments'))) {
             abort(403, 'غير مصرح لك بقبض وتسديد رسوم الكشفية');
         }
 
@@ -322,14 +351,14 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process consultation payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process consultation payments'))) {
             abort(403, 'غير مصرح لك بقبض وتسديد رسوم الكشفية');
         }
 
         $request->validate([
             'payment_method' => 'required|in:cash,card,insurance',
             'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
         ]);
 
         // التحقق من أن الموعد لم يتم دفعه بعد
@@ -355,16 +384,16 @@ class CashierController extends Controller
             }
         }
 
-        if (!$scanType && $appointment->doctor && $insuranceType === 'hi') {
+        if (! $scanType && $appointment->doctor && $insuranceType === 'hi') {
             $docCommission = \App\Models\DoctorCommissionSetting::where('doctor_id', $appointment->doctor->id)->first();
-            if (!$docCommission || (float)($docCommission->hi_fixed_amount ?? 0) <= 0) {
+            if (! $docCommission || (float) ($docCommission->hi_fixed_amount ?? 0) <= 0) {
                 return back()->with('error', 'لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.');
             }
         }
 
         DB::beginTransaction();
         try {
-            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $copayPercentage = (float) $request->input('copay_percentage', $patient->copay_percentage ?? 0);
             $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
             if ($scanType) {
@@ -372,7 +401,7 @@ class CashierController extends Controller
             } elseif ($appointment->doctor && $appointment->doctor->consultation_fee > 0) {
                 $servicePricing = $appointment->doctor->calculateInsurancePricing($insuranceType, $copayPercentage);
             } else {
-                $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 0);
+                $baseFee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 0);
                 $isCovered = ($insuranceType !== 'none');
                 $patientShare = $isCovered ? round($baseFee * ($copayPercentage / 100.0), 2) : $baseFee;
                 $servicePricing = [
@@ -384,8 +413,8 @@ class CashierController extends Controller
             }
 
             $isCovered = $servicePricing ? $servicePricing['is_covered'] : false;
-            $patientPaidAmount = (float)$request->amount;
-            $totalApproved = $isCovered ? (float)$servicePricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
+            $patientPaidAmount = (float) $request->amount;
+            $totalApproved = $isCovered ? (float) $servicePricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
             if ($totalApproved <= 0) {
                 $totalApproved = $patientPaidAmount;
             }
@@ -409,21 +438,21 @@ class CashierController extends Controller
                 'claim_status' => $claimStatus,
                 'payment_method' => $request->payment_method,
                 'payment_type' => 'appointment',
-                'description' => ($scanType ? 'دفع رسوم ' . $scanType->name : 'دفع رسوم موعد #' . $appointment->id),
+                'description' => ($scanType ? 'دفع رسوم '.$scanType->name : 'دفع رسوم موعد #'.$appointment->id),
                 'notes' => $request->notes,
-                'paid_at' => Carbon::now()
+                'paid_at' => Carbon::now(),
             ]);
 
             // تحديث حالة الدفع للموعد
             $appointment->update([
                 'payment_status' => 'paid',
-                'payment_id' => $payment->id
+                'payment_id' => $payment->id,
             ]);
 
             // تحديث الزيارة والطلبات الطبية المرتبطة إن وجدت
             if ($appointment->visit) {
                 $appointment->visit->update([
-                    'status' => 'scheduled' // في انتظار دخول الطبيب
+                    'status' => 'scheduled', // في انتظار دخول الطبيب
                 ]);
 
                 $medReqs = \App\Models\Request::where('visit_id', $appointment->visit->id)->get();
@@ -431,14 +460,14 @@ class CashierController extends Controller
                     $medReq->update([
                         'payment_status' => 'paid',
                         'payment_id' => $payment->id,
-                        'status' => 'pending'
+                        'status' => 'pending',
                     ]);
 
                     // إذا كان طلباً للأشعة أو السونار، إنشاء سجل في radiology_requests إن لم يوجد
                     if ($medReq->type === 'radiology') {
                         $details = is_string($medReq->details) ? json_decode($medReq->details, true) : $medReq->details;
                         $radTypeIds = $details['radiology_type_ids'] ?? [];
-                        if (empty($radTypeIds) && !empty($details['ultrasound_type_id'])) {
+                        if (empty($radTypeIds) && ! empty($details['ultrasound_type_id'])) {
                             $radTypeIds = [$details['ultrasound_type_id']];
                         }
 
@@ -447,7 +476,7 @@ class CashierController extends Controller
                                 ->where('radiology_type_id', $radTypeId)
                                 ->exists();
 
-                            if (!$exists) {
+                            if (! $exists) {
                                 try {
                                     $radTypeObj = \App\Models\RadiologyType::find($radTypeId);
                                     \App\Models\RadiologyRequest::create([
@@ -462,7 +491,7 @@ class CashierController extends Controller
                                         'total_cost' => $radTypeObj ? $radTypeObj->base_price : null,
                                     ]);
                                 } catch (\Exception $e) {
-                                    \Log::error('Failed to create radiology request from appointment payment: ' . $e->getMessage());
+                                    \Log::error('Failed to create radiology request from appointment payment: '.$e->getMessage());
                                 }
                             }
                         }
@@ -473,12 +502,13 @@ class CashierController extends Controller
             DB::commit();
 
             return redirect()->route('cashier.receipt', $payment->id)
-                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number);
+                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: '.$payment->receipt_number);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()
-                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -504,7 +534,7 @@ class CashierController extends Controller
             )
         );
 
-        if (!$canViewReceipt) {
+        if (! $canViewReceipt) {
             abort(403, 'غير مصرح لك بعرض سند القبض');
         }
 
@@ -520,7 +550,7 @@ class CashierController extends Controller
             'surgery.department',
             'surgery.labTests.labTest',
             'surgery.radiologyTests.radiologyType',
-            'cashier'
+            'cashier',
         ]);
 
         return view('cashier.receipt', compact('payment'));
@@ -543,7 +573,7 @@ class CashierController extends Controller
             'surgery.department',
             'surgery.labTests.labTest',
             'surgery.radiologyTests.radiologyType',
-            'cashier'
+            'cashier',
         ]);
 
         return view('cashier.receipt-print', compact('payment'));
@@ -557,14 +587,14 @@ class CashierController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $isUltrasoundRequest = ($request->subtype === 'ultrasound' || str_contains($request->description ?? '', 'سونار') || str_contains(json_encode($request->details ?? []), 'ultrasound'));
-        
-        $canPay = $isAdmin 
+
+        $canPay = $isAdmin
             || ($user && $user->can('process medical requests payments'))
             || ($user && $user->can('process medical request payments'))
             || ($user && $user->can('process ultrasound payments') && $isUltrasoundRequest)
             || ($user && $user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
 
-        if (!$canPay) {
+        if (! $canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
@@ -576,7 +606,7 @@ class CashierController extends Controller
 
         $request->load(['visit.patient.user', 'visit.doctor.user']);
 
-        if (!$request->visit) {
+        if (! $request->visit) {
             // shouldn't normally happen but guard anyway
             return redirect()->route('cashier.index')
                 ->with('error', 'الطلب غير مرتبط بأي زيارة ولا يمكن عرضه.');
@@ -598,27 +628,27 @@ class CashierController extends Controller
     public function processRequestPayment(Request $httpRequest, MedicalRequest $request)
     {
         \Log::info('========== processRequestPayment CALLED ==========');
-        \Log::info('Request ID: ' . $request->id);
-        \Log::info('HTTP Request data: ' . json_encode($httpRequest->all()));
-        
+        \Log::info('Request ID: '.$request->id);
+        \Log::info('HTTP Request data: '.json_encode($httpRequest->all()));
+
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $isUltrasoundRequest = ($request->subtype === 'ultrasound' || str_contains($request->description ?? '', 'سونار') || str_contains(json_encode($request->details ?? []), 'ultrasound'));
 
-        $canPay = $isAdmin 
+        $canPay = $isAdmin
             || ($user && $user->can('process medical requests payments'))
             || ($user && $user->can('process medical request payments'))
             || ($user && $user->can('process ultrasound payments') && $isUltrasoundRequest)
             || ($user && $user->can('process consultation payments') && in_array($request->type, ['radiology', 'lab']));
 
-        if (!$canPay) {
+        if (! $canPay) {
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
         $httpRequest->validate([
             'payment_method' => 'required|in:cash,card,insurance',
             'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
         ]);
 
         // التحقق من أن الطلب لم يتم دفعه بعد
@@ -629,34 +659,35 @@ class CashierController extends Controller
 
         DB::beginTransaction();
         try {
-            \Log::info('Starting payment process for request #' . $request->id);
+            \Log::info('Starting payment process for request #'.$request->id);
             // Ensure visit is loaded and exists; otherwise abort early to avoid null errors.
-        $request->load('visit');
-        if (!$request->visit) {
-            \Log::error('MedicalRequest #' . $request->id . ' has no associated visit');
-            DB::rollBack();
-            return redirect()->route('cashier.index')
-                        ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
-        }
+            $request->load('visit');
+            if (! $request->visit) {
+                \Log::error('MedicalRequest #'.$request->id.' has no associated visit');
+                DB::rollBack();
+
+                return redirect()->route('cashier.index')
+                    ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
+            }
             $patient = optional($request->visit)->patient;
             $appointment = optional($request->visit)->appointment;
             $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-            
+
             // شرط الحصانة: الطلبات الخارجية والزيارات المباشرة للمختبر والأشعة بدون إحالة استشاري تحاسب كاش نقدي كامل 100%
-            $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (!empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit']) || !empty($details['created_at_inquiry']));
+            $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (! empty($details['direct_lab_visit']) || ! empty($details['direct_radiology_visit']) || ! empty($details['created_at_inquiry']));
             if ($isDirectVisit && empty($appointment?->doctor_id)) {
                 $insuranceType = 'none';
             } else {
                 $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
             }
 
-            $copayPercentage = (float)$httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
+            $copayPercentage = (float) $httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
             $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
 
             // الطلبات المتضمنة في الدفع الموحد للزيارة
-            $includedRequestIds = (array)$httpRequest->input('included_request_ids', [$request->id]);
+            $includedRequestIds = (array) $httpRequest->input('included_request_ids', [$request->id]);
             $includedRequestIds = array_unique(array_filter(array_map('intval', $includedRequestIds)));
-            if (!in_array($request->id, $includedRequestIds)) {
+            if (! in_array($request->id, $includedRequestIds)) {
                 $includedRequestIds[] = $request->id;
             }
 
@@ -687,81 +718,101 @@ class CashierController extends Controller
                     $package = $packageId ? \App\Models\Package::find($packageId) : null;
 
                     if ($package) {
-                        $pkgPrice = (float)$package->price;
+                        $pkgPrice = (float) $package->price;
                         $computedTotal += $pkgPrice;
                         $computedPatientShare += $pkgPrice;
-                        $descParts[] = 'باقة مختبر (' . $package->name . ')';
+                        $descParts[] = 'باقة مختبر ('.$package->name.')';
 
                         $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
                         $allTestIds = $details['lab_test_ids'] ?? [];
                         $extraTestIds = array_diff($allTestIds, $pkgTestIds);
                         foreach ($extraTestIds as $testId) {
-                            if (in_array($testId, $seenLabTestIds)) continue;
+                            if (in_array($testId, $seenLabTestIds)) {
+                                continue;
+                            }
                             $seenLabTestIds[] = $testId;
                             $test = LabTest::find($testId);
                             if ($test && $test->is_active) {
                                 $normTestName = mb_strtolower(trim($test->name));
-                                if (in_array($normTestName, $seenLabTestNames)) continue;
+                                if (in_array($normTestName, $seenLabTestNames)) {
+                                    continue;
+                                }
                                 $seenLabTestNames[] = $normTestName;
 
                                 $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
                                 $computedInsuranceShare += $p['insurance_share'];
-                                if ($p['is_covered']) $hasCoveredItem = true;
+                                if ($p['is_covered']) {
+                                    $hasCoveredItem = true;
+                                }
                             }
                         }
                     } else {
                         $labTestIds = $details['lab_test_ids'] ?? [];
-                        if (!empty($labTestIds)) {
+                        if (! empty($labTestIds)) {
                             foreach ($labTestIds as $testId) {
-                                if (in_array($testId, $seenLabTestIds)) continue;
+                                if (in_array($testId, $seenLabTestIds)) {
+                                    continue;
+                                }
                                 $seenLabTestIds[] = $testId;
                                 $test = LabTest::find($testId);
                                 if ($test && $test->is_active) {
                                     $normTestName = mb_strtolower(trim($test->name));
-                                    if (in_array($normTestName, $seenLabTestNames)) continue;
+                                    if (in_array($normTestName, $seenLabTestNames)) {
+                                        continue;
+                                    }
                                     $seenLabTestNames[] = $normTestName;
 
                                     $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
-                                    if ($p['is_covered']) $hasCoveredItem = true;
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
                                 }
                             }
-                        } elseif (!empty($details['tests'])) {
+                        } elseif (! empty($details['tests'])) {
                             foreach ($details['tests'] as $testName) {
                                 $test = LabTest::where('is_active', true)
-                                    ->where(function($q) use ($testName) {
+                                    ->where(function ($q) use ($testName) {
                                         $q->where('name', $testName)->orWhere('code', $testName);
                                     })
                                     ->first();
                                 if ($test) {
-                                    if (in_array($test->id, $seenLabTestIds)) continue;
+                                    if (in_array($test->id, $seenLabTestIds)) {
+                                        continue;
+                                    }
                                     $seenLabTestIds[] = $test->id;
                                     $normTestName = mb_strtolower(trim($test->name));
-                                    if (in_array($normTestName, $seenLabTestNames)) continue;
+                                    if (in_array($normTestName, $seenLabTestNames)) {
+                                        continue;
+                                    }
                                     $seenLabTestNames[] = $normTestName;
 
                                     $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
-                                    if ($p['is_covered']) $hasCoveredItem = true;
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
                                 }
                             }
                         }
-                        $descParts[] = 'مختبر #' . $reqItem->id;
+                        $descParts[] = 'مختبر #'.$reqItem->id;
                     }
                 } elseif ($reqItem->type === 'radiology') {
                     $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
                     $radTargets = $details['radiology_targets'] ?? [];
-                    if (!empty($radTypeIds)) {
+                    if (! empty($radTypeIds)) {
                         foreach ($radTypeIds as $typeId) {
                             $targetPart = isset($radTargets[$typeId]) ? trim($radTargets[$typeId]) : '';
-                            $radKey = $typeId . '_' . $targetPart;
-                            if (in_array($radKey, $seenRadKeys)) continue;
+                            $radKey = $typeId.'_'.$targetPart;
+                            if (in_array($radKey, $seenRadKeys)) {
+                                continue;
+                            }
                             $seenRadKeys[] = $radKey;
                             $type = RadiologyType::find($typeId);
                             if ($type) {
@@ -769,24 +820,26 @@ class CashierController extends Controller
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
                                 $computedInsuranceShare += $p['insurance_share'];
-                                if ($p['is_covered']) $hasCoveredItem = true;
+                                if ($p['is_covered']) {
+                                    $hasCoveredItem = true;
+                                }
                             }
                         }
                     }
-                    $descParts[] = 'أشعة #' . $reqItem->id;
+                    $descParts[] = 'أشعة #'.$reqItem->id;
                 }
             }
 
-            $patientPaidAmount = (float)$httpRequest->amount;
+            $patientPaidAmount = (float) $httpRequest->amount;
             $totalApproved = $computedTotal > 0 ? $computedTotal : $patientPaidAmount;
             $patientShare = $patientPaidAmount;
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
-            $paymentType = in_array('radiology', $allRequestsToPay->pluck('type')->toArray()) && !in_array('lab', $allRequestsToPay->pluck('type')->toArray()) ? 'radiology' : 'lab';
+            $paymentType = in_array('radiology', $allRequestsToPay->pluck('type')->toArray()) && ! in_array('lab', $allRequestsToPay->pluck('type')->toArray()) ? 'radiology' : 'lab';
             $paymentDescription = count($allRequestsToPay) > 1
-                ? ('دفع رسوم موحدة للزيارة (' . implode(' + ', $descParts) . ')')
-                : (!empty($package) ? ('دفع رسوم باقة: ' . $package->name . ' - طلب #' . $request->id) : ('دفع رسوم طلب ' . $request->type . ' #' . $request->id));
+                ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
+                : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$request->id) : ('دفع رسوم طلب '.$request->type.' #'.$request->id));
 
             // إنشاء سجل الدفع مع تجميد الأرقام المالية الثلاثة
             \Log::info('Creating payment record with insurance snapshot...');
@@ -807,37 +860,37 @@ class CashierController extends Controller
                 'payment_type' => $paymentType,
                 'description' => $paymentDescription,
                 'notes' => $httpRequest->notes,
-                'paid_at' => Carbon::now()
+                'paid_at' => Carbon::now(),
             ]);
 
-            \Log::info('Payment created successfully: #' . $payment->id);
+            \Log::info('Payment created successfully: #'.$payment->id);
 
             // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الموحد
             foreach ($allRequestsToPay as $reqItem) {
                 $reqItem->update([
                     'payment_status' => 'paid',
-                    'payment_id' => $payment->id
+                    'payment_id' => $payment->id,
                 ]);
             }
 
-            \Log::info('All included requests (' . $allRequestsToPay->pluck('id')->join(',') . ') updated to paid');
+            \Log::info('All included requests ('.$allRequestsToPay->pluck('id')->join(',').') updated to paid');
 
             // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة (فقط للزيارات قيد انتظار الدفع)
             if ($request->visit) {
                 if ($request->visit->status === 'pending_payment') {
                     $request->visit->update([
-                        'status' => 'scheduled'
+                        'status' => 'scheduled',
                     ]);
                 }
 
                 // تحديث الموعد المرتبط إن وجد (حصراً لحجوزات السونار المباشرة الخالية من كشفية طبيب مستقلة ولم تدفع بعد)
                 if ($request->visit->appointment_id) {
                     $linkedAppt = \App\Models\Appointment::with(['doctor.currentCommissionSetting', 'patient'])->find($request->visit->appointment_id);
-                    if ($linkedAppt && empty($linkedAppt->payment_id) && (float)$linkedAppt->consultation_fee == 0) {
+                    if ($linkedAppt && empty($linkedAppt->payment_id) && (float) $linkedAppt->consultation_fee == 0) {
                         $linkedAppt->update([
                             'payment_status' => 'paid',
                             'status' => 'confirmed',
-                            'payment_id' => $payment->id
+                            'payment_id' => $payment->id,
                         ]);
 
                         if (empty($payment->appointment_id)) {
@@ -847,14 +900,14 @@ class CashierController extends Controller
                         // إنشاء أو تحديث قيد إيرادات الاستشارية لحجز السونار الخارجي المباشر
                         $doctor = $linkedAppt->doctor;
                         $setting = $doctor?->currentCommissionSetting;
-                        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+                        $amount = (float) ($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
                         $docShare = 0;
                         if ($setting && $amount > 0) {
                             if ($setting->commission_type === 'fixed') {
                                 $isInsurance = in_array($payment->insurance_type, ['hi', 'moi']) || ($payment->insurance_share > 0);
-                                $fixed = $isInsurance && $setting->hi_fixed_amount > 0 
-                                    ? (float)$setting->hi_fixed_amount 
-                                    : (float)$setting->fixed_amount;
+                                $fixed = $isInsurance && $setting->hi_fixed_amount > 0
+                                    ? (float) $setting->hi_fixed_amount
+                                    : (float) $setting->fixed_amount;
                                 $docShare = min($amount, $fixed);
                             } elseif ($setting->commission_type === 'percentage') {
                                 $docShare = round($amount * ($setting->commission_value / 100), 2);
@@ -883,47 +936,47 @@ class CashierController extends Controller
                                 'movement_type' => 'payment',
                                 'revenue_date' => $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString(),
                                 'paid_at' => $payment->paid_at ?? now(),
-                                'notes' => 'حجز سونار خارجي مباشر من الاستعلامات (طلب #' . $request->id . ')',
+                                'notes' => 'حجز سونار خارجي مباشر من الاستعلامات (طلب #'.$request->id.')',
                             ]
                         );
                     }
                 }
                 \Log::info('Visit and linked appointment status handled after request payment');
             } else {
-                \Log::warning('Cannot update visit status: visit is null for request #' . $request->id);
+                \Log::warning('Cannot update visit status: visit is null for request #'.$request->id);
             }
 
             // إذا كان أي من الطلبات المدفوعة أشعة، إنشاء سجلات في radiology_requests إن لم تكن موجودة
             foreach ($allRequestsToPay->where('type', 'radiology') as $radReq) {
-                \Log::info('Processing radiology request payment, request_id: ' . $radReq->id);
+                \Log::info('Processing radiology request payment, request_id: '.$radReq->id);
 
                 $radDetails = is_string($radReq->details) ? json_decode($radReq->details, true) : $radReq->details;
-                \Log::info('Request details: ' . json_encode($radDetails));
+                \Log::info('Request details: '.json_encode($radDetails));
 
                 $radiologyTypeIds = [];
-                if (isset($radDetails['radiology_type_ids']) && !empty($radDetails['radiology_type_ids'])) {
+                if (isset($radDetails['radiology_type_ids']) && ! empty($radDetails['radiology_type_ids'])) {
                     $radiologyTypeIds = $radDetails['radiology_type_ids'];
-                } elseif (isset($radDetails['radiology_types']) && !empty($radDetails['radiology_types'])) {
+                } elseif (isset($radDetails['radiology_types']) && ! empty($radDetails['radiology_types'])) {
                     $radiologyTypeIds = $radDetails['radiology_types'];
                 }
 
-                if (!empty($radiologyTypeIds)) {
-                    if (!$radReq->visit) {
-                        \Log::warning('Skipping radiology request creation, visit missing for request #' . $radReq->id);
+                if (! empty($radiologyTypeIds)) {
+                    if (! $radReq->visit) {
+                        \Log::warning('Skipping radiology request creation, visit missing for request #'.$radReq->id);
                     } else {
-                        \Log::info('Found radiology type ids: ' . json_encode($radiologyTypeIds));
+                        \Log::info('Found radiology type ids: '.json_encode($radiologyTypeIds));
 
                         foreach ($radiologyTypeIds as $radiologyTypeId) {
                             $exists = \App\Models\RadiologyRequest::where('visit_id', $radReq->visit_id)
                                 ->where('radiology_type_id', $radiologyTypeId)
                                 ->exists();
 
-                            if (!$exists) {
+                            if (! $exists) {
                                 try {
                                     $radiologyType = \App\Models\RadiologyType::find($radiologyTypeId);
 
                                     $doctorId = $radReq->visit->doctor_id;
-                                    if (!$doctorId && $radReq->visit->department_id) {
+                                    if (! $doctorId && $radReq->visit->department_id) {
                                         $doctor = \App\Models\Doctor::where('department_id', $radReq->visit->department_id)->first();
                                         $doctorId = $doctor ? $doctor->id : null;
                                     }
@@ -940,64 +993,64 @@ class CashierController extends Controller
                                         'total_cost' => $radiologyType ? $radiologyType->base_price : null,
                                     ]);
 
-                                    \Log::info('Created radiology_request #' . $radiologyRequest->id . ' for type_id: ' . $radiologyTypeId);
+                                    \Log::info('Created radiology_request #'.$radiologyRequest->id.' for type_id: '.$radiologyTypeId);
                                 } catch (\Exception $e) {
-                                    \Log::error('Failed to create radiology_request: ' . $e->getMessage());
+                                    \Log::error('Failed to create radiology_request: '.$e->getMessage());
                                 }
                             } else {
-                                \Log::info('Radiology request already exists for visit_id: ' . $radReq->visit_id . ', type_id: ' . $radiologyTypeId);
+                                \Log::info('Radiology request already exists for visit_id: '.$radReq->visit_id.', type_id: '.$radiologyTypeId);
                             }
                         }
                     }
                 } else {
-                    \Log::warning('No radiology_type_ids found in request details for request #' . $radReq->id);
+                    \Log::warning('No radiology_type_ids found in request details for request #'.$radReq->id);
                 }
             }
 
             // إذا كان الطلب تمريض (nursing)، يتم إرساله لموظفي الطوارئ
             if ($request->type === 'nursing') {
-                \Log::info('Processing nursing request payment, request_id: ' . $request->id);
+                \Log::info('Processing nursing request payment, request_id: '.$request->id);
                 // يتم عرضه في StaffRequestController للموظفين في قسم الطوارئ
             }
 
             // إذا كان الطلب طوارئ، إنشاء سجل طوارئ
             if ($request->type === 'emergency') {
-                \Log::info('Processing emergency request payment, request_id: ' . $request->id);
-                
+                \Log::info('Processing emergency request payment, request_id: '.$request->id);
+
                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                \Log::info('Emergency request details: ' . json_encode($details));
-                
+                \Log::info('Emergency request details: '.json_encode($details));
+
                 if (isset($details['emergency_priority']) && isset($details['emergency_type'])) {
                     // double-check visit exists
-                    if (!$request->visit) {
-                        \Log::warning('Skipping emergency record creation, visit missing for request #' . $request->id);
+                    if (! $request->visit) {
+                        \Log::warning('Skipping emergency record creation, visit missing for request #'.$request->id);
                     } else {
                         try {
-                        // إنشاء سجل طوارئ
-                        $isEmergencyInsured = ($request->insurance_type && $request->insurance_type !== 'none');
-                        $emergency = \App\Models\Emergency::create([
-                            'patient_id' => $request->visit->patient_id,
-                            'doctor_id' => $request->visit->doctor_id,
-                            'priority' => $details['emergency_priority'],
-                            'emergency_type' => $details['emergency_type'],
-                            'symptoms' => $details['symptoms_description'] ?? $request->description,
-                            'vital_signs' => $details['vital_signs'] ?? [],
-                            'admission_time' => now(),
-                            'status' => 'waiting',
-                            'is_active' => true,
-                            'is_insured' => $isEmergencyInsured,
-                            'insurance_type' => $isEmergencyInsured ? $request->insurance_type : 'none',
-                        ]);
-                        
-                        \Log::info('Created emergency record #' . $emergency->id . ' for request #' . $request->id);
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to create emergency record: ' . $e->getMessage());
-                    }
-                } // end visit-exists else branch
-            } // end isset-emergency_priority check
-            else {
-                \Log::warning('Emergency request missing required details for request #' . $request->id);
-            }
+                            // إنشاء سجل طوارئ
+                            $isEmergencyInsured = ($request->insurance_type && $request->insurance_type !== 'none');
+                            $emergency = \App\Models\Emergency::create([
+                                'patient_id' => $request->visit->patient_id,
+                                'doctor_id' => $request->visit->doctor_id,
+                                'priority' => $details['emergency_priority'],
+                                'emergency_type' => $details['emergency_type'],
+                                'symptoms' => $details['symptoms_description'] ?? $request->description,
+                                'vital_signs' => $details['vital_signs'] ?? [],
+                                'admission_time' => now(),
+                                'status' => 'waiting',
+                                'is_active' => true,
+                                'is_insured' => $isEmergencyInsured,
+                                'insurance_type' => $isEmergencyInsured ? $request->insurance_type : 'none',
+                            ]);
+
+                            \Log::info('Created emergency record #'.$emergency->id.' for request #'.$request->id);
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to create emergency record: '.$e->getMessage());
+                        }
+                    } // end visit-exists else branch
+                } // end isset-emergency_priority check
+                else {
+                    \Log::warning('Emergency request missing required details for request #'.$request->id);
+                }
             }
 
             DB::commit();
@@ -1006,13 +1059,14 @@ class CashierController extends Controller
 
             // العودة إلى صفحة إيصال الدفع
             return redirect()->route('cashier.receipt', $payment->id)
-                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: ' . $payment->receipt_number)
+                ->with('success', 'تم تسجيل الدفع بنجاح! رقم الإيصال: '.$payment->receipt_number)
                 ->with('payment_id', $payment->id);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()
-                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -1024,7 +1078,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('process medical requests payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process medical requests payments') && ! $user->can('process refunds') && ! $user->can('process payments') && ! $user->hasRole('cashier')))) {
             abort(403, 'غير مصرح لك بمعالجة استرجاع المبالغ الطبية');
         }
 
@@ -1052,13 +1106,13 @@ class CashierController extends Controller
             $originalPayment = $request->payments()->where('amount', '>', 0)->latest()->first();
             $patientId = $request->visit?->patient_id ?? $originalPayment?->patient_id;
 
-            $typeName = match($request->type) {
+            $typeName = match ($request->type) {
                 'lab' => 'تحاليل المختبر',
                 'radiology' => 'الأشعة والتصوير',
                 default => 'الفحوصات الطبية',
             };
 
-            $description = "استرجاع مالي للمريض: طلب {$typeName} ملغي #{$request->id}" .
+            $description = "استرجاع مالي للمريض: طلب {$typeName} ملغي #{$request->id}".
                 ($originalPayment ? " (عن الوصل الأصلي #{$originalPayment->receipt_number})" : '');
 
             // إنشاء سند دفع سالب (Refund)
@@ -1090,13 +1144,13 @@ class CashierController extends Controller
             $details['refund_payment_id'] = $refundPayment->id;
             $details['refund_receipt_number'] = $refundPayment->receipt_number;
             $details['refunded_amount'] = $netRefundable;
-            
+
             $request->details = $details;
             $request->save();
 
             DB::commit();
 
-            $successMsg = "تم صرف واسترجاع مبلغ (" . number_format($netRefundable, 0) . " د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
+            $successMsg = 'تم صرف واسترجاع مبلغ ('.number_format($netRefundable, 0)." د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
 
             return redirect()->route('cashier.index')
                 ->with('success', $successMsg)
@@ -1104,8 +1158,9 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error processing medical request refund: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: ' . $e->getMessage());
+            \Log::error('Error processing medical request refund: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: '.$e->getMessage());
         }
     }
 
@@ -1116,7 +1171,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('process emergency payments') && !$user->can('process refunds') && !$user->can('process payments') && !$user->hasRole('cashier')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process emergency payments') && ! $user->can('process refunds') && ! $user->can('process payments') && ! $user->hasRole('cashier')))) {
             abort(403, 'غير مصرح لك بمعالجة استرجاع مبالغ الطوارئ');
         }
 
@@ -1144,7 +1199,7 @@ class CashierController extends Controller
             $originalPayment = $emergency->payments()->where('amount', '>', 0)->latest()->first();
             $patientId = $emergency->patient_id ?? $originalPayment?->patient_id;
 
-            $description = "استرجاع مالي للمريض: حالة طوارئ ملغاة #{$emergency->id}" .
+            $description = "استرجاع مالي للمريض: حالة طوارئ ملغاة #{$emergency->id}".
                 ($originalPayment ? " (عن الوصل الأصلي #{$originalPayment->receipt_number})" : '');
 
             // إنشاء سند دفع سالب (Refund)
@@ -1177,7 +1232,7 @@ class CashierController extends Controller
 
             DB::commit();
 
-            $successMsg = "تم صرف واسترجاع مبلغ (" . number_format($netRefundable, 0) . " د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
+            $successMsg = 'تم صرف واسترجاع مبلغ ('.number_format($netRefundable, 0)." د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
 
             return redirect()->route('cashier.receipt', $refundPayment->id)
                 ->with('success', $successMsg)
@@ -1185,8 +1240,105 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error processing emergency refund: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: ' . $e->getMessage());
+            \Log::error('Error processing emergency refund: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * معالجة استرجاع مبالغ طلبات الطوارئ الملغاة (فحوصات الأشعة أو تحاليل المختبر)
+     */
+    public function processEmergencyRequestRefund(Request $httpRequest, string $type, int $id)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('process emergency payments') && ! $user->can('process refunds') && ! $user->can('process payments') && ! $user->hasRole('cashier')))) {
+            abort(403, 'غير مصرح لك بمعالجة استرجاع مبالغ الطوارئ');
+        }
+
+        if ($type === 'radiology') {
+            $req = \App\Models\EmergencyRadiologyRequest::with(['emergency.patient', 'radiologyTypes', 'payment'])->find($id);
+            $typeName = 'الأشعة والتصوير';
+            $itemsList = $req ? $req->radiologyTypes->pluck('name')->join('، ') : '';
+            $refundAmount = $req ? (float) $req->radiologyTypes->sum(fn ($t) => $t->base_price ?? $t->price ?? 0) : 0;
+        } elseif ($type === 'lab') {
+            $req = \App\Models\EmergencyLabRequest::with(['emergency.patient', 'labTests', 'payment'])->find($id);
+            $typeName = 'تحاليل المختبر';
+            $itemsList = $req ? $req->labTests->pluck('name')->join('، ') : '';
+            $refundAmount = $req ? (float) $req->labTests->sum('price') : 0;
+        } else {
+            return redirect()->back()->with('error', 'نوع الفحص غير صالح');
+        }
+
+        if (! $req) {
+            return redirect()->back()->with('error', 'طلب الفحص غير موجود');
+        }
+
+        if ($req->status !== 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن استرجاع المبلغ لأن الطلب غير ملغي.');
+        }
+
+        if ($req->payment_status === 'refunded') {
+            return redirect()->back()->with('error', 'تم استرجاع مبلغ هذا الطلب مسبقاً.');
+        }
+
+        if (! $req->payment_id) {
+            return redirect()->back()->with('error', 'هذا الطلب لم يتم تسديده مسبقاً.');
+        }
+
+        $httpRequest->validate([
+            'payment_method' => 'required|in:cash,card',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $emergency = $req->emergency;
+            $originalPayment = $req->payment ?? ($emergency ? $emergency->payments()->where('amount', '>', 0)->latest()->first() : null);
+            $patientId = $emergency?->patient_id ?? $originalPayment?->patient_id;
+
+            $description = "استرجاع مالي للمريض: طلب {$typeName} طوارئ ملغي #{$req->id} ({$itemsList})".
+                ($originalPayment ? " (عن الوصل الأصلي #{$originalPayment->receipt_number})" : '');
+
+            // إنشاء سند دفع سالب (Refund)
+            $refundPayment = Payment::create([
+                'patient_id' => $patientId,
+                'cashier_id' => $user->id,
+                'emergency_id' => $emergency?->id,
+                'receipt_number' => Payment::generateReceiptNumber(),
+                'amount' => -$refundAmount,
+                'total_amount' => -$refundAmount,
+                'patient_share' => -$refundAmount,
+                'insurance_share' => 0,
+                'insurance_type' => 'none',
+                'copay_percentage' => 0,
+                'claim_status' => 'none',
+                'payment_method' => $httpRequest->input('payment_method', 'cash'),
+                'payment_type' => 'emergency',
+                'description' => $description,
+                'notes' => $httpRequest->input('notes', 'استرجاع نقدي لفحص طوارئ ملغي'),
+                'paid_at' => now(),
+            ]);
+
+            $req->update([
+                'payment_status' => 'refunded',
+                'notes' => trim(($req->notes ?? '')." | تم استرجاع المبلغ بسند #{$refundPayment->receipt_number}"),
+            ]);
+
+            DB::commit();
+
+            $successMsg = 'تم صرف واسترجاع مبلغ ('.number_format($refundAmount, 0)." د.ع) للمريض بنجاح، وتوليد سند الاسترجاع رقم #{$refundPayment->receipt_number}.";
+
+            return redirect()->route('cashier.receipt', $refundPayment->id)
+                ->with('success', $successMsg)
+                ->with('payment_id', $refundPayment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error processing emergency request refund: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الاسترجاع المالي: '.$e->getMessage());
         }
     }
 
@@ -1197,7 +1349,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier reports'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view cashier reports'))) {
             abort(403, 'غير مصرح لك بعرض التقارير المالية وكشوفات الصندوق');
         }
 
@@ -1226,7 +1378,7 @@ class CashierController extends Controller
             $toDate = now()->format('Y-m-d');
         } else {
             // إذا كانت الزيارة الأولى تماماً (بدون أي معايير GET إطلاقاً ولا حتى page)
-            if (!$request->has('from_date') && !$request->has('to_date') && !$request->has('search') && !$request->has('payment_type') && !$request->has('page') && !$request->has('range')) {
+            if (! $request->has('from_date') && ! $request->has('to_date') && ! $request->has('search') && ! $request->has('payment_type') && ! $request->has('page') && ! $request->has('range')) {
                 $fromDate = now()->startOfDay()->format('Y-m-d');
                 $toDate = now()->endOfDay()->format('Y-m-d');
                 $range = 'today';
@@ -1244,7 +1396,7 @@ class CashierController extends Controller
             'emergency.patient.user',
             'emergency.emergencyPatient',
             'surgery.doctor.user',
-            'request.visit.doctor.user'
+            'request.visit.doctor.user',
         ]);
 
         if ($fromDate) {
@@ -1272,29 +1424,29 @@ class CashierController extends Controller
         }
 
         // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
-        if (!$user->hasRole(['admin', 'accountant', 'super_admin'])) {
+        if (! $user->hasRole(['admin', 'accountant', 'super_admin'])) {
             $query->where('cashier_id', $user->id);
         } elseif ($cashierId) {
             $query->where('cashier_id', $cashierId);
         }
 
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('receipt_number', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('insurance_card_no', 'like', "%{$search}%")
-                  ->orWhereHas('patient.user', function($pq) use ($search) {
-                      $pq->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('emergency.emergencyPatient', function($eq) use ($search) {
-                      $eq->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('emergency.patient.user', function($epq) use ($search) {
-                      $epq->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('insurance_card_no', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', function ($pq) use ($search) {
+                        $pq->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('emergency.emergencyPatient', function ($eq) use ($search) {
+                        $eq->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('emergency.patient.user', function ($epq) use ($search) {
+                        $epq->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -1308,11 +1460,11 @@ class CashierController extends Controller
         $totalCount = $allPayments->count();
 
         // إحصائيات حسب الأقسام
-        $typeBreakdown = $allPayments->groupBy('payment_type')->map(function($items, $type) {
+        $typeBreakdown = $allPayments->groupBy('payment_type')->map(function ($items, $type) {
             return [
                 'count' => $items->count(),
                 'total' => $items->sum('amount'),
-                'label' => \App\Models\Payment::PAYMENT_TYPES[$type] ?? $type
+                'label' => \App\Models\Payment::PAYMENT_TYPES[$type] ?? $type,
             ];
         });
 
@@ -1323,6 +1475,7 @@ class CashierController extends Controller
         // إذا كان الطلب طباعة
         if ($request->query('print') == '1') {
             $payments = $query->orderBy('paid_at', 'desc')->get();
+
             return view('cashier.report-print', compact(
                 'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
                 'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
@@ -1344,7 +1497,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view account statements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view account statements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى كشوفات الحسابات');
         }
 
@@ -1357,7 +1510,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view account statements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view account statements'))) {
             abort(403, 'غير مصرح لك بتصدير كشوفات الحسابات');
         }
 
@@ -1370,7 +1523,7 @@ class CashierController extends Controller
                 $data['monthlyDoctorSummary'],
                 $data['monthNames']
             ),
-            'cashier_statements_' . now()->format('Ymd_His') . '.xlsx'
+            'cashier_statements_'.now()->format('Ymd_His').'.xlsx'
         );
     }
 
@@ -1394,8 +1547,8 @@ class CashierController extends Controller
         $revenues = $query->orderBy('paid_at', 'desc')->get();
 
         $groupedRevenues = ConsultationRevenue::selectRaw(
-                'consultation_revenues.doctor_id as doctor_id, MIN(appointments.appointment_date) as first_appointment_date, COUNT(*) as examination_count, SUM(total_amount) as total_amount, SUM(doctor_share) as doctor_share, SUM(hospital_share) as hospital_share'
-            )
+            'consultation_revenues.doctor_id as doctor_id, MIN(appointments.appointment_date) as first_appointment_date, COUNT(*) as examination_count, SUM(total_amount) as total_amount, SUM(doctor_share) as doctor_share, SUM(hospital_share) as hospital_share'
+        )
             ->join('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
             ->where('consultation_revenues.movement_type', 'payment')
             ->where('appointments.payment_status', 'paid')
@@ -1430,11 +1583,11 @@ class CashierController extends Controller
 
         $monthExpression = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite'
             ? "CAST(strftime('%m', appointments.appointment_date) AS INTEGER) as month_number"
-            : "MONTH(appointments.appointment_date) as month_number";
+            : 'MONTH(appointments.appointment_date) as month_number';
 
         $monthlyDoctorRevenues = ConsultationRevenue::selectRaw(
-                "consultation_revenues.doctor_id, {$monthExpression}, COUNT(*) as examination_count"
-            )
+            "consultation_revenues.doctor_id, {$monthExpression}, COUNT(*) as examination_count"
+        )
             ->join('appointments', 'consultation_revenues.appointment_id', '=', 'appointments.id')
             ->where('consultation_revenues.movement_type', 'payment')
             ->where('appointments.payment_status', 'paid')
@@ -1453,7 +1606,7 @@ class CashierController extends Controller
             ->orderBy('month_number')
             ->get();
 
-        $monthlyDoctorSummary = $monthlyDoctorRevenues->groupBy('doctor_id')->map(function ($items) use ($monthNames) {
+        $monthlyDoctorSummary = $monthlyDoctorRevenues->groupBy('doctor_id')->map(function ($items) {
             $months = array_fill(1, 12, 0);
             $doctor = optional($items->first())->doctor;
 
@@ -1542,43 +1695,43 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view cashier surgeries'))) {
             abort(403, 'غير مصرح لك بالوصول إلى كاشير العمليات');
         }
 
         // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي، أو التي تحتوي مبالغ زائدة للاسترجاع) مجمعة حسب المريض
         // جلب العمليات المعلقة (بانتظار الدفع أو دفع جزئي، أو التي تحتوي مبالغ زائدة/ملغاة للاسترجاع) مجمعة حسب المريض
         $pendingSurgeries = Surgery::with([
-            'patient.user', 
-            'doctor.user', 
+            'patient.user',
+            'doctor.user',
             'department',
             'surgicalOperation',
             'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
             'visit',
-            'additionalOperations'
+            'additionalOperations',
         ])
-        ->where(function($query) {
-            $query->where(function($q) {
-                $q->where('billing_status', '!=', 'pending_review')
-                  ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-                  ->where(function($subQ) {
-                      $subQ->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
-                            ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
-                            ->orWhereRaw('room_fee_paid_amount > room_fee');
-                  });
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('billing_status', '!=', 'pending_review')
+                        ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+                        ->where(function ($subQ) {
+                            $subQ->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
+                                ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
+                                ->orWhereRaw('room_fee_paid_amount > room_fee');
+                        });
+                })
+                    ->orWhere(function ($q) {
+                        $q->where('status', 'cancelled')
+                            ->where(function ($subQ) {
+                                $subQ->where('surgery_fee_paid_amount', '>', 0)
+                                    ->orWhere('room_fee_paid_amount', '>', 0);
+                            });
+                    });
             })
-            ->orWhere(function($q) {
-                $q->where('status', 'cancelled')
-                  ->where(function($subQ) {
-                      $subQ->where('surgery_fee_paid_amount', '>', 0)
-                            ->orWhere('room_fee_paid_amount', '>', 0);
-                  });
-            });
-        })
-        ->orderBy('scheduled_date')
-        ->get();
+            ->orderBy('scheduled_date')
+            ->get();
 
         // تجميع العمليات حسب المريض
         $surgeriesByPatient = $pendingSurgeries->groupBy('patient_id');
@@ -1586,24 +1739,24 @@ class CashierController extends Controller
         // إحصائيات العمليات
         $today = Carbon::today();
         $surgeryStats = [
-            'pending_count' => Surgery::where(function($query) {
-                    $query->where(function($q) {
-                        $q->where('billing_status', '!=', 'pending_review')
-                          ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-                          ->where(function($subQ) {
-                              $subQ->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
-                                    ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
-                                    ->orWhereRaw('room_fee_paid_amount > room_fee');
-                          });
-                    })
-                    ->orWhere(function($q) {
+            'pending_count' => Surgery::where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('billing_status', '!=', 'pending_review')
+                        ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+                        ->where(function ($subQ) {
+                            $subQ->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
+                                ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
+                                ->orWhereRaw('room_fee_paid_amount > room_fee');
+                        });
+                })
+                    ->orWhere(function ($q) {
                         $q->where('status', 'cancelled')
-                          ->where(function($subQ) {
-                              $subQ->where('surgery_fee_paid_amount', '>', 0)
+                            ->where(function ($subQ) {
+                                $subQ->where('surgery_fee_paid_amount', '>', 0)
                                     ->orWhere('room_fee_paid_amount', '>', 0);
-                          });
+                            });
                     });
-                })->count(),
+            })->count(),
             'patients_count' => $surgeriesByPatient->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
                 ->where('payment_type', 'surgery')
@@ -1623,7 +1776,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view cashier surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view cashier surgeries'))) {
             abort(403, 'غير مصرح لك بالوصول إلى كاشير العمليات');
         }
 
@@ -1642,8 +1795,8 @@ class CashierController extends Controller
 
         // فلترة باسم المريض
         if ($request->filled('patient_name')) {
-            $query->whereHas('patient.user', function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->patient_name . '%');
+            $query->whereHas('patient.user', function ($q) use ($request) {
+                $q->where('name', 'like', '%'.$request->patient_name.'%');
             });
         }
 
@@ -1682,32 +1835,32 @@ class CashierController extends Controller
     public function showSurgeryPaymentForm(Surgery $surgery)
     {
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process surgery payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
             abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
 
         $isCancelled = $surgery->status === 'cancelled';
         $hasPaidMoneyToRefund = (($surgery->surgery_fee_paid_amount ?? 0) > 0) || (($surgery->room_fee_paid_amount ?? 0) > 0);
 
-        if ($isCancelled && !$hasPaidMoneyToRefund) {
+        if ($isCancelled && ! $hasPaidMoneyToRefund) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('warning', 'لا يمكن دفع عملية ملغاة');
         }
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية/تخفيض الغرفة ويوجد فرق مالي معلق أو مستحق استرجاع)
-        $hasRemainingRoomFee = !$isCancelled && ((($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0);
+        $hasRemainingRoomFee = ! $isCancelled && ((($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0);
         $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : ($surgery->room_fee ?? 0))) > 0;
         $totalSurgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price'));
         $hasExcessSurgeryFee = (($surgery->surgery_fee_paid_amount ?? 0) - $totalSurgeryFee) > 0;
-        
-        if (!$isCancelled && $surgery->payment_status === 'paid' && !$hasRemainingRoomFee && !$hasExcessRoomFee && !$hasExcessSurgeryFee) {
+
+        if (! $isCancelled && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
 
         $surgery->load([
-            'patient.user', 
-            'doctor.user', 
+            'patient.user',
+            'doctor.user',
             'department',
             'surgicalOperation',
             'room',
@@ -1715,7 +1868,7 @@ class CashierController extends Controller
             'radiologyTests.radiologyType',
             'visit',
             'additionalOperations.surgicalOperation',
-            'medicalDevices'
+            'medicalDevices',
         ]);
 
         // حساب التكلفة الإجمالية
@@ -1725,13 +1878,13 @@ class CashierController extends Controller
         $devicesFee = $surgery->medicalDevices->sum('pivot.price');
         $totalSurgeryFee = $surgeryFee + $additionalOpsFee + $devicesFee;
 
-        $labTestsFee = $surgery->labTests->sum(function($test) {
+        $labTestsFee = $surgery->labTests->sum(function ($test) {
             return $test->labTest->price ?? 0;
         });
-        $radiologyTestsFee = $surgery->radiologyTests->sum(function($test) {
+        $radiologyTestsFee = $surgery->radiologyTests->sum(function ($test) {
             return $test->radiologyType->base_price ?? 0;
         });
-        
+
         $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee;
 
         return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'additionalOpsFee', 'devicesFee', 'totalSurgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
@@ -1744,7 +1897,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process surgery payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
             abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
 
@@ -1770,7 +1923,7 @@ class CashierController extends Controller
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
         $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
-        if ($surgery->payment_status === 'paid' && !$hasRemainingRoomFee) {
+        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
@@ -1792,7 +1945,7 @@ class CashierController extends Controller
             $paySurgery = true;
         }
 
-        if (!$paySurgery && !$payRoom && empty($payLabTests) && empty($payRadiologyTests)) {
+        if (! $paySurgery && ! $payRoom && empty($payLabTests) && empty($payRadiologyTests)) {
             return redirect()->back()
                 ->with('error', 'يرجى تحديد عنصر واحد على الأقل للدفع')
                 ->withInput();
@@ -1819,7 +1972,7 @@ class CashierController extends Controller
                     } else {
                         $surgeryFeePaidThisTime = $remainingSurgeryFee;
                     }
-                    $paidItems[] = 'رسوم العملية الجراحية (الأساسية والإضافية)' . ($isInclusive ? ' (شاملة)' : '') . ' - مدفوع: ' . number_format($surgeryFeePaidThisTime, 0) . ' د.ع';
+                    $paidItems[] = 'رسوم العملية الجراحية (الأساسية والإضافية)'.($isInclusive ? ' (شاملة)' : '').' - مدفوع: '.number_format($surgeryFeePaidThisTime, 0).' د.ع';
                     $actualAmount += $surgeryFeePaidThisTime;
                 }
             }
@@ -1844,42 +1997,42 @@ class CashierController extends Controller
                             $roomFeePaidThisTime = $remainingRoomFee;
                         }
                         $actualAmount += $roomFeePaidThisTime;
-                        $paidItems[] = 'أجور الغرفة - مدفوع: ' . number_format($roomFeePaidThisTime, 0) . ' د.ع';
+                        $paidItems[] = 'أجور الغرفة - مدفوع: '.number_format($roomFeePaidThisTime, 0).' د.ع';
                     }
                 }
             }
 
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
-            $copayPercentage = (float)($request->input('copay_percentage', 15.0));
+            $copayPercentage = (float) ($request->input('copay_percentage', 15.0));
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
             // 3. Lab Tests
-            if (!empty($payLabTests)) {
+            if (! empty($payLabTests)) {
                 foreach ($surgery->labTests as $labTest) {
                     if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
                         if ($isInclusive) {
-                            $paidItems[] = 'تحليل: ' . ($labTest->labTest->name ?? 'غير محدد') . ' (مشمول)';
+                            $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' (مشمول)';
                         } else {
                             $pricing = $labTest->labTest ? $labTest->labTest->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
-                            $labTestPrice = $pricing ? (float)$pricing['approved_price'] : (float)($labTest->labTest->price ?? 0);
+                            $labTestPrice = $pricing ? (float) $pricing['approved_price'] : (float) ($labTest->labTest->price ?? 0);
                             $actualAmount += $labTestPrice;
-                            $paidItems[] = 'تحليل: ' . ($labTest->labTest->name ?? 'غير محدد') . ' (' . number_format($labTestPrice, 0) . ' د.ع)';
+                            $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' ('.number_format($labTestPrice, 0).' د.ع)';
                         }
                     }
                 }
             }
 
             // 4. Radiology Tests
-            if (!empty($payRadiologyTests)) {
+            if (! empty($payRadiologyTests)) {
                 foreach ($surgery->radiologyTests as $radiologyTest) {
                     if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
                         if ($isInclusive) {
-                            $paidItems[] = 'أشعة: ' . ($radiologyTest->radiologyType->name ?? 'غير محدد') . ' (مشمولة)';
+                            $paidItems[] = 'أشعة: '.($radiologyTest->radiologyType->name ?? 'غير محدد').' (مشمولة)';
                         } else {
                             $pricing = $radiologyTest->radiologyType ? $radiologyTest->radiologyType->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
-                            $radiologyPrice = $pricing ? (float)$pricing['approved_price'] : (float)($radiologyTest->radiologyType->base_price ?? 0);
+                            $radiologyPrice = $pricing ? (float) $pricing['approved_price'] : (float) ($radiologyTest->radiologyType->base_price ?? 0);
                             $actualAmount += $radiologyPrice;
-                            $paidItems[] = 'أشعة: ' . ($radiologyTest->radiologyType->name ?? 'غير محدد') . ' (' . number_format($radiologyPrice, 0) . ' د.ع)';
+                            $paidItems[] = 'أشعة: '.($radiologyTest->radiologyType->name ?? 'غير محدد').' ('.number_format($radiologyPrice, 0).' د.ع)';
                         }
                     }
                 }
@@ -1890,16 +2043,16 @@ class CashierController extends Controller
             $insuranceShare = $isInsurance ? max(0, $totalApprovedPayable - $patientShare) : 0.00;
 
             if ($isInsurance) {
-                $paidItems[] = 'تغطية الضمان: ' . ($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي') . ' (نسبة التحمل: ' . $copayPercentage . '%)';
-                $paidItems[] = 'حصة المريض: ' . number_format($patientShare, 0) . ' د.ع | مطالبة الضمان: ' . number_format($insuranceShare, 0) . ' د.ع';
+                $paidItems[] = 'تغطية الضمان: '.($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' (نسبة التحمل: '.$copayPercentage.'%)';
+                $paidItems[] = 'حصة المريض: '.number_format($patientShare, 0).' د.ع | مطالبة الضمان: '.number_format($insuranceShare, 0).' د.ع';
             }
 
             // إنشاء وصف الدفع
-            $description = 'دفع رسوم العملية الجراحية: ' . $surgery->surgery_type . ' (ID: #' . $surgery->id . ')';
+            $description = 'دفع رسوم العملية الجراحية: '.$surgery->surgery_type.' (ID: #'.$surgery->id.')';
             if ($isInclusive) {
                 $description .= "\nملاحظة: الشاملة (التكاليف المسبقة مٌضمَّنة)";
             }
-            $description .= "\nالعناصر المدفوعة:\n- " . implode("\n- ", $paidItems);
+            $description .= "\nالعناصر المدفوعة:\n- ".implode("\n- ", $paidItems);
 
             // إنشاء سجل الدفع
             $payment = Payment::create([
@@ -1920,7 +2073,7 @@ class CashierController extends Controller
                 'description' => $description,
                 'notes' => $request->notes,
                 'is_inclusive' => $isInclusive,
-                'paid_at' => Carbon::now()
+                'paid_at' => Carbon::now(),
             ]);
 
             // تحديث مبالغ وحالة رسوم العملية
@@ -1928,10 +2081,10 @@ class CashierController extends Controller
                 $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
                 $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
                 $surgeryFeePaidStatus = $newSurgeryFeePaidAmount >= $totalSurgeryFee ? 'paid' : 'partial';
-                
+
                 $surgery->update([
                     'surgery_fee_paid_amount' => $newSurgeryFeePaidAmount,
-                    'surgery_fee_paid' => $surgeryFeePaidStatus
+                    'surgery_fee_paid' => $surgeryFeePaidStatus,
                 ]);
             }
 
@@ -1939,29 +2092,29 @@ class CashierController extends Controller
             if ($payRoom && $roomFeePaidThisTime > 0) {
                 $newRoomFeePaidAmount = ($surgery->room_fee_paid_amount ?? 0) + $roomFeePaidThisTime;
                 $surgery->update([
-                    'room_fee_paid_amount' => $newRoomFeePaidAmount
+                    'room_fee_paid_amount' => $newRoomFeePaidAmount,
                 ]);
             }
 
             // تحديث حالة التحاليل المدفوعة
-            if (!empty($payLabTests)) {
+            if (! empty($payLabTests)) {
                 foreach ($surgery->labTests as $labTest) {
                     if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
                         $labTest->update([
                             'payment_status' => 'paid',
-                            'payment_id' => $payment->id
+                            'payment_id' => $payment->id,
                         ]);
                     }
                 }
             }
 
             // تحديث حالة الأشعة المدفوعة
-            if (!empty($payRadiologyTests)) {
+            if (! empty($payRadiologyTests)) {
                 foreach ($surgery->radiologyTests as $radiologyTest) {
                     if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
                         $radiologyTest->update([
                             'payment_status' => 'paid',
-                            'payment_id' => $payment->id
+                            'payment_id' => $payment->id,
                         ]);
                     }
                 }
@@ -1979,7 +2132,7 @@ class CashierController extends Controller
             // تحديث حالة دفع العملية
             $surgery->update([
                 'payment_status' => $allPaid ? 'paid' : 'partial',
-                'payment_id' => $payment->id
+                'payment_id' => $payment->id,
             ]);
 
             // تحديث حالة الطلبات المرتبطة إذا تم الدفع الكامل
@@ -1988,17 +2141,17 @@ class CashierController extends Controller
                     ->where('payment_status', 'pending')
                     ->where('status', '!=', 'cancelled')
                     ->update(['payment_status' => 'paid']);
-                
+
                 // تحديث حالة الزيارة
                 $surgery->visit->update(['status' => 'in_progress']);
             }
 
             DB::commit();
 
-            $successMessage = $allPaid 
-                ? 'تم تسجيل الدفع الكامل بنجاح!' 
+            $successMessage = $allPaid
+                ? 'تم تسجيل الدفع الكامل بنجاح!'
                 : 'تم تسجيل الدفع الجزئي بنجاح! المتبقي سيُدفع لاحقاً.';
-            $successMessage .= ' رقم الإيصال: ' . $payment->receipt_number;
+            $successMessage .= ' رقم الإيصال: '.$payment->receipt_number;
 
             return redirect()->route('cashier.surgeries.index')
                 ->with('success', $successMessage)
@@ -2006,8 +2159,9 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()
-                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -2019,7 +2173,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('process surgery payments') && !$user->can('process refunds')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process surgery payments') && ! $user->can('process refunds')))) {
             abort(403, 'غير مصرح لك بمعالجة استرجاع مبالغ العمليات');
         }
 
@@ -2028,8 +2182,8 @@ class CashierController extends Controller
         if ($isCancelled) {
             // للمريض: استرجاع المبلغ النقدي الفعلي الذي دفعه المريض فقط (حصة المريض وليس كامل سعر الضمان)
             $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
-            $totalExcessAmount = $netPatientPaidCash > 0 
-                ? $netPatientPaidCash 
+            $totalExcessAmount = $netPatientPaidCash > 0
+                ? $netPatientPaidCash
                 : (($surgery->surgery_fee_paid_amount ?? 0) + ($surgery->room_fee_paid_amount ?? 0));
             $excessSurgeryFee = $totalExcessAmount;
             $excessRoomFee = 0;
@@ -2063,11 +2217,11 @@ class CashierController extends Controller
         try {
             $isInsurance = ($surgery->insurance_type && $surgery->insurance_type !== 'none');
             // إنشاء وصف الاسترجاع
-            $description = ($isCancelled ? 'إرجاع المبلغ النقدي الفعلي المسدد لعملية ملغاة: ' : 'إرجاع مبلغ زائد مدفوع للعملية الجراحية: ') . 
-                           $surgery->surgery_type . ' (ID: #' . $surgery->id . ")\n" .
-                           'المبلغ المعاد للمريض: ' . number_format($totalExcessAmount, 0) . ' د.ع' .
-                           ($isInsurance ? ' (تغطية الضمان: ' . ($surgery->insurance_type === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي') . ' - تم إلغاء المطالبة)' : '') .
-                           ($excessRoomFee > 0 ? " (يشمل استرجاع رسوم الغرفة: " . number_format($excessRoomFee, 0) . " د.ع)" : "");
+            $description = ($isCancelled ? 'إرجاع المبلغ النقدي الفعلي المسدد لعملية ملغاة: ' : 'إرجاع مبلغ زائد مدفوع للعملية الجراحية: ').
+                           $surgery->surgery_type.' (ID: #'.$surgery->id.")\n".
+                           'المبلغ المعاد للمريض: '.number_format($totalExcessAmount, 0).' د.ع'.
+                           ($isInsurance ? ' (تغطية الضمان: '.($surgery->insurance_type === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' - تم إلغاء المطالبة)' : '').
+                           ($excessRoomFee > 0 ? ' (يشمل استرجاع رسوم الغرفة: '.number_format($excessRoomFee, 0).' د.ع)' : '');
 
             // إنشاء سجل الدفع بقيمة سالبة
             $payment = Payment::create([
@@ -2087,7 +2241,7 @@ class CashierController extends Controller
                 'description' => $description,
                 'notes' => $request->notes,
                 'is_inclusive' => false,
-                'paid_at' => Carbon::now()
+                'paid_at' => Carbon::now(),
             ]);
 
             if ($isCancelled) {
@@ -2096,14 +2250,14 @@ class CashierController extends Controller
                     'surgery_fee_paid_amount' => 0,
                     'room_fee_paid_amount' => 0,
                     'surgery_fee_paid' => 'refunded',
-                    'payment_status' => 'refunded'
+                    'payment_status' => 'refunded',
                 ]);
             } else {
                 // تحديث مبالغ الدفع وحالتها في الجراحة
                 $surgery->update([
                     'surgery_fee_paid_amount' => $totalSurgeryFee,
                     'surgery_fee_paid' => 'paid',
-                    'room_fee_paid_amount' => $roomFee
+                    'room_fee_paid_amount' => $roomFee,
                 ]);
 
                 // التحقق من الدفع الكامل لكامل البنود (الغرفة، التحاليل، الأشعة)
@@ -2113,18 +2267,19 @@ class CashierController extends Controller
                 $allPaid = $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
 
                 $surgery->update([
-                    'payment_status' => $allPaid ? 'paid' : 'partial'
+                    'payment_status' => $allPaid ? 'paid' : 'partial',
                 ]);
             }
 
             DB::commit();
 
             return redirect()->route('cashier.surgeries.index')
-                ->with('success', 'تم إرجاع المبلغ بنجاح بقيمة ' . number_format($totalExcessAmount, 0) . ' د.ع. رقم الإيصال: ' . $payment->receipt_number);
+                ->with('success', 'تم إرجاع المبلغ بنجاح بقيمة '.number_format($totalExcessAmount, 0).' د.ع. رقم الإيصال: '.$payment->receipt_number);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة المرتجع: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة المرتجع: '.$e->getMessage());
         }
     }
 
@@ -2135,7 +2290,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process emergency payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process emergency payments'))) {
             abort(403, 'غير مصرح لك بقبض رسوم الطوارئ');
         }
 
@@ -2153,7 +2308,7 @@ class CashierController extends Controller
             'emergency.radiologyRequests.radiologyTypes',
             'emergency.appointments.doctor.user',
             'emergency.appointments.department',
-            'appointment.doctor.user'
+            'appointment.doctor.user',
         ]);
 
         return view('cashier.emergency-payment-form', compact('payment'));
@@ -2166,14 +2321,14 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('process emergency payments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process emergency payments'))) {
             abort(403, 'غير مصرح لك بقبض رسوم الطوارئ');
         }
 
         $request->validate([
             'payment_method' => 'required|in:cash,card,insurance',
             'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
         ]);
 
         // التحقق من أن الدفعة تخص خدمات طوارئ ولم يتم دفعها بعد
@@ -2187,11 +2342,11 @@ class CashierController extends Controller
         try {
             $patient = $payment->patient ?? optional($payment->emergency)->patient;
             $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
-            $copayPercentage = (float)$request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $copayPercentage = (float) $request->input('copay_percentage', $patient->copay_percentage ?? 0);
             $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
-            $patientPaidAmount = (float)$request->amount;
-            $totalApproved = ($payment->total_amount && $payment->total_amount > 0) ? (float)$payment->total_amount : $patientPaidAmount;
+            $patientPaidAmount = (float) $request->amount;
+            $totalApproved = ($payment->total_amount && $payment->total_amount > 0) ? (float) $payment->total_amount : $patientPaidAmount;
             $patientShare = $patientPaidAmount;
             $insuranceShare = ($insuranceType !== 'none') ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
@@ -2224,16 +2379,22 @@ class CashierController extends Controller
             \DB::table('emergency_lab_requests')
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
-                ->update(['payment_id' => $payment->id]);
+                ->update([
+                    'payment_id' => $payment->id,
+                    'payment_status' => 'paid',
+                ]);
 
             // 3. طلبات الأشعة
             \DB::table('emergency_radiology_requests')
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
-                ->update(['payment_id' => $payment->id]);
+                ->update([
+                    'payment_id' => $payment->id,
+                    'payment_status' => 'paid',
+                ]);
 
             // 4. رسوم المتابعة
-            if ($payment->emergency->doctor_follow_up_fee > 0 && !$payment->emergency->follow_up_payment_id) {
+            if ($payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
                 $payment->emergency->update([
                     'follow_up_payment_id' => $payment->id,
                 ]);
@@ -2245,19 +2406,19 @@ class CashierController extends Controller
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
                 ->exists();
-            
+
             $hasUnpaidLabs = \DB::table('emergency_lab_requests')
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
                 ->exists();
-                
+
             $hasUnpaidRadiology = \DB::table('emergency_radiology_requests')
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
                 ->exists();
 
-            $paymentStatus = ($hasUnpaidServices || $hasUnpaidLabs || $hasUnpaidRadiology) 
-                ? 'pending' 
+            $paymentStatus = ($hasUnpaidServices || $hasUnpaidLabs || $hasUnpaidRadiology)
+                ? 'pending'
                 : 'paid';
 
             $payment->emergency->update([
@@ -2277,7 +2438,7 @@ class CashierController extends Controller
                 ]);
 
                 if ($appointment->doctor_id) {
-                    $fee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
+                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
                     // حصة استشارة الطوارئ: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى (نسبة 80% / 20%)
                     $doctorShare = ($fee == 50000.0) ? 40000.0 : round($fee * 0.80, 2);
                     $hospitalShare = round($fee - $doctorShare, 2);
@@ -2306,7 +2467,7 @@ class CashierController extends Controller
                             'movement_type' => 'payment',
                             'revenue_date' => ($payment->paid_at ?? now())->toDateString(),
                             'paid_at' => $payment->paid_at ?? now(),
-                            'notes' => 'استشارة طوارئ لحالة #' . $payment->emergency_id . ($appointment->reason ? ' (' . $appointment->reason . ')' : ''),
+                            'notes' => 'استشارة طوارئ لحالة #'.$payment->emergency_id.($appointment->reason ? ' ('.$appointment->reason.')' : ''),
                             'transaction_reference' => $payment->receipt_number,
                         ]
                     );
@@ -2320,7 +2481,7 @@ class CashierController extends Controller
                         [
                             'amount' => $doctorShare,
                             'status' => 'pending',
-                            'notes' => 'مستحقات استشارة طوارئ لحالة #' . $payment->emergency_id . ' (إيصال ' . $payment->receipt_number . ')',
+                            'notes' => 'مستحقات استشارة طوارئ لحالة #'.$payment->emergency_id.' (إيصال '.$payment->receipt_number.')',
                         ]
                     );
 
@@ -2341,13 +2502,14 @@ class CashierController extends Controller
             DB::commit();
 
             return redirect()->route('cashier.index')
-                ->with('success', 'تم تسديد خدمات الطوارئ بنجاح! رقم الإيصال: ' . $payment->receipt_number)
+                ->with('success', 'تم تسديد خدمات الطوارئ بنجاح! رقم الإيصال: '.$payment->receipt_number)
                 ->with('payment_id', $payment->id);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()
-                ->with('error', 'حدث خطأ أثناء معالجة الدفع: ' . $e->getMessage())
+                ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -2359,7 +2521,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view emergency financial movements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view emergency financial movements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للطوارئ');
         }
 
@@ -2408,7 +2570,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view emergency statements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view emergency statements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى كشوفات حسابات الطوارئ');
         }
 
@@ -2514,13 +2676,15 @@ class CashierController extends Controller
             if ($payment->emergency && $payment->emergency->doctor_id) {
                 $doctorId = $payment->emergency->doctor_id;
                 $doctor = \App\Models\Doctor::with('user')->find($doctorId);
-                if (!$doctor) continue;
+                if (! $doctor) {
+                    continue;
+                }
 
                 $paidAt = $payment->paid_at;
-                $month = (int)$paidAt->format('m');
+                $month = (int) $paidAt->format('m');
 
                 // ملخص حسب الطبيب
-                if (!isset($groupedRevenues[$doctorId])) {
+                if (! isset($groupedRevenues[$doctorId])) {
                     $groupedRevenues[$doctorId] = [
                         'doctor' => $doctor,
                         'first_appointment_date' => $paidAt,
@@ -2530,21 +2694,21 @@ class CashierController extends Controller
                         'hospital_share' => 0,
                     ];
                 }
-                
+
                 $groupedRevenues[$doctorId]['examination_count']++;
                 $groupedRevenues[$doctorId]['total_amount'] += $stmt['total'];
                 $groupedRevenues[$doctorId]['doctor_share'] += $stmt['follow_up_sum'];
                 $groupedRevenues[$doctorId]['hospital_share'] += ($stmt['total'] - $stmt['follow_up_sum']);
-                
+
                 if ($paidAt->lt($groupedRevenues[$doctorId]['first_appointment_date'])) {
                     $groupedRevenues[$doctorId]['first_appointment_date'] = $paidAt;
                 }
 
                 // الكشف الشهري المجمع
-                if (!isset($monthlyDoctorRevenues[$doctorId])) {
+                if (! isset($monthlyDoctorRevenues[$doctorId])) {
                     $monthlyDoctorRevenues[$doctorId] = [];
                 }
-                if (!isset($monthlyDoctorRevenues[$doctorId][$month])) {
+                if (! isset($monthlyDoctorRevenues[$doctorId][$month])) {
                     $monthlyDoctorRevenues[$doctorId][$month] = 0;
                 }
                 $monthlyDoctorRevenues[$doctorId][$month]++;
@@ -2552,8 +2716,8 @@ class CashierController extends Controller
         }
 
         // تحويل المصفوفة لـ Collection وكائنات متوافقة مع الواجهة
-        $groupedRevenues = collect($groupedRevenues)->sortByDesc('examination_count')->map(function($item) {
-            return (object)$item;
+        $groupedRevenues = collect($groupedRevenues)->sortByDesc('examination_count')->map(function ($item) {
+            return (object) $item;
         });
 
         $monthNames = [
@@ -2617,7 +2781,7 @@ class CashierController extends Controller
                 $percent = 100;
             }
 
-            $monthlyDoctorSummary->push((object)[
+            $monthlyDoctorSummary->push((object) [
                 'doctor' => $doctor,
                 'months' => $months,
                 'month_trends' => $monthTrends,
@@ -2730,7 +2894,7 @@ class CashierController extends Controller
                     })
                     ->count();
 
-                return (object)[
+                return (object) [
                     'doctor' => $doctor,
                     'doctor_id' => $doctorId,
                     'total_cases' => $totalCases,
@@ -2738,9 +2902,9 @@ class CashierController extends Controller
                     'radiology_count' => $radiologyCount,
                     'sonar_count' => $sonarCount,
                     'echo_count' => $echoCount,
-                    'mri_count' => $mriCount
+                    'mri_count' => $mriCount,
                 ];
-            })->filter(function($item) {
+            })->filter(function ($item) {
                 return $item->doctor !== null;
             });
 
@@ -2780,7 +2944,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view emergency statements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view emergency statements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى تقرير إحالات الطوارئ');
         }
 
@@ -2790,7 +2954,7 @@ class CashierController extends Controller
         $toDate = $request->query('to_date');
 
         $doctor = \App\Models\Doctor::with('user')->find($doctorId);
-        if (!$doctor) {
+        if (! $doctor) {
             abort(404, 'الطبيب غير موجود');
         }
 
@@ -2819,15 +2983,15 @@ class CashierController extends Controller
                         ->select('lab_tests.name', 'lab_tests.price')
                         ->get();
                     foreach ($labTests as $t) {
-                        $items[] = $t->name . ' (' . number_format($t->price, 0) . ' د.ع)';
+                        $items[] = $t->name.' ('.number_format($t->price, 0).' د.ع)';
                         $caseSum += $t->price;
                     }
                 }
-                $details[] = (object)[
+                $details[] = (object) [
                     'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
-                    'amount' => $caseSum
+                    'amount' => $caseSum,
                 ];
                 $totalAmount += $caseSum;
             }
@@ -2836,14 +3000,14 @@ class CashierController extends Controller
                 'radiology' => 'أشعة',
                 'sonar' => 'السونار',
                 'echo' => 'الإيكو',
-                'mri' => 'الرنين'
+                'mri' => 'الرنين',
             ];
             $dbCategory = $categoryMap[$type];
 
-            $emergencies->whereHas('radiologyRequests.radiologyTypes', function($q) use ($dbCategory) {
+            $emergencies->whereHas('radiologyRequests.radiologyTypes', function ($q) use ($dbCategory) {
                 $q->where('main_category', $dbCategory);
             });
-            
+
             $records = $emergencies->get();
             foreach ($records as $em) {
                 $items = [];
@@ -2856,15 +3020,15 @@ class CashierController extends Controller
                         ->select('radiology_types.name', 'radiology_types.base_price')
                         ->get();
                     foreach ($radiologyTypes as $r) {
-                        $items[] = $r->name . ' (' . number_format($r->base_price, 0) . ' د.ع)';
+                        $items[] = $r->name.' ('.number_format($r->base_price, 0).' د.ع)';
                         $caseSum += $r->base_price;
                     }
                 }
-                $details[] = (object)[
+                $details[] = (object) [
                     'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
-                    'amount' => $caseSum
+                    'amount' => $caseSum,
                 ];
                 $totalAmount += $caseSum;
             }
@@ -2875,15 +3039,15 @@ class CashierController extends Controller
                 $surgery = \App\Models\Surgery::where('patient_id', $em->patient_id)
                     ->whereDate('created_at', '>=', $em->created_at->toDateString())
                     ->first();
-                
+
                 $caseSum = $surgery ? (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee')) : 0;
                 $items = $surgery ? $surgery->surgery_type : 'تحويل للعمليات (قيد الانتظار)';
-                
-                $details[] = (object)[
+
+                $details[] = (object) [
                     'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => $items,
-                    'amount' => $caseSum
+                    'amount' => $caseSum,
                 ];
                 $totalAmount += $caseSum;
             }
@@ -2909,7 +3073,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view emergency doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى حسابات أطباء الطوارئ');
         }
 
@@ -2924,7 +3088,7 @@ class CashierController extends Controller
         foreach ($doctors as $doctor) {
             $earnedCases = \App\Models\Emergency::where('doctor_id', $doctor->id)
                 ->whereNotNull('follow_up_payment_id')
-                ->whereHas('followUpPayment', function($q) {
+                ->whereHas('followUpPayment', function ($q) {
                     $q->whereNotNull('paid_at');
                 })
                 ->where('doctor_follow_up_fee', '>', 0)
@@ -2959,7 +3123,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view emergency doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى تفاصيل حساب طبيب الطوارئ');
         }
 
@@ -2968,7 +3132,7 @@ class CashierController extends Controller
         $earnedCases = \App\Models\Emergency::with(['patient.user', 'followUpPayment'])
             ->where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('followUpPayment', function($q) {
+            ->whereHas('followUpPayment', function ($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)
@@ -2977,7 +3141,7 @@ class CashierController extends Controller
 
         $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('followUpPayment', function($q) {
+            ->whereHas('followUpPayment', function ($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)
@@ -3012,20 +3176,20 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view emergency doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view emergency doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بصرف مستحقات طبيب الطوارئ');
         }
 
         $request->validate([
             'amount' => 'required|numeric|min:1',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $amount = $request->amount;
 
         $totalEarned = \App\Models\Emergency::where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
-            ->whereHas('followUpPayment', function($q) {
+            ->whereHas('followUpPayment', function ($q) {
                 $q->whereNotNull('paid_at');
             })
             ->where('doctor_follow_up_fee', '>', 0)
@@ -3052,7 +3216,7 @@ class CashierController extends Controller
                 'paid_at' => now(),
             ]);
 
-            $voucherNumber = 'EXP-EMG-DOC-' . now()->format('ymd') . '-' . rand(1000, 9999);
+            $voucherNumber = 'EXP-EMG-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
             \App\Models\FinancialTransaction::create([
                 'transaction_type' => 'expense',
                 'voucher_type' => 'outflow',
@@ -3063,17 +3227,19 @@ class CashierController extends Controller
                 'amount' => $amount,
                 'currency' => 'IQD',
                 'payment_method' => 'cash',
-                'description' => 'صرف مستحقات طوارئ للطبيب ' . optional($doctor->user)->name,
-                'notes' => 'سند صرف نقدي - طوارئ: ' . ($request->notes ?: 'صرف مستحقات أطباء الطوارئ'),
+                'description' => 'صرف مستحقات طوارئ للطبيب '.optional($doctor->user)->name,
+                'notes' => 'سند صرف نقدي - طوارئ: '.($request->notes ?: 'صرف مستحقات أطباء الطوارئ'),
                 'performed_by_id' => $user->id,
                 'performed_at' => now(),
             ]);
 
             DB::commit();
+
             return redirect()->route('cashier.emergency.doctor-account', $doctor)->with('success', 'تم تسجيل دفعة الصرف للطبيب بنجاح.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء الصرف: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء الصرف: '.$e->getMessage());
         }
     }
 }

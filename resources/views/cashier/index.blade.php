@@ -967,7 +967,10 @@
                                         <!-- تبويب مستحقات الاسترجاع (Refunds) -->
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
                                             @php
-                                                $hasAnyRefunds = (isset($pendingRefundRequests) && $pendingRefundRequests->count() > 0) || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0);
+                                                $hasAnyRefunds = (isset($pendingRefundRequests) && $pendingRefundRequests->count() > 0) 
+                                                    || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0)
+                                                    || (isset($pendingEmergencyRadRefunds) && $pendingEmergencyRadRefunds->count() > 0)
+                                                    || (isset($pendingEmergencyLabRefunds) && $pendingEmergencyLabRefunds->count() > 0);
                                             @endphp
                                             @if($hasAnyRefunds)
                                                 <div class="table-responsive">
@@ -1095,6 +1098,114 @@
                                                                                 data-amount="{{ $emgNetRefund }}"
                                                                                 data-service="طوارئ وإسعاف"
                                                                                 data-action="{{ route('cashier.emergency.refund.process', $emg->id) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
+                                                            {{-- استرجاع طلبات أشعة الطوارئ الملغاة بعد السداد --}}
+                                                            @foreach($pendingEmergencyRadRefunds ?? [] as $radReq)
+                                                                @php
+                                                                    $emgPatientName = $radReq->emergency?->patient?->user?->name ?? $radReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientPhone = $radReq->emergency?->patient?->user?->phone ?? $radReq->emergency?->emergencyPatient?->phone ?? '---';
+                                                                    $radItems = $radReq->radiologyTypes;
+                                                                    $radRefundAmount = (float)$radItems->sum(fn($t) => $t->base_price ?? $t->price ?? 0);
+                                                                    $receiptNo = optional($radReq->payment)->receipt_number ?? optional($radReq->emergency?->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $radCancelledAt = $radReq->updated_at->format('Y-m-d H:i');
+                                                                    $itemsText = $radItems->pluck('name')->join('، ');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">أشعة طوارئ #{{ $radReq->id }}</strong>
+                                                                        <div class="small text-muted font-monospace">حالة #{{ $radReq->emergency_id }}</div>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة طوارئ</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $itemsText }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <small class="text-muted">{{ $emgPatientPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($receiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $receiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $radReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
+                                                                        <small class="text-muted">بتأريخ: {{ $radCancelledAt }}</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($radRefundAmount, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $radReq->id }}"
+                                                                                data-patient="{{ $emgPatientName }}"
+                                                                                data-receipt="{{ $receiptNo ?? '---' }}"
+                                                                                data-amount="{{ $radRefundAmount }}"
+                                                                                data-service="أشعة طوارئ: {{ $itemsText }}"
+                                                                                data-action="{{ route('cashier.emergency.request.refund.process', ['type' => 'radiology', 'id' => $radReq->id]) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
+                                                            {{-- استرجاع طلبات مختبر الطوارئ الملغاة بعد السداد --}}
+                                                            @foreach($pendingEmergencyLabRefunds ?? [] as $labReq)
+                                                                @php
+                                                                    $emgPatientName = $labReq->emergency?->patient?->user?->name ?? $labReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientPhone = $labReq->emergency?->patient?->user?->phone ?? $labReq->emergency?->emergencyPatient?->phone ?? '---';
+                                                                    $labItems = $labReq->labTests;
+                                                                    $labRefundAmount = (float)$labItems->sum('price');
+                                                                    $receiptNo = optional($labReq->payment)->receipt_number ?? optional($labReq->emergency?->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $labCancelledAt = $labReq->updated_at->format('Y-m-d H:i');
+                                                                    $itemsText = $labItems->pluck('name')->join('، ');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">مختبر طوارئ #{{ $labReq->id }}</strong>
+                                                                        <div class="small text-muted font-monospace">حالة #{{ $labReq->emergency_id }}</div>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-primary text-white"><i class="fas fa-flask me-1"></i> مختبر طوارئ</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $itemsText }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <small class="text-muted">{{ $emgPatientPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($receiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $receiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $labReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
+                                                                        <small class="text-muted">بتأريخ: {{ $labCancelledAt }}</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($labRefundAmount, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $labReq->id }}"
+                                                                                data-patient="{{ $emgPatientName }}"
+                                                                                data-receipt="{{ $receiptNo ?? '---' }}"
+                                                                                data-amount="{{ $labRefundAmount }}"
+                                                                                data-service="مختبر طوارئ: {{ $itemsText }}"
+                                                                                data-action="{{ route('cashier.emergency.request.refund.process', ['type' => 'lab', 'id' => $labReq->id]) }}">
                                                                             <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
                                                                         </button>
                                                                     </td>

@@ -201,6 +201,48 @@
                     'insurance' => max(0, $fee - $pat),
                 ];
             }
+
+            // طلبات تحاليل المختبر المسددة بهذا الإيصال
+            $paidLabs = $payment->emergency->labRequests()->where('payment_id', $payment->id)->with('labTests')->get();
+            foreach ($paidLabs as $labReq) {
+                foreach ($labReq->labTests as $lt) {
+                    $base = (float)($lt->price ?? 0);
+                    $pricing = $isInsured && method_exists($lt, 'calculateInsurancePricing')
+                        ? $lt->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                        : null;
+                    $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                    $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    $lineItems[] = [
+                        'name' => 'تحليل طوارئ: ' . $lt->name . ($lt->code ? ' (' . $lt->code . ')' : ''),
+                        'category' => 'مختبر طوارئ',
+                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'المختبر',
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
+            }
+
+            // طلبات الأشعة والتصوير الطبي المسددة بهذا الإيصال
+            $paidRads = $payment->emergency->radiologyRequests()->where('payment_id', $payment->id)->with('radiologyTypes')->get();
+            foreach ($paidRads as $radReq) {
+                foreach ($radReq->radiologyTypes as $rt) {
+                    $base = (float)($rt->base_price ?? $rt->price ?? 0);
+                    $pricing = $isInsured && method_exists($rt, 'calculateInsurancePricing')
+                        ? $rt->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                        : null;
+                    $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                    $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    $lineItems[] = [
+                        'name' => 'أشعة طوارئ: ' . $rt->name,
+                        'category' => 'أشعة وتصوير',
+                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'قسم الأشعة',
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
+            }
         }
 
         // إذا لم توجد تفاصيل متعددة نستخدم السجل المباشر

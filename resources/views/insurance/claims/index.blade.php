@@ -22,7 +22,7 @@
             <p class="text-muted small mb-0">متابعة دقيقة لكل مريض وفئة ضمانه، الخدمات المقدمة، أسعار الخدمات، المبالغ المقبوضة نقداً، ومطالبات المستشفى لدى هيئة الضمان</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2 d-print-none">
-            <a href="{{ route('insurance.claims.export', request()->query()) }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm">
+            <a href="{{ route('insurance.claims.export', array_merge(request()->query(), ['view_mode' => $viewMode])) }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm">
                 <i class="fas fa-file-excel me-1.5"></i> تصدير إكسيل (Excel)
             </a>
             <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold bg-white shadow-sm">
@@ -258,10 +258,12 @@
                     </div>
                 </div>
 
+                <input type="hidden" name="view_mode" value="{{ $viewMode }}">
+
                 <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                     <span class="small text-muted">
                         <i class="fas fa-filter text-secondary me-1"></i> الفلاتر الحالية تعرض: 
-                        <strong class="text-primary">{{ $claims->total() }}</strong> سجل مطالبة
+                        <strong class="text-primary">{{ $kpis->total_patients ?? 0 }}</strong> مريض (مجموع <strong class="text-primary">{{ $kpis->total_claims ?? 0 }}</strong> مطالبة)
                     </span>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold">
@@ -276,183 +278,459 @@
         </div>
     </div>
 
-    <!-- جدول سجلات ومطالبات الضمان الصحي التفصيلي -->
+    <!-- جدول كشف وسجلات مطالبات الضمان الصحي -->
     <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
-        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                <i class="fas fa-list-check text-primary"></i>
-                <span>تفاصيل مطالبات الخدمات الطبية</span>
-                <span class="badge bg-light text-dark border fw-normal fs-7">عرض {{ $claims->firstItem() ?? 0 }} إلى {{ $claims->lastItem() ?? 0 }} من أصل {{ $claims->total() }}</span>
-            </h5>
-            <div class="d-flex gap-2 d-print-none">
-                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 small">
-                    <i class="fas fa-info-circle me-1"></i> يتم احتساب الأسعار استحقاقياً
-                </span>
+        <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="fas fa-list-check text-primary"></i>
+                    <span>{{ $viewMode === 'patient_grouped' ? 'كشف مطالبات الضمان الصحي (مجمّع حسب المرضى)' : 'تفاصيل مطالبات الخدمات الطبية (حسب الوصولات)' }}</span>
+                    @if($viewMode === 'patient_grouped')
+                        <span class="badge bg-light text-dark border fw-normal fs-7">عرض {{ $patientsPaginated->firstItem() ?? 0 }} إلى {{ $patientsPaginated->lastItem() ?? 0 }} من أصل {{ $patientsPaginated->total() }} مريض</span>
+                    @else
+                        <span class="badge bg-light text-dark border fw-normal fs-7">عرض {{ $claims->firstItem() ?? 0 }} إلى {{ $claims->lastItem() ?? 0 }} من أصل {{ $claims->total() }} مطالبة</span>
+                    @endif
+                </h5>
+                <p class="text-muted small mb-0 mt-1">
+                    @if($viewMode === 'patient_grouped')
+                        يتم عرض كل مريض ومجموعة خدماته وفحوصاته الطبية المسددة تباعاً تليها المجاميع الخاصة به ثم المريض التالي
+                    @else
+                        يتم عرض الوصولات والسندات بشكل فردي ومفصل محاسبياً
+                    @endif
+                </p>
+            </div>
+            <div class="d-flex align-items-center gap-2 d-print-none">
+                <!-- مبدل طريقة العرض -->
+                <div class="btn-group p-0.5 bg-light rounded-pill border shadow-xs">
+                    <a href="{{ request()->fullUrlWithQuery(['view_mode' => 'patient_grouped']) }}" class="btn btn-sm rounded-pill px-3 {{ $viewMode === 'patient_grouped' ? 'btn-primary text-white shadow-sm fw-bold' : 'btn-light text-muted' }}" title="عرض تجميعي لكل مريض تتبعه خدماته ومجاميعه">
+                        <i class="fas fa-users me-1"></i> حسب المريض
+                    </a>
+                    <a href="{{ request()->fullUrlWithQuery(['view_mode' => 'receipt']) }}" class="btn btn-sm rounded-pill px-3 {{ $viewMode === 'receipt' ? 'btn-primary text-white shadow-sm fw-bold' : 'btn-light text-muted' }}" title="عرض فردي مسطح لكل وصل">
+                        <i class="fas fa-receipt me-1"></i> حسب الوصل
+                    </a>
+                </div>
             </div>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap" id="insuranceClaimsTable">
-                <thead class="table-light border-top border-bottom" style="font-size: 0.8rem;">
-                    <tr>
-                        <th class="ps-3 py-3" style="width: 50px;">#</th>
-                        <th>رقم الإيصال</th>
-                        <th>التاريخ والوقت</th>
-                        <th>اسم المريض</th>
-                        <th>فئة الضمان</th>
-                        <th>رقم البطاقة / الباج</th>
-                        <th>القسم / نوع الخدمة</th>
-                        <th>الطبيب المعالج / الاستشاري</th>
-                        <th>تفاصيل الفحص / الخدمة</th>
-                        <th class="text-end">السعر الكلي</th>
-                        <th class="text-end">تحمل المريض (نقداً)</th>
-                        <th class="text-end pe-3">مطالبة الضمان</th>
-                        <th class="text-center">التغطية</th>
-                    </tr>
-                </thead>
-                <tbody style="font-size: 0.84rem;">
-                    @forelse($claims as $index => $payment)
-                    @php
-                        $gross = (float)($payment->amount + $payment->insurance_share);
-                        $patientPaid = (float)$payment->amount;
-                        $insuranceShare = (float)$payment->insurance_share;
-                        $copayPercent = $payment->copay_percentage ?? ($gross > 0 ? round(($patientPaid / $gross) * 100, 1) : 0);
-                        $coveragePercent = $gross > 0 ? round(($insuranceShare / $gross) * 100, 1) : (100 - $copayPercent);
+            <table class="table align-middle mb-0 text-nowrap" id="insuranceClaimsTable">
+                @if($viewMode === 'patient_grouped')
+                    <!-- ==================== العرض المجمّع حسب المرضى ==================== -->
+                    <thead class="table-light border-top border-bottom" style="font-size: 0.8rem;">
+                        <tr>
+                            <th class="ps-3 py-3" style="width: 50px;">#</th>
+                            <th>رقم الإيصال</th>
+                            <th>التاريخ والوقت</th>
+                            <th>القسم / نوع الخدمة</th>
+                            <th>الطبيب المعالج / الاستشاري</th>
+                            <th>تفاصيل الفحص / الخدمة</th>
+                            <th class="text-end">السعر الكلي</th>
+                            <th class="text-end">تحمل المريض (نقداً)</th>
+                            <th class="text-end pe-3">مطالبة الضمان</th>
+                            <th class="text-center">التغطية</th>
+                            <th class="text-center d-print-none">طباعة</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 0.84rem;">
+                        @forelse($patientsPaginated as $pIndex => $pItem)
+                        @php
+                            $patient = $patientsMap->get($pItem->patient_id);
+                            $patientPayments = $paymentsByPatient->get($pItem->patient_id, collect());
+                            $categoryName = $patient?->healthInsuranceCategory?->name ?? 'غير محدد';
+                            $categoryCode = $patient?->healthInsuranceCategory?->code;
+                            $cardNo = $patient?->insurance_card_no ?: '—';
+                            $patientGross = (float)$pItem->total_gross;
+                            $patientPaid = (float)$pItem->total_patient_paid;
+                            $patientInsurance = (float)$pItem->total_insurance_share;
+                            $patientCoverage = $patientGross > 0 ? round(($patientInsurance / $patientGross) * 100, 1) : 0;
+                            
+                            $catBadgeClass = match($categoryCode) {
+                                'A' => 'bg-danger-subtle text-danger border-danger-subtle',
+                                'B' => 'bg-warning-subtle text-dark border-warning-subtle',
+                                'C' => 'bg-info-subtle text-info border-info-subtle',
+                                'D' => 'bg-success-subtle text-success border-success-subtle',
+                                'E' => 'bg-primary-subtle text-primary border-primary-subtle',
+                                'H' => 'bg-purple-subtle text-purple border-purple-subtle',
+                                default => 'bg-light text-dark border-secondary-subtle'
+                            };
+                        @endphp
 
-                        $categoryName = $payment->patient?->healthInsuranceCategory?->name ?? 'غير محدد';
-                        $categoryCode = $payment->patient?->healthInsuranceCategory?->code;
-                        $cardNo = $payment->insurance_card_no ?: ($payment->patient?->insurance_card_no ?: '—');
-                        $doctorName = $payment->attending_doctor_name;
+                        <!-- 1. شريط هيدر المريض (Patient Header) -->
+                        <tr class="border-top border-2 border-primary border-opacity-50" style="background-color: #f1f6ff !important;">
+                            <td colspan="11" class="py-2.5 px-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2.5 flex-wrap">
+                                        <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fw-bold fs-7">
+                                            مريض #{{ $patientsPaginated->firstItem() + $pIndex }}
+                                        </span>
+                                        <div class="fw-bold fs-6 text-dark d-flex align-items-center gap-1.5">
+                                            <i class="fas fa-user-circle text-primary fs-5"></i>
+                                            <span>{{ $patient?->name ?? 'مريض غير محدد' }}</span>
+                                        </div>
+                                        <span class="badge border rounded-pill px-2.5 py-1 {{ $catBadgeClass }}">
+                                            <i class="fas fa-id-badge me-1"></i>
+                                            <strong>{{ $categoryName }}</strong>
+                                            @if($categoryCode) <span class="ms-1 opacity-75">({{ $categoryCode }})</span> @endif
+                                        </span>
+                                        @if($cardNo !== '—')
+                                            <span class="badge bg-white text-dark border font-monospace">
+                                                <i class="fas fa-credit-card text-muted me-1"></i>{{ $cardNo }}
+                                            </span>
+                                        @endif
+                                        @if($patient?->user?->phone)
+                                            <span class="text-muted small font-monospace">
+                                                <i class="fas fa-phone text-muted me-1"></i>{{ $patient->user->phone }}
+                                            </span>
+                                        @endif
+                                        @if($patient?->file_number)
+                                            <span class="text-muted small font-monospace">
+                                                <i class="fas fa-folder text-muted me-1"></i>ملف: #{{ $patient->file_number }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-white text-primary border border-primary-subtle rounded-pill px-3 py-1 font-monospace fw-bold">
+                                            <i class="fas fa-receipt me-1"></i> إجمالي الخدمات: {{ $pItem->receipts_count }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
 
-                        // تحديد لون فئة الضمان
-                        $catBadgeClass = match($categoryCode) {
-                            'A' => 'bg-danger-subtle text-danger border-danger-subtle',
-                            'B' => 'bg-warning-subtle text-dark border-warning-subtle',
-                            'C' => 'bg-info-subtle text-info border-info-subtle',
-                            'D' => 'bg-success-subtle text-success border-success-subtle',
-                            'E' => 'bg-primary-subtle text-primary border-primary-subtle',
-                            'H' => 'bg-purple-subtle text-purple border-purple-subtle',
-                            default => 'bg-light text-dark border-secondary-subtle'
-                        };
+                        <!-- 2. أسطر خدمات هذا المريض واحدة تلو الأخرى -->
+                        @foreach($patientPayments as $sIndex => $payment)
+                            @php
+                                $gross = (float)($payment->amount + $payment->insurance_share);
+                                $patientPaid = (float)$payment->amount;
+                                $insuranceShare = (float)$payment->insurance_share;
+                                $copayPercent = $payment->copay_percentage ?? ($gross > 0 ? round(($patientPaid / $gross) * 100, 1) : 0);
+                                $coveragePercent = $gross > 0 ? round(($insuranceShare / $gross) * 100, 1) : (100 - $copayPercent);
+                                $doctorName = $payment->attending_doctor_name;
 
-                        // تحديد شارة القسم
-                        $deptBadgeClass = match($payment->payment_type) {
-                            'appointment' => 'bg-primary-subtle text-primary border-primary-subtle',
-                            'lab' => 'bg-teal-subtle text-teal border-teal-subtle',
-                            'radiology' => 'bg-warning-subtle text-dark border-warning-subtle',
-                            'emergency' => 'bg-danger-subtle text-danger border-danger-subtle',
-                            'surgery' => 'bg-indigo-subtle text-indigo border-indigo-subtle',
-                            default => 'bg-secondary-subtle text-secondary border-secondary-subtle'
-                        };
-                    @endphp
-                    <tr>
-                        <td class="ps-3 fw-bold text-muted">{{ $claims->firstItem() + $index }}</td>
-                        <td>
-                            <span class="badge bg-light text-dark border font-monospace fw-bold">
-                                {{ $payment->receipt_number ?: '#' . $payment->id }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="text-dark fw-semibold">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '—' }}</div>
-                            <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $payment->paid_at ? $payment->paid_at->format('h:i A') : '' }}</small>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-dark d-flex align-items-center gap-1.5">
-                                <i class="fas fa-user-circle text-primary opacity-75"></i>
-                                <span>{{ $payment->patient?->name ?? 'مريض غير محدد' }}</span>
-                            </div>
-                            @if($payment->patient?->phone)
-                                <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $payment->patient->phone }}</small>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge border rounded-pill px-2.5 py-1 {{ $catBadgeClass }}">
-                                <i class="fas fa-id-badge me-1"></i>
-                                <strong>{{ $categoryName }}</strong>
-                                @if($categoryCode)
-                                    <span class="ms-1 opacity-75">({{ $categoryCode }})</span>
+                                $deptBadgeClass = match($payment->payment_type) {
+                                    'appointment' => 'bg-primary-subtle text-primary border-primary-subtle',
+                                    'lab' => 'bg-teal-subtle text-teal border-teal-subtle',
+                                    'radiology' => 'bg-warning-subtle text-dark border-warning-subtle',
+                                    'emergency' => 'bg-danger-subtle text-danger border-danger-subtle',
+                                    'surgery' => 'bg-indigo-subtle text-indigo border-indigo-subtle',
+                                    default => 'bg-secondary-subtle text-secondary border-secondary-subtle'
+                                };
+                            @endphp
+                            <tr class="align-middle border-bottom border-light" style="background-color: #ffffff;">
+                                <td class="ps-4 text-muted small font-monospace" style="width: 45px;">
+                                    <span class="text-secondary opacity-75">↳ {{ $sIndex + 1 }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border font-monospace fw-bold">
+                                        {{ $payment->receipt_number ?: '#' . $payment->id }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-dark fw-semibold" style="font-size: 0.8rem;">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '—' }}</div>
+                                    <small class="text-muted font-monospace" style="font-size: 0.7rem;">{{ $payment->paid_at ? $payment->paid_at->format('h:i A') : '' }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge border rounded-pill px-2.5 py-1 {{ $deptBadgeClass }}">
+                                        {{ $payment->payment_type_name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($doctorName)
+                                        <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-semibold text-wrap" style="max-width: 170px;">
+                                            <i class="fas fa-user-md text-primary me-1"></i>{{ $doctorName }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="text-wrap text-dark small" style="max-width: 320px; line-height: 1.35;" title="{{ $payment->service_details_text }}">
+                                        {{ $payment->service_details_text }}
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold text-dark font-monospace">
+                                    {{ number_format($gross) }} <small class="text-muted">د.ع</small>
+                                </td>
+                                <td class="text-end fw-bold text-success font-monospace">
+                                    {{ number_format($patientPaid) }} <small class="text-muted">د.ع</small>
+                                </td>
+                                <td class="text-end pe-3 fw-bold text-info font-monospace">
+                                    {{ number_format($insuranceShare) }} <small class="text-muted">د.ع</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 font-monospace" title="تغطية الضمان: {{ $coveragePercent }}% | تحمل المريض: {{ $copayPercent }}%">
+                                        {{ $coveragePercent }}%
+                                    </span>
+                                </td>
+                                <td class="text-center d-print-none">
+                                    <a href="{{ route('cashier.receipt.print', $payment->id) }}" target="_blank" class="btn btn-outline-secondary btn-sm p-1 px-2 rounded-pill" title="طباعة الإيصال">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+
+                        <!-- 3. سطر مجاميع هذا المريض -->
+                        <tr class="border-bottom border-2 border-secondary border-opacity-25 fw-bold" style="background-color: #f8fafc !important;">
+                            <td colspan="6" class="text-end pe-3 py-2 text-muted" style="font-size: 0.82rem;">
+                                <i class="fas fa-calculator text-primary me-1"></i> مجموع استحقاقات المريض ({{ $patient?->name }}):
+                            </td>
+                            <td class="text-end text-dark font-monospace" style="font-size: 0.85rem;">
+                                {{ number_format($patientGross) }} د.ع
+                            </td>
+                            <td class="text-end text-success font-monospace" style="font-size: 0.85rem;">
+                                {{ number_format($patientPaid) }} د.ع
+                            </td>
+                            <td class="text-end pe-3 text-info font-monospace" style="font-size: 0.85rem;">
+                                {{ number_format($patientInsurance) }} د.ع
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border rounded-pill px-2 py-1 font-monospace">
+                                    {{ $patientCoverage }}%
+                                </span>
+                            </td>
+                            <td class="d-print-none"></td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="11" class="text-center py-5 text-muted">
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-shield-alt fa-3x text-muted opacity-25 mb-3"></i>
+                                    <h6 class="fw-bold">لا توجد مطالبات أو خدمات مسجلة مطابقة للبحث المحدد</h6>
+                                    <p class="small text-muted mb-2">جرب تغيير الفترة الزمنية أو إزالة فلاتر البحث للعثور على السجلات المطلوبة</p>
+                                    <a href="{{ route('insurance.claims.index') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                        <i class="fas fa-undo me-1"></i> إعادة ضبط الفلاتر
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+
+                        <!-- عمليات بدون ملف مريض مسجل (إن وجدت) -->
+                        @if($unassignedPayments->isNotEmpty())
+                        <tr class="border-top border-2 border-warning" style="background-color: #fffbeb !important;">
+                            <td colspan="11" class="py-2.5 px-3">
+                                <div class="d-flex align-items-center gap-2 text-warning-emphasis fw-bold">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>عمليات وإيصالات بدون ملف مريض مسجل ({{ $unassignedPayments->count() }} إيصال)</span>
+                                </div>
+                            </td>
+                        </tr>
+                        @foreach($unassignedPayments as $uIndex => $payment)
+                            @php
+                                $gross = (float)($payment->amount + $payment->insurance_share);
+                                $patientPaid = (float)$payment->amount;
+                                $insuranceShare = (float)$payment->insurance_share;
+                                $copayPercent = $payment->copay_percentage ?? ($gross > 0 ? round(($patientPaid / $gross) * 100, 1) : 0);
+                                $coveragePercent = $gross > 0 ? round(($insuranceShare / $gross) * 100, 1) : (100 - $copayPercent);
+                                $doctorName = $payment->attending_doctor_name;
+                            @endphp
+                            <tr class="align-middle border-bottom border-light" style="background-color: #ffffff;">
+                                <td class="ps-4 text-muted small font-monospace">↳ {{ $uIndex + 1 }}</td>
+                                <td><span class="badge bg-light text-dark border font-monospace">{{ $payment->receipt_number ?: '#' . $payment->id }}</span></td>
+                                <td><small class="text-muted">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '—' }}</small></td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ $payment->payment_type_name }}</span></td>
+                                <td><small class="text-muted">{{ $doctorName ?: '—' }}</small></td>
+                                <td><small class="text-dark">{{ $payment->service_details_text }}</small></td>
+                                <td class="text-end fw-bold font-monospace">{{ number_format($gross) }} د.ع</td>
+                                <td class="text-end fw-bold text-success font-monospace">{{ number_format($patientPaid) }} د.ع</td>
+                                <td class="text-end pe-3 fw-bold text-info font-monospace">{{ number_format($insuranceShare) }} د.ع</td>
+                                <td class="text-center font-monospace">{{ $coveragePercent }}%</td>
+                                <td class="text-center d-print-none">
+                                    <a href="{{ route('cashier.receipt.print', $payment->id) }}" target="_blank" class="btn btn-outline-secondary btn-sm p-1 px-2 rounded-pill"><i class="fas fa-print"></i></a>
+                                </td>
+                            </tr>
+                        @endforeach
+                        @endif
+                    </tbody>
+                    @if($patientsPaginated->isNotEmpty())
+                    <tfoot class="table-light border-top fw-bold" style="font-size: 0.85rem;">
+                        <tr>
+                            <td colspan="6" class="ps-3 py-3 text-end">مجموع المرضى في الصفحة الحالية:</td>
+                            <td class="text-end text-dark font-monospace">
+                                {{ number_format($patientsPaginated->sum('total_gross')) }} د.ع
+                            </td>
+                            <td class="text-end text-success font-monospace">
+                                {{ number_format($patientsPaginated->sum('total_patient_paid')) }} د.ع
+                            </td>
+                            <td class="text-end pe-3 text-info font-monospace">
+                                {{ number_format($patientsPaginated->sum('total_insurance_share')) }} د.ع
+                            </td>
+                            <td class="text-center text-muted">—</td>
+                            <td class="d-print-none"></td>
+                        </tr>
+                    </tfoot>
+                    @endif
+                @else
+                    <!-- ==================== العرض التفصيلي المسطح للوصولات ==================== -->
+                    <thead class="table-light border-top border-bottom" style="font-size: 0.8rem;">
+                        <tr>
+                            <th class="ps-3 py-3" style="width: 50px;">#</th>
+                            <th>رقم الإيصال</th>
+                            <th>التاريخ والوقت</th>
+                            <th>اسم المريض</th>
+                            <th>فئة الضمان</th>
+                            <th>رقم البطاقة / الباج</th>
+                            <th>القسم / نوع الخدمة</th>
+                            <th>الطبيب المعالج / الاستشاري</th>
+                            <th>تفاصيل الفحص / الخدمة</th>
+                            <th class="text-end">السعر الكلي</th>
+                            <th class="text-end">تحمل المريض (نقداً)</th>
+                            <th class="text-end pe-3">مطالبة الضمان</th>
+                            <th class="text-center">التغطية</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 0.84rem;">
+                        @forelse($claims as $index => $payment)
+                        @php
+                            $gross = (float)($payment->amount + $payment->insurance_share);
+                            $patientPaid = (float)$payment->amount;
+                            $insuranceShare = (float)$payment->insurance_share;
+                            $copayPercent = $payment->copay_percentage ?? ($gross > 0 ? round(($patientPaid / $gross) * 100, 1) : 0);
+                            $coveragePercent = $gross > 0 ? round(($insuranceShare / $gross) * 100, 1) : (100 - $copayPercent);
+
+                            $categoryName = $payment->patient?->healthInsuranceCategory?->name ?? 'غير محدد';
+                            $categoryCode = $payment->patient?->healthInsuranceCategory?->code;
+                            $cardNo = $payment->insurance_card_no ?: ($payment->patient?->insurance_card_no ?: '—');
+                            $doctorName = $payment->attending_doctor_name;
+
+                            $catBadgeClass = match($categoryCode) {
+                                'A' => 'bg-danger-subtle text-danger border-danger-subtle',
+                                'B' => 'bg-warning-subtle text-dark border-warning-subtle',
+                                'C' => 'bg-info-subtle text-info border-info-subtle',
+                                'D' => 'bg-success-subtle text-success border-success-subtle',
+                                'E' => 'bg-primary-subtle text-primary border-primary-subtle',
+                                'H' => 'bg-purple-subtle text-purple border-purple-subtle',
+                                default => 'bg-light text-dark border-secondary-subtle'
+                            };
+
+                            $deptBadgeClass = match($payment->payment_type) {
+                                'appointment' => 'bg-primary-subtle text-primary border-primary-subtle',
+                                'lab' => 'bg-teal-subtle text-teal border-teal-subtle',
+                                'radiology' => 'bg-warning-subtle text-dark border-warning-subtle',
+                                'emergency' => 'bg-danger-subtle text-danger border-danger-subtle',
+                                'surgery' => 'bg-indigo-subtle text-indigo border-indigo-subtle',
+                                default => 'bg-secondary-subtle text-secondary border-secondary-subtle'
+                            };
+                        @endphp
+                        <tr>
+                            <td class="ps-3 fw-bold text-muted">{{ $claims->firstItem() + $index }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace fw-bold">
+                                    {{ $payment->receipt_number ?: '#' . $payment->id }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-dark fw-semibold">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d') : '—' }}</div>
+                                <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $payment->paid_at ? $payment->paid_at->format('h:i A') : '' }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark d-flex align-items-center gap-1.5">
+                                    <i class="fas fa-user-circle text-primary opacity-75"></i>
+                                    <span>{{ $payment->patient?->name ?? 'مريض غير محدد' }}</span>
+                                </div>
+                                @if($payment->patient?->phone)
+                                    <small class="text-muted font-monospace" style="font-size: 0.72rem;">{{ $payment->patient->phone }}</small>
                                 @endif
-                            </span>
-                        </td>
-                        <td>
-                            @if($cardNo !== '—')
-                                <span class="badge bg-light text-dark border font-monospace">
-                                    <i class="fas fa-credit-card text-muted me-1"></i>{{ $cardNo }}
+                            </td>
+                            <td>
+                                <span class="badge border rounded-pill px-2.5 py-1 {{ $catBadgeClass }}">
+                                    <i class="fas fa-id-badge me-1"></i>
+                                    <strong>{{ $categoryName }}</strong>
+                                    @if($categoryCode)
+                                        <span class="ms-1 opacity-75">({{ $categoryCode }})</span>
+                                    @endif
                                 </span>
-                            @else
-                                <span class="text-muted">—</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge border rounded-pill px-2.5 py-1 {{ $deptBadgeClass }}">
-                                {{ $payment->payment_type_name }}
-                            </span>
-                        </td>
-                        <td>
-                            @if($doctorName)
-                                <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-semibold text-wrap" style="max-width: 170px;">
-                                    <i class="fas fa-user-md text-primary me-1"></i>{{ $doctorName }}
+                            </td>
+                            <td>
+                                @if($cardNo !== '—')
+                                    <span class="badge bg-light text-dark border font-monospace">
+                                        <i class="fas fa-credit-card text-muted me-1"></i>{{ $cardNo }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge border rounded-pill px-2.5 py-1 {{ $deptBadgeClass }}">
+                                    {{ $payment->payment_type_name }}
                                 </span>
-                            @else
-                                <span class="text-muted">—</span>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="text-wrap text-dark small" style="max-width: 280px; line-height: 1.35;" title="{{ $payment->service_details_text }}">
-                                {{ $payment->service_details_text }}
-                            </div>
-                        </td>
-                        <td class="text-end fw-bold text-dark font-monospace">
-                            {{ number_format($gross) }} <small class="text-muted">د.ع</small>
-                        </td>
-                        <td class="text-end fw-bold text-success font-monospace">
-                            {{ number_format($patientPaid) }} <small class="text-muted">د.ع</small>
-                        </td>
-                        <td class="text-end pe-3 fw-bold text-info font-monospace">
-                            {{ number_format($insuranceShare) }} <small class="text-muted">د.ع</small>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 font-monospace" title="تغطية الضمان: {{ $coveragePercent }}% | تحمل المريض: {{ $copayPercent }}%">
-                                {{ $coveragePercent }}%
-                            </span>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="13" class="text-center py-5 text-muted">
-                            <div class="d-flex flex-column align-items-center justify-content-center">
-                                <i class="fas fa-shield-alt fa-3x text-muted opacity-25 mb-3"></i>
-                                <h6 class="fw-bold">لا توجد مطالبات أو خدمات مسجلة مطابقة للبحث المحدد</h6>
-                                <p class="small text-muted mb-2">جرب تغيير الفترة الزمنية أو إزالة فلاتر البحث للعثور على السجلات المطلوبة</p>
-                                <a href="{{ route('insurance.claims.index') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                                    <i class="fas fa-undo me-1"></i> إعادة ضبط الفلاتر
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-                @if($claims->isNotEmpty())
-                <tfoot class="table-light border-top fw-bold" style="font-size: 0.85rem;">
-                    <tr>
-                        <td colspan="9" class="ps-3 py-3 text-end">مجموع الصفحة الحالية:</td>
-                        <td class="text-end text-dark font-monospace">
-                            {{ number_format($claims->sum(fn($p) => $p->amount + $p->insurance_share)) }} د.ع
-                        </td>
-                        <td class="text-end text-success font-monospace">
-                            {{ number_format($claims->sum('amount')) }} د.ع
-                        </td>
-                        <td class="text-end pe-3 text-info font-monospace">
-                            {{ number_format($claims->sum('insurance_share')) }} د.ع
-                        </td>
-                        <td class="text-center text-muted">—</td>
-                    </tr>
-                </tfoot>
+                            </td>
+                            <td>
+                                @if($doctorName)
+                                    <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-semibold text-wrap" style="max-width: 170px;">
+                                        <i class="fas fa-user-md text-primary me-1"></i>{{ $doctorName }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="text-wrap text-dark small" style="max-width: 280px; line-height: 1.35;" title="{{ $payment->service_details_text }}">
+                                    {{ $payment->service_details_text }}
+                                </div>
+                            </td>
+                            <td class="text-end fw-bold text-dark font-monospace">
+                                {{ number_format($gross) }} <small class="text-muted">د.ع</small>
+                            </td>
+                            <td class="text-end fw-bold text-success font-monospace">
+                                {{ number_format($patientPaid) }} <small class="text-muted">د.ع</small>
+                            </td>
+                            <td class="text-end pe-3 fw-bold text-info font-monospace">
+                                {{ number_format($insuranceShare) }} <small class="text-muted">د.ع</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 font-monospace" title="تغطية الضمان: {{ $coveragePercent }}% | تحمل المريض: {{ $copayPercent }}%">
+                                    {{ $coveragePercent }}%
+                                </span>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="13" class="text-center py-5 text-muted">
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-shield-alt fa-3x text-muted opacity-25 mb-3"></i>
+                                    <h6 class="fw-bold">لا توجد مطالبات أو خدمات مسجلة مطابقة للبحث المحدد</h6>
+                                    <p class="small text-muted mb-2">جرب تغيير الفترة الزمنية أو إزالة فلاتر البحث للعثور على السجلات المطلوبة</p>
+                                    <a href="{{ route('insurance.claims.index') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                        <i class="fas fa-undo me-1"></i> إعادة ضبط الفلاتر
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                    @if($claims->isNotEmpty())
+                    <tfoot class="table-light border-top fw-bold" style="font-size: 0.85rem;">
+                        <tr>
+                            <td colspan="9" class="ps-3 py-3 text-end">مجموع الصفحة الحالية:</td>
+                            <td class="text-end text-dark font-monospace">
+                                {{ number_format($claims->sum(fn($p) => $p->amount + $p->insurance_share)) }} د.ع
+                            </td>
+                            <td class="text-end text-success font-monospace">
+                                {{ number_format($claims->sum('amount')) }} د.ع
+                            </td>
+                            <td class="text-end pe-3 text-info font-monospace">
+                                {{ number_format($claims->sum('insurance_share')) }} د.ع
+                            </td>
+                            <td class="text-center text-muted">—</td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 @endif
             </table>
         </div>
 
-        @if($claims->hasPages())
+        @if($viewMode === 'patient_grouped' && $patientsPaginated->hasPages())
+        <div class="card-footer bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2 d-print-none">
+            <span class="text-muted small">
+                عرض <strong>{{ $patientsPaginated->firstItem() }}</strong> إلى <strong>{{ $patientsPaginated->lastItem() }}</strong> من أصل <strong>{{ $patientsPaginated->total() }}</strong> مريض
+            </span>
+            <div>
+                {{ $patientsPaginated->links() }}
+            </div>
+        </div>
+        @elseif($viewMode === 'receipt' && $claims->hasPages())
         <div class="card-footer bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2 d-print-none">
             <span class="text-muted small">
                 عرض <strong>{{ $claims->firstItem() }}</strong> إلى <strong>{{ $claims->lastItem() }}</strong> من أصل <strong>{{ $claims->total() }}</strong> مطالبة مسجلة
