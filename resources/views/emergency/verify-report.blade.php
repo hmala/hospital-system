@@ -191,9 +191,10 @@
 @php
     $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد';
     $emergencyId = 'EMR-' . str_pad($emergency->id, 6, '0', STR_PAD_LEFT);
-    $doctorName = $doctor?->user?->name ?? $emergency->doctor?->user?->name ?? 'د. مهند إسماعيل';
-    $doctorSpec = $doctor?->specialization ?? $emergency->doctor?->specialization ?? 'طب الطوارئ والحالات الحرجة';
-    $signaturePath = $doctor?->signature ?? $emergency->doctor?->signature ?? 'images/signatures/doctor_244.png';
+    $actualDoctor = $doctor ?? $emergency->doctor;
+    $doctorName = $actualDoctor?->user?->name ?? 'طبيب الطوارئ المناوب';
+    $doctorSpec = $actualDoctor?->specialization ?? 'طب الطوارئ والحالات الحرجة';
+    $signaturePath = $actualDoctor?->signature;
 @endphp
 
 <div class="verify-card">
@@ -278,12 +279,14 @@
                 $verifySigSrc = null;
                 if ($signaturePath && file_exists(public_path($signaturePath))) {
                     $verifySigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path($signaturePath)));
-                } elseif (file_exists(public_path('images/signatures/doctor_244.png'))) {
-                    $verifySigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
                 }
             @endphp
             @if($verifySigSrc)
                 <img src="{{ $verifySigSrc }}" class="sig-img" alt="توقيع الطبيب">
+            @else
+                <div style="font-size: 12px; color: #64748b; margin-top: 8px; font-weight: 600;">
+                    (توقيع معتمد يدوياً)
+                </div>
             @endif
         </div>
     </div>

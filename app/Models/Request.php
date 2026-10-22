@@ -51,14 +51,21 @@ class Request extends Model
         switch ($this->type) {
             case 'lab':
                 if (!empty($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
-                    return LabTest::whereIn('id', $details['lab_test_ids'])->sum('price');
+                    return LabTest::whereIn('id', $details['lab_test_ids'])->where('is_active', true)->sum('price');
                 }
 
                 if (!empty($details['tests']) && is_array($details['tests'])) {
                     $total = 0;
+                    $seenTests = [];
                     foreach ($details['tests'] as $testName) {
-                        $test = LabTest::where('name', $testName)
-                            ->orWhere('code', $testName)
+                        $normName = mb_strtolower(trim((string)$testName));
+                        if (in_array($normName, $seenTests)) continue;
+                        $seenTests[] = $normName;
+
+                        $test = LabTest::where('is_active', true)
+                            ->where(function($q) use ($testName) {
+                                $q->where('name', $testName)->orWhere('code', $testName);
+                            })
                             ->first();
                         if ($test) {
                             $total += $test->price ?? 0;
@@ -433,12 +440,19 @@ class Request extends Model
             ?? ($this->visit?->patient?->user?->name 
             ?? ($this->visit?->patient?->name ?? 'المريض'));
         $reportUrl = $this->getPublicReportUrl();
+        $details = is_string($this->details) ? json_decode($this->details, true) : ($this->details ?? []);
+        $hasAttachments = !empty($details['attachment']) || !empty($details['test_attachments']);
+
+        $attachmentNote = $hasAttachments 
+            ? "📎 ملاحظة: يحتوي تقريركم على مرفقات وتقارير أجهزة طبية يمكنك استعراضها وتحميلها مباشرة من الرابط أعلاه.\n\n" 
+            : "";
 
         $text = "السلام عليكم ورحمة الله وبركاته\n"
               . "الأخ/الأخت: {$patientName} المحترم،\n\n"
               . "نود إعلامكم بأن نتائج الفحوصات المخبرية الخاصة بكم لدى مستشفى الكفاءات الأهلي للطلب رقم (#{$this->id}) جاهزة ومكتملة.\n\n"
               . "📄 يمكنكم الاطلاع على التقرير الطبي والنتائج المعتمدة مباشرة عبر الرابط التالي:\n"
               . "{$reportUrl}\n\n"
+              . $attachmentNote
               . "مع تمنياتنا لكم بالصحة والعافية.\n"
               . "مختبر مستشفى الكفاءات الأهلي 🏥";
 

@@ -176,4 +176,61 @@ class LabWhatsAppShareAndPublicReportTest extends TestCase
         $showResponse->assertDontSee('https://wa.me/9647701234567', false);
         $showResponse->assertDontSee('إرسال النتيجة عبر واتساب');
     }
+
+    public function test_public_report_shows_attachment_buttons_in_toolbar(): void
+    {
+        $this->labRequest->update([
+            'details' => array_merge($this->labRequest->details ?? [], [
+                'attachment' => 'lab_attachments/sample.pdf',
+                'test_attachments' => [
+                    'CBC' => ['path' => 'lab_attachments/cbc.pdf'],
+                ],
+            ]),
+        ]);
+
+        $publicUrl = $this->labRequest->getPublicReportUrl();
+        $response = $this->get($publicUrl);
+
+        $response->assertStatus(200);
+        $response->assertSee('تقرير الجهاز المرفق (PDF)');
+        $response->assertDontSee('<div class="decorative-border">', false);
+    }
+
+    public function test_patient_can_download_attachment_with_valid_token_without_login(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('lab_attachments/sample.pdf', 'fake-pdf-content');
+
+        $this->labRequest->update([
+            'details' => array_merge($this->labRequest->details ?? [], [
+                'attachment' => 'lab_attachments/sample.pdf',
+            ]),
+        ]);
+
+        $token = $this->labRequest->getPublicReportToken();
+        $attachmentUrl = route('lab.attachment', ['request' => $this->labRequest->id, 'token' => $token]);
+
+        // Unauthenticated guest user accesses attachment directly without login
+        $response = $this->get($attachmentUrl);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_patient_cannot_download_attachment_without_valid_token(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('lab_attachments/sample.pdf', 'fake-pdf-content');
+
+        $this->labRequest->update([
+            'details' => array_merge($this->labRequest->details ?? [], [
+                'attachment' => 'lab_attachments/sample.pdf',
+            ]),
+        ]);
+
+        // Without token or with invalid token
+        $attachmentUrl = route('lab.attachment', ['request' => $this->labRequest->id, 'token' => 'invalid_token']);
+
+        $response = $this->get($attachmentUrl);
+        $response->assertStatus(403);
+    }
 }

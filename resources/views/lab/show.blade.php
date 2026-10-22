@@ -94,7 +94,11 @@ if (!function_exists('buildSelectedLabTests')) {
         if (!empty($requestDetails['package_id'])) {
             $pkg = \App\Models\Package::find($requestDetails['package_id']);
             if ($pkg) {
-                $testsList = array_merge($testsList, $pkg->labTests->pluck('name')->toArray());
+                $pkgTests = $pkg->labTests()->where('is_active', true)->pluck('name')->toArray();
+                if (empty($pkgTests)) {
+                    $pkgTests = $pkg->labTests->pluck('name')->toArray();
+                }
+                $testsList = array_merge($testsList, $pkgTests);
             }
         }
 
@@ -103,19 +107,40 @@ if (!function_exists('buildSelectedLabTests')) {
             foreach ($ids as $testId) {
                 if ($testId === '') continue;
                 $labTest = \App\Models\LabTest::find($testId);
-                if ($labTest) {
-                    $testsList[] = $labTest->name;
+                if ($labTest && $labTest->is_active) {
+                    $testsList[] = trim($labTest->name);
                 }
             }
         }
 
         if (isset($requestDetails['tests'])) {
             $tests = normalizeTestsField($requestDetails['tests']);
-            $testsList = array_merge($testsList, $tests);
+            foreach ($tests as $tName) {
+                $trimmed = trim((string)$tName);
+                if ($trimmed === '') continue;
+                $lt = \App\Models\LabTest::where('name', $trimmed)->orWhere('code', $trimmed)->first();
+                if ($lt && !$lt->is_active) {
+                    continue;
+                }
+                $testsList[] = $trimmed;
+            }
         }
 
         $testsList = array_filter($testsList, fn($item) => !is_null($item) && trim((string) $item) !== '');
-        return array_values(array_unique($testsList));
+
+        // منع التكرار مع مراعاة الحروف الكبيرة والصغيرة والمسافات
+        $uniqueTests = [];
+        $seen = [];
+        foreach ($testsList as $item) {
+            $key = mb_strtolower(trim((string)$item));
+            if ($key === '') continue;
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $uniqueTests[] = trim((string)$item);
+            }
+        }
+
+        return array_values($uniqueTests);
     }
 }
 
@@ -154,7 +179,13 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                             <h5 class="mb-0 fw-bold text-dark">
                                 طلب المختبر #{{ $request->id }}
                             </h5>
-                            <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
+                            @if($request->status === 'in_progress')
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="الطلب محفوظ كمسودة قيد الفحص بالمختبر ولم يُرسل للطبيب بعد">
+                                    <i class="fas fa-edit me-1 text-warning"></i> مسودة قيد الفحص
+                                </span>
+                            @else
+                                <span class="badge bg-{{ $request->status_color }}">{{ $request->status_text }}</span>
+                            @endif
                         </div>
                         <small class="text-muted">
                             <i class="fas fa-calendar-alt me-1"></i> {{ $request->created_at->format('Y-m-d H:i') }}
@@ -180,8 +211,12 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                     @endif
 
                     @if(!$isBloodBankRequest)
-                        <button type="submit" form="labResultForm" class="btn btn-primary fw-bold shadow-sm px-3">
-                            <i class="fas fa-check-circle me-1"></i> حفظ واعتماد النتائج
+                        <button type="submit" form="labResultForm" name="action" value="draft" onclick="submitLabForm('draft')" class="btn btn-warning text-dark fw-bold shadow-sm px-3 border-warning" title="حفظ النتائج والمدخلات كمسودة في المختبر دون إرسالها للطبيب">
+                            <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                        </button>
+
+                        <button type="submit" form="labResultForm" name="action" value="complete" onclick="submitLabForm('complete')" class="btn btn-success fw-bold shadow-sm px-3" title="اعتماد النتائج نهائياً وإرسالها لعيادة الطبيب">
+                            <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال للطبيب
                         </button>
                     @endif
 
@@ -693,12 +728,16 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
             }, 'references'])->where(function($query) use ($normalizedSearchTerms) {
                 $query->whereIn('name', $normalizedSearchTerms)
                       ->orWhereIn('code', $normalizedSearchTerms);
-            })->get();
+            })
+            ->orderByRaw('is_active DESC')
+            ->get();
 
             $labTestMap = collect();
             foreach ($rawLabTests as $ltItem) {
-                $labTestMap[$ltItem->name] = $ltItem;
-                if ($ltItem->code) {
+                if (!isset($labTestMap[$ltItem->name]) || $ltItem->is_active) {
+                    $labTestMap[$ltItem->name] = $ltItem;
+                }
+                if ($ltItem->code && (!isset($labTestMap[$ltItem->code]) || $ltItem->is_active)) {
                     $labTestMap[$ltItem->code] = $ltItem;
                 }
             }
@@ -707,7 +746,12 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                     $labTestMap[$alias] = $labTestMap[$targetCode];
                 }
             }
-            $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
+            $allDbResults = \App\Models\LabResult::where('request_id', $request->id)->get();
+            $dbResultsBySubId = $allDbResults->whereNotNull('sub_test_id')->keyBy('sub_test_id');
+            $dbResultsByParentAndName = $allDbResults->keyBy(function($r) {
+                return ($r->parent_test_name ? $r->parent_test_name . '__' : '') . $r->test_name;
+            });
+            $dbResults = $allDbResults->keyBy('test_name');
             
             $resultData = is_string($request->result) ? json_decode($request->result, true) : ($request->result ?? []);
             $savedTestResults = is_array($resultData) ? ($resultData['test_results'] ?? []) : [];
@@ -730,8 +774,8 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
         <form action="{{ route('lab.update', $request) }}" method="POST" enctype="multipart/form-data" id="labResultForm">
             @csrf
             @method('PUT')
-            <input type="hidden" name="status" value="completed">
-            <input type="hidden" name="action" value="complete">
+            <input type="hidden" name="status" value="completed" id="labFormStatus">
+            <input type="hidden" name="action" value="complete" id="labFormAction">
 
             <div class="row g-3 mb-3">
                 <!-- العمود الأيمن (8 أعمدة): جدول النتائج الرقمية والمديات المرجعية -->
@@ -759,7 +803,7 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                             <th style="width: 150px;">المدى المرجعي</th>
                                             <th style="width: 90px;" class="text-center">الحالة (Flag)</th>
                                             <th style="width: 250px;" class="text-center">
-                                                <i class="fas fa-paperclip text-primary me-1"></i> المرفق (اختياري)
+                                                <i class="fas fa-paperclip text-primary me-1"></i> تقرير الجهاز / المرفق
                                             </th>
                                         </tr>
                                     </thead>
@@ -771,10 +815,10 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                 $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                                 $hasSpecificAttachment = !empty($testAttachments[$test]);
                                                 
-                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون مرفق ما لم يحدد خلاف ذلك)
+                                                // تحديد نمط إدخال النتائج (افتراضياً: فحص رقمي فردي إلا إذا كان له قيم فرعية فيكون فحص مركب ما لم يحدد خلاف ذلك)
                                                 $entryType = $labTestObj?->result_entry_type;
                                                 if (empty($entryType)) {
-                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_ATTACHMENT : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
+                                                    $entryType = $hasSubTests ? \App\Models\LabTest::ENTRY_TYPE_SUBTESTS : \App\Models\LabTest::ENTRY_TYPE_SINGLE;
                                                 }
                                             @endphp
 
@@ -868,11 +912,11 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                                     <i class="fas fa-times" style="font-size: 0.65rem;"></i>
                                                                 </label>
                                                             </div>
-                                                        @else
+                                                        @elseif($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
                                                             <div class="pill-upload-wrapper d-inline-block">
-                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير إضافي اختياري">
+                                                                <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="إرفاق تقرير الجهاز الخاص بهذا الفحص">
                                                                     <i class="fas fa-paperclip"></i>
-                                                                    <span class="pill-text fw-semibold">مرفق (اختياري)</span>
+                                                                    <span class="pill-text fw-semibold">إرفاق تقرير</span>
                                                                     <input type="file" name="test_attachments[{{ $test }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
                                                                 </label>
                                                                 <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-sm" style="font-size: 0.74rem;">
@@ -881,15 +925,34 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                                     <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
                                                                 </div>
                                                             </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
                                                         @endif
                                                     </td>
                                                 </tr>
                                                 {{-- صفوف الباراميترات الفرعية --}}
                                                 @foreach($labTestObj->subTests as $subIdx => $subTest)
                                                     @php
-                                                        $savedSubVal = $dbResults[$subTest->name]->value ?? '';
-                                                        if ($savedSubVal === '' && isset($savedTestResults[$subTest->name])) {
-                                                            $savedSubVal = is_array($savedTestResults[$subTest->name]) ? ($savedTestResults[$subTest->name]['value'] ?? '') : $savedTestResults[$subTest->name];
+                                                        $subKey = 'sub_' . $subTest->id;
+                                                        $savedSubVal = $dbResultsBySubId[$subTest->id]->value
+                                                            ?? ($dbResultsByParentAndName[$test . '__' . $subTest->name]->value
+                                                            ?? null);
+                                                        if ($savedSubVal === null) {
+                                                            if (isset($savedTestResults[$subKey])) {
+                                                                $savedSubVal = is_array($savedTestResults[$subKey]) ? ($savedTestResults[$subKey]['value'] ?? '') : $savedTestResults[$subKey];
+                                                            } elseif (isset($savedTestResults[$subTest->name])) {
+                                                                $resItem = $savedTestResults[$subTest->name];
+                                                                if (is_array($resItem)) {
+                                                                    if (empty($resItem['parent_test_name']) || $resItem['parent_test_name'] === $test) {
+                                                                        $savedSubVal = $resItem['value'] ?? '';
+                                                                    }
+                                                                } else {
+                                                                    $savedSubVal = $resItem;
+                                                                }
+                                                            }
+                                                        }
+                                                        if ($savedSubVal === null) {
+                                                            $savedSubVal = $dbResults[$subTest->name]->value ?? '';
                                                         }
                                                     @endphp
                                                     <tr class="test-row subtest-item-row" data-test="{{ $subTest->name }}"
@@ -908,16 +971,16 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                         <td>
                                                             <input type="text"
                                                                    class="form-control form-control-sm test-value font-monospace fw-bold"
-                                                                   name="test_results[{{ $subTest->name }}][value]"
-                                                                   value="{{ old('test_results.' . $subTest->name . '.value', $savedSubVal) }}"
+                                                                   name="test_results[{{ $subKey }}][value]"
+                                                                   value="{{ old('test_results.' . $subKey . '.value', old('test_results.' . $subTest->name . '.value', $savedSubVal)) }}"
                                                                    placeholder="أدخل النتيجة..."
                                                                    data-test="{{ $subTest->name }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
-                                                            <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][test_name]" value="{{ $subTest->name }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][parent_test_name]" value="{{ $test }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][unit]" value="{{ $subTest->unit }}">
+                                                            <input type="hidden" name="test_results[{{ $subKey }}][reference_range]" value="{{ $subTest->reference_range }}">
                                                         </td>
                                                         <td class="text-muted small fw-semibold">{{ $subTest->unit ?: '-' }}</td>
                                                         <td>
@@ -1010,11 +1073,7 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                                     <i class="fas fa-times" style="font-size: 0.65rem;"></i>
                                                                 </label>
                                                             </div>
-                                                        @elseif($hasAttachment)
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
-                                                                <i class="fas fa-check-circle me-1"></i> ضمن التقرير العام
-                                                            </span>
-                                                        @else
+                                                        @elseif($entryType === \App\Models\LabTest::ENTRY_TYPE_FLEXIBLE)
                                                             <div class="pill-upload-wrapper d-inline-block">
                                                                 <label class="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-sm pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="اضغط لاختيار تقرير هذا الفحص">
                                                                     <i class="fas fa-paperclip"></i>
@@ -1027,6 +1086,8 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                                                                     <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="إلغاء الملف" onclick="cancelPillUpload(this)"></button>
                                                                 </div>
                                                             </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
                                                         @endif
                                                     </td>
                                                 </tr>
@@ -1101,12 +1162,57 @@ $age = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : ($patient?->
                 </div>
             </div>
 
+            <!-- شريط أزرار الحفظ والاعتماد السفلي -->
+            <div class="card shadow-sm border-0 bg-white rounded-3 p-3 mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        @if($request->status === 'in_progress')
+                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-2 px-3 fs-6">
+                                <i class="fas fa-info-circle me-1 text-warning"></i> هذا الطلب محفوظ كـ <strong>مسودة قيد الفحص بالمختبر</strong> (لم يُرسل للطبيب بعد)
+                            </span>
+                        @elseif($request->status === 'completed')
+                            <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3 fs-6">
+                                <i class="fas fa-check-double me-1 text-success"></i> هذا الطلب <strong>معتمد ومكتمل ومُرسل للطبيب</strong>
+                            </span>
+                        @else
+                            <span class="badge bg-secondary-subtle text-secondary py-2 px-3 fs-6">
+                                <i class="fas fa-clock me-1"></i> حالة الطلب الحالية: {{ $request->status_text }}
+                            </span>
+                        @endif
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" name="action" value="draft" onclick="submitLabForm('draft')" class="btn btn-warning text-dark fw-bold shadow-sm px-4 py-2 border-warning" title="حفظ النتائج والمدخلات كمسودة في المختبر دون إرسالها للطبيب">
+                            <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                        </button>
+
+                        <button type="submit" name="action" value="complete" onclick="submitLabForm('complete')" class="btn btn-success fw-bold shadow-sm px-4 py-2" title="اعتماد النتائج نهائياً وإرسالها لعيادة الطبيب">
+                            <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال للطبيب
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </form>
     @endif
 
 </div>
 
 <script>
+// ──────────────── دالة ضبط نوع الإجراء (مسودة أو اعتماد نهائي) ────────────────
+function submitLabForm(actionType) {
+    const actionInput = document.getElementById('labFormAction');
+    const statusInput = document.getElementById('labFormStatus');
+    
+    if (actionType === 'draft') {
+        if (actionInput) actionInput.value = 'draft';
+        if (statusInput) statusInput.value = 'in_progress';
+    } else {
+        if (actionInput) actionInput.value = 'complete';
+        if (statusInput) statusInput.value = 'completed';
+    }
+}
+
 // ──────────────── دوال رفع المرفقات بنمط الكبسولة الأنيقة ────────────────
 function handlePillUpload(input) {
     const wrapper = input.closest('.pill-upload-wrapper');

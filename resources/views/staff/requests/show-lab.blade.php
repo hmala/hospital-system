@@ -549,7 +549,12 @@ function getTestUnit($testName, $labTests) {
                                 $labTestMap[$alias] = $labTestMap[$targetCode];
                             }
                         }
-                        $dbResults = \App\Models\LabResult::where('request_id', $request->id)->get()->keyBy('test_name');
+                        $allDbResults = \App\Models\LabResult::where('request_id', $request->id)->get();
+                        $dbResultsBySubId = $allDbResults->whereNotNull('sub_test_id')->keyBy('sub_test_id');
+                        $dbResultsByParentAndName = $allDbResults->keyBy(function($r) {
+                            return ($r->parent_test_name ? $r->parent_test_name . '__' : '') . $r->test_name;
+                        });
+                        $dbResults = $allDbResults->keyBy('test_name');
                     @endphp
                     <div class="row mb-4">
                         <div class="col-12">
@@ -613,8 +618,13 @@ function getTestUnit($testName, $labTests) {
 
                                                         @foreach($labTestObj->subTests as $sIdx => $subTest)
                                                             @php
-                                                                $subSavedVal = $dbResults[$subTest->name]->value ?? ($savedTestResults[$subTest->name]['value'] ?? '');
-                                                                $subSavedStatus = $dbResults[$subTest->name]->status ?? ($savedTestResults[$subTest->name]['status'] ?? '');
+                                                                $subKey = 'sub_' . $subTest->id;
+                                                                $subSavedVal = $dbResultsBySubId[$subTest->id]->value
+                                                                    ?? ($dbResultsByParentAndName[$test . '__' . $subTest->name]->value
+                                                                    ?? ($savedTestResults[$subKey]['value'] ?? ($savedTestResults[$subTest->name]['value'] ?? ($dbResults[$subTest->name]->value ?? ''))));
+                                                                $subSavedStatus = $dbResultsBySubId[$subTest->id]->status
+                                                                    ?? ($dbResultsByParentAndName[$test . '__' . $subTest->name]->status
+                                                                    ?? ($savedTestResults[$subKey]['status'] ?? ($savedTestResults[$subTest->name]['status'] ?? ($dbResults[$subTest->name]->status ?? ''))));
                                                             @endphp
                                                             <tr class="test-row subtest-row" data-test="{{ $subTest->name }}"
                                                                 data-ref-min="{{ $subTest->ref_min ?? '' }}"
@@ -629,16 +639,16 @@ function getTestUnit($testName, $labTests) {
                                                                 <td>
                                                                     <input type="text"
                                                                            class="form-control form-control-sm test-value"
-                                                                           name="test_results[{{ $subTest->name }}][value]"
-                                                                           value="{{ old('test_results.' . $subTest->name . '.value', $subSavedVal) }}"
+                                                                           name="test_results[{{ $subKey }}][value]"
+                                                                           value="{{ old('test_results.' . $subKey . '.value', old('test_results.' . $subTest->name . '.value', $subSavedVal)) }}"
                                                                            placeholder="أدخل النتيجة"
                                                                            data-test="{{ $subTest->name }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][test_name]" value="{{ $subTest->name }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][parent_test_name]" value="{{ $test }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][sub_test_id]" value="{{ $subTest->id }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][lab_test_id]" value="{{ $labTestObj->id }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][unit]" value="{{ $subTest->unit }}">
-                                                                    <input type="hidden" name="test_results[{{ $subTest->name }}][reference_range]" value="{{ $subTest->reference_range }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][test_name]" value="{{ $subTest->name }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][parent_test_name]" value="{{ $test }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][sub_test_id]" value="{{ $subTest->id }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][lab_test_id]" value="{{ $labTestObj->id }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][unit]" value="{{ $subTest->unit }}">
+                                                                    <input type="hidden" name="test_results[{{ $subKey }}][reference_range]" value="{{ $subTest->reference_range }}">
                                                                 </td>
                                                                 <td class="text-muted small">{{ $subTest->unit ?: '—' }}</td>
                                                                 <td>

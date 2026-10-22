@@ -599,13 +599,12 @@
     $gcs = $emergency->gcs ?? '15/15';
 
     // Doctor information & signature
-    $doctorName = $doctor?->user?->name ?? $emergency->doctor?->user?->name ?? 'د. أحمد عبدالله';
-    $signaturePath = $doctor?->signature ?? $emergency->doctor?->signature ?? 'images/signatures/doctor_244.png';
+    $actualDoctor = $doctor ?? $emergency->doctor;
+    $doctorName = $actualDoctor?->user?->name ?? 'طبيب الطوارئ المناوب';
+    $signaturePath = $actualDoctor?->signature;
     $docSigSrc = null;
     if ($signaturePath && file_exists(public_path($signaturePath))) {
         $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path($signaturePath)));
-    } elseif (file_exists(public_path('images/signatures/doctor_244.png'))) {
-        $docSigSrc = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/signatures/doctor_244.png')));
     }
 
     // Official System Logo (Login & Sidebar Logo) for Watermark & Footer
@@ -1053,8 +1052,8 @@
                         @if($docSigSrc)
                             <img src="{{ $docSigSrc }}" alt="توقيع {{ $doctorName }}">
                         @else
-                            <div style="font-size: 13px; font-weight: 800; color: #005a9c; border-bottom: 1.5px solid #005a9c; padding-bottom: 2px;">
-                                {{ $doctorName }}
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; border-bottom: 1px dashed #cbd5e1; width: 80%; text-align: center; padding-bottom: 4px;">
+                                (التوقيع اليدوي)
                             </div>
                         @endif
                     </div>

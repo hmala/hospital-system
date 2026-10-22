@@ -409,6 +409,184 @@ Consult these files before making changes or proposing fixes:
   * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
 
 
+## Session log (2026-10-22 — المرحلة 102: التدقيق المالي الشامل لخزينة المستشفى، الشريط التنفيذي ذو الـ 6 كروت، مطالبات الضمان ومستحقات الأطباء المعلقة، وتفكيك وسائط الأشعة والتصوير Hospital Treasury Financial Audit, 6 Executive Cards Strip, Insurance Claims Receivable, Doctor Liabilities & Radiology Modalities Decomposition)
+
+### Done
+- **شريط الكروت التنفيذي السداسي الشامل المتجاوب (6 Executive Cards Strip) ([resources/views/treasury/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/treasury/index.blade.php))**:
+  * كشف أسباب اللبس الرقمي الذي لاحظه المستخدم: كارت الرصيد التراكمي (كل الوقت) مقابل كروت الفترة الزمنية المحددة، وعزل نقد الدرج عن مطالبات الضمان والمستحقات المعلقة.
+  * توسيع الشريط العلوي من 5 إلى 6 كروت متوازنة ومتجاوبة بنظام 6 أعمدة متساوية على الشاشات الكبيرة (`col-xl-2`):
+    1. `الرصيد الفعلي بالخزينة`: مع وسم بارز يوضح أنه تراكمي شامل لكل الفترات وتفصيل الوارد والصادر التراكمي.
+    2. `إجمالي المقبوض نقداً (الفترة)`: نقد صندوق الخزينة والكاشير الفعلي المحصل.
+    3. `مطالبات الضمان الصحي (الفترة)` (كارت تنفيذي جديد): يعرض قيمة الذمم المدينة المؤجلة قيد التحصيل من هيئات وشركات الضمان الصحي مع عدد المطالبات، مما أظهر أكثر من 14.6 مليون دينار كانت غائبة عن مؤشرات الخزينة.
+    4. `المبالغ المسترجعة للمرضى`: تتبع دقيق لكافة حركات الاسترجاع الناتجة عن إلغاء كشفيات أو خدمات.
+    5. `المصروفات المنفذة`: نفقات التشغيل والمشتريات المنفذة، مع سطر فرعي بارز يرصد التزامات مستحقات الأطباء المعلقة غير المنصرفة (`DoctorDue::where('status', 'pending')`).
+    6. `صافي سيولة الفترة`: الفائض النقدي الفعلي لحركة الفترة (الوارد النقدي - المنصرف).
+- **تفكيك وسائط قسم الأشعة والتصوير إلى خدمات تخصصية مستقلة ([app/Http/Controllers/HospitalTreasuryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HospitalTreasuryController.php) & [resources/views/treasury/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/treasury/index.blade.php))**:
+  * تفكيك بند الأشعة الموحد القديم وإفراد كل وسيطة تشخيصية ببطاقة وإحصائية ولون بياني مخصص:
+    * السونار (Ultrasound)
+    * الأشعة السينية (X-Ray)
+    * الرنين المغناطيسي (MRI)
+    * المفراس الحلزوني (CT Scan)
+    * إيكو القلب (Echo)
+  * تنظيم قائمة تصفية البنود والتصنيفات في شريط الفلاتر إلى مجموعتين واضحتين: `[الأقسام والخدمات الطبية]` و `[المصروفات والمسترجعات]`، مع دعم التصفية المباشرة بالسندات المرتبطة بنوع وسيطة الفحص.
+- **تطوير جدول إيرادات ومصروفات الأقسام (التبويب 2) وحل عجز الاستشارية الظاهري**:
+  * إضافة أعمدة صريحة تفصل: `[المقبوض نقداً (Cash)]` و `[مطالبات الضمان (Insurance)]` و `[إجمالي الاستحقاق (Accrual Gross)]` بجانب `[حصص الأطباء / التكاليف]` و `[صافي المستشفى (Net)]`.
+  * حل مشكلة العجز الظاهري لعيادات الاستشارية (حيث كان يظهر المقبوض نقداً أقل من حصص الأطباء لأن المريض يدفع 2,500 د.ع كاش والباقي 22,500 د.ع مطالبة ضمان صحي)؛ ليصبح الدخل الاستحقاقي الإجمالي يغطي حصص الأطباء ويظهر صافي أرباح المستشفى الحقيقية بدقة تامة.
+- **تحديث كروت ذكاء الأعمال للأطباء (التبويب 4 - Doctor BI)**:
+  * تعديل الكارت الثاني ليعرض `إجمالي الدخل الاستحقاقي للأطباء` كرقم رئيسي، مع أسطر فرعية شفافة توضح صافي المستشفى وحصص الأطباء ونقد الدرج ومطالبات الضمان.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/TreasuryExecutiveCardsAndRadiologyModalitiesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/TreasuryExecutiveCardsAndRadiologyModalitiesTest.php))**:
+  * بناء اختبارات ميزة تؤكد ظهور الكروت الـ 6 بمطالبات الضمان والمستحقات المعلقة، وظهور وسائط الأشعة المفككة، مع اجتياز كامل حزمة اختبارات الخزينة (`11 passed, 55 assertions`).
+
+## Session log (2026-10-21 — المرحلة 101: نقل مسار تحميل مرفقات المختبر للمسارات العامة المحمية برمز التوكن لمنع مطالبة المريض بتسجيل الدخول Lab Attachment Route Token-Protected Public Access Fix)
+
+### Done
+- **نقل مسار تحميل المرفقات للمسارات العامة المحمية ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * نقل المسار `Route::get('/lab/requests/{request}/attachment')` خارج مجموعة ميدلوير تسجيل الدخول `Route::middleware(['auth'])` ووضعه مباشرة بجانب مسار التقرير العام `lab.public-report`.
+  * حل مشكلة مطالبة المريض بتسجيل الدخول أو إعادة توجيهه لصفحة `/login` عند النقر على زر تحميل تقرير الجهاز (PDF).
+  * حماية المسار بكنترولر المختبر [app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) عبر الرمز المشفر (`?token=...`) بحيث يفتح للمريض بنقرة واحدة، ويُحظر أي وصول غير مصرح به بدون التوكن الصحيح برمز `403 Forbidden`.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
+  * بناء وتأكيد اختباري ميزة لتنزيل المريض للمرفق بدون تسجيل دخول وحظر الدخول بدون رمز، مع اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`68 passed, 329 assertions`).
+
+## Session log (2026-10-21 — المرحلة 100: توحيد إطار تقرير المختبر الكحلي الشامل وإلغاء الخطوط المطلقة ودمج أزرار تحميل مرفقات الأجهزة بالشريط العائم Lab Report Unified Full Container Border & Toolbar Attachment Downloads)
+
+### Done
+- **تصحيح هيدر تقرير المختبر وتوحيد الإطار الخارجي الكامل ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * إعادة تفعيل تنسيق `display: flex !important; direction: rtl !important; justify-content: space-between !important; align-items: center !important;` للهيدر الرئيسي `.report-header` وهيدر صفحة الإدرار `.page2-header` في وضع التقرير العام (`body.is-public-report`).
+  * إلغاء الخطوط العائمة المشوهة القديمة (`.decorative-border` المطلقة التي كانت تقطع منتصف الهيدر في الـ PDF) واستبدالها بإطار رسمي موحد ومستمر يحيط بكامل الصفحة: `.report-page { border: 1.5px solid #005a9c; border-radius: 4px; padding: 6mm 10mm; }` للشاشة وللطباعة الورقية، مع إخفائه التلقائي عند الطباعة على ورق المستشفى المروس (`letterhead-mode`).
+  * ضبط التباعد العلوي للتقرير العام `body.is-public-report { padding-top: 65px !important; }` مع تصفيره عند الطباعة الورقية (`padding: 0 !important;`).
+- **دمج أزرار تحميل مرفقات الأجهزة الطبية مباشرة في الشريط العائم**:
+  * إضافة أزرار أنيقة ومميزة داخل شريط الإجراءات العلوي العائم (`.print-toolbar`) للمريض والكادر الطبي لتحميل تقارير الأجهزة الأصلية (مثل CBC و ABG بصيغة PDF) بنقرة زر واحدة.
+  * تختفي هذه الأزرار تلقائياً عند حفظ الـ PDF أو الطباعة الورقية بفضل خاصية `@media print { .print-toolbar { display: none !important; } }`، فيبقى التقرير الطبي المطبوع رسمياً وفخماً.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
+  * إضافة وتأكيد اختبارات الميزة لظهور أزرار تحميل المرفقات في شريط الأدوات واختفاء عناصر الإطار المشوهة القديمة مع اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`66 passed, 327 assertions`).
+
+## Session log (2026-10-21 — المرحلة 99: عزل صفحات تقرير المختبر وتثبيت الفوتر لكل صفحة، إلغاء السطر التقديري لتقارير الأجهزة وحفظ النتائج السابقة وهيدر الفحوصات Lab Report Isolated Page Containers, Dedicated Footers, Removal of Placeholder Device Rows, and 100% Previous Results & Header Fidelity)
+
+### Done
+- **عزل الصفحات الطباعية بحاويات مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * استبدال جدول `report-print-container` بحاويات صفحات مستقلة كلياً `.report-page.page-1` و `.report-page.page-2.gue-page-break` بنظام CSS Flexbox مع تثبيت الفوتر أسفل كل صفحة على حدة عبر `.report-bottom-block`.
+  * حل مشكلة الصفحة الأولى بدون فوتر نهائياً؛ تظهر بيانات الطباعة والتاريخ وعنوان المستشفى أسفل الصفحة 1 وأسفل الصفحة 2 بدقة متناهية.
+  * ضبط ارتفاع حاوية الطباعة إلى `min-height: 270mm !important;` مع `page-break-after: always !important;` للصفحة الأولى و `page-break-after: auto !important;` لآخر صفحة لمنع توليد أي صفحة ثالثة بيضاء أو تجاوزات نهائياً.
+- **إلغاء السطر التقديري لمرفقات الأجهزة في جدول التحاليل**:
+  * حذف إدراج أسطر تقديرية للفحوصات المرفقة كـ CBC داخل جدول الكيمياء الحيوية (إلغاء سطر `📎 تقرير الجهاز مرفق` و `Automated Hematology Analyzer / Clinical Device`) بناءً على توجيهات الطبيب، والاعتماد الكامل على بطاقة وأزرار تحميل تقارير الأجهزة الأصلية (PDF) في شريط المرفقات ورسائل الواتساب.
+- **ترويسة مدمجة وخفيفة لصفحة فحص الإدرار العام (G.U.E)**:
+  * تزويد الصفحة الثانية بترويسة مستشفى مصغرة وشريط مختصر لمعلومات المريض (الاسم، العمر، الجنس، رقم العينة، والتاريخ) مع جدول النتائج الـ 19 المضغوط المكون من 4 أعمدة، بحيث تتسع كافة الفحوصات وتوقيع وخاتم المختبر والفوتر المعتمد بأريحية تامة دون أي تزاحم.
+- **الحفاظ بنسبة 100% على النتائج السابقة وهيدر كل تحليل**:
+  * الحفاظ الكامل على دالة استرجاع السجلات التاريخية للمريض `$findPrevResults` وعرض مربع النتائج السابقة الرأسي والرقائق الملونة وتواريخ الفحوصات السابقة أسفل القيمة الحالية لكل تحليل.
+  * الحفاظ على بانر العنوان المستقل لكل فحص (`category-header-row`) لمنع أي تداخل بين التحاليل.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
+  * اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`65 passed, 324 assertions`).
+
+## Session log (2026-10-21 — المرحلة 98: حل تضارب الباراميترات الفرعية للمختبر وعزل فحص الإدرار العام (G.U.E) في صفحة طباعية مستقلة ومطابقة كافة الفحوصات والمرفقات 100% Lab Subtest Collision Fix, Dedicated GUE Page Break, Clinical Grouping & 100% Ordered Tests Coverage)
+
+### Done
+- **معالجة تضارب مفاتيح إدخال الباراميترات الفرعية ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php) & [resources/views/staff/requests/show-lab.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/show-lab.blade.php))**:
+  * تحويل مفاتيح الإدخال للباراميترات الفرعية من اسم الفحص المشترك إلى مفتاح فريد ومميز بمعرف الباراميتر: `test_results[sub_{{ $subTest->id }}][value]`.
+  * حل مشكلة مسح الفحوصات التي تشترك في نفس أسماء المعايير الفرعية (مثل اشتراك FSH و LH في معيار `Men` و `Follicular Phase` الخ) نهائياً ومنع استبدال القيم أثناء الإرسال (`$_POST`).
+  * ترقية استرجاع القيم المحفوظة في الشاشة عبر الفهرسة المتعددة (`$dbResultsBySubId` و `$dbResultsByParentAndName`) لضمان ظهور القيم المحفوظة لجميع التحاليل بدقة متناهية.
+- **إفراد فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة طباعية مستقلة ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * عزل فحص الإدرار العام (19 فحصاً فرعياً) عن الفحوصات العامة (الهرمونات، الدم، الكيمياء) وتطبيق فاصل صفحات طباعي تلقائي: `.gue-page-break` (`page-break-before: always; break-before: page;`).
+  * إذا كان الطلب يحتوي على G.U.E فقط دون تحاليل أخرى، يُطبع في صفحة واحدة مباشرة دون إحداث صفحة بيضاء سابقة.
+  * عرض نتائج فحص الإدرار الـ 19 مباشرة وبشكل سلس في جدول الصفحة المخصصة بدون أي تقسيمات فرعية متكلفة مع ترويسة أعمدة واضحة `[ Test Description | Result | Status ]`.
+  * تزويد كل من صفحة الفحوصات العامة وصفحة فحص الإدرار المستقلة بختم وتوقيع معتمد ومستقل بأعلى معايير الجودة الطبية.
+- **عزل وفصل فحوصات الهرمونات والتحاليل الفردية ومنع التصنيف العالق (Category Bleed Fix)**:
+  * التحقق من الفئات المرجعية الديموغرافية (مثل Men, Follicular Phase) وعرض الاسم الطبي الحقيقي للفحص (`Follicular-stimulating hormone` و `Luteinizing hormone`) في عمود Test Description، وإلحاق اسم الفئة بالمعدل الطبيعي: `1.7 - 8.6 (Men)`.
+  * تصفية وإلغاء التصنيف العالق فوراً (`$currentGroup = null`) بحيث تظهر التحاليل المستقلة التالية (`Prolactin`, `Thyroid stimulating hormone`, `25-OH Vitamin`) في سطور وبطاقات مستقلة تماماً ومفصولة بخطوط واضحة دون أي دمج خاطئ.
+- **مطابقة الفحوصات المطلوبة بنسبة 100% وإظهار مرفقات الأجهزة (CBC) والفحوصات المعلقة**:
+  * رصد ومطابقة كافة الفحوصات المطلوبة من قبل الطبيب في التقرير المطبوع.
+  * الفحوصات المرفقة كتقارير أجهزة (مثل Complete blood count & Differential) يظهر لها سطر رسمي بارز ومميز في جدول النتائج المطبوعة: `Complete blood count & Differential` | `📎 تقرير الجهاز مرفق (Attached Device Report)` | شارة `Attached`.
+  * الفحوصات التي لم تُدخل نتائجها بعد تظهر بشارة `Pending (قيد الإنجاز)` ولا تختفي أو تسقط من التقرير.
+- **تحديث وإكمال نتائج الطلب رقم 285 للمريض جاسم حامد عباس**:
+  * حفظ وتثبيت قيمة فحص FSH للرجال (`3.5 mIU/mL`) بجانب فحص LH (`2.72 mIU/mL`) بنجاح، وظهور كافة الفحوصات الـ 8 للمريض كاملة في شاشة المختبر والتقرير المطبوع.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
+  * بناء واجتياز اختبارات ميزة متكاملة تؤكد منع التضارب بين FSH و LH، وتؤكد عزل G.U.E بفاصل الصفحة وظهور تقرير CBC المرفق وكافة الفحوصات بنجاح (`2 passed, 17 assertions`)، مع اجتياز كامل حزمة فحوصات المختبر (`65 passed, 324 assertions`).
+
+## Session log (2026-10-21 — المرحلة 97: مطابقة آلية طلبات طبيب الطوارئ مع الاستشارية: الدمج التلقائي، الحذف الفردي، شريط التقدم السريري، وأرشيف الطلبات الملغاة Emergency Doctor Request Auto-Merge, Item-Level Removal, Clinical Stepper & Cancelled Archive)
+
+### Done
+- **الدمج التلقائي لطلبات المختبر والأشعة للطوارئ ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * عند قيام طبيب الطوارئ بطلب تحاليل مختبرية جديدة لحالة طوارئ لديها طلب معلق غير مسدد (`payment_id === null` و `status === 'pending'`)، يتم دمج الفحوصات الجديدة تلقائياً في نفس الطلب عبر `syncWithoutDetaching` بدلاً من تشتيت الكاشير بطلبات متعددة.
+  * نفس الدمج التلقائي الذكي يطبق على طلبات الأشعة والسونار غير المسددة.
+  * تحديث وحساب المبالغ المستحقة للكاشير تلقائياً بعد كل دمج عبر `upsertUnifiedEmergencyPayment`.
+- **تمكين طبيب الطوارئ من حذف وتعديل الفحوصات الفردية ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) & [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار ودالة الحذف الفردي `DELETE /emergency/{emergency}/remove-request-item`.
+  * قفل وحظر الحذف التام إذا كان الطلب مسدداً لدى الكاشير (`payment_id !== null` أو حالة الطلب مسدد) لحماية الصندوق والحسابات برمز `422 Unprocessable Entity`.
+  * فك ارتباط الفحص المطلوب فقط من جدول الربط الوسيط (`detach`).
+  * في حال حذف الفحص الأخير المتبقي في الطلب، يتم تحويل حالة الطلب تلقائياً إلى ملغي (`cancelled`) وتوثيق سبب الإلغاء، مع تحديث استحقاق الكاشير.
+- **ترقية شاشة الطوارئ بواجهة الاستشارية الحديثة ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * **شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper)**: شريط مصغر بأعلى كل بطاقة يوضح مراحل الإنجاز: `[ 1. طلب الطبيب ⬅️ 2. عند الكاشير / سُدّد ⬅️ 3. قيد الفحص بالمختبر/الأشعة ⬅️ 4. النتيجة جاهزة ]` مع شارات وألوان تفاعلية.
+  * **الجدول السريري المصغر (Clinical Mini-Table)**: استبدال طريقة العرض القديمة بجدول سطر منظم وأنيق يعرض: رقم التسلسل، اسم الفحص، شارة الحالة الحية، وزر الحذف `[ × ]` التفاعلي للأطباء قبل السداد عبر AJAX سلس دون إعادة تحميل الصفحة.
+  * **أرشيف الطلبات الملغاة**: عزل وإخفاء الطلبات الملغاة من القائمة النشطة ووضعها داخل أكورديون مطوي أنيق: `[ 📁 أرشيف طلبات المختبر/الأشعة الملغاة (مخفية) ]`.
+  * تصفية اللوحة الجانبية لمريض الطوارئ (`side-cur-pane`) لإخفاء الطلبات الملغاة من قائمة الإجراءات النشطة.
+- **الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php))**:
+  * بناء واجتياز 7 اختبارات ميزة متكاملة تغطي الدمج التلقائي للمختبر والأشعة، الحذف الفردي، تحول الطلب لملغي عند إفراغه، حظر الحذف بعد السداد، وظهور الـ Stepper والجدول المصغر وأرشيف الملغاة (`7 passed, 38 assertions`)، مع اجتياز كامل حزمة الطوارئ بنجاح (`40 passed, 209 assertions`).
+
+## Session log (2026-10-21 — المرحلة 96: ربط شاشة المختبر بإعدادات أنماط الإدخال وإلغاء أزرار المرفقات للفحوصات الرقمية المفردة وتمكين المريض من تحميل مرفقات الأجهزة عبر الواتساب Lab Result Entry Types Integration, Selective Attachment Buttons & Patient WhatsApp Attachment Downloads)
+
+### Done
+- **الالتزام بأنماط إدخال النتائج المعتمدة في شاشة الإعدادات ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * حذف كلمة `(اختياري)` من ترويسة الجدول لتصبح `تقرير الجهاز / المرفق`، وإلغاء كلمة `(اختياري)` من أزرار الرفع.
+  * إلغاء ظهور زر `إرفاق تقرير` للفحوصات المحددة كـ `single_value` (قيمة مباشرة مفردة) أو `sub_tests` (قيم فرعية) وإظهار شرطة `—` بدلاً منها لمنع تشويه الجدول.
+  * قصر إظهار زر رفع المرفق حصراً على الفحوصات المحددة في الإعدادات كـ `attachment_only` (مرفق تقرير جهاز) أو `flexible` (مرن) أو الفحوصات التي رُفع لها مرفق مسبقاً.
+- **تمكين المريض من استعراض وتحميل مرفقات الأجهزة عبر الواتساب والتقرير الطبي ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php) & [app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * إضافة بطاقة أنيقة في التقرير الطبي المعتمد تظهر فيها أزرار تحميل وعرض تقارير الأجهزة والملفات المرفقة (العامة والخاصة بكل فحص).
+  * تمكين المريض من فتح وتحميل المرفقات بصورة آمنة ومباشرة عبر التوكن المشفر `?token=...` دون الحاجة لتسجيل دخول، وتخطي حظر 403.
+  * تضمين تنبيه ذكي في نص رسالة الواتساب ينبه المريض بوجود تقارير أجهزة مرفقة يمكنه استعراضها وتحميلها بنقرة زر واحدة ([app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php)).
+- **الاختبارات الآلية الحصينة**:
+  * اجتياز كامل لجميع اختبارات حزمة المختبر والواتساب وأنماط الإدخال (`16 passed, 72 assertions`).
+
+## Session log (2026-10-21 — المرحلة 93: فصل حفظ مسودة نتائج المختبر عن الاعتماد النهائي والإرسال للطبيب Lab Draft Saving vs Final Doctor Transmission)
+
+### Done
+- **فصل الحفظ كمسودة عن الاعتماد النهائي ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * عند اختيار `action === 'draft'` أو `status === 'in_progress'`: حفظ النتائج الرقمية والمدخلات ومرفقات الأجهزة والملاحظات كمسودة في قاعدة البيانات وجدول `lab_results`.
+  * تثبيت حالة الطلب على `in_progress` (قيد الفحص بالمختبر) لضمان عدم وصول إشعار للطبيب أو تقدم مسار الطلب لديه قبل اكتمال التحاليل.
+  * توثيق النشاط المكتبي كمسودة `save_lab_draft` وإبقاء فني المختبر في نفس الشاشة مع رسالة نجاح خضراء لتسهيل إكمال باقي الفحوصات لاحقاً.
+  * عند اختيار `action === 'complete'`: اعتماد النتائج نهائياً، تحويل حالة الطلب إلى `completed`، إرسال إشعار التيليجرام، وتوثيق النشاط `save_lab_results`، والتحويل إلى القائمة الرئيسية للمختبر.
+- **شريط الإجراءات المزدوج وشارات الحالة في واجهة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * إضافة زرين مميزين في الترويسة العلوية وفي شريط أسفل النتائج:
+    1. `[ 💾 حفظ مؤقت (مسودة) ]`: بلون تحذيري دافئ ومميز.
+    2. `[ 🚀 اعتماد نهائي وإرسال للطبيب ]`: بلون أخضر رسمي.
+  * شارة ذكية أعلى الصفحة `[ ✏️ مسودة قيد الفحص ]` توضح لفني المختبر حالة الطلب الحالية بوضوح، وبطاقة تنبيه سفلية تبين وضع الطلب.
+  * ضبط دالة JavaScript `submitLabForm` لتحديد نوع الإجراء والحالة بدقة وسلاسة.
+- **حماية واجهة الطبيب والبيانات (Zero Doctor Disruption & Zero Data Loss)**:
+  * الإبقاء الكامل على واجهة كشف الطبيب دون أي تغيير؛ تظل تعرض مرحلة `[ 🔬 تنفيذ الفحص بالمختبر ]` طالما أن الطلب مسودة، ولا تنتقل إلى `[ ✅ النتيجة جاهزة ]` إلا بعد الاعتماد النهائي.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabDraftResultSaveTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabDraftResultSaveTest.php))**:
+  * اجتياز كامل لـ 3 اختبارات ميزة تغطي حفظ المسودة، والاعتماد النهائي، ووجود الأزرار الثنائية (`3 passed, 20 assertions`).
+
+## Session log (2026-10-21 — المرحلة 95: حظر الفحوصات المعطلة ومنع تكرار التحاليل في واجهة المختبر والكاشير ومطابقة طلبات الطبيب 1-to-1 دون المساس بسجلات قاعدة البيانات Lab & Cashier Active-Only Filtering, Name Deduplication & 1-to-1 Doctor Order Fidelity)
+
+### Done
+- **مطابقة طلبات الطبيب 1-to-1 وحظر ربط الفحوصات المعطلة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * عرض التحاليل المفعلة فقط والفريدة بالاسم للطبيب في شاشة الكشف الطبي.
+  * عند حفظ طلب الطبيب: الاستعلام حصراً عن الفحوصات المفعلة (`where('is_active', true)`) وأخذ أول معرف مفعل لكل اسم فحص، مما يمنع نهائياً سحب أو تخزين معرفات الفحوصات المعطلة أو المكررة في `details['lab_test_ids']`.
+  * في دالة حذف الفحص الفردي `removeRequestItem`: مطابقة وحذف كافة المعرفات المرتبطة باسم الفحص لضمان خلو الطلب من المعرفات المعلقة.
+- **تصفية واجهة محطة المختبر وإلغاء التكرار الصارم ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * في دالة `buildSelectedLabTests`: استبعاد أي فحص معطل (`!$labTest->is_active`) من الظهور أمام فني المختبر حتى في الطلبات القديمة المسجلة مسبقاً.
+  * إلغاء التكرار الصارم الموحد بالاسم الصافي مع توحيد الأحرف والمسافات (`Normalized Case-Insensitive Unique Name`).
+  * ترتيب التحاليل تنازلياً حسب التفعيل (`orderByRaw('is_active DESC')`) لربط المراجع والقيم الفرعية بالفحص المفعل دائماً.
+- **حماية حسابات الكاشير وطباعة الوصل الحراري 80mm ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * استبعاد الفحوصات المعطلة من الاحتساب المالي ومنع تكرار نفس الفحص عبر مصفوفة التتبع `$seenLabTestNames`.
+  * في طباعة الوصل الحراري 80mm: عدم طباعة أي فحص معطل، وتصفية الأسطر بالاسم الصافي لمنع تكرار الفحص في الوصل.
+  * في نموذج الطلب [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php): جمع أسعار الفحوصات المفعلة واستبعاد التكرارات.
+- **حماية البيانات التاريخية (Zero Data Deletion)**:
+  * الإبقاء الكامل على جميع سجلات جدول `lab_tests` دون حذف أي سطر لحماية التاريخ الطبي والمحاسبي.
+- **الاختبارات الآلية الحصينة ([tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php))**:
+  * اجتياز كامل لـ 3 اختبارات ميزة تغطي دورة الفحص كاملة (`3 passed, 13 assertions`).
+
+## Session log (2026-10-21 — المرحلة 94: تصحيح أسعار الخدمات الفردية في الوصل الحراري 80mm وإلغاء تكرار المجموع الكلي وعرض المبلغ المطلوب من المريض فقط Cashier 80mm Thermal Receipt Line-Item Patient Fee Fix & Grand Total Duplication Removal)
+
+### Done
+- **معالجة تكرار المجموع الإجمالي أمام كل خدمة ([resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إلغاء الشرط القديم `empty($payment->patient_share) ? $item['price'] : $payment->amount` الذي كان يتسبب في تكرار المجموع الإجمالي في كل أسطر الجدول لمرضى الضمان الصحي.
+  * ضبط عمود المبلغ ليعرض السعر الفعلي لكل خدمة المطلوب من المريض فقط `$item['price']`.
+- **حساب حصة المريض الدقيقة لكافة الخدمات الفردية في الوصل**:
+  * تحاليل المختبر وفحوصات الأشعة: استدعاء `calculateInsurancePricing` وسحب `patient_share` بدلاً من السعر المعتمد الكامل.
+  * باقات المختبر واستشارات الطوارئ وخدمات الطوارئ: تطبيق نسبة التحمل بدقة متناهية (`copay_percentage`).
+  * مطابقة رياضية بنسبة 100% بين مجموع أسطر الخدمات وسطر "المبلغ المدفوع" في قاع الوصل.
+- **الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
+  * إنشاء واجتياز اختبار ميزة متكامل يتحقق من ظهور الأجور الفردية المطلوبة من المريض حصراً أمام كل فحص وعدم تكرار المجموع الإجمالي في أسطر الجدول (`1 passed, 7 assertions`).
+
 ## Session log (2026-10-21 — المرحلة 92: تمكين الطبيب من حذف الفحوصات الفردية وإخفاء الطلبات الملغاة وإلغاء عرض الأسعار لمنع التشتيت Doctor Item-Level Request Modification, Clean Clean UI & Cancelled Requests Archive)
 
 ### Done

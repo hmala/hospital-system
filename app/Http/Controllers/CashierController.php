@@ -851,6 +851,7 @@ class CashierController extends Controller
             $descParts = [];
             $package = null;
             $seenLabTestIds = [];
+            $seenLabTestNames = [];
             $seenRadKeys = [];
 
             foreach ($allRequestsToPay as $reqItem) {
@@ -873,7 +874,11 @@ class CashierController extends Controller
                             if (in_array($testId, $seenLabTestIds)) continue;
                             $seenLabTestIds[] = $testId;
                             $test = LabTest::find($testId);
-                            if ($test) {
+                            if ($test && $test->is_active) {
+                                $normTestName = mb_strtolower(trim($test->name));
+                                if (in_array($normTestName, $seenLabTestNames)) continue;
+                                $seenLabTestNames[] = $normTestName;
+
                                 $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
@@ -888,7 +893,11 @@ class CashierController extends Controller
                                 if (in_array($testId, $seenLabTestIds)) continue;
                                 $seenLabTestIds[] = $testId;
                                 $test = LabTest::find($testId);
-                                if ($test) {
+                                if ($test && $test->is_active) {
+                                    $normTestName = mb_strtolower(trim($test->name));
+                                    if (in_array($normTestName, $seenLabTestNames)) continue;
+                                    $seenLabTestNames[] = $normTestName;
+
                                     $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
@@ -898,10 +907,18 @@ class CashierController extends Controller
                             }
                         } elseif (!empty($details['tests'])) {
                             foreach ($details['tests'] as $testName) {
-                                $test = LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                                $test = LabTest::where('is_active', true)
+                                    ->where(function($q) use ($testName) {
+                                        $q->where('name', $testName)->orWhere('code', $testName);
+                                    })
+                                    ->first();
                                 if ($test) {
                                     if (in_array($test->id, $seenLabTestIds)) continue;
                                     $seenLabTestIds[] = $test->id;
+                                    $normTestName = mb_strtolower(trim($test->name));
+                                    if (in_array($normTestName, $seenLabTestNames)) continue;
+                                    $seenLabTestNames[] = $normTestName;
+
                                     $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];

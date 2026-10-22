@@ -73,6 +73,10 @@ Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\Emerge
 Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReportController::class, 'view'])
     ->name('lab.public-report');
 
+// مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمريض الحامل للرمز المشفر)
+Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])
+    ->name('lab.attachment');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -473,8 +477,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
     });
 
-    // مسار فتح وتحميل مرفقات التحاليل الطبية (متاح لكافة الكوادر الطبية والمختبر)
-    Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])->name('lab.attachment');
 
     // ======= مسارات قسم المختبر =======
     Route::prefix('lab')->name('lab.')->middleware('can:view lab tests')->group(function () {
@@ -794,6 +796,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{emergency}/create-consultation', [\App\Http\Controllers\EmergencyController::class, 'createConsultation'])->name('create-consultation');
         Route::post('/{emergency}/request-lab', [\App\Http\Controllers\EmergencyController::class, 'requestLab'])->name('request-lab');
         Route::post('/{emergency}/request-radiology', [\App\Http\Controllers\EmergencyController::class, 'requestRadiology'])->name('request-radiology');
+        Route::delete('/{emergency}/remove-request-item', [\App\Http\Controllers\EmergencyController::class, 'removeRequestItem'])->name('remove-request-item');
         Route::post('/{emergency}/transfer-to-surgery', [\App\Http\Controllers\EmergencyController::class, 'transferToSurgery'])->name('transfer-to-surgery');
         Route::post('/{emergency}/transfer-to-admission', [\App\Http\Controllers\EmergencyController::class, 'transferToAdmission'])->name('transfer-to-admission');
         Route::post('/{emergency}/discharge', [\App\Http\Controllers\EmergencyController::class, 'discharge'])->name('discharge');
