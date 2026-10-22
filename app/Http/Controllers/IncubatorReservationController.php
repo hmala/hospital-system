@@ -292,6 +292,15 @@ class IncubatorReservationController extends Controller
             'discharge_notes' => 'nullable|string',
         ]);
 
+        $billingService = app(\App\Services\NicuBillingService::class);
+        $stayDetails = $billingService->calculateStayDetails($incubatorReservation);
+
+        // صمام الأمان المالي: منع الخروج في حال وجود رصيد متبقي بذمة الحاضنة
+        if (($stayDetails['net_balance'] ?? 0) > 0) {
+            return redirect()->back()
+                           ->with('error', '⛔ لا يمكن إتمام خروج الطفل لوجود رصيد مالي متبقي بذمة الحاضنة بمبلغ (' . number_format($stayDetails['net_balance']) . ' د.ع). يرجى التوجيه لكاشير الخدج لتسوية الحساب كاملاً أولاً.');
+        }
+
         $incubatorReservation->update([
             'status' => IncubatorReservation::STATUS_DISCHARGED,
             'discharge_date' => now()->toDateString(),

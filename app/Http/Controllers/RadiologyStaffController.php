@@ -30,7 +30,14 @@ class RadiologyStaffController extends Controller
         $search = $request->query('search');
         $dateFilter = $request->query('date', 'today'); // 'today', 'all', or 'YYYY-MM-DD'
 
-        $baseQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+        $baseQuery = MedicalRequest::with([
+                'visit.patient.user', 
+                'visit.doctor.user', 
+                'visit.department',
+                'incubatorReservation.patient.user',
+                'incubatorReservation.incubator',
+                'incubatorReservation.doctor.user'
+            ])
             ->where('type', 'radiology')
             ->where('status', '!=', 'cancelled');
 
@@ -74,6 +81,12 @@ class RadiologyStaffController extends Controller
                   })
                   ->orWhereHas('visit.doctor.user', function($dq) use ($search) {
                       $dq->where('name', 'LIKE', "%{$search}%");
+                  })
+                  ->orWhereHas('incubatorReservation', function($rq) use ($search) {
+                      $rq->where('baby_name', 'like', "%{$search}%")
+                         ->orWhere('id', 'like', "%{$search}%")
+                         ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$search}%"))
+                         ->orWhereHas('doctor.user', fn($duq) => $duq->where('name', 'like', "%{$search}%"));
                   });
             });
         }

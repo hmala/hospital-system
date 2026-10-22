@@ -293,7 +293,10 @@ class CashierController extends Controller
                 'doctor.user',
                 'payments'
             ])
-            ->whereIn('status', ['admitted', 'pending']);
+            ->where(function($q) {
+                $q->whereIn('status', ['admitted', 'pending'])
+                  ->orWhere('status', 'discharged');
+            });
 
         if ($search) {
             $nicuReservationsQuery->where(function($q) use ($search) {
@@ -316,8 +319,15 @@ class CashierController extends Controller
                 'net_balance' => (float)$stayDetails['net_balance'],
                 'excess_deposit' => (float)$stayDetails['excess_deposit'],
             ];
-        });
-        $pendingNicuCount = $activeNicuReservations->count();
+        })->filter(function($item) {
+            // الحالات المنومة أو المعلقة تظهر دائماً، أما الحالات التي خرجت فتظهر فقط إذا كان بذمتها رصيد متبقي لم يسدد
+            if (in_array($item['reservation']->status, ['admitted', 'pending'])) {
+                return true;
+            }
+            return $item['net_balance'] > 0;
+        })->values();
+
+        $pendingNicuCount = $nicuAccounts->count();
         $todayStats['pending_nicu_count'] = $pendingNicuCount;
 
         // استخدام اسم مختلف لتجنب التعارض

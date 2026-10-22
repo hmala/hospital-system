@@ -1015,6 +1015,11 @@
                                                                     <td>
                                                                         <div class="fw-bold text-dark">{{ $babyName }}</div>
                                                                         <small class="text-muted">المسؤول: {{ $parentName }} • {{ $phone }}</small>
+                                                                        @if($res->status === 'discharged')
+                                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-block mt-1" style="font-size: 0.68rem;">
+                                                                                <i class="fas fa-exclamation-triangle me-1"></i> خروج معلق مالياً
+                                                                            </span>
+                                                                        @endif
                                                                     </td>
                                                                     <td>
                                                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold">

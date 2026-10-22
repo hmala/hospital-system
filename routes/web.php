@@ -747,6 +747,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reservations/{reservation}/medications-admin', [\App\Http\Controllers\NicuController::class, 'storeMedicationAdministration'])->name('medications-admin.store');
         Route::get('/reservations/{reservation}/print-prescription', [\App\Http\Controllers\NicuController::class, 'printPrescription'])->name('print.prescription');
         Route::patch('/orders/{order}/complete', [\App\Http\Controllers\NicuController::class, 'completeMedicalOrder'])->name('orders.complete');
+
+        // جداول الرعاية والتوصيات السريرية (رضاعة / علاج)
+        Route::post('/reservations/{reservation}/care-schedules', [\App\Http\Controllers\NicuController::class, 'storeCareSchedule'])->name('care-schedules.store');
+        Route::post('/reservations/{reservation}/care-schedules/batch', [\App\Http\Controllers\NicuController::class, 'storeCareSchedulesBatch'])->name('care-schedules.batch');
+        Route::post('/care-schedules/{schedule}/toggle', [\App\Http\Controllers\NicuController::class, 'toggleCareSchedule'])->name('care-schedules.toggle');
+        Route::delete('/care-schedules/{schedule}', [\App\Http\Controllers\NicuController::class, 'destroyCareSchedule'])->name('care-schedules.destroy');
+        Route::post('/care-schedules/{schedule}/administer-quick', [\App\Http\Controllers\NicuController::class, 'administerCareScheduleQuick'])->name('care-schedules.administer-quick');
+
         Route::post('/reservations/{reservation}/discharge', [\App\Http\Controllers\NicuController::class, 'discharge'])->name('discharge');
         Route::post('/incubators/{incubator}/sterilized', [\App\Http\Controllers\NicuController::class, 'markSterilized'])->name('incubators.sterilized');
         Route::post('/reservations/{reservation}/cam-token', [\App\Http\Controllers\NicuController::class, 'generateBabyCamToken'])->name('cam-token');

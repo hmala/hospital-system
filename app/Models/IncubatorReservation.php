@@ -171,6 +171,14 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * خطة الرعاية وجداول مواعيد الرضاعة والعلاج
+     */
+    public function careSchedules()
+    {
+        return $this->hasMany(NicuCareSchedule::class, 'reservation_id')->latest();
+    }
+
+    /**
      * المدفوعات والأمانات المسددة في الصندوق (جدول nicu_payments المستقل)
      */
     public function payments()
@@ -398,5 +406,35 @@ class IncubatorReservation extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', self::STATUS_DISCHARGED);
+    }
+
+    /**
+     * جدول الرضاعة النشط الحالي
+     */
+    public function activeFeedingSchedule()
+    {
+        return $this->careSchedules->first(function ($schedule) {
+            return $schedule->type === 'feeding' && $schedule->is_active;
+        });
+    }
+
+    /**
+     * جداول الأدوية النشطة الحالية
+     */
+    public function activeMedicationSchedules()
+    {
+        return $this->careSchedules->filter(function ($schedule) {
+            return $schedule->type === 'medication' && $schedule->is_active;
+        });
+    }
+
+    /**
+     * التوصيات المستحقة أو المتأخرة حالياً
+     */
+    public function dueCareSchedules()
+    {
+        return $this->careSchedules->filter(function ($schedule) {
+            return $schedule->is_active && $schedule->next_due_at && $schedule->next_due_at->lte(now());
+        });
     }
 }

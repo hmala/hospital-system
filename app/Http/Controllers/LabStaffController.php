@@ -19,7 +19,13 @@ class LabStaffController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
+        $query = MedicalRequest::with([
+                'visit.patient.user', 
+                'visit.doctor.user',
+                'incubatorReservation.patient.user',
+                'incubatorReservation.incubator',
+                'incubatorReservation.doctor.user'
+            ])
             ->where(function ($q) {
                 $q->whereIn('type', ['lab', 'blood_bank'])
                   ->orWhere(function ($inner) {
@@ -39,6 +45,12 @@ class LabStaffController extends Controller
                   })
                   ->orWhereHas('visit.doctor.user', function($dq) use ($s) {
                       $dq->where('name', 'like', "%{$s}%");
+                  })
+                  ->orWhereHas('incubatorReservation', function($rq) use ($s) {
+                      $rq->where('baby_name', 'like', "%{$s}%")
+                         ->orWhere('id', 'like', "%{$s}%")
+                         ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$s}%"))
+                         ->orWhereHas('doctor.user', fn($duq) => $duq->where('name', 'like', "%{$s}%"));
                   });
             });
         }

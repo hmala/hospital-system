@@ -221,6 +221,51 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- تنبيهات وجدول الرعاية الحية (الرضاعة والعلاج) -->
+                                        @php
+                                            $activeFeeding = $res->activeFeedingSchedule();
+                                            $dueMeds = $res->activeMedicationSchedules()->filter(fn($m) => $m->is_due);
+                                            $nextMed = $res->activeMedicationSchedules()->sortBy('next_due_at')->first();
+                                        @endphp
+                                        @if($activeFeeding || $nextMed)
+                                            <div class="mt-2 p-1.5 rounded bg-light border d-flex flex-column gap-1" style="font-size: 11.5px;">
+                                                <!-- تنبيه الرضاعة -->
+                                                @if($activeFeeding)
+                                                    @if($activeFeeding->is_due)
+                                                        <div class="badge bg-danger text-white py-1.5 px-2 d-flex align-items-center justify-content-between text-wrap text-start shadow-xs">
+                                                            <div>
+                                                                <i class="fas fa-baby-bottle me-1"></i>
+                                                                <strong>حان موعد الرضاعة:</strong> {{ Str::limit($activeFeeding->title, 40) }}
+                                                            </div>
+                                                            <span class="badge bg-white text-danger font-monospace ms-1">{{ $activeFeeding->due_human }}</span>
+                                                        </div>
+                                                    @else
+                                                        <div class="d-flex align-items-center justify-content-between text-muted px-1">
+                                                            <span><i class="fas fa-baby-bottle text-warning me-1"></i> الرضاعة القادمة:</span>
+                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle font-monospace">{{ $activeFeeding->due_human }}</span>
+                                                        </div>
+                                                    @endif
+                                                @endif
+
+                                                <!-- تنبيه الدواء -->
+                                                @if($dueMeds && $dueMeds->count() > 0)
+                                                    @php $firstDueMed = $dueMeds->first(); @endphp
+                                                    <div class="badge bg-danger text-white py-1.5 px-2 d-flex align-items-center justify-content-between text-wrap text-start shadow-xs">
+                                                        <div>
+                                                            <i class="fas fa-pills me-1"></i>
+                                                            <strong>حان موعد دواء:</strong> {{ Str::limit($firstDueMed->title, 40) }}
+                                                        </div>
+                                                        <span class="badge bg-white text-danger font-monospace ms-1">{{ $firstDueMed->due_human }}</span>
+                                                    </div>
+                                                @elseif($nextMed)
+                                                    <div class="d-flex align-items-center justify-content-between text-muted px-1">
+                                                        <span><i class="fas fa-pills text-primary me-1"></i> الدواء القادم ({{ Str::limit($nextMed->title, 25) }}):</span>
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace">{{ $nextMed->due_human }}</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
 
                                     <!-- أزرار الإجراءات السريعة للمشغولة -->

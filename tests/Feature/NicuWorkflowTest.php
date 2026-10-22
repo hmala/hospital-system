@@ -327,6 +327,27 @@ class NicuWorkflowTest extends TestCase
 
         $this->incubator->update(['status' => Incubator::STATUS_OCCUPIED]);
 
+        // 1. محاولة الخروج الطبي مع وجود رصيد متبقي بذمة الحاضنة يجب أن تُمنع بصمام الأمان المالي
+        $blockedResponse = $this->actingAs($this->admin)->post(route('nicu.discharge', $reservation), [
+            'discharge_type' => 'improved',
+            'discharge_notes' => 'الطفل مستقر وخروج لحضن الأم',
+        ]);
+        $blockedResponse->assertSessionHas('error');
+        $this->assertEquals('admitted', $reservation->fresh()->status);
+
+        // 2. تسوية الرصيد المتبقي بالكامل لدى الكاشير
+        $stayDetails = app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
+        \App\Models\NicuPayment::create([
+            'incubator_reservation_id' => $reservation->id,
+            'receipt_number' => \App\Models\NicuPayment::generateReceiptNumber(),
+            'cashier_id' => $this->admin->id,
+            'amount' => $stayDetails['net_balance'],
+            'payment_type' => 'deposit',
+            'financial_status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        // 3. الآن بعد تسوية المبلغ كاملاً، يتم اعتماد الخروج بنجاح
         $response = $this->actingAs($this->admin)->post(route('nicu.discharge', $reservation), [
             'discharge_type' => 'improved',
             'discharge_notes' => 'الطفل مستقر والرضاعة ممتازة وخروج لحضن الأم',
@@ -1056,9 +1077,88 @@ class NicuWorkflowTest extends TestCase
         $response->assertSee('id="prescriptionRowsContainer"', false);
         $response->assertSee('طباعة الوصفة (RX)');
 
+        // فحص وجود تبويب التوصيات وخطة الرعاية
+        $response->assertSee('id="care-schedules-tab"', false);
+        $response->assertSee('id="careSchedulesPane"', false);
+
         // فحص وجود نموذج وجدول إعطاء العلاج MAR التمريضي المستقل
         $response->assertSee('توثيق إعطاء جرعة علاجية (MAR)');
         $response->assertSee('سجل إعطاء وتطبيق الأدوية التمريضي (MAR Timeline)');
+    }
+
+    public function test_care_schedules_creation_and_quick_administration(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل جدول الرعاية',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        // 1. إضافة جدول رضاعة (كل 3 ساعات)
+        $feedingResp = $this->actingAs($this->admin)->post(route('nicu.care-schedules.store', $reservation), [
+            'type' => 'feeding',
+            'title' => 'حليب سيميلاك نيوشور',
+            'dose_or_amount' => '25 ml',
+            'route' => 'أنبوب أنفي معدي (NG Tube)',
+            'interval_hours' => 3,
+            'start_time' => now()->format('Y-m-d H:i:s'),
+            'instructions' => 'فحص بقايا المعدة قبل الوجبة',
+        ]);
+        $feedingResp->assertSessionHas('success');
+
+        $feedingSchedule = $reservation->careSchedules()->where('type', 'feeding')->first();
+        $this->assertNotNull($feedingSchedule);
+        $this->assertEquals('حليب سيميلاك نيوشور', $feedingSchedule->title);
+        $this->assertEquals(3, $feedingSchedule->interval_hours);
+        $this->assertTrue($feedingSchedule->is_active);
+
+        // 2. إضافة جدول دواء (أمبيسيلين كل 8 ساعات)
+        $medResp = $this->actingAs($this->admin)->post(route('nicu.care-schedules.store', $reservation), [
+            'type' => 'medication',
+            'title' => 'أمبيسيلين Ampicillin',
+            'dose_or_amount' => '50 mg',
+            'route' => 'وريدي (IV)',
+            'interval_hours' => 8,
+            'start_time' => now()->format('Y-m-d H:i:s'),
+            'instructions' => 'إعطاء ببطء خلال 30 دقيقة',
+        ]);
+        $medResp->assertSessionHas('success');
+
+        $medSchedule = $reservation->careSchedules()->where('type', 'medication')->first();
+        $this->assertNotNull($medSchedule);
+        $this->assertEquals(8, $medSchedule->interval_hours);
+
+        // 3. توثيق إعطاء سريع للجرعة الدوائية (administer quick)
+        $adminQuickResp = $this->actingAs($this->admin)->post(route('nicu.care-schedules.administer-quick', $medSchedule));
+        $adminQuickResp->assertSessionHas('success');
+
+        $medSchedule->refresh();
+        $this->assertNotNull($medSchedule->last_administered_at);
+        $this->assertTrue($medSchedule->next_due_at->gt(now()));
+
+        // التأكد من توثيق الجرعة في MAR التمريضي تلقائياً
+        $mar = \App\Models\NicuMedicationAdministration::where('reservation_id', $reservation->id)
+            ->where('medication_name', 'أمبيسيلين Ampicillin')
+            ->first();
+        $this->assertNotNull($mar);
+        $this->assertNotNull($mar->given_at);
+        $this->assertEquals('50 mg', $mar->dose);
+
+        // التأكد من عدم إنشاء أي طلب مخزني أو فواتير صيدلية
+        $pharmacyOrder = \App\Models\NicuMedicalOrder::where('reservation_id', $reservation->id)
+            ->where('order_type', 'medication')
+            ->first();
+        $this->assertNull($pharmacyOrder);
+
+        // 4. فحص ظهور التنبيه على اللوحة اللحظية للحاضنات (Nicu Live Board)
+        $this->incubator->update(['status' => Incubator::STATUS_OCCUPIED]);
+        $liveBoardResp = $this->actingAs($this->admin)->get(route('nicu.index'));
+        $liveBoardResp->assertStatus(200);
+        $liveBoardResp->assertSee('حليب سيميلاك نيوشور');
+        $liveBoardResp->assertSee('أمبيسيلين Ampicillin');
     }
 }
 

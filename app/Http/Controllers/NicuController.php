@@ -10,6 +10,7 @@ use App\Models\NicuVital;
 use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
 use App\Models\NicuMedicationAdministration;
+use App\Models\NicuCareSchedule;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Medicine;
@@ -51,6 +52,9 @@ class NicuController extends Controller
             'activeReservation.doctor.user',
             'activeReservation.vitals' => function ($q) {
                 $q->latest('recorded_at')->limit(1);
+            },
+            'activeReservation.careSchedules' => function ($q) {
+                $q->where('is_active', true);
             }
         ]);
 
@@ -200,6 +204,7 @@ class NicuController extends Controller
             'medicalRequests.labResults',
             'medicalRequests.payments',
             'labResults',
+            'careSchedules.creator',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
@@ -334,6 +339,21 @@ class NicuController extends Controller
 
         if (!empty($validated['weight'])) {
             $reservation->update(['current_weight' => $validated['weight']]);
+        }
+
+        // تحديث جدول الرضاعة النشط وموعد الوجبة القادمة تلقائياً إن وُجدت رضعة
+        if ($request->filled('feeding_amount_ml') && (float)$request->feeding_amount_ml > 0) {
+            $activeFeeding = $reservation->careSchedules()
+                ->where('type', 'feeding')
+                ->where('is_active', true)
+                ->first();
+
+            if ($activeFeeding) {
+                $activeFeeding->update([
+                    'last_administered_at' => now(),
+                    'next_due_at' => now()->addHours($activeFeeding->interval_hours),
+                ]);
+            }
         }
 
         return redirect()->back()->with('success', 'تم توثيق العلامات الحيوية والوزن بنجاح.');
@@ -776,6 +796,24 @@ class NicuController extends Controller
 
         NicuMedicationAdministration::create($validated);
 
+        // مطابقة وتحديث جدول العلاج النشط وموعد الجرعة القادمة تلقائياً
+        $medName = trim($validated['medication_name']);
+        $matchedSchedule = $reservation->careSchedules()
+            ->where('type', 'medication')
+            ->where('is_active', true)
+            ->where(function($q) use ($medName) {
+                $q->where('title', 'like', "%{$medName}%")
+                  ->orWhereRaw("? LIKE CONCAT('%', title, '%')", [$medName]);
+            })
+            ->first();
+
+        if ($matchedSchedule) {
+            $matchedSchedule->update([
+                'last_administered_at' => $validated['given_at'],
+                'next_due_at' => Carbon::parse($validated['given_at'])->addHours($matchedSchedule->interval_hours),
+            ]);
+        }
+
         return redirect()->back()->with('success', 'تم توثيق إعطاء وتطبيق الجرعة العلاجية في سجل التمريض بنجاح.');
     }
 
@@ -798,6 +836,154 @@ class NicuController extends Controller
     }
 
     /**
+     * حفظ توصية جديدة أو جدول رعاية (رضاعة / دواء)
+     */
+    public function storeCareSchedule(Request $request, IncubatorReservation $reservation)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:feeding,medication',
+            'title' => 'required|string|max:255',
+            'dose_or_amount' => 'nullable|string|max:100',
+            'route' => 'nullable|string|max:100',
+            'interval_hours' => 'required|integer|min:1|max:48',
+            'start_time' => 'nullable|date',
+            'instructions' => 'nullable|string|max:1000',
+        ]);
+
+        $startTime = $request->filled('start_time') ? Carbon::parse($request->start_time) : now();
+        $nextDueAt = $startTime;
+
+        // في حال كان جدول رضاعة جديد، يتم إلغاء تنشيط جداول الرضاعة السابقة لتكون هناك خطة رضاعة معتمدة واحدة
+        if ($validated['type'] === 'feeding') {
+            $reservation->careSchedules()->where('type', 'feeding')->update(['is_active' => false]);
+        }
+
+        NicuCareSchedule::create([
+            'reservation_id' => $reservation->id,
+            'type' => $validated['type'],
+            'title' => $validated['title'],
+            'dose_or_amount' => $validated['dose_or_amount'] ?? null,
+            'route' => $validated['route'] ?? null,
+            'interval_hours' => $validated['interval_hours'],
+            'start_time' => $startTime,
+            'next_due_at' => $nextDueAt,
+            'instructions' => $validated['instructions'] ?? null,
+            'is_active' => true,
+            'created_by' => Auth::id(),
+        ]);
+
+        $typeName = $validated['type'] === 'feeding' ? 'جدول الرضاعة' : 'جدول إعطاء العلاج';
+        return redirect()->back()->with('success', "تم اعتماد {$typeName} بنجاح وتفعيل التنبيهات على لوحة الحاضنات.");
+    }
+
+    /**
+     * حفظ دفعة توصيات متعددة بوقت واحد (Batch)
+     */
+    public function storeCareSchedulesBatch(Request $request, IncubatorReservation $reservation)
+    {
+        $request->validate([
+            'schedules' => 'required|array|min:1',
+            'schedules.*.type' => 'required|in:feeding,medication',
+            'schedules.*.title' => 'required|string|max:255',
+            'schedules.*.dose_or_amount' => 'nullable|string|max:100',
+            'schedules.*.route' => 'nullable|string|max:100',
+            'schedules.*.interval_hours' => 'required|integer|min:1|max:48',
+            'schedules.*.instructions' => 'nullable|string|max:1000',
+        ]);
+
+        $createdCount = 0;
+        foreach ($request->schedules as $schedData) {
+            if (empty(trim($schedData['title'] ?? ''))) {
+                continue;
+            }
+
+            if ($schedData['type'] === 'feeding') {
+                $reservation->careSchedules()->where('type', 'feeding')->update(['is_active' => false]);
+            }
+
+            NicuCareSchedule::create([
+                'reservation_id' => $reservation->id,
+                'type' => $schedData['type'],
+                'title' => trim($schedData['title']),
+                'dose_or_amount' => $schedData['dose_or_amount'] ?? null,
+                'route' => $schedData['route'] ?? null,
+                'interval_hours' => (int) $schedData['interval_hours'],
+                'start_time' => now(),
+                'next_due_at' => now(),
+                'instructions' => $schedData['instructions'] ?? null,
+                'is_active' => true,
+                'created_by' => Auth::id(),
+            ]);
+            $createdCount++;
+        }
+
+        return redirect()->back()->with('success', "تم اعتماد وإدراج {$createdCount} من التوصيات وجداول الرعاية بنجاح.");
+    }
+
+    /**
+     * تفعيل أو إيقاف التوصية
+     */
+    public function toggleCareSchedule(NicuCareSchedule $schedule)
+    {
+        $schedule->update([
+            'is_active' => !$schedule->is_active,
+        ]);
+
+        $statusText = $schedule->is_active ? 'تفعيل' : 'إيقاف';
+        return redirect()->back()->with('success', "تم {$statusText} التوصية بنجاح.");
+    }
+
+    /**
+     * حذف التوصية
+     */
+    public function destroyCareSchedule(NicuCareSchedule $schedule)
+    {
+        $schedule->delete();
+        return redirect()->back()->with('success', 'تم حذف التوصية من الخطة العلاجية بنجاح.');
+    }
+
+    /**
+     * توثيق إعطاء سريع للجرعة أو الرضعة وتحديث الموعد القادم تلقائياً
+     */
+    public function administerCareScheduleQuick(Request $request, NicuCareSchedule $schedule)
+    {
+        $now = now();
+
+        if ($schedule->type === 'medication') {
+            NicuMedicationAdministration::create([
+                'reservation_id' => $schedule->reservation_id,
+                'medication_name' => $schedule->title,
+                'dose' => $schedule->dose_or_amount ?: 'جرعة موصوفة',
+                'route' => $schedule->route ?: 'وريدي IV',
+                'given_at' => $now,
+                'notes' => 'توثيق تطبيق سريع استناداً إلى جدول العلاج',
+                'nurse_id' => Auth::id(),
+            ]);
+        } elseif ($schedule->type === 'feeding') {
+            $amountMl = null;
+            if (preg_match('/(\d+(\.\d+)?)/', $schedule->dose_or_amount ?? '', $matches)) {
+                $amountMl = (float)$matches[1];
+            }
+            NicuVital::create([
+                'reservation_id' => $schedule->reservation_id,
+                'nurse_id' => Auth::id(),
+                'recorded_at' => $now,
+                'feeding_type' => $schedule->title,
+                'feeding_amount_ml' => $amountMl,
+                'feeding_notes' => 'توثيق رضاعة سريع وفق جدول الرضاعة',
+            ]);
+        }
+
+        $nextDue = $now->copy()->addHours($schedule->interval_hours);
+        $schedule->update([
+            'last_administered_at' => $now,
+            'next_due_at' => $nextDue,
+        ]);
+
+        return redirect()->back()->with('success', "تم توثيق الإعطاء بنجاح. الموعد القادم: الساعة " . $nextDue->format('H:i') . ".");
+    }
+
+    /**
      * أمر الخروج الطبي وحساب التصفية
      */
     public function discharge(Request $request, IncubatorReservation $reservation)
@@ -808,6 +994,12 @@ class NicuController extends Controller
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
+
+        // صمام الأمان المالي: منع الخروج في حال وجود رصيد متبقي بذمة الحاضنة
+        if (($stayDetails['net_balance'] ?? 0) > 0) {
+            return redirect()->back()
+                             ->with('error', '⛔ لا يمكن إتمام الخروج الطبي للطفل لوجود رصيد مالي متبقي بذمة الحاضنة بمبلغ (' . number_format($stayDetails['net_balance']) . ' د.ع). يرجى التوجيه لكاشير الخدج لتسوية الحساب كاملاً أولاً.');
+        }
 
         $now = now();
         $reservation->update([

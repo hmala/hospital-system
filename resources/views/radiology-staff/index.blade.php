@@ -386,10 +386,12 @@
                         @php $turnNum = 1; @endphp
                         @forelse($waitingRequests as $req)
                             @php
-                                $isPaid = $req->payment_status === 'paid';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $isPaid = $isNicu || $req->payment_status === 'paid';
                                 $isCalling = $req->status === 'calling';
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
                                 $qNum = $req->visit?->appointment?->queue_number ?? ($turnNum++);
                             @endphp
                             <tr class="{{ $isCalling ? 'calling-row fw-bold' : '' }}" id="request-row-{{ $req->id }}">
@@ -401,15 +403,24 @@
                                 <td class="font-monospace text-muted">#{{ $req->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle">
-                                            {{ mb_substr($pName, 0, 1) }}
+                                        <div class="avatar-circle {{ $isNicu ? 'bg-primary-subtle text-primary' : '' }}">
+                                            @if($isNicu)
+                                                <i class="fas fa-baby"></i>
+                                            @else
+                                                {{ mb_substr($pName, 0, 1) }}
+                                            @endif
                                         </div>
                                         <div class="ms-2">
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
-                                                @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                                @if($isNicu)
+                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle me-1">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }}</span>
+                                                    <span>ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</span>
+                                                @else
+                                                    @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                    @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                    @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                                @endif
                                             </small>
                                         </div>
                                     </div>
@@ -428,8 +439,15 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
-                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @if($isNicu)
+                                        <div class="small fw-semibold text-dark">د. {{ $nicuRes?->doctor?->user?->name ?? 'طبيب الخدج' }}</div>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
+                                            <i class="fas fa-baby me-1"></i> قسم الخدج
+                                        </span>
+                                    @else
+                                        <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @endif
                                     @if(!empty($req->doctor_notes))
                                         <div class="mt-1">
                                             <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
@@ -440,7 +458,9 @@
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
                                 <td class="text-center">
-                                    @if($isPaid)
+                                    @if($isNicu)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold" title="يُسدد ضمن حساب الحاضنة الموحد لدى الكاشير"><i class="fas fa-file-invoice-dollar me-1"></i> حساب الحاضنة</span>
+                                    @elseif($isPaid)
                                         <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
                                     @else
                                         <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
@@ -518,15 +538,28 @@
                     <tbody id="radiology-tab-inprogress-tbody">
                         @forelse($inProgressRequests as $req)
                             @php
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="inprogress-row">
                                 <td><span class="badge bg-info text-white font-monospace fs-6">#{{ $qNum }}</span></td>
-                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>
+                                    <strong class="text-dark">{{ $pName }}</strong>
+                                    @if($isNicu)
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                    @endif
+                                </td>
                                 <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
-                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td>
+                                    <span>د. {{ $docName }}</span>
+                                    @if($isNicu)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                    @endif
+                                </td>
                                 <td class="text-center font-monospace small">{{ $req->details['started_at'] ?? $req->updated_at->format('H:i') }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs">
@@ -570,15 +603,28 @@
                     <tbody id="radiology-tab-completed-tbody">
                         @forelse($completedRequests as $req)
                             @php
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="completed-row">
                                 <td><span class="badge bg-success text-white font-monospace fs-6">#{{ $qNum }}</span></td>
-                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>
+                                    <strong class="text-dark">{{ $pName }}</strong>
+                                    @if($isNicu)
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                    @endif
+                                </td>
                                 <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
-                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td>
+                                    <span>د. {{ $docName }}</span>
+                                    @if($isNicu)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                    @endif
+                                </td>
                                 <td class="text-center font-monospace small">{{ $req->updated_at ? $req->updated_at->format('H:i') : '—' }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة">

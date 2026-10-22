@@ -123,6 +123,15 @@
                     </button>
                 </li>
                 <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark" id="care-schedules-tab" data-bs-toggle="tab" data-bs-target="#careSchedulesPane" type="button">
+                        <i class="fas fa-clipboard-list text-warning me-1"></i> 📋 التوصيات وخطة الرعاية
+                        @php $activeSchedulesCount = $reservation->careSchedules->where('is_active', true)->count(); @endphp
+                        @if($activeSchedulesCount > 0)
+                            <span class="badge bg-warning text-dark rounded-pill ms-1">{{ $activeSchedulesCount }}</span>
+                        @endif
+                    </button>
+                </li>
+                <li class="nav-item">
                     <button class="nav-link fw-bold text-dark" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultationsPane" type="button">
                         <i class="fas fa-user-md text-info me-1"></i> استشارات الأطباء (داخلي / خارجي)
                         @if($reservation->consultations->count() > 0)
@@ -406,19 +415,39 @@
                                         <input type="number" name="weight" class="form-control form-control-sm" value="{{ $reservation->current_weight }}" placeholder="مثال: 1450">
                                     </div>
 
+                                    @php
+                                        $activeFeedingSched = $reservation->activeFeedingSchedule();
+                                        $defaultFeedingAmount = null;
+                                        if ($activeFeedingSched && preg_match('/(\d+(\.\d+)?)/', $activeFeedingSched->dose_or_amount ?? '', $fMatches)) {
+                                            $defaultFeedingAmount = $fMatches[1];
+                                        }
+                                    @endphp
+                                    @if($activeFeedingSched)
+                                        <div class="alert alert-warning py-1.5 px-2 mb-2 small d-flex justify-content-between align-items-center border-0 bg-warning bg-opacity-10 text-dark">
+                                            <div>
+                                                <i class="fas fa-baby-bottle text-warning me-1"></i>
+                                                <strong>الخطة المعتمدة:</strong> {{ $activeFeedingSched->title }} ({{ $activeFeedingSched->dose_or_amount }})
+                                            </div>
+                                            <span class="badge {{ $activeFeedingSched->is_due ? 'bg-danger text-white' : 'bg-secondary' }}">
+                                                {{ $activeFeedingSched->due_human }}
+                                            </span>
+                                        </div>
+                                    @endif
+
                                     <div class="row g-2 mb-2">
                                         <div class="col-6">
                                             <label class="form-label small">نوع الرضاعة:</label>
-                                            <select name="feeding_type" class="form-select form-select-sm">
-                                                <option value="حليب أم (EBM)">حليب أم (EBM)</option>
-                                                <option value="حليب خدج صناعي">حليب خدج صناعي</option>
-                                                <option value="تغذية وريدية TPN">تغذية وريدية TPN</option>
-                                                <option value="صيام NPO">صيام NPO</option>
-                                            </select>
+                                            <input type="text" name="feeding_type" class="form-control form-control-sm" list="quickVitalsFeedingTypes" value="{{ $activeFeedingSched ? $activeFeedingSched->title : 'حليب أم (EBM)' }}">
+                                            <datalist id="quickVitalsFeedingTypes">
+                                                <option value="حليب أم (EBM)">
+                                                <option value="حليب خدج صناعي">
+                                                <option value="تغذية وريدية TPN">
+                                                <option value="صيام NPO">
+                                            </datalist>
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label small">كمية الرضعة (مل/CC):</label>
-                                            <input type="number" step="0.5" name="feeding_amount_ml" class="form-control form-control-sm" placeholder="15">
+                                            <input type="number" step="0.5" name="feeding_amount_ml" class="form-control form-control-sm" value="{{ $defaultFeedingAmount }}" placeholder="15">
                                         </div>
                                     </div>
 
@@ -498,6 +527,38 @@
                                     <i class="fas fa-info-circle me-1"></i>
                                     <strong>توثيق سريري مباشر:</strong> يُسجل هذا النموذج وقت وطريقة إعطاء الجرعة للطفل بالحاضنة ولا يرتبط بطلب المخزون أو الصيدلية.
                                 </div>
+
+                                @php $activeMedSchedules = $reservation->activeMedicationSchedules(); @endphp
+                                @if($activeMedSchedules->count() > 0)
+                                    <div class="card border-0 bg-white p-2.5 rounded-3 mb-3 border border-warning-subtle shadow-xs">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="fw-bold small text-dark"><i class="fas fa-bell text-warning me-1"></i> أدوية مجدولة مستحقة / نشطة:</span>
+                                            <span class="badge bg-warning text-dark">{{ $activeMedSchedules->count() }} مجدول</span>
+                                        </div>
+                                        <div class="d-flex flex-column gap-2">
+                                            @foreach($activeMedSchedules as $aMed)
+                                                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded border small">
+                                                    <div>
+                                                        <strong class="text-dark">{{ $aMed->title }}</strong>
+                                                        <small class="text-muted d-block">{{ $aMed->dose_or_amount ?: 'جرعة موصوفة' }} • {{ $aMed->route ?: 'وريدي' }} (كل {{ $aMed->interval_hours }} س)</small>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge {{ $aMed->is_overdue ? 'bg-danger' : ($aMed->is_due ? 'bg-warning text-dark' : 'bg-light text-dark border') }} font-monospace" style="font-size: 10px;">
+                                                            {{ $aMed->due_human }}
+                                                        </span>
+                                                        <form action="{{ route('nicu.care-schedules.administer-quick', $aMed) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-sm btn-success fw-bold py-0.5 px-2" style="font-size: 11px;" title="توثيق الإعطاء الآن وتحديث الموعد القادم">
+                                                                <i class="fas fa-check me-1"></i> إعطاء
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <form action="{{ route('nicu.medications-admin.store', $reservation) }}" method="POST">
                                     @csrf
                                     <div class="mb-2">
@@ -1830,6 +1891,292 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تبويب 7: التوصيات وخطة الرعاية وجداول المواعيد (Care Plan & Schedules) -->
+                <div class="tab-pane fade" id="careSchedulesPane">
+                    <div class="row g-4">
+                        <!-- نموذج إضافة التوصيات -->
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs mb-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-warning text-dark p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">إضافة توصية / جدول رعاية جديد</h6>
+                                            <small class="text-muted" style="font-size: 11px;">جدولة مواعيد الرضاعة أو إعطاء العلاج الدوري</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-warning text-dark small">طبيب / تمريض</span>
+                                </div>
+
+                                <div class="alert alert-info py-2 px-3 small mb-3 border-0 bg-info bg-opacity-10 text-info-emphasis" style="font-size: 11px;">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    <strong>إجراء سريري داخلي للحاضنة:</strong> هذا النظام خاص بمواعيد رعاية الطفل والتنبيهات الحية فقط، ولا ينشئ أي التزامات على الصيدلية أو المخزن.
+                                </div>
+
+                                <!-- أزرار الاختيار السريع للنوع -->
+                                <ul class="nav nav-pills nav-fill mb-3" id="scheduleTypePill" role="tablist">
+                                    <li class="nav-item">
+                                        <button class="nav-link active btn-sm fw-bold py-1" id="pill-feeding-tab" data-bs-toggle="pill" data-bs-target="#pill-feeding" type="button">
+                                            <i class="fas fa-baby-bottle me-1"></i> جدول رضاعة
+                                        </button>
+                                    </li>
+                                    <li class="nav-item">
+                                        <button class="nav-link btn-sm fw-bold py-1" id="pill-medication-tab" data-bs-toggle="pill" data-bs-target="#pill-medication" type="button">
+                                            <i class="fas fa-pills me-1"></i> جدول علاج دوائي
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content" id="scheduleTypeContent">
+                                    <!-- نموذج الرضاعة -->
+                                    <div class="tab-pane fade show active" id="pill-feeding">
+                                        <form action="{{ route('nicu.care-schedules.store', $reservation) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="type" value="feeding">
+
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-bold">نوع الرضاعة / التغذية:</label>
+                                                <input type="text" name="title" class="form-control form-control-sm" placeholder="مثلاً: حليب أم EBM، حليب سيميلاك نيوشور..." list="quickFeedingTypes" required>
+                                                <datalist id="quickFeedingTypes">
+                                                    <option value="حليب أم طبيعي (EBM)">
+                                                    <option value="حليب خدج صناعي (Pre-term Formula)">
+                                                    <option value="حليب سيميلاك نيوشور (Neosure)">
+                                                    <option value="حليب ببتي جونيور قليل التحسس">
+                                                    <option value="تغذية وريدية كاملة (TPN)">
+                                                </datalist>
+                                            </div>
+
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">كمية الوجبة (مل):</label>
+                                                    <input type="text" name="dose_or_amount" class="form-control form-control-sm" placeholder="مثال: 20 مل أو 35 CC" required>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">طريقة الإعطاء (Route):</label>
+                                                    <select name="route" class="form-select form-select-sm">
+                                                        <option value="رضاعة بالزجاجة / المصاصة (Oral / Bottle)">رضاعة بالزجاجة (Oral)</option>
+                                                        <option value="أنبوب أنفي معدي (NG Tube)">أنبوب أنفي معدي (NG Tube)</option>
+                                                        <option value="أنبوب فموي معدي (OG Tube)">أنبوب فموي معدي (OG Tube)</option>
+                                                        <option value="مضخة تغذية مستمرة (Infusion)">مضخة تغذية مستمرة</option>
+                                                        <option value="وريدي (IV / TPN)">وريدي (IV / TPN)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold text-danger">التكرار (كل كم ساعة؟):</label>
+                                                    <select name="interval_hours" class="form-select form-select-sm fw-bold border-danger-subtle" required>
+                                                        <option value="2">كل ساعتين (q2h - 12 وجبة/يوم)</option>
+                                                        <option value="3" selected>كل 3 ساعات (q3h - 8 وجبات/يوم)</option>
+                                                        <option value="4">كل 4 ساعات (q4h - 6 وجبات/يوم)</option>
+                                                        <option value="6">كل 6 ساعات (q6h - 4 وجبات/يوم)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">وقت أول وجبة:</label>
+                                                    <input type="datetime-local" name="start_time" class="form-control form-control-sm" value="{{ now()->format('Y-m-d\TH:i') }}">
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small">تعليمات سريرية وملاحظات الطبيب:</label>
+                                                <textarea name="instructions" rows="2" class="form-control form-control-sm" placeholder="مثال: فحص بقايا المعدة قبل الوجبة، رفع الرأس 30 درجة، تجشؤ بعد الرضعة..."></textarea>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold shadow-sm">
+                                                <i class="fas fa-save me-1"></i> اعتماد جدول الرضاعة والتنبيهات
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- نموذج العلاج الدوائي -->
+                                    <div class="tab-pane fade" id="pill-medication">
+                                        <form action="{{ route('nicu.care-schedules.store', $reservation) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="type" value="medication">
+
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-bold">اسم الدواء:</label>
+                                                <input type="text" name="title" class="form-control form-control-sm" placeholder="اكتب اسم الدواء أو اختر من القائمة..." list="quickMedScheduleList" required>
+                                                <datalist id="quickMedScheduleList">
+                                                    @foreach($reservation->medicalOrders->where('order_type', 'medication') as $pMed)
+                                                        <option value="{{ $pMed->item_name }}">من وصفة الطفل</option>
+                                                    @endforeach
+                                                    @foreach($medicines->take(200) as $med)
+                                                        <option value="{{ $med->name }}">{{ $med->strength }}</option>
+                                                    @endforeach
+                                                </datalist>
+                                            </div>
+
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">الجرعة المحددة:</label>
+                                                    <input type="text" name="dose_or_amount" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 0.5 ml" required>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">مسار الإعطاء (Route):</label>
+                                                    <select name="route" class="form-select form-select-sm">
+                                                        <option value="وريدي (IV)">حقن وريدي (IV)</option>
+                                                        <option value="تسريب وريدي مستمر (IV Infusion)">تسريب وريدي مستمر</option>
+                                                        <option value="عضلي (IM)">حقن عضلي (IM)</option>
+                                                        <option value="فموي (PO / Oral)">فموي (Oral / NG)</option>
+                                                        <option value="استنشاق (Nebulizer)">استنشاق (Nebulizer)</option>
+                                                        <option value="قطرات (Drops)">قطرات (Drops)</option>
+                                                        <option value="تحت الجلد (SC)">تحت الجلد (SC)</option>
+                                                        <option value="موضعي (Topical)">موضعي (Topical)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold text-danger">التكرار (كل كم ساعة؟):</label>
+                                                    <select name="interval_hours" class="form-select form-select-sm fw-bold border-danger-subtle" required>
+                                                        <option value="4">كل 4 ساعات (q4h - 6 مرات/يوم)</option>
+                                                        <option value="6">كل 6 ساعات (q6h - 4 مرات/يوم)</option>
+                                                        <option value="8" selected>كل 8 ساعات (q8h - 3 مرات/يوم)</option>
+                                                        <option value="12">كل 12 ساعة (q12h - مرتان/يوم)</option>
+                                                        <option value="24">كل 24 ساعة (q24h - مرة يومياً)</option>
+                                                        <option value="48">كل 48 ساعة (q48h - كل يومين)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold">وقت أول جرعة:</label>
+                                                    <input type="datetime-local" name="start_time" class="form-control form-control-sm" value="{{ now()->format('Y-m-d\TH:i') }}">
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small">تعليمات سريرية وملاحظات الطبيب:</label>
+                                                <textarea name="instructions" rows="2" class="form-control form-control-sm" placeholder="مثال: إعطاء المحلول ببطء خلال 30 دقيقة، مراقبة الكانيولا..."></textarea>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm">
+                                                <i class="fas fa-save me-1"></i> اعتماد جدول الدواء والتنبيهات
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- جدول وقائمة التوصيات وجداول الرعاية الحالية -->
+                        <div class="col-lg-7">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-tasks text-primary me-1"></i>
+                                    الجداول والتوصيات المعتمدة للطفل
+                                </h6>
+                                <span class="badge bg-light text-dark border">
+                                    إجمالي التوصيات: {{ $reservation->careSchedules->count() }}
+                                </span>
+                            </div>
+
+                            @forelse($reservation->careSchedules as $sched)
+                                @php
+                                    $isFeeding = $sched->type === 'feeding';
+                                    $isDue = $sched->is_due;
+                                    $isOverdue = $sched->is_overdue;
+                                @endphp
+                                <div class="card mb-3 border-0 shadow-xs {{ !$sched->is_active ? 'opacity-50 bg-light' : ($isOverdue ? 'border-start border-danger border-4' : ($isDue ? 'border-start border-warning border-4' : 'border-start border-success border-4')) }}">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="{{ $isFeeding ? 'bg-warning-subtle text-warning' : 'bg-primary-subtle text-primary' }} p-2 rounded-circle" style="width: 38px; height: 38px; text-align: center;">
+                                                    <i class="{{ $sched->icon }}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark fs-6">{{ $sched->title }}</div>
+                                                    <small class="text-muted">
+                                                        <span class="badge {{ $isFeeding ? 'bg-warning-subtle text-dark border border-warning-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' }} me-1">
+                                                            {{ $sched->type_arabic }}
+                                                        </span>
+                                                        @if($sched->dose_or_amount)
+                                                            <strong class="text-dark">{{ $sched->dose_or_amount }}</strong> •
+                                                        @endif
+                                                        <span>{{ $sched->route ?: 'مسار موصوف' }}</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+
+                                            <div class="text-end">
+                                                @if(!$sched->is_active)
+                                                    <span class="badge bg-secondary">متوقف / ملغى</span>
+                                                @elseif($isOverdue)
+                                                    <span class="badge bg-danger py-1 px-2">
+                                                        <i class="fas fa-exclamation-circle me-1"></i> متأخر ({{ $sched->due_human }})
+                                                    </span>
+                                                @elseif($isDue)
+                                                    <span class="badge bg-warning text-dark py-1 px-2">
+                                                        <i class="fas fa-bell me-1"></i> مستحق الآن
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                                        <i class="fas fa-clock me-1"></i> القادم: {{ $sched->due_human }}
+                                                    </span>
+                                                @endif
+                                                <div class="small text-muted font-monospace mt-1">كل {{ $sched->interval_hours }} ساعة</div>
+                                            </div>
+                                        </div>
+
+                                        @if($sched->instructions)
+                                            <div class="bg-light p-2 rounded mb-2 small text-dark border">
+                                                <i class="fas fa-stethoscope text-primary me-1"></i>
+                                                <strong>ملاحظات:</strong> {{ $sched->instructions }}
+                                            </div>
+                                        @endif
+
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+                                            <small class="text-muted" style="font-size: 11px;">
+                                                <i class="fas fa-calendar-alt me-1"></i>
+                                                الموعد القادم: <strong>{{ $sched->next_due_at ? $sched->next_due_at->format('Y-m-d H:i') : '—' }}</strong>
+                                                @if($sched->last_administered_at)
+                                                    • آخر إعطاء: {{ $sched->last_administered_at->format('H:i') }}
+                                                @endif
+                                            </small>
+
+                                            <div class="d-flex gap-1 align-items-center">
+                                                @if($sched->is_active)
+                                                    <form action="{{ route('nicu.care-schedules.administer-quick', $sched) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-xs" title="توثيق الإعطاء الآن وتحديث الموعد القادم تلقائياً">
+                                                            <i class="fas fa-check-circle me-1"></i> توثيق الإعطاء الآن
+                                                        </button>
+                                                    </form>
+                                                @endif
+
+                                                <form action="{{ route('nicu.care-schedules.toggle', $sched) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary px-2 py-1" title="{{ $sched->is_active ? 'إيقاف التوصية' : 'إعادة تفعيل التوصية' }}">
+                                                        <i class="fas {{ $sched->is_active ? 'fa-pause' : 'fa-play' }}"></i>
+                                                    </button>
+                                                </form>
+
+                                                <form action="{{ route('nicu.care-schedules.destroy', $sched) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه التوصية؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-1" title="حذف التوصية">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="card border-0 bg-light p-4 text-center text-muted rounded-3">
+                                    <i class="fas fa-clipboard-list fa-3x mb-2 text-secondary opacity-50"></i>
+                                    <h6>لا توجد خطة رعاية أو توصيات مجدولة للطفل حتى الآن</h6>
+                                    <p class="small mb-0">يمكن للطبيب أو التمريض إضافة جدول الرضاعة أو جداول إعطاء العلاجات بالأوقات المحددة من النموذج المقابل.</p>
+                                </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>

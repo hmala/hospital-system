@@ -588,8 +588,11 @@
                                         }
                                         $tests = array_filter(array_map('trim', $tests));
 
-                                        $patient = $req->visit?->patient;
+                                        $isNicu = !empty($req->incubator_reservation_id);
+                                        $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                        $patient = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
                                         $patientUser = $patient?->user;
+                                        $babyName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($patientUser?->name ? 'طفل ' . $patientUser->name : 'طفل خديج'))) : null;
                                         $isConsultation = !empty($req->visit?->doctor_id);
                                         $isCompleted = $req->status === 'completed';
                                         $isInProgress = $req->status === 'in_progress';
@@ -605,23 +608,48 @@
                                         <!-- بيانات المريض -->
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="{{ $isCompleted ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary' }} rounded-circle p-2 text-center" style="width: 34px; height: 34px;">
-                                                    <i class="fas fa-user small"></i>
+                                                <div class="{{ $isCompleted ? 'bg-success-subtle text-success' : ($isNicu ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary') }} rounded-circle p-2 text-center" style="width: 34px; height: 34px;">
+                                                    <i class="{{ $isNicu ? 'fas fa-baby' : 'fas fa-user' }} small"></i>
                                                 </div>
                                                 <div>
-                                                    <strong class="text-dark d-block">{{ $patientUser?->name ?? 'غير محدد' }}</strong>
-                                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                                        ملف: #{{ $patient?->national_id ?: ($patient?->id ?? '-') }}
-                                                        @if($patient?->age) • {{ $patient->age }} سنة @endif
-                                                        @if($patient?->blood_type) • <span class="text-danger fw-bold">{{ $patient->blood_type }}</span> @endif
-                                                    </small>
+                                                    @if($isNicu)
+                                                        <strong class="text-dark d-block">👶 {{ $babyName }}</strong>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">
+                                                            <span class="badge bg-info-subtle text-dark border border-info-subtle px-1.5 py-0.5 me-1">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }}</span>
+                                                            ملف: #{{ $patient?->national_id ?: ($patient?->id ?? '-') }}
+                                                            @if($nicuRes?->gestational_weeks) • {{ $nicuRes->gestational_weeks }} أسبوع @endif
+                                                            @if($patient?->blood_type) • <span class="text-danger fw-bold">{{ $patient->blood_type }}</span> @endif
+                                                        </small>
+                                                    @else
+                                                        <strong class="text-dark d-block">{{ $patientUser?->name ?? 'غير محدد' }}</strong>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">
+                                                            ملف: #{{ $patient?->national_id ?: ($patient?->id ?? '-') }}
+                                                            @if($patient?->age) • {{ $patient->age }} سنة @endif
+                                                            @if($patient?->blood_type) • <span class="text-danger fw-bold">{{ $patient->blood_type }}</span> @endif
+                                                        </small>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </td>
 
                                         <!-- المصدر والطبيب المحول -->
                                         <td>
-                                            @if($isConsultation)
+                                            @if($isNicu)
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fas fa-user-md text-primary small me-1"></i>
+                                                    <span class="text-dark fw-semibold small">د. {{ $nicuRes?->doctor?->user?->name ?? 'طبيب الخدج' }}</span>
+                                                </div>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
+                                                    <i class="fas fa-baby me-1"></i> قسم الخدج والحاضنات
+                                                </span>
+                                                @if(!empty($req->doctor_notes))
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
+                                                            <i class="fas fa-sticky-note text-warning me-1"></i> {{ $req->doctor_notes }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            @elseif($isConsultation)
                                                 <div class="d-flex align-items-center gap-1">
                                                     <i class="fas fa-user-md text-primary small me-1"></i>
                                                     <span class="text-dark fw-semibold small">د. {{ $req->visit?->doctor?->user?->name }}</span>
@@ -713,7 +741,11 @@
 
                                         <!-- حالة الدفع -->
                                         <td class="text-center">
-                                            @if($req->payment_status == 'paid')
+                                            @if($isNicu)
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" title="يُسدد ضمن حساب الحاضنة الموحد لدى الكاشير">
+                                                    <i class="fas fa-file-invoice-dollar me-1"></i> حساب الحاضنة
+                                                </span>
+                                            @elseif($req->payment_status == 'paid')
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
                                                     <i class="fas fa-check-circle me-1"></i> مسدد
                                                 </span>
