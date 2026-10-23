@@ -3734,14 +3734,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // إعادة تحميل الصفحة لتحديث البيانات
+            .then(async response => {
+                const data = await response.json().catch(() => ({}));
+                return { ok: response.ok, data };
+            })
+            .then(res => {
+                if (res.ok && res.data.success) {
                     location.reload();
                 } else {
-                    // عرض رسائل الخطأ
-                    if (data.errors) {
+                    const data = res.data;
+                    if (data.message) {
+                        alert(data.message);
+                    } else if (data.errors) {
                         let errorMessage = 'حدثت أخطاء:\n';
                         for (let field in data.errors) {
                             errorMessage += '- ' + data.errors[field].join('\n') + '\n';

@@ -713,16 +713,17 @@ class DoctorVisitController extends Controller
 
         if ($request->has('status')) {
             if ($request->status === 'completed') {
-                // منع إنهاء الزيارة في حال وجود أي فحوصات معلقة (تحاليل أو أشعة) لم تكتمل نتائجها
                 $visitDateStr = \Carbon\Carbon::parse($visit->visit_date)->toDateString();
-                $pendingRequests = \App\Models\Request::where(function ($q) use ($visit, $visitDateStr) {
-                    $q->where('visit_id', $visit->id)
-                        ->orWhere(function ($sub) use ($visit, $visitDateStr) {
-                            $sub->where('patient_id', $visit->patient_id)
-                                ->where('doctor_id', $visit->doctor_id)
-                                ->whereDate('created_at', $visitDateStr);
-                        });
-                })
+                $sameDayVisitIds = Visit::where('patient_id', $visit->patient_id)
+                    ->where('doctor_id', $visit->doctor_id)
+                    ->whereDate('visit_date', $visitDateStr)
+                    ->pluck('id');
+
+                if (! $sameDayVisitIds->contains($visit->id)) {
+                    $sameDayVisitIds->push($visit->id);
+                }
+
+                $pendingRequests = \App\Models\Request::whereIn('visit_id', $sameDayVisitIds)
                     ->whereIn('type', ['lab', 'radiology'])
                     ->whereNotIn('status', ['completed', 'cancelled'])
                     ->get();
