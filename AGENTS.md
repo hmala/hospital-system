@@ -54,6 +54,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-23 — المرحلة 111: إصلاح استعلام التحقق من الفحوصات المعلقة عند إنهاء الزيارة، وتحسين استجابة AJAX، وتفعيل الحظر الصارم للحجز المكرر في واجهة الاستعلامات Doctor Visit Completion SQL Fix, Clean AJAX Error Handling & Inquiry Hard Block UI)
+
+### Done
+- **إصلاح استعلام SQL لفحص الفحوصات المعلقة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * معالجة خطأ `SQLSTATE[42S22]: Column not found: 1054 Unknown column 'patient_id' in 'where clause'` الذي تسبب بـ 500 Internal Server Error عند رغبة الطبيب بإنهاء الزيارة المكتملة فحوصاتها.
+  * تصحيح الاستعلام بالاعتماد على معرّفات زيارات اليوم للمريض والطبيب (`whereIn('visit_id', $sameDayVisitIds)`).
+- **تحسين إظهار رسائل AJAX عند إنهاء الزيارة ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * قراءة وعرض رسالة الخطأ السريرية الدقيقة الصادرة من السيرفر (`data.message`) مباشرة بدلاً من الرسالة الافتراضية "حدث خطأ أثناء إنهاء الزيارة".
+- **الحظر الصارم لتكرار الحجز في واجهة الاستعلامات ([resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php))**:
+  * تحويل التنبيه البرتقالي إلى بانيل أحمر مانع (`⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً`).
+  * تعطيل زر الإرسال والحفظ تلقائياً (`Disabled`) بنص `[ ⛔ محظور: مسجل اليوم بالفعل لدى الطبيب ]` ومنع الإرسال فورياً في حال كان المريض مسجلاً اليوم لدى الطبيب.
+
 ## Session log (2026-10-23 — المرحلة 110: الحظر الصارم للحجز المكرر لنفس اليوم، والقفل السريري الإلزامي لإنهاء الزيارة بانتظار الفحوصات Strict Same-Day Duplicate Booking Prevention, Hard Validation Block & Mandatory Visit Completion Clinical Gate Pending Test Results)
 
 ### Done
