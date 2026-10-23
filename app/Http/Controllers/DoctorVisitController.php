@@ -288,9 +288,18 @@ class DoctorVisitController extends Controller
             'treatments' => $otherTreatments->toArray(),
         ]);
 
-        // Check if there are any completed requests
-        $hasCompletedRequests = $visit->requests()->where('status', 'completed')->exists();
-        $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
+        // فحص الفحوصات الطبية (تحاليل وأشعة) المعلقة والمكتملة لليوم
+        $hasCompletedRequests = $allSameDayRequests
+            ->whereIn('type', ['lab', 'radiology'])
+            ->where('status', 'completed')
+            ->isNotEmpty();
+
+        $pendingRequests = $allSameDayRequests
+            ->whereIn('type', ['lab', 'radiology'])
+            ->whereNotIn('status', ['completed', 'cancelled']);
+
+        $hasPendingRequests = $pendingRequests->isNotEmpty();
+        $pendingRequestsCount = $pendingRequests->count();
 
         $labTests = \App\Models\LabTest::where('is_active', true)->get()->unique(fn ($t) => trim(mb_strtolower($t->name)));
         $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
@@ -568,6 +577,7 @@ class DoctorVisitController extends Controller
             'otherTreatments',
             'hasCompletedRequests',
             'hasPendingRequests',
+            'pendingRequestsCount',
             'availableDoctors',
             'emergencyServices',
             'availableMedicines',
@@ -702,6 +712,36 @@ class DoctorVisitController extends Controller
         }
 
         if ($request->has('status')) {
+            if ($request->status === 'completed') {
+                // منع إنهاء الزيارة في حال وجود أي فحوصات معلقة (تحاليل أو أشعة) لم تكتمل نتائجها
+                $visitDateStr = \Carbon\Carbon::parse($visit->visit_date)->toDateString();
+                $pendingRequests = \App\Models\Request::where(function ($q) use ($visit, $visitDateStr) {
+                    $q->where('visit_id', $visit->id)
+                        ->orWhere(function ($sub) use ($visit, $visitDateStr) {
+                            $sub->where('patient_id', $visit->patient_id)
+                                ->where('doctor_id', $visit->doctor_id)
+                                ->whereDate('created_at', $visitDateStr);
+                        });
+                })
+                    ->whereIn('type', ['lab', 'radiology'])
+                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->get();
+
+                if ($pendingRequests->isNotEmpty()) {
+                    $pendingCount = $pendingRequests->count();
+                    $errMsg = "⚠️ لا يمكن إنهاء الزيارة! توجد فحوصات معلقة لم تكتمل نتائجها بعد (عددها: {$pendingCount}). يرجى الانتظار لحين صدور كافة النتائج واستلامها، أو استخدام «تعليق بانتظار الفحوصات» لاستدعاء المرضى الآخرين ريثما تصدر النتائج في محطتك.";
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $errMsg,
+                            'pending_requests_count' => $pendingCount,
+                        ], 422);
+                    }
+
+                    return redirect()->back()->with('error', $errMsg);
+                }
+            }
+
             $updateData['status'] = $request->status;
         }
 

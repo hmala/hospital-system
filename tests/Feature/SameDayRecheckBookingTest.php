@@ -94,10 +94,10 @@ class SameDayRecheckBookingTest extends TestCase
         ]);
     }
 
-    public function test_booking_same_day_for_same_doctor_automatically_becomes_free_recheck(): void
+    public function test_booking_same_day_for_same_doctor_is_strictly_blocked(): void
     {
-        // 1. إنشاء زيارة سابقة مكتملة للمريض في نفس اليوم
-        $visit = Visit::create([
+        // 1. إنشاء زيارة سابقة للمريض في نفس اليوم
+        Visit::create([
             'patient_id' => $this->patient->id,
             'doctor_id' => $this->doctor->id,
             'department_id' => $this->department->id,
@@ -105,7 +105,7 @@ class SameDayRecheckBookingTest extends TestCase
             'visit_time' => '10:00:00',
             'visit_type' => 'checkup',
             'chief_complaint' => 'فحص عام',
-            'status' => 'completed',
+            'status' => 'in_progress',
         ]);
 
         $admin = User::create([
@@ -115,7 +115,7 @@ class SameDayRecheckBookingTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        // 2. محاولة حجز موعد جديد لنفس المريض ونفس الطبيب في نفس اليوم
+        // 2. محاولة حجز موعد ثانٍ لنفس المريض ونفس الطبيب في نفس اليوم
         $response = $this->actingAs($admin)->post(route('appointments.store'), [
             'patient_id' => $this->patient->id,
             'doctor_id' => $this->doctor->id,
@@ -126,19 +126,54 @@ class SameDayRecheckBookingTest extends TestCase
             'consultation_fee' => 35000,
         ]);
 
-        $response->assertRedirect(route('appointments.index'));
+        // 3. التأكد من رفض الحجز برسالة خطأ وعدم إنشاء أي موعد جديد
+        $response->assertSessionHasErrors(['patient_id']);
+        $this->assertEquals(0, Appointment::where('patient_id', $this->patient->id)->count());
+    }
 
-        // 3. التأكد من أن الحجز الجديد تم تعريفه كمراجعة مجانية برسم 0 د.ع ومرتبط بالزيارة الأصلية
-        $newAppt = Appointment::where('patient_id', $this->patient->id)
-            ->where('doctor_id', $this->doctor->id)
-            ->latest('id')
-            ->first();
+    public function test_doctor_workstation_blocks_completing_visit_when_tests_are_pending(): void
+    {
+        // 1. زيارة قيد الكشف
+        $visit = Visit::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:00:00',
+            'visit_type' => 'checkup',
+            'chief_complaint' => 'فحص عام',
+            'status' => 'in_progress',
+        ]);
 
-        $this->assertNotNull($newAppt);
-        $this->assertTrue((bool) $newAppt->is_free_recheck);
-        $this->assertEquals(0, (float) $newAppt->consultation_fee);
-        $this->assertEquals('paid', $newAppt->payment_status);
-        $this->assertEquals($visit->id, $newAppt->recheck_parent_visit_id);
+        // 2. طلب تحليل قيد الانتظار لم يكتمل
+        $labRequest = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'type' => 'lab',
+            'status' => 'pending',
+            'description' => 'CBC test',
+            'details' => ['tests' => ['CBC']],
+        ]);
+
+        // 3. محاولة إنهاء الزيارة أثناء تعليق الفحص -> يجب أن تُرفض ويُمنع الإغلاق
+        $response = $this->actingAs($this->doctorUser)->put(route('doctor.visits.update', $visit), [
+            'status' => 'completed',
+        ]);
+
+        $response->assertSessionHas('error');
+        $this->assertEquals('in_progress', $visit->fresh()->status);
+
+        // 4. بعد اكتمال التحليل من قبل المختبر
+        $labRequest->update(['status' => 'completed']);
+
+        // 5. محاولة إنهاء الزيارة مجدداً -> يجب أن تنجح
+        $responseSuccess = $this->actingAs($this->doctorUser)->put(route('doctor.visits.update', $visit), [
+            'status' => 'completed',
+        ]);
+
+        $responseSuccess->assertSessionHas('success');
+        $this->assertEquals('completed', $visit->fresh()->status);
     }
 
     public function test_doctor_workstation_merges_all_same_day_requests_for_patient(): void

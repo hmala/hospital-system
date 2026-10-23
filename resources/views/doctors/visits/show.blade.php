@@ -470,18 +470,25 @@
                         </button>
                     @endif
                     @if($visit->status == 'in_progress')
-                        <a href="{{ route('doctor.visits.index') }}" class="btn btn-outline-warning fw-semibold shadow-sm" title="الرجوع للعيادة واستدعاء المريض التالي مع إبقاء هذه الزيارة بانتظار صدور النتائج">
+                        <a href="{{ route('doctor.visits.index') }}" class="btn btn-warning fw-bold shadow-sm" title="الرجوع للعيادة واستدعاء المريض التالي مع إبقاء هذه الزيارة بانتظار صدور النتائج">
                             <i class="fas fa-hourglass-half me-1"></i> تعليق بانتظار الفحوصات
                         </a>
-                        <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" class="d-inline" id="completeVisitForm">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="status" value="completed">
-                            <button type="submit" class="btn btn-success" onclick="return confirm('{{ (isset($hasPendingRequests) && $hasPendingRequests) ? '⚠️ تنبيه سريري: توجد فحوصات (أشعة أو مختبر) لهذا المريض لم تكتمل نتائجها بعد!\n\nإنهاء الزيارة سيقفل ملف الكشف الآن.\nهل تريد بالتأكيد إنهاء الزيارة؟\n(نصيحة: يمكنك الضغط على «تعليق بانتظار الفحوصات» لاستدعاء المريض التالي ريثما تصدر النتائج).' : 'هل أنت متأكد من إنهاء هذه الزيارة؟ سيتم تغيير حالتها إلى مكتملة وستظهر في التاريخ.' }}')">
-                                <i class="fas fa-check-circle me-1"></i>
-                                إنهاء الزيارة
+                        @if(isset($hasPendingRequests) && $hasPendingRequests)
+                            <button type="button" class="btn btn-secondary fw-semibold shadow-sm" style="cursor: not-allowed; opacity: 0.85;" onclick="alert('⚠️ تنبيه سريري: لا يمكن إنهاء الزيارة الآن!\n\nتوجد فحوصات (تحاليل أو أشعة) معلقة لم تكتمل نتائجها بعد (عددها: {{ $pendingRequestsCount ?? 1 }}).\n\nيرجى استخدام زر «تعليق بانتظار الفحوصات» لاستدعاء المرضى الآخرين ريثما يكتمل استلام النتائج.')" title="مغلق: توجد فحوصات معلقة لم تكتمل نتائجها بعد">
+                                <i class="fas fa-lock me-1"></i>
+                                إنهاء الزيارة (بانتظار الفحوصات)
                             </button>
-                        </form>
+                        @else
+                            <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" class="d-inline" id="completeVisitForm">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="btn btn-success fw-bold shadow-sm" onclick="return confirm('هل أنت متأكد من إنهاء هذه الزيارة؟ سيتم اعتماد التشخيص والعلاج وأرشفة الكشفية.')">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    إنهاء الزيارة
+                                </button>
+                            </form>
+                        @endif
                         <form action="{{ route('doctor.visits.cancel', $visit) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')
@@ -529,8 +536,33 @@
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(isset($hasPendingRequests) && $hasPendingRequests && $visit->status == 'in_progress')
+        <div class="alert alert-warning border-warning d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 shadow-sm rounded-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-hourglass-half fa-2x text-warning me-2"></i>
+                <div>
+                    <h6 class="mb-1 fw-bold text-dark">
+                        <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                        توجد فحوصات طبية معلقة بانتظار صدور النتائج (عددها: {{ $pendingRequestsCount ?? 1 }})
+                    </h6>
+                    <p class="mb-0 text-muted small">يُمنع إنهاء الزيارة حتى تكتمل وتصدر نتائج كافة الفحوصات (المخبرية والشعاعية). يمكنك الضغط على <strong>«تعليق بانتظار الفحوصات»</strong> لمتابعة العيادة واستدعاء المريض التالي ريثما تصدر النتائج.</p>
+                </div>
+            </div>
+            <a href="{{ route('doctor.visits.index') }}" class="btn btn-warning fw-bold text-dark px-3 py-2 shadow-sm mt-2 mt-md-0">
+                <i class="fas fa-hourglass-half me-1"></i> تعليق واستدعاء التالي
+            </a>
         </div>
     @endif
 

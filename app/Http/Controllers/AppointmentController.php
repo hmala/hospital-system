@@ -139,37 +139,42 @@ class AppointmentController extends Controller
             return back()->withErrors(['appointment_time' => 'يوجد موعد محجوز مسبقاً لهذا الطبيب في هذا التاريخ والوقت'])->withInput();
         }
 
-        $doctor = Doctor::find($request->doctor_id);
-
-        // التحقق مما إذا كان للمريض زيارة سابقة لنفس الطبيب في نفس اليوم لتحويله لمراجعة نتائج مجانية
+        // منع تكرار الحجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً
         $apptDateOnly = \Carbon\Carbon::parse($request->appointment_date)->toDateString();
-        $sameDayVisit = Visit::where('patient_id', $request->patient_id)
+
+        $existingSameDayAppt = Appointment::where('patient_id', $request->patient_id)
+            ->where('doctor_id', $request->doctor_id)
+            ->whereDate('appointment_date', $apptDateOnly)
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->first();
+
+        $existingSameDayVisit = Visit::where('patient_id', $request->patient_id)
             ->where('doctor_id', $request->doctor_id)
             ->whereDate('visit_date', $apptDateOnly)
             ->where('status', '!=', 'cancelled')
-            ->latest('id')
             ->first();
 
-        $isSameDayRecheck = ($sameDayVisit !== null);
-        $consultationFee = $isSameDayRecheck ? 0 : ($request->consultation_fee ?: ($doctor?->consultation_fee ?? 0));
-        $reason = $isSameDayRecheck ? 'مراجعة نتائج نفس اليوم (مجانية)' : ($request->reason ?: 'كشف طبي');
-        $notes = $isSameDayRecheck ? ("مراجعة نتائج فحوصات مجانية لنفس اليوم (مرتبطة بالزيارة #{$sameDayVisit->id})") : $request->notes;
-        $status = $isSameDayRecheck ? 'confirmed' : 'scheduled';
-        $paymentStatus = $isSameDayRecheck ? 'paid' : 'pending';
+        if ($existingSameDayAppt || $existingSameDayVisit) {
+            return back()->withErrors([
+                'patient_id' => '⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض لديه كشفية/حجز مسجل اليوم بالفعل لدى هذا الطبيب، ويدخل للعيادة مباشرة لمتابعة الفحوصات دون الحاجة لقطع حجز جديد.',
+            ])->withInput();
+        }
+
+        $doctor = Doctor::find($request->doctor_id);
+        $consultationFee = $request->consultation_fee ?: ($doctor?->consultation_fee ?? 0);
 
         Appointment::create([
             'patient_id' => $request->patient_id,
             'doctor_id' => $request->doctor_id,
             'department_id' => $request->department_id,
             'appointment_date' => $request->appointment_date.' '.$request->appointment_time.':00',
-            'reason' => $reason,
-            'notes' => $notes,
+            'reason' => $request->reason ?: 'كشف طبي عام',
+            'notes' => $request->notes,
             'consultation_fee' => $consultationFee,
-            'is_free_recheck' => $isSameDayRecheck,
-            'recheck_parent_visit_id' => $sameDayVisit?->id,
+            'is_free_recheck' => false,
             'duration' => $request->duration ?? 30,
-            'status' => $status,
-            'payment_status' => $paymentStatus,
+            'status' => 'scheduled',
+            'payment_status' => 'pending',
         ]);
 
         return redirect()->route('appointments.index')

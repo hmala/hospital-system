@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-23 — المرحلة 110: الحظر الصارم للحجز المكرر لنفس اليوم، والقفل السريري الإلزامي لإنهاء الزيارة بانتظار الفحوصات Strict Same-Day Duplicate Booking Prevention, Hard Validation Block & Mandatory Visit Completion Clinical Gate Pending Test Results)
+
+### Done
+- **الحظر الصارم لتكرار الحجز لنفس اليوم نهائياً ([app/Http/Controllers/AppointmentController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AppointmentController.php) & [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php))**:
+  * منع تسجيل أو قطع أي حجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً (حتى لو برسم 0 د.ع أو تأكيد الاستعلامات).
+  * إرجاع رسالة خطأ وإرشاد واضحة: *"⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض مسجل اليوم بالفعل لدى الطبيب. لا داعي لقطع حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة"*.
+  * ضمان عدم توليد أي قيود أو وصولات إضافية بصندوق الكاشير أو سجلات الحركات المالية.
+- **القفل السريري الإلزامي لإنهاء الزيارة في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * **التحقق البرمجي الصارم (Backend Gate)**: في دالة `update`، يُمنع تحويل الزيارة إلى `completed` في حال وجود أي فحوصات مخبرية أو شعاعية معلقة لم تكتمل نتائجها (`whereNotIn('status', ['completed', 'cancelled'])`).
+  * **التحكم بالواجهة (Frontend Lock)**: استبدال زر "إنهاء الزيارة" بزر مقفل ومعطل (`Disabled`) يحمل أيقونة القفل مع نافذة تنبيهية إرشادية توضح عدد الفحوصات المعلقة، وتوجه الطبيب لاستخدام زر `[ ⏳ تعليق بانتظار الفحوصات ]`.
+  * **شريط تحذيري وإرشادي علوي**: عرض بانيل تنبيه كهرماني بارز أعلى صفحة الزيارة يوضح وجود فحوصات معلقة مع زر سريع `[ تعليق واستدعاء التالي ]` للرجوع لمحطة العيادة ومتابعة باقي المراجعين ريثما تصدر النتائج.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
+  * تحديث وتوسيع الاختبارات للتأكد من حظر حجز نفس اليوم بالكامل، ومنع إنهاء الزيارة عند وجود فحوصات معلقة، والسماح بإنهائها فقط عند اكتمال كافة الفحوصات بنجاح تام (`3 passed, 10 assertions`).
+
 ## Session log (2026-10-23 — المرحلة 109: حماية كشفية نفس اليوم من التكرار، وأتمتة مراجعة النتائج المجانية، ودمج فحوصات اليوم في محطة الطبيب، وتنظيف قيود هوستنجر المكررة Same-Day Duplicate Consultation Prevention, Automatic Free Results Recheck, Workstation Requests Aggregation & Hostinger Duplicate Cleanup)
 
 ### Done

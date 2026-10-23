@@ -420,25 +420,26 @@ class InquiryController extends Controller
                 // تحديد تاريخ الموعد (إما من النموذج أو اليوم)
                 $appointmentDate = $httpRequest->appointment_date ? Carbon::parse($httpRequest->appointment_date) : Carbon::today();
 
-                // فحص تكرار الحجز النشط في نفس اليوم للطبيب
-                if (! $httpRequest->boolean('confirm_duplicate_booking')) {
-                    $existingActiveAppt = Appointment::where('patient_id', $patient->id)
-                        ->where('doctor_id', $doctor->id)
-                        ->whereDate('appointment_date', $appointmentDate)
-                        ->whereNotIn('status', ['completed', 'cancelled'])
-                        ->first();
+                // منع تكرار الحجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً (حتى لو بمبلغ 0)
+                $apptDateStr = $appointmentDate->toDateString();
+                $existingSameDayAppt = Appointment::where('patient_id', $patient->id)
+                    ->where('doctor_id', $doctor->id)
+                    ->whereDate('appointment_date', $apptDateStr)
+                    ->whereNotIn('status', ['cancelled', 'no_show'])
+                    ->first();
 
-                    if ($existingActiveAppt) {
-                        return redirect()->back()
-                            ->withInput()
-                            ->with('duplicate_booking_warning', [
-                                'type' => 'checkup',
-                                'doctor_name' => $doctor->user?->name ?? 'الطبيب',
-                                'queue_number' => $existingActiveAppt->queue_number,
-                                'status' => $existingActiveAppt->status,
-                                'message' => 'المريض لديه حجز نشط اليوم بالفعل مع د. '.($doctor->user?->name ?? '')." برقم تسلسل #{$existingActiveAppt->queue_number}. يرجى تأكيد الرغبة بحجز موعد إضافي ثانٍ لنفس اليوم.",
-                            ]);
-                    }
+                $existingSameDayVisit = Visit::where('patient_id', $patient->id)
+                    ->where('doctor_id', $doctor->id)
+                    ->whereDate('visit_date', $apptDateStr)
+                    ->where('status', '!=', 'cancelled')
+                    ->first();
+
+                if ($existingSameDayAppt || $existingSameDayVisit) {
+                    $docName = $doctor->user?->name ?? 'الطبيب';
+
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', "⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض مسجل اليوم بالفعل لدى د. {$docName}. لا داعي لقطع أي حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة.");
                 }
 
                 // فحص ما إذا كان للمريض موعد مراجعة مجانية مجدول مسبقاً أو زيارة سابقة حدد فيها الطبيب صراحة موعد مراجعة وما زالت صالحة
@@ -470,30 +471,16 @@ class InquiryController extends Controller
                         ->first();
                 }
 
-                // 3. هل توجد زيارة سابقة لنفس المريض في نفس تاريخ اليوم لدى نفس الطبيب؟ (مراجعة نتائج نفس اليوم)
-                $sameDayVisit = null;
-                if (! $scheduledRecheckAppt && ! $recentVisitWithFollowUp) {
-                    $apptDateOnly = Carbon::parse($appointmentDate)->toDateString();
-                    $sameDayVisit = Visit::where('patient_id', $patient->id)
-                        ->where('doctor_id', $doctor->id)
-                        ->whereDate('visit_date', $apptDateOnly)
-                        ->where('status', '!=', 'cancelled')
-                        ->latest('id')
-                        ->first();
-                }
-
-                $parentVisit = $scheduledRecheckAppt?->recheckParentVisit ?: ($recentVisitWithFollowUp ?: $sameDayVisit);
-                $isFreeRecheck = ($scheduledRecheckAppt !== null || $recentVisitWithFollowUp !== null || $sameDayVisit !== null);
+                $parentVisit = $scheduledRecheckAppt?->recheckParentVisit ?: $recentVisitWithFollowUp;
+                $isFreeRecheck = ($scheduledRecheckAppt !== null || $recentVisitWithFollowUp !== null);
 
                 $fee = $isFreeRecheck ? 0 : ($doctor->consultation_fee ?? $department->consultation_fee ?? 0);
                 $payStatus = $isFreeRecheck ? 'paid' : 'pending';
                 $reasonText = $isFreeRecheck
-                    ? ($sameDayVisit ? 'مراجعة نتائج نفس اليوم (مجانية)' : 'مراجعة مجانية')
+                    ? 'مراجعة مجانية'
                     : ($httpRequest->description ?? 'كشف طبي عام');
                 $noteText = $isFreeRecheck
-                    ? ($sameDayVisit
-                        ? "مراجعة نتائج فحوصات مجانية لنفس اليوم (مرتبطة بالزيارة #{$sameDayVisit->id})"
-                        : ('مراجعة مجانية صالحة حتى '.Carbon::parse($parentVisit?->visit_date ?? now())->addDays($validityDays)->format('Y-m-d').($parentVisit ? " (مرتبطة بالزيارة #{$parentVisit->id})" : '')))
+                    ? ('مراجعة مجانية صالحة حتى '.Carbon::parse($parentVisit?->visit_date ?? now())->addDays($validityDays)->format('Y-m-d').($parentVisit ? " (مرتبطة بالزيارة #{$parentVisit->id})" : ''))
                     : 'تم الحجز من الاستعلامات - بانتظار الدفع';
 
                 if ($httpRequest->boolean('confirm_duplicate_booking')) {
