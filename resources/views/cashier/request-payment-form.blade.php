@@ -408,10 +408,9 @@
                                                     <th width="40" class="text-center">#</th>
                                                     <th>اسم الخدمة / الفحص</th>
                                                     <th width="100">الرمز</th>
-                                                    <th width="120" class="text-end">السعر المعتمد</th>
-                                                    <th width="120" class="text-end text-success">تحمل المريض</th>
-                                                    <th width="120" class="text-end text-primary">حصة الضمان</th>
-                                                    <th width="190" class="text-center bg-light border-start">الإجراء / الحالة</th>
+                                                    <th width="130" class="text-end">السعر المعتمد</th>
+                                                    <th width="130" class="text-end text-success">تحمل المريض</th>
+                                                    <th width="130" class="text-end text-primary">حصة الضمان</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -434,9 +433,8 @@
                                                         data-moi-price="{{ $item['moi_price'] }}"
                                                         data-hi-price="{{ $item['hi_price'] }}"
                                                         data-is-moi-active="{{ $item['is_moi_active'] ? '1' : '0' }}"
-                                                        data-is-hi-active="{{ $item['is_hi_active'] ? '1' : '0' }}"
-                                                        data-item-action="pay_today">
-                                                        <td class="text-center text-muted row-number">{{ $idx + 1 }}</td>
+                                                        data-is-hi-active="{{ $item['is_hi_active'] ? '1' : '0' }}">
+                                                        <td class="text-center text-muted">{{ $idx + 1 }}</td>
                                                         <td>
                                                             @if($item['type'] === 'package')
                                                                 <i class="fas fa-box text-warning me-2"></i>
@@ -445,7 +443,7 @@
                                                             @else
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
                                                             @endif
-                                                            <span class="fw-semibold item-name-span">{{ $item['name'] }}</span>
+                                                            <span class="fw-semibold">{{ $item['name'] }}</span>
                                                             @if(count($allRequests) > 1)
                                                                 <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : 'bg-primary' }} ms-1" style="font-size:0.68rem;">
                                                                     {{ $item['type'] === 'radiology' ? 'أشعة' : 'مختبر' }}
@@ -463,17 +461,6 @@
                                                         <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
                                                         <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} د.ع</td>
                                                         <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} د.ع</td>
-                                                        <td class="text-center border-start p-1 align-middle">
-                                                            <select name="item_actions[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]" 
-                                                                    class="form-select form-select-sm item-action-select fw-bold border-success text-success py-1" 
-                                                                    style="font-size: 0.82rem;"
-                                                                    data-row-idx="{{ $idx }}"
-                                                                    onchange="handleItemActionChange(this)">
-                                                                <option value="pay_today" class="text-success fw-bold" selected>✅ إجراء وتسديد اليوم</option>
-                                                                <option value="postpone" class="text-warning fw-bold">⏱️ تأجيل (صيام/للغد)</option>
-                                                                <option value="cancel" class="text-danger fw-bold">❌ إلغاء الفحص</option>
-                                                            </select>
-                                                        </td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -483,62 +470,9 @@
                                                     <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} د.ع</th>
-                                                    <th class="text-center text-muted small" id="table_active_items_count">نشط: {{ count($items) }}</th>
                                                 </tr>
                                             </tfoot>
                                         </table>
-                                    </div>
-
-                                    <!-- صندوق تأجيل الفحوصات المحدد للغد (صيام / تحضير) -->
-                                    <div id="postponeReasonBox" class="card border-warning mt-3 shadow-xs rounded-3" style="display: none; background-color: #fffdf5;">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex align-items-center gap-2 mb-2">
-                                                <i class="fas fa-hourglass-half fa-lg text-warning"></i>
-                                                <strong class="text-dark">فحوصات محددة للتأجيل لموعد لاحق (صيام / تحضير مسبق):</strong>
-                                            </div>
-                                            <div class="row g-2 align-items-center">
-                                                <div class="col-md-5">
-                                                    <label class="form-label small fw-bold text-muted mb-1">سبب التأجيل المعتمد:</label>
-                                                    <select name="postpone_reason" id="postponeReasonSelect" class="form-select form-select-sm" onchange="if(this.value === 'custom') { $('#postponeCustomDiv').show(); } else { $('#postponeCustomDiv').hide(); }">
-                                                        <option value="تأجيل الفحص لعدم الصيام / يتطلب صيام 12 ساعة (Fasting)" selected>تأجيل لعدم الصيام / صيام 12 ساعة (Fasting)</option>
-                                                        <option value="يتطلب تحضيراً مسبقاً (حمية خاصة أو امتلاء مثانة)">يتطلب تحضيراً مسبقاً (حمية / امتلاء مثانة)</option>
-                                                        <option value="عدم توفر المادة المشغلة اليوم بالقسم">عدم توفر المادة المشغلة اليوم بالقسم</option>
-                                                        <option value="بناءً على طلب وتفضيل المريض لموعد آخر">بناءً على طلب وتفضيل المريض لموعد آخر</option>
-                                                        <option value="custom">سبب آخر (كتابة يدوية)...</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4" id="postponeCustomDiv" style="display: none;">
-                                                    <label class="form-label small fw-bold text-muted mb-1">حدد السبب المخصص:</label>
-                                                    <input type="text" name="postpone_custom_reason" id="postponeCustomReason" class="form-control form-control-sm" placeholder="اكتب سبب التأجيل...">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <small class="text-muted d-block mt-2">
-                                                        <i class="fas fa-info-circle text-primary me-1"></i> سيتم إنشاء طلب فرعي مستقل بالفحوصات المؤجلة دون إيقاف باقي الفحوصات أو كشفية الطبيب.
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- صندوق إلغاء الفحوصات برغبة المريض -->
-                                    <div id="cancelReasonBox" class="card border-danger mt-3 shadow-xs rounded-3" style="display: none; background-color: #fff9f9;">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex align-items-center gap-2 mb-2 text-danger">
-                                                <i class="fas fa-times-circle fa-lg"></i>
-                                                <strong>فحوصات محددة للإلغاء:</strong>
-                                            </div>
-                                            <div class="row g-2 align-items-center">
-                                                <div class="col-md-6">
-                                                    <label class="form-label small fw-bold text-muted mb-1">سبب الإلغاء:</label>
-                                                    <input type="text" name="cancel_reason" id="cancelReasonInput" class="form-control form-control-sm" value="ألغي برغبة المريض عند شباك الكاشير" placeholder="سبب الإلغاء...">
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <small class="text-muted d-block mt-2">
-                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i> سيتم استبعاد هذه الفحوصات نهائياً من الفاتورة وإشعار الطبيب المعالج.
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 @else
                                     <div class="alert alert-secondary mb-0">
@@ -658,45 +592,6 @@ function toggleInsuranceEdit() {
     }
 }
 
-let triggerRecalculate = null;
-
-function handleItemActionChange(selectElem) {
-    const row = selectElem.closest('.service-item-row');
-    const action = selectElem.value;
-    
-    if (action === 'pay_today') {
-        selectElem.className = 'form-select form-select-sm item-action-select fw-bold border-success text-success py-1';
-        if (row) {
-            row.classList.remove('table-warning', 'table-danger', 'bg-opacity-25');
-            row.setAttribute('data-item-action', 'pay_today');
-            const nameSpan = row.querySelector('.item-name-span');
-            if (nameSpan) nameSpan.classList.remove('text-muted', 'text-decoration-line-through');
-        }
-    } else if (action === 'postpone') {
-        selectElem.className = 'form-select form-select-sm item-action-select fw-bold border-warning text-dark bg-warning bg-opacity-25 py-1';
-        if (row) {
-            row.classList.remove('table-danger');
-            row.classList.add('table-warning', 'bg-opacity-25');
-            row.setAttribute('data-item-action', 'postpone');
-            const nameSpan = row.querySelector('.item-name-span');
-            if (nameSpan) nameSpan.classList.remove('text-decoration-line-through');
-        }
-    } else if (action === 'cancel') {
-        selectElem.className = 'form-select form-select-sm item-action-select fw-bold border-danger text-danger bg-danger bg-opacity-10 py-1';
-        if (row) {
-            row.classList.remove('table-warning');
-            row.classList.add('table-danger', 'bg-opacity-25');
-            row.setAttribute('data-item-action', 'cancel');
-            const nameSpan = row.querySelector('.item-name-span');
-            if (nameSpan) nameSpan.classList.add('text-muted', 'text-decoration-line-through');
-        }
-    }
-    
-    if (typeof triggerRecalculate === 'function') {
-        triggerRecalculate();
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     const insuranceTypeSelect = document.getElementById('insurance_type');
     const copayInput = document.getElementById('copay_percentage');
@@ -710,10 +605,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const copayBadge = document.getElementById('copayBadge');
     const hiBadge = document.getElementById('patient_hi_category_badge');
     const rows = document.querySelectorAll('.service-item-row');
-    const postponeBox = document.getElementById('postponeReasonBox');
-    const cancelBox = document.getElementById('cancelReasonBox');
-    const submitBtn = document.getElementById('submitPaymentBtn');
-    const paymentMethodsRow = document.querySelector('.payment-methods-group')?.closest('.row');
 
     function formatNumber(num) {
         return Math.round(num).toLocaleString('en-US') + ' د.ع';
@@ -740,6 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 copayBadge.textContent = 'هيئة الضمان الصحي الوطني';
             }
         } else {
+            // none
             copayPct = 100;
             if (insuranceCardCol) insuranceCardCol.style.display = 'none';
             if (copaySection) copaySection.style.display = 'none';
@@ -752,37 +644,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalApproved = 0;
         let totalPatient = 0;
         let totalInsurance = 0;
+        let hasError = false;
         let hasUncovered = false;
-        let activeCount = 0;
-        let postponeCount = 0;
-        let cancelCount = 0;
 
         rows.forEach(row => {
-            const action = row.getAttribute('data-item-action') || 'pay_today';
-            const tdApproved = row.querySelector('.row-approved-price');
-            const tdPatient = row.querySelector('.row-patient-share');
-            const tdInsurance = row.querySelector('.row-insurance-share');
-            const covBadge = row.querySelector('.row-coverage-badge');
-
-            if (action === 'postpone') {
-                postponeCount++;
-                if (tdApproved) tdApproved.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>مؤجل لموعد لاحق</span>';
-                if (tdPatient) tdPatient.textContent = '0 د.ع';
-                if (tdInsurance) tdInsurance.textContent = '0 د.ع';
-                if (covBadge) covBadge.style.display = 'none';
-                return;
-            }
-
-            if (action === 'cancel') {
-                cancelCount++;
-                if (tdApproved) tdApproved.innerHTML = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>ملغي</span>';
-                if (tdPatient) tdPatient.textContent = '0 د.ع';
-                if (tdInsurance) tdInsurance.textContent = '0 د.ع';
-                if (covBadge) covBadge.style.display = 'none';
-                return;
-            }
-
-            activeCount++;
             const basePrice = parseFloat(row.getAttribute('data-base-price')) || 0;
             const moiPrice = parseFloat(row.getAttribute('data-moi-price')) || 0;
             const hiPrice = parseFloat(row.getAttribute('data-hi-price')) || 0;
@@ -820,6 +685,11 @@ document.addEventListener('DOMContentLoaded', function() {
             totalPatient += rowPatient;
             totalInsurance += rowInsurance;
 
+            const tdApproved = row.querySelector('.row-approved-price');
+            const tdPatient = row.querySelector('.row-patient-share');
+            const tdInsurance = row.querySelector('.row-insurance-share');
+            const covBadge = row.querySelector('.row-coverage-badge');
+
             if (tdApproved) tdApproved.textContent = formatNumber(rowApproved);
             if (tdPatient) tdPatient.textContent = formatNumber(rowPatient);
             if (tdInsurance) tdInsurance.textContent = formatNumber(rowInsurance);
@@ -839,32 +709,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // إظهار أو إخفاء صناديق أسباب التأجيل والإلغاء
-        if (postponeBox) postponeBox.style.display = postponeCount > 0 ? 'block' : 'none';
-        if (cancelBox) cancelBox.style.display = cancelCount > 0 ? 'block' : 'none';
-
-        const activeCountElem = document.getElementById('table_active_items_count');
-        if (activeCountElem) {
-            activeCountElem.textContent = 'للدفع اليوم: ' + activeCount;
-            activeCountElem.className = activeCount > 0 ? 'text-center fw-bold text-success small' : 'text-center fw-bold text-muted small';
-        }
-
-        // ضبط زر الإرسال عند اختيار تأجيل أو إلغاء كامل
-        if (submitBtn) {
-            if (activeCount === 0 && postponeCount > 0) {
-                submitBtn.className = 'btn btn-warning btn-lg px-4 fw-bold shadow-sm';
-                submitBtn.innerHTML = '<i class="fas fa-hourglass-half me-2"></i> تأكيد تأجيل كافة الفحوصات للغد';
-            } else if (activeCount === 0 && cancelCount > 0) {
-                submitBtn.className = 'btn btn-danger btn-lg px-4 fw-bold shadow-sm';
-                submitBtn.innerHTML = '<i class="fas fa-trash-alt me-2"></i> تأكيد إلغاء كافة الفحوصات';
-            } else {
-                submitBtn.className = 'btn btn-success btn-lg px-4 fw-bold shadow-sm';
-                submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد الدفع وإصدار الإيصال';
-            }
-        }
-
         const alertBox = document.getElementById('insuranceErrorAlert');
-        if (hasUncovered && insType !== 'none' && activeCount > 0) {
+        const submitBtn = document.getElementById('submitPaymentBtn');
+
+        if (hasUncovered && insType !== 'none') {
             if (alertBox) {
                 alertBox.className = 'alert alert-warning fw-semibold small mb-3 text-center';
                 alertBox.innerHTML = '<i class="fas fa-info-circle me-1 text-warning"></i> تنبيه للكاشير: يحتوي الطلب على فحوصات غير مشمولة بالضمان، تم احتسابها نقداً 100% على المريض تلقائياً.';
@@ -873,6 +721,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             if (alertBox) alertBox.classList.add('d-none');
         }
+
+        if (submitBtn) submitBtn.disabled = false;
 
         if (displayApproved) displayApproved.textContent = formatNumber(totalApproved);
         if (displayPatientShare) displayPatientShare.textContent = formatNumber(totalPatient);
@@ -891,8 +741,6 @@ document.addEventListener('DOMContentLoaded', function() {
             amountInput.value = totalPatient;
         }
     }
-
-    triggerRecalculate = recalculate;
 
     const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor($request->type) : 15.0);
     const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));

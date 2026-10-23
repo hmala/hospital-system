@@ -53,22 +53,7 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
-## Session log (2026-10-23 — المرحلة 113: منظومة التحكم الفردي بفحوصات الطلب الطبي لدى الكاشير وفصل الفحوصات المؤجلة (الخيار أ) وإشعار الطبيب والمختبر/الأشعة لحظياً Item-Level Cashier Actions, Automatic Request Split for Postponed Tests & Live Notifications Engine)
-
-### Done
-- **التحكم الفردي على مستوى الفحص الواحد في واجهة دفع الكاشير ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
-  * إضافة قائمة إجراءات مستقلة لكل فحص/تحليل في الطلب: (تسديد اليوم / تأجيل لموعد لاحق / إلغاء الفحص).
-  * ربط حقول الإجراءات بتحديث فوري لجدول التسوية المالية (المبلغ الإجمالي، نسبة التحمل، ومطالبة الضمان).
-  * حقل إجباري لتحديد سبب التأجيل (مثل عدم الصيام أو التحضير المسبق) لتوثيقه في السجلات الطبية.
-- **محرك فصل وتجزئة الطلب الآلي - الخيار (أ) ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
-  * عند تأجيل فحص، يتم تلقائياً إنشاء طلب طبي فرعي مستقل (`status = 'postponed'`) يحتوي حصراً على الفحوصات المؤجلة وسبب التأجيل وتاريخ الاستحقاق.
-  * تحديث الطلب الأصلي ليحتوي فقط على الفحوصات المسددة اليوم (`payment_status = 'paid'`) وحفظ إيصال القبض المالي للمبلغ المستلم فعلياً.
-  * إرسال إشعارات داخلية فورية (`App\Models\Notification`) للطبيب المعالج وكادر المختبر/الأشعة توضح الفحوصات المؤجلة وأسباب التأجيل.
-- **فك القفل السريري للزيارة عند اكتمال فحوصات اليوم ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * استثناء الطلبات المؤجلة (`postponed`) من القفل السريري، وتمكين الطبيب من إنهاء الزيارة اليوم وصرف العلاج بنجاح.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
-  * اجتياز كامل الاختبارات بـ 4 اختبارات و 19 تأكيداً برمجياً ناجحاً (`4 passed, 19 assertions`).
-
+- When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
 ## Session log (2026-10-23 — المرحلة 111: إصلاح استعلام التحقق من الفحوصات المعلقة عند إنهاء الزيارة، وتحسين استجابة AJAX، وتفعيل الحظر الصارم للحجز المكرر في واجهة الاستعلامات Doctor Visit Completion SQL Fix, Clean AJAX Error Handling & Inquiry Hard Block UI)
 
 ### Done

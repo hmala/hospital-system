@@ -35,17 +35,12 @@ class SameDayRecheckBookingTest extends TestCase
 
         Role::findOrCreate('admin', 'web');
         Role::findOrCreate('doctor', 'web');
-        Role::findOrCreate('cashier', 'web');
-        Role::findOrCreate('lab_staff', 'web');
-        Role::findOrCreate('radiology_staff', 'web');
         Role::findOrCreate('consultation_receptionist', 'web');
 
         Permission::findOrCreate('manage own visits', 'web');
         Permission::findOrCreate('view own visits', 'web');
         Permission::findOrCreate('create visits', 'web');
         Permission::findOrCreate('manage appointments', 'web');
-        Permission::findOrCreate('process payments', 'web');
-        Permission::findOrCreate('view cashier', 'web');
 
         $hospital = Hospital::create([
             'name' => 'مستشفى الكفاءات',
@@ -224,98 +219,5 @@ class SameDayRecheckBookingTest extends TestCase
         $loadedVisit = $response->viewData('visit');
         $this->assertCount(1, $loadedVisit->requests);
         $this->assertEquals($req1->id, $loadedVisit->requests->first()->id);
-    }
-
-    public function test_cashier_splits_postponed_tests_into_separate_request_and_releases_visit_lock(): void
-    {
-        Permission::findOrCreate('process medical requests payments', 'web');
-        $cashierUser = User::factory()->create();
-        $cashierUser->assignRole('cashier');
-        $cashierUser->givePermissionTo('process medical requests payments');
-
-        $test1 = \App\Models\LabTest::create([
-            'name' => 'Fasting Blood Sugar',
-            'code' => 'FBS-99',
-            'price' => 15000,
-            'is_active' => true,
-        ]);
-
-        $test2 = \App\Models\LabTest::create([
-            'name' => 'Complete Blood Count',
-            'code' => 'CBC-99',
-            'price' => 10000,
-            'is_active' => true,
-        ]);
-
-        $visit = Visit::create([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'department_id' => $this->department->id,
-            'visit_date' => now()->toDateString(),
-            'visit_time' => '10:00:00',
-            'visit_type' => 'checkup',
-            'chief_complaint' => 'فحص عام',
-            'status' => 'in_progress',
-        ]);
-
-        $originalReq = MedicalRequest::create([
-            'visit_id' => $visit->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'type' => 'lab',
-            'status' => 'pending',
-            'payment_status' => 'pending',
-            'description' => 'فحوصات دم',
-            'details' => [
-                'lab_test_ids' => [$test1->id, $test2->id],
-            ],
-        ]);
-
-        // الكاشير يسدد CBC (test2) ويؤجل فحص السكر الصائم FBS (test1) لعدم الصيام
-        $response = $this->actingAs($cashierUser)->post(route('cashier.request.payment.process', $originalReq), [
-            'amount' => 10000,
-            'payment_method' => 'cash',
-            'insurance_type' => 'none',
-            'item_actions' => [
-                $originalReq->id => [
-                    'lab' => [
-                        $test1->id => 'postpone',
-                        $test2->id => 'pay_today',
-                    ],
-                ],
-            ],
-            'postpone_reason' => 'عدم الصيام 12 ساعة',
-        ]);
-
-        // 1. التحقق من تسديد فحص CBC بنجاح
-        $this->assertEquals('paid', $originalReq->fresh()->payment_status);
-        $this->assertEquals([$test2->id], $originalReq->fresh()->details['lab_test_ids']);
-
-        // 2. التحقق من إنشاء طلب فرعي جديد للفحص المؤجل (FBS) بحالة postponed
-        $splitPostponedReq = MedicalRequest::where('visit_id', $visit->id)
-            ->where('status', 'postponed')
-            ->first();
-
-        $this->assertNotNull($splitPostponedReq);
-        $this->assertEquals('pending', $splitPostponedReq->payment_status);
-        $this->assertEquals([$test1->id], $splitPostponedReq->details['lab_test_ids']);
-        $this->assertTrue($splitPostponedReq->details['is_postponed_split']);
-
-        // 3. التحقق من وصول إشعار للطبيب المعالج
-        $this->assertDatabaseHas('notifications', [
-            'notifiable_id' => $this->doctorUser->id,
-            'type' => 'request_items_postponed',
-        ]);
-
-        // 4. المختبر يكمل الفحص المدفوع اليوم
-        $originalReq->update(['status' => 'completed']);
-
-        // 5. الطبيب ينهي الزيارة بنجاح دون أن يعيقه الفحص المؤجل للغد
-        $visitCompleteResponse = $this->actingAs($this->doctorUser)->put(route('doctor.visits.update', $visit), [
-            'status' => 'completed',
-        ]);
-
-        $visitCompleteResponse->assertSessionHas('success');
-        $this->assertEquals('completed', $visit->fresh()->status);
     }
 }

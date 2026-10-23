@@ -63,7 +63,7 @@ class RadiologyStaffController extends Controller
 
         $baseQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
             ->where('type', 'radiology')
-            ->whereNotIn('status', ['cancelled', 'postponed']);
+            ->where('status', '!=', 'cancelled');
 
         // تطبيق فلتر التاريخ الموحد
         if ($dateFilter === 'today') {

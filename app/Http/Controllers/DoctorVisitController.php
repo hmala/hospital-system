@@ -296,7 +296,7 @@ class DoctorVisitController extends Controller
 
         $pendingRequests = $allSameDayRequests
             ->whereIn('type', ['lab', 'radiology'])
-            ->whereNotIn('status', ['completed', 'cancelled', 'postponed']);
+            ->whereNotIn('status', ['completed', 'cancelled']);
 
         $hasPendingRequests = $pendingRequests->isNotEmpty();
         $pendingRequestsCount = $pendingRequests->count();
@@ -725,7 +725,7 @@ class DoctorVisitController extends Controller
 
                 $pendingRequests = \App\Models\Request::whereIn('visit_id', $sameDayVisitIds)
                     ->whereIn('type', ['lab', 'radiology'])
-                    ->whereNotIn('status', ['completed', 'cancelled', 'postponed'])
+                    ->whereNotIn('status', ['completed', 'cancelled'])
                     ->get();
 
                 if ($pendingRequests->isNotEmpty()) {
