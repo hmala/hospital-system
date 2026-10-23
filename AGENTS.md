@@ -54,7 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
-- **CRITICAL GIT RULE (قاعدة Git المعتمدة)**: الرفع المباشر (`git push`) يتم حصراً على الفرع الرئيسي `main` دون إنشاء فروع جانبية.
+## Session log (2026-10-23 — المرحلة 108: توحيد وهيكلة محطة الأشعة والتصوير الطبي وفق نمط المختبر حسب الأقسام، وبناء شريط الفلترة الموحد للتاريخ، وتصحيح التبويب الافتراضي وتزامن الفلاتر Radiology Hub Department Architecture Harmonization with Lab, Unified Date Toolbar, Instant Consultation Results Sync & Zero Tab-Switching Glitch)
+
+### Done
+- **توحيد التبويب الافتراضي وحل مشكلة اختفاء نتائج الاستشارية عند اختيار التاريخ**:
+  * تشخيص ومعالجة عدم تطابق المسمى البرمجي القديم (`waiting`) مع معرّف التبويب المعتمد (`station` / `station-pane`)، حيث كان يتسبب في عدم وجود كلاس التفعيل `show active` عند إعادة تحميل الصفحة بعد اختيار أي تاريخ، ما يؤدي لاختفاء جدول النتائج كلياً حتى يتنقل المستخدم بين التبويبات ويعود إليه.
+  * توحيد التبويب الافتراضي في الكنترولر والواجهة إلى `$activeTab = 'station'` وضمان بقاء تبويب الاستشارية وبانيل العرض نشطاً بـ `show active` فورياً.
+  * تحديث جدول الاستشارية ليعرض كافة طلبات العيادات المحولة (`$consultationRequests`) مرتبة بالأولوية السريرية (قيد النداء ⬅️ بالانتظار ⬅️ قيد الفحص ⬅️ المكتملة) بحيث تظهر الفحوصات في التواريخ السابقة مع أزرار الطباعة والمعاينة دون إخفائها خلف قائمة الانتظار فقط.
+  * حصر المزامنة اللحظية لطابور الاستدعاء (`syncRadiologyQueue`) لتعمل حصراً عند اختيار تاريخ "اليوم"، ومنع مسح نتائج التواريخ السابقة من الشاشة.
+- **تزامن حقول الفلترة التلقائي مع التبويبات والبطاقات العلوية**:
+  * ربط مستمعات التبويبات في الجافاسكربت لتحديث حقلي النموذج المخفيين (`radiology-active-tab-input` و `radiology-source-input`) لحظياً عند التنقل، لضمان بقاء المستخدم في نفس التبويب عند اختيار أي تاريخ.
+  * مزامنة تظليل وتمييز بطاقات الأقسام العلوية الأربعة (`#radiology-department-cards`) فورياً مع التبويب النشط.
+- **إعادة هيكلة محطة الأشعة وفق نمط المختبر (Department Breakdown)**:
+  * شريط بطاقات أقسام علوي رباعي: (طلبات العيادات الاستشارية، طلبات الأشعة المباشرة، أشعة وفحوصات قسم الطوارئ، كافة طلبات القسم).
+  * شريط فلترة وبحث موحد وشامل للتاريخ (اليوم، أمس، الأسبوع، الشهر، كافة التواريخ، وتقويم مخصص) بدلاً من الفلاتر المتكررة داخل التبويبات.
+  * تبويب مستقل لطلبات الأشعة المباشرة والاستقبال (`#direct-pane`) مع دعم زر الإلغاء الفوري.
+- **حزمة الاختبارات الآلية الحصينة**:
+  * إضافة اختبارات متقدمة تؤكد بقاء تبويب الاستشارية نشطاً بـ `show active` وظهور الفحوصات فورياً عند فلترة التاريخ بدون تنقل في [RadiologyPriorPendingRequestsTabTest](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyPriorPendingRequestsTabTest.php) بـ 5 اختبارات ناجحة (`5 passed, 36 assertions`).
+  * اجتياز كامل حزمة اختبارات قسم الأشعة والتصوير الطبي بـ 41 اختباراً ناجحاً (`41 passed, 217 assertions`).
+
 ## Session log (2026-10-22 — المرحلة 107: تعريب وتوحيد مسميات الأدوار والصلاحيات بالكامل، وإعادة تصميم لوحة الأدوار التنفيذية، وإضافة صلاحية التحكم بمطالبات الضمان الصحي Complete Roles & Permissions Arabic Localization, Executive Roles Hub Redesign, Unified Role Labels Engine, Zero Untranslated Permissions & Insurance Claims Access Control)
 
 ### Done
