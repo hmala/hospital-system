@@ -1736,17 +1736,26 @@ class InquiryController extends Controller
             $activeAppt = Appointment::where('patient_id', $patientId)
                 ->where('doctor_id', $doctorId)
                 ->whereDate('appointment_date', Carbon::today())
-                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereNotIn('status', ['cancelled', 'no_show'])
                 ->with(['doctor.user', 'department'])
                 ->latest()
                 ->first();
 
-            if ($activeAppt) {
+            $sameDayVisit = Visit::where('patient_id', $patientId)
+                ->where('doctor_id', $doctorId)
+                ->whereDate('visit_date', Carbon::today())
+                ->where('status', '!=', 'cancelled')
+                ->latest()
+                ->first();
+
+            if ($activeAppt || $sameDayVisit) {
                 $statusMap = [
                     'scheduled' => 'مجدول (بانتظار الدخول)',
                     'confirmed' => 'مؤكد في الطابور',
                     'waiting' => 'في غرفة الانتظار',
-                    'in_progress' => 'جاري الكشف حالياً',
+                    'in_consultation' => 'جاري الكشف حالياً في العيادة',
+                    'in_progress' => 'جاري الكشف حالياً في العيادة',
+                    'completed' => 'تم الكشف ومكتمل',
                 ];
                 $payMap = [
                     'paid' => 'مسدد نقداً (كاش)',
@@ -1755,20 +1764,25 @@ class InquiryController extends Controller
                     'not_applicable' => 'غير مطلوب',
                 ];
 
-                $docName = $activeAppt->doctor?->user?->name ?? 'الطبيب';
-                $statusLabel = $statusMap[$activeAppt->status] ?? $activeAppt->status;
-                $payLabel = $payMap[$activeAppt->payment_status] ?? $activeAppt->payment_status;
+                $docName = $activeAppt?->doctor?->user?->name ?? $sameDayVisit?->doctor?->user?->name ?? 'الطبيب';
+                $curStatus = $activeAppt?->status ?? $sameDayVisit?->status ?? 'in_progress';
+                $curPayment = $activeAppt?->payment_status ?? 'paid';
+                $queueNo = $activeAppt?->queue_number ?? '-';
+
+                $statusLabel = $statusMap[$curStatus] ?? $curStatus;
+                $payLabel = $payMap[$curPayment] ?? $curPayment;
 
                 return response()->json([
                     'has_active' => true,
+                    'is_blocked' => true,
                     'type' => 'checkup',
                     'doctor_name' => $docName,
-                    'queue_number' => $activeAppt->queue_number,
-                    'status' => $activeAppt->status,
+                    'queue_number' => $queueNo,
+                    'status' => $curStatus,
                     'status_label' => $statusLabel,
-                    'payment_status' => $activeAppt->payment_status,
+                    'payment_status' => $curPayment,
                     'payment_label' => $payLabel,
-                    'message' => "المريض لديه حجز كشفية نشط اليوم مع د. {$docName} برقم تسلسل #{$activeAppt->queue_number} (الحالة: {$statusLabel} - الدفع: {$payLabel}).",
+                    'message' => "المريض لديه كشفية مسجلة اليوم بالفعل لدى د. {$docName} برقم تسلسل #{$queueNo} (الحالة: {$statusLabel} - الدفع: {$payLabel}).",
                 ]);
             }
         }

@@ -464,20 +464,20 @@
                                             <span class="badge bg-success rounded-pill px-2 py-1">محدد</span>
                                         </div>
 
-                                        <!-- تنبيه فوري لوجود حجز نشط سابق لنفس الطبيب اليوم -->
-                                        <div id="duplicateDoctorWarningBox" class="mt-2 p-3 rounded-3 bg-warning bg-opacity-10 border border-warning shadow-sm" style="display: none;">
+                                        <!-- تنبيه فوري لمنع تكرار الحجز لنفس الطبيب في نفس اليوم -->
+                                        <div id="duplicateDoctorWarningBox" class="mt-2 p-3 rounded-3 bg-danger bg-opacity-10 border border-danger shadow-sm" style="display: none;">
                                             <div class="d-flex align-items-start gap-2">
-                                                <i class="fas fa-exclamation-triangle text-warning fs-4 mt-1"></i>
+                                                <i class="fas fa-ban text-danger fs-3 mt-1"></i>
                                                 <div class="flex-grow-1">
-                                                    <strong class="text-dark d-block mb-1" id="duplicateDoctorTitle">⚠️ تنبيه: حجز نشط مسبقاً اليوم لدى هذا الطبيب</strong>
-                                                    <p class="text-muted small mb-2" id="duplicateDoctorMessage"></p>
+                                                    <strong class="text-danger d-block mb-1" id="duplicateDoctorTitle">⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً</strong>
+                                                    <p class="text-dark small mb-2 fw-semibold" id="duplicateDoctorMessage"></p>
                                                     <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                                        <span class="badge bg-warning text-dark" id="duplicateDoctorQueueBadge">تسلسل: #0</span>
-                                                        <span class="badge bg-info text-dark" id="duplicateDoctorStatusBadge">الحالة</span>
-                                                        <span class="badge bg-secondary" id="duplicateDoctorPayBadge">الدفع</span>
+                                                        <span class="badge bg-danger text-white" id="duplicateDoctorQueueBadge">تسلسل: #0</span>
+                                                        <span class="badge bg-secondary text-white" id="duplicateDoctorStatusBadge">الحالة</span>
+                                                        <span class="badge bg-dark text-white" id="duplicateDoctorPayBadge">الدفع</span>
                                                     </div>
-                                                    <div class="small text-danger fw-bold">
-                                                        <i class="fas fa-info-circle me-1"></i> سيتطلب النظام تأكيد رغبتك بإنشاء حجز إضافي لنفس اليوم عند الحفظ.
+                                                    <div class="alert alert-danger p-2 mb-0 small fw-bold">
+                                                        <i class="fas fa-times-circle me-1"></i> يُمنع قطع حجز إضافي لنفس المريض في نفس اليوم! المريض مسجل بالفعل ويدخل للعيادة مباشرة لمتابعة الفحوصات أو المراجعة. (تم تعطيل الحفظ تلقائياً).
                                                     </div>
                                                 </div>
                                             </div>
@@ -1066,9 +1066,17 @@ function openConfirmDuplicateModal(message) {
 
 function checkDoctorActiveBooking(doctorId) {
     const warningBox = document.getElementById('duplicateDoctorWarningBox');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+
     if (!doctorId) {
         activeBookingState.checkup = null;
         if (warningBox) warningBox.style.display = 'none';
+        if (submitBtn && submitBtn.dataset.blockedByDuplicate === '1') {
+            submitBtn.disabled = false;
+            submitBtn.dataset.blockedByDuplicate = '0';
+            if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+        }
         return;
     }
 
@@ -1088,9 +1096,19 @@ function checkDoctorActiveBooking(doctorId) {
                     if (payEl) payEl.textContent = data.payment_label;
                     warningBox.style.display = 'block';
                 }
+                if (submitBtn && selectedTypes.has('checkup')) {
+                    submitBtn.disabled = true;
+                    submitBtn.dataset.blockedByDuplicate = '1';
+                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-ban me-2"></i> محظور: مسجل اليوم بالفعل لدى الطبيب';
+                }
             } else {
                 activeBookingState.checkup = null;
                 if (warningBox) warningBox.style.display = 'none';
+                if (submitBtn && submitBtn.dataset.blockedByDuplicate === '1') {
+                    submitBtn.disabled = false;
+                    submitBtn.dataset.blockedByDuplicate = '0';
+                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+                }
             }
         })
         .catch(err => {
@@ -1606,25 +1624,34 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         }
     }
 
-    // التحقق من الحجز المكرر النشط غير المؤكد
+    // 1. الحظر الصارم لتكرار كشفية نفس اليوم لنفس الطبيب
+    const docWarnBox = document.getElementById('duplicateDoctorWarningBox');
+    const isDoctorDuplicate = selectedTypes.has('checkup') && (
+        (activeBookingState.checkup && activeBookingState.checkup.has_active) || 
+        (docWarnBox && docWarnBox.style.display !== 'none')
+    );
+
+    if (isDoctorDuplicate) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        if (typeof window.hidePageLoader === 'function') window.hidePageLoader(true);
+        enableSubmitButton();
+        alert('⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً!\n\nالمريض لديه كشفية مسجلة اليوم بالفعل لدى هذا الطبيب.\nلا داعي لقطع حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة.');
+        return false;
+    }
+
+    // 2. التحقق من حجز السونار النشط غير المؤكد
     const confirmInput = document.getElementById('confirm_duplicate_booking');
     if (confirmInput && confirmInput.value !== '1') {
         let duplicateMessage = '';
-        if (selectedTypes.has('checkup') && activeBookingState.checkup && activeBookingState.checkup.has_active) {
-            duplicateMessage = activeBookingState.checkup.message;
-        } else if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && activeBookingState.ultrasound && activeBookingState.ultrasound.has_active) {
+        if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && activeBookingState.ultrasound && activeBookingState.ultrasound.has_active) {
             duplicateMessage = activeBookingState.ultrasound.message;
         }
 
-        // إسناد احتياطي فوري إذا كان صندوق التنبيه معروضاً بالفعل على الشاشة
         if (!duplicateMessage) {
-            const docWarnBox = document.getElementById('duplicateDoctorWarningBox');
-            if (selectedTypes.has('checkup') && docWarnBox && docWarnBox.style.display !== 'none') {
-                const msgEl = document.getElementById('duplicateDoctorMessage');
-                duplicateMessage = (msgEl && msgEl.textContent.trim()) ? msgEl.textContent.trim() : 'المريض لديه حجز نشط اليوم بالفعل مع هذا الطبيب.';
-            }
             const sonarWarnBox = document.getElementById('duplicateUltrasoundWarningBox');
-            if (!duplicateMessage && selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && sonarWarnBox && sonarWarnBox.style.display !== 'none') {
+            if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound' && sonarWarnBox && sonarWarnBox.style.display !== 'none') {
                 const msgEl = document.getElementById('duplicateUltrasoundMessage');
                 duplicateMessage = (msgEl && msgEl.textContent.trim()) ? msgEl.textContent.trim() : 'المريض لديه حجز سونار نشط اليوم.';
             }
