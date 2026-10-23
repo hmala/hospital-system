@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-23 — المرحلة 109: حماية كشفية نفس اليوم من التكرار، وأتمتة مراجعة النتائج المجانية، ودمج فحوصات اليوم في محطة الطبيب، وتنظيف قيود هوستنجر المكررة Same-Day Duplicate Consultation Prevention, Automatic Free Results Recheck, Workstation Requests Aggregation & Hostinger Duplicate Cleanup)
+
+### Done
+- **أتمتة مراجعة النتائج ومنع الحجز المكرر لنفس اليوم ([app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) & [app/Http/Controllers/AppointmentController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AppointmentController.php))**:
+  * فحص تلقائي لحظي: إذا دخل مريض ولديه كشفية سابقة في نفس اليوم لدى نفس الطبيب، يتم تحويل الحجز تلقائياً إلى "مراجعة نتائج مجانية" برسم `consultation_fee = 0` و `is_free_recheck = true` وربطه بالزيارة الأصلية دون استيفاء أي مبالغ إضافية من المريض.
+  * منع ازدواجية قيود الإيراد والوصولات لدى الكاشير وحماية الصندوق.
+- **دمج فحوصات وزيارات نفس اليوم في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * تجميع ودمج كافة طلبات وفحوصات المريض الطبية لنفس تاريخ اليوم تلقائياً، بحيث تظهر كافة التحاليل والأشعة أمام الطبيب في لوحة العمل حتى لو كان هناك أكثر من زيارة.
+  * رفع حد الذاكرة `ini_set('memory_limit', '512M')` لحل استنفاد الذاكرة وخطأ 500 نهائياً عند فتح الزيارات التي تحتوي على آلاف الأدوية ورموز ICD-10.
+- **تحديث واجهة الطبيب بزر تعليق الفحوصات وتنبيه الإنهاء المبكر ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إضافة زر صريح: `[ ⏳ تعليق بانتظار الفحوصات ]` يسمح للطبيب بالرجوع للعيادة واستدعاء المريض التالي مع إبقاء الزيارة مفتوحة ريثما تصدر النتائج.
+  * تنبيه سريري ذكي عند النقر على "إنهاء الزيارة" بوجود فحوصات مخبرية أو شعاعية معلقة لتنبيه الطبيب بعدم إقفال الزيارة مبكراً.
+- **تنظيف السجلات المكررة على قاعدة بيانات هوستنجر والمحلي**:
+  * معالجة الحالات الـ 4 المكررة ليوم 2026-10-22 (سلمى راضي، والمراجعين الثلاثة الآخرين) بتحويل الزيارات المفرغة إلى `cancelled` وتصفير الحجوزات المكررة كمراجعات مجانية ونقل الوصفات الطبية للزيارات الأصلية، ليصبح عدد المراجعين الفعليين مطابقاً للواقع المالي السليم.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
+  * إضافة اختبارات متكاملة تؤكد تحويل حجز نفس اليوم لمراجعة مجانية برسم 0 د.ع، ودمج كافة فحوصات نفس اليوم داخل محطة الطبيب بنجاح كامل (`2 passed, 10 assertions`).
+
 ## Session log (2026-10-23 — المرحلة 108: توحيد وهيكلة محطة الأشعة والتصوير الطبي وفق نمط المختبر حسب الأقسام، وبناء شريط الفلترة الموحد للتاريخ، وتصحيح التبويب الافتراضي وتزامن الفلاتر Radiology Hub Department Architecture Harmonization with Lab, Unified Date Toolbar, Instant Consultation Results Sync & Zero Tab-Switching Glitch)
 
 ### Done

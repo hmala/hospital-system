@@ -470,11 +470,14 @@
                         </button>
                     @endif
                     @if($visit->status == 'in_progress')
+                        <a href="{{ route('doctor.visits.index') }}" class="btn btn-outline-warning fw-semibold shadow-sm" title="الرجوع للعيادة واستدعاء المريض التالي مع إبقاء هذه الزيارة بانتظار صدور النتائج">
+                            <i class="fas fa-hourglass-half me-1"></i> تعليق بانتظار الفحوصات
+                        </a>
                         <form action="{{ route('doctor.visits.update', $visit) }}" method="POST" class="d-inline" id="completeVisitForm">
                             @csrf
                             @method('PUT')
                             <input type="hidden" name="status" value="completed">
-                            <button type="submit" class="btn btn-success" onclick="return confirm('هل أنت متأكد من إنهاء هذه الزيارة؟ سيتم تغيير حالتها إلى مكتملة وستظهر في التاريخ.')">
+                            <button type="submit" class="btn btn-success" onclick="return confirm('{{ (isset($hasPendingRequests) && $hasPendingRequests) ? '⚠️ تنبيه سريري: توجد فحوصات (أشعة أو مختبر) لهذا المريض لم تكتمل نتائجها بعد!\n\nإنهاء الزيارة سيقفل ملف الكشف الآن.\nهل تريد بالتأكيد إنهاء الزيارة؟\n(نصيحة: يمكنك الضغط على «تعليق بانتظار الفحوصات» لاستدعاء المريض التالي ريثما تصدر النتائج).' : 'هل أنت متأكد من إنهاء هذه الزيارة؟ سيتم تغيير حالتها إلى مكتملة وستظهر في التاريخ.' }}')">
                                 <i class="fas fa-check-circle me-1"></i>
                                 إنهاء الزيارة
                             </button>
