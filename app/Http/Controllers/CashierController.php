@@ -700,6 +700,226 @@ class CashierController extends Controller
                 $allRequestsToPay = collect([$request]);
             }
 
+            // الخيار (أ): معالجة إجراءات الفحوصات الفردية (تسديد اليوم / تأجيل لموعد لاحق / إلغاء)
+            $itemActions = $httpRequest->input('item_actions', []);
+            $postponeReason = $httpRequest->input('postpone_reason') ?: ($httpRequest->input('postpone_custom_reason') ?: 'تأجيل الفحص لعدم الصيام / صيام 12 ساعة (Fasting)');
+            $cancelReason = $httpRequest->input('cancel_reason') ?: 'ألغي برغبة المريض عند شباك الكاشير';
+
+            $totalPostponedNames = [];
+            $totalCancelledNames = [];
+            $activeRequestsToPay = collect([]);
+
+            foreach ($allRequestsToPay as $reqItem) {
+                $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
+                $reqActions = $itemActions[$reqItem->id] ?? [];
+
+                $reqPostponedLabIds = [];
+                $reqPostponedRadIds = [];
+                $reqPostponedNames = [];
+
+                $reqCancelledLabIds = [];
+                $reqCancelledRadIds = [];
+                $reqCancelledNames = [];
+
+                $reqTodayLabIds = [];
+                $reqTodayRadIds = [];
+
+                if ($reqItem->type === 'lab') {
+                    $labTestIds = $details['lab_test_ids'] ?? [];
+                    if (! empty($labTestIds)) {
+                        foreach ($labTestIds as $tId) {
+                            $act = $reqActions['lab'][$tId] ?? 'pay_today';
+                            $testObj = LabTest::find($tId);
+                            $tName = $testObj ? $testObj->name : "تحليل #$tId";
+
+                            if ($act === 'postpone') {
+                                $reqPostponedLabIds[] = $tId;
+                                $reqPostponedNames[] = $tName;
+                            } elseif ($act === 'cancel') {
+                                $reqCancelledLabIds[] = $tId;
+                                $reqCancelledNames[] = $tName;
+                            } else {
+                                $reqTodayLabIds[] = $tId;
+                            }
+                        }
+                    } elseif (! empty($details['tests'])) {
+                        foreach ($details['tests'] as $tName) {
+                            $testObj = LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                            $tId = $testObj ? $testObj->id : $tName;
+                            $act = $reqActions['lab'][$tId] ?? 'pay_today';
+
+                            if ($act === 'postpone') {
+                                if ($testObj) {
+                                    $reqPostponedLabIds[] = $testObj->id;
+                                }
+                                $reqPostponedNames[] = $tName;
+                            } elseif ($act === 'cancel') {
+                                if ($testObj) {
+                                    $reqCancelledLabIds[] = $testObj->id;
+                                }
+                                $reqCancelledNames[] = $tName;
+                            } else {
+                                if ($testObj) {
+                                    $reqTodayLabIds[] = $testObj->id;
+                                }
+                            }
+                        }
+                    }
+                } elseif ($reqItem->type === 'radiology') {
+                    $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? [];
+                    if (! is_array($radTypeIds)) {
+                        $radTypeIds = [$radTypeIds];
+                    }
+                    foreach ($radTypeIds as $rId) {
+                        $act = $reqActions['radiology'][$rId] ?? 'pay_today';
+                        $radObj = RadiologyType::find($rId);
+                        $rName = $radObj ? $radObj->name : "أشعة #$rId";
+
+                        if ($act === 'postpone') {
+                            $reqPostponedRadIds[] = $rId;
+                            $reqPostponedNames[] = $rName;
+                        } elseif ($act === 'cancel') {
+                            $reqCancelledRadIds[] = $rId;
+                            $reqCancelledNames[] = $rName;
+                        } else {
+                            $reqTodayRadIds[] = $rId;
+                        }
+                    }
+                }
+
+                $totalPostponedNames = array_merge($totalPostponedNames, $reqPostponedNames);
+                $totalCancelledNames = array_merge($totalCancelledNames, $reqCancelledNames);
+
+                $hasTodayItems = ($reqItem->type === 'lab' && ! empty($reqTodayLabIds)) || ($reqItem->type === 'radiology' && ! empty($reqTodayRadIds));
+                $hasPostponedItems = ! empty($reqPostponedNames);
+                $hasCancelledItems = ! empty($reqCancelledNames);
+
+                if (! $hasTodayItems && $hasPostponedItems) {
+                    // كامل الطلب تم تأجيله لعدم الصيام
+                    $details['postpone_reason'] = $postponeReason;
+                    $details['postponed_at'] = now()->toDateTimeString();
+                    $details['postponed_by'] = $user->id;
+                    $details['postponed_by_name'] = $user->name;
+                    $reqItem->update([
+                        'status' => 'postponed',
+                        'details' => $details,
+                    ]);
+                } elseif (! $hasTodayItems && $hasCancelledItems) {
+                    // كامل الطلب تم إلغاؤه برغبة المريض
+                    $details['cancel_reason'] = $cancelReason;
+                    $details['cancelled_at'] = now()->toDateTimeString();
+                    $details['cancelled_by'] = $user->id;
+                    $details['cancelled_by_name'] = $user->name;
+                    $reqItem->update([
+                        'status' => 'cancelled',
+                        'details' => $details,
+                    ]);
+                } else {
+                    // هناك فحوصات تدفع اليوم
+                    if ($hasPostponedItems) {
+                        // فصل الفحوصات المؤجلة في طلب مستقل (خيار أ)
+                        $postponedDetails = $details;
+                        if ($reqItem->type === 'lab') {
+                            $postponedDetails['lab_test_ids'] = $reqPostponedLabIds;
+                            $postponedDetails['tests'] = $reqPostponedNames;
+                            unset($postponedDetails['package_id']);
+                        } else {
+                            $postponedDetails['radiology_type_ids'] = $reqPostponedRadIds;
+                            $postponedDetails['radiology_types'] = $reqPostponedRadIds;
+                        }
+                        $postponedDetails['is_postponed_split'] = true;
+                        $postponedDetails['parent_request_id'] = $reqItem->id;
+                        $postponedDetails['postpone_reason'] = $postponeReason;
+                        $postponedDetails['postponed_at'] = now()->toDateTimeString();
+                        $postponedDetails['postponed_by'] = $user->id;
+                        $postponedDetails['postponed_by_name'] = $user->name;
+
+                        MedicalRequest::create([
+                            'visit_id' => $reqItem->visit_id,
+                            'type' => $reqItem->type,
+                            'description' => 'فحوصات مؤجلة للغد (صيام/تحضير): '.implode('، ', $reqPostponedNames),
+                            'details' => $postponedDetails,
+                            'status' => 'postponed',
+                            'payment_status' => 'pending',
+                            'insurance_type' => $reqItem->insurance_type,
+                        ]);
+                    }
+
+                    // تحديث الطلب الحالي ليحتفظ فقط بالفحوصات المسددة اليوم
+                    if ($hasPostponedItems || $hasCancelledItems) {
+                        if ($reqItem->type === 'lab') {
+                            $details['lab_test_ids'] = $reqTodayLabIds;
+                            $details['tests'] = LabTest::whereIn('id', $reqTodayLabIds)->pluck('name')->toArray();
+                        } else {
+                            $details['radiology_type_ids'] = $reqTodayRadIds;
+                            $details['radiology_types'] = $reqTodayRadIds;
+                        }
+                        if ($hasCancelledItems) {
+                            $details['cancelled_items'] = $reqCancelledNames;
+                            $details['cancel_reason'] = $cancelReason;
+                        }
+                        if ($hasPostponedItems) {
+                            $details['postponed_items'] = $reqPostponedNames;
+                            $details['postpone_reason'] = $postponeReason;
+                        }
+                        $reqItem->details = $details;
+                        $reqItem->save();
+                    }
+
+                    $activeRequestsToPay->push($reqItem);
+                }
+            }
+
+            // إرسال الإشعارات الفورية للطبيب المعالج والقسم المعني
+            $doctorUser = optional(optional($request->visit)->doctor)->user;
+            $patientName = optional(optional($request->visit)->patient)->name ?? (optional(optional($request->visit)->patient->user)->name ?? 'المريض');
+
+            if (! empty($totalPostponedNames)) {
+                if ($doctorUser) {
+                    \App\Models\Notification::createForUser(
+                        $doctorUser->id,
+                        'request_items_postponed',
+                        'تأجيل بعض الفحوصات للمريض (صيام)',
+                        'قام الكاشير بتأجيل الفحوصات: ('.implode('، ', array_unique($totalPostponedNames)).") للمريض {$patientName} لعدم الصيام/موعد لاحق. تم تسديد وإرسال باقي الفحوصات اليوم.",
+                        ['visit_id' => $request->visit_id, 'request_id' => $request->id]
+                    );
+                }
+                $targetRole = $request->type === 'lab' ? 'lab_staff' : 'radiology_staff';
+                \App\Models\Notification::createForRole(
+                    $targetRole,
+                    'request_items_postponed',
+                    'فحوصات مؤجلة للغد (صيام/تحضير)',
+                    'تم تأجيل الفحوصات: ('.implode('، ', array_unique($totalPostponedNames)).") للمريض {$patientName} (صيام/تحضير). الفحوصات المسددة فقط ستصل للقسم اليوم.",
+                    ['visit_id' => $request->visit_id]
+                );
+            }
+
+            if (! empty($totalCancelledNames)) {
+                if ($doctorUser) {
+                    \App\Models\Notification::createForUser(
+                        $doctorUser->id,
+                        'request_items_cancelled',
+                        'إلغاء بعض الفحوصات للمريض',
+                        'قام الكاشير بإلغاء الفحوصات: ('.implode('، ', array_unique($totalCancelledNames)).") للمريض {$patientName} برغبة المريض عند الصندوق.",
+                        ['visit_id' => $request->visit_id, 'request_id' => $request->id]
+                    );
+                }
+            }
+
+            // إذا تم تأجيل أو إلغاء كامل الفحوصات ولم يتبق أي فحص للدفع اليوم
+            if ($activeRequestsToPay->isEmpty()) {
+                DB::commit();
+                if (! empty($totalPostponedNames)) {
+                    return redirect()->route('cashier.index')
+                        ->with('success', 'تم تأجيل كافة الفحوصات الطبية لموعد لاحق بنجاح (صيام/تحضير)، وإشعار الطبيب وقسم الفحص.');
+                } else {
+                    return redirect()->route('cashier.index')
+                        ->with('info', 'تم إلغاء كافة الفحوصات الطبية بنجاح برغبة المريض وإشعار الطبيب المعالج.');
+                }
+            }
+
+            $allRequestsToPay = $activeRequestsToPay;
+
             $computedTotal = 0;
             $computedPatientShare = 0;
             $computedInsuranceShare = 0;

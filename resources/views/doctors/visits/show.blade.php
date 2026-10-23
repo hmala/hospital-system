@@ -2287,26 +2287,34 @@
                                             $testAttachments = $reqDetails['test_attachments'] ?? ($resultData['test_attachments'] ?? []);
                                             if (!is_array($testAttachments)) $testAttachments = [];
 
+                                            $isPostponed = $medRequest->status === 'postponed';
                                             $isPaid = ($medRequest->payment_status ?? 'pending') === 'paid';
                                             $isCompleted = $medRequest->status === 'completed';
-                                            $cardBorderClass = $isCompleted ? 'border-success' : ($isPaid ? 'border-primary' : 'border-warning');
+                                            $cardBorderClass = $isCompleted ? 'border-success' : ($isPostponed ? 'border-warning shadow' : ($isPaid ? 'border-primary' : 'border-secondary'));
                                         @endphp
                                         <div class="today-card-item card {{ $cardBorderClass }} shadow-sm rounded-3 overflow-hidden mb-3" id="doctor-request-card-{{ $medRequest->id }}" data-today-type="{{ $medRequest->type }}">
-                                            <div class="card-header py-2 px-3 {{ $isCompleted ? 'bg-success-subtle text-success-emphasis' : ($isPaid ? 'bg-primary-subtle text-primary-emphasis' : 'bg-warning-subtle text-dark') }} d-flex justify-content-between align-items-center">
+                                            <div class="card-header py-2 px-3 {{ $isCompleted ? 'bg-success-subtle text-success-emphasis' : ($isPostponed ? 'bg-warning-subtle text-dark' : ($isPaid ? 'bg-primary-subtle text-primary-emphasis' : 'bg-light text-dark')) }} d-flex justify-content-between align-items-center">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-{{ $medRequest->type == 'lab' ? 'primary' : ($medRequest->type == 'radiology' ? 'info text-dark' : 'success') }}">
                                                         <i class="fas fa-{{ $medRequest->type == 'lab' ? 'microscope' : ($medRequest->type == 'radiology' ? 'x-ray' : 'syringe') }} me-1"></i>
                                                         {{ $medRequest->type_text }}
                                                     </span>
+                                                    @if($isPostponed)
+                                                        <span class="badge bg-warning text-dark font-monospace fw-bold"><i class="fas fa-clock me-1"></i> مؤجل لموعد لاحق (صيام)</span>
+                                                    @endif
                                                     <small class="text-muted font-monospace"><i class="fas fa-clock me-1"></i>{{ $medRequest->created_at->format('H:i') }}</small>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-1">
-                                                    @if($isPaid)
+                                                    @if($isPostponed)
+                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-calendar-alt me-1"></i> مؤجل للغد (صيام)
+                                                        </span>
+                                                    @elseif($isPaid)
                                                         <span class="badge bg-success text-white" style="font-size: 0.72rem;">
-                                                            <i class="fas fa-check-circle me-1"></i> مدفوع
+                                                            <i class="fas fa-check-circle me-1"></i> مسدد بالصندوق
                                                         </span>
                                                     @else
-                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                        <span class="badge bg-secondary text-white border" style="font-size: 0.72rem;">
                                                             <i class="fas fa-hourglass-half me-1"></i> بانتظار السداد
                                                         </span>
                                                     @endif
@@ -2315,6 +2323,17 @@
                                                     </span>
                                                 </div>
                                             </div>
+
+                                            @if($isPostponed || !empty($reqDetails['postpone_reason']))
+                                                <div class="alert alert-warning py-1.5 px-3 mb-0 rounded-0 border-0 border-bottom border-warning-subtle small d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                                        <strong>ملاحظة الكاشير:</strong> {{ $reqDetails['postpone_reason'] ?? 'تأجيل الفحص لعدم الصيام' }}
+                                                    </div>
+                                                    <span class="badge bg-warning text-dark">صيام 12 ساعة</span>
+                                                </div>
+                                            @endif
+
                                             <!-- شريط مسار ومراحل الطلب التفاعلي (Status Progress Stepper) -->
                                             <div class="px-2 py-2 bg-light-subtle border-bottom">
                                                 <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
@@ -2330,7 +2349,12 @@
 
                                                     <!-- المرحلة 2: الكاشير -->
                                                     <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                        @if($isPaid)
+                                                        @if($isPostponed)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-clock"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-warning" style="font-size: 0.7rem;">أجله الكاشير</span>
+                                                        @elseif($isPaid)
                                                             <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
                                                                 <i class="fas fa-check"></i>
                                                             </span>
@@ -2350,6 +2374,11 @@
                                                                 <i class="fas fa-check"></i>
                                                             </span>
                                                             <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
+                                                        @elseif($isPostponed)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-calendar-day"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">مؤجل للغد</span>
                                                         @elseif($isPaid)
                                                             <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
                                                                 <i class="fas fa-spinner fa-spin"></i>
@@ -2370,6 +2399,11 @@
                                                                 <i class="fas fa-file-medical"></i>
                                                             </span>
                                                             <span class="fw-bold text-success" style="font-size: 0.7rem;">النتيجة جاهزة</span>
+                                                        @elseif($isPostponed)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-clock"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">بعد التحضير</span>
                                                         @else
                                                             <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
                                                                 <i class="fas fa-file"></i>
@@ -2385,11 +2419,16 @@
                                                 @if($medRequest->type === 'lab')
                                                     @php
                                                         $labItems = [];
-                                                        if (!empty($reqDetails['tests']) && is_array($reqDetails['tests'])) {
+                                                        if (!empty($reqDetails['lab_test_ids'])) {
+                                                            $ids = is_array($reqDetails['lab_test_ids']) ? $reqDetails['lab_test_ids'] : explode(',', (string)$reqDetails['lab_test_ids']);
+                                                            $labItems = \App\Models\LabTest::whereIn('id', array_filter($ids))->pluck('name')->toArray();
+                                                        } elseif (!empty($reqDetails['tests']) && is_array($reqDetails['tests'])) {
                                                             $labItems = $reqDetails['tests'];
                                                         } else {
                                                             $labItems = [$reqDetails['description'] ?? '-'];
                                                         }
+                                                        $cancelledItemsList = (array)($reqDetails['cancelled_items'] ?? []);
+                                                        $postponedItemsList = (array)($reqDetails['postponed_items'] ?? []);
                                                     @endphp
                                                     <div class="table-responsive rounded-2 border bg-white mb-2 shadow-2xs">
                                                         <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
@@ -2398,7 +2437,7 @@
                                                                     <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
                                                                     <th class="py-1 px-2">اسم التحليل المخبري</th>
                                                                     <th class="py-1 px-2 text-center" style="width: 95px;">الحالة</th>
-                                                                    @if(!$isPaid && !$isCompleted)
+                                                                    @if(!$isPaid && !$isCompleted && !$isPostponed)
                                                                         <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
                                                                     @endif
                                                                 </tr>
@@ -2413,19 +2452,51 @@
                                                                         <td class="text-center py-1 px-2">
                                                                             @if($isCompleted)
                                                                                 <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">مكتمل</span>
+                                                                            @elseif($isPostponed)
+                                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">مؤجل (صيام)</span>
                                                                             @elseif($isPaid)
-                                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">قيد التحليل</span>
+                                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">قيد التحليل بالمختبر</span>
                                                                             @else
                                                                                 <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
                                                                             @endif
                                                                         </td>
-                                                                        @if(!$isPaid && !$isCompleted)
+                                                                        @if(!$isPaid && !$isCompleted && !$isPostponed)
                                                                             <td class="text-center py-1 px-2">
                                                                                 <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا التحليل" onclick="doctorRemoveRequestItem({{ $medRequest->id }}, '{{ addslashes($lItem) }}', 'req-item-{{ $medRequest->id }}-lab-{{ $itemIdx }}')">
                                                                                     <i class="fas fa-times" style="font-size: 0.68rem;"></i>
                                                                                 </button>
                                                                             </td>
                                                                         @endif
+                                                                    </tr>
+                                                                @endforeach
+
+                                                                {{-- عرض الفحوصات الملغاة برغبة المريض عند الكاشير إن وجدت --}}
+                                                                @foreach($cancelledItemsList as $cIdx => $cItem)
+                                                                    <tr class="table-light opacity-75">
+                                                                        <td class="text-muted font-monospace text-center py-1 px-2">-</td>
+                                                                        <td class="text-muted text-decoration-line-through py-1 px-2">
+                                                                            <i class="fas fa-ban text-danger me-1"></i> {{ $cItem }}
+                                                                        </td>
+                                                                        <td class="text-center py-1 px-2" colspan="2">
+                                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.68rem;">
+                                                                                ألغي برغبة المريض عند الكاشير
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+
+                                                                {{-- عرض الفحوصات المؤجلة لعدم الصيام إن وجدت --}}
+                                                                @foreach($postponedItemsList as $pIdx => $pItem)
+                                                                    <tr class="table-light opacity-75">
+                                                                        <td class="text-muted font-monospace text-center py-1 px-2">-</td>
+                                                                        <td class="text-muted py-1 px-2">
+                                                                            <i class="fas fa-clock text-warning me-1"></i> {{ $pItem }}
+                                                                        </td>
+                                                                        <td class="text-center py-1 px-2" colspan="2">
+                                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">
+                                                                                فُصل بطلب مؤجل للغد (صيام)
+                                                                            </span>
+                                                                        </td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>

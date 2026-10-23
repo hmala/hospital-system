@@ -488,9 +488,7 @@
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
                                 }
                             }
-                        }
-
-                        if (!empty($testNames)) {
+                        } elseif (!empty($testNames)) {
                             foreach ($testNames as $tName) {
                                 $test = \App\Models\LabTest::where('is_active', true)
                                     ->where(function($q) use ($tName) {
