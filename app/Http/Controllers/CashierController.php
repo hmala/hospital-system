@@ -52,7 +52,7 @@ class CashierController extends Controller
             ->count();
 
         $previousPendingReqsQuery = MedicalRequest::where('payment_status', 'pending')
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'postponed'])
             ->whereDate('created_at', '<', $today)
             ->whereHas('visit.patient')
             ->whereDoesntHave('visit.surgery');
@@ -106,10 +106,10 @@ class CashierController extends Controller
             ->paginate(15, ['*'], 'appointments_page')
             ->appends(request()->query());
 
-        // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات
+        // جلب الطلبات المعلقة (تحاليل، أشعة، صيدلية) - استبعاد الطلبات المرتبطة بالعمليات والمؤجلة
         $pendingRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where('payment_status', 'pending')
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'postponed'])
             ->whereHas('visit', function ($q) {
                 $q->where('status', '!=', 'cancelled')
                     ->where(function ($query) {
@@ -156,6 +156,58 @@ class CashierController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'requests_page')
             ->appends(request()->query());
+
+        // جلب الطلبات المؤجلة بطلب المريض (Postponed Requests)
+        $postponedRequestsQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
+            ->where('payment_status', 'pending')
+            ->where('status', 'postponed')
+            ->whereHas('visit', function ($q) {
+                $q->where('status', '!=', 'cancelled')
+                    ->where(function ($query) {
+                        $query->where('visit_type', '!=', 'surgery')
+                            ->orWhereNull('visit_type');
+                    });
+            })
+            ->whereHas('visit.patient')
+            ->whereDoesntHave('visit.surgery');
+
+        if ($canUltrasoundOnly) {
+            $postponedRequestsQuery->where(function ($q) {
+                $q->where(function ($sq) {
+                    $sq->where('subtype', 'ultrasound')
+                        ->orWhere('description', 'LIKE', '%سونار%');
+                })->where('details', 'LIKE', '%created_at_inquiry%');
+            });
+        }
+
+        if ($dateFilter === 'today') {
+            $postponedRequestsQuery->whereDate('created_at', $today);
+        } elseif ($dateFilter === 'previous') {
+            $postponedRequestsQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $postponedRequestsQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $postponedRequestsQuery->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('visit.patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('visit.patient', function ($qp) use ($search) {
+                        $qp->where('national_id', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $postponedMedicalRequests = $postponedRequestsQuery
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'postponed_page')
+            ->appends(request()->query());
+
+        $postponedRequestsCount = $postponedMedicalRequests->total();
 
         // جلب خدمات الطوارئ المعلقة الدفع
         $pendingEmergencyQuery = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'emergency.services', 'appointment.doctor.user'])
@@ -208,6 +260,7 @@ class CashierController extends Controller
             'pending_appointments_count' => $pendingAppointmentsCount,
             'pending_requests_count' => $pendingRequestsCount,
             'pending_emergency_count' => $pendingEmergencyCount,
+            'postponed_requests_count' => $postponedRequestsCount,
             'previous_pending_count' => $previousPendingCount,
             'doctor_fees' => 0,
             'hospital_profit' => 0,
@@ -306,6 +359,8 @@ class CashierController extends Controller
         return view('cashier.index', compact(
             'pendingAppointments',
             'pendingMedicalRequests',
+            'postponedMedicalRequests',
+            'postponedRequestsCount',
             'pendingEmergencyPayments',
             'pendingRefundRequests',
             'pendingEmergencyRefunds',
@@ -645,60 +700,208 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بقبض رسوم الفحوصات الطبية');
         }
 
-        $httpRequest->validate([
-            'payment_method' => 'required|in:cash,card,insurance',
-            'amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
         // التحقق من أن الطلب لم يتم دفعه بعد
         if ($request->payment_status === 'paid') {
             return redirect()->route('cashier.index')
                 ->with('error', 'هذا الطلب تم دفعه مسبقاً');
         }
 
+        // Ensure visit is loaded and exists
+        $request->load('visit');
+        if (! $request->visit) {
+            return redirect()->route('cashier.index')
+                ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
+        }
+
+        $patient = optional($request->visit)->patient;
+        $appointment = optional($request->visit)->appointment;
+        $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+
+        // شرط الحصانة: الطلبات الخارجية والزيارات المباشرة للمختبر والأشعة بدون إحالة استشاري تحاسب كاش نقدي كامل 100%
+        $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (! empty($details['direct_lab_visit']) || ! empty($details['direct_radiology_visit']) || ! empty($details['created_at_inquiry']));
+        if ($isDirectVisit && empty($appointment?->doctor_id)) {
+            $insuranceType = 'none';
+        } else {
+            $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
+        }
+
+        $copayPercentage = (float) $httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
+        $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
+
+        // الطلبات المتضمنة في الدفع الموحد للزيارة
+        $includedRequestIds = (array) $httpRequest->input('included_request_ids', [$request->id]);
+        $includedRequestIds = array_unique(array_filter(array_map('intval', $includedRequestIds)));
+        if (! in_array($request->id, $includedRequestIds)) {
+            $includedRequestIds[] = $request->id;
+        }
+
+        $allRequestsToPay = MedicalRequest::whereIn('id', $includedRequestIds)
+            ->where('visit_id', $request->visit_id)
+            ->where('payment_status', 'pending')
+            ->get();
+
+        if ($allRequestsToPay->isEmpty()) {
+            $allRequestsToPay = collect([$request]);
+        }
+
+        // استلام إجراءات كل فحص (تسديد / تأجيل / إلغاء بطلب المريض) وأسباب الاستبعاد
+        $itemActions = (array) $httpRequest->input('item_actions', []);
+        $itemReasons = (array) $httpRequest->input('item_reasons', []);
+        $itemCustomReasons = (array) $httpRequest->input('item_custom_reasons', []);
+
+        $getReasonText = function ($reqId, $itemType, $itemId) use ($itemReasons, $itemCustomReasons) {
+            $reasonKey = $itemReasons[$reqId][$itemType][$itemId] ?? 'lack_of_funds';
+            $custom = trim($itemCustomReasons[$reqId][$itemType][$itemId] ?? '');
+            $labels = [
+                'lack_of_funds' => 'عدم توفر المبلغ المالي / قلة السيولة لدى المريض',
+                'patient_refused' => 'عدم رغبة المريض بالفحص / رفض الإجراء',
+                'time_constraint' => 'ضيق الوقت ورغبة المريض بالعودة لاحقاً',
+                'other' => 'أسباب أخرى',
+            ];
+            $base = $labels[$reasonKey] ?? 'بطلب من المريض لدى الكاشير';
+
+            return $custom ? "{$base} ({$custom})" : $base;
+        };
+
+        // مسح أولي لمعرفة هل توجد أي فحوصات مسددة أم أن كافة الفحوصات ألغيت/أجلت بطلب المريض
+        $hasAnyPay = false;
+        $hasAnyCancel = false;
+        $hasAnyPostpone = false;
+
+        foreach ($allRequestsToPay as $reqItem) {
+            $rDetails = is_string($reqItem->details) ? json_decode($reqItem->details, true) : ($reqItem->details ?? []);
+            if ($reqItem->type === 'lab') {
+                if (! empty($rDetails['package_id'])) {
+                    $pkgId = $rDetails['package_id'];
+                    $act = $itemActions[$reqItem->id]['package'][$pkgId] ?? ($itemActions[$reqItem->id]['package']['pkg_'.$pkgId] ?? 'pay');
+                    if ($act === 'pay') {
+                        $hasAnyPay = true;
+                    } elseif ($act === 'cancel') {
+                        $hasAnyCancel = true;
+                    } elseif ($act === 'postpone') {
+                        $hasAnyPostpone = true;
+                    }
+                }
+                $tIds = $rDetails['lab_test_ids'] ?? [];
+                if (! empty($tIds)) {
+                    foreach ($tIds as $tId) {
+                        $act = $itemActions[$reqItem->id]['lab'][$tId] ?? 'pay';
+                        if ($act === 'pay') {
+                            $hasAnyPay = true;
+                        } elseif ($act === 'cancel') {
+                            $hasAnyCancel = true;
+                        } elseif ($act === 'postpone') {
+                            $hasAnyPostpone = true;
+                        }
+                    }
+                } elseif (! empty($rDetails['tests'])) {
+                    foreach ($rDetails['tests'] as $tName) {
+                        $tModel = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                        $lookupId = $tModel?->id ?? $tName;
+                        $act = $itemActions[$reqItem->id]['lab'][$lookupId] ?? ($itemActions[$reqItem->id]['lab'][$tName] ?? 'pay');
+                        if ($act === 'pay') {
+                            $hasAnyPay = true;
+                        } elseif ($act === 'cancel') {
+                            $hasAnyCancel = true;
+                        } elseif ($act === 'postpone') {
+                            $hasAnyPostpone = true;
+                        }
+                    }
+                }
+            } elseif ($reqItem->type === 'radiology') {
+                $radIds = $rDetails['radiology_type_ids'] ?? $rDetails['radiology_types'] ?? $rDetails['radiology_type_id'] ?? [];
+                if (! is_array($radIds)) {
+                    $radIds = [$radIds];
+                }
+                foreach ($radIds as $rId) {
+                    $act = $itemActions[$reqItem->id]['radiology'][$rId] ?? 'pay';
+                    if ($act === 'pay') {
+                        $hasAnyPay = true;
+                    } elseif ($act === 'cancel') {
+                        $hasAnyCancel = true;
+                    } elseif ($act === 'postpone') {
+                        $hasAnyPostpone = true;
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // الحالة أ: لم يتم اختيار أي فحص للدفع (إلغاء أو تأجيل كامل الطلبات بطلب المريض)
+        // =========================================================================
+        if (! $hasAnyPay) {
+            DB::beginTransaction();
+            try {
+                foreach ($allRequestsToPay as $reqItem) {
+                    $rDetails = is_string($reqItem->details) ? json_decode($reqItem->details, true) : ($reqItem->details ?? []);
+                    $itemActionsForReq = [];
+
+                    if ($reqItem->type === 'lab') {
+                        $tIds = $rDetails['lab_test_ids'] ?? [];
+                        if (empty($tIds) && ! empty($rDetails['tests'])) {
+                            foreach ($rDetails['tests'] as $tName) {
+                                $tModel = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                $tIds[] = $tModel?->id ?? $tName;
+                            }
+                        }
+                        foreach ($tIds as $tId) {
+                            $itemActionsForReq[$tId] = $itemActions[$reqItem->id]['lab'][$tId] ?? 'cancel';
+                        }
+                    } elseif ($reqItem->type === 'radiology') {
+                        $radIds = (array) ($rDetails['radiology_type_ids'] ?? $rDetails['radiology_types'] ?? $rDetails['radiology_type_id'] ?? []);
+                        foreach ($radIds as $rId) {
+                            $itemActionsForReq[$rId] = $itemActions[$reqItem->id]['radiology'][$rId] ?? 'cancel';
+                        }
+                    }
+
+                    $reqPostponed = in_array('postpone', $itemActionsForReq) && ! in_array('cancel', $itemActionsForReq);
+                    $firstKey = ! empty($itemActionsForReq) ? array_key_first($itemActionsForReq) : 0;
+                    $reasonText = $getReasonText($reqItem->id, $reqItem->type, $firstKey);
+
+                    if ($reqPostponed) {
+                        $rDetails['postpone_reason'] = $reasonText;
+                        $rDetails['postponed_by_cashier_id'] = $user->id;
+                        $rDetails['postponed_at'] = Carbon::now()->toDateTimeString();
+                        $reqItem->status = 'postponed';
+                    } else {
+                        $rDetails['cancellation_reason'] = $reasonText;
+                        $rDetails['cancelled_by_cashier_id'] = $user->id;
+                        $rDetails['cancelled_at'] = Carbon::now()->toDateTimeString();
+                        $reqItem->status = 'cancelled';
+                        $reqItem->payment_status = 'cancelled';
+                    }
+                    $reqItem->details = $rDetails;
+                    $reqItem->save();
+                }
+
+                DB::commit();
+
+                $redirectMsg = ($hasAnyCancel && ! $hasAnyPostpone)
+                    ? 'تم إلغاء كافة الفحوصات بطلب من المريض بنجاح دون تحصيل أي مبالغ.'
+                    : ((! $hasAnyCancel && $hasAnyPostpone)
+                        ? 'تم تأجيل كافة الفحوصات بطلب من المريض بنجاح وحفظها لمراجعته القادمة.'
+                        : 'تم تحديث حالة الفحوصات (إلغاء / تأجيل) بطلب المريض دون تحصيل أي مبالغ.');
+
+                return redirect()->route('cashier.index')->with('info', $redirectMsg);
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                return redirect()->back()->with('error', 'حدث خطأ أثناء معالجة الطلبات: '.$e->getMessage());
+            }
+        }
+
+        // =========================================================================
+        // الحالة ب: توجد فحوصات مسددة (مع إمكانية استبعاد/إلغاء/تأجيل فحوصات أخرى جزئياً)
+        // =========================================================================
+        $httpRequest->validate([
+            'payment_method' => 'required|in:cash,card,insurance',
+            'amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
         DB::beginTransaction();
         try {
             \Log::info('Starting payment process for request #'.$request->id);
-            // Ensure visit is loaded and exists; otherwise abort early to avoid null errors.
-            $request->load('visit');
-            if (! $request->visit) {
-                \Log::error('MedicalRequest #'.$request->id.' has no associated visit');
-                DB::rollBack();
-
-                return redirect()->route('cashier.index')
-                    ->with('error', 'الطلب غير مرتبط بأي زيارة. لا يمكن متابعة الدفع.');
-            }
-            $patient = optional($request->visit)->patient;
-            $appointment = optional($request->visit)->appointment;
-            $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-
-            // شرط الحصانة: الطلبات الخارجية والزيارات المباشرة للمختبر والأشعة بدون إحالة استشاري تحاسب كاش نقدي كامل 100%
-            $isDirectVisit = empty($appointment) || in_array($request->visit?->visit_type, ['lab', 'radiology', 'external'], true) || (! empty($details['direct_lab_visit']) || ! empty($details['direct_radiology_visit']) || ! empty($details['created_at_inquiry']));
-            if ($isDirectVisit && empty($appointment?->doctor_id)) {
-                $insuranceType = 'none';
-            } else {
-                $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
-            }
-
-            $copayPercentage = (float) $httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
-            $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
-
-            // الطلبات المتضمنة في الدفع الموحد للزيارة
-            $includedRequestIds = (array) $httpRequest->input('included_request_ids', [$request->id]);
-            $includedRequestIds = array_unique(array_filter(array_map('intval', $includedRequestIds)));
-            if (! in_array($request->id, $includedRequestIds)) {
-                $includedRequestIds[] = $request->id;
-            }
-
-            $allRequestsToPay = MedicalRequest::whereIn('id', $includedRequestIds)
-                ->where('visit_id', $request->visit_id)
-                ->where('payment_status', 'pending')
-                ->get();
-
-            if ($allRequestsToPay->isEmpty()) {
-                $allRequestsToPay = collect([$request]);
-            }
 
             $computedTotal = 0;
             $computedPatientShare = 0;
@@ -709,49 +912,156 @@ class CashierController extends Controller
             $seenLabTestIds = [];
             $seenLabTestNames = [];
             $seenRadKeys = [];
+            $excludedNotes = [];
+            $actuallyPaidRequests = collect();
 
             foreach ($allRequestsToPay as $reqItem) {
-                $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
+                $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : ($reqItem->details ?? []);
 
                 if ($reqItem->type === 'lab') {
                     $packageId = $details['package_id'] ?? null;
                     $package = $packageId ? \App\Models\Package::find($packageId) : null;
 
                     if ($package) {
-                        $pkgPrice = (float) $package->price;
-                        $computedTotal += $pkgPrice;
-                        $computedPatientShare += $pkgPrice;
-                        $descParts[] = 'باقة مختبر ('.$package->name.')';
-
-                        $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
-                        $allTestIds = $details['lab_test_ids'] ?? [];
-                        $extraTestIds = array_diff($allTestIds, $pkgTestIds);
-                        foreach ($extraTestIds as $testId) {
-                            if (in_array($testId, $seenLabTestIds)) {
-                                continue;
+                        $pkgAct = $itemActions[$reqItem->id]['package'][$packageId] ?? 'pay';
+                        if ($pkgAct === 'pay') {
+                            $pkgPrice = (float) $package->price;
+                            $computedTotal += $pkgPrice;
+                            $computedPatientShare += $pkgPrice;
+                            $descParts[] = 'باقة مختبر ('.$package->name.')';
+                            $actuallyPaidRequests->push($reqItem);
+                        } else {
+                            $reasonText = $getReasonText($reqItem->id, 'package', $packageId);
+                            if ($pkgAct === 'cancel') {
+                                $reqItem->status = 'cancelled';
+                                $reqItem->payment_status = 'cancelled';
+                                $details['cancellation_reason'] = $reasonText;
+                                $details['cancelled_by_cashier_id'] = $user->id;
+                                $details['cancelled_at'] = Carbon::now()->toDateTimeString();
+                                $excludedNotes[] = 'إلغاء باقة مختبر ('.$package->name.') - '.$reasonText;
+                            } else {
+                                $reqItem->status = 'postponed';
+                                $details['postpone_reason'] = $reasonText;
+                                $details['postponed_by_cashier_id'] = $user->id;
+                                $details['postponed_at'] = Carbon::now()->toDateTimeString();
+                                $excludedNotes[] = 'تأجيل باقة مختبر ('.$package->name.') - '.$reasonText;
                             }
-                            $seenLabTestIds[] = $testId;
-                            $test = LabTest::find($testId);
-                            if ($test && $test->is_active) {
-                                $normTestName = mb_strtolower(trim($test->name));
-                                if (in_array($normTestName, $seenLabTestNames)) {
-                                    continue;
-                                }
-                                $seenLabTestNames[] = $normTestName;
+                            $reqItem->details = $details;
+                            $reqItem->save();
 
-                                $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
-                                $computedTotal += $p['total_amount'];
-                                $computedPatientShare += $p['patient_share'];
-                                $computedInsuranceShare += $p['insurance_share'];
-                                if ($p['is_covered']) {
-                                    $hasCoveredItem = true;
+                            continue;
+                        }
+                    } else {
+                        // تحاليل فردية
+                        $allTestIds = (array) ($details['lab_test_ids'] ?? []);
+                        if (empty($allTestIds) && ! empty($details['tests'])) {
+                            foreach ($details['tests'] as $tName) {
+                                $tModel = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                                if ($tModel) {
+                                    $allTestIds[] = $tModel->id;
                                 }
                             }
                         }
-                    } else {
-                        $labTestIds = $details['lab_test_ids'] ?? [];
-                        if (! empty($labTestIds)) {
-                            foreach ($labTestIds as $testId) {
+
+                        $paidLabIds = [];
+                        $cancelledLabIds = [];
+                        $postponedLabIds = [];
+
+                        foreach ($allTestIds as $tId) {
+                            $act = $itemActions[$reqItem->id]['lab'][$tId] ?? 'pay';
+                            if ($act === 'pay') {
+                                $paidLabIds[] = $tId;
+                            } elseif ($act === 'cancel') {
+                                $cancelledLabIds[] = $tId;
+                            } elseif ($act === 'postpone') {
+                                $postponedLabIds[] = $tId;
+                            }
+                        }
+
+                        // فصل التحاليل الملغاة في طلب مستقل
+                        if (! empty($cancelledLabIds)) {
+                            $cancelledNames = \App\Models\LabTest::whereIn('id', $cancelledLabIds)->pluck('name')->toArray();
+                            $reasonText = $getReasonText($reqItem->id, 'lab', $cancelledLabIds[0]);
+                            $excludedNotes[] = 'إلغاء تحاليل: '.implode('، ', $cancelledNames).' ('.$reasonText.')';
+
+                            if (empty($paidLabIds) && empty($postponedLabIds)) {
+                                $reqItem->status = 'cancelled';
+                                $reqItem->payment_status = 'cancelled';
+                                $details['cancellation_reason'] = $reasonText;
+                                $details['cancelled_by_cashier_id'] = $user->id;
+                                $details['cancelled_at'] = Carbon::now()->toDateTimeString();
+                                $reqItem->details = $details;
+                                $reqItem->save();
+                            } else {
+                                MedicalRequest::create([
+                                    'visit_id' => $reqItem->visit_id,
+                                    'type' => 'lab',
+                                    'subtype' => $reqItem->subtype,
+                                    'description' => 'تحاليل ملغاة بطلب المريض لدى الكاشير: '.implode('، ', $cancelledNames),
+                                    'status' => 'cancelled',
+                                    'payment_status' => 'cancelled',
+                                    'insurance_type' => $insuranceType,
+                                    'details' => [
+                                        'tests' => $cancelledNames,
+                                        'lab_test_ids' => array_values($cancelledLabIds),
+                                        'cancellation_reason' => $reasonText,
+                                        'cancelled_by_cashier_id' => $user->id,
+                                        'cancelled_at' => Carbon::now()->toDateTimeString(),
+                                        'original_request_id' => $reqItem->id,
+                                        'action_source' => 'cashier_item_selection',
+                                    ],
+                                    'requested_by' => $reqItem->requested_by,
+                                ]);
+                            }
+                        }
+
+                        // فصل التحاليل المؤجلة في طلب مستقل
+                        if (! empty($postponedLabIds)) {
+                            $postponedNames = \App\Models\LabTest::whereIn('id', $postponedLabIds)->pluck('name')->toArray();
+                            $reasonText = $getReasonText($reqItem->id, 'lab', $postponedLabIds[0]);
+                            $excludedNotes[] = 'تأجيل تحاليل: '.implode('، ', $postponedNames).' ('.$reasonText.')';
+
+                            if (empty($paidLabIds)) {
+                                $reqItem->status = 'postponed';
+                                $details['postpone_reason'] = $reasonText;
+                                $details['postponed_by_cashier_id'] = $user->id;
+                                $details['postponed_at'] = Carbon::now()->toDateTimeString();
+                                $reqItem->details = $details;
+                                $reqItem->save();
+                            } else {
+                                MedicalRequest::create([
+                                    'visit_id' => $reqItem->visit_id,
+                                    'type' => 'lab',
+                                    'subtype' => $reqItem->subtype,
+                                    'description' => 'تحاليل مؤجلة بطلب المريض لدى الكاشير: '.implode('، ', $postponedNames),
+                                    'status' => 'postponed',
+                                    'payment_status' => 'pending',
+                                    'insurance_type' => $insuranceType,
+                                    'details' => [
+                                        'tests' => $postponedNames,
+                                        'lab_test_ids' => array_values($postponedLabIds),
+                                        'postpone_reason' => $reasonText,
+                                        'postponed_by_cashier_id' => $user->id,
+                                        'postponed_at' => Carbon::now()->toDateTimeString(),
+                                        'original_request_id' => $reqItem->id,
+                                        'action_source' => 'cashier_item_selection',
+                                    ],
+                                    'requested_by' => $reqItem->requested_by,
+                                ]);
+                            }
+                        }
+
+                        // احتساب الفحوصات المسددة فقط
+                        if (! empty($paidLabIds)) {
+                            $paidNames = \App\Models\LabTest::whereIn('id', $paidLabIds)->pluck('name')->toArray();
+                            $details['lab_test_ids'] = array_values($paidLabIds);
+                            $details['tests'] = $paidNames;
+                            $reqItem->details = $details;
+                            $reqItem->save();
+
+                            $actuallyPaidRequests->push($reqItem);
+
+                            foreach ($paidLabIds as $testId) {
                                 if (in_array($testId, $seenLabTestIds)) {
                                     continue;
                                 }
@@ -773,41 +1083,114 @@ class CashierController extends Controller
                                     }
                                 }
                             }
-                        } elseif (! empty($details['tests'])) {
-                            foreach ($details['tests'] as $testName) {
-                                $test = LabTest::where('is_active', true)
-                                    ->where(function ($q) use ($testName) {
-                                        $q->where('name', $testName)->orWhere('code', $testName);
-                                    })
-                                    ->first();
-                                if ($test) {
-                                    if (in_array($test->id, $seenLabTestIds)) {
-                                        continue;
-                                    }
-                                    $seenLabTestIds[] = $test->id;
-                                    $normTestName = mb_strtolower(trim($test->name));
-                                    if (in_array($normTestName, $seenLabTestNames)) {
-                                        continue;
-                                    }
-                                    $seenLabTestNames[] = $normTestName;
-
-                                    $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
-                                    $computedTotal += $p['total_amount'];
-                                    $computedPatientShare += $p['patient_share'];
-                                    $computedInsuranceShare += $p['insurance_share'];
-                                    if ($p['is_covered']) {
-                                        $hasCoveredItem = true;
-                                    }
-                                }
-                            }
+                            $descParts[] = 'مختبر #'.$reqItem->id;
                         }
-                        $descParts[] = 'مختبر #'.$reqItem->id;
                     }
                 } elseif ($reqItem->type === 'radiology') {
-                    $radTypeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
-                    $radTargets = $details['radiology_targets'] ?? [];
-                    if (! empty($radTypeIds)) {
-                        foreach ($radTypeIds as $typeId) {
+                    $allRadIds = (array) ($details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? []);
+                    $radTargets = (array) ($details['radiology_targets'] ?? []);
+
+                    $paidRadIds = [];
+                    $cancelledRadIds = [];
+                    $postponedRadIds = [];
+
+                    foreach ($allRadIds as $rId) {
+                        $act = $itemActions[$reqItem->id]['radiology'][$rId] ?? 'pay';
+                        if ($act === 'pay') {
+                            $paidRadIds[] = $rId;
+                        } elseif ($act === 'cancel') {
+                            $cancelledRadIds[] = $rId;
+                        } elseif ($act === 'postpone') {
+                            $postponedRadIds[] = $rId;
+                        }
+                    }
+
+                    // فصل الأشعة الملغاة في طلب مستقل
+                    if (! empty($cancelledRadIds)) {
+                        $cancelledRadNames = \App\Models\RadiologyType::whereIn('id', $cancelledRadIds)->pluck('name')->toArray();
+                        $reasonText = $getReasonText($reqItem->id, 'radiology', $cancelledRadIds[0]);
+                        $excludedNotes[] = 'إلغاء أشعة: '.implode('، ', $cancelledRadNames).' ('.$reasonText.')';
+
+                        if (empty($paidRadIds) && empty($postponedRadIds)) {
+                            $reqItem->status = 'cancelled';
+                            $reqItem->payment_status = 'cancelled';
+                            $details['cancellation_reason'] = $reasonText;
+                            $details['cancelled_by_cashier_id'] = $user->id;
+                            $details['cancelled_at'] = Carbon::now()->toDateTimeString();
+                            $reqItem->details = $details;
+                            $reqItem->save();
+                        } else {
+                            MedicalRequest::create([
+                                'visit_id' => $reqItem->visit_id,
+                                'type' => 'radiology',
+                                'subtype' => $reqItem->subtype,
+                                'description' => 'أشعة ملغاة بطلب المريض لدى الكاشير: '.implode('، ', $cancelledRadNames),
+                                'status' => 'cancelled',
+                                'payment_status' => 'cancelled',
+                                'insurance_type' => $insuranceType,
+                                'details' => [
+                                    'radiology_type_ids' => array_values($cancelledRadIds),
+                                    'radiology_types' => array_values($cancelledRadIds),
+                                    'radiology_targets' => array_intersect_key($radTargets, array_flip($cancelledRadIds)),
+                                    'cancellation_reason' => $reasonText,
+                                    'cancelled_by_cashier_id' => $user->id,
+                                    'cancelled_at' => Carbon::now()->toDateTimeString(),
+                                    'original_request_id' => $reqItem->id,
+                                    'action_source' => 'cashier_item_selection',
+                                ],
+                                'requested_by' => $reqItem->requested_by,
+                            ]);
+                        }
+                    }
+
+                    // فصل الأشعة المؤجلة في طلب مستقل
+                    if (! empty($postponedRadIds)) {
+                        $postponedRadNames = \App\Models\RadiologyType::whereIn('id', $postponedRadIds)->pluck('name')->toArray();
+                        $reasonText = $getReasonText($reqItem->id, 'radiology', $postponedRadIds[0]);
+                        $excludedNotes[] = 'تأجيل أشعة: '.implode('، ', $postponedRadNames).' ('.$reasonText.')';
+
+                        if (empty($paidRadIds)) {
+                            $reqItem->status = 'postponed';
+                            $details['postpone_reason'] = $reasonText;
+                            $details['postponed_by_cashier_id'] = $user->id;
+                            $details['postponed_at'] = Carbon::now()->toDateTimeString();
+                            $reqItem->details = $details;
+                            $reqItem->save();
+                        } else {
+                            MedicalRequest::create([
+                                'visit_id' => $reqItem->visit_id,
+                                'type' => 'radiology',
+                                'subtype' => $reqItem->subtype,
+                                'description' => 'أشعة مؤجلة بطلب المريض لدى الكاشير: '.implode('، ', $postponedRadNames),
+                                'status' => 'postponed',
+                                'payment_status' => 'pending',
+                                'insurance_type' => $insuranceType,
+                                'details' => [
+                                    'radiology_type_ids' => array_values($postponedRadIds),
+                                    'radiology_types' => array_values($postponedRadIds),
+                                    'radiology_targets' => array_intersect_key($radTargets, array_flip($postponedRadIds)),
+                                    'postpone_reason' => $reasonText,
+                                    'postponed_by_cashier_id' => $user->id,
+                                    'postponed_at' => Carbon::now()->toDateTimeString(),
+                                    'original_request_id' => $reqItem->id,
+                                    'action_source' => 'cashier_item_selection',
+                                ],
+                                'requested_by' => $reqItem->requested_by,
+                            ]);
+                        }
+                    }
+
+                    // احتساب فحوصات الأشعة المسددة فقط
+                    if (! empty($paidRadIds)) {
+                        $details['radiology_type_ids'] = array_values($paidRadIds);
+                        $details['radiology_types'] = array_values($paidRadIds);
+                        $details['radiology_targets'] = array_intersect_key($radTargets, array_flip($paidRadIds));
+                        $reqItem->details = $details;
+                        $reqItem->save();
+
+                        $actuallyPaidRequests->push($reqItem);
+
+                        foreach ($paidRadIds as $typeId) {
                             $targetPart = isset($radTargets[$typeId]) ? trim($radTargets[$typeId]) : '';
                             $radKey = $typeId.'_'.$targetPart;
                             if (in_array($radKey, $seenRadKeys)) {
@@ -825,9 +1208,13 @@ class CashierController extends Controller
                                 }
                             }
                         }
+                        $descParts[] = 'أشعة #'.$reqItem->id;
                     }
-                    $descParts[] = 'أشعة #'.$reqItem->id;
                 }
+            }
+
+            if ($actuallyPaidRequests->isEmpty()) {
+                throw new \Exception('لم يتم العثور على أي خدمات مسددة لمعالجة الدفع.');
             }
 
             $patientPaidAmount = (float) $httpRequest->amount;
@@ -836,15 +1223,21 @@ class CashierController extends Controller
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
-            $paymentType = in_array('radiology', $allRequestsToPay->pluck('type')->toArray()) && ! in_array('lab', $allRequestsToPay->pluck('type')->toArray()) ? 'radiology' : 'lab';
-            $paymentDescription = count($allRequestsToPay) > 1
+            $paymentType = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray()) && ! in_array('lab', $actuallyPaidRequests->pluck('type')->toArray()) ? 'radiology' : 'lab';
+            $paymentDescription = count($actuallyPaidRequests) > 1
                 ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
-                : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$request->id) : ('دفع رسوم طلب '.$request->type.' #'.$request->id));
+                : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+
+            $combinedNotes = $httpRequest->notes ?: '';
+            if (! empty($excludedNotes)) {
+                $combinedNotes = trim($combinedNotes.(empty($combinedNotes) ? '' : ' | ').implode(' | ', $excludedNotes));
+            }
 
             // إنشاء سجل الدفع مع تجميد الأرقام المالية الثلاثة
             \Log::info('Creating payment record with insurance snapshot...');
+            $primaryRequestId = $actuallyPaidRequests->first()->id ?? $request->id;
             $payment = Payment::create([
-                'request_id' => $request->id,
+                'request_id' => $primaryRequestId,
                 'patient_id' => $request->visit->patient_id,
                 'cashier_id' => $user->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
@@ -859,14 +1252,14 @@ class CashierController extends Controller
                 'payment_method' => $httpRequest->payment_method,
                 'payment_type' => $paymentType,
                 'description' => $paymentDescription,
-                'notes' => $httpRequest->notes,
+                'notes' => $combinedNotes,
                 'paid_at' => Carbon::now(),
             ]);
 
             \Log::info('Payment created successfully: #'.$payment->id);
 
-            // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الموحد
-            foreach ($allRequestsToPay as $reqItem) {
+            // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الفعلي
+            foreach ($actuallyPaidRequests as $reqItem) {
                 $reqItem->update([
                     'payment_status' => 'paid',
                     'payment_id' => $payment->id,

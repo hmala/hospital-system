@@ -54,6 +54,35 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-24 — المرحلة 112: تفكيك وقرارات طلبات الفحوصات لدى الكاشير بتصميم الكبسولات العصرية Segmented Pills وانعكاسها السريري وتبويب الفحوصات المؤجلة بلوحة الكاشير Cashier Item-Level Pay/Postpone/Cancel Controls, Modern iOS-Style Segmented Pills, Clinical Gate Release, Doctor Alerts & Dedicated Postponed Tab in Cashier Hub)
+
+### Done
+- **تصميم الكبسولات العصرية السلسة (Modern Segmented Pills) ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * استبدال الأزرار الكلاسيكية المزدحمة بشريط كبسولي ناعم ومضغوط (iOS/Tailwind Segmented Control) لكل فحص بروابط بصرية فائقة الأناقة:
+    - `[ ✓ تسديد ]` بتدرج أخضر زمردي وظل خفيف ناعم.
+    - `[ ⏱ تأجيل ]` بتدرج كهرماني دافئ عند الرغبة في تأجيل الفحص.
+    - `[ ✕ إلغاء ]` بتدرج وردي/أحمر لإلغاء الفحص بطلب المريض.
+  * قائمة أسباب مدمجة (Pill Dropdown & Input) تظهر بسلاسة عند اختيار الإلغاء أو التأجيل لتوثيق السبب بدقة.
+- **تفكيك طلبات الفحوصات وحساب الصندوق المالي ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * فصل الفحوصات المؤجلة في طلب طبي مستقل برقم جديد وحالة `status = 'postponed'`.
+  * فصل الفحوصات الملغاة في طلب طبي مستقل برقم جديد وحالة `status = 'cancelled'` مع توثيق السبب المالي/السريري.
+  * احتساب وتحصيل رسوم الفحوصات المسددة فقط ضمن الإيصال المالي الرسمي، أو استكمال العملية بمبلغ 0 في حال ألغى/أجل المريض كل الفحوصات.
+- **استحداث تبويب الفحوصات المؤجلة بلوحة الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * عزل الطلبات المؤجلة عن قائمة العمل اليومية المعتادة بتضمين استعلام مخصص في `CashierController@index`.
+  * إضافة تبويب مستقل في شريط التبويبات الرئيسي: `[ ⏱ الفحوصات المؤجلة (N) ]` مع شارة عداد باللون الكهرماني.
+  * جدول تفصيلي متكامل يعرض: رقم الطلب، القسم التشخيصي، المريض، الفحوصات المؤجلة، سبب التأجيل، الطبيب، المبلغ، وتاريخ التأجيل.
+  * زر إجراء مباشر: `[ 💳 تسديد الآن ]` يفتح استمارة التسديد فوراً بمجرد عودة المريض لاستئناف الفحص دون الحاجة لطلب طبي جديد.
+  * بانيل تنبيه كهرماني علوي بارز يظهر للكاشير بوجود طلبات مؤجلة مع زر انتقال فوري للتبويب.
+- **تحرير القفل السريري بمحطة الطبيب وتنبيهات الكاشير ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * استبعاد الفحوصات المؤجلة والملغاة (`whereNotIn('status', ['completed', 'cancelled', 'postponed'])`) من شرط القفل السريري الإلزامي.
+  * تمكين الطبيب من إنهاء الزيارة فوراً ودون احتجاز متى ما سدد المريض أو ألغى/أجل بقية الفحوصات.
+  * إظهار تنبيهات سريرية بارزة أعلى تبويب الفحوصات توضح الفحوصات التي ألغاها أو أجلها المريض مع أسبابها، مع فلتر سريع `[ ⛔ ملغاة ]`.
+- **عزل الأقسام التشخيصية وطابور العيادة ([app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php) & [app/Http/Controllers/DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php))**:
+  * استبعاد الفحوصات الملغاة والمؤجلة تلقائياً من قوائم العمل النشطة لمختبر التحاليل وأقسام الأشعة.
+  * منع إدراج المريض في قائمة "بانتظار الفحوصات" في شاشة استدعاء الطبيب إذا كانت الفحوصات ملغاة أو مؤجلة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierItemActionCancellationAndPostponeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierItemActionCancellationAndPostponeTest.php))**:
+  * بناء اختبارات متكاملة تغطي تسديد فحص وإلغاء وتأجيل آخر مع الأسباب وتفكيك السجلات وإنهاء الزيارة، واختبار إلغاء كافة الفحوصات، واختبار ظهور الفحوصات المؤجلة في التبويب المخصص بلوحة الكاشير بنجاح تام (`3 passed, 38 assertions`).
+
 ## Session log (2026-10-23 — المرحلة 111: إصلاح استعلام التحقق من الفحوصات المعلقة عند إنهاء الزيارة، وتحسين استجابة AJAX، وتفعيل الحظر الصارم للحجز المكرر في واجهة الاستعلامات Doctor Visit Completion SQL Fix, Clean AJAX Error Handling & Inquiry Hard Block UI)
 
 ### Done

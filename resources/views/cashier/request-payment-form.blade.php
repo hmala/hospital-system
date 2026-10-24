@@ -2,6 +2,74 @@
 
 @section('content')
 <div class="container-fluid">
+    <style>
+        .segmented-control-pills {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 50rem;
+            padding: 3px;
+            gap: 2px;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            position: relative;
+            user-select: none;
+            width: 100%;
+            justify-content: space-between;
+        }
+        .segmented-pill-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+        .segmented-pill-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            border-radius: 50rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 0;
+            flex: 1;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .segmented-pill-label:hover {
+            color: #1e293b;
+            background: rgba(255, 255, 255, 0.7);
+        }
+        .segmented-pill-label i {
+            font-size: 0.72rem;
+        }
+        /* Active Pay */
+        .segmented-pill-input:checked + .segmented-pill-label.pill-pay {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+        }
+        /* Active Postpone */
+        .segmented-pill-input:checked + .segmented-pill-label.pill-postpone {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+        }
+        /* Active Cancel */
+        .segmented-pill-input:checked + .segmented-pill-label.pill-cancel {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+        }
+        .item-reason-container {
+            transition: all 0.25s ease-in-out;
+        }
+    </style>
     <div class="row justify-content-center">
         <div class="col-md-9">
             <div class="card border-0 shadow-sm">
@@ -405,12 +473,13 @@
                                         <table class="table table-bordered table-hover align-middle mb-0" id="itemsTable">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th width="40" class="text-center">#</th>
+                                                    <th width="35" class="text-center">#</th>
                                                     <th>اسم الخدمة / الفحص</th>
-                                                    <th width="100">الرمز</th>
-                                                    <th width="130" class="text-end">السعر المعتمد</th>
-                                                    <th width="130" class="text-end text-success">تحمل المريض</th>
-                                                    <th width="130" class="text-end text-primary">حصة الضمان</th>
+                                                    <th width="85">الرمز</th>
+                                                    <th width="115" class="text-end">السعر المعتمد</th>
+                                                    <th width="115" class="text-end text-success">تحمل المريض</th>
+                                                    <th width="115" class="text-end text-primary">حصة الضمان</th>
+                                                    <th width="250" class="text-center bg-light">الإجراء (قرار المريض)</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -429,6 +498,9 @@
                                                         $rowIns = $rowCov ? max(0, $rowApp - $rowPat) : 0;
                                                     @endphp
                                                     <tr class="service-item-row" 
+                                                        data-request-id="{{ $item['request_id'] }}"
+                                                        data-item-type="{{ $item['type'] }}"
+                                                        data-item-id="{{ $item['id'] }}"
                                                         data-base-price="{{ $item['base_price'] }}"
                                                         data-moi-price="{{ $item['moi_price'] }}"
                                                         data-hi-price="{{ $item['hi_price'] }}"
@@ -443,7 +515,7 @@
                                                             @else
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
                                                             @endif
-                                                            <span class="fw-semibold">{{ $item['name'] }}</span>
+                                                            <span class="fw-semibold item-name-label">{{ $item['name'] }}</span>
                                                             @if(count($allRequests) > 1)
                                                                 <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : 'bg-primary' }} ms-1" style="font-size:0.68rem;">
                                                                     {{ $item['type'] === 'radiology' ? 'أشعة' : 'مختبر' }}
@@ -461,15 +533,67 @@
                                                         <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
                                                         <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} د.ع</td>
                                                         <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} د.ع</td>
+                                                        <td class="text-center p-1" style="min-width: 220px;">
+                                                            <div class="segmented-control-pills item-action-group">
+                                                                <input type="radio" class="segmented-pill-input item-action-radio" 
+                                                                       name="item_actions[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]" 
+                                                                       id="act_pay_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" 
+                                                                       value="pay" checked autocomplete="off"
+                                                                       onchange="handleItemActionChange(this)">
+                                                                <label class="segmented-pill-label pill-pay" for="act_pay_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" title="تسديد ودفع الرسوم الآن">
+                                                                    <i class="fas fa-check"></i>
+                                                                    <span>تسديد</span>
+                                                                </label>
+
+                                                                <input type="radio" class="segmented-pill-input item-action-radio" 
+                                                                       name="item_actions[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]" 
+                                                                       id="act_postpone_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" 
+                                                                       value="postpone" autocomplete="off"
+                                                                       onchange="handleItemActionChange(this)">
+                                                                <label class="segmented-pill-label pill-postpone" for="act_postpone_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" title="تأجيل الفحص لزيارة لاحقة">
+                                                                    <i class="fas fa-clock"></i>
+                                                                    <span>تأجيل</span>
+                                                                </label>
+
+                                                                <input type="radio" class="segmented-pill-input item-action-radio" 
+                                                                       name="item_actions[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]" 
+                                                                       id="act_cancel_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" 
+                                                                       value="cancel" autocomplete="off"
+                                                                       onchange="handleItemActionChange(this)">
+                                                                <label class="segmented-pill-label pill-cancel" for="act_cancel_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" title="إلغاء نهائي بطلب المريض">
+                                                                    <i class="fas fa-times"></i>
+                                                                    <span>إلغاء</span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="item-reason-container mt-1.5 d-none" id="reason_box_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}">
+                                                                <select class="form-select form-select-sm py-0.5 px-2 border-danger-subtle text-danger small mb-1 item-reason-select rounded-pill" 
+                                                                        name="item_reasons[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]"
+                                                                        style="font-size: 0.72rem; height: 28px;"
+                                                                        onchange="handleReasonSelectChange(this)">
+                                                                    <option value="lack_of_funds">💸 قلة السيولة / عدم توفر المبلغ</option>
+                                                                    <option value="patient_refused">⛔ عدم رغبة المريض بالفحص</option>
+                                                                    <option value="time_constraint">⏳ ضيق الوقت / تأجيل لزيارة لاحقة</option>
+                                                                    <option value="other">✏️ سبب آخر...</option>
+                                                                </select>
+                                                                <input type="text" class="form-control form-control-sm py-0.5 px-2 d-none custom-reason-input rounded-pill"
+                                                                       name="item_custom_reasons[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]"
+                                                                       placeholder="اكتب السبب هنا..." maxlength="190"
+                                                                       style="font-size: 0.72rem; height: 28px;">
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
                                             <tfoot class="table-success">
                                                 <tr>
-                                                    <th colspan="3" class="text-end fw-bold">المجموع الإجمالي:</th>
+                                                    <th colspan="3" class="text-end fw-bold">المجموع الإجمالي (المسدد):</th>
                                                     <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} د.ع</th>
+                                                    <th class="text-center p-1" id="table_actions_summary">
+                                                        <span class="badge bg-success">كل الفحوصات مسددة</span>
+                                                    </th>
                                                 </tr>
                                             </tfoot>
                                         </table>
@@ -592,6 +716,44 @@ function toggleInsuranceEdit() {
     }
 }
 
+window.handleItemActionChange = function(radioElem) {
+    const row = radioElem.closest('.service-item-row');
+    if (!row) return;
+    const reqId = row.getAttribute('data-request-id');
+    const itemType = row.getAttribute('data-item-type');
+    const itemId = row.getAttribute('data-item-id');
+    const reasonBox = document.getElementById('reason_box_' + reqId + '_' + itemType + '_' + itemId);
+
+    if (reasonBox) {
+        if (radioElem.value === 'cancel' || radioElem.value === 'postpone') {
+            reasonBox.classList.remove('d-none');
+            const select = reasonBox.querySelector('.item-reason-select');
+            if (select && radioElem.value === 'postpone') {
+                select.value = 'time_constraint';
+            } else if (select && radioElem.value === 'cancel') {
+                select.value = 'lack_of_funds';
+            }
+        } else {
+            reasonBox.classList.add('d-none');
+        }
+    }
+    if (typeof window.recalculateServices === 'function') {
+        window.recalculateServices();
+    }
+};
+
+window.handleReasonSelectChange = function(selectElem) {
+    const customInput = selectElem.parentElement.querySelector('.custom-reason-input');
+    if (customInput) {
+        if (selectElem.value === 'other') {
+            customInput.classList.remove('d-none');
+            customInput.focus();
+        } else {
+            customInput.classList.add('d-none');
+        }
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const insuranceTypeSelect = document.getElementById('insurance_type');
     const copayInput = document.getElementById('copay_percentage');
@@ -605,6 +767,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const copayBadge = document.getElementById('copayBadge');
     const hiBadge = document.getElementById('patient_hi_category_badge');
     const rows = document.querySelectorAll('.service-item-row');
+    const submitBtn = document.getElementById('submitPaymentBtn');
+    const actionsSummary = document.getElementById('table_actions_summary');
 
     function formatNumber(num) {
         return Math.round(num).toLocaleString('en-US') + ' د.ع';
@@ -646,8 +810,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalInsurance = 0;
         let hasError = false;
         let hasUncovered = false;
+        let countPay = 0;
+        let countPostpone = 0;
+        let countCancel = 0;
 
         rows.forEach(row => {
+            const actRadio = row.querySelector('.item-action-radio:checked');
+            const action = actRadio ? actRadio.value : 'pay';
+
             const basePrice = parseFloat(row.getAttribute('data-base-price')) || 0;
             const moiPrice = parseFloat(row.getAttribute('data-moi-price')) || 0;
             const hiPrice = parseFloat(row.getAttribute('data-hi-price')) || 0;
@@ -662,14 +832,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     rowApproved = moiPrice;
                     rowCovered = true;
                 } else {
-                    hasUncovered = true;
+                    if (action === 'pay') hasUncovered = true;
                 }
             } else if (insType === 'hi') {
                 if (isHiActive && hiPrice > 0) {
                     rowApproved = hiPrice;
                     rowCovered = true;
                 } else {
-                    hasUncovered = true;
+                    if (action === 'pay') hasUncovered = true;
                 }
             }
 
@@ -681,9 +851,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 rowInsurance = Math.max(0, rowApproved - rowPatient);
             }
 
-            totalApproved += rowApproved;
-            totalPatient += rowPatient;
-            totalInsurance += rowInsurance;
+            const nameLabel = row.querySelector('.item-name-label');
+
+            if (action === 'cancel') {
+                countCancel++;
+                row.classList.add('table-danger');
+                row.classList.remove('table-warning');
+                row.style.opacity = '0.7';
+                if (nameLabel) nameLabel.style.textDecoration = 'line-through';
+            } else if (action === 'postpone') {
+                countPostpone++;
+                row.classList.add('table-warning');
+                row.classList.remove('table-danger');
+                row.style.opacity = '0.75';
+                if (nameLabel) nameLabel.style.textDecoration = 'none';
+            } else {
+                countPay++;
+                row.classList.remove('table-danger', 'table-warning');
+                row.style.opacity = '1';
+                if (nameLabel) nameLabel.style.textDecoration = 'none';
+
+                totalApproved += rowApproved;
+                totalPatient += rowPatient;
+                totalInsurance += rowInsurance;
+            }
 
             const tdApproved = row.querySelector('.row-approved-price');
             const tdPatient = row.querySelector('.row-patient-share');
@@ -737,10 +928,52 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tableTotalPatient) tableTotalPatient.textContent = formatNumber(totalPatient);
         if (tableTotalInsurance) tableTotalInsurance.textContent = formatNumber(totalInsurance);
 
-        if (amountInput) {
-            amountInput.value = totalPatient;
+        if (actionsSummary) {
+            if (countPay > 0 && countCancel === 0 && countPostpone === 0) {
+                actionsSummary.innerHTML = '<span class="badge bg-success">تسديد الكل (' + countPay + ')</span>';
+            } else {
+                let sumHtml = '';
+                if (countPay > 0) sumHtml += '<span class="badge bg-success me-1">' + countPay + ' تسديد</span>';
+                if (countPostpone > 0) sumHtml += '<span class="badge bg-warning text-dark me-1">' + countPostpone + ' تأجيل</span>';
+                if (countCancel > 0) sumHtml += '<span class="badge bg-danger">' + countCancel + ' إلغاء</span>';
+                actionsSummary.innerHTML = sumHtml;
+            }
+        }
+
+        if (countPay === 0) {
+            if (amountInput) {
+                amountInput.value = 0;
+                amountInput.required = false;
+            }
+            if (submitBtn) {
+                if (countCancel > 0 && countPostpone === 0) {
+                    submitBtn.className = 'btn btn-danger btn-lg px-4';
+                    submitBtn.innerHTML = '<i class="fas fa-ban me-2"></i> تأكيد إلغاء كافة الفحوصات بطلب المريض';
+                } else if (countPostpone > 0 && countCancel === 0) {
+                    submitBtn.className = 'btn btn-warning btn-lg px-4 text-dark';
+                    submitBtn.innerHTML = '<i class="fas fa-hourglass-half me-2"></i> تأكيد تأجيل كافة الفحوصات بطلب المريض';
+                } else {
+                    submitBtn.className = 'btn btn-secondary btn-lg px-4';
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد تحديث الفحوصات (إلغاء وتأجيل)';
+                }
+            }
+        } else {
+            if (amountInput) {
+                amountInput.value = totalPatient;
+                amountInput.required = true;
+            }
+            if (submitBtn) {
+                submitBtn.className = 'btn btn-success btn-lg px-4';
+                if (countCancel > 0 || countPostpone > 0) {
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد دفع الفحوصات المختارة (' + formatNumber(totalPatient) + ')';
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد الدفع وإصدار الإيصال';
+                }
+            }
         }
     }
+
+    window.recalculateServices = recalculate;
 
     const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor($request->type) : 15.0);
     const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));

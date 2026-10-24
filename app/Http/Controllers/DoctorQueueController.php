@@ -7,8 +7,6 @@ use App\Models\Doctor;
 use App\Models\Visit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class DoctorQueueController extends Controller
 {
@@ -20,17 +18,17 @@ class DoctorQueueController extends Controller
         $today = today();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('type', 'consultant')
-                  ->orWhere('type', 'sonar')
-                  ->orWhere('specialization', 'LIKE', '%سونار%');
+                    ->orWhere('type', 'sonar')
+                    ->orWhere('specialization', 'LIKE', '%سونار%');
             })
             ->get();
 
         $doctorsList = $this->getDoctorsListWithCounts($doctors, $today);
 
         $doctorId = $request->query('doctor_id') ?? $request->query('doctor');
-        if (!$doctorId && auth()->check() && auth()->user()->doctor) {
+        if (! $doctorId && auth()->check() && auth()->user()->doctor) {
             $doctorId = auth()->user()->doctor->id;
         }
 
@@ -50,10 +48,10 @@ class DoctorQueueController extends Controller
         $today = today();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('type', 'consultant')
-                  ->orWhere('type', 'sonar')
-                  ->orWhere('specialization', 'LIKE', '%سونار%');
+                    ->orWhere('type', 'sonar')
+                    ->orWhere('specialization', 'LIKE', '%سونار%');
             })
             ->get();
 
@@ -62,14 +60,14 @@ class DoctorQueueController extends Controller
         // Find doctor currently assigned to this room
         $doctor = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($q) use ($roomNumber) {
+            ->where(function ($q) use ($roomNumber) {
                 $q->where('current_room', $roomNumber)
-                  ->orWhere(function($sub) use ($roomNumber) {
-                      $sub->whereNull('current_room')
-                          ->whereHas('department', function($d) use ($roomNumber) {
-                              $d->where('room_number', $roomNumber);
-                          });
-                  });
+                    ->orWhere(function ($sub) use ($roomNumber) {
+                        $sub->whereNull('current_room')
+                            ->whereHas('department', function ($d) use ($roomNumber) {
+                                $d->where('room_number', $roomNumber);
+                            });
+                    });
             })
             ->first();
 
@@ -83,18 +81,18 @@ class DoctorQueueController extends Controller
     {
         $doctor = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($q) use ($roomNumber) {
+            ->where(function ($q) use ($roomNumber) {
                 $q->where('current_room', $roomNumber)
-                  ->orWhere(function($sub) use ($roomNumber) {
-                      $sub->whereNull('current_room')
-                          ->whereHas('department', function($d) use ($roomNumber) {
-                              $d->where('room_number', $roomNumber);
-                          });
-                  });
+                    ->orWhere(function ($sub) use ($roomNumber) {
+                        $sub->whereNull('current_room')
+                            ->whereHas('department', function ($d) use ($roomNumber) {
+                                $d->where('room_number', $roomNumber);
+                            });
+                    });
             })
             ->first();
 
-        if (!$doctor) {
+        if (! $doctor) {
             return response()->json([
                 'success' => true,
                 'has_doctor' => false,
@@ -132,7 +130,7 @@ class DoctorQueueController extends Controller
         ]);
 
         $doctor = Doctor::findOrFail($request->doctor_id);
-        
+
         // If room is specified, clear any other doctor on that same room
         if ($request->filled('room')) {
             Doctor::where('current_room', $request->room)
@@ -144,9 +142,9 @@ class DoctorQueueController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $request->filled('room') 
-                ? "تم تعيين د. " . optional($doctor->user)->name . " على عيادة {$request->room} بنجاح" 
-                : "تم إلغاء تعيين الغرفة للطبيب",
+            'message' => $request->filled('room')
+                ? 'تم تعيين د. '.optional($doctor->user)->name." على عيادة {$request->room} بنجاح"
+                : 'تم إلغاء تعيين الغرفة للطبيب',
             'doctor_id' => $doctor->id,
             'room' => $doctor->current_room,
         ]);
@@ -197,13 +195,13 @@ class DoctorQueueController extends Controller
                 ->whereDate('appointment_date', $today)
                 ->where(function ($q) {
                     $q->where('payment_status', 'paid')
-                      ->orWhereNotNull('emergency_id');
+                        ->orWhereNotNull('emergency_id');
                 })
                 ->where(function ($q) {
                     $q->whereDoesntHave('visit')
-                      ->orWhereHas('visit', function ($vq) {
-                          $vq->whereNotIn('status', ['completed', 'cancelled']);
-                      });
+                        ->orWhereHas('visit', function ($vq) {
+                            $vq->whereNotIn('status', ['completed', 'cancelled']);
+                        });
                 })
                 ->whereIn('status', ['scheduled', 'confirmed'])
                 ->count();
@@ -213,11 +211,11 @@ class DoctorQueueController extends Controller
                 ->whereIn('status', ['calling', 'in_consultation'])
                 ->count();
 
-            $isAvailableToday = (bool) ($doc->is_available_today && (!$doc->available_date || $doc->available_date->isToday()));
+            $isAvailableToday = (bool) ($doc->is_available_today && (! $doc->available_date || $doc->available_date->isToday()));
 
             return [
                 'id' => $doc->id,
-                'name' => optional($doc->user)->name ?? 'طبيب #' . $doc->id,
+                'name' => optional($doc->user)->name ?? 'طبيب #'.$doc->id,
                 'specialization' => $doc->specialization ?? 'استشاري',
                 'department' => optional($doc->department)->name ?? 'العيادات الاستشارية',
                 'current_room' => $doc->current_room ?: optional($doc->department)->room_number,
@@ -227,12 +225,12 @@ class DoctorQueueController extends Controller
                 'calling_count' => $callingCount,
             ];
         })
-        ->sortByDesc(function ($doc) {
-            return ($doc['is_available_today'] ? 1000 : 0) 
-                 + ($doc['waiting_count'] > 0 ? 500 : 0) 
-                 + ($doc['calling_count'] > 0 ? 200 : 0);
-        })
-        ->values();
+            ->sortByDesc(function ($doc) {
+                return ($doc['is_available_today'] ? 1000 : 0)
+                     + ($doc['waiting_count'] > 0 ? 500 : 0)
+                     + ($doc['calling_count'] > 0 ? 200 : 0);
+            })
+            ->values();
     }
 
     /**
@@ -280,18 +278,18 @@ class DoctorQueueController extends Controller
         $waitingList = Appointment::with(['patient.user', 'emergency'])
             ->where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('payment_status', 'paid')
-                  ->orWhereNotNull('emergency_id');
+                    ->orWhereNotNull('emergency_id');
             })
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereDoesntHave('visit')
-                  ->orWhereHas('visit', function($vq) {
-                      $vq->whereNotIn('status', ['completed', 'cancelled']);
-                  });
+                    ->orWhereHas('visit', function ($vq) {
+                        $vq->whereNotIn('status', ['completed', 'cancelled']);
+                    });
             })
             ->whereIn('status', ['scheduled', 'confirmed'])
-            ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
+            ->orderByRaw('CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('queue_number', 'asc')
             ->orderBy('id', 'asc')
             ->limit(50)
@@ -306,36 +304,36 @@ class DoctorQueueController extends Controller
             'prescriptions.items.medicine',
             'prescriptions.items.suggestedMedicine',
         ])
-        ->where('doctor_id', $doctor->id)
-        ->whereNotIn('status', ['completed', 'cancelled'])
-        ->where(function($q) use ($today) {
-            $q->whereDate('visit_date', $today)
-              ->orWhereDate('updated_at', $today)
-              ->orWhereHas('requests', function($rq) use ($today) {
-                  $rq->whereDate('created_at', $today);
-              })
-              ->orWhereHas('radiologyRequests', function($rq) use ($today) {
-                  $rq->whereDate('created_at', $today);
-              });
-        })
-        ->where(function($q) {
-            $q->whereHas('radiologyRequests')
-              ->orWhereHas('requests', function($rq) {
-                  $rq->whereIn('type', ['lab', 'radiology']);
-              })
-              ->orWhereHas('prescriptions');
-        })
-        ->latest('updated_at')
-        ->get();
+            ->where('doctor_id', $doctor->id)
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where(function ($q) use ($today) {
+                $q->whereDate('visit_date', $today)
+                    ->orWhereDate('updated_at', $today)
+                    ->orWhereHas('requests', function ($rq) use ($today) {
+                        $rq->whereDate('created_at', $today);
+                    })
+                    ->orWhereHas('radiologyRequests', function ($rq) use ($today) {
+                        $rq->whereDate('created_at', $today);
+                    });
+            })
+            ->where(function ($q) {
+                $q->whereHas('radiologyRequests')
+                    ->orWhereHas('requests', function ($rq) {
+                        $rq->whereIn('type', ['lab', 'radiology']);
+                    })
+                    ->orWhereHas('prescriptions');
+            })
+            ->latest('updated_at')
+            ->get();
 
-        $formattedPendingTests = $pendingTestsVisits->map(function($v) {
+        $formattedPendingTests = $pendingTestsVisits->map(function ($v) {
             $pUser = $v->patient ? $v->patient->user : null;
             $pName = $pUser ? $pUser->name : 'مريض';
             $qNum = $v->appointment ? $v->appointment->queue_number : $v->id;
 
-            $radRequests = $v->radiologyRequests->whereNotIn('status', ['cancelled', 'rejected']);
-            $medicalRadRequests = $v->requests->where('type', 'radiology')->whereNotIn('status', ['cancelled', 'rejected']);
-            $labRequests = $v->requests->where('type', 'lab')->whereNotIn('status', ['cancelled', 'rejected']);
+            $radRequests = $v->radiologyRequests->whereNotIn('status', ['cancelled', 'rejected', 'postponed']);
+            $medicalRadRequests = $v->requests->where('type', 'radiology')->whereNotIn('status', ['cancelled', 'rejected', 'postponed']);
+            $labRequests = $v->requests->where('type', 'lab')->whereNotIn('status', ['cancelled', 'rejected', 'postponed']);
             $prescriptions = $v->prescriptions->whereNotIn('status', ['cancelled', 'rejected']);
 
             $testsList = [];
@@ -348,27 +346,31 @@ class DoctorQueueController extends Controller
                 $typeName = $rr->radiologyType ? $rr->radiologyType->name : 'أشعة';
                 $isReady = ($rr->status === 'completed');
                 $totalTests++;
-                if ($isReady) $completedCount++;
+                if ($isReady) {
+                    $completedCount++;
+                }
 
                 $testsList[] = [
                     'type' => 'radiology',
                     'name' => $typeName,
                     'status' => $rr->status,
-                    'is_ready' => $isReady
+                    'is_ready' => $isReady,
                 ];
             }
 
             foreach ($medicalRadRequests as $mr) {
                 $isReady = ($mr->status === 'completed');
                 $totalTests++;
-                if ($isReady) $completedCount++;
+                if ($isReady) {
+                    $completedCount++;
+                }
 
                 $testsList[] = [
                     'type' => 'radiology',
                     'name' => $mr->description ?: 'فحص أشعة / سونار',
                     'status' => $mr->status,
                     'payment_status' => $mr->payment_status,
-                    'is_ready' => $isReady
+                    'is_ready' => $isReady,
                 ];
             }
 
@@ -377,25 +379,29 @@ class DoctorQueueController extends Controller
                 $details = is_array($lr->details) ? $lr->details : (json_decode($lr->details, true) ?: []);
                 $tests = $details['tests'] ?? [];
 
-                if (!empty($tests) && is_array($tests)) {
+                if (! empty($tests) && is_array($tests)) {
                     foreach ($tests as $tName) {
                         $totalTests++;
-                        if ($isReady) $completedCount++;
+                        if ($isReady) {
+                            $completedCount++;
+                        }
                         $testsList[] = [
                             'type' => 'lab',
                             'name' => $tName,
                             'status' => $lr->status,
-                            'is_ready' => $isReady
+                            'is_ready' => $isReady,
                         ];
                     }
                 } else {
                     $totalTests++;
-                    if ($isReady) $completedCount++;
+                    if ($isReady) {
+                        $completedCount++;
+                    }
                     $testsList[] = [
                         'type' => 'lab',
                         'name' => $lr->description ?: 'تحليل مختبر',
                         'status' => $lr->status,
-                        'is_ready' => $isReady
+                        'is_ready' => $isReady,
                     ];
                 }
             }
@@ -403,7 +409,9 @@ class DoctorQueueController extends Controller
             foreach ($prescriptions as $rx) {
                 $isDispensed = in_array($rx->status, ['dispensed', 'partially_dispensed']);
                 $totalTests++;
-                if ($isDispensed) $completedCount++;
+                if ($isDispensed) {
+                    $completedCount++;
+                }
 
                 foreach ($rx->items as $item) {
                     if ($item->substitution_status === 'pending_approval') {
@@ -419,7 +427,7 @@ class DoctorQueueController extends Controller
 
                 $testsList[] = [
                     'type' => 'pharmacy',
-                    'name' => 'صيدلية: ' . $rx->status_text,
+                    'name' => 'صيدلية: '.$rx->status_text,
                     'prescription_number' => $rx->prescription_number,
                     'status' => $rx->status,
                     'status_text' => $rx->status_text,
@@ -429,7 +437,7 @@ class DoctorQueueController extends Controller
             }
 
             $hasUnpaidRequests = $v->requests->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->count() > 0;
-            $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && !$v->appointment->emergency_id);
+            $isUnpaidAppointment = ($v->appointment && $v->appointment->payment_status !== 'paid' && ! $v->appointment->emergency_id);
             $hasUnpaidTests = $hasUnpaidRequests || $isUnpaidAppointment;
 
             $allReady = ($totalTests > 0) && ($completedCount === $totalTests);
@@ -445,14 +453,14 @@ class DoctorQueueController extends Controller
                 'total_tests' => $totalTests,
                 'completed_tests' => $completedCount,
                 'tests' => $testsList,
-                'updated_at' => $v->updated_at ? $v->updated_at->format('H:i') : ''
+                'updated_at' => $v->updated_at ? $v->updated_at->format('H:i') : '',
             ];
         });
 
         // 4. Stats for today
         $totalToday = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('payment_status', 'paid')->orWhereNotNull('emergency_id');
             })
             ->count();
@@ -483,41 +491,41 @@ class DoctorQueueController extends Controller
                 'is_result_review' => false,
                 'called_at' => $calledTime,
                 'called_at_timestamp' => $calledTimestamp,
-                'call_key' => "sonar_{$callingSonarReq->id}_" . ($callingSonarReq->updated_at ? $callingSonarReq->updated_at->format('YmdHis') : now()->format('YmdHis')) . "_calling",
+                'call_key' => "sonar_{$callingSonarReq->id}_".($callingSonarReq->updated_at ? $callingSonarReq->updated_at->format('YmdHis') : now()->format('YmdHis')).'_calling',
             ];
         } elseif ($currentPatient) {
             $patientUser = $currentPatient->patient ? $currentPatient->patient->user : null;
             $name = $patientUser ? $patientUser->name : ($currentPatient->emergency && $currentPatient->emergency->emergencyPatient ? $currentPatient->emergency->emergencyPatient->name : 'مريض مجهول');
             $hasVisitTests = $currentPatient->visit && ($currentPatient->visit->radiologyRequests->count() > 0 || $currentPatient->visit->requests->count() > 0);
-            
+
             $formattedCurrent = [
                 'id' => $currentPatient->id,
                 'queue_number' => $currentPatient->queue_number ?: $currentPatient->id,
                 'name' => $name,
                 'status' => $currentPatient->status,
                 'status_text' => $currentPatient->status_text,
-                'is_emergency' => (bool)$currentPatient->emergency_id,
+                'is_emergency' => (bool) $currentPatient->emergency_id,
                 'emergency_id' => $currentPatient->emergency_id,
                 'emergency_notes' => $currentPatient->emergency?->notes,
                 'emergency_symptoms' => $currentPatient->emergency?->symptoms,
                 'emergency_diagnosis' => $currentPatient->emergency?->diagnosis,
                 'appointment_notes' => $currentPatient->notes,
-                'is_result_review' => (bool)$hasVisitTests,
+                'is_result_review' => (bool) $hasVisitTests,
                 'called_at' => $currentPatient->called_at ? $currentPatient->called_at->toIso8601String() : null,
                 'called_at_timestamp' => $currentPatient->called_at ? $currentPatient->called_at->timestamp : null,
-                'call_key' => $currentPatient->id . '_' . ($currentPatient->called_at ? $currentPatient->called_at->format('YmdHis') : '0') . '_' . $currentPatient->status,
+                'call_key' => $currentPatient->id.'_'.($currentPatient->called_at ? $currentPatient->called_at->format('YmdHis') : '0').'_'.$currentPatient->status,
             ];
         }
 
-        $formattedWaiting = $waitingList->map(function($apt) {
+        $formattedWaiting = $waitingList->map(function ($apt) {
             $patientUser = $apt->patient ? $apt->patient->user : null;
             $name = $patientUser ? $patientUser->name : ($apt->emergency && $apt->emergency->emergencyPatient ? $apt->emergency->emergencyPatient->name : 'مريض مجهول');
-            
+
             return [
                 'id' => $apt->id,
                 'queue_number' => $apt->queue_number ?: $apt->id,
                 'name' => $name,
-                'is_emergency' => (bool)$apt->emergency_id,
+                'is_emergency' => (bool) $apt->emergency_id,
                 'emergency_id' => $apt->emergency_id,
                 'emergency_notes' => $apt->emergency?->notes,
                 'emergency_symptoms' => $apt->emergency?->symptoms,
@@ -590,7 +598,7 @@ class DoctorQueueController extends Controller
 
             $waitingCount = Appointment::where('doctor_id', $doctor->id)
                 ->whereDate('appointment_date', $today)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('payment_status', 'paid')->orWhereNotNull('emergency_id');
                 })
                 ->whereIn('status', ['scheduled', 'confirmed'])
@@ -604,7 +612,7 @@ class DoctorQueueController extends Controller
                     'queue_number' => $current->queue_number ?: $current->id,
                     'name' => $pName,
                     'status' => $current->status,
-                    'is_emergency' => (bool)$current->emergency_id,
+                    'is_emergency' => (bool) $current->emergency_id,
                     'called_at_timestamp' => $current->called_at ? $current->called_at->timestamp : null,
                 ];
             }
@@ -634,7 +642,7 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المرضى من الطابور.'], 403);
         }
 
@@ -647,28 +655,28 @@ class DoctorQueueController extends Controller
         $nextAppointment = Appointment::with(['patient.user', 'emergency'])
             ->where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('payment_status', 'paid')->orWhereNotNull('emergency_id');
             })
             ->whereIn('status', ['scheduled', 'confirmed'])
-            ->orderByRaw("CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END")
+            ->orderByRaw('CASE WHEN emergency_id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('queue_number', 'asc')
             ->orderBy('id', 'asc')
             ->first();
 
-        if (!$nextAppointment) {
+        if (! $nextAppointment) {
             return response()->json([
                 'success' => false,
-                'message' => 'لا يوجد مرضى في قائمة الانتظار حالياً.'
+                'message' => 'لا يوجد مرضى في قائمة الانتظار حالياً.',
             ], 404);
         }
 
         // Move previous admitted/consultation appointments with visits to completed
         Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('status', 'in_consultation')
-                  ->orWhereHas('visit');
+                    ->orWhereHas('visit');
             })
             ->where('id', '!=', $nextAppointment->id)
             ->update(['status' => 'completed']);
@@ -702,17 +710,17 @@ class DoctorQueueController extends Controller
                 app(\App\Services\TelegramService::class)->sendNearTurnAlert($followingAppointment);
             }
         } catch (\Throwable $e) {
-            \Log::warning('Telegram notification failed: ' . $e->getMessage());
+            \Log::warning('Telegram notification failed: '.$e->getMessage());
         }
 
         $pName = $nextAppointment->patient && $nextAppointment->patient->user ? $nextAppointment->patient->user->name : 'المريض';
 
         return response()->json([
             'success' => true,
-            'message' => 'تم استدعاء المريض (' . $pName . ') بنجاح.',
+            'message' => 'تم استدعاء المريض ('.$pName.') بنجاح.',
             'appointment_id' => $nextAppointment->id,
             'queue_number' => $nextAppointment->queue_number,
-            'patient_name' => $pName
+            'patient_name' => $pName,
         ]);
     }
 
@@ -723,7 +731,7 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المرضى من الطابور.'], 403);
         }
 
@@ -736,9 +744,9 @@ class DoctorQueueController extends Controller
         // Move previous admitted/consultation appointments with visits to completed
         Appointment::where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('status', 'in_consultation')
-                  ->orWhereHas('visit');
+                    ->orWhereHas('visit');
             })
             ->where('id', '!=', $appointment->id)
             ->update(['status' => 'completed']);
@@ -760,17 +768,17 @@ class DoctorQueueController extends Controller
         try {
             app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
         } catch (\Throwable $e) {
-            \Log::warning('Telegram notification failed: ' . $e->getMessage());
+            \Log::warning('Telegram notification failed: '.$e->getMessage());
         }
 
         $pName = $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'المريض';
 
         return response()->json([
             'success' => true,
-            'message' => 'تم استدعاء المريض (' . $pName . ') بدور #' . ($appointment->queue_number ?? $appointment->id) . ' بنجاح.',
+            'message' => 'تم استدعاء المريض ('.$pName.') بدور #'.($appointment->queue_number ?? $appointment->id).' بنجاح.',
             'appointment_id' => $appointment->id,
             'queue_number' => $appointment->queue_number,
-            'patient_name' => $pName
+            'patient_name' => $pName,
         ]);
     }
 
@@ -781,12 +789,12 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك بإعادة المناداة على المريض.'], 403);
         }
 
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
-        
+
         $appointment->status = 'calling';
         $appointment->called_at = now();
         $appointment->save();
@@ -794,18 +802,19 @@ class DoctorQueueController extends Controller
         // إعادة إرسال نداء تيليجرام
         try {
             app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
 
         $pName = $appointment->patient && $appointment->patient->user ? $appointment->patient->user->name : 'المريض';
         $docName = $appointment->doctor && $appointment->doctor->user ? $appointment->doctor->user->name : 'الطبيب';
 
         return response()->json([
             'success' => true,
-            'message' => 'تمت المناداة على المريض (' . $pName . ').',
+            'message' => 'تمت المناداة على المريض ('.$pName.').',
             'patient_name' => $pName,
             'doctor_name' => $docName,
             'queue_number' => $appointment->queue_number,
-            'called_at' => $appointment->called_at->toIso8601String()
+            'called_at' => $appointment->called_at->toIso8601String(),
         ]);
     }
 
@@ -816,30 +825,31 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المراجعين للنتائج.'], 403);
         }
 
         $visit = Visit::with(['patient.user', 'doctor.user', 'appointment', 'radiologyRequests', 'requests'])->findOrFail($visitId);
-        
-        $hasPendingRad = $visit->radiologyRequests()->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
-        $hasPendingLab = $visit->requests()->where('type', 'lab')->whereNotIn('status', ['completed', 'cancelled', 'rejected'])->exists();
+
+        $hasPendingRad = $visit->radiologyRequests()->whereNotIn('status', ['completed', 'cancelled', 'rejected', 'postponed'])->exists();
+        $hasPendingLab = $visit->requests()->where('type', 'lab')->whereNotIn('status', ['completed', 'cancelled', 'rejected', 'postponed'])->exists();
         if ($hasPendingRad || $hasPendingLab) {
             return response()->json([
                 'success' => false,
-                'message' => 'لا يمكن استدعاء المراجع حالياً، بانتظار اكتمال كافة الفحوصات الطبية من المختبر / الأشعة.'
+                'message' => 'لا يمكن استدعاء المراجع حالياً، بانتظار اكتمال كافة الفحوصات الطبية من المختبر / الأشعة.',
             ], 422);
         }
 
         // التحقق من تسديد أجور الفحوصات والكشفية بالكاشير
-        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected'])->where('payment_status', '!=', 'paid')->exists();
-        $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && !$visit->appointment->emergency_id);
+        $hasUnpaidLab = $visit->requests()->whereIn('type', ['lab', 'radiology'])->whereNotIn('status', ['cancelled', 'rejected', 'postponed'])->where('payment_status', '!=', 'paid')->exists();
+        $isUnpaidAppointment = ($visit->appointment && $visit->appointment->payment_status !== 'paid' && ! $visit->appointment->emergency_id);
 
         if ($hasUnpaidLab || $isUnpaidAppointment) {
             $pTitle = $visit->patient && $visit->patient->user ? $visit->patient->user->name : 'المراجع';
+
             return response()->json([
                 'success' => false,
-                'message' => 'تنبيه: توجد فحوصات طبية غير مسددة في الكاشير للمراجع (' . $pTitle . '). يرجى توجيهه لتسديد الرسوم في الكاشير أولاً.'
+                'message' => 'تنبيه: توجد فحوصات طبية غير مسددة في الكاشير للمراجع ('.$pTitle.'). يرجى توجيهه لتسديد الرسوم في الكاشير أولاً.',
             ], 422);
         }
 
@@ -852,11 +862,11 @@ class DoctorQueueController extends Controller
         // Move previous admitted/consultation appointments with other visits to completed
         Appointment::where('doctor_id', $visit->doctor_id)
             ->whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('status', 'in_consultation')
-                  ->orWhereHas('visit');
+                    ->orWhereHas('visit');
             })
-            ->when($appointment, function($q) use ($appointment) {
+            ->when($appointment, function ($q) use ($appointment) {
                 $q->where('id', '!=', $appointment->id);
             })
             ->update(['status' => 'completed']);
@@ -866,7 +876,7 @@ class DoctorQueueController extends Controller
             ->whereDate('appointment_date', $today)
             ->where('status', 'calling')
             ->whereDoesntHave('visit')
-            ->when($appointment, function($q) use ($appointment) {
+            ->when($appointment, function ($q) use ($appointment) {
                 $q->where('id', '!=', $appointment->id);
             })
             ->update(['status' => 'confirmed']);
@@ -878,17 +888,18 @@ class DoctorQueueController extends Controller
 
             try {
                 app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'تم استدعاء المراجع (' . $pName . ') لمراجعة نتائج الفحوصات.',
+            'message' => 'تم استدعاء المراجع ('.$pName.') لمراجعة نتائج الفحوصات.',
             'patient_name' => $pName,
             'doctor_name' => $docName,
             'queue_number' => $appointment ? $appointment->queue_number : null,
             'is_result_review' => true,
-            'redirect_url' => route('doctor.visits.show', $visit->id)
+            'redirect_url' => route('doctor.visits.show', $visit->id),
         ]);
     }
 
@@ -899,22 +910,22 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك ببدء الكشف الطبي.'], 403);
         }
 
         $appointment = Appointment::with(['patient.user', 'doctor.user'])->findOrFail($appointmentId);
 
-        if ($appointment->payment_status !== 'paid' && !$appointment->emergency_id) {
+        if ($appointment->payment_status !== 'paid' && ! $appointment->emergency_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'يجب تسديد أجور الكشف في الكاشير أولاً.'
+                'message' => 'يجب تسديد أجور الكشف في الكاشير أولاً.',
             ], 422);
         }
 
         // Find or create Visit
         $visit = $appointment->visit;
-        if (!$visit) {
+        if (! $visit) {
             $visit = Visit::create([
                 'patient_id' => $appointment->patient_id,
                 'doctor_id' => $appointment->doctor_id,
@@ -924,7 +935,7 @@ class DoctorQueueController extends Controller
                 'visit_time' => now()->format('H:i'),
                 'visit_type' => 'checkup',
                 'chief_complaint' => $appointment->reason ?: 'زيارة استشارية',
-                'status' => 'in_progress'
+                'status' => 'in_progress',
             ]);
         }
 
@@ -933,13 +944,14 @@ class DoctorQueueController extends Controller
 
         try {
             app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'تم إدخال المريض وبدء الكشف بنجاح.',
             'visit_id' => $visit->id,
-            'redirect_url' => route('doctor.visits.show', $visit->id)
+            'redirect_url' => route('doctor.visits.show', $visit->id),
         ]);
     }
 
@@ -950,12 +962,12 @@ class DoctorQueueController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage own visits') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage own visits') && ! $user->can('manage consultant availability')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك بتأخير دور المريض.'], 403);
         }
 
         $appointment = Appointment::findOrFail($appointmentId);
-        
+
         // Put at the end of queue
         $maxQueue = Appointment::where('doctor_id', $appointment->doctor_id)
             ->whereDate('appointment_date', today())
@@ -968,7 +980,7 @@ class DoctorQueueController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تأخير دور المريض ونقله لآخر الطابور.'
+            'message' => 'تم تأخير دور المريض ونقله لآخر الطابور.',
         ]);
     }
 
@@ -1015,8 +1027,8 @@ class DoctorQueueController extends Controller
             $context = stream_context_create([
                 'http' => [
                     'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
-                    'timeout' => 5
-                ]
+                    'timeout' => 5,
+                ],
             ]);
             $audio = @file_get_contents($url, false, $context);
             if ($audio && strlen($audio) > 500) {
@@ -1025,7 +1037,8 @@ class DoctorQueueController extends Controller
                     'Cache-Control' => 'public, max-age=86400',
                 ]);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response('', 404);
     }
@@ -1036,6 +1049,7 @@ class DoctorQueueController extends Controller
     public function patientLiveTracker(Appointment $appointment)
     {
         $appointment->load(['patient.user', 'doctor.user', 'department']);
+
         return view('queue.patient-tracker', compact('appointment'));
     }
 }

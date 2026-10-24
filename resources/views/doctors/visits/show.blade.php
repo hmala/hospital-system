@@ -2163,7 +2163,12 @@
                                 $todayLabRequests = $activeRequests->where('type', 'lab');
                                 $todayRadRequests = $activeRequests->where('type', 'radiology');
                                 $todayNursingRequests = $activeRequests->where('type', 'nursing');
-                                $totalTodayCount = $todayLabRequests->count() + $todayRadRequests->count() + $todayNursingRequests->count() + ($hasPrescriptions ? 1 : 0);
+                                $cashierCancelled = $cancelledRequests->filter(function($r) {
+                                    $d = is_string($r->details) ? json_decode($r->details, true) : ($r->details ?? []);
+                                    return !empty($d['cancellation_reason']) || !empty($d['cancelled_by_cashier_id']);
+                                });
+                                $cashierPostponed = $activeRequests->where('status', 'postponed');
+                                $totalTodayCount = $todayLabRequests->count() + $todayRadRequests->count() + $todayNursingRequests->count() + ($hasPrescriptions ? 1 : 0) + $cancelledRequests->count();
                             @endphp
 
                             @if($totalTodayCount > 0)
@@ -2192,9 +2197,63 @@
                                             <i class="fas fa-syringe me-1"></i> التمريض <span class="badge bg-secondary rounded-pill ms-1">{{ $todayNursingRequests->count() }}</span>
                                         </button>
                                     @endif
+                                    @if($cancelledRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 fw-bold today-filter-pill" data-filter="cancelled" onclick="filterTodayRequests('cancelled', this)">
+                                            <i class="fas fa-ban me-1"></i> ملغاة <span class="badge bg-danger rounded-pill ms-1">{{ $cancelledRequests->count() }}</span>
+                                        </button>
+                                    @endif
                                 </div>
 
                                 <div class="d-flex flex-column gap-3">
+                                    {{-- تنبيهات سريرية للفحوصات الملغاة أو المؤجلة بطلب المريض لدى الكاشير --}}
+                                    @if($cashierCancelled->isNotEmpty())
+                                        <div class="alert alert-danger border-danger-subtle bg-danger-subtle text-danger-emphasis p-2.5 rounded-3 mb-1 d-flex align-items-start gap-2 shadow-2xs today-card-item" data-today-type="cancelled">
+                                            <i class="fas fa-ban text-danger fs-5 mt-0.5"></i>
+                                            <div class="flex-grow-1 small">
+                                                <strong class="d-block text-danger fw-bold mb-1">⛔ تنبيه سريري: تم إلغاء فحوصات بطلب المريض لدى الكاشير:</strong>
+                                                <div class="d-flex flex-column gap-1">
+                                                    @foreach($cashierCancelled as $ccReq)
+                                                        @php 
+                                                            $ccD = is_string($ccReq->details) ? json_decode($ccReq->details, true) : ($ccReq->details ?? []);
+                                                            $cNames = !empty($ccD['tests']) ? implode('، ', (array)$ccD['tests']) : ($ccD['description'] ?? $ccReq->description);
+                                                        @endphp
+                                                        <div class="p-1.5 bg-white rounded border border-danger-subtle text-dark">
+                                                            <span class="badge bg-secondary me-1">{{ $ccReq->type_text }}</span>
+                                                            <strong class="text-danger">{{ $cNames }}</strong>
+                                                            @if(!empty($ccD['cancellation_reason']))
+                                                                <div class="text-muted small mt-0.5"><i class="fas fa-info-circle me-1 text-danger"></i>السبب: {{ $ccD['cancellation_reason'] }}</div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if($cashierPostponed->isNotEmpty())
+                                        <div class="alert alert-warning border-warning-subtle bg-warning-subtle text-warning-emphasis p-2.5 rounded-3 mb-1 d-flex align-items-start gap-2 shadow-2xs today-card-item" data-today-type="postponed">
+                                            <i class="fas fa-hourglass-half text-warning fs-5 mt-0.5"></i>
+                                            <div class="flex-grow-1 small">
+                                                <strong class="d-block text-dark fw-bold mb-1">⏳ تنبيه: تم تأجيل فحوصات بطلب المريض لدى الكاشير:</strong>
+                                                <div class="d-flex flex-column gap-1">
+                                                    @foreach($cashierPostponed as $cpReq)
+                                                        @php 
+                                                            $cpD = is_string($cpReq->details) ? json_decode($cpReq->details, true) : ($cpReq->details ?? []);
+                                                            $pNames = !empty($cpD['tests']) ? implode('، ', (array)$cpD['tests']) : ($cpD['description'] ?? $cpReq->description);
+                                                        @endphp
+                                                        <div class="p-1.5 bg-white rounded border border-warning-subtle text-dark">
+                                                            <span class="badge bg-warning text-dark me-1">{{ $cpReq->type_text }}</span>
+                                                            <strong class="text-dark">{{ $pNames }}</strong>
+                                                            @if(!empty($cpD['postpone_reason']))
+                                                                <div class="text-muted small mt-0.5"><i class="fas fa-info-circle me-1 text-warning"></i>السبب: {{ $cpD['postpone_reason'] }}</div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     {{-- بطاقة الوصفة الطبية الإلكترونية وصرف الصيدلية --}}
                                     @if($hasPrescriptions)
                                         <div class="today-card-item card border border-success shadow-sm rounded-3 overflow-hidden" data-today-type="rx">
@@ -2289,7 +2348,8 @@
 
                                             $isPaid = ($medRequest->payment_status ?? 'pending') === 'paid';
                                             $isCompleted = $medRequest->status === 'completed';
-                                            $cardBorderClass = $isCompleted ? 'border-success' : ($isPaid ? 'border-primary' : 'border-warning');
+                                            $isPostponed = $medRequest->status === 'postponed';
+                                            $cardBorderClass = $isCompleted ? 'border-success' : ($isPostponed ? 'border-warning' : ($isPaid ? 'border-primary' : 'border-warning'));
                                         @endphp
                                         <div class="today-card-item card {{ $cardBorderClass }} shadow-sm rounded-3 overflow-hidden mb-3" id="doctor-request-card-{{ $medRequest->id }}" data-today-type="{{ $medRequest->type }}">
                                             <div class="card-header py-2 px-3 {{ $isCompleted ? 'bg-success-subtle text-success-emphasis' : ($isPaid ? 'bg-primary-subtle text-primary-emphasis' : 'bg-warning-subtle text-dark') }} d-flex justify-content-between align-items-center">
@@ -2301,7 +2361,11 @@
                                                     <small class="text-muted font-monospace"><i class="fas fa-clock me-1"></i>{{ $medRequest->created_at->format('H:i') }}</small>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-1">
-                                                    @if($isPaid)
+                                                    @if($isPostponed)
+                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-hourglass-half me-1"></i> مؤجل بطلب المريض
+                                                        </span>
+                                                    @elseif($isPaid)
                                                         <span class="badge bg-success text-white" style="font-size: 0.72rem;">
                                                             <i class="fas fa-check-circle me-1"></i> مدفوع
                                                         </span>
@@ -2330,7 +2394,12 @@
 
                                                     <!-- المرحلة 2: الكاشير -->
                                                     <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                        @if($isPaid)
+                                                        @if($isPostponed)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-pause"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-warning" style="font-size: 0.7rem;">مؤجل بالكاشير</span>
+                                                        @elseif($isPaid)
                                                             <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
                                                                 <i class="fas fa-check"></i>
                                                             </span>
@@ -2381,6 +2450,15 @@
                                             </div>
 
                                             <div class="card-body p-2 p-md-3">
+                                                @if($isPostponed && !empty($reqDetails['postpone_reason']))
+                                                    <div class="alert alert-warning py-1.5 px-2.5 small mb-2 d-flex align-items-center gap-2 rounded-2">
+                                                        <i class="fas fa-info-circle text-warning fs-6"></i>
+                                                        <div>
+                                                            <strong class="d-block mb-0 text-dark">تأجيل بطلب المريض لدى الكاشير:</strong>
+                                                            <span class="text-secondary">{{ $reqDetails['postpone_reason'] }}</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
                                                 <!-- جدول الفحوصات والخدمات السريري (Clinical Mini-Table) -->
                                                 @if($medRequest->type === 'lab')
                                                     @php
@@ -5953,22 +6031,24 @@ function confirmSurgeryReferral() {
     // تصفية بطاقات طلبات ونتائج اليوم بالتبويبات
     window.filterTodayRequests = function(filterType, btn) {
         document.querySelectorAll('.today-filter-pill').forEach(function(pill) {
-            pill.classList.remove('active', 'btn-dark', 'btn-primary', 'btn-info', 'btn-success', 'btn-secondary');
+            pill.classList.remove('active', 'btn-dark', 'btn-primary', 'btn-info', 'btn-success', 'btn-secondary', 'btn-danger');
             var f = pill.getAttribute('data-filter');
             if (f === 'all') pill.classList.add('btn-outline-dark');
             else if (f === 'lab') pill.classList.add('btn-outline-primary');
             else if (f === 'radiology') pill.classList.add('btn-outline-info');
             else if (f === 'rx') pill.classList.add('btn-outline-success');
             else if (f === 'nursing') pill.classList.add('btn-outline-secondary');
+            else if (f === 'cancelled') pill.classList.add('btn-outline-danger');
         });
 
         btn.classList.add('active');
-        btn.classList.remove('btn-outline-dark', 'btn-outline-primary', 'btn-outline-info', 'btn-outline-success', 'btn-outline-secondary');
+        btn.classList.remove('btn-outline-dark', 'btn-outline-primary', 'btn-outline-info', 'btn-outline-success', 'btn-outline-secondary', 'btn-outline-danger');
         if (filterType === 'all') btn.classList.add('btn-dark');
         else if (filterType === 'lab') btn.classList.add('btn-primary');
         else if (filterType === 'radiology') btn.classList.add('btn-info');
         else if (filterType === 'rx') btn.classList.add('btn-success');
         else if (filterType === 'nursing') btn.classList.add('btn-secondary');
+        else if (filterType === 'cancelled') btn.classList.add('btn-danger');
 
         document.querySelectorAll('.today-card-item').forEach(function(card) {
             if (filterType === 'all' || card.getAttribute('data-today-type') === filterType) {
@@ -5977,6 +6057,13 @@ function confirmSurgeryReferral() {
                 card.style.display = 'none';
             }
         });
+
+        var cancelledSection = document.getElementById('docCancelledRequestsSection');
+        if (cancelledSection) {
+            if (filterType === 'cancelled') {
+                cancelledSection.classList.add('show');
+            }
+        }
     };
 
     // دوال تحديد موعد المراجعة المجانية السريع
