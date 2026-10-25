@@ -191,7 +191,7 @@
                                         <div class="p-2 px-3 rounded-2 bg-white border text-secondary small d-flex justify-content-between align-items-center" id="locked_insurance_display">
                                             <span>جهة التغطية: <strong class="text-dark">{{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : 'ضمان قوى الأمن الداخلي' }}</strong></span>
                                             <i class="fas fa-check-circle text-success"></i>
-                                            <input type="hidden" name="insurance_type" value="{{ $defaultInsurance }}">
+                                            <input type="hidden" name="insurance_type" id="insurance_type" value="{{ $defaultInsurance }}">
                                         </div>
                                     @else
                                         <select class="form-select" id="insurance_type" name="insurance_type">

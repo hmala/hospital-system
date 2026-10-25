@@ -388,7 +388,7 @@
                                                 <i class="fas fa-check-circle text-success me-1"></i>
                                                 {{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : 'ضمان قوى الأمن الداخلي (وزارة الداخلية)' }}
                                             </span>
-                                            <input type="hidden" name="insurance_type" value="{{ $defaultInsurance }}">
+                                            <input type="hidden" name="insurance_type" id="insurance_type" value="{{ $defaultInsurance }}">
                                         </div>
                                     @else
                                         <select class="form-select" id="insurance_type" name="insurance_type">
