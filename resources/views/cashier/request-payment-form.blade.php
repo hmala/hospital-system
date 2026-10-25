@@ -360,12 +360,19 @@
                         @endforeach
 
                         <!-- قسم الضمان الصحي ونسبة التحمل التلقائية -->
-                        <div clas                                    <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-secondary' }}" id="copayBadge">
+                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary mb-0">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    تغطية الضمان ونسبة التحمل (Co-payment)
+                                </h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-secondary' }}" id="copayBadge">
                                         {{ $defaultInsurance === 'hi' ? 'مشمول بالضمان الصحي الوطني' : ($defaultInsurance === 'moi' ? 'مشمول بضمان الداخلية' : 'دفع نقدي كامل (100%)') }}
                                     </span>
                                     @if($defaultInsurance !== 'none')
                                         <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
-                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً من الضمان
+                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
                                         </span>
                                     @endif
                                 </div>
@@ -696,28 +703,6 @@
 
 @section('scripts')
 <script>
-function toggleInsuranceEdit() {
-    const lockedDisplay = document.getElementById('locked_insurance_display');
-    const selectElem = document.getElementById('insurance_type');
-    const manualGroup = document.getElementById('manual_copay_input_group');
-    const lockIcon = document.getElementById('lock_icon');
-    const lockText = document.getElementById('lock_text');
-
-    if (selectElem && selectElem.classList.contains('d-none')) {
-        selectElem.classList.remove('d-none');
-        if (lockedDisplay) lockedDisplay.classList.add('d-none');
-        if (manualGroup) manualGroup.style.display = 'flex';
-        if (lockIcon) lockIcon.className = 'fas fa-unlock text-warning me-1';
-        if (lockText) lockText.textContent = 'تعديل استثنائي مفتوح';
-    } else if (selectElem) {
-        selectElem.classList.add('d-none');
-        if (lockedDisplay) lockedDisplay.classList.remove('d-none');
-        if (manualGroup) manualGroup.style.display = 'none';
-        if (lockIcon) lockIcon.className = 'fas fa-lock me-1';
-        if (lockText) lockText.textContent = 'تثبيت آلي من الحجز';
-    }
-}
-
 window.handleItemActionChange = function(radioElem) {
     const row = radioElem.closest('.service-item-row');
     if (!row) return;

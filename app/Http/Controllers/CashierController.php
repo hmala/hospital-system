@@ -448,7 +448,9 @@ class CashierController extends Controller
 
         DB::beginTransaction();
         try {
-            $copayPercentage = (float) $request->input('copay_percentage', $patient->copay_percentage ?? 0);
+            $copayPercentage = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('consultation')
+                : (float) $request->input('copay_percentage', $patient->copay_percentage ?? 0);
             $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
             if ($scanType) {
@@ -468,11 +470,11 @@ class CashierController extends Controller
             }
 
             $isCovered = $servicePricing ? $servicePricing['is_covered'] : false;
-            $patientPaidAmount = (float) $request->amount;
-            $totalApproved = $isCovered ? (float) $servicePricing['total_amount'] : ($appointment->consultation_fee ?? $patientPaidAmount);
+            $totalApproved = $isCovered ? (float) $servicePricing['total_amount'] : ($appointment->consultation_fee ?? (float) $request->amount);
             if ($totalApproved <= 0) {
-                $totalApproved = $patientPaidAmount;
+                $totalApproved = (float) $request->amount;
             }
+            $patientPaidAmount = $isCovered ? (float) $servicePricing['patient_share'] : (float) $request->amount;
             $patientShare = $patientPaidAmount;
             $insuranceShare = $isCovered ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
@@ -2399,7 +2401,10 @@ class CashierController extends Controller
             }
 
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
-            $copayPercentage = (float) ($request->input('copay_percentage', 15.0));
+            $patient = $surgery->patient;
+            $copayPercentage = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('surgery')
+                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
             // 3. Lab Tests

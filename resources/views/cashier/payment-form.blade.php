@@ -176,33 +176,37 @@
                                     <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-secondary' }} px-3 py-2 fs-7" id="copayBadge">
                                         {{ $defaultInsurance === 'hi' ? 'مشمول بالضمان الصحي الوطني' : ($defaultInsurance === 'moi' ? 'مشمول بضمان الداخلية' : 'دفع نقدي كامل (100%)') }}
                                     </span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" onclick="toggleInsuranceEdit()">
-                                        <i class="fas fa-lock me-1" id="lock_icon"></i><span id="lock_text">تثبيت آلي</span>
-                                    </button>
+                                    @if($defaultInsurance !== 'none')
+                                        <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
+                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
 
                             <!-- تفاصيل الضمان المثبتة -->
                             <div class="row g-2 align-items-center mt-1">
                                 <div class="col-md-6" id="insurance_type_wrapper">
-                                    <div class="p-2 px-3 rounded-2 bg-white border text-secondary small d-flex justify-content-between align-items-center" id="locked_insurance_display">
-                                        <span>جهة التغطية: <strong class="text-dark">{{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : ($defaultInsurance === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'بدون ضمان') }}</strong></span>
-                                        @if($defaultInsurance !== 'none')
+                                    @if($defaultInsurance !== 'none')
+                                        <div class="p-2 px-3 rounded-2 bg-white border text-secondary small d-flex justify-content-between align-items-center" id="locked_insurance_display">
+                                            <span>جهة التغطية: <strong class="text-dark">{{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : 'ضمان قوى الأمن الداخلي' }}</strong></span>
                                             <i class="fas fa-check-circle text-success"></i>
-                                        @endif
-                                    </div>
-                                    <select class="form-select d-none" id="insurance_type" name="insurance_type">
-                                        <option value="none" {{ old('insurance_type', $defaultInsurance) == 'none' ? 'selected' : '' }}>بدون ضمان (دفع نقدي كامل 100%)</option>
-                                        <option value="moi" {{ old('insurance_type', $defaultInsurance) == 'moi' ? 'selected' : '' }}>ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
-                                        <option value="hi" {{ old('insurance_type', $defaultInsurance) == 'hi' ? 'selected' : '' }}>هيئة الضمان الصحي الوطني</option>
-                                    </select>
+                                            <input type="hidden" name="insurance_type" value="{{ $defaultInsurance }}">
+                                        </div>
+                                    @else
+                                        <select class="form-select" id="insurance_type" name="insurance_type">
+                                            <option value="none" selected>بدون ضمان (دفع نقدي كامل 100%)</option>
+                                            <option value="moi">ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
+                                            <option value="hi">هيئة الضمان الصحي الوطني</option>
+                                        </select>
+                                    @endif
                                 </div>
 
                                 <div class="col-md-6" id="insurance_card_col" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
                                     <div class="input-group">
                                         <span class="input-group-text bg-white small text-muted"><i class="fas fa-id-badge me-1"></i>رقم البطاقة / الدفتر:</span>
                                         <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
-                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية">
+                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية" readonly>
                                     </div>
                                 </div>
 
@@ -221,14 +225,17 @@
                                 @endif
 
                                 <div class="col-12" id="copay_section" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
-                                    <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <span class="small text-muted">نسبة التحمل المقررة على المريض: <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
-                                        <div class="input-group" id="manual_copay_input_group" style="max-width: 140px; display: none !important;">
-                                            <input type="number" step="1" min="0" max="100" class="form-control form-control-sm text-center fw-bold" 
-                                                   id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
-                                            <span class="input-group-text bg-light">%</span>
+                                    <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-percentage text-primary"></i>
+                                            <span class="small text-muted">نسبة التحمل المقررة رسمياً على المريض: <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
                                         </div>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-shield-alt text-success me-1"></i>
+                                            مقفلة ومحددة آلياً وفق فئة المريض الرسمية
+                                        </span>
                                     </div>
+                                    <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
                                 </div>
                             </div>
                         </div>
@@ -287,18 +294,23 @@
                                 <input type="number" 
                                        name="amount" 
                                        id="amount_input"
-                                       class="form-control text-center fw-bold text-success border-success fs-3 @error('amount') is-invalid @enderror" 
+                                       class="form-control text-center fw-bold text-success border-success fs-3 bg-light @error('amount') is-invalid @enderror" 
                                        value="{{ old('amount', $regularPrice) }}"
                                        step="0.01"
                                        min="0"
                                        style="max-width: 240px; border-radius: 12px;"
+                                       readonly
                                        required>
                                 <span class="input-group-text bg-success text-white fw-bold rounded-3 ms-2">د.ع</span>
                             </div>
                             @error('amount')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
-                            <small class="text-muted d-block mt-2">يُعدل آلياً حسب نسبة التحمل للضمان</small>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary-subtle text-secondary border">
+                                    <i class="fas fa-lock me-1"></i>محسوب آلياً ومطابق للوصل
+                                </span>
+                            </div>
                         </div>
 
                         <!-- ملخص سريع للعملية -->
@@ -381,28 +393,6 @@ function showDoctorFeeModal() {
     if (modalElement && typeof bootstrap !== 'undefined') {
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
-    }
-}
-
-function toggleInsuranceEdit() {
-    const lockedDisplay = document.getElementById('locked_insurance_display');
-    const selectElem = document.getElementById('insurance_type');
-    const manualGroup = document.getElementById('manual_copay_input_group');
-    const lockIcon = document.getElementById('lock_icon');
-    const lockText = document.getElementById('lock_text');
-
-    if (selectElem && selectElem.classList.contains('d-none')) {
-        selectElem.classList.remove('d-none');
-        if (lockedDisplay) lockedDisplay.classList.add('d-none');
-        if (manualGroup) manualGroup.style.display = 'flex';
-        if (lockIcon) lockIcon.className = 'fas fa-unlock text-warning me-1';
-        if (lockText) lockText.textContent = 'تعديل مفتوح';
-    } else if (selectElem) {
-        selectElem.classList.add('d-none');
-        if (lockedDisplay) lockedDisplay.classList.remove('d-none');
-        if (manualGroup) manualGroup.style.display = 'none';
-        if (lockIcon) lockIcon.className = 'fas fa-lock me-1';
-        if (lockText) lockText.textContent = 'تثبيت آلي';
     }
 }
 
