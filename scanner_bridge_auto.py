@@ -12,6 +12,12 @@ import tempfile
 import threading
 from io import BytesIO
 
+# إصلاح ترميز الشاشة في ويندوز
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # محاولة استيراد المكتبات المطلوبة
 try:
     from flask import Flask, request, send_file, jsonify
@@ -36,8 +42,16 @@ except ImportError:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response.headers['Access-Control-Allow-Private-Network'] = 'true'
+    return response
+
 TEMP_DIR = tempfile.gettempdir()
-PORT = 37426
+PORT = int(os.environ.get('SCANNER_PORT', 5000))
 
 # WIA Constants
 WIA_DEVICE_TYPE_SCANNER = 1
@@ -166,11 +180,16 @@ def api_scan():
     """نقطة نهاية المسح الرئيسية"""
     
     if request.method == 'OPTIONS':
-        return '', 200
+        resp = app.make_response(('', 204))
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        resp.headers['Access-Control-Allow-Private-Network'] = 'true'
+        return resp
     
     try:
         # قراءة الإعدادات من الطلب
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         scanner_id = data.get('scanner_id', None)
         color_mode = data.get('color_mode', 'color')
         resolution = data.get('resolution', 200)
@@ -299,5 +318,13 @@ if __name__ == '__main__':
     print("═" * 60)
     print()
     
-    # تشغيل الخادم
-    app.run(host='127.0.0.1', port=PORT, debug=False, threaded=True)
+    # تشغيل الخادم (المنفذ الأساسي 5000 والاحتياطي 37426)
+    try:
+        app.run(host='127.0.0.1', port=PORT, debug=False, threaded=True)
+    except OSError as e:
+        if PORT != 37426:
+            print(f"⚠️ المنفذ {PORT} مشخول، جاري التبديل للمنفذ الاحتياطي 37426...")
+            PORT = 37426
+            app.run(host='127.0.0.1', port=PORT, debug=False, threaded=True)
+        else:
+            raise e

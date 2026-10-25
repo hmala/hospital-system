@@ -28,4 +28,6 @@ Thumbs.db
 *.sql
 /scratch/
 service_records.csv
+__pycache__/
+*.pyc
 
