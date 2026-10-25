@@ -111,43 +111,75 @@
                     foreach ($extraTestIds as $testId) {
                         $test = \App\Models\LabTest::find($testId);
                         if ($test) {
-                            $base = (float)$test->price;
-                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
                                 'name' => '🔬 تحليل إضافي: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
                                 'category' => 'تحاليل مختبرية إضافية',
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
-                                'insurance' => max(0, $base - $pat),
+                                'insurance' => $ins,
                             ];
                         }
                     }
-                } elseif (isset($details['lab_test_ids'])) {
+                } elseif (!empty($details['lab_test_ids'])) {
                     foreach ($details['lab_test_ids'] as $testId) {
                         $test = \App\Models\LabTest::find($testId);
                         if ($test) {
-                            $base = (float)$test->price;
-                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
                                 'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
                                 'category' => 'تحاليل مختبرية',
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
-                                'insurance' => max(0, $base - $pat),
+                                'insurance' => $ins,
+                            ];
+                        }
+                    }
+                } elseif (!empty($details['tests'])) {
+                    foreach ($details['tests'] as $tName) {
+                        $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                        if ($test) {
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                            $lineItems[] = [
+                                'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => 'تحاليل مختبرية',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => $ins,
                             ];
                         }
                     }
                 }
             } elseif ($reqItem->type === 'radiology') {
-                $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
+                $typeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? []);
                 $radTargets = $details['radiology_targets'] ?? [];
                 foreach ($typeIds as $typeId) {
                     $type = \App\Models\RadiologyType::find($typeId);
                     if ($type) {
-                        $base = (float)$type->base_price;
-                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $pricing = $isInsured && method_exists($type, 'calculateInsurancePricing')
+                            ? $type->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                            : null;
+                        $base = $pricing ? (float)$pricing['approved_price'] : (float)($type->base_price ?? $type->price ?? 0);
+                        $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                        $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                         $targetPart = isset($radTargets[$typeId]) && !empty($radTargets[$typeId]) ? trim($radTargets[$typeId]) : null;
                         $lineItems[] = [
                             'name' => 'أشعة: ' . $type->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
@@ -155,7 +187,7 @@
                             'doctor' => $doctorName,
                             'approved' => $base,
                             'patient' => $pat,
-                            'insurance' => max(0, $base - $pat),
+                            'insurance' => $ins,
                         ];
                     }
                 }
