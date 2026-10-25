@@ -725,7 +725,9 @@ class CashierController extends Controller
             $insuranceType = $httpRequest->input('insurance_type', $request->insurance_type ?? optional($appointment)->insurance_type ?? $patient->insurance_type ?? 'none');
         }
 
-        $copayPercentage = (float) $httpRequest->input('copay_percentage', ($insuranceType === 'hi' && $patient) ? $patient->getCopayPercentageFor($request->type) : ($patient->copay_percentage ?? 0));
+        $copayPercentage = ($insuranceType === 'hi' && $patient)
+            ? (float) $patient->getCopayPercentageFor($request->type)
+            : (float) $httpRequest->input('copay_percentage', ($patient->copay_percentage ?? 0));
         $cardNo = ($insuranceType !== 'none') ? $httpRequest->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null) : null;
 
         // الطلبات المتضمنة في الدفع الموحد للزيارة
