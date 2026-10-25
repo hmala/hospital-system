@@ -636,22 +636,28 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">
-                                    <i class="fas fa-hand-holding-usd me-1 text-success"></i>
-                                    المبلغ المحصل نقداً من المريض (IQD) *
+                                <label class="form-label fw-bold d-flex justify-content-between align-items-center mb-1">
+                                    <span>
+                                        <i class="fas fa-hand-holding-usd me-1 text-success"></i>
+                                        المبلغ المحصل نقداً من المريض (IQD) *
+                                    </span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle small fw-bold" style="font-size: 0.72rem;">
+                                        <i class="fas fa-lock me-1"></i>محسوب آلياً ومطابق للوصل
+                                    </span>
                                 </label>
                                 <div class="input-group input-group-lg">
                                     <input type="number" 
-                                           class="form-control fw-bold text-success @error('amount') is-invalid @enderror" 
+                                           class="form-control fw-bold text-success bg-light @error('amount') is-invalid @enderror" 
                                            id="amount" 
                                            name="amount" 
                                            step="0.01" 
                                            min="0" 
                                            value="{{ old('amount', $initialPatient > 0 ? $initialPatient : ($request->total_amount ?? 0)) }}" 
+                                           readonly
                                            required>
                                     <span class="input-group-text bg-success text-white fw-bold">IQD</span>
                                 </div>
-                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض.</small>
+                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض (محسوب بدقة من جدول الخدمات لضمان تطابق الوصل).</small>
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

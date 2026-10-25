@@ -1217,9 +1217,10 @@ class CashierController extends Controller
                 throw new \Exception('لم يتم العثور على أي خدمات مسددة لمعالجة الدفع.');
             }
 
-            $patientPaidAmount = (float) $httpRequest->amount;
-            $totalApproved = $computedTotal > 0 ? $computedTotal : $patientPaidAmount;
-            $patientShare = $patientPaidAmount;
+            $totalApproved = $computedTotal > 0 ? $computedTotal : (float) $httpRequest->amount;
+            // ضمان تطابق المبلغ المقبوض وحصة المريض مع المجموع الفعلي لأسطر الفحوصات والوصل المالي
+            $patientShare = ($computedTotal > 0) ? $computedPatientShare : (float) $httpRequest->amount;
+            $patientPaidAmount = $patientShare;
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
