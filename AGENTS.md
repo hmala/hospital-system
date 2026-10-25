@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-25 — المرحلة 113: تحصين نسب التحمل المالية، إلغاء التعديل اليدوي للنسب والمبالغ، ومطابقة تسعير الوصل الإلكتروني والحراري للضمان الصحي Strict Cashier Copay Lockdown, Removal of Manual Copay & Amount Overrides, 100% Web & Thermal Receipt Parity & Hostinger Data Fix)
+
+### Done
+- **تشخيص وحل تباين الوصل الإلكتروني والحراري ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php))**:
+  * معالجة مشكلة قراءة السعر الخاص بدلاً من سعر الضمان في جدول البنود للوصل الإلكتروني بمطابقة الدالة `calculateInsurancePricing` لكل من المختبر والأشعة.
+  * تصحيح القيد المالي رقم #1062 للمريضة شكرية أحمد على قاعدة بيانات هوستنجر وقاعدة البيانات المحلية، بإعادة نسبة التحمل إلى 25% الرسمية المعتمدة للفئة H وتعديل المبلغ إلى 18,500 د.ع وتثبيت حصة الضمان 55,500 د.ع بدقة 100%.
+- **إلغاء التعديل اليدوي لنسبة التحمل نهائياً عبر كافة واجهات الكاشير ([resources/views/cashier/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/payment-form.blade.php), [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إزالة زر فتح وتعديل الضمان `[ 🔒 تثبيت آلي ] / [ 🔓 تعديل استثنائي مفتوح ]` ومجموعة حقول الإدخال اليدوية للنسبة (`#manual_copay_input_group`) وأزرار النسب الخماسية السريعة للعمليات.
+  * قفل خانة النسبة لتكون حقل عرض محمي وشارة تأكيد رسمية فقط مع تمرير النسبة تلقائياً عبر حقل مخفي وفق معادلة فئة المريض الرسمية `getCopayPercentageFor()`.
+- **قفل خانة المبلغ المطلوب قبضه (`#amount_input`)**:
+  * جعل حقل المبلغ `readonly` مع خلفية مضاءة ووسم حماية مشفر `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الكاشير من كتابة مبالغ يدوية مغايرة للحسبة الآلية الدقيقة.
+- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * إلزام دالة `processPayment` و `processRequestPayment` و `processSurgeryPayment` بفرض نسبة التحمل الرسمية لفئة المريض تلقائياً وتثبيت `$patientPaidAmount` مساوياً لحصة المريض المحسوبة نظامياً دون الاعتماد على مدخلات الفورم المعدلة يدوياً.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
+  * إضافة اختبار ميزة يضمن دقة تسعير بنود الضمان في الوصل الإلكتروني والحراري، واجتياز كامل حزمة اختبارات الكاشير بـ 20 اختباراً ناجحاً (`20 passed, 154 assertions`).
+
 ## Session log (2026-10-24 — المرحلة 112: تفكيك وقرارات طلبات الفحوصات لدى الكاشير بتصميم الكبسولات العصرية Segmented Pills وانعكاسها السريري وتبويب الفحوصات المؤجلة بلوحة الكاشير Cashier Item-Level Pay/Postpone/Cancel Controls, Modern iOS-Style Segmented Pills, Clinical Gate Release, Doctor Alerts & Dedicated Postponed Tab in Cashier Hub)
 
 ### Done
