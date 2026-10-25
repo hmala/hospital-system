@@ -210,45 +210,29 @@ class EmergencyController extends Controller
             $selectedPatient = Patient::with(['user', 'healthInsuranceCategory'])->find($selectedPatientId);
         }
 
-        $daysMap = [
-            'Saturday' => 'السبت',
-            'Sunday' => 'الأحد',
-            'Monday' => 'الإثنين',
-            'Tuesday' => 'الثلاثاء',
-            'Wednesday' => 'الأربعاء',
-            'Thursday' => 'الخميس',
-            'Friday' => 'الجمعة',
-        ];
-        $todayArabic = $daysMap[date('l')] ?? 'السبت';
-
+        // جلب جميع أطباء الطوارئ الفعالين دون تقييد بأيام الأسبوع
         $doctors = Doctor::has('user')->with('user')
             ->where('is_active', true)
-            ->where('is_available_today', true)
-            ->whereJsonContains('working_days', [$todayArabic])
             ->where(function ($query) {
                 $query->where('specialization', 'LIKE', '%طوارئ%')
                     ->orWhere('specialization', 'LIKE', '%emergency%')
                     ->orWhere('type', 'emergency');
             })
-            ->get();
+            ->get()
+            ->sortBy(function ($doc) {
+                return $doc->user->name ?? '';
+            })
+            ->values();
 
-        // إذا القائمة فارغة، عرض جميع أطباء الطوارئ الفعالين
+        // إذا لم يتوفر أي طبيب طوارئ، استخدام الأطباء الفعالين كاحتياط
         if ($doctors->isEmpty()) {
             $doctors = Doctor::has('user')->with('user')
                 ->where('is_active', true)
-                ->where(function ($query) {
-                    $query->where('specialization', 'LIKE', '%طوارئ%')
-                        ->orWhere('specialization', 'LIKE', '%emergency%')
-                        ->orWhere('type', 'emergency');
+                ->get()
+                ->sortBy(function ($doc) {
+                    return $doc->user->name ?? '';
                 })
-                ->get();
-        }
-
-        // إذا لم يتوفر طبيب طوارئ محدد، استخدام الأطباء الفعالين
-        if ($doctors->isEmpty()) {
-            $doctors = Doctor::has('user')->with('user')
-                ->where('is_active', true)
-                ->get();
+                ->values();
         }
 
         $assignedDoctor = $user->doctor ?: Doctor::where('user_id', $user->id)->first();
