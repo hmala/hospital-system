@@ -2695,10 +2695,16 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بقبض رسوم الطوارئ');
         }
 
-        // التحقق من أن الدفعة تخص خدمات طوارئ ولم يتم دفعها بعد
-        if ($payment->payment_type !== 'emergency' || $payment->paid_at !== null || $payment->appointment_id !== null) {
+        // التحقق من أن الدفعة تخص خدمات طوارئ
+        if ($payment->payment_type !== 'emergency' || $payment->appointment_id !== null) {
             return redirect()->route('cashier.index')
                 ->with('warning', 'هذه الدفعة غير متاحة للدفع');
+        }
+
+        // إذا كانت الدفعة مسددة بالفعل، يتم التوجيه مباشرة إلى الوصل الرسمي
+        if ($payment->paid_at !== null) {
+            return redirect()->route('cashier.receipt', $payment)
+                ->with('info', 'هذه الدفعة مسددة مسبقاً، تم فتح الوصل الرسمي');
         }
 
         $payment->load([
@@ -2742,14 +2748,25 @@ class CashierController extends Controller
 
         try {
             $patient = $payment->patient ?? optional($payment->emergency)->patient;
-            $insuranceType = $request->input('insurance_type', $patient->insurance_type ?? 'none');
-            $copayPercentage = (float) $request->input('copay_percentage', $patient->copay_percentage ?? 0);
-            $cardNo = $request->input('insurance_card_no', $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
+            $insuranceType = $request->input('insurance_type', $payment->insurance_type ?? $patient->insurance_type ?? 'none');
+
+            // جلب نسبة التحمل الرسمية لفئة المريض تلقائياً وحمايتها
+            $copayPercentage = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('emergency')
+                : (float) $request->input('copay_percentage', $payment->copay_percentage ?? $patient->copay_percentage ?? 0);
+
+            $cardNo = $request->input('insurance_card_no', $payment->insurance_card_no ?? $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
             $patientPaidAmount = (float) $request->amount;
             $totalApproved = ($payment->total_amount && $payment->total_amount > 0) ? (float) $payment->total_amount : $patientPaidAmount;
-            $patientShare = $patientPaidAmount;
-            $insuranceShare = ($insuranceType !== 'none') ? max(0, $totalApproved - $patientShare) : 0;
+
+            if ($insuranceType !== 'none') {
+                $patientShare = $patientPaidAmount;
+                $insuranceShare = max(0, $totalApproved - $patientShare);
+            } else {
+                $patientShare = $patientPaidAmount;
+                $insuranceShare = 0;
+            }
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
             // تحديث الدفعة
@@ -2902,9 +2919,8 @@ class CashierController extends Controller
 
             DB::commit();
 
-            return redirect()->route('cashier.index')
-                ->with('success', 'تم تسديد خدمات الطوارئ بنجاح! رقم الإيصال: '.$payment->receipt_number)
-                ->with('payment_id', $payment->id);
+            return redirect()->route('cashier.receipt', $payment)
+                ->with('success', 'تم تسديد خدمات الطوارئ بنجاح! رقم الإيصال: '.$payment->receipt_number);
 
         } catch (\Exception $e) {
             DB::rollBack();

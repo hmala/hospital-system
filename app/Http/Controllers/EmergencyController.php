@@ -1738,11 +1738,23 @@ class EmergencyController extends Controller
             'appointments',
         ]);
 
+        $existingPayment = Payment::where('emergency_id', $emergency->id)
+            ->where('payment_type', 'emergency')
+            ->whereNull('appointment_id')
+            ->whereNull('paid_at')
+            ->latest('id')
+            ->first();
+
         // حساب الخدمات غير المدفوعة فقط
         // نحتاج للتحقق من جدول emergency_emergency_service للخدمات
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $emergency->id)
-            ->whereNull('payment_id')
+            ->where(function ($q) use ($existingPayment) {
+                $q->whereNull('payment_id');
+                if ($existingPayment) {
+                    $q->orWhere('payment_id', $existingPayment->id);
+                }
+            })
             ->pluck('emergency_service_id');
 
         $isInsurance = false;
@@ -1783,7 +1795,9 @@ class EmergencyController extends Controller
         $totalLabAmount = 0.0;
         $labPatientShare = 0.0;
         $labInsuranceShare = 0.0;
-        $unpaidLabRequests = $emergency->labRequests->whereNull('payment_id');
+        $unpaidLabRequests = $emergency->labRequests->filter(function ($req) use ($existingPayment) {
+            return is_null($req->payment_id) || ($existingPayment && $req->payment_id == $existingPayment->id);
+        });
         foreach ($unpaidLabRequests as $request) {
             foreach ($request->labTests as $test) {
                 $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
@@ -1797,7 +1811,9 @@ class EmergencyController extends Controller
         $totalRadiologyAmount = 0.0;
         $radiologyPatientShare = 0.0;
         $radiologyInsuranceShare = 0.0;
-        $unpaidRadiologyRequests = $emergency->radiologyRequests->whereNull('payment_id');
+        $unpaidRadiologyRequests = $emergency->radiologyRequests->filter(function ($req) use ($existingPayment) {
+            return is_null($req->payment_id) || ($existingPayment && $req->payment_id == $existingPayment->id);
+        });
         foreach ($unpaidRadiologyRequests as $request) {
             foreach ($request->radiologyTypes as $rad) {
                 $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
@@ -1824,12 +1840,6 @@ class EmergencyController extends Controller
         $insuranceShare = $servicesInsuranceShare + $labInsuranceShare + $radiologyInsuranceShare + $followUpInsuranceShare;
 
         $hasPendingAmount = $totalAmount > 0;
-        $existingPayment = Payment::where('emergency_id', $emergency->id)
-            ->where('payment_type', 'emergency')
-            ->whereNull('appointment_id')
-            ->whereNull('paid_at')
-            ->latest('id')
-            ->first();
 
         if (! $hasPendingAmount) {
             if ($existingPayment) {
@@ -1919,9 +1929,9 @@ class EmergencyController extends Controller
                 'insurance_card_no' => $emergency->patient->insurance_card_no ?? null,
                 'payment_type' => 'emergency',
                 'payment_method' => 'insurance',
-                'claim_status' => 'claimed',
+                'claim_status' => 'pending',
                 'description' => $description.' (مغطاة بالكامل بالضمان الصحي)',
-                'paid_at' => now(),
+                'paid_at' => null,
             ];
 
             if ($existingPayment) {
