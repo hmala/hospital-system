@@ -62,9 +62,11 @@
             pointer-events: none;
         }
 
-        /* RIGHT — deep navy */
+        /* RIGHT — deep navy with dynamic multi-tier aurora and reflections */
         .right-panel {
-            background: linear-gradient(155deg, #1e3a8a 0%, #1d4ed8 55%, #1e40af 100%);
+            background: radial-gradient(circle at 85% 15%, rgba(56, 189, 248, 0.28) 0%, transparent 45%),
+                        radial-gradient(circle at 15% 85%, rgba(30, 58, 138, 0.70) 0%, transparent 50%),
+                        linear-gradient(155deg, #1e3a8a 0%, #1d4ed8 52%, #1e40af 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -74,25 +76,224 @@
             overflow: hidden;
         }
 
-        /* Right panel subtle top glow */
-        .right-panel::before {
-            content: '';
+        /* ══ Blinking White Lines Canvas ══ */
+        .blinking-lines-canvas {
             position: absolute;
-            top: -100px; right: -100px;
-            width: 400px; height: 400px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(96,165,250,0.20) 0%, transparent 70%);
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* Ambient Glass Sheen Reflection */
+        .panel-glass-sheen {
+            position: absolute;
+            top: -30%;
+            left: -30%;
+            width: 160%;
+            height: 160%;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.14) 0%,
+                rgba(255, 255, 255, 0.03) 24%,
+                transparent 48%
+            );
+            transform: rotate(-10deg);
             pointer-events: none;
         }
 
-        .right-panel::after {
-            content: '';
+        /* Cyber Medical Telemetry Dot Grid */
+        .panel-cyber-grid {
             position: absolute;
-            bottom: -80px; left: -80px;
-            width: 300px; height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(30,58,138,0.5) 0%, transparent 70%);
+            inset: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.20) 1.2px, transparent 1.2px);
+            background-size: 26px 26px;
+            opacity: 0.25;
+            mask-image: radial-gradient(ellipse at 50% 50%, black 35%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 35%, transparent 80%);
             pointer-events: none;
+        }
+
+        /* Animated White ECG SVG Paths with Neon Blink */
+        .blinking-ecg-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .ecg-white-path {
+            stroke: #ffffff;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            filter: drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 14px rgba(56, 189, 248, 0.9));
+        }
+
+        .ecg-blink-1 {
+            stroke-dasharray: 800;
+            stroke-dashoffset: 800;
+            animation: ecgFlow 5s linear infinite, whiteBlink1 2.2s ease-in-out infinite alternate;
+        }
+
+        .ecg-blink-2 {
+            stroke-dasharray: 800;
+            stroke-dashoffset: 800;
+            animation: ecgFlowReverse 6.5s linear infinite, whiteBlink2 3s ease-in-out infinite alternate 0.8s;
+        }
+
+        .ecg-blink-3 {
+            stroke-dasharray: 800;
+            stroke-dashoffset: 800;
+            animation: ecgFlow 5.8s linear infinite, whiteBlink3 2.6s ease-in-out infinite alternate 1.4s;
+        }
+
+        @keyframes ecgFlow {
+            0%   { stroke-dashoffset: 800; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        @keyframes ecgFlowReverse {
+            0%   { stroke-dashoffset: -800; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        @keyframes whiteBlink1 {
+            0%   { opacity: 0.15; filter: drop-shadow(0 0 2px #ffffff); }
+            50%  { opacity: 0.85; filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 18px #38bdf8); }
+            100% { opacity: 0.25; filter: drop-shadow(0 0 3px #ffffff); }
+        }
+
+        @keyframes whiteBlink2 {
+            0%   { opacity: 0.10; filter: drop-shadow(0 0 2px #ffffff); }
+            60%  { opacity: 0.90; filter: drop-shadow(0 0 10px #ffffff) drop-shadow(0 0 22px #93c5fd); }
+            100% { opacity: 0.20; filter: drop-shadow(0 0 2px #ffffff); }
+        }
+
+        @keyframes whiteBlink3 {
+            0%   { opacity: 0.20; filter: drop-shadow(0 0 2px #ffffff); }
+            45%  { opacity: 0.95; filter: drop-shadow(0 0 9px #ffffff) drop-shadow(0 0 20px #38bdf8); }
+            100% { opacity: 0.15; filter: drop-shadow(0 0 2px #ffffff); }
+        }
+
+        /* Horizontal White Laser Streaks */
+        .white-line-streak {
+            position: absolute;
+            height: 1.5px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 20%, #ffffff 50%, rgba(255, 255, 255, 0.2) 80%, transparent 100%);
+            box-shadow: 0 0 8px #ffffff, 0 0 16px rgba(56, 189, 248, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .streak-h1 {
+            top: 22%;
+            left: -30%;
+            width: 70%;
+            animation: streakHFlow1 6s cubic-bezier(0.4, 0, 0.2, 1) infinite, streakFlash1 2.4s ease-in-out infinite;
+        }
+
+        .streak-h2 {
+            top: 68%;
+            right: -25%;
+            width: 65%;
+            animation: streakHFlow2 7.5s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.8s, streakFlash2 3.1s ease-in-out infinite 0.7s;
+        }
+
+        .streak-h3 {
+            bottom: 14%;
+            left: 10%;
+            width: 45%;
+            animation: streakPulse3 3.6s ease-in-out infinite;
+        }
+
+        @keyframes streakHFlow1 {
+            0%   { transform: translateX(0); opacity: 0; }
+            20%  { opacity: 0.9; }
+            80%  { opacity: 0.9; }
+            100% { transform: translateX(180%); opacity: 0; }
+        }
+
+        @keyframes streakHFlow2 {
+            0%   { transform: translateX(0); opacity: 0; }
+            20%  { opacity: 0.85; }
+            80%  { opacity: 0.85; }
+            100% { transform: translateX(-170%); opacity: 0; }
+        }
+
+        @keyframes streakPulse3 {
+            0%, 100% { opacity: 0.15; transform: scaleX(0.7); }
+            50%      { opacity: 0.85; transform: scaleX(1.15); box-shadow: 0 0 12px #ffffff, 0 0 24px #38bdf8; }
+        }
+
+        @keyframes streakFlash1 {
+            0%, 100% { opacity: 0.2; }
+            50%      { opacity: 1; filter: drop-shadow(0 0 10px #ffffff); }
+        }
+
+        @keyframes streakFlash2 {
+            0%, 100% { opacity: 0.2; }
+            45%      { opacity: 0.95; filter: drop-shadow(0 0 8px #ffffff); }
+        }
+
+        /* Vertical White Laser Beams */
+        .white-line-v {
+            position: absolute;
+            width: 1.5px;
+            background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.3) 25%, #ffffff 50%, rgba(255, 255, 255, 0.3) 75%, transparent 100%);
+            box-shadow: 0 0 8px #ffffff, 0 0 18px rgba(56, 189, 248, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .streak-v1 {
+            left: 10%;
+            top: 0;
+            height: 55%;
+            animation: vStreakBlink1 4.2s ease-in-out infinite alternate;
+        }
+
+        .streak-v2 {
+            right: 12%;
+            bottom: 0;
+            height: 60%;
+            animation: vStreakBlink2 5s ease-in-out infinite alternate 1.5s;
+        }
+
+        @keyframes vStreakBlink1 {
+            0%, 100% { opacity: 0.15; transform: translateY(-10px); }
+            50%      { opacity: 0.85; transform: translateY(15px); }
+        }
+
+        @keyframes vStreakBlink2 {
+            0%, 100% { opacity: 0.10; transform: translateY(15px); }
+            50%      { opacity: 0.80; transform: translateY(-10px); }
+        }
+
+        /* Twinkling White Telemetry Nodes */
+        .white-sparkle-node {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffffff, 0 0 16px #38bdf8;
+            pointer-events: none;
+        }
+
+        .node-1 { top: 22%; left: 35%; animation: nodeSparkle 2.4s ease-in-out infinite; }
+        .node-2 { top: 38%; right: 24%; animation: nodeSparkle 3.1s ease-in-out infinite 0.7s; }
+        .node-3 { top: 68%; left: 22%; animation: nodeSparkle 2.7s ease-in-out infinite 1.2s; }
+        .node-4 { bottom: 22%; right: 30%; animation: nodeSparkle 3.5s ease-in-out infinite 1.8s; }
+        .node-5 { top: 15%; right: 42%; animation: nodeSparkle 2.9s ease-in-out infinite 0.4s; }
+
+        @keyframes nodeSparkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.6); }
+            50%      { opacity: 1; transform: scale(1.6); box-shadow: 0 0 12px #ffffff, 0 0 22px #93c5fd; }
         }
 
         /* ══ LEFT CONTENT ══ */
@@ -479,8 +680,8 @@
 
         .field-input {
             width: 100%;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.22);
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.22);
             border-radius: 12px;
             padding: 0.88rem 3rem 0.88rem 1rem;
             font-size: 0.92rem;
@@ -490,14 +691,17 @@
             outline: none;
             transition: all 0.25s ease;
             caret-color: #93c5fd;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .field-input::placeholder { color: rgba(147,197,253,0.60); font-weight: 400; }
+        .field-input::placeholder { color: rgba(191, 219, 254, 0.65); font-weight: 400; }
 
         .field-input:focus {
-            border-color: rgba(255,255,255,0.55);
-            background: rgba(255,255,255,0.20);
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+            border-color: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.18);
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.25), 0 0 0 3px rgba(56, 189, 248, 0.28), 0 8px 25px rgba(29, 78, 216, 0.35);
         }
 
         .field-input:focus + .field-icon { color: #93c5fd; }
@@ -777,6 +981,38 @@
 
         <!-- ══ RIGHT: Login Panel ══ -->
         <div class="right-panel">
+
+            <!-- Dynamic Blinking White Lines & Telemetry Canvas -->
+            <div class="blinking-lines-canvas">
+                <div class="panel-glass-sheen"></div>
+                <div class="panel-cyber-grid"></div>
+
+                <!-- Horizontal White Streaks -->
+                <div class="white-line-streak streak-h1"></div>
+                <div class="white-line-streak streak-h2"></div>
+                <div class="white-line-streak streak-h3"></div>
+
+                <!-- Vertical Laser Rays -->
+                <div class="white-line-v streak-v1"></div>
+                <div class="white-line-v streak-v2"></div>
+
+                <!-- Blinking Animated White ECG Waveforms -->
+                <svg class="blinking-ecg-svg" viewBox="0 0 800 600" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="ecg-white-path ecg-blink-1"
+                          d="M0 120 H220 L235 90 L248 150 L262 70 L278 140 L290 120 H500 L515 95 L528 145 L540 120 H800"/>
+                    <path class="ecg-white-path ecg-blink-2"
+                          d="M0 320 H140 L155 295 L168 355 L182 275 L198 345 L210 320 H620 L635 290 L650 350 L665 320 H800"/>
+                    <path class="ecg-white-path ecg-blink-3"
+                          d="M0 510 H310 L325 480 L338 540 L352 460 L368 535 L380 510 H700 L715 485 L730 535 L742 510 H800"/>
+                </svg>
+
+                <!-- Twinkling White Telemetry Sparkle Nodes -->
+                <div class="white-sparkle-node node-1"></div>
+                <div class="white-sparkle-node node-2"></div>
+                <div class="white-sparkle-node node-3"></div>
+                <div class="white-sparkle-node node-4"></div>
+                <div class="white-sparkle-node node-5"></div>
+            </div>
 
             <!-- Live pill -->
             <div class="live-pill">
