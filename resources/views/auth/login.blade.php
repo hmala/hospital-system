@@ -23,6 +23,8 @@
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
             min-height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
         /* LEFT — light airy hospital white-blue */
@@ -35,6 +37,7 @@
             padding: 3rem 3.5rem;
             position: relative;
             overflow: hidden;
+            z-index: 1;
         }
 
         /* Soft corner glow */
@@ -73,7 +76,26 @@
             justify-content: center;
             padding: 3rem 2.5rem;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            z-index: 2;
+        }
+
+        /* ══ S-CURVE ORGANIC WAVE DIVIDER ══ */
+        .scurve-divider {
+            position: absolute;
+            top: 0;
+            right: -70px;
+            width: 72px;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            filter: drop-shadow(10px 0 18px rgba(15, 23, 42, 0.18));
+        }
+
+        .scurve-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         /* ══ Blinking White Lines Canvas ══ */
@@ -981,6 +1003,53 @@
 
         <!-- ══ RIGHT: Login Panel ══ -->
         <div class="right-panel">
+
+            <!-- Organic S-Curve Wave Boundary Divider -->
+            <div class="scurve-divider">
+                <svg class="scurve-svg" viewBox="0 0 100 1000" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="scurveFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#1e3a8a"/>
+                            <stop offset="50%" stop-color="#1d4ed8"/>
+                            <stop offset="100%" stop-color="#1e40af"/>
+                        </linearGradient>
+                        <linearGradient id="neonSeamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                            <stop offset="25%" stop-color="#38bdf8" stop-opacity="0.95"/>
+                            <stop offset="50%" stop-color="#93c5fd" stop-opacity="1"/>
+                            <stop offset="75%" stop-color="#38bdf8" stop-opacity="0.95"/>
+                            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.95"/>
+                        </linearGradient>
+                        <filter id="neonSeamGlow" x="-50%" y="-10%" width="200%" height="120%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur1"/>
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur2"/>
+                            <feMerge>
+                                <feMergeNode in="blur2"/>
+                                <feMergeNode in="blur1"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    <!-- Seamless S-Curve Wave Body -->
+                    <path d="M 0 0
+                             C 45 90, 85 180, 85 290
+                             C 85 430, 15 490, 15 610
+                             C 15 740, 65 860, 0 1000
+                             Z"
+                          fill="url(#scurveFill)"/>
+
+                    <!-- Glowing Neon Seam Line along the wave edge -->
+                    <path d="M 0 0
+                             C 45 90, 85 180, 85 290
+                             C 85 430, 15 490, 15 610
+                             C 15 740, 65 860, 0 1000"
+                          stroke="url(#neonSeamGrad)"
+                          stroke-width="3"
+                          stroke-linecap="round"
+                          filter="url(#neonSeamGlow)"/>
+                </svg>
+            </div>
 
             <!-- Dynamic Blinking White Lines & Telemetry Canvas -->
             <div class="blinking-lines-canvas">
