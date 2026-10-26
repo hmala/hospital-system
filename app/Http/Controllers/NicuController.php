@@ -11,6 +11,8 @@ use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
 use App\Models\NicuMedicationAdministration;
 use App\Models\NicuCareSchedule;
+use App\Models\NicuAttachment;
+use App\Models\NicuDoctorNote;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Medicine;
@@ -18,10 +20,12 @@ use App\Models\Doctor;
 use App\Models\Room;
 use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
+use App\Models\UserLabTestGroup;
 use App\Services\NicuBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class NicuController extends Controller
@@ -41,7 +45,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff'])))) {
+        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لقسم الخدج والحاضنات');
         }
 
@@ -100,7 +104,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff'])))) {
+        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لسجل وإضبارات الخدج');
         }
 
@@ -205,6 +209,8 @@ class NicuController extends Controller
             'medicalRequests.payments',
             'labResults',
             'careSchedules.creator',
+            'attachments.uploader',
+            'doctorNotes.doctor',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
@@ -225,12 +231,40 @@ class NicuController extends Controller
             ->orderBy('name')
             ->get();
 
+        // جلب باقات ومجموعات التحاليل الخاصة بقسم الخدج والحاضنات حصراً (department = 'nicu')
+        $user = Auth::user();
+        $labTestGroups = collect();
+        if ($user) {
+            $doctorUserId = $reservation->doctor?->user_id;
+
+            $labTestGroups = UserLabTestGroup::with('labTests')
+                ->where('department', 'nicu')
+                ->where(function ($q) use ($user, $doctorUserId) {
+                    $q->where('is_public', true)
+                      ->orWhere('user_id', $user->id);
+                    if ($doctorUserId && $doctorUserId !== $user->id) {
+                        $q->orWhere('user_id', $doctorUserId);
+                    }
+                })
+                ->orderBy('name')
+                ->get();
+
+            // في حال عدم وجود باقات خاصة، نجلب أي باقات عامة معرفة للخدج
+            if ($labTestGroups->isEmpty()) {
+                $labTestGroups = UserLabTestGroup::with('labTests')
+                    ->where('department', 'nicu')
+                    ->orderBy('name')
+                    ->get();
+            }
+        }
+
         return view('nicu.show', compact(
             'reservation', 
             'stayDetails', 
             'nicuServices', 
             'doctors',
             'labTests',
+            'labTestGroups',
             'radiologyTypes',
             'medicines'
         ));
@@ -474,7 +508,10 @@ class NicuController extends Controller
             'item_name' => 'nullable|string|max:255',
             'priority' => 'required|in:normal,urgent,stat',
             'instructions' => 'nullable|string|max:1000',
+            'doctor_notes' => 'nullable|string|max:1000',
         ]);
+
+        $docNotes = $request->input('doctor_notes') ?? $request->input('instructions');
 
         $testsToCreate = collect();
         if ($request->filled('tests') && is_array($request->tests)) {
@@ -494,6 +531,7 @@ class NicuController extends Controller
         // جلب أسعار ومطابقة التحاليل تلقائياً إن وجدت
         $existingTests = LabTest::whereIn('name', $testsToCreate->all())
             ->orWhereIn('code', $testsToCreate->all())
+            ->orWhereIn('id', $testsToCreate->all())
             ->with('references')
             ->get()
             ->keyBy(fn($item) => strtolower($item->name));
@@ -546,7 +584,7 @@ class NicuController extends Controller
                 'tests' => $testNames,
                 'lab_test_ids' => $testIds,
                 'priority' => $request->priority,
-                'doctor_notes' => $request->instructions,
+                'doctor_notes' => $docNotes,
                 'total_amount' => $totalPrice,
                 'incubator_reservation_id' => $reservation->id,
             ],
@@ -566,7 +604,7 @@ class NicuController extends Controller
                 'lab_test_id' => $item['lab_test_id'],
                 'price' => $item['price'],
                 'priority' => $request->priority,
-                'instructions' => $request->instructions,
+                'instructions' => $docNotes,
                 'order_group_id' => $groupId,
                 'unit' => $item['unit'],
                 'reference_range' => $item['ref_range'],
@@ -590,7 +628,10 @@ class NicuController extends Controller
             'item_name' => 'nullable|string|max:255',
             'priority' => 'required|in:normal,urgent,stat',
             'instructions' => 'nullable|string|max:1000',
+            'doctor_notes' => 'nullable|string|max:1000',
         ]);
+
+        $docNotes = $request->input('doctor_notes') ?? $request->input('instructions');
 
         $examsToCreate = collect();
         if ($request->filled('radiology_types') && is_array($request->radiology_types)) {
@@ -672,7 +713,7 @@ class NicuController extends Controller
                 'radiology_type_ids' => $radTypeIds,
                 'radiology_names' => $radNames,
                 'priority' => $request->priority,
-                'doctor_notes' => $request->instructions,
+                'doctor_notes' => $docNotes,
                 'total_amount' => $totalPrice,
                 'incubator_reservation_id' => $reservation->id,
             ],
@@ -692,7 +733,7 @@ class NicuController extends Controller
                 'radiology_type_id' => $item['radiology_type_id'],
                 'price' => $item['price'],
                 'priority' => $request->priority,
-                'instructions' => $request->instructions,
+                'instructions' => $docNotes,
                 'order_group_id' => $groupId,
                 'status' => NicuMedicalOrder::STATUS_PENDING,
                 'ordered_by' => Auth::id(),
@@ -1096,5 +1137,150 @@ class NicuController extends Controller
     {
         $reservation->load(['patient.user', 'incubator.room', 'nicuService', 'doctor.user']);
         return view('nicu.print.crib_card', compact('reservation'));
+    }
+
+    /**
+     * رفع وأرشفة مستند/ملف جديد للطفل الخديج
+     */
+    public function storeAttachment(Request $request, IncubatorReservation $reservation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('manage nicu attachments') && !$user->can('manage incubator reservations') && !$user->hasRole(['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك برفع مرفقات بالخدج');
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'title.required' => 'يرجى كتابة اسم أو وصف للمستند المرفق',
+            'file.required' => 'يرجى اختيار ملف لرفعه',
+            'file.mimes' => 'يجب أن يكون الملف بصيغة PDF أو صورة (JPG, PNG, WebP)',
+            'file.max' => 'الحد الأقصى لحجم الملف هو 10 ميغابايت',
+        ]);
+
+        $file = $request->file('file');
+        $fileName = $file->getClientOriginalName();
+        $mimeType = $file->getClientMimeType();
+        $fileSize = $file->getSize();
+
+        $storageName = time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('nicu_attachments/' . $reservation->id, $storageName, 'public');
+
+        NicuAttachment::create([
+            'incubator_reservation_id' => $reservation->id,
+            'patient_id' => $reservation->patient_id,
+            'user_id' => $user?->id,
+            'title' => $validated['title'],
+            'file_path' => $path,
+            'file_name' => $fileName,
+            'mime_type' => $mimeType,
+            'file_size' => $fileSize,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return redirect()->back()->with('success', 'تم حفظ وأرشفة المستند بنجاح في السجل الطبي للطفل');
+    }
+
+    /**
+     * تحميل مستند من الأرشيف
+     */
+    public function downloadAttachment(NicuAttachment $attachment)
+    {
+        if (!Storage::disk('public')->exists($attachment->file_path)) {
+            abort(404, 'الملف غير موجود في الخادم');
+        }
+
+        return Storage::disk('public')->download($attachment->file_path, $attachment->file_name);
+    }
+
+    /**
+     * حذف مستند من الأرشيف
+     */
+    public function destroyAttachment(NicuAttachment $attachment)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('manage nicu attachments') && !$user->can('manage incubator reservations') && !$user->hasRole(['nicu_doctor', 'doctor', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بحذف مرفقات الخدج');
+        }
+
+        if (Storage::disk('public')->exists($attachment->file_path)) {
+            Storage::disk('public')->delete($attachment->file_path);
+        }
+
+        $attachment->delete();
+
+        return redirect()->back()->with('success', 'تم حذف المستند بنجاح من الأرشيف');
+    }
+
+    /**
+     * تدوين ملاحظة / توجيه جديد للطبيب الاختصاص
+     */
+    public function storeDoctorNote(Request $request, IncubatorReservation $reservation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بتدوين ملاحظات الطبيب الاختصاص');
+        }
+
+        $validated = $request->validate([
+            'content' => 'required|string|max:5000',
+            'is_urgent' => 'nullable|boolean',
+            'is_pinned' => 'nullable|boolean',
+        ], [
+            'content.required' => 'يرجى كتابة نص الملاحظة أو التوجيه السريري',
+        ]);
+
+        NicuDoctorNote::create([
+            'incubator_reservation_id' => $reservation->id,
+            'doctor_id' => $user?->id,
+            'doctor_name' => $user?->name,
+            'content' => $validated['content'],
+            'is_urgent' => $request->boolean('is_urgent'),
+            'is_pinned' => $request->boolean('is_pinned'),
+        ]);
+
+        return redirect()->back()->with('success', 'تم تدوين وحفظ توجيه وملاحظة الطبيب الاختصاص بنجاح');
+    }
+
+    /**
+     * تثبيت أو إلغاء تثبيت ملاحظة الطبيب
+     */
+    public function togglePinDoctorNote(NicuDoctorNote $note)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بتعديل حالة الملاحظة');
+        }
+
+        $note->update(['is_pinned' => !$note->is_pinned]);
+
+        return redirect()->back()->with('success', $note->is_pinned ? 'تم تثبيت التوجيه كإشعار رئيسي بنجاح' : 'تم إلغاء التثبيت');
+    }
+
+    /**
+     * حذف ملاحظة طبيب
+     */
+    public function destroyDoctorNote(NicuDoctorNote $note)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+            abort(403, 'غير مصرح لك بحذف ملاحظة الطبيب');
+        }
+
+        $note->delete();
+
+        return redirect()->back()->with('success', 'تم حذف ملاحظة الطبيب بنجاح');
     }
 }

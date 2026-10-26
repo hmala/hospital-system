@@ -9,13 +9,23 @@
                 <i class="fas fa-layer-group"></i>
             </span>
             <div>
-                <h4 class="mb-0 fw-bold text-dark">{{ $group->name }}</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <h4 class="mb-0 fw-bold text-dark">{{ $group->name }}</h4>
+                    @if($group->department === 'nicu')
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="fas fa-baby me-1"></i> قسم الخدج (NICU)</span>
+                    @else
+                        <span class="badge bg-light text-secondary border"><i class="fas fa-stethoscope me-1"></i> عيادات واستشارية</span>
+                    @endif
+                    @if($group->is_public)
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="fas fa-globe me-1"></i> عامة للقسم</span>
+                    @endif
+                </div>
                 <p class="text-muted small mb-0">{{ $group->description ?: 'مجموعة التحاليل المفضلة للطبيب' }}</p>
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('lab-tests.groups.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('lab-tests.groups.index', ['department' => $group->department]) }}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-right me-1"></i> العودة للمجموعات
             </a>
             <button type="submit" form="groupTestsForm" class="btn btn-primary btn-sm px-3 shadow-sm">

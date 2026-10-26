@@ -14,21 +14,37 @@ class UserLabTestGroupController extends Controller
         $this->middleware('can:view lab test groups');
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        $department = $request->query('department');
 
         $groupsQuery = UserLabTestGroup::withCount('labTests')
             ->with('user')
             ->orderBy('updated_at', 'desc');
 
+        if ($department === 'nicu') {
+            $groupsQuery->where('department', 'nicu');
+        } elseif ($department === 'consultant') {
+            $groupsQuery->where(function ($q) {
+                $q->whereNull('department')->orWhere('department', 'consultant');
+            });
+        }
+
         if (!$user->isAdmin()) {
-            $groupsQuery->where('user_id', $user->id);
+            $groupsQuery->where(function ($q) use ($user, $department) {
+                $q->where('user_id', $user->id);
+                if ($department) {
+                    $q->orWhere(function ($sub) use ($department) {
+                        $sub->where('department', $department)->where('is_public', true);
+                    });
+                }
+            });
         }
 
         $groups = $groupsQuery->get();
 
-        return view('lab-tests.groups.index', compact('groups'));
+        return view('lab-tests.groups.index', compact('groups', 'department'));
     }
 
     public function store(Request $request)
@@ -40,15 +56,24 @@ class UserLabTestGroupController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
+            'department' => 'nullable|string|in:nicu,consultant',
+            'is_public' => 'nullable|boolean',
         ]);
 
-        UserLabTestGroup::create([
+        $group = UserLabTestGroup::create([
             'user_id' => $user->id,
             'name' => $request->name,
             'description' => $request->description,
+            'department' => $request->department ?: null,
+            'is_public' => $user->isAdmin() ? $request->boolean('is_public') : false,
         ]);
 
-        return redirect()->back()->with('success', 'تم إنشاء المجموعة بنجاح');
+        $targetUrl = route('lab-tests.groups.edit', $group);
+        if ($request->filled('department')) {
+            $targetUrl .= '?department=' . urlencode($request->department);
+        }
+
+        return redirect($targetUrl)->with('success', 'تم إنشاء المجموعة بنجاح. يمكنك الآن اختيار التحاليل الخاصة بها.');
     }
 
     public function edit(UserLabTestGroup $group)
@@ -98,14 +123,37 @@ class UserLabTestGroupController extends Controller
             abort(403, 'غير مصرح لك بتحرير هذه المجموعة');
         }
 
-        $validated = $request->validate([
-            'lab_test_ids' => 'nullable|array',
-            'lab_test_ids.*' => 'integer|exists:lab_tests,id',
-        ]);
+        if ($request->has('lab_test_ids')) {
+            $validated = $request->validate([
+                'lab_test_ids' => 'nullable|array',
+                'lab_test_ids.*' => 'integer|exists:lab_tests,id',
+            ]);
 
-        $group->labTests()->sync($validated['lab_test_ids'] ?? []);
+            $group->labTests()->sync($validated['lab_test_ids'] ?? []);
+        }
 
-        return redirect()->route('lab-tests.groups.edit', $group)->with('success', 'تم حفظ التحاليل للمجموعة بنجاح');
+        if ($request->filled('name')) {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'department' => 'nullable|string|in:nicu,consultant',
+                'is_public' => 'nullable|boolean',
+            ]);
+
+            $updateData = [
+                'name' => $request->name,
+                'description' => $request->description,
+                'department' => $request->department ?: null,
+            ];
+
+            if ($user->isAdmin()) {
+                $updateData['is_public'] = $request->boolean('is_public');
+            }
+
+            $group->update($updateData);
+        }
+
+        return redirect()->route('lab-tests.groups.edit', $group)->with('success', 'تم حفظ التعديلات للمجموعة بنجاح');
     }
 
     public function destroy(UserLabTestGroup $group)

@@ -179,6 +179,30 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * مرفقات وأرشيف الطفل الخديج
+     */
+    public function attachments()
+    {
+        return $this->hasMany(NicuAttachment::class, 'incubator_reservation_id')->latest();
+    }
+
+    /**
+     * ملاحظات وتوجيهات الطبيب الاختصاص
+     */
+    public function doctorNotes()
+    {
+        return $this->hasMany(NicuDoctorNote::class, 'incubator_reservation_id')->latest();
+    }
+
+    /**
+     * الملاحظات المثبتة للطبيب الاختصاص
+     */
+    public function pinnedDoctorNotes()
+    {
+        return $this->hasMany(NicuDoctorNote::class, 'incubator_reservation_id')->where('is_pinned', true)->latest();
+    }
+
+    /**
      * المدفوعات والأمانات المسددة في الصندوق (جدول nicu_payments المستقل)
      */
     public function payments()
@@ -288,6 +312,14 @@ class IncubatorReservation extends Model
         }
 
         return $this->admission_date->diffInDays(now()) + 1;
+    }
+
+    /**
+     * عدد أيام الإقامة بالحاضنة (Alias للتوافق مع شاشات الفحص والطباعة)
+     */
+    public function getDaysCountAttribute(): int
+    {
+        return $this->current_duration;
     }
 
     /**

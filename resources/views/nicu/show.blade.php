@@ -105,6 +105,51 @@
         </div>
     @endif
 
+    @php
+        $pinnedNotes = $reservation->doctorNotes->where('is_pinned', true);
+    @endphp
+    @if($pinnedNotes->isNotEmpty())
+        <div class="card border-0 shadow-sm mb-4 border-start border-4 border-danger" style="border-radius: 12px; background: #fff5f5;">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-danger-subtle">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-danger text-white p-2 rounded-circle">
+                            <i class="fas fa-thumbtack"></i>
+                        </span>
+                        <div>
+                            <h6 class="fw-bold text-danger mb-0">توجيهات وملاحظات الطبيب الاختصاص المثبتة (Pinned Clinical Orders)</h6>
+                            <small class="text-muted" style="font-size: 11px;">توجيهات مشددة ذات أولوية عليا واجبة التطبيق الفوري</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-1">{{ $pinnedNotes->count() }} مثبت</span>
+                </div>
+                <div class="d-flex flex-column gap-2">
+                    @foreach($pinnedNotes as $pNote)
+                        <div class="p-2.5 rounded-3 bg-white border border-danger-subtle d-flex justify-content-between align-items-start gap-3">
+                            <div class="flex-grow-1">
+                                <div class="text-dark fw-bold mb-1" style="font-size: 13.5px;">{{ $pNote->content }}</div>
+                                <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 11px;">
+                                    <span><i class="fas fa-user-md me-1 text-primary"></i>{{ optional($pNote->doctor)->name ?? 'طبيب اختصاص' }}</span>
+                                    <span>•</span>
+                                    <span><i class="fas fa-clock me-1"></i>{{ $pNote->created_at->format('Y-m-d H:i') }} ({{ $pNote->created_at->diffForHumans() }})</span>
+                                    @if($pNote->is_urgent)
+                                        <span class="badge bg-danger text-white"><i class="fas fa-bolt me-1"></i>عاجل جداً</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <form action="{{ route('nicu.doctor-notes.toggle-pin', $pNote) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-xs btn-outline-secondary py-1 px-2" title="إلغاء التثبيت من رأس الصفحة">
+                                    <i class="fas fa-thumbtack me-1 text-muted"></i> إلغاء التثبيت
+                                </button>
+                            </form>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- تبويبات المركز السريري -->
     <div class="card border-0 shadow-sm" style="border-radius: 14px;">
         <div class="card-header bg-white border-0 pt-3 px-4">
@@ -120,6 +165,11 @@
                         @if($reservation->medicationAdministrations->count() > 0)
                             <span class="badge bg-danger rounded-pill ms-1">{{ $reservation->medicationAdministrations->count() }}</span>
                         @endif
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark" id="growth-tab" data-bs-toggle="tab" data-bs-target="#growthPane" type="button">
+                        <i class="fas fa-chart-line text-success me-1"></i> 📈 معدلات النمو والوزن
                     </button>
                 </li>
                 <li class="nav-item">
@@ -163,6 +213,14 @@
                         @php $medCount = $reservation->medicalOrders->where('order_type', 'medication')->count(); @endphp
                         @if($medCount > 0)
                             <span class="badge bg-success rounded-pill ms-1">{{ $medCount }}</span>
+                        @endif
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachmentsPane" type="button">
+                        <i class="fas fa-folder-open text-primary me-1"></i> 📁 الأرشيف والمرفقات
+                        @if($reservation->attachments->count() > 0)
+                            <span class="badge bg-primary text-white rounded-pill ms-1">{{ $reservation->attachments->count() }}</span>
                         @endif
                     </button>
                 </li>
@@ -676,6 +734,206 @@
                     </div>
                 </div>
 
+                <!-- تبويب مستقل: معدلات النمو ومنحنى الوزن (Growth & Weight Curve) -->
+                <div class="tab-pane fade" id="growthPane">
+                    @php
+                        $weightVitals = $reservation->vitals->whereNotNull('weight')->sortBy('recorded_at');
+                        $initialWeight = ($reservation->birth_weight && is_numeric($reservation->birth_weight)) 
+                            ? (float)$reservation->birth_weight 
+                            : ($weightVitals->first()?->weight ?? null);
+                        $latestWeight = $weightVitals->last()?->weight ?? $reservation->current_weight ?? $initialWeight;
+                        $netWeightGain = ($latestWeight && $initialWeight) ? ($latestWeight - $initialWeight) : 0;
+                        $netWeightPct = ($initialWeight && $initialWeight > 0) ? round(($netWeightGain / $initialWeight) * 100, 1) : 0;
+                        $daysInNicu = max($stayDetails['calculated_days'] ?? ($stayDetails['days_count'] ?? ($reservation->days_count ?? 1)), 1);
+                        $dailyGrowthRate = ($latestWeight && $initialWeight && $daysInNicu > 0) ? round($netWeightGain / $daysInNicu, 1) : 0;
+                    @endphp
+
+                    <!-- بطاقات المؤشرات الحيوية للنمو والوزن (Growth KPIs) -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-2 col-sm-6 col-12">
+                            <div class="card border-0 bg-light p-3 rounded-3 h-100 shadow-xs border-start border-4 border-secondary">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-baby me-1"></i> وزن الولادة / الدخول</span>
+                                <h4 class="fw-bold text-dark mb-0 font-monospace">
+                                    {{ $initialWeight ? number_format($initialWeight) : '—' }}
+                                    <small class="fs-6 fw-normal text-muted">جم</small>
+                                </h4>
+                                <small class="text-muted" style="font-size: 10px;">خط الأساس (Baseline)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-6 col-12">
+                            <div class="card border-0 bg-light p-3 rounded-3 h-100 shadow-xs border-start border-4 border-success">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-weight-scale me-1 text-success"></i> الوزن الحالي</span>
+                                <h4 class="fw-bold text-success mb-0 font-monospace">
+                                    {{ $latestWeight ? number_format($latestWeight) : '—' }}
+                                    <small class="fs-6 fw-normal text-muted">جم</small>
+                                </h4>
+                                <small class="text-muted" style="font-size: 10px;">آخر قراءة موثقة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="card border-0 bg-light p-3 rounded-3 h-100 shadow-xs border-start border-4 {{ $netWeightGain >= 0 ? 'border-success' : 'border-danger' }}">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-chart-line me-1 {{ $netWeightGain >= 0 ? 'text-success' : 'text-danger' }}"></i> صافي التغير التراكمي</span>
+                                <h4 class="fw-bold {{ $netWeightGain >= 0 ? 'text-success' : 'text-danger' }} mb-0 font-monospace">
+                                    {{ $netWeightGain >= 0 ? '+' : '' }}{{ number_format($netWeightGain) }}
+                                    <small class="fs-6 fw-normal text-muted">جم</small>
+                                    <span class="badge {{ $netWeightGain >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} fs-6 ms-1">
+                                        {{ $netWeightGain >= 0 ? '+' : '' }}{{ $netWeightPct }}%
+                                    </span>
+                                </h4>
+                                <small class="text-muted" style="font-size: 10px;">مقارنة بوزن البداية</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 col-12">
+                            <div class="card border-0 bg-light p-3 rounded-3 h-100 shadow-xs border-start border-4 border-info">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-tachometer-alt me-1 text-info"></i> معدل النمو اليومي</span>
+                                <h4 class="fw-bold text-info mb-0 font-monospace">
+                                    {{ $dailyGrowthRate >= 0 ? '+' : '' }}{{ $dailyGrowthRate }}
+                                    <small class="fs-6 fw-normal text-muted">جم/يوم</small>
+                                </h4>
+                                <small class="text-muted" style="font-size: 10px;">المعدل الطبيعي: 15 - 30 جم/يوم</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm-6 col-12">
+                            <div class="card border-0 bg-light p-3 rounded-3 h-100 shadow-xs border-start border-4 border-primary">
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-calendar-day me-1 text-primary"></i> مدة الحضانة</span>
+                                <h4 class="fw-bold text-primary mb-0 font-monospace">
+                                    {{ $daysInNicu }}
+                                    <small class="fs-6 fw-normal text-muted">يوم</small>
+                                </h4>
+                                <small class="text-muted" style="font-size: 10px;">{{ $weightVitals->count() }} قراءات مسجلة</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- بطاقة الرسم البياني لمنحنى النمو -->
+                    <div class="card border-0 bg-white shadow-xs rounded-3 mb-4">
+                        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success-subtle text-success p-2 rounded-circle fs-6">
+                                    <i class="fas fa-chart-area"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">المخطط البياني لتتبع وزن ونمو الطفل الخديج (Weight & Growth Curve)</h6>
+                                    <small class="text-muted">مقارنة القراءات المسجلة مع خط الأساس لوزن الدخول (Baseline)</small>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-circle text-success me-1"></i> وزن الطفل
+                                </span>
+                                <span class="badge bg-light text-muted border">
+                                    <i class="fas fa-minus text-warning me-1"></i> خط البداية
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="position-relative" style="height: 320px;">
+                                <canvas id="nicuWeightGrowthChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light border-0 py-2 px-3 small text-muted d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                <strong>إرشاد سريري:</strong> نزول وزن الخديج حتى 10% خلال الأيام الأولى فسيولوجي طبيعي، ثم يستعيد وزن الولادة ويبدأ بالنمو المتسارع بمعدل 15-20 جم/كجم/يوم.
+                            </div>
+                            <a href="javascript:void(0);" onclick="document.getElementById('vitals-tab').click();" class="text-decoration-none fw-semibold">
+                                <i class="fas fa-plus-circle me-1"></i> تسجيل وزن جديد في محطة التمريض &larr;
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- جدول تاريخ وسجل قياسات الوزن للطفل -->
+                    <div class="card border-0 bg-white shadow-xs rounded-3">
+                        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                            <h6 class="fw-bold text-dark mb-0">
+                                <i class="fas fa-list-ol text-success me-1"></i>
+                                سجل القياسات التفصيلي وتدرج الوزن (Weight Progression Log)
+                            </h6>
+                            <span class="badge bg-light text-success border">{{ $weightVitals->count() }} تسجيلات</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered align-middle text-center mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>التاريخ والوقت</th>
+                                        <th>الوزن المسجل (جم)</th>
+                                        <th>التغير عن القراءة السابقة</th>
+                                        <th>التغير التراكمي عن البداية</th>
+                                        <th>العلامات الحيوية المرافقة (حرارة / نبض / SpO2)</th>
+                                        <th>التغذية والرضاعة</th>
+                                        <th>القائم بالتوثيق</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php 
+                                        $prevWeight = $initialWeight; 
+                                        $rowIdx = 1;
+                                    @endphp
+                                    @if($initialWeight)
+                                        <tr class="table-secondary bg-opacity-25">
+                                            <td>—</td>
+                                            <td class="fw-semibold">وزن الدخول / الولادة</td>
+                                            <td class="fw-bold text-dark font-monospace">{{ number_format($initialWeight) }} جم</td>
+                                            <td class="text-muted">— (نقطة الأساس)</td>
+                                            <td class="text-muted">—</td>
+                                            <td class="text-muted">—</td>
+                                            <td class="text-muted">—</td>
+                                            <td class="text-muted">ملف الدخول</td>
+                                        </tr>
+                                    @endif
+                                    @forelse($weightVitals as $wv)
+                                        @php
+                                            $diffFromPrev = $prevWeight ? ($wv->weight - $prevWeight) : 0;
+                                            $diffFromInit = $initialWeight ? ($wv->weight - $initialWeight) : 0;
+                                            $prevWeight = $wv->weight;
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $rowIdx++ }}</td>
+                                            <td>{{ $wv->recorded_at->format('Y-m-d H:i') }}</td>
+                                            <td class="fw-bold text-success font-monospace fs-6">{{ number_format($wv->weight) }} جم</td>
+                                            <td>
+                                                @if($diffFromPrev > 0)
+                                                    <span class="badge bg-success-subtle text-success">+{{ number_format($diffFromPrev) }} جم</span>
+                                                @elseif($diffFromPrev < 0)
+                                                    <span class="badge bg-danger-subtle text-danger">{{ number_format($diffFromPrev) }} جم</span>
+                                                @else
+                                                    <span class="badge bg-light text-muted border">0 جم</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($diffFromInit > 0)
+                                                    <span class="text-success fw-bold">+{{ number_format($diffFromInit) }} جم</span>
+                                                @elseif($diffFromInit < 0)
+                                                    <span class="text-danger fw-bold">{{ number_format($diffFromInit) }} جم</span>
+                                                @else
+                                                    <span class="text-muted">0 جم</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border me-1">{{ $wv->temperature ? $wv->temperature . '°C' : '—' }}</span>
+                                                <span class="badge bg-light text-dark border me-1">{{ $wv->heart_rate ? $wv->heart_rate . ' bpm' : '—' }}</span>
+                                                <span class="badge bg-light {{ $wv->spo2 < 92 ? 'text-danger' : 'text-success' }} border">{{ $wv->spo2 ? $wv->spo2 . '%' : '—' }}</span>
+                                            </td>
+                                            <td>{{ $wv->feeding_type ?: '—' }} {{ $wv->feeding_amount_ml ? '(' . $wv->feeding_amount_ml . ' مل)' : '' }}</td>
+                                            <td class="text-muted">{{ optional($wv->nurse)->name ?? 'ممرض' }}</td>
+                                        </tr>
+                                    @empty
+                                        @if(!$initialWeight)
+                                            <tr>
+                                                <td colspan="8" class="py-4 text-muted">
+                                                    <i class="fas fa-weight-scale fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                                    لم يتم توثيق أي قراءات وزن للطفل حتى الآن. يمكنك إدخال وزن الطفل عبر تبويب محطة التمريض.
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- تبويب 3: استشارات الأطباء (داخلي / خارجي) -->
                 <div class="tab-pane fade" id="consultationsPane">
                     <div class="row g-4">
@@ -865,114 +1123,257 @@
                 <!-- تبويب 4: التحاليل والفحوصات المخبرية (Lab Workstation) -->
                 <div class="tab-pane fade" id="labPane">
                     <div class="row g-4">
-                        <!-- عمود تقديم طلب التحاليل المخبرية -->
-                        <div class="col-lg-5">
+                        <!-- عمود تقديم طلب التحاليل المخبرية بنمط الطبيب الاستشاري -->
+                        <div class="col-xl-6 col-lg-12">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
-                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                            <i class="fas fa-microscope"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-bold text-primary mb-0">طلب فحوصات مخبرية</h6>
-                                            <small class="text-muted" style="font-size: 11px;">اختر من الباقات أو ابحث بالاسم واضغط Enter</small>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-primary rounded-pill px-2 py-1">مختبر المستشفى</span>
-                                </div>
-
                                 <form action="{{ route('nicu.lab-orders.store', $reservation) }}" method="POST" id="nicuLabOrderForm">
                                     @csrf
 
-                                    <!-- باقات حديثي الولادة والخدج السريعة -->
-                                    <div class="mb-3 p-2 bg-white rounded-3 border">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <span class="small fw-bold text-dark">
-                                                <i class="fas fa-bolt text-warning me-1"></i> باقات الخدج السريعة (نقرة واحدة للإدراج):
+                                    <!-- رأس محطة طلب التحاليل (مطابق للاستشاري) -->
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-6">
+                                                <i class="fas fa-microscope"></i>
                                             </span>
+                                            <div>
+                                                <h5 class="mb-0 fw-bold text-primary">طلب فحوصات المختبر</h5>
+                                                <small class="text-muted">ابحث واضغط Enter أو اختر من الباقات والمجموعات التخصصية</small>
+                                            </div>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Complete Blood Count (CBC)", "Total Serum Bilirubin (TSB)", "C-Reactive Protein (CRP)", "Random Blood Sugar (RBS)", "Blood Group & Rh"]'>
-                                                <i class="fas fa-baby me-1"></i> دخول روتيني (5)
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 nicu-quick-lab-pkg text-dark" data-tests='["Total Serum Bilirubin (TSB)", "Direct Bilirubin", "Indirect Bilirubin", "Blood Group & Rh", "Direct Coombs Test"]'>
-                                                <i class="fas fa-sun me-1"></i> اليرقان والصفار (5)
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Arterial Blood Gases (ABG)", "Serum Electrolytes (Na, K, Cl)", "Blood Lactate"]'>
-                                                <i class="fas fa-lungs me-1"></i> غازات الدم ABG (3)
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Complete Blood Count (CBC)", "Blood Culture", "C-Reactive Protein (CRP)", "Procalcitonin", "Micro-ESR"]'>
-                                                <i class="fas fa-shield-virus me-1"></i> مسح الإنتان Sepsis (5)
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 nicu-quick-lab-pkg" data-tests='["Serum Creatinine", "Blood Urea", "Serum Electrolytes (Na, K, Cl)", "Serum Calcium"]'>
-                                                <i class="fas fa-vial me-1"></i> وظائف الكلى والأملاح (4)
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="{{ route('lab-tests.groups.index', ['department' => 'nicu']) }}" target="_blank" class="btn btn-sm btn-outline-info text-dark" title="إدارة باقات ومفضلات قسم الخدج">
+                                                <i class="fas fa-baby me-1 text-primary"></i> إدارة باقات الخدج
+                                            </a>
+                                            <button type="submit" id="btnSubmitNicuLabTop" class="btn btn-primary btn-sm px-3 shadow-sm fw-bold">
+                                                <i class="fas fa-paper-plane me-1"></i> إرسال الطلب (<span class="doc-lab-selected-count">0</span>)
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- مربع البحث التفاعلي الفوري عن التحاليل -->
+                                    <!-- 1. شريط باقات المفضلات السريعة بنقر واحدة (UserLabTestGroup) -->
+                                    @if(isset($labTestGroups) && $labTestGroups->isNotEmpty())
+                                        <div class="mb-3 p-2 bg-white rounded-3 border">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <span class="small fw-bold text-dark">
+                                                    <i class="fas fa-baby text-primary me-1"></i> باقات الخدج السريعة (نقرة واحدة للإضافة):
+                                                </span>
+                                                <a href="{{ route('lab-tests.groups.index', ['department' => 'nicu']) }}" target="_blank" class="small text-decoration-none">
+                                                    <i class="fas fa-cog me-1"></i> إدارة باقات الخدج
+                                                </a>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach($labTestGroups as $pkg)
+                                                    @php
+                                                        $pkgTestIds = $pkg->labTests->pluck('id')->values()->all();
+                                                        $pkgTestNames = $pkg->labTests->pluck('name')->values()->all();
+                                                    @endphp
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 doc-lab-quick-pkg-btn" 
+                                                            data-test-ids="{{ json_encode($pkgTestIds) }}"
+                                                            data-tests="{{ json_encode($pkgTestNames) }}"
+                                                            data-pkg-name="{{ $pkg->name }}">
+                                                        <i class="fas fa-baby me-1 opacity-75"></i>
+                                                        <strong>{{ $pkg->name }}</strong>
+                                                        <span class="badge bg-primary-subtle text-primary rounded-pill ms-1">{{ count($pkgTestIds) }}</span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="mb-3 p-2 bg-white rounded-3 border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <span class="small text-muted">
+                                                <i class="fas fa-baby text-primary me-1"></i> يمكنك إنشاء باقات تحاليل خاصة بقسم الخدج لتسهيل طلبها بنقرة واحدة
+                                            </span>
+                                            <a href="{{ route('lab-tests.groups.index', ['department' => 'nicu']) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size: 0.78rem;">
+                                                <i class="fas fa-plus me-1"></i> إنشاء وإدارة باقات الخدج
+                                            </a>
+                                        </div>
+                                    @endif
+
+                                    <!-- شريط إشعار فلترة الباقة النشطة (مطابق للاستشاري) -->
+                                    <div id="docLabActiveFilterNotice" class="d-none alert alert-info py-2 px-3 mb-2 rounded-3 border-info d-flex align-items-center justify-content-between shadow-xs">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                                <i class="fas fa-layer-group"></i>
+                                            </div>
+                                            <span class="small fw-semibold text-dark">
+                                                يتم الآن عرض تحاليل باقة: <strong id="docLabActivePkgTitle" class="text-primary"></strong> (<span id="docLabActivePkgCount">0</span> تحليل)
+                                            </span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill small" id="docLabResetPkgFilterBtn">
+                                            <i class="fas fa-times me-1"></i> إلغاء الفلترة وعرض الكل
+                                        </button>
+                                    </div>
+
+                                    <!-- 2. حقل البحث الذكي بنمط Tag Autocomplete -->
                                     <div class="mb-3 position-relative">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-search text-primary me-1"></i> ابحث عن التحليل المخبري:
-                                        </label>
-                                        <div class="input-group input-group-sm shadow-xs">
-                                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                            <input type="text" id="nicuLabSearchInput" class="form-control" placeholder="اكتب اسم التحليل (مثل: CBC, Bilirubin, ABG, CRP...) واضغط Enter..." autocomplete="off">
-                                            <button type="button" class="btn btn-outline-secondary" id="nicuLabClearInputBtn" title="مسح">
+                                        <div class="input-group shadow-sm">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   id="docLabSearchInput" 
+                                                   class="form-control form-control-lg fs-6" 
+                                                   placeholder="اكتب اسم التحليل (مثل: CBC, TSH, Lipid, Glucose...) واضغط Enter..."
+                                                   autocomplete="off">
+                                            <button type="button" class="btn btn-outline-secondary d-none" id="docLabClearSearchBtn" title="مسح البحث">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
-                                        <div id="nicuLabAutocompleteMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="max-height: 220px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                                        <div id="docLabAutocompleteMenu" class="dropdown-menu w-100 shadow-lg p-1 border-0" style="max-height: 280px; overflow-y: auto; display: none; position: absolute; z-index: 1050;"></div>
                                     </div>
 
-                                    <!-- صينية التحاليل المختارة للإرسال (Chips Tray) -->
-                                    <div id="nicuLabSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                    <!-- 3. صينية التحاليل المختارة حالياً (Selected Chips Tray) -->
+                                    <div id="docLabSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="small fw-bold text-primary">
-                                                <i class="fas fa-check-circle me-1"></i> التحاليل المختارة (<span id="nicuLabSelectedCount">0</span>):
+                                                <i class="fas fa-check-circle me-1"></i> التحاليل المختارة للإرسال (<span class="doc-lab-selected-count">0</span>):
                                             </span>
-                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="nicuLabClearAllBtn">
+                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="docLabClearAllBtn">
                                                 <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
                                             </button>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-2" id="nicuLabChipsContainer"></div>
+                                        <div class="d-flex flex-wrap gap-2" id="docLabChipsContainer"></div>
                                     </div>
 
-                                    <!-- الأولوية وملاحظات الطبيب -->
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">الأولوية والسرعة المطلوبة:</label>
-                                            <div class="d-flex gap-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="labPriNormal" value="normal">
-                                                    <label class="form-check-label small" for="labPriNormal">عادي (Normal)</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="labPriUrgent" value="urgent" checked>
-                                                    <label class="form-check-label small text-warning fw-bold" for="labPriUrgent">عاجل (Urgent)</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="labPriStat" value="stat">
-                                                    <label class="form-check-label small text-danger fw-bold" for="labPriStat">🚨 فوري طارئ (STAT)</label>
-                                                </div>
+                                    <!-- 3.5 حقل ملاحظات وتوجيهات الطبيب للمختبر -->
+                                    <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label for="docLabDoctorNotes" class="form-label small fw-bold text-dark mb-0">
+                                                <i class="fas fa-comment-medical text-primary me-1"></i> ملاحظات وتوجيهات الطبيب للمختبر (اختياري):
+                                            </label>
+                                            <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>تظهر مباشرة لفني التحاليل في شاشة الفحص وقائمة العمل</span>
+                                        </div>
+                                        <textarea class="form-control form-control-sm bg-white" 
+                                                  id="docLabDoctorNotes" 
+                                                  name="doctor_notes" 
+                                                  rows="2" 
+                                                  placeholder="اكتب أي ملاحظة سريرية أو توجيه لفني التحاليل (مثل: عينة كعب قدم دقيقة، فحص عاجل قبل العلاج الضوئي)..." 
+                                                  style="resize: vertical;"></textarea>
+                                    </div>
+
+                                    <!-- الأولوية المطلوبة -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <label class="form-label small fw-bold text-dark mb-1">
+                                            <i class="fas fa-stopwatch me-1 text-warning"></i> أولوية وسرعة الفحص المخبري:
+                                        </label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="labPriNormal" value="normal">
+                                                <label class="form-check-label small" for="labPriNormal">عادي (Normal)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="labPriUrgent" value="urgent" checked>
+                                                <label class="form-check-label small text-warning fw-bold" for="labPriUrgent">عاجل (Urgent)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="labPriStat" value="stat">
+                                                <label class="form-check-label small text-danger fw-bold" for="labPriStat">🚨 فوري طارئ (STAT)</label>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">ملاحظات وتوجيهات الطبيب للمختبر:</label>
-                                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="مثال: عينة كعب قدم دقيقة، فحص عاجل قبل العلاج الضوئي...">
+                                    <!-- 4. تبويبات تصفية الأقسام حسب المجموعات الطبية -->
+                                    @php
+                                        $catMap = [
+                                            'biochemistry' => '🧪 كيمياء حيوية',
+                                            'hormone' => '🧬 هرمونات',
+                                            'hematology' => '🩸 أمراض الدم',
+                                            'haematology' => '🩸 أمراض الدم',
+                                            'immunity' => '🛡️ المناعة',
+                                            'immunology' => '🛡️ المناعة',
+                                            'serology' => '💉 الأمصال',
+                                            'infectious disease' => '🦠 أمراض معدية',
+                                            'microbiology' => '🔬 أحياء مجهرية',
+                                            'virology' => '🧫 فيروسات',
+                                        ];
+
+                                        $labGrouped = $labTests->groupBy(function($t) use ($catMap) {
+                                            $sub = strtolower(trim($t->subcategory ?? ''));
+                                            return $catMap[$sub] ?? ($t->subcategory ?: ($t->main_category ?: 'تحاليل عامة'));
+                                        });
+                                    @endphp
+
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                                        <div class="d-flex align-items-center gap-1 overflow-x-auto" id="docLabCategoryPills" style="white-space: nowrap;">
+                                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 doc-cat-pill active" data-category="ALL">
+                                                الكل <span class="badge bg-white text-primary ms-1">{{ $labTests->count() }}</span>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 doc-cat-pill" data-category="SELECTED_ONLY" id="docLabFilterSelectedBtn">
+                                                <i class="fas fa-check-circle me-1"></i> المختارة فقط <span class="badge bg-success-subtle text-success ms-1 doc-lab-selected-count">0</span>
+                                            </button>
+                                            @foreach($labGrouped as $category => $tests)
+                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-cat-pill" data-category="{{ $category }}">
+                                                    {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $tests->count() }}</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
                                     </div>
 
-                                    <button type="submit" id="btnSubmitNicuLab" class="btn btn-primary w-100 fw-bold shadow-sm">
-                                        <i class="fas fa-paper-plane me-1"></i> إرسال طلب التحاليل للمختبر
-                                    </button>
+                                    <!-- 5. شبكة بطاقات التحاليل (Compact Grid) -->
+                                    <div id="docLabTestsGridContainer" style="max-height: 420px; overflow-y: auto; padding-right: 4px;">
+                                        <div class="row g-2" id="docLabItemsGrid">
+                                            <div id="docLabNoFilterResults" class="col-12 text-center py-4 text-muted d-none">
+                                                <i class="fas fa-filter fa-2x mb-2 text-secondary opacity-50"></i>
+                                                <p class="mb-0 fw-semibold">لا توجد تحاليل مطابقة للفلتر المحدد.</p>
+                                            </div>
+                                            @foreach($labTests as $test)
+                                                @php
+                                                    $testCat = $catMap[strtolower(trim($test->subcategory ?? ''))] ?? ($test->subcategory ?: ($test->main_category ?: 'تحاليل عامة'));
+                                                @endphp
+                                                <div class="col-md-6 col-12 doc-lab-col" 
+                                                     data-test-name="{{ strtolower($test->name) }}"
+                                                     data-test-code="{{ strtolower($test->code ?? '') }}"
+                                                     data-category="{{ $testCat }}"
+                                                     data-id="{{ $test->id }}">
+                                                    <label for="nicu_inline_test_{{ $test->id }}" 
+                                                           class="doc-lab-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
+                                                           style="cursor: pointer; transition: all 0.15s ease;">
+                                                        <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+                                                            <input class="form-check-input doc-lab-chk flex-shrink-0 m-0" 
+                                                                   type="checkbox" 
+                                                                   name="tests[]" 
+                                                                   value="{{ $test->name }}" 
+                                                                   id="nicu_inline_test_{{ $test->id }}" 
+                                                                   data-test-id="{{ $test->id }}"
+                                                                   data-test-name="{{ $test->name }}"
+                                                                   data-test-code="{{ $test->code ?? '' }}"
+                                                                   data-test-category="{{ $testCat }}"
+                                                                   data-test-price="{{ (float)$test->price }}"
+                                                                   style="cursor: pointer; width: 1.1em; height: 1.1em;">
+                                                            <div class="text-truncate">
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $test->name }}">{{ $test->name }}</span>
+                                                                </div>
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    @if($test->code)
+                                                                        <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $test->code }}</span>
+                                                                    @endif
+                                                                    <span class="text-muted" style="font-size: 0.68rem;">{{ Str::limit($testCat, 20) }}</span>
+                                                                    <span class="badge bg-light text-primary border px-1 py-0" style="font-size: 0.68rem;">{{ number_format((float)$test->price) }} د.ع</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <span class="doc-lab-check-icon text-primary ms-1 d-none">
+                                                            <i class="fas fa-check-circle"></i>
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <button type="submit" id="btnSubmitNicuLabBottom" class="btn btn-primary w-100 fw-bold shadow-sm py-2">
+                                            <i class="fas fa-paper-plane me-1"></i> إرسال طلب التحاليل للمختبر (<span class="doc-lab-selected-count">0</span>)
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
 
                         <!-- سجل ومتابعة طلبات المختبر والتحاليل بنمط محطة الطبيب -->
-                        <div class="col-lg-7">
+                        <div class="col-xl-6 col-lg-12">
                             @php
                                 $labRequests = $reservation->medicalRequests->where('type', 'lab')->sortByDesc('id');
                                 $legacyLabOrders = $reservation->medicalOrders->where('order_type', 'lab')->filter(function($o) {
@@ -1208,6 +1609,33 @@
                                                 </div>
                                             @endif
 
+                                            <!-- مرفقات وتقارير أجهزة الفحص المخبري -->
+                                            @if(!empty($reqDetails['attachment']) || !empty($reqDetails['test_attachments']))
+                                                <div class="mt-2 p-2 bg-light rounded border">
+                                                    <strong class="small text-dark d-block mb-1"><i class="fas fa-paperclip me-1 text-primary"></i> المرفقات وتقارير الأجهزة المخبرية:</strong>
+                                                    @if(!empty($reqDetails['attachment']))
+                                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                                            <i class="fas fa-file-pdf text-danger"></i>
+                                                            <span class="small fw-semibold">{{ $reqDetails['attachment_name'] ?? basename($reqDetails['attachment']) }}</span>
+                                                            <a href="{{ asset('storage/' . $reqDetails['attachment']) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 11px;">
+                                                                <i class="fas fa-eye me-1"></i> معاينة المرفق
+                                                            </a>
+                                                        </div>
+                                                    @endif
+                                                    @if(!empty($reqDetails['test_attachments']) && is_array($reqDetails['test_attachments']))
+                                                        @foreach($reqDetails['test_attachments'] as $tName => $tAtt)
+                                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                                <i class="fas fa-image text-info"></i>
+                                                                <span class="small">{{ $tAtt['name'] ?? basename($tAtt['path']) }}</span>
+                                                                <a href="{{ asset('storage/' . $tAtt['path']) }}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 11px;">
+                                                                    <i class="fas fa-eye me-1"></i> معاينة المرفق
+                                                                </a>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
+                                                </div>
+                                            @endif
+
                                             <!-- شريط الإجراءات والطباعة الرسمية -->
                                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top flex-wrap gap-2">
                                                 <div>
@@ -1291,114 +1719,286 @@
                 <!-- تبويب 5: الفحوصات الشعاعية والتصوير والسونار (Radiology Workstation) -->
                 <div class="tab-pane fade" id="radiologyPane">
                     <div class="row g-4">
-                        <!-- عمود تقديم طلب الأشعة والسونار -->
-                        <div class="col-lg-5">
+                        <!-- عمود تقديم طلب الأشعة والسونار بنمط الطبيب الاستشاري -->
+                        <div class="col-xl-6 col-lg-12">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
-                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-info text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                            <i class="fas fa-x-ray"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-bold text-info mb-0">طلب فحص شعاعي / سونار</h6>
-                                            <small class="text-muted" style="font-size: 11px;">أشعة نقالة بالحاضنة، سونار دماغ، إيكو قلب...</small>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-info text-white rounded-pill px-2 py-1">قسم الأشعة</span>
-                                </div>
-
                                 <form action="{{ route('nicu.radiology-orders.store', $reservation) }}" method="POST" id="nicuRadOrderForm">
                                     @csrf
 
-                                    <!-- فحوصات التصوير الشائعة لحديثي الولادة -->
-                                    <div class="mb-3 p-2 bg-white rounded-3 border">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <span class="small fw-bold text-dark">
-                                                <i class="fas fa-bolt text-warning me-1"></i> تصوير الخدج الشائع (نقرة واحدة للإدراج):
+                                    <!-- رأس محطة طلب الأشعة (مطابق للاستشاري) -->
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-info-subtle text-info p-2 rounded-circle fs-6">
+                                                <i class="fas fa-x-ray"></i>
                                             </span>
+                                            <div>
+                                                <h5 class="mb-0 fw-bold text-info">طلب فحوصات الأشعة والتصوير</h5>
+                                                <small class="text-muted">ابحث واضغط Enter أو اختر من الأقسام والتصنيفات (أشعة، سونار، رنين، مفراس)</small>
+                                            </div>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Portable Chest X-Ray (Incubator)"]'>
-                                                <i class="fas fa-lungs me-1"></i> أشعة صدر نقالة
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Cranial Ultrasound (Neurosonogram)"]'>
-                                                <i class="fas fa-brain me-1"></i> سونار الدماغ واليافوخ
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Pediatric Echocardiogram (PDA Screen)"]'>
-                                                <i class="fas fa-heart me-1"></i> إيكو قلب أطفال
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 nicu-quick-rad-pkg text-dark" data-types='["Portable Abdominal X-Ray (NEC Evaluation)"]'>
-                                                <i class="fas fa-circle-notch me-1"></i> أشعة بطن نقالة
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 nicu-quick-rad-pkg" data-types='["Babygram (Whole Body X-Ray)"]'>
-                                                <i class="fas fa-child me-1"></i> تصوير كامل (Babygram)
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button type="submit" id="btnSubmitNicuRadTop" class="btn btn-info text-white btn-sm px-3 shadow-sm fw-bold">
+                                                <i class="fas fa-paper-plane me-1"></i> إرسال الطلب (<span class="doc-rad-selected-count">0</span>)
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- مربع البحث التفاعلي الفوري عن الفحص الشعاعي -->
+                                    <!-- 1. شريط فحوصات التصوير الشائعة لحديثي الولادة -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <span class="small fw-bold text-dark">
+                                                <i class="fas fa-bolt text-warning me-1"></i> تصوير الخدج الشائع (نقرة واحدة للإضافة):
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 doc-rad-quick-pkg-btn"
+                                                    data-type-names='["Portable Chest X-Ray (Incubator)", "Chest X-Ray", "أشعة صدر"]'>
+                                                <i class="fas fa-lungs me-1 opacity-75"></i>
+                                                <strong>أشعة صدر نقالة بالحاضنة</strong>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 doc-rad-quick-pkg-btn"
+                                                    data-type-names='["Cranial Ultrasound (Neurosonogram)", "Brain Ultrasound", "سونار الدماغ واليافوخ"]'>
+                                                <i class="fas fa-brain me-1 opacity-75"></i>
+                                                <strong>سونار الدماغ واليافوخ</strong>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 doc-rad-quick-pkg-btn"
+                                                    data-type-names='["Pediatric Echocardiogram (PDA Screen)", "Echocardiogram", "إيكو قلب"]'>
+                                                <i class="fas fa-heart me-1 opacity-75"></i>
+                                                <strong>إيكو قلب أطفال وتفقد PDA</strong>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 doc-rad-quick-pkg-btn text-dark"
+                                                    data-type-names='["Portable Abdominal X-Ray (NEC Evaluation)", "Abdominal X-Ray", "أشعة بطن"]'>
+                                                <i class="fas fa-circle-notch me-1 opacity-75"></i>
+                                                <strong>أشعة بطن نقالة (NEC)</strong>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-rad-quick-pkg-btn"
+                                                    data-type-names='["Babygram (Whole Body X-Ray)", "Babygram", "تصوير كامل"]'>
+                                                <i class="fas fa-child me-1 opacity-75"></i>
+                                                <strong>تصوير كامل Babygram</strong>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. حقل البحث الذكي بنمط الفلترة الفورية المباشرة -->
                                     <div class="mb-3 position-relative">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-search text-info me-1"></i> ابحث عن نوع الفحص الشعاعي:
-                                        </label>
-                                        <div class="input-group input-group-sm shadow-xs">
-                                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                            <input type="text" id="nicuRadSearchInput" class="form-control" placeholder="اكتب اسم الفحص (مثل: Chest, Brain, Echo, Abdomen...) واضغط Enter..." autocomplete="off">
-                                            <button type="button" class="btn btn-outline-secondary" id="nicuRadClearInputBtn" title="مسح">
+                                        <div class="input-group shadow-sm">
+                                            <span class="input-group-text bg-info text-white">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   id="docRadSearchInput" 
+                                                   class="form-control form-control-lg fs-6" 
+                                                   placeholder="ابحث عن فحص الأشعة أو السونار لتصفية القائمة فوراً..."
+                                                   autocomplete="off">
+                                            <button type="button" class="btn btn-outline-secondary d-none" id="docRadClearSearchBtn" title="مسح البحث">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
-                                        <div id="nicuRadAutocompleteMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="max-height: 220px; overflow-y: auto; display: none; z-index: 1060;"></div>
                                     </div>
 
-                                    <!-- صينية الفحوصات الشعاعية المختارة (Chips Tray) -->
-                                    <div id="nicuRadSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                    <!-- 3. صينية الفحوصات المختارة حالياً (Selected Chips Tray) -->
+                                    <div id="docRadSelectedTray" class="mb-3 p-3 bg-white rounded-3 border d-none">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="small fw-bold text-info">
-                                                <i class="fas fa-check-circle me-1"></i> الفحوصات المختارة (<span id="nicuRadSelectedCount">0</span>):
+                                                <i class="fas fa-check-circle me-1"></i> الفحوصات المختارة للإرسال (<span class="doc-rad-selected-count">0</span>):
                                             </span>
-                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="nicuRadClearAllBtn">
+                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="docRadClearAllBtn">
                                                 <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
                                             </button>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-2" id="nicuRadChipsContainer"></div>
+                                        <div class="d-flex flex-wrap gap-2" id="docRadChipsContainer"></div>
                                     </div>
 
-                                    <!-- الأولوية ودواعي الفحص -->
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">الأولوية والسرعة المطلوبة:</label>
-                                            <div class="d-flex gap-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="radPriNormal" value="normal">
-                                                    <label class="form-check-label small" for="radPriNormal">عادي (Normal)</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="radPriUrgent" value="urgent" checked>
-                                                    <label class="form-check-label small text-warning fw-bold" for="radPriUrgent">عاجل (Urgent)</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="priority" id="radPriStat" value="stat">
-                                                    <label class="form-check-label small text-danger fw-bold" for="radPriStat">🚨 فوري طارئ (STAT)</label>
-                                                </div>
+                                    <!-- 3.5 حقل ملاحظات وتوجيهات الطبيب لقسم الأشعة -->
+                                    <div class="mb-3 p-2 bg-light bg-opacity-75 rounded-3 border border-info-subtle">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label for="docRadDoctorNotes" class="form-label small fw-bold text-dark mb-0">
+                                                <i class="fas fa-comment-medical text-info me-1"></i> ملاحظات وتوجيهات الطبيب لقسم الأشعة:
+                                            </label>
+                                            <span class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>تظهر مباشرة لفني الأشعة في شاشة الفحص وطابور العمل</span>
+                                        </div>
+                                        <textarea class="form-control form-control-sm bg-white" 
+                                                  id="docRadDoctorNotes" 
+                                                  name="doctor_notes" 
+                                                  rows="2" 
+                                                  placeholder="اكتب التوجيه السريري أو سبب الفحص (مثل: أشعة نقالة داخل الحاضنة، تفقد أنبوب التنفس ETT، الشك بـ NEC، إلخ)..." 
+                                                  style="resize: vertical;"></textarea>
+                                    </div>
+
+                                    <!-- الأولوية المطلوبة -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <label class="form-label small fw-bold text-dark mb-1">
+                                            <i class="fas fa-stopwatch me-1 text-warning"></i> أولوية وسرعة الفحص الشعاعي:
+                                        </label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="radPriNormal" value="normal">
+                                                <label class="form-check-label small" for="radPriNormal">عادي (Normal)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="radPriUrgent" value="urgent" checked>
+                                                <label class="form-check-label small text-warning fw-bold" for="radPriUrgent">عاجل (Urgent)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priority" id="radPriStat" value="stat">
+                                                <label class="form-check-label small text-danger fw-bold" for="radPriStat">🚨 فوري طارئ (STAT)</label>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">الدواعي السريرية وتوجيهات التصوير:</label>
-                                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="مثال: تصوير داخل الحاضنة بدون تحريك، تفقد موقع أنبوب الرغامي ETT...">
+                                    <!-- 4. تبويبات تصفية الأقسام والتصوير -->
+                                    @php
+                                        $radCatMap = [
+                                            'xray' => '🩻 أشعة سينية (X-Ray)',
+                                            'x-ray' => '🩻 أشعة سينية (X-Ray)',
+                                            'x_ray' => '🩻 أشعة سينية (X-Ray)',
+                                            'أشعة' => '🩻 أشعة سينية (X-Ray)',
+                                            'اشعة' => '🩻 أشعة سينية (X-Ray)',
+                                            'mri' => '🧲 رنين مغناطيسي (MRI)',
+                                            'رنين' => '🧲 رنين مغناطيسي (MRI)',
+                                            'رنين مغناطيسي' => '🧲 رنين مغناطيسي (MRI)',
+                                            'ct' => '🌀 مفراس حلزوني (CT Scan)',
+                                            'ct scan' => '🌀 مفراس حلزوني (CT Scan)',
+                                            'ct_scan' => '🌀 مفراس حلزوني (CT Scan)',
+                                            'مفراس' => '🌀 مفراس حلزوني (CT Scan)',
+                                            'ultrasound' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'u/s' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'us' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'سونار' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'doppler' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'دوبلر' => '🔊 السونار والدوبلر (Ultrasound & Doppler)',
+                                            'echo' => '❤️ إيكو قلب (Echo)',
+                                            'إيكو' => '❤️ إيكو قلب (Echo)',
+                                            'ايكو' => '❤️ إيكو قلب (Echo)',
+                                        ];
+
+                                        $radGrouped = $radiologyTypes->groupBy(function($r) use ($radCatMap) {
+                                            $rawCat = mb_strtolower(trim($r->main_category ?? ''));
+                                            $rawSub = mb_strtolower(trim($r->subcategory ?? ''));
+                                            $rawName = mb_strtolower(trim($r->name ?? ''));
+
+                                            if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
+                                                str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
+                                                str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
+                                                str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') || 
+                                                str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
+                                                return '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                            }
+
+                                            if (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
+                                                return '🧲 رنين مغناطيسي (MRI)';
+                                            }
+
+                                            if (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
+                                                return '🌀 مفراس حلزوني (CT Scan)';
+                                            }
+
+                                            if (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
+                                                return '❤️ إيكو قلب (Echo)';
+                                            }
+
+                                            return $radCatMap[$rawCat] ?? ($r->main_category ?: ($r->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
+                                        });
+                                    @endphp
+
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3 border-bottom">
+                                        <div class="d-flex align-items-center gap-1 overflow-x-auto" id="docRadCategoryPills" style="white-space: nowrap;">
+                                            <button type="button" class="btn btn-sm btn-info text-white rounded-pill px-3 py-1 doc-rad-cat-pill active" data-category="ALL">
+                                                الكل <span class="badge bg-white text-info ms-1">{{ $radiologyTypes->count() }}</span>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 doc-rad-cat-pill" data-category="SELECTED_ONLY" id="docRadFilterSelectedBtn">
+                                                <i class="fas fa-check-circle me-1"></i> المختارة فقط <span class="badge bg-success-subtle text-success ms-1 doc-rad-selected-count">0</span>
+                                            </button>
+                                            @foreach($radGrouped as $category => $types)
+                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 doc-rad-cat-pill" data-category="{{ $category }}">
+                                                    {{ $category }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $types->count() }}</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
                                     </div>
 
-                                    <button type="submit" id="btnSubmitNicuRad" class="btn btn-info text-white w-100 fw-bold shadow-sm">
-                                        <i class="fas fa-paper-plane me-1"></i> إرسال طلب الأشعة لقسم التصوير
-                                    </button>
+                                    <!-- 5. شبكة بطاقات فحوصات الأشعة (Compact Grid) -->
+                                    <div id="docRadTestsGridContainer" style="max-height: 420px; overflow-y: auto; padding-right: 4px;">
+                                        <div class="row g-2" id="docRadItemsGrid">
+                                            <div id="docRadNoFilterResults" class="col-12 text-center py-4 text-muted d-none">
+                                                <i class="fas fa-filter fa-2x mb-2 text-secondary opacity-50"></i>
+                                                <p class="mb-0 fw-semibold">لا توجد فحوصات مطابقة للفلتر المحدد.</p>
+                                            </div>
+                                            @foreach($radiologyTypes as $type)
+                                                @php
+                                                    $rawCat = mb_strtolower(trim($type->main_category ?? ''));
+                                                    $rawSub = mb_strtolower(trim($type->subcategory ?? ''));
+                                                    $rawName = mb_strtolower(trim($type->name ?? ''));
+
+                                                    if (str_contains($rawCat, 'سونار') || str_contains($rawSub, 'سونار') || str_contains($rawName, 'سونار') || 
+                                                        str_contains($rawCat, 'ultrasound') || str_contains($rawName, 'ultrasound') || 
+                                                        str_contains($rawCat, 'doppler') || str_contains($rawName, 'doppler') || 
+                                                        str_contains($rawCat, 'دوبلر') || str_contains($rawName, 'دوبلر') || 
+                                                        str_contains($rawName, 'u/s') || str_contains($rawName, 'sonar')) {
+                                                        $radCat = '🔊 السونار والدوبلر (Ultrasound & Doppler)';
+                                                    } elseif (str_contains($rawCat, 'رنين') || str_contains($rawSub, 'رنين') || str_contains($rawName, 'رنين') || str_contains($rawCat, 'mri') || str_contains($rawName, 'mri')) {
+                                                        $radCat = '🧲 رنين مغناطيسي (MRI)';
+                                                    } elseif (str_contains($rawCat, 'مفراس') || str_contains($rawSub, 'مفراس') || str_contains($rawName, 'مفراس') || str_contains($rawCat, 'ct') || str_contains($rawName, 'ct')) {
+                                                        $radCat = '🌀 مفراس حلزوني (CT Scan)';
+                                                    } elseif (str_contains($rawCat, 'إيكو') || str_contains($rawSub, 'إيكو') || str_contains($rawName, 'إيكو') || str_contains($rawCat, 'echo') || str_contains($rawName, 'echo')) {
+                                                        $radCat = '❤️ إيكو قلب (Echo)';
+                                                    } else {
+                                                        $radCat = $radCatMap[$rawCat] ?? ($type->main_category ?: ($type->subcategory ?: '🩻 أشعة سينية (X-Ray)'));
+                                                    }
+                                                @endphp
+                                                <div class="col-md-6 col-12 doc-rad-col" 
+                                                     data-type-name="{{ strtolower($type->name) }}"
+                                                     data-type-code="{{ strtolower($type->code ?? '') }}"
+                                                     data-category="{{ $radCat }}"
+                                                     data-id="{{ $type->id }}">
+                                                    <label for="nicu_inline_rad_{{ $type->id }}" 
+                                                           class="doc-rad-card p-2 rounded-3 border bg-white d-flex align-items-center justify-content-between h-100 mb-0 w-100 user-select-none" 
+                                                           style="cursor: pointer; transition: all 0.15s ease;">
+                                                        <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+                                                            <input class="form-check-input doc-rad-chk flex-shrink-0 m-0" 
+                                                                   type="checkbox" 
+                                                                   name="radiology_types[]" 
+                                                                   value="{{ $type->name }}" 
+                                                                   id="nicu_inline_rad_{{ $type->id }}" 
+                                                                   data-type-id="{{ $type->id }}"
+                                                                   data-type-name="{{ $type->name }}"
+                                                                   data-type-code="{{ $type->code ?? '' }}"
+                                                                   data-type-category="{{ $radCat }}"
+                                                                   data-type-price="{{ (float)$type->price }}"
+                                                                   style="cursor: pointer; width: 1.1em; height: 1.1em;">
+                                                            <div class="text-truncate">
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    <span class="fw-semibold text-dark small text-truncate d-block" title="{{ $type->name }}">{{ $type->name }}</span>
+                                                                </div>
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    @if($type->code)
+                                                                        <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.68rem;">{{ $type->code }}</span>
+                                                                    @endif
+                                                                    <span class="text-muted" style="font-size: 0.68rem;">{{ Str::limit($radCat, 20) }}</span>
+                                                                    <span class="badge bg-light text-info border px-1 py-0" style="font-size: 0.68rem;">{{ number_format((float)$type->price) }} د.ع</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <span class="doc-rad-check-icon text-info ms-1 d-none">
+                                                            <i class="fas fa-check-circle"></i>
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <button type="submit" id="btnSubmitNicuRadBottom" class="btn btn-info text-white w-100 fw-bold shadow-sm py-2">
+                                            <i class="fas fa-paper-plane me-1"></i> إرسال طلب الفحوصات الشعاعية (<span class="doc-rad-selected-count">0</span>)
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
 
                         <!-- عمود عرض ومتابعة تقارير الأشعة والسونار بنمط محطة الطبيب -->
-                        <div class="col-lg-7">
+                        <div class="col-xl-6 col-lg-12">
                             @php
                                 $radRequests = $reservation->medicalRequests->where('type', 'radiology')->sortByDesc('id');
                                 $legacyRadOrders = $reservation->medicalOrders->where('order_type', 'radiology')->filter(function($o) {
@@ -1931,6 +2531,11 @@
                                             <i class="fas fa-pills me-1"></i> جدول علاج دوائي
                                         </button>
                                     </li>
+                                    <li class="nav-item">
+                                        <button class="nav-link btn-sm fw-bold py-1" id="pill-doctor-note-tab" data-bs-toggle="pill" data-bs-target="#pill-doctor-note" type="button">
+                                            <i class="fas fa-user-md me-1 text-danger"></i> ملاحظة الاختصاص
+                                        </button>
+                                    </li>
                                 </ul>
 
                                 <div class="tab-content" id="scheduleTypeContent">
@@ -2063,12 +2668,99 @@
                                             </button>
                                         </form>
                                     </div>
+
+                                    <!-- نموذج ملاحظة وتوجيهات الطبيب الاختصاص -->
+                                    <div class="tab-pane fade" id="pill-doctor-note">
+                                        <form action="{{ route('nicu.doctor-notes.store', $reservation) }}" method="POST">
+                                            @csrf
+                                            <div class="alert alert-danger py-2 px-3 small mb-3 border-0 bg-danger bg-opacity-10 text-danger" style="font-size: 11px;">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                <strong>توجيهات الطبيب الاختصاص:</strong> يتم توثيق الملاحظة باسمك مع تاريخ وتوقيت فوري، وتثبيتها كأمر عاجل في رأس ملف الحاضنة.
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-dark">
+                                                    <i class="fas fa-comment-medical text-danger me-1"></i> نص الملاحظة والتوجيه السريري: <span class="text-danger">*</span>
+                                                </label>
+                                                <textarea name="content" rows="4" class="form-control form-control-sm" placeholder="اكتب ملاحظتك السريرية أو الأوامر التمريضية المشددة هنا..." required></textarea>
+                                            </div>
+
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="is_urgent" id="chkUrgentNote" value="1" checked>
+                                                        <label class="form-check-label small fw-bold text-danger" for="chkUrgentNote">
+                                                            <i class="fas fa-bolt me-1"></i> أمر عاجل جداً (Urgent)
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="is_pinned" id="chkPinnedNote" value="1" checked>
+                                                        <label class="form-check-label small fw-bold text-dark" for="chkPinnedNote">
+                                                            <i class="fas fa-thumbtack me-1 text-warning"></i> تثبيت في رأس الملف
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold shadow-sm">
+                                                <i class="fas fa-save me-1"></i> حفظ وتعميم ملاحظة الاختصاص
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- جدول وقائمة التوصيات وجداول الرعاية الحالية -->
                         <div class="col-lg-7">
+                            <!-- قسم ملاحظات الطبيب الاختصاص السريرية -->
+                            <div class="card border-0 bg-white shadow-xs rounded-3 p-3 mb-3 border border-danger-subtle">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">
+                                        <i class="fas fa-user-md text-danger me-1"></i>
+                                        ملاحظات وتوجيهات الطبيب الاختصاص السريرية
+                                    </h6>
+                                    <span class="badge bg-danger text-white rounded-pill">{{ $reservation->doctorNotes->count() }} ملاحظة</span>
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    @forelse($reservation->doctorNotes as $dNote)
+                                        <div class="p-2.5 rounded-3 bg-light border d-flex justify-content-between align-items-start gap-2">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center gap-1 mb-1">
+                                                    <strong class="text-dark small">{{ optional($dNote->doctor)->name ?? 'طبيب اختصاص' }}</strong>
+                                                    <span class="text-muted" style="font-size: 10px;">• {{ $dNote->created_at->format('Y-m-d H:i') }}</span>
+                                                    @if($dNote->is_urgent)
+                                                        <span class="badge bg-danger text-white" style="font-size: 10px;">عاجل</span>
+                                                    @endif
+                                                    @if($dNote->is_pinned)
+                                                        <span class="badge bg-warning text-dark" style="font-size: 10px;"><i class="fas fa-thumbtack me-1"></i>مثبت</span>
+                                                    @endif
+                                                </div>
+                                                <p class="text-dark small mb-0">{{ $dNote->content }}</p>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <form action="{{ route('nicu.doctor-notes.toggle-pin', $dNote) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5" title="{{ $dNote->is_pinned ? 'إلغاء التثبيت' : 'تثبيت في رأس الملف' }}" style="font-size: 10px;">
+                                                        <i class="fas fa-thumbtack {{ $dNote->is_pinned ? 'text-danger' : 'text-muted' }}"></i>
+                                                    </button>
+                                                </form>
+                                                <form action="{{ route('nicu.doctor-notes.destroy', $dNote) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه الملاحظة؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-xs btn-outline-danger py-0.5 px-1.5" title="حذف" style="font-size: 10px;">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted small mb-0 text-center py-2">لا توجد ملاحظات اختصاص مسجلة حتى الآن.</p>
+                                    @endforelse
+                                </div>
+                            </div>
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h6 class="fw-bold text-dark mb-0">
                                     <i class="fas fa-tasks text-primary me-1"></i>
@@ -2181,6 +2873,181 @@
                     </div>
                 </div>
 
+                <!-- تبويب الأرشيف والمرفقات الطبية للطفل (NICU Patient Attachments) -->
+                <div class="tab-pane fade" id="attachmentsPane">
+                    <div class="row g-4">
+                        <!-- نموذج رفع مستند جديد -->
+                        <div class="col-lg-4">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs mb-3">
+                                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-file-upload"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">أرشفة ورفع مستند جديد</h6>
+                                            <small class="text-muted" style="font-size: 11px;">إرفاق مستندات، تقارير، وصور للسجل الطبي</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary text-white small">أرشيف</span>
+                                </div>
+
+                                <div class="alert alert-info py-2 px-3 small mb-3 border-0 bg-info bg-opacity-10 text-info-emphasis" style="font-size: 11px;">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    يتم حفظ المرفق في الإضبارة الطبية الدائمة للطفل، ويكون متاحاً للمعاينة والتحميل في أي وقت.
+                                </div>
+
+                                <form action="{{ route('nicu.attachments.store', $reservation) }}" method="POST" enctype="multipart/form-data">
+                                    @csrf
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-tag text-primary me-1"></i> اسم أو وصف المستند المرفق: <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" name="title" class="form-control form-control-sm" placeholder="مثلاً: بيان الولادة، إحالة طبية، تخطيط قلب، تعهد الأب..." required>
+                                        <small class="text-muted" style="font-size: 10px;">اكتب اسماً واضحاً يسهل التعرف عليه لاحقاً</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-paperclip text-primary me-1"></i> اختيار الملف: <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp" required>
+                                        <small class="text-muted" style="font-size: 10px;">الملفات المسموحة: PDF، صور JPG/PNG (الحد الأقصى 20 ميجابايت)</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-dark">ملاحظات توضيحية (اختياري):</label>
+                                        <textarea name="notes" rows="2" class="form-control form-control-sm" placeholder="أي تفاصيل أو ملاحظات حول هذا المستند..."></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm">
+                                        <i class="fas fa-cloud-upload-alt me-1"></i> رفع وأرشفة المستند الآن
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- جدول وقائمة المستندات والمرفقات المؤرشفة -->
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-folder-open text-primary me-1"></i>
+                                    أرشيف مستندات وملفات الطفل الخديج
+                                </h6>
+                                <span class="badge bg-light text-primary border">
+                                    إجمالي المستندات: {{ $reservation->attachments->count() }}
+                                </span>
+                            </div>
+
+                            @forelse($reservation->attachments as $att)
+                                @php
+                                    $isPdf = $att->isPdf();
+                                    $isImg = $att->isImage();
+                                    $attUrl = asset('storage/' . $att->file_path);
+                                @endphp
+                                <div class="card mb-3 border-0 shadow-xs">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <div class="p-2.5 rounded-3 {{ $isPdf ? 'bg-danger bg-opacity-10 text-danger' : ($isImg ? 'bg-info bg-opacity-10 text-info' : 'bg-primary bg-opacity-10 text-primary') }} d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                    @if($isPdf)
+                                                        <i class="fas fa-file-pdf fa-2x"></i>
+                                                    @elseif($isImg)
+                                                        <i class="fas fa-file-image fa-2x"></i>
+                                                    @else
+                                                        <i class="fas fa-file fa-2x"></i>
+                                                    @endif
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-1">{{ $att->title }}</h6>
+                                                    <div class="d-flex align-items-center gap-2 small text-muted mb-1" style="font-size: 11px;">
+                                                        <span class="font-monospace text-secondary"><i class="fas fa-paperclip me-1"></i>{{ $att->file_name }}</span>
+                                                        <span>•</span>
+                                                        <span>{{ $att->formattedSize() }}</span>
+                                                        <span>•</span>
+                                                        <span><i class="fas fa-clock me-1"></i>{{ $att->created_at->format('Y-m-d H:i') }}</span>
+                                                        <span>•</span>
+                                                        <span><i class="fas fa-user me-1"></i>{{ optional($att->uploader)->name ?? 'مستخدم' }}</span>
+                                                    </div>
+                                                    @if($att->notes)
+                                                        <p class="small text-muted mb-0 bg-light p-1.5 px-2 rounded">{{ $att->notes }}</p>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                                <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5" data-bs-toggle="modal" data-bs-target="#previewAttModal{{ $att->id }}" title="معاينة المستند">
+                                                    <i class="fas fa-eye me-1"></i> معاينة
+                                                </button>
+                                                <a href="{{ route('nicu.attachments.download', $att) }}" class="btn btn-sm btn-outline-success py-1 px-2.5" title="تحميل الملف">
+                                                    <i class="fas fa-download me-1"></i> تحميل
+                                                </a>
+                                                <form action="{{ route('nicu.attachments.destroy', $att) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المستند المرفق نهائياً؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="حذف">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal معاينة المستند -->
+                                <div class="modal fade" id="previewAttModal{{ $att->id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                                        <div class="modal-content" style="border-radius: 12px;">
+                                            <div class="modal-header py-2.5 bg-light">
+                                                <h6 class="modal-title fw-bold text-dark">
+                                                    <i class="fas {{ $isPdf ? 'fa-file-pdf text-danger' : 'fa-file-image text-info' }} me-2"></i>
+                                                    معاينة: {{ $att->title }}
+                                                </h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body p-2 text-center bg-dark bg-opacity-10" style="min-height: 480px;">
+                                                @if($isPdf)
+                                                    <iframe src="{{ $attUrl }}" style="width: 100%; height: 600px; border: none; border-radius: 8px;"></iframe>
+                                                @elseif($isImg)
+                                                    <img src="{{ $attUrl }}" alt="{{ $att->title }}" class="img-fluid rounded shadow-sm" style="max-height: 600px;">
+                                                @else
+                                                    <div class="py-5 text-muted">
+                                                        <i class="fas fa-file-download fa-4x mb-3 text-secondary"></i>
+                                                        <h6>لا يمكن معاينة هذا النوع من الملفات مباشرة</h6>
+                                                        <a href="{{ route('nicu.attachments.download', $att) }}" class="btn btn-primary">
+                                                            <i class="fas fa-download me-1"></i> تحميل الملف
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="modal-footer py-2 justify-content-between">
+                                                <div class="small text-muted">
+                                                    {{ $att->file_name }} • {{ $att->formattedSize() }} • رُفِع بواسطة: {{ optional($att->uploader)->name ?? 'مستخدم' }}
+                                                </div>
+                                                <div>
+                                                    <a href="{{ $attUrl }}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
+                                                        <i class="fas fa-external-link-alt me-1"></i> فتح في علامة تبويب جديدة
+                                                    </a>
+                                                    <a href="{{ route('nicu.attachments.download', $att) }}" class="btn btn-sm btn-success me-1">
+                                                        <i class="fas fa-download me-1"></i> تحميل
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="card border-0 bg-light p-4 text-center text-muted rounded-3">
+                                    <i class="fas fa-folder-open fa-3x mb-2 text-secondary opacity-50"></i>
+                                    <h6>لا توجد مستندات أو ملفات مؤرشفة بعد لهذا الطفل الخديج</h6>
+                                    <p class="small mb-0">يمكنك رفع أي مستندات مثل بيان الولادة، الإحالات الطبية، التقارير الخارجية، أو التعهدات من النموذج المقابل.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -2228,7 +3095,126 @@
 </div>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+function normalizeText(text) {
+    if (!text) return '';
+    return String(text).toLowerCase().trim()
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي');
+}
+
+// ==================== رسم منحنى النمو وتتبع الوزن البياني للخدج (Chart.js) ====================
+let nicuGrowthChartInstance = null;
+
+function initNicuGrowthChart() {
+    const canvas = document.getElementById('nicuWeightGrowthChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    if (nicuGrowthChartInstance) {
+        nicuGrowthChartInstance.resize();
+        return;
+    }
+
+    const growthLabels = [
+        @if($initialWeight)
+            @json($reservation->start_date ? \Carbon\Carbon::parse($reservation->start_date)->format('m-d H:i') : 'الدخول'),
+        @endif
+        @foreach($weightVitals as $wv)
+            @json($wv->recorded_at->format('m-d H:i')),
+        @endforeach
+    ];
+
+    const recordedWeights = [
+        @if($initialWeight)
+            {{ (float)$initialWeight }},
+        @endif
+        @foreach($weightVitals as $wv)
+            {{ (float)$wv->weight }},
+        @endforeach
+    ];
+
+    const baselineWeights = [
+        @if($initialWeight)
+            {{ (float)$initialWeight }},
+        @endif
+        @foreach($weightVitals as $wv)
+            {{ (float)$initialWeight ?: 'null' }},
+        @endforeach
+    ];
+
+    const ctx = canvas.getContext('2d');
+    nicuGrowthChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: growthLabels.length > 0 ? growthLabels : ['لا توجد قراءات مسجلة بعد'],
+            datasets: [
+                {
+                    label: 'وزن الطفل الفعلي (جم)',
+                    data: recordedWeights.length > 0 ? recordedWeights : [0],
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#198754',
+                    pointHoverRadius: 8
+                },
+                {
+                    label: 'خط الأساس لوزن الدخول (Baseline)',
+                    data: baselineWeights.length > 0 ? baselineWeights : [0],
+                    borderColor: '#f59e0b',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { family: 'inherit', size: 12, weight: 'bold' }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + Number(context.parsed.y).toLocaleString() + ' جم';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    title: {
+                        display: true,
+                        text: 'الوزن (جرام)',
+                        font: { family: 'inherit', weight: 'bold' }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return Number(value).toLocaleString() + ' جم';
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'تاريخ وتوقيت القياس',
+                        font: { family: 'inherit', weight: 'bold' }
+                    }
+                }
+            }
+        }
+    });
+}
 const internalDoctors = [
     @foreach($doctors as $doc)
     {
@@ -2409,303 +3395,785 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==================== 1. مختبر الخدج (Lab Workstation) ====================
-    const nicuLabTests = [
-        @foreach($labTests as $t)
-        { id: {{ $t->id }}, name: @json($t->name), code: @json($t->code ?? ''), price: {{ (float)($t->price ?? 0) }} },
-        @endforeach
-    ];
+    // ==================== 1. مختبر الخدج بنمط الطبيب الاستشاري ====================
+    function setupFastDoctorLabSelection() {
+        const searchInput = document.getElementById('docLabSearchInput');
+        const clearSearchBtn = document.getElementById('docLabClearSearchBtn');
+        const searchDropdown = document.getElementById('docLabAutocompleteMenu');
+        const categoryPills = document.querySelectorAll('.doc-cat-pill');
+        const labCols = Array.from(document.querySelectorAll('.doc-lab-col'));
+        const labCheckboxes = Array.from(document.querySelectorAll('.doc-lab-chk'));
+        const selectedTray = document.getElementById('docLabSelectedTray');
+        const selectedChipsContainer = document.getElementById('docLabChipsContainer');
+        const countBadges = document.querySelectorAll('.doc-lab-selected-count');
+        const clearAllBtn = document.getElementById('docLabClearAllBtn');
+        const pkgBtns = document.querySelectorAll('.doc-lab-quick-pkg-btn');
+        const labForm = document.getElementById('nicuLabOrderForm');
 
-    const selectedLabTests = new Set();
-    const labInput = document.getElementById('nicuLabSearchInput');
-    const labMenu = document.getElementById('nicuLabAutocompleteMenu');
-    const labTray = document.getElementById('nicuLabSelectedTray');
-    const labChips = document.getElementById('nicuLabChipsContainer');
-    const labCountSpan = document.getElementById('nicuLabSelectedCount');
-    const labClearAllBtn = document.getElementById('nicuLabClearAllBtn');
-    const labClearInputBtn = document.getElementById('nicuLabClearInputBtn');
+        if (!labForm) return;
 
-    function updateLabChipsUI() {
-        if (!labTray || !labCountSpan) return;
-        labCountSpan.textContent = selectedLabTests.size;
-        if (selectedLabTests.size > 0) {
-            labTray.classList.remove('d-none');
-        } else {
-            labTray.classList.add('d-none');
-        }
-    }
+        let activeCategory = 'ALL';
+        let activePackageTestIds = null;
+        let activePackageNames = null;
+        let activePackageBtn = null;
+        const customTests = new Set();
 
-    function addLabTest(testName, price = 0) {
-        const cleanName = (testName || '').trim();
-        if (!cleanName || selectedLabTests.has(cleanName)) return;
-        selectedLabTests.add(cleanName);
-
-        const chip = document.createElement('span');
-        chip.className = 'badge bg-light text-primary border p-2 d-inline-flex align-items-center gap-1 rounded-pill shadow-xs';
-        chip.setAttribute('data-test-name', cleanName);
-        chip.innerHTML = `
-            <i class="fas fa-vial me-1"></i>
-            <span>${cleanName}</span>
-            <input type="hidden" name="tests[]" value="${cleanName}">
-            <button type="button" class="btn-close ms-1" style="font-size: 8px;" title="إزالة"></button>
-        `;
-        chip.querySelector('.btn-close').addEventListener('click', function() {
-            removeLabTest(cleanName);
-        });
-        if (labChips) labChips.appendChild(chip);
-        updateLabChipsUI();
-    }
-
-    function removeLabTest(testName) {
-        selectedLabTests.delete(testName);
-        if (labChips) {
-            const chip = labChips.querySelector(`[data-test-name="${CSS.escape(testName)}"]`);
-            if (chip) chip.remove();
-        }
-        updateLabChipsUI();
-    }
-
-    function clearAllLabTests() {
-        selectedLabTests.clear();
-        if (labChips) labChips.innerHTML = '';
-        updateLabChipsUI();
-    }
-
-    if (labClearAllBtn) {
-        labClearAllBtn.addEventListener('click', clearAllLabTests);
-    }
-
-    if (labClearInputBtn) {
-        labClearInputBtn.addEventListener('click', function() {
-            if (labInput) {
-                labInput.value = '';
-                labInput.focus();
+        function updateCardVisual(chk) {
+            const card = chk.closest('.doc-lab-card');
+            if (!card) return;
+            const icon = card.querySelector('.doc-lab-check-icon');
+            if (chk.checked) {
+                card.classList.add('border-primary', 'bg-primary-subtle');
+                card.classList.remove('bg-white');
+                if (icon) icon.classList.remove('d-none');
+            } else {
+                card.classList.remove('border-primary', 'bg-primary-subtle');
+                card.classList.add('bg-white');
+                if (icon) icon.classList.add('d-none');
             }
-            if (labMenu) labMenu.style.display = 'none';
-        });
-    }
+        }
 
-    // أزرار باقات الخدج السريعة
-    document.querySelectorAll('.nicu-quick-lab-pkg').forEach(btn => {
-        btn.addEventListener('click', function() {
-            try {
-                const tests = JSON.parse(this.getAttribute('data-tests') || '[]');
-                tests.forEach(t => addLabTest(t));
-            } catch(e) {
-                console.error('Error parsing tests:', e);
-            }
-        });
-    });
+        function renderSelectedChips() {
+            const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
+            const totalCount = checkedBoxes.length + customTests.size;
 
-    if (labInput) {
-        labInput.addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
-            if (!query) {
-                if (labMenu) labMenu.style.display = 'none';
+            countBadges.forEach(b => b.textContent = totalCount);
+
+            if (totalCount === 0) {
+                if (selectedTray) selectedTray.classList.add('d-none');
+                if (selectedChipsContainer) selectedChipsContainer.innerHTML = '';
                 return;
             }
-            const matches = nicuLabTests.filter(t => 
-                (t.name && t.name.toLowerCase().includes(query)) || 
-                (t.code && t.code.toLowerCase().includes(query))
-            ).slice(0, 15);
 
-            if (!labMenu) return;
-            labMenu.innerHTML = '';
+            if (selectedTray) selectedTray.classList.remove('d-none');
+            if (selectedChipsContainer) {
+                selectedChipsContainer.innerHTML = '';
+
+                // البطاقات المفحوصة من الكتالوج
+                checkedBoxes.forEach(chk => {
+                    const name = chk.getAttribute('data-test-name') || chk.value;
+                    const code = chk.getAttribute('data-test-code') || '';
+
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-white text-dark border p-1 px-2 d-inline-flex align-items-center gap-1 shadow-xs';
+                    chip.style.fontSize = '0.8rem';
+                    chip.innerHTML = `
+                        <i class="fas fa-vial text-primary me-1"></i>
+                        <span class="fw-semibold text-primary">${name}</span>
+                        ${code ? `<span class="text-muted small">(${code})</span>` : ''}
+                        <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.55rem;" aria-label="إزالة"></button>
+                    `;
+
+                    chip.querySelector('.btn-close').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        chk.checked = false;
+                        updateCardVisual(chk);
+                        renderSelectedChips();
+                        filterGrid();
+                    });
+
+                    selectedChipsContainer.appendChild(chip);
+                });
+
+                // التحاليل المخصصة المضافة يدوياً
+                customTests.forEach(testName => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-white text-dark border border-primary p-1 px-2 d-inline-flex align-items-center gap-1 shadow-xs';
+                    chip.style.fontSize = '0.8rem';
+                    chip.innerHTML = `
+                        <i class="fas fa-flask text-primary me-1"></i>
+                        <span class="fw-semibold text-dark">${testName}</span>
+                        <span class="badge bg-primary-subtle text-primary" style="font-size: 9px;">مخصص</span>
+                        <input type="hidden" name="tests[]" value="${testName}">
+                        <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.55rem;" aria-label="إزالة"></button>
+                    `;
+
+                    chip.querySelector('.btn-close').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        customTests.delete(testName);
+                        renderSelectedChips();
+                    });
+
+                    selectedChipsContainer.appendChild(chip);
+                });
+            }
+
+            // تحديث حالة أزرار الباقات السريعة
+            pkgBtns.forEach(btn => {
+                let testIds = [];
+                let testNames = [];
+                try { testIds = JSON.parse(btn.getAttribute('data-test-ids') || '[]') || []; } catch(e) { testIds = []; }
+                try { testNames = JSON.parse(btn.getAttribute('data-tests') || '[]') || []; } catch(e) { testNames = []; }
+                const targetIds = (Array.isArray(testIds) ? testIds : []).map(id => String(id));
+                const targetNames = (Array.isArray(testNames) ? testNames : []).map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || ''))).filter(Boolean);
+
+                const matches = labCheckboxes.filter(cb => {
+                    const cbId = String(cb.getAttribute('data-test-id') || '');
+                    const cbName = normalizeText(cb.getAttribute('data-test-name') || cb.value || '');
+                    return (cbId && targetIds.includes(cbId)) || (cbName && targetNames.includes(cbName));
+                });
+
+                if (matches.length > 0 && matches.every(cb => cb.checked)) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary', 'active');
+                } else {
+                    btn.classList.remove('btn-primary', 'active');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
+        }
+
+        labCheckboxes.forEach(chk => {
+            chk.addEventListener('change', function() {
+                updateCardVisual(this);
+                renderSelectedChips();
+            });
+        });
+
+        function filterGrid() {
+            const q = searchInput ? normalizeText(searchInput.value) : '';
+            let visibleCount = 0;
+
+            labCols.forEach(col => {
+                const id = String(col.getAttribute('data-id') || '');
+                const name = normalizeText(col.getAttribute('data-test-name') || '');
+                const code = normalizeText(col.getAttribute('data-test-code') || '');
+                const cat = col.getAttribute('data-category') || '';
+                const chk = col.querySelector('.doc-lab-chk');
+                const isChecked = chk && chk.checked;
+
+                // 1. فلترة الباقة النشطة
+                let matchesPkg = true;
+                if (activePackageTestIds !== null) {
+                    matchesPkg = activePackageTestIds.includes(id) || (activePackageNames && activePackageNames.includes(name));
+                }
+
+                // 2. فلترة التصنيف الطبي أو المختارة فقط
+                let matchesCat = true;
+                if (activeCategory === 'SELECTED_ONLY') {
+                    matchesCat = isChecked;
+                } else if (activeCategory !== 'ALL') {
+                    matchesCat = (cat === activeCategory);
+                }
+
+                const matchesSearch = (!q || name.includes(q) || code.includes(q));
+                const isVisible = matchesPkg && matchesCat && matchesSearch;
+                col.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+
+            const noResultsEl = document.getElementById('docLabNoFilterResults');
+            if (noResultsEl) {
+                noResultsEl.classList.toggle('d-none', visibleCount > 0);
+            }
+        }
+
+        function resetPackageFilter() {
+            activePackageTestIds = null;
+            activePackageNames = null;
+            activePackageBtn = null;
+            pkgBtns.forEach(b => {
+                b.classList.remove('btn-primary', 'shadow', 'active');
+                b.classList.add('btn-outline-primary');
+            });
+            const filterNotice = document.getElementById('docLabActiveFilterNotice');
+            if (filterNotice) filterNotice.classList.add('d-none');
+            filterGrid();
+        }
+
+        const resetPkgBtn = document.getElementById('docLabResetPkgFilterBtn');
+        if (resetPkgBtn) {
+            resetPkgBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                resetPackageFilter();
+            });
+        }
+
+        function renderSearchDropdown(q) {
+            if (!searchDropdown) return;
+            if (!q || q.length < 1) {
+                searchDropdown.style.display = 'none';
+                searchDropdown.innerHTML = '';
+                return;
+            }
+
+            const matches = labCheckboxes.filter(chk => {
+                const name = normalizeText(chk.getAttribute('data-test-name') || '');
+                const code = normalizeText(chk.getAttribute('data-test-code') || '');
+                return name.includes(q) || code.includes(q);
+            }).slice(0, 8);
+
+            searchDropdown.innerHTML = '';
+
             if (matches.length === 0) {
-                labMenu.innerHTML = `<div class="list-group-item text-muted text-center py-2 small">
-                    <i class="fas fa-info-circle me-1"></i> لا يوجد تحليل مطابق، اضغط Enter لإضافة "${query}" كفحص مخصص
-                </div>`;
+                const customBtn = document.createElement('a');
+                customBtn.href = 'javascript:void(0);';
+                customBtn.className = 'list-group-item list-group-item-action text-primary small py-2 px-3';
+                customBtn.innerHTML = `<i class="fas fa-plus-circle me-1"></i> إضافة "${searchInput.value.trim()}" كتحليل مخصص`;
+                customBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    addCustomLabTest(searchInput.value.trim());
+                });
+                searchDropdown.appendChild(customBtn);
             } else {
-                matches.forEach(m => {
+                matches.forEach(chk => {
+                    const isChecked = chk.checked;
+                    const name = chk.getAttribute('data-test-name') || chk.value;
+                    const code = chk.getAttribute('data-test-code') || '';
+                    const cat = chk.getAttribute('data-test-category') || '';
+                    const price = chk.getAttribute('data-test-price') || 0;
+
                     const item = document.createElement('a');
                     item.href = 'javascript:void(0);';
-                    item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
+                    item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 ${isChecked ? 'bg-light' : ''}`;
                     item.innerHTML = `
                         <div>
-                            <strong class="text-dark small d-block">${m.name}</strong>
-                            ${m.code ? `<span class="badge bg-secondary-subtle text-secondary me-1" style="font-size: 10px;">${m.code}</span>` : ''}
+                            <span class="fw-bold text-dark small">${name}</span>
+                            ${code ? `<span class="badge bg-light text-muted border ms-1 font-monospace" style="font-size: 10px;">${code}</span>` : ''}
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">${cat}</small>
                         </div>
-                        <span class="badge bg-primary-subtle text-primary" style="font-size: 10px;">${Number(m.price).toLocaleString()} د.ع</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-primary border" style="font-size: 10px;">${Number(price).toLocaleString()} د.ع</span>
+                            ${isChecked 
+                                ? `<span class="badge bg-success-subtle text-success"><i class="fas fa-check"></i></span>` 
+                                : `<span class="badge bg-primary-subtle text-primary">+ إضافة</span>`}
+                        </div>
                     `;
+
                     item.addEventListener('click', function(e) {
                         e.preventDefault();
-                        addLabTest(m.name, m.price);
-                        labInput.value = '';
-                        labMenu.style.display = 'none';
-                        labInput.focus();
+                        chk.checked = !chk.checked;
+                        updateCardVisual(chk);
+                        renderSelectedChips();
+                        searchInput.value = '';
+                        if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                        searchDropdown.style.display = 'none';
+                        filterGrid();
+                        searchInput.focus();
                     });
-                    labMenu.appendChild(item);
+
+                    searchDropdown.appendChild(item);
                 });
             }
-            labMenu.style.display = 'block';
-        });
 
-        labInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
+            searchDropdown.style.display = 'block';
+        }
+
+        function addCustomLabTest(name) {
+            const clean = (name || '').trim();
+            if (!clean) return;
+            customTests.add(clean);
+            if (searchInput) {
+                searchInput.value = '';
+                if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+            }
+            if (searchDropdown) searchDropdown.style.display = 'none';
+            renderSelectedChips();
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
                 const val = this.value.trim();
-                if (val) {
-                    const firstMatch = nicuLabTests.find(t => 
-                        (t.name && t.name.toLowerCase().includes(val.toLowerCase())) || 
-                        (t.code && t.code.toLowerCase() === val.toLowerCase())
-                    );
-                    if (firstMatch) {
-                        addLabTest(firstMatch.name, firstMatch.price);
-                    } else {
-                        addLabTest(val);
-                    }
-                    this.value = '';
-                    if (labMenu) labMenu.style.display = 'none';
+                if (clearSearchBtn) {
+                    clearSearchBtn.classList.toggle('d-none', val.length === 0);
                 }
-            }
-        });
-    }
+                renderSearchDropdown(normalizeText(val));
+                filterGrid();
+            });
 
-    // ==================== 2. أشعة وسونار الخدج (Radiology Workstation) ====================
-    const nicuRadiologyTypes = [
-        @foreach($radiologyTypes as $r)
-        { id: {{ $r->id }}, name: @json($r->name), price: {{ (float)($r->price ?? 0) }} },
-        @endforeach
-    ];
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const rawVal = this.value.trim();
+                    const q = normalizeText(rawVal);
+                    if (!q) return;
 
-    const selectedRadExams = new Set();
-    const radInput = document.getElementById('nicuRadSearchInput');
-    const radMenu = document.getElementById('nicuRadAutocompleteMenu');
-    const radTray = document.getElementById('nicuRadSelectedTray');
-    const radChips = document.getElementById('nicuRadChipsContainer');
-    const radCountSpan = document.getElementById('nicuRadSelectedCount');
-    const radClearAllBtn = document.getElementById('nicuRadClearAllBtn');
-    const radClearInputBtn = document.getElementById('nicuRadClearInputBtn');
+                    const firstMatch = labCheckboxes.find(chk => {
+                        const name = normalizeText(chk.getAttribute('data-test-name') || '');
+                        const code = normalizeText(chk.getAttribute('data-test-code') || '');
+                        return name.includes(q) || code.includes(q);
+                    });
 
-    function updateRadChipsUI() {
-        if (!radTray || !radCountSpan) return;
-        radCountSpan.textContent = selectedRadExams.size;
-        if (selectedRadExams.size > 0) {
-            radTray.classList.remove('d-none');
-        } else {
-            radTray.classList.add('d-none');
+                    if (firstMatch) {
+                        firstMatch.checked = true;
+                        updateCardVisual(firstMatch);
+                        renderSelectedChips();
+                        this.value = '';
+                        if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                        if (searchDropdown) searchDropdown.style.display = 'none';
+                        filterGrid();
+                    } else {
+                        addCustomLabTest(rawVal);
+                    }
+                } else if (e.key === 'Escape') {
+                    if (searchDropdown) searchDropdown.style.display = 'none';
+                }
+            });
         }
-    }
 
-    function addRadExam(examName, price = 0) {
-        const cleanName = (examName || '').trim();
-        if (!cleanName || selectedRadExams.has(cleanName)) return;
-        selectedRadExams.add(cleanName);
-
-        const chip = document.createElement('span');
-        chip.className = 'badge bg-light text-info border p-2 d-inline-flex align-items-center gap-1 rounded-pill shadow-xs';
-        chip.setAttribute('data-exam-name', cleanName);
-        chip.innerHTML = `
-            <i class="fas fa-x-ray me-1"></i>
-            <span>${cleanName}</span>
-            <input type="hidden" name="radiology_types[]" value="${cleanName}">
-            <button type="button" class="btn-close ms-1" style="font-size: 8px;" title="إزالة"></button>
-        `;
-        chip.querySelector('.btn-close').addEventListener('click', function() {
-            removeRadExam(cleanName);
-        });
-        if (radChips) radChips.appendChild(chip);
-        updateRadChipsUI();
-    }
-
-    function removeRadExam(examName) {
-        selectedRadExams.delete(examName);
-        if (radChips) {
-            const chip = radChips.querySelector(`[data-exam-name="${CSS.escape(examName)}"]`);
-            if (chip) chip.remove();
+        if (clearSearchBtn && searchInput) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                clearSearchBtn.classList.add('d-none');
+                if (searchDropdown) searchDropdown.style.display = 'none';
+                filterGrid();
+                searchInput.focus();
+            });
         }
-        updateRadChipsUI();
-    }
 
-    function clearAllRadExams() {
-        selectedRadExams.clear();
-        if (radChips) radChips.innerHTML = '';
-        updateRadChipsUI();
-    }
+        categoryPills.forEach(pill => {
+            pill.addEventListener('click', function() {
+                if (activePackageBtn) {
+                    activePackageTestIds = null;
+                    activePackageNames = null;
+                    activePackageBtn = null;
+                    pkgBtns.forEach(b => {
+                        b.classList.remove('btn-primary', 'shadow', 'active');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    const filterNotice = document.getElementById('docLabActiveFilterNotice');
+                    if (filterNotice) filterNotice.classList.add('d-none');
+                }
 
-    if (radClearAllBtn) {
-        radClearAllBtn.addEventListener('click', clearAllRadExams);
-    }
+                categoryPills.forEach(p => {
+                    p.classList.remove('btn-primary', 'btn-success', 'active', 'text-white');
+                    p.classList.add('btn-outline-secondary');
+                    const b = p.querySelector('.badge');
+                    if (b) {
+                        b.classList.remove('bg-white', 'text-primary', 'text-success');
+                        b.classList.add('bg-secondary-subtle', 'text-secondary');
+                    }
+                });
 
-    if (radClearInputBtn) {
-        radClearInputBtn.addEventListener('click', function() {
-            if (radInput) {
-                radInput.value = '';
-                radInput.focus();
-            }
-            if (radMenu) radMenu.style.display = 'none';
+                const isSelectedBtn = this.getAttribute('data-category') === 'SELECTED_ONLY';
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add(isSelectedBtn ? 'btn-success' : 'btn-primary', 'active', 'text-white');
+                const badge = this.querySelector('.badge');
+                if (badge) {
+                    badge.classList.remove('bg-secondary-subtle', 'text-secondary');
+                    badge.classList.add('bg-white', isSelectedBtn ? 'text-success' : 'text-primary');
+                }
+
+                activeCategory = this.getAttribute('data-category');
+                filterGrid();
+            });
         });
-    }
 
-    // أزرار تصوير الخدج الشائعة
-    document.querySelectorAll('.nicu-quick-rad-pkg').forEach(btn => {
-        btn.addEventListener('click', function() {
-            try {
-                const types = JSON.parse(this.getAttribute('data-types') || '[]');
-                types.forEach(t => addRadExam(t));
-            } catch(e) {
-                console.error('Error parsing rad types:', e);
-            }
+        // باقات المفضلات السريعة (UserLabTestGroup) - اختيار الفحوصات وتصفية الشبكة فورياً
+        pkgBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                let testIds = [];
+                let testNames = [];
+                try {
+                    testIds = JSON.parse(this.getAttribute('data-test-ids') || '[]') || [];
+                } catch(e) { testIds = []; }
+                try {
+                    testNames = JSON.parse(this.getAttribute('data-tests') || '[]') || [];
+                } catch(e) { testNames = []; }
+
+                const targetIds = (Array.isArray(testIds) ? testIds : []).map(id => String(id));
+                const targetNames = (Array.isArray(testNames) ? testNames : [])
+                    .map(s => normalizeText(typeof s === 'string' ? s : (s.name || s.test_name || '')))
+                    .filter(Boolean);
+
+                const matchingCheckboxes = labCheckboxes.filter(cb => {
+                    const cbId = String(cb.getAttribute('data-test-id') || '');
+                    const cbName = normalizeText(cb.getAttribute('data-test-name') || cb.value || '');
+                    return (cbId && targetIds.includes(cbId)) || (cbName && targetNames.includes(cbName));
+                });
+
+                if (matchingCheckboxes.length === 0) {
+                    alert('لم يتم العثور على أي تحاليل مفعلة لهذه الباقة في القائمة الحالية.');
+                    return;
+                }
+
+                const isCurrentActive = (activePackageBtn === this);
+                const allAlreadyChecked = matchingCheckboxes.length > 0 && matchingCheckboxes.every(cb => cb.checked);
+
+                if (isCurrentActive || allAlreadyChecked) {
+                    matchingCheckboxes.forEach(cb => {
+                        cb.checked = false;
+                        updateCardVisual(cb);
+                    });
+                    this.classList.remove('btn-primary', 'shadow', 'active');
+                    this.classList.add('btn-outline-primary');
+                    if (isCurrentActive) {
+                        resetPackageFilter();
+                    } else {
+                        filterGrid();
+                    }
+                    renderSelectedChips();
+                    return;
+                }
+
+                pkgBtns.forEach(b => {
+                    b.classList.remove('btn-primary', 'shadow', 'active');
+                    b.classList.add('btn-outline-primary');
+                });
+
+                matchingCheckboxes.forEach(cb => {
+                    cb.checked = true;
+                    updateCardVisual(cb);
+                });
+
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary', 'shadow', 'active');
+                activePackageBtn = this;
+                activePackageTestIds = targetIds;
+                activePackageNames = targetNames;
+
+                const filterNotice = document.getElementById('docLabActiveFilterNotice');
+                const pkgTitle = document.getElementById('docLabActivePkgTitle');
+                const pkgCount = document.getElementById('docLabActivePkgCount');
+                if (filterNotice) {
+                    if (pkgTitle) pkgTitle.textContent = this.getAttribute('data-pkg-name') || 'الباقة';
+                    if (pkgCount) pkgCount.textContent = matchingCheckboxes.length;
+                    filterNotice.classList.remove('d-none');
+                }
+
+                categoryPills.forEach(p => {
+                    p.classList.remove('btn-primary', 'btn-success', 'active', 'text-white');
+                    p.classList.add('btn-outline-secondary');
+                });
+                const allPill = document.querySelector('.doc-cat-pill[data-category="ALL"]');
+                if (allPill) {
+                    allPill.classList.remove('btn-outline-secondary');
+                    allPill.classList.add('btn-primary', 'active');
+                }
+                activeCategory = 'ALL';
+
+                filterGrid();
+                renderSelectedChips();
+
+                const gridContainer = document.getElementById('docLabTestsGridContainer');
+                if (gridContainer) gridContainer.scrollTop = 0;
+            });
         });
-    });
 
-    if (radInput) {
-        radInput.addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
-            if (!query) {
-                if (radMenu) radMenu.style.display = 'none';
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', function() {
+                labCheckboxes.forEach(chk => {
+                    chk.checked = false;
+                    updateCardVisual(chk);
+                });
+                customTests.clear();
+                resetPackageFilter();
+                renderSelectedChips();
+            });
+        }
+
+        labForm.addEventListener('submit', function(e) {
+            const checkedBoxes = labCheckboxes.filter(cb => cb.checked);
+            if (checkedBoxes.length === 0 && customTests.size === 0) {
+                e.preventDefault();
+                alert('يرجى اختيار تحليل واحد على الأقل قبل إرسال الطلب للمختبر.');
+                if (searchInput) searchInput.focus();
                 return;
             }
-            const matches = nicuRadiologyTypes.filter(r => 
-                r.name && r.name.toLowerCase().includes(query)
-            ).slice(0, 15);
 
-            if (!radMenu) return;
-            radMenu.innerHTML = '';
-            if (matches.length === 0) {
-                radMenu.innerHTML = `<div class="list-group-item text-muted text-center py-2 small">
-                    <i class="fas fa-info-circle me-1"></i> اضغط Enter لإضافة "${query}" كفحص شعاعي مخصص
-                </div>`;
+            const submitBtns = labForm.querySelectorAll('button[type="submit"]');
+            submitBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جارٍ الإرسال...';
+            });
+        });
+
+        renderSelectedChips();
+    }
+
+    // ==================== 2. أشعة وسونار الخدج بنمط الطبيب الاستشاري ====================
+    function setupFastDoctorRadiologySelection() {
+        const radForm = document.getElementById('nicuRadOrderForm');
+        if (!radForm) return;
+
+        const searchInput = document.getElementById('docRadSearchInput');
+        const clearSearchBtn = document.getElementById('docRadClearSearchBtn');
+        const selectedTray = document.getElementById('docRadSelectedTray');
+        const selectedChipsContainer = document.getElementById('docRadChipsContainer');
+        const clearAllBtn = document.getElementById('docRadClearAllBtn');
+        const countBadges = document.querySelectorAll('.doc-rad-selected-count');
+        const categoryPills = document.querySelectorAll('.doc-rad-cat-pill');
+        const radCols = Array.from(document.querySelectorAll('.doc-rad-col'));
+        const radCheckboxes = Array.from(document.querySelectorAll('.doc-rad-chk'));
+        const pkgBtns = document.querySelectorAll('.doc-rad-quick-pkg-btn');
+
+        let activeCategory = 'ALL';
+        const customRadExams = new Set();
+
+        function updateCardVisual(chk) {
+            const card = chk.closest('.doc-rad-card');
+            if (!card) return;
+            const icon = card.querySelector('.doc-rad-check-icon');
+            if (chk.checked) {
+                card.classList.add('border-info', 'bg-info-subtle');
+                card.classList.remove('bg-white');
+                if (icon) icon.classList.remove('d-none');
             } else {
-                matches.forEach(m => {
-                    const item = document.createElement('a');
-                    item.href = 'javascript:void(0);';
-                    item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
-                    item.innerHTML = `
-                        <strong class="text-dark small">${m.name}</strong>
-                        <span class="badge bg-info-subtle text-info" style="font-size: 10px;">${Number(m.price).toLocaleString()} د.ع</span>
+                card.classList.remove('border-info', 'bg-info-subtle');
+                card.classList.add('bg-white');
+                if (icon) icon.classList.add('d-none');
+            }
+        }
+
+        function renderSelectedChips() {
+            const checkedBoxes = radCheckboxes.filter(cb => cb.checked);
+            const totalCount = checkedBoxes.length + customRadExams.size;
+
+            countBadges.forEach(b => b.textContent = totalCount);
+
+            if (totalCount === 0) {
+                if (selectedTray) selectedTray.classList.add('d-none');
+                if (selectedChipsContainer) selectedChipsContainer.innerHTML = '';
+                return;
+            }
+
+            if (selectedTray) selectedTray.classList.remove('d-none');
+            if (selectedChipsContainer) {
+                selectedChipsContainer.innerHTML = '';
+
+                checkedBoxes.forEach(chk => {
+                    const name = chk.getAttribute('data-type-name') || chk.value;
+                    const code = chk.getAttribute('data-type-code') || '';
+
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-white text-dark border p-1 px-2 d-inline-flex align-items-center gap-1 shadow-xs';
+                    chip.style.fontSize = '0.8rem';
+                    chip.innerHTML = `
+                        <i class="fas fa-x-ray text-info me-1"></i>
+                        <span class="fw-semibold text-info">${name}</span>
+                        ${code ? `<span class="text-muted small">(${code})</span>` : ''}
+                        <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.55rem;" aria-label="إزالة"></button>
                     `;
-                    item.addEventListener('click', function(e) {
+
+                    chip.querySelector('.btn-close').addEventListener('click', function(e) {
                         e.preventDefault();
-                        addRadExam(m.name, m.price);
-                        radInput.value = '';
-                        radMenu.style.display = 'none';
-                        radInput.focus();
+                        e.stopPropagation();
+                        chk.checked = false;
+                        updateCardVisual(chk);
+                        renderSelectedChips();
+                        filterGrid();
                     });
-                    radMenu.appendChild(item);
+
+                    selectedChipsContainer.appendChild(chip);
+                });
+
+                customRadExams.forEach(examName => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-white text-dark border border-info p-1 px-2 d-inline-flex align-items-center gap-1 shadow-xs';
+                    chip.style.fontSize = '0.8rem';
+                    chip.innerHTML = `
+                        <i class="fas fa-radiation text-info me-1"></i>
+                        <span class="fw-semibold text-dark">${examName}</span>
+                        <span class="badge bg-info-subtle text-info" style="font-size: 9px;">مخصص</span>
+                        <input type="hidden" name="radiology_types[]" value="${examName}">
+                        <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.55rem;" aria-label="إزالة"></button>
+                    `;
+
+                    chip.querySelector('.btn-close').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        customRadExams.delete(examName);
+                        renderSelectedChips();
+                    });
+
+                    selectedChipsContainer.appendChild(chip);
                 });
             }
-            radMenu.style.display = 'block';
+        }
+
+        radCheckboxes.forEach(chk => {
+            chk.addEventListener('change', function() {
+                updateCardVisual(this);
+                renderSelectedChips();
+            });
         });
 
-        radInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const val = this.value.trim();
-                if (val) {
-                    const firstMatch = nicuRadiologyTypes.find(r => 
-                        r.name && r.name.toLowerCase().includes(val.toLowerCase())
-                    );
-                    if (firstMatch) {
-                        addRadExam(firstMatch.name, firstMatch.price);
-                    } else {
-                        addRadExam(val);
-                    }
-                    this.value = '';
-                    if (radMenu) radMenu.style.display = 'none';
+        function filterGrid() {
+            const q = searchInput ? normalizeText(searchInput.value) : '';
+            let visibleCount = 0;
+
+            radCols.forEach(col => {
+                const name = normalizeText(col.getAttribute('data-type-name') || '');
+                const code = normalizeText(col.getAttribute('data-type-code') || '');
+                const cat = col.getAttribute('data-category') || '';
+                const chk = col.querySelector('.doc-rad-chk');
+                const isChecked = chk && chk.checked;
+
+                let matchesCat = true;
+                if (activeCategory === 'SELECTED_ONLY') {
+                    matchesCat = isChecked;
+                } else if (activeCategory !== 'ALL') {
+                    matchesCat = (cat === activeCategory);
                 }
+
+                const matchesSearch = (!q || name.includes(q) || code.includes(q));
+                const isVisible = matchesCat && matchesSearch;
+                col.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+
+            const noResultsEl = document.getElementById('docRadNoFilterResults');
+            if (noResultsEl) {
+                noResultsEl.classList.toggle('d-none', visibleCount > 0);
             }
+        }
+
+        function addCustomRadExam(name) {
+            const clean = (name || '').trim();
+            if (!clean) return;
+            customRadExams.add(clean);
+            if (searchInput) {
+                searchInput.value = '';
+                if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+            }
+            renderSelectedChips();
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const val = this.value.trim();
+                if (clearSearchBtn) {
+                    clearSearchBtn.classList.toggle('d-none', val.length === 0);
+                }
+                filterGrid();
+            });
+
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const rawVal = this.value.trim();
+                    const q = normalizeText(rawVal);
+                    if (!q) return;
+
+                    const firstMatch = radCheckboxes.find(chk => {
+                        const name = normalizeText(chk.getAttribute('data-type-name') || '');
+                        const code = normalizeText(chk.getAttribute('data-type-code') || '');
+                        return name.includes(q) || code.includes(q);
+                    });
+
+                    if (firstMatch) {
+                        firstMatch.checked = true;
+                        updateCardVisual(firstMatch);
+                        renderSelectedChips();
+                        this.value = '';
+                        if (clearSearchBtn) clearSearchBtn.classList.add('d-none');
+                        filterGrid();
+                    } else {
+                        addCustomRadExam(rawVal);
+                    }
+                }
+            });
+        }
+
+        if (clearSearchBtn && searchInput) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                clearSearchBtn.classList.add('d-none');
+                filterGrid();
+                searchInput.focus();
+            });
+        }
+
+        categoryPills.forEach(pill => {
+            pill.addEventListener('click', function() {
+                categoryPills.forEach(p => {
+                    p.classList.remove('btn-info', 'text-white', 'active');
+                    p.classList.add('btn-outline-secondary');
+                    const b = p.querySelector('.badge');
+                    if (b) {
+                        b.classList.remove('bg-white', 'text-info');
+                        b.classList.add('bg-secondary-subtle', 'text-secondary');
+                    }
+                });
+
+                const isSelectedBtn = this.getAttribute('data-category') === 'SELECTED_ONLY';
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add(isSelectedBtn ? 'btn-success' : 'btn-info', 'text-white', 'active');
+                const badge = this.querySelector('.badge');
+                if (badge) {
+                    badge.classList.remove('bg-secondary-subtle', 'text-secondary');
+                    badge.classList.add('bg-white', isSelectedBtn ? 'text-success' : 'text-info');
+                }
+
+                activeCategory = this.getAttribute('data-category');
+                filterGrid();
+            });
         });
+
+        // تصوير الخدج الشائع
+        pkgBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                let typeNames = [];
+                try {
+                    typeNames = JSON.parse(this.getAttribute('data-type-names') || '[]');
+                } catch(e) { typeNames = []; }
+
+                const targetNames = typeNames.map(s => normalizeText(s)).filter(Boolean);
+
+                const matchingCheckboxes = radCheckboxes.filter(cb => {
+                    const cbName = normalizeText(cb.getAttribute('data-type-name') || cb.value || '');
+                    const cbCode = normalizeText(cb.getAttribute('data-type-code') || '');
+                    return targetNames.some(t => cbName.includes(t) || t.includes(cbName) || (cbCode && cbCode === t));
+                });
+
+                if (matchingCheckboxes.length > 0) {
+                    const allAlreadyChecked = matchingCheckboxes.every(cb => cb.checked);
+                    matchingCheckboxes.forEach(cb => {
+                        cb.checked = !allAlreadyChecked;
+                        updateCardVisual(cb);
+                    });
+                } else if (typeNames.length > 0) {
+                    addCustomRadExam(typeNames[0]);
+                }
+
+                renderSelectedChips();
+            });
+        });
+
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', function() {
+                radCheckboxes.forEach(chk => {
+                    chk.checked = false;
+                    updateCardVisual(chk);
+                });
+                customRadExams.clear();
+                renderSelectedChips();
+            });
+        }
+
+        radForm.addEventListener('submit', function(e) {
+            const checkedBoxes = radCheckboxes.filter(cb => cb.checked);
+            if (checkedBoxes.length === 0 && customRadExams.size === 0) {
+                e.preventDefault();
+                alert('يرجى اختيار فحص أشعة واحد على الأقل قبل إرسال الطلب.');
+                if (searchInput) searchInput.focus();
+                return;
+            }
+
+            const submitBtns = radForm.querySelectorAll('button[type="submit"]');
+            submitBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جارٍ الإرسال...';
+            });
+        });
+
+        renderSelectedChips();
+    }
+
+    // تشغيل أنظمة الاختيار والمخططات السريرية
+    setupFastDoctorLabSelection();
+    setupFastDoctorRadiologySelection();
+
+    const growthTab = document.getElementById('growth-tab');
+    if (growthTab) {
+        growthTab.addEventListener('shown.bs.tab', function() {
+            setTimeout(initNicuGrowthChart, 50);
+        });
+        if (growthTab.classList.contains('active')) {
+            setTimeout(initNicuGrowthChart, 100);
+        }
     }
 
     // ==================== 3. وصفة أدوية الخدج (Prescription Workstation) ====================
@@ -2857,11 +4325,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // إغلاق أي قائمة منسدلة عند النقر خارجها
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('#nicuLabSearchInput') && !e.target.closest('#nicuLabAutocompleteMenu')) {
+        if (!e.target.closest('#docLabSearchInput') && !e.target.closest('#docLabAutocompleteMenu')) {
+            const labMenu = document.getElementById('docLabAutocompleteMenu');
             if (labMenu) labMenu.style.display = 'none';
-        }
-        if (!e.target.closest('#nicuRadSearchInput') && !e.target.closest('#nicuRadAutocompleteMenu')) {
-            if (radMenu) radMenu.style.display = 'none';
         }
         if (!e.target.closest('.med-name-input') && !e.target.closest('.med-autocomplete-menu')) {
             document.querySelectorAll('.med-autocomplete-menu').forEach(m => m.style.display = 'none');

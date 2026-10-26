@@ -241,4 +241,14 @@ class Patient extends Model
     {
         return $this->national_id ?? ($this->medical_number ?? ('MRN-' . str_pad($this->id, 5, '0', STR_PAD_LEFT)));
     }
+
+    public function incubatorReservations()
+    {
+        return $this->hasMany(IncubatorReservation::class, 'patient_id');
+    }
+
+    public function nicuAttachments()
+    {
+        return $this->hasMany(NicuAttachment::class, 'patient_id')->latest();
+    }
 }

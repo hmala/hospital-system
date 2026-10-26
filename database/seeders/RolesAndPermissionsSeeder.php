@@ -93,6 +93,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -288,6 +294,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -570,6 +582,34 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             // السماح للطاقم بعرض الباقات
             'view packages',
+        ]);
+
+        // دور طبيب الخدج (NICU Doctor)
+        $nicuDoctorRole = Role::firstOrCreate(['name' => 'nicu_doctor']);
+        $nicuDoctorRole->givePermissionTo([
+            'view incubator reservations',
+            'create incubator reservations',
+            'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
+            'view patients',
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
+        ]);
+
+        // دور تمريض الخدج (NICU Nurse)
+        $nicuNurseRole = Role::firstOrCreate(['name' => 'nicu_nurse']);
+        $nicuNurseRole->givePermissionTo([
+            'view incubator reservations',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu attachments',
+            'view patients',
         ]);
 
         // دور مدير الموارد البشرية (HR Manager)

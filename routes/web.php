@@ -755,6 +755,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/care-schedules/{schedule}', [\App\Http\Controllers\NicuController::class, 'destroyCareSchedule'])->name('care-schedules.destroy');
         Route::post('/care-schedules/{schedule}/administer-quick', [\App\Http\Controllers\NicuController::class, 'administerCareScheduleQuick'])->name('care-schedules.administer-quick');
 
+        // ملاحظات وتوجيهات الطبيب الاختصاص السريرية
+        Route::post('/reservations/{reservation}/doctor-notes', [\App\Http\Controllers\NicuController::class, 'storeDoctorNote'])->name('doctor-notes.store');
+        Route::post('/doctor-notes/{note}/toggle-pin', [\App\Http\Controllers\NicuController::class, 'togglePinDoctorNote'])->name('doctor-notes.toggle-pin');
+        Route::delete('/doctor-notes/{note}', [\App\Http\Controllers\NicuController::class, 'destroyDoctorNote'])->name('doctor-notes.destroy');
+
+        // مرفقات وأرشيف الطفل الخديج
+        Route::post('/reservations/{reservation}/attachments', [\App\Http\Controllers\NicuController::class, 'storeAttachment'])->name('attachments.store');
+        Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\NicuController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::delete('/attachments/{attachment}', [\App\Http\Controllers\NicuController::class, 'destroyAttachment'])->name('attachments.destroy');
+
         Route::post('/reservations/{reservation}/discharge', [\App\Http\Controllers\NicuController::class, 'discharge'])->name('discharge');
         Route::post('/incubators/{incubator}/sterilized', [\App\Http\Controllers\NicuController::class, 'markSterilized'])->name('incubators.sterilized');
         Route::post('/reservations/{reservation}/cam-token', [\App\Http\Controllers\NicuController::class, 'generateBabyCamToken'])->name('cam-token');

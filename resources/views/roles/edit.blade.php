@@ -415,6 +415,9 @@
     .text-purple { color: #7c3aed !important; }
     .bg-purple { background-color: #7c3aed !important; }
     .border-purple { border-color: #7c3aed !important; }
+    .text-pink { color: #ec4899 !important; }
+    .bg-pink { background-color: #ec4899 !important; }
+    .border-pink { border-color: #ec4899 !important; }
 </style>
 
 <script>

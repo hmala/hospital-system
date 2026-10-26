@@ -220,6 +220,7 @@ class NicuBillingService
         return [
             'total_hours' => $totalHours,
             'calculated_days' => $billableDays['days'],
+            'days_count' => $billableDays['days'],
             'admission_grace_applied' => $billableDays['admission_grace'],
             'discharge_grace_applied' => $billableDays['discharge_grace'],
             'grace_notes' => $billableDays['notes'],

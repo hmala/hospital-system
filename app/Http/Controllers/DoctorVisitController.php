@@ -273,7 +273,7 @@ class DoctorVisitController extends Controller
         $hasPendingRequests = $visit->requests()->where('status', 'pending')->exists();
 
         $labTests = \App\Models\LabTest::where('is_active', true)->get()->unique(fn($t) => trim(mb_strtolower($t->name)));
-        $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->get();
+        $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->consultant()->get();
         $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
         $medicineGroups = \App\Models\UserMedicineGroup::with('medicines')
             ->where(function($q) use ($user) {

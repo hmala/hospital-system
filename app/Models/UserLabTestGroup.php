@@ -17,7 +17,25 @@ class UserLabTestGroup extends Model
         'user_id',
         'name',
         'description',
+        'department',
+        'is_public',
     ];
+
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
+    public function scopeNicu($query)
+    {
+        return $query->where('department', 'nicu');
+    }
+
+    public function scopeConsultant($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('department')->orWhere('department', 'consultant');
+        });
+    }
 
     public function user(): BelongsTo
     {

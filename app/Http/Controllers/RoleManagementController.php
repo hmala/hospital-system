@@ -63,6 +63,16 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        // صلاحيات قسم الخدج والحاضنات (NICU)
+        Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu care plans', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -126,6 +136,16 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        // صلاحيات قسم الخدج والحاضنات (NICU)
+        Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu care plans', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -288,6 +308,12 @@ class RoleManagementController extends Controller
                 'icon' => 'fa-procedures',
                 'color' => 'warning',
                 'description' => 'محطات الجراح والتخدير والتمريض والمقيم، صالات العمليات، وإدارة الأسرّة والغرف'
+            ],
+            'nicu' => [
+                'name' => 'قسم الخدج والحاضنات (NICU)',
+                'icon' => 'fa-baby',
+                'color' => 'pink',
+                'description' => 'مراقبة الحاضنات، الأوامر السريرية، محطة التمريض، خطة الرعاية، ملاحظات الاختصاص، والأرشيف'
             ],
             'whatsapp' => [
                 'name' => 'خدمات ومراسلات الواتساب (WhatsApp)',
@@ -465,11 +491,27 @@ class RoleManagementController extends Controller
 
             // 📲 10. خدمات ومراسلات الواتساب (WhatsApp)
             'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل المخبرية للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
+
+            // 👶 11. قسم الخدج والحاضنات (NICU)
+            'view incubator reservations' => ['label' => 'عرض لوحة وحاضنات قسم الخدج (NICU)', 'action' => 'عرض', 'badge' => 'info'],
+            'create incubator reservations' => ['label' => 'تسجيل وقبول وتسكين طفل جديد بالحاضنة', 'action' => 'إضافة', 'badge' => 'success'],
+            'manage incubator reservations' => ['label' => 'إدارة شاملة لملف الحاضنة وتعديل البيانات', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage nicu clinical' => ['label' => 'إصدار ومتابعة الأوامر السريرية (تحاليل، أشعة، وصفات، استشارات)', 'action' => 'سريري', 'badge' => 'primary'],
+            'manage nicu nursing' => ['label' => 'محطة التمريض (العلامات الحيوية، الوزن، وسجل إعطاء العلاج MAR)', 'action' => 'تمريض', 'badge' => 'success'],
+            'manage nicu care plans' => ['label' => 'إدارة وتعديل خطة الرعاية وجداول مواعيد الرضاعة والعلاج', 'action' => 'توصيات', 'badge' => 'warning'],
+            'manage nicu doctor notes' => ['label' => 'تدوين واعتماد وتثبيت ملاحظات وتوجيهات الطبيب الاختصاص', 'action' => 'طبيب', 'badge' => 'danger'],
+            'manage nicu attachments' => ['label' => 'رفع واستعراض وأرشفة وحذف مرفقات ومستندات الطفل', 'action' => 'أرشيف', 'badge' => 'teal'],
+            'discharge incubator reservations' => ['label' => 'إجراء الخروج السريري وتطهير الحاضنة', 'action' => 'خروج', 'badge' => 'danger'],
         ];
     }
 
     private function permissionGroup(string $permissionName): string
     {
+        // 0. NICU Services
+        if (str_contains($permissionName, 'incubator') || str_contains($permissionName, 'nicu')) {
+            return 'nicu';
+        }
+
         // 0. WhatsApp Services
         if (str_contains($permissionName, 'whatsapp')) {
             return 'whatsapp';
@@ -482,7 +524,6 @@ class RoleManagementController extends Controller
             'view patients', 'create patients', 'edit patients', 'delete patients',
             'create emergencies',
             'view bed reservations', 'create bed reservations',
-            'view incubator reservations', 'create incubator reservations', 'manage incubator reservations',
         ])) {
             return 'inquiry';
         }

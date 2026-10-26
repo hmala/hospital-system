@@ -18,11 +18,14 @@ use App\Models\NicuMedicalOrder;
 use App\Models\LabTest;
 use App\Models\RadiologyType;
 use App\Models\Medicine;
+use App\Models\UserLabTestGroup;
 use App\Models\NicuMedicationAdministration;
 use App\Services\NicuBillingService;
 use Database\Seeders\NicuServicesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Carbon\Carbon;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class NicuWorkflowTest extends TestCase
 {
@@ -1065,13 +1068,22 @@ class NicuWorkflowTest extends TestCase
         $response->assertSee('id="radiology-tab"', false);
         $response->assertSee('id="prescriptions-tab"', false);
 
-        // فحص وجود عناصر محطة المختبر
-        $response->assertSee('id="nicuLabSearchInput"', false);
-        $response->assertSee('id="nicuLabSelectedTray"', false);
+        // فحص وجود عناصر محطة المختبر بنمط الطبيب الاستشاري
+        $response->assertSee('id="docLabSearchInput"', false);
+        $response->assertSee('id="docLabSelectedTray"', false);
 
-        // فحص وجود عناصر محطة الأشعة
-        $response->assertSee('id="nicuRadSearchInput"', false);
-        $response->assertSee('id="nicuRadSelectedTray"', false);
+        // فحص وجود عناصر محطة الأشعة بنمط الطبيب الاستشاري
+        $response->assertSee('id="docRadSearchInput"', false);
+        $response->assertSee('id="docRadSelectedTray"', false);
+
+        // فحص وجود تبويب ورسم معدلات النمو والوزن البياني
+        $response->assertSee('id="growth-tab"', false);
+        $response->assertSee('id="growthPane"', false);
+        $response->assertSee('id="nicuWeightGrowthChart"', false);
+
+        // فحص وجود تبويب المرفقات وسجل المستندات
+        $response->assertSee('id="attachments-tab"', false);
+        $response->assertSee('id="attachmentsPane"', false);
 
         // فحص وجود عناصر محطة الوصفة والطباعة
         $response->assertSee('id="prescriptionRowsContainer"', false);
@@ -1159,6 +1171,251 @@ class NicuWorkflowTest extends TestCase
         $liveBoardResp->assertStatus(200);
         $liveBoardResp->assertSee('حليب سيميلاك نيوشور');
         $liveBoardResp->assertSee('أمبيسيلين Ampicillin');
+    }
+
+    public function test_nicu_attachments_upload_download_and_deletion_workflow(): void
+    {
+        Storage::fake('public');
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل فحص الأرشيف والمرفقات',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $fakeFile = UploadedFile::fake()->create('birth_certificate.pdf', 300, 'application/pdf');
+
+        // 1. رفع المرفق باسم يختاره المستخدم بحرية
+        $uploadResp = $this->actingAs($this->admin)->post(route('nicu.attachments.store', $reservation), [
+            'title' => 'بيان الولادة الرسمي ومستمسكات الأبوين',
+            'file' => $fakeFile,
+            'notes' => 'نسخة مصدقة من مستشفى الولادة',
+        ]);
+
+        $uploadResp->assertRedirect();
+        $uploadResp->assertSessionHas('success');
+
+        $attachment = \App\Models\NicuAttachment::where('incubator_reservation_id', $reservation->id)->first();
+        $this->assertNotNull($attachment);
+        $this->assertEquals('بيان الولادة الرسمي ومستمسكات الأبوين', $attachment->title);
+        $this->assertEquals('birth_certificate.pdf', $attachment->file_name);
+        $this->assertEquals($this->babyPatient->id, $attachment->patient_id);
+        $this->assertTrue($attachment->isPdf());
+        Storage::disk('public')->assertExists($attachment->file_path);
+
+        // 2. التحقق من ظهور المستند في شاشة الخدج وفي تبويب الأرشيف
+        $showResp = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $showResp->assertStatus(200);
+        $showResp->assertSee('بيان الولادة الرسمي ومستمسكات الأبوين');
+        $showResp->assertSee('birth_certificate.pdf');
+
+        // 3. تحميل المرفق
+        $downloadResp = $this->actingAs($this->admin)->get(route('nicu.attachments.download', $attachment));
+        $downloadResp->assertStatus(200);
+
+        // 4. حذف المرفق
+        $deleteResp = $this->actingAs($this->admin)->delete(route('nicu.attachments.destroy', $attachment));
+        $deleteResp->assertRedirect();
+        $this->assertDatabaseMissing('nicu_attachments', ['id' => $attachment->id]);
+        Storage::disk('public')->assertMissing($attachment->file_path);
+    }
+
+    public function test_specialist_doctor_notes_creation_pinning_and_deletion(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل ملاحظات الاختصاص',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        // 1. تدوين ملاحظة جديدة وتثبيتها كأمر عاجل
+        $noteResp = $this->actingAs($this->admin)->post(route('nicu.doctor-notes.store', $reservation), [
+            'content' => 'إيقاف الرضاعة فوراً والبدء بمحلول سكري 10% بمعدل 4 مل/ساعة ومراقبة سكر الدم',
+            'is_urgent' => true,
+            'is_pinned' => true,
+        ]);
+
+        $noteResp->assertRedirect();
+        $noteResp->assertSessionHas('success');
+
+        $note = \App\Models\NicuDoctorNote::where('incubator_reservation_id', $reservation->id)->first();
+        $this->assertNotNull($note);
+        $this->assertTrue($note->is_urgent);
+        $this->assertTrue($note->is_pinned);
+        $this->assertEquals($this->admin->id, $note->doctor_id);
+
+        // 2. التأكد من ظهور شريط التنبيه المثبت في أعلى المحطة السريرية
+        $showResp = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $showResp->assertStatus(200);
+        $showResp->assertSee('توجيهات وملاحظات الطبيب الاختصاص المثبتة');
+        $showResp->assertSee('إيقاف الرضاعة فوراً والبدء بمحلول سكري 10%');
+
+        // 3. إلغاء التثبيت
+        $toggleResp = $this->actingAs($this->admin)->post(route('nicu.doctor-notes.toggle-pin', $note));
+        $toggleResp->assertRedirect();
+        $note->refresh();
+        $this->assertFalse($note->is_pinned);
+
+        // 4. حذف الملاحظة
+        $deleteResp = $this->actingAs($this->admin)->delete(route('nicu.doctor-notes.destroy', $note));
+        $deleteResp->assertRedirect();
+        $this->assertDatabaseMissing('nicu_doctor_notes', ['id' => $note->id]);
+    }
+
+    public function test_central_lab_attachment_renders_in_nicu_workstation(): void
+    {
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل مرفق المختبر',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        // إنشاء طلب مختبر مع مرفق تقرير جهاز الفحص
+        $medRequest = \App\Models\Request::create([
+            'incubator_reservation_id' => $reservation->id,
+            'type' => 'lab',
+            'status' => 'completed',
+            'description' => 'تحاليل خديج: CBC Blood Profile',
+            'details' => [
+                'tests' => ['CBC Blood Profile'],
+                'priority' => 'normal',
+                'attachment' => 'lab_attachments/sysmex_cbc_report.pdf',
+                'attachment_name' => 'sysmex_cbc_report.pdf',
+                'attachment_mime' => 'application/pdf',
+                'test_attachments' => [
+                    'CBC Blood Profile' => [
+                        'path' => 'lab_attachments/device_curve.png',
+                        'name' => 'device_curve.png',
+                    ],
+                ],
+            ],
+            'result' => [
+                'technician' => 'أحمد المختبري',
+                'notes' => 'العينة سليمة وتم التحليل بنجاح',
+                'completed_at' => now()->toDateTimeString(),
+            ],
+        ]);
+
+        $showResp = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $showResp->assertStatus(200);
+        $showResp->assertSee('sysmex_cbc_report.pdf');
+        $showResp->assertSee('معاينة المرفق');
+        $showResp->assertSee('device_curve.png');
+    }
+
+    public function test_nicu_roles_and_granular_permissions(): void
+    {
+        $doctorRole = \Spatie\Permission\Models\Role::findByName('nicu_doctor');
+        $nurseRole = \Spatie\Permission\Models\Role::findByName('nicu_nurse');
+
+        $this->assertNotNull($doctorRole);
+        $this->assertNotNull($nurseRole);
+
+        // الطبيب يمتلك صلاحيات الأوامر السريرية وملاحظات الاختصاص
+        $this->assertTrue($doctorRole->hasPermissionTo('manage nicu doctor notes'));
+        $this->assertTrue($doctorRole->hasPermissionTo('manage nicu clinical'));
+        $this->assertTrue($doctorRole->hasPermissionTo('manage nicu attachments'));
+        $this->assertTrue($doctorRole->hasPermissionTo('view incubator reservations'));
+
+        // التمريض يمتلك صلاحيات محطة التمريض وخطة الرعاية
+        $this->assertTrue($nurseRole->hasPermissionTo('manage nicu nursing'));
+        $this->assertTrue($nurseRole->hasPermissionTo('manage nicu care plans'));
+        $this->assertTrue($nurseRole->hasPermissionTo('manage nicu attachments'));
+        $this->assertFalse($nurseRole->hasPermissionTo('manage nicu doctor notes'));
+
+        // اختبار منع مستخدم غير مصرح من تدوين ملاحظات الطبيب
+        $unauthorizedUser = User::factory()->create();
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل اختبار الصلاحيات',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $forbiddenResp = $this->actingAs($unauthorizedUser)->post(route('nicu.doctor-notes.store', $reservation), [
+            'content' => 'ملاحظة غير مصرح بها',
+        ]);
+        $forbiddenResp->assertStatus(403);
+    }
+
+    public function test_nicu_workstation_renders_user_lab_test_groups_matching_consultant_doctor(): void
+    {
+        $labTest1 = LabTest::firstOrCreate(['name' => 'فحص بيليروبين كلي ومباشر'], ['code' => 'BIL-TOT', 'price' => 15000]);
+        $labTest2 = LabTest::firstOrCreate(['name' => 'تعداد دم كامل خدج'], ['code' => 'CBC-NICU', 'price' => 12000]);
+
+        // باقة مخصصة للخدج
+        $nicuGroup = UserLabTestGroup::create([
+            'user_id' => $this->admin->id,
+            'name' => 'باقة يرقان ومسح دم مخصصة',
+            'department' => 'nicu',
+        ]);
+        $nicuGroup->labTests()->attach([$labTest1->id, $labTest2->id]);
+
+        // باقة استشارية عامة خارجية (يجب ألا تظهر في الخدج إطلاقاً)
+        $consultantGroup = UserLabTestGroup::create([
+            'user_id' => $this->admin->id,
+            'name' => 'باقة جلدية وروماتزم استشارية',
+            'department' => 'consultant',
+        ]);
+        $consultantGroup->labTests()->attach([$labTest1->id]);
+
+        $reservation = IncubatorReservation::create([
+            'patient_id' => $this->babyPatient->id,
+            'baby_name' => 'طفل اختبار الباقات المخصصة',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now(),
+            'admission_time' => '10:00',
+            'status' => 'admitted',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $response->assertStatus(200);
+
+        // رابط إدارة باقات الخدج
+        $response->assertSee(route('lab-tests.groups.index', ['department' => 'nicu']));
+        $response->assertSee('إدارة باقات الخدج');
+
+        // ظهور باقة الخدج حصراً
+        $response->assertSee('باقة يرقان ومسح دم مخصصة');
+        $response->assertSee('doc-lab-quick-pkg-btn');
+        $response->assertSee('data-test-ids');
+        $response->assertSee('docLabActiveFilterNotice');
+        $response->assertSee('docLabResetPkgFilterBtn');
+
+        // التأكد القاطع من عزل باقات الاستشارية والعيادات وعدم ظهورها في الخدج
+        $response->assertDontSee('باقة جلدية وروماتزم استشارية');
+    }
+
+    public function test_lab_test_groups_department_isolation_between_nicu_and_consultant(): void
+    {
+        // 1. إنشاء باقة خدج عبر POST
+        $postResp = $this->actingAs($this->admin)->post(route('lab-tests.groups.store'), [
+            'name' => 'باقة خدج تنفسية جديدة',
+            'department' => 'nicu',
+            'description' => 'باقة متخصصة بالحاضنات',
+        ]);
+        $postResp->assertRedirect();
+
+        $group = UserLabTestGroup::where('name', 'باقة خدج تنفسية جديدة')->first();
+        $this->assertNotNull($group);
+        $this->assertEquals('nicu', $group->department);
+
+        // 2. التحقق من فلتر صفحة المجموعات للخدج
+        $indexNicuResp = $this->actingAs($this->admin)->get(route('lab-tests.groups.index', ['department' => 'nicu']));
+        $indexNicuResp->assertStatus(200);
+        $indexNicuResp->assertSee('باقة خدج تنفسية جديدة');
+        $indexNicuResp->assertSee('باقات قسم الخدج والحاضنات (NICU)');
     }
 }
 
