@@ -105,17 +105,22 @@
 
                         foreach($em->services->whereIn('id', $unpaidServiceIds) as $service) {
                             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+                            $qty = max(1, (int) ($service->pivot->quantity ?? 1));
+                            $approvedPrice = (float) $pricing['approved_price'];
+                            $patientShare = (float) $pricing['patient_share'];
+                            $insuranceShare = (float) $pricing['insurance_share'];
+
                             $invoiceItems[] = [
                                 'category' => 'خدمة طوارئ',
                                 'badge_class' => 'bg-info text-dark',
                                 'icon' => 'fa-medkit',
-                                'name' => $service->name,
-                                'qty' => 1,
+                                'name' => $service->name . ($qty > 1 ? " (×{$qty})" : ''),
+                                'qty' => $qty,
                                 'is_covered' => $isInsurance && $pricing['is_covered'],
-                                'price' => (float) $pricing['approved_price'],
-                                'total' => (float) $pricing['approved_price'],
-                                'patient_share' => (float) $pricing['patient_share'],
-                                'insurance_share' => (float) $pricing['insurance_share'],
+                                'price' => $approvedPrice,
+                                'total' => round($approvedPrice * $qty, 2),
+                                'patient_share' => round($patientShare * $qty, 2),
+                                'insurance_share' => round($insuranceShare * $qty, 2),
                             ];
                         }
 

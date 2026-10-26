@@ -141,5 +141,15 @@ class EmergencyServiceQuantityStepperTest extends TestCase
         $this->assertEquals(21000, (float) $payment->patient_share);
         $this->assertStringContainsString('(×3)', $payment->description);
         $this->assertEquals(21000, $emergency->fresh()->getUnpaidAmount());
+
+        // اختبار ظهور الكمية 3 والمبلغ المضاعف في واجهة استمارة الكاشير وقائمة الكاشير
+        $formResponse = $this->actingAs($admin)->get(route('cashier.emergency.payment.form', $payment));
+        $formResponse->assertOk();
+        $formResponse->assertSee('(×3)');
+        $formResponse->assertSee('21,000 د.ع');
+
+        $indexResponse = $this->actingAs($admin)->get(route('cashier.index'));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('خدمات: 3');
     }
 }

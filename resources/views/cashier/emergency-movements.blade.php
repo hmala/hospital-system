@@ -130,7 +130,7 @@
                                                 @if($payment->emergency)
                                                     <ul class="list-unstyled mb-0 small">
                                                         @if($payment->emergency->services->isNotEmpty())
-                                                            <li><i class="fas fa-hand-holding-medical text-primary me-1"></i>خدمات: {{ $payment->emergency->services->pluck('name')->implode(', ') }}</li>
+                                                            <li><i class="fas fa-hand-holding-medical text-primary me-1"></i>خدمات: {{ $payment->emergency->services->map(fn($s) => $s->name . (($s->pivot->quantity ?? 1) > 1 ? ' (×' . $s->pivot->quantity . ')' : ''))->implode(', ') }}</li>
                                                         @endif
                                                         @if($payment->emergency->labRequests->isNotEmpty())
                                                             @php 

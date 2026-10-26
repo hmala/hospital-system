@@ -571,6 +571,8 @@
                                                                         $em = $payment->emergency;
                                                                         $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
                                                                         $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                        $emServicesCount = $em->services->count();
+                                                                        $emServicesTotalQty = (int) $em->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
                                                                     @endphp
                                                                     <tr>
                                                                         <td><strong>#{{ $payment->id }}</strong></td>
@@ -581,7 +583,7 @@
                                                                         </td>
                                                                         <td>
                                                                             <span class="badge bg-{{ $payment->emergency->priority_color }}">{{ $payment->emergency->priority_text }}</span>
-                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $emServicesTotalQty }}{{ $emServicesTotalQty != $emServicesCount ? " ({$emServicesCount} أنواع)" : '' }}</small>
                                                                         </td>
                                                                         <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                                         <td>
@@ -965,7 +967,11 @@
                                                                          </span>
                                                                      </td>
                                                                      <td>
-                                                                         <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                         @php
+                                                                            $emTotalQty = (int) $payment->emergency->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
+                                                                            $emCount = $payment->emergency->services->count();
+                                                                        @endphp
+                                                                        <small class="text-muted">عدد الخدمات: <strong>{{ $emTotalQty }}</strong>{{ $emTotalQty != $emCount ? " ({$emCount} أنواع)" : '' }}</small>
                                                                      </td>
                                                                      <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                                      <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
