@@ -53,6 +53,27 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-26 — المرحلة 115: مطابقة وتوحيد واجهة دفع الطوارئ 100% مع واجهة الكاشير الرئيسية، تحصين نسب فئات الضمان، وإرجاع وصولات المريضة فاطمة Emergency Cashier Form 100% Parity with Request Payment, Strict Category Copay Lockdown & Unpaid Receipt Reversal)
+
+### Done
+- **إرجاع وتصحيح وصولات المريضة فاطمة صباح (الفئة H)**:
+  * إرجاع قيد ودفع خدمات الطوارئ رقم #1191 إلى "غير مسدد" ومحمي بنسبة 0% الرسمية للفئة H بمبلغ 0 د.ع للمريض وتغطية 100% للضمان (75,000 د.ع).
+  * إرجاع وتصحيح وصل التحاليل رقم #1187 إلى "غير مسدد" مع إعادة احتسابه وفق نسبة الـ 25% الرسمية المعتمدة للفئة H (حصة المريض: 7,750 د.ع، وحصة الضمان: 23,250 د.ع بدلاً من حساب الـ 15% الخاطئ).
+- **إعادة تصميم وتوحيد واجهة دفع الطوارئ بالكامل ([resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * مطابقة الواجهة بنسبة 100% مع واجهة `request-payment/567` العصرية الفاخرة:
+    - رأس أزرق ملكي مع بطاقتين علويتين لبيانات الحالة وبيانات المريض ورقم الهوية.
+    - بطاقات الإحصاء المالي الثلاثية المباشرة (إجمالي السعر المعتمد، حصة هيئة الضمان، والصافي المطلوب نقداً).
+    - شريط فئة الضمان الصحي المعتمد مع شارة `[ الفئة H ]` ونسبة الاستقطاع الرسمية للطوارئ (0%).
+    - جدول تفصيلي متكامل للبنود والخدمات يوضح السعر المعتمد وحصة المريض وحصة الضمان لكل بند.
+    - قفل خانة المبلغ المحصل `readonly` مع وسام `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الإدخال اليدوي.
+    - التوجيه التلقائي المباشر للوصل فور تأكيد الدفع لطباعة الإيصال الإلكتروني والحراري.
+- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إلزام دالة `processEmergencyPayment` بجلب نسبة فئة المريض تلقائياً عبر `getCopayPercentageFor('emergency')`.
+  * تعديل دالة `upsertUnifiedEmergencyPayment` لإبقاء الفواتير المغطاة بالكامل 100% بالضمان في حالة انتظار لتأكيدها وإصدار وصل رسمي لها عبر الكاشير.
+  * معالجة تحويل الدفعات المسددة مسبقاً تلقائياً إلى صفحة الوصل الرسمي بدلاً من رسائل التحويل التحذيرية.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyCashierCopayLockTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyCashierCopayLockTest.php))**:
+  * بناء اختبار ميزة متكامل واجتيازه بنجاح تام مع اجتياز كامل حزمة اختبارات الكاشير الـ 21 بنجاح (`21 passed, 165 assertions`).
+
 ## Session log (2026-10-26 — المرحلة 114: عداد تكرار الخدمات التمريضية والطبية بالطوارئ وتحديث الحسابات والوصولات آلياً Emergency Nursing Services Dynamic Stepper Counter, Realtime Multiplied Pricing & Full Receipt Parity)
 
 ### Done
