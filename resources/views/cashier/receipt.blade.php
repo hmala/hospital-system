@@ -199,13 +199,16 @@
             $paidServices = \DB::table('emergency_emergency_service')
                 ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                 ->where('emergency_emergency_service.payment_id', $payment->id)
-                ->select('emergency_services.name', 'emergency_services.price')
+                ->select('emergency_services.name', 'emergency_services.price', 'emergency_emergency_service.quantity')
                 ->get();
             foreach ($paidServices as $svc) {
-                $base = (float)($svc->price ?? 0);
+                $qty = max(1, (int) ($svc->quantity ?? 1));
+                $unitBase = (float) ($svc->price ?? 0);
+                $base = $unitBase * $qty;
                 $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                $nameStr = 'خدمة طوارئ: ' . $svc->name . ($qty > 1 ? " (×{$qty})" : '');
                 $lineItems[] = [
-                    'name' => 'خدمة طوارئ: ' . $svc->name,
+                    'name' => $nameStr,
                     'category' => 'طوارئ',
                     'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'كادر الطوارئ',
                     'approved' => $base,

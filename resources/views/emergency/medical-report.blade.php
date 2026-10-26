@@ -942,7 +942,7 @@
                                 <tr>
                                     <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
                                     <td>{{ $emergency->created_at->format('H:i') }}</td>
-                                    <td><strong>{{ $srv->name }}</strong></td>
+                                    <td><strong>{{ $srv->name }}{{ ($srv->pivot && $srv->pivot->quantity > 1) ? ' (×' . $srv->pivot->quantity . ')' : '' }}</strong></td>
                                     <td>{{ $emergency->diagnosis ?? '' }}</td>
                                     <td>{{ $doctorName }}</td>
                                 </tr>

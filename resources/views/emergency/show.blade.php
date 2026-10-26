@@ -587,26 +587,30 @@
                                                     <input type="text" id="serviceSearchInput" class="form-control" placeholder="ابحث باسم الخدمة الطبية أو التمريضية...">
                                                     <button class="btn btn-outline-secondary d-none" type="button" id="clearServiceSearch"><i class="fas fa-times"></i></button>
                                                 </div>
-                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 290px; overflow-y: auto;">
+                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 320px; overflow-y: auto;">
                                                     @php
                                                         $selectedServiceIds = $emergency->services->pluck('id')->toArray();
+                                                        $serviceQuantities = $emergency->services->pluck('pivot.quantity', 'id')->toArray();
                                                     @endphp
                                                     @foreach($emergencyServices as $service)
                                                         @php
                                                             $isPaid = isset($paidServiceMap[$service->id]);
                                                             $isSelected = in_array($service->id, $selectedServiceIds);
+                                                            $qty = (int) ($serviceQuantities[$service->id] ?? 1);
+                                                            if ($qty < 1) $qty = 1;
+                                                            $unitPrice = (float) $service->price;
                                                             $isSrvInsurance = ($service->is_hi_active ?? true) && ($service->hi_price > 0);
                                                         @endphp
                                                         <div class="col-12 service-item" data-is-insurance="{{ $isSrvInsurance ? '1' : '0' }}">
                                                             <div class="form-check d-flex justify-content-between align-items-center p-2 rounded {{ $isPaid ? 'bg-success-subtle bg-opacity-25 border border-success-subtle' : ($isSelected ? 'bg-light border' : '') }}">
-                                                                <div>
+                                                                <div class="d-flex align-items-center flex-grow-1 me-2">
                                                                     @if($isPaid)
                                                                         <input type="hidden" name="service_ids[]" value="{{ $service->id }}">
-                                                                        <input class="form-check-input service-checkbox" type="checkbox" checked disabled id="srv_{{ $service->id }}">
+                                                                        <input class="form-check-input service-checkbox me-2" type="checkbox" checked disabled id="srv_{{ $service->id }}">
                                                                     @else
-                                                                        <input class="form-check-input service-checkbox" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
+                                                                        <input class="form-check-input service-checkbox me-2" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
                                                                     @endif
-                                                                    <label class="form-check-label fw-bold service-name {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
+                                                                    <label class="form-check-label fw-bold service-name mb-0 {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
                                                                         {{ $service->name }}
                                                                         @if($isSrvInsurance)
                                                                             <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.68rem;">
@@ -624,9 +628,32 @@
                                                                         @endif
                                                                     </label>
                                                                 </div>
-                                                                <span class="badge {{ $isPaid ? 'bg-success text-white' : 'bg-success-subtle text-success border border-success-subtle' }}">
-                                                                    {{ number_format($service->price) }} IQD
-                                                                </span>
+
+                                                                <!-- عداد الكمية التفاعلي ومضاعف السعر -->
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="input-group input-group-sm service-qty-group {{ $isSelected || $isPaid ? '' : 'd-none' }}" style="width: 105px;">
+                                                                        <button type="button" class="btn btn-outline-secondary px-2 btn-service-minus" title="إنقاص" {{ $isPaid ? 'disabled' : '' }}>
+                                                                            <i class="fas fa-minus" style="font-size: 0.65rem;"></i>
+                                                                        </button>
+                                                                        <input type="number" 
+                                                                               name="service_quantities[{{ $service->id }}]" 
+                                                                               class="form-control text-center p-0 fw-bold service-qty-input" 
+                                                                               value="{{ $qty }}" 
+                                                                               min="1" 
+                                                                               max="99" 
+                                                                               data-unit-price="{{ $unitPrice }}"
+                                                                               data-service-id="{{ $service->id }}"
+                                                                               style="font-size: 0.85rem;"
+                                                                               {{ $isPaid ? 'readonly' : '' }}>
+                                                                        <button type="button" class="btn btn-outline-secondary px-2 btn-service-plus" title="زيادة" {{ $isPaid ? 'disabled' : '' }}>
+                                                                            <i class="fas fa-plus" style="font-size: 0.65rem;"></i>
+                                                                        </button>
+                                                                    </div>
+
+                                                                    <span class="badge {{ $isPaid ? 'bg-success text-white' : 'bg-success-subtle text-success border border-success-subtle' }} service-price-badge px-2 py-1 text-center" style="min-width: 85px; font-size: 0.8rem;">
+                                                                        <span class="price-val">{{ number_format($unitPrice * $qty) }}</span> IQD
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     @endforeach
@@ -2819,6 +2846,76 @@ document.addEventListener('DOMContentLoaded', function() {
     initLiveFilter('serviceSearchInput', 'clearServiceSearch', '.service-item', '.service-name', 'noServicesFound', 'serviceSelectedCount', '.service-checkbox', '.service-filter-btn');
     initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox', '.lab-filter-btn');
     initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox', '.rad-filter-btn');
+
+    // إدارة عداد كميات الخدمات التمريضية والطبية (زيادة / إنقاص / تحديث السعر الفوري)
+    document.querySelectorAll('.service-item').forEach(function(row) {
+        const checkbox = row.querySelector('.service-checkbox');
+        const qtyGroup = row.querySelector('.service-qty-group');
+        const qtyInput = row.querySelector('.service-qty-input');
+        const minusBtn = row.querySelector('.btn-service-minus');
+        const plusBtn = row.querySelector('.btn-service-plus');
+        const priceVal = row.querySelector('.price-val');
+        const formCheck = row.querySelector('.form-check');
+
+        if (!qtyInput) return;
+        const unitPrice = parseFloat(qtyInput.getAttribute('data-unit-price')) || 0;
+
+        function updatePrice() {
+            let q = parseInt(qtyInput.value) || 1;
+            if (q < 1) {
+                q = 1;
+                qtyInput.value = 1;
+            }
+            if (priceVal) {
+                priceVal.textContent = Math.round(unitPrice * q).toLocaleString('en-US');
+            }
+        }
+
+        if (plusBtn) {
+            plusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let current = parseInt(qtyInput.value) || 1;
+                qtyInput.value = current + 1;
+                updatePrice();
+            });
+        }
+
+        if (minusBtn) {
+            minusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let current = parseInt(qtyInput.value) || 1;
+                if (current > 1) {
+                    qtyInput.value = current - 1;
+                    updatePrice();
+                }
+            });
+        }
+
+        if (qtyInput) {
+            qtyInput.addEventListener('input', updatePrice);
+            qtyInput.addEventListener('change', updatePrice);
+        }
+
+        if (checkbox && !checkbox.disabled) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (qtyGroup) qtyGroup.classList.remove('d-none');
+                    if (formCheck) formCheck.classList.add('bg-light', 'border');
+                    if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
+                        qtyInput.value = 1;
+                    }
+                    updatePrice();
+                } else {
+                    if (qtyGroup) qtyGroup.classList.add('d-none');
+                    if (formCheck) formCheck.classList.remove('bg-light', 'border');
+                    qtyInput.value = 1;
+                    updatePrice();
+                }
+            });
+        }
+    });
 
     /**
      * تمكين طبيب الطوارئ من حذف فحص/تحليل محدد من الطلب المعلق مباشرة دون تحديث كامل الصفحة

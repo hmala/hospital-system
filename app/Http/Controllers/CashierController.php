@@ -3011,7 +3011,7 @@ class CashierController extends Controller
                 $servicesSum = \DB::table('emergency_emergency_service')
                     ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                     ->where('emergency_emergency_service.payment_id', $payment->id)
-                    ->sum('emergency_services.price');
+                    ->sum(\DB::raw('emergency_services.price * COALESCE(emergency_emergency_service.quantity, 1)'));
 
                 // Labs
                 $labRequestIds = \DB::table('emergency_lab_requests')

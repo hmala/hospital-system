@@ -786,6 +786,8 @@ class EmergencyController extends Controller
             'diagnosis' => 'nullable|string|max:1000',
             'service_ids' => 'nullable|array',
             'service_ids.*' => 'exists:emergency_services,id',
+            'service_quantities' => 'nullable|array',
+            'service_quantities.*' => 'nullable|integer|min:1|max:99',
         ]);
         $vitals = $emergency->vital_signs ?? [];
         if ($request->filled('blood_pressure')) {
@@ -840,15 +842,14 @@ class EmergencyController extends Controller
         $allServiceIds = array_unique(array_merge($submittedServiceIds, $paidServiceIds));
 
         $syncData = [];
+        $submittedQuantities = (array) $request->input('service_quantities', []);
         foreach ($allServiceIds as $srvId) {
             $paidRecord = $existingPaidServices->firstWhere('emergency_service_id', $srvId);
-            if ($paidRecord) {
-                $syncData[$srvId] = [
-                    'payment_id' => $paidRecord->payment_id,
-                ];
-            } else {
-                $syncData[$srvId] = [];
-            }
+            $qty = max(1, (int) ($submittedQuantities[$srvId] ?? ($paidRecord->quantity ?? 1)));
+            $syncData[$srvId] = [
+                'quantity' => $qty,
+                'payment_id' => $paidRecord ? $paidRecord->payment_id : null,
+            ];
         }
 
         $emergency->services()->sync($syncData);
@@ -1767,10 +1768,11 @@ class EmergencyController extends Controller
         $fullyCoveredServiceIds = [];
 
         foreach ($unpaidServices as $service) {
+            $qty = max(1, (int) ($service->pivot->quantity ?? 1));
             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
-            $totalServicesAmount += (float) $pricing['total_amount'];
-            $servicesPatientShare += (float) $pricing['patient_share'];
-            $servicesInsuranceShare += (float) $pricing['insurance_share'];
+            $totalServicesAmount += ((float) $pricing['total_amount']) * $qty;
+            $servicesPatientShare += ((float) $pricing['patient_share']) * $qty;
+            $servicesInsuranceShare += ((float) $pricing['insurance_share']) * $qty;
 
             if ($pricing['is_covered'] && $pricing['patient_share'] <= 0) {
                 $fullyCoveredServiceIds[] = $service->id;
@@ -1844,7 +1846,11 @@ class EmergencyController extends Controller
         // بناء الوصف من العناصر غير المدفوعة فقط
         $serviceNames = $emergency->services
             ->whereIn('id', $unpaidServiceIds)
-            ->pluck('name')
+            ->map(function ($service) {
+                $qty = max(1, (int) ($service->pivot->quantity ?? 1));
+
+                return $qty > 1 ? "{$service->name} (×{$qty})" : $service->name;
+            })
             ->filter()
             ->values();
 

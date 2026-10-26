@@ -53,7 +53,24 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
-- When working on frontend or realtime behavior, inspect `vite.config.js`, `resources/`, and `package.json` scripts.
+## Session log (2026-10-26 — المرحلة 114: عداد تكرار الخدمات التمريضية والطبية بالطوارئ وتحديث الحسابات والوصولات آلياً Emergency Nursing Services Dynamic Stepper Counter, Realtime Multiplied Pricing & Full Receipt Parity)
+
+### Done
+- **قاعدة البيانات والترحيل السحابي والمحلي ([database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php))**:
+  * إضافة حقل `quantity` الافتراضي 1 بجدول الوسيط `emergency_emergency_service` لتسجيل تكرار أي خدمة تمريضية أو طبية لنفس المريض دون الإخلال بالقيد الفريد.
+  * تطبيق الترحيل بنجاح على قاعدة البيانات المحلية وتطبيق التعديل الهيكلي DDL على قاعدة بيانات هوستنجر السحابية بدقة 100%.
+- **تصميم العداد التفاعلي (Dynamic Stepper Counter) ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * تحويل كل خدمة تمريضية إلى صف تفاعلي أنيق يظهر فيه عداد كبسولي `[-] [ 1 ] [+]` فور تحديد الخدمة.
+  * القيمة الافتراضية تبدأ من 1 (بحد أدنى 1 وحد أقصى 99).
+  * تحديث فوري لشارة السعر الإجمالي للخدمة (`السعر × العدد د.ع`) عند النقر على `+` أو `-` أو الكتابة الرقمية المباشرة في الحقل.
+- **تحديث محرك الحسابات المالية بالطوارئ والكاشير ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php), [app/Models/Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) & [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * قراءة وتخزين مصفوفة `service_quantities` في جدول الوسيط أثناء الحفظ والتحديث.
+  * ضرب أسعار الخدمات في الكمية في دوال احتساب الرصيد غير المسدد `getUnpaidAmount` والحساب الموحد `upsertUnifiedEmergencyPayment` وحسابات الكاشير.
+- **مطابقة الوصولات والتقارير الطبية الرسمية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) & [resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php))**:
+  * استرجاع حقل `quantity` وعرض مضاعف الخدمة `(×N)` في مسميات البنود في الوصل الإلكتروني والحراري والتقرير الطبي للطوارئ واحتساب الإجمالي بدقة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyServiceQuantityStepperTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyServiceQuantityStepperTest.php))**:
+  * بناء اختبارات ميزة تغطي إظهار العداد، حفظ الكميات، وحساب المضاعفات المالية، واجتياز كافة الاختبارات بنجاح (`2 passed, 13 assertions`).
+
 ## Session log (2026-10-25 — المرحلة 113: تحصين نسب التحمل المالية، إلغاء التعديل اليدوي للنسب والمبالغ، ومطابقة تسعير الوصل الإلكتروني والحراري للضمان الصحي Strict Cashier Copay Lockdown, Removal of Manual Copay & Amount Overrides, 100% Web & Thermal Receipt Parity & Hostinger Data Fix)
 
 ### Done
