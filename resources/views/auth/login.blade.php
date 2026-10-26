@@ -535,11 +535,14 @@
         <div class="welcome-section">
             <div class="text-center mb-4">
                 @php
-                    $loginLogoFile = public_path('images/logo.jpeg');
-                    $loginLogoSrc = file_exists($loginLogoFile) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($loginLogoFile)) : asset('images/logo.jpeg');
+                    $loginLogoFile = public_path('images/logo.png');
+                    if (!file_exists($loginLogoFile)) {
+                        $loginLogoFile = public_path('images/logo.jpeg');
+                    }
+                    $loginLogoSrc = file_exists($loginLogoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($loginLogoFile)) : asset('images/logo.png');
                 @endphp
-                <div style="background: #ffffff; border-radius: 16px; padding: 12px 20px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8);">
-                    <img src="{{ $loginLogoSrc }}" alt="HERAMZ RP" class="img-fluid" style="max-height: 90px; width: auto;">
+                <div style="background: transparent; border-radius: 16px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; border: none; box-shadow: none;">
+                    <img src="{{ $loginLogoSrc }}" alt="MEDIX ERP" class="img-fluid" style="max-height: 95px; width: auto;">
                 </div>
             </div>
            

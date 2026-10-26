@@ -191,21 +191,21 @@
         .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
         .sidebar-header img,
         .sidebar-header .logo-badge { 
-            background: rgba(59, 130, 246, 0.12); 
-            border-radius: 18px; 
-            padding: 10px; 
+            background: transparent; 
+            border-radius: 12px; 
+            padding: 2px 4px; 
             max-height: 70px; 
             width: auto; 
-            border: 1px solid rgba(59, 130, 246, 0.45); 
-            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18); 
+            border: none; 
+            box-shadow: none; 
             display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
         }
         .sidebar-header .logo-badge:hover {
-            background: rgba(59, 130, 246, 0.22);
-            border-color: rgba(59, 130, 246, 0.65);
+            background: transparent;
+            border-color: transparent;
             transform: translateY(-1px);
         }
         .sidebar-header .logo-badge img {
@@ -616,10 +616,13 @@
 </head>
 <body>
     @php
-        $logoFilePath = public_path('images/logo.jpeg');
+        $logoFilePath = public_path('images/logo.png');
+        if (!file_exists($logoFilePath)) {
+            $logoFilePath = public_path('images/logo.jpeg');
+        }
         $systemLogoSrc = file_exists($logoFilePath) 
-            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFilePath)) 
-            : asset('images/logo.jpeg');
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFilePath)) 
+            : asset('images/logo.png');
     @endphp
 
     {{-- Global Page Loader Ultra --}}
@@ -645,7 +648,7 @@
                 <div class="position-sticky pt-0">
                     <div class="sidebar-header text-center">
                         <div class="logo-badge">
-                            <img src="{{ $systemLogoSrc }}" alt="HERAMZ RP" class="img-fluid">
+                            <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
                         </div>
                         <div class="sidebar-user">
                             <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>

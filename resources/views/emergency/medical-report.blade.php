@@ -608,10 +608,13 @@
     }
 
     // Official System Logo (Login & Sidebar Logo) for Watermark & Footer
-    $systemLogoFile = public_path('images/logo.jpeg');
+    $systemLogoFile = public_path('images/logo.png');
+    if (!file_exists($systemLogoFile)) {
+        $systemLogoFile = public_path('images/logo.jpeg');
+    }
     $systemLogoSrc = file_exists($systemLogoFile)
-        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($systemLogoFile))
-        : asset('images/logo.jpeg');
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($systemLogoFile))
+        : asset('images/logo.png');
 
     // Triage badge calculation
     $priority = $emergency->priority ?? 'urgent';
