@@ -3,28 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة المستشفى - تسجيل الدخول</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>تسجيل الدخول | MEDIX ERP - إدارة المستشفيات والمراكز الطبية</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #3b82f6;
-            --secondary-color: #60a5fa;
-            --accent-color: #10b981;
-            --background-color: #f8fafc;
-            --surface-color: #ffffff;
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
-            --text-muted: #9ca3af;
-            --border-color: #e5e7eb;
-            --border-hover: #d1d5db;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --transition: all 0.2s ease-in-out;
-            --border-radius: 12px;
-            --border-radius-lg: 16px;
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.45);
+            --primary-hover: #1d4ed8;
+            --accent-cyan: #0284c7;
+            --accent-emerald: #10b981;
+            --bg-deep: #070d19;
+            --bg-card: rgba(15, 23, 42, 0.65);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glass-focus: rgba(56, 189, 248, 0.45);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
         }
 
         * {
@@ -34,594 +30,702 @@
         }
 
         body {
-            font-family: 'Cairo', sans-serif;
-            background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.8) 100%), url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80') no-repeat center center fixed;
-            background-size: cover;
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-
-
-        .login-container {
-            width: 100%;
-            max-width: 1400px;
-            padding: 2rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-        }
-
-        /* قسم الترحيب */
-        .welcome-section {
-            text-align: center;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: var(--border-radius-lg);
-            backdrop-filter: blur(10px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .welcome-icon {
-            font-size: 4rem;
-            color: var(--primary-color);
-            margin-bottom: 2rem;
-            animation: pulse 2s infinite;
-        }
-
-        .welcome-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-
-        .welcome-subtitle {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            line-height: 1.6;
-        }
-
-        .luxury-features {
-            margin-top: 2rem;
-        }
-
-        .feature-item {
-            background: var(--surface-color);
+            overflow-x: hidden;
+            position: relative;
             padding: 1.5rem;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-            transition: var(--transition);
         }
 
-        .feature-item:hover {
-            border-color: var(--primary-color);
-            box-shadow: var(--shadow);
-            transform: scale(1.05);
+        /* Tech Background Grid Overlay */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .feature-icon {
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-        }
-
-        .feature-title {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .feature-desc {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        /* بطاقة تسجيل الدخول */
-        .login-card {
-            background: transparent;
-            border-radius: var(--border-radius-lg);
-            box-shadow: none;
-            border: none;
-            overflow: hidden;
-        }
-
-        .login-card:hover {
-            transform: perspective(1000px) rotateX(0deg);
-        }
-
-        /* رأس البطاقة */
-        .login-header {
-            background: transparent;
-            color: var(--text-primary);
-            padding: 3rem 2rem 2rem;
-            text-align: center;
-        }
-
-        .login-logo {
-            width: 80px;
-            height: 80px;
+        /* Ambient Glow Orbs */
+        .ambient-orb {
+            position: fixed;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
+            filter: blur(120px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        .orb-1 {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.5) 0%, rgba(37, 99, 235, 0) 70%);
+            top: -10%;
+            right: -5%;
+            animation: orbFloat 14s ease-in-out infinite alternate;
+        }
+
+        .orb-2 {
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0) 70%);
+            bottom: -15%;
+            left: -5%;
+            animation: orbFloat 18s ease-in-out infinite alternate-reverse;
+        }
+
+        .orb-3 {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, rgba(2, 132, 199, 0.35) 0%, rgba(2, 132, 199, 0) 70%);
+            top: 40%;
+            left: 30%;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -30px) scale(1.08); }
+            100% { transform: translate(-30px, 40px) scale(0.95); }
+        }
+
+        /* Main Glassmorphic Wrapper */
+        .login-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1100px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 28px;
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            box-shadow: 
+                0 25px 60px -15px rgba(0, 0, 0, 0.65),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Left Side: Brand Showcase */
+        .brand-panel {
+            padding: 3.5rem 3rem;
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border-left: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.5), transparent);
+        }
+
+        .brand-top {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .brand-logo-holder {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+        }
+
+        .brand-logo-holder img {
+            max-height: 80px;
+            width: auto;
+            filter: drop-shadow(0 10px 25px rgba(37, 99, 235, 0.3));
+        }
+
+        .brand-tagline {
+            font-size: 1.65rem;
+            font-weight: 800;
+            line-height: 1.35;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-tagline span {
+            background: linear-gradient(135deg, #38bdf8 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* Feature Pills in Brand Panel */
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2.2rem 0;
+        }
+
+        .feature-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1.1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            transition: all 0.25s ease;
+        }
+
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(56, 189, 248, 0.25);
+            transform: translateX(-4px);
+        }
+
+        .feature-icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.5rem;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            font-size: 1.1rem;
+            flex-shrink: 0;
         }
 
-        .login-logo i {
-            font-size: 2.5rem;
-            color: white;
+        .icon-blue {
+            background: rgba(37, 99, 235, 0.18);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+
+        .icon-emerald {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .icon-purple {
+            background: rgba(168, 85, 247, 0.18);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .feature-text h4 {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 2px;
+        }
+
+        .feature-text p {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin: 0;
+        }
+
+        .brand-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .hospital-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulseDot 2s infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        .system-version {
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        /* Right Side: Login Portal Form */
+        .login-panel {
+            padding: 3.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
         }
 
         .login-title {
-            font-size: 2rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.5px;
         }
 
         .login-subtitle {
-            font-size: 1rem;
-            opacity: 0.9;
+            font-size: 0.92rem;
+            color: var(--text-muted);
         }
 
-        /* نموذج تسجيل الدخول */
-        .login-form {
-            padding: 3rem 2rem;
-        }
-
+        /* Form Controls */
         .form-group {
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.35rem;
             position: relative;
         }
 
         .form-label {
             display: block;
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 0.45rem;
+        }
+
+        .input-wrapper {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-        }
-
-        .form-label i {
-            color: var(--primary-color);
-            font-size: 1.1rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 1rem 1rem 1rem 3rem;
-            border: 2px solid var(--border-color);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            background: var(--surface-color);
-            transition: var(--transition);
-            outline: none;
-            font-weight: 400;
-            color: var(--text-primary);
-        }
-
-        .form-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .form-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .form-input.is-invalid {
-            border-color: #ef4444;
         }
 
         .input-icon {
             position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 1.1rem;
+            right: 1.1rem;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
             pointer-events: none;
         }
 
-        .form-input:focus + .input-icon {
-            color: var(--primary-color);
+        .form-input {
+            width: 100%;
+            padding: 0.85rem 2.85rem 0.85rem 1rem;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
         }
 
-        /* زر كشف/إخفاء كلمة المرور */
-        .password-toggle {
+        .form-input::placeholder {
+            color: #475569;
+        }
+
+        .form-input:focus {
+            background: rgba(15, 23, 42, 0.9);
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+        }
+
+        .form-input:focus + .input-icon,
+        .input-wrapper:focus-within .input-icon {
+            color: #38bdf8;
+        }
+
+        .password-toggle-btn {
             position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
+            left: 1rem;
             background: none;
             border: none;
-            color: var(--text-muted);
-            font-size: 1rem;
+            color: var(--text-dim);
             cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 6px;
-            transition: var(--transition);
-        }
-
-        .password-toggle:hover {
-            color: var(--primary-color);
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        /* مربع تذكرني */
-        .checkbox-group {
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .checkbox-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-        }
-
-        .checkbox-input {
-            position: absolute;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .checkmark {
-            width: 18px;
-            height: 18px;
-            border: 2px solid var(--border-color);
-            border-radius: 4px;
-            position: relative;
-            transition: var(--transition);
-        }
-
-        .checkbox-input:checked ~ .checkmark {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .checkbox-input:checked ~ .checkmark::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* أزرار الإجراءات */
-        .form-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .btn-login {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            border: none;
-            padding: 1.25rem 2rem;
-            border-radius: var(--border-radius);
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
+            padding: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            box-shadow: var(--shadow);
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-login:active {
-            transform: translateY(0);
-        }
-
-        .forgot-password-link {
-            color: var(--primary-color);
-            text-decoration: none;
             font-size: 0.95rem;
-            font-weight: 500;
-            text-align: center;
-            transition: var(--transition);
-            padding: 0.75rem;
+            transition: color 0.2s ease;
         }
 
-        .forgot-password-link:hover {
-            color: var(--secondary-color);
+        .password-toggle-btn:hover {
+            color: #e2e8f0;
+        }
+
+        /* Error States */
+        .form-input.is-invalid {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .field-error {
+            color: #f87171;
+            font-size: 0.8rem;
+            margin-top: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* Checkbox & Forgot */
+        .form-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1.2rem 0 1.8rem 0;
+            font-size: 0.86rem;
+        }
+
+        .custom-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-muted);
+        }
+
+        .custom-checkbox input {
+            display: none;
+        }
+
+        .checkbox-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            background: rgba(15, 23, 42, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-box i {
+            color: #ffffff;
+            font-size: 0.65rem;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s ease;
+        }
+
+        .custom-checkbox input:checked + .checkbox-box {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        }
+
+        .custom-checkbox input:checked + .checkbox-box i {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .forgot-link {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .forgot-link:hover {
+            color: #7dd3fc;
             text-decoration: underline;
         }
 
-        /* رسائل الخطأ */
-        .error-message {
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            padding: 0.95rem 1.5rem;
+            background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
+            border: none;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);
             display: flex;
             align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(255, 255, 255, 0.15), transparent);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px -4px rgba(37, 99, 235, 0.6);
+        }
+
+        .btn-submit:hover::after {
+            opacity: 1;
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Footer Security Notice */
+        .portal-footer {
+            margin-top: 2rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 0.5rem;
-            color: #ef4444;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-            font-weight: 500;
+            font-size: 0.78rem;
+            color: var(--text-dim);
         }
 
-        .error-message i {
-            font-size: 14px;
+        .portal-footer i {
+            color: #10b981;
         }
 
-        /* التنسيق المتجاوب */
-        @media (max-width: 1024px) {
-            .login-container {
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+            .login-wrapper {
                 grid-template-columns: 1fr;
-                gap: 3rem;
+                max-width: 520px;
+                border-radius: 22px;
             }
 
-            .welcome-section {
-                order: 2;
+            .brand-panel {
+                padding: 2.5rem 2rem 2rem 2rem;
+                border-left: none;
+                border-bottom: 1px solid var(--border-glass);
             }
 
-            .login-card {
-                order: 1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .login-container {
-                padding: 1rem;
-                gap: 2rem;
+            .brand-tagline {
+                font-size: 1.35rem;
             }
 
-            .welcome-title {
-                font-size: 2rem;
+            .feature-list {
+                display: none;
             }
 
-            .welcome-icon {
-                font-size: 3rem;
+            .login-panel {
+                padding: 2.5rem 2rem;
             }
-
-            .luxury-features {
-                grid-template-columns: 1fr;
-            }
-
-            .login-header {
-                padding: 2rem 1.5rem 1.5rem;
-            }
-
-            .login-title {
-                font-size: 1.5rem;
-            }
-
-            .login-form {
-                padding: 2rem 1.5rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .welcome-title {
-                font-size: 1.5rem;
-            }
-
-            .login-header {
-                padding: 1.5rem 1rem 1rem;
-            }
-
-            .login-logo {
-                width: 60px;
-                height: 60px;
-            }
-
-            .login-logo i {
-                font-size: 1.8rem;
-            }
-
-            .login-title {
-                font-size: 1.3rem;
-            }
-
-            .login-form {
-                padding: 1.5rem 1rem;
-            }
-
-            .form-input {
-                padding: 0.875rem 0.875rem 0.875rem 2.5rem;
-            }
-
-            .input-icon {
-                left: 0.75rem;
-            }
-
-            .password-toggle {
-                right: 0.75rem;
-            }
-        }
-
-        /* تأثيرات الدخول */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .login-container {
-            animation: fadeInUp 1s ease-out;
-        }
-
-        .welcome-section {
-            animation: slideInRight 1s ease-out 0.3s both;
-        }
-
-        .login-card {
-            animation: slideInLeft 1s ease-out 0.3s both;
-        }
-
-        .form-group {
-            animation: fadeInUp 0.8s ease-out both;
-        }
-
-        .form-group:nth-child(1) { animation-delay: 0.5s; }
-        .form-group:nth-child(2) { animation-delay: 0.7s; }
-        .checkbox-group { animation-delay: 0.9s; }
-        .form-actions { animation-delay: 1.1s; }
-
-        /* تخصيص شريط التمرير */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--background-color);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <!-- قسم الترحيب -->
-        <div class="welcome-section">
-            <div class="text-center mb-4">
-                @php
-                    $loginLogoFile = public_path('images/logo.png');
-                    if (!file_exists($loginLogoFile)) {
-                        $loginLogoFile = public_path('images/logo.jpeg');
-                    }
-                    $loginLogoSrc = file_exists($loginLogoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($loginLogoFile)) : asset('images/logo.png');
-                @endphp
-                <div style="background: transparent; border-radius: 16px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; border: none; box-shadow: none;">
-                    <img src="{{ $loginLogoSrc }}" alt="MEDIX ERP" class="img-fluid" style="max-height: 95px; width: auto;">
+    <!-- Background Decor -->
+    <div class="bg-grid"></div>
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    @php
+        $loginLogoFile = public_path('images/logo.png');
+        if (!file_exists($loginLogoFile)) {
+            $loginLogoFile = public_path('images/logo.jpeg');
+        }
+        $loginLogoSrc = file_exists($loginLogoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($loginLogoFile)) : asset('images/logo.png');
+    @endphp
+
+    <!-- Main Glassmorphic Container -->
+    <div class="login-wrapper">
+
+        <!-- Right Side in RTL: Brand & Showcase -->
+        <div class="brand-panel">
+            <div class="brand-top">
+                <div class="brand-logo-holder">
+                    <img src="{{ $loginLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
+                </div>
+
+                <div class="brand-tagline">
+                    المنظومة السحابية الذكية<br>
+                    <span>لإدارة المستشفيات والمراكز</span>
+                </div>
+
+                <p class="brand-desc">
+                    حلول رقمية متكاملة تجمع بين الملف الطبي الموحد، التحاسب المالي والصناديق، والربط اللحظي بين العيادات والمحطات التشخيصية.
+                </p>
+
+                <!-- Dynamic Features Pill List -->
+                <div class="feature-list">
+                    <div class="feature-card">
+                        <div class="feature-icon-box icon-blue">
+                            <i class="fas fa-heart-pulse"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>إدارة سريرية وطوارئ فورية</h4>
+                            <p>طابور ذكي، متابعة مرضى الطوارئ، وتوثيق لحظي</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box icon-emerald">
+                            <i class="fas fa-cash-register"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>نظام الصناديق والضمان الصحي</h4>
+                            <p>أتمتة نسب التحمل، مطالبات الضمان، ووصولات حرارية</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-box icon-purple">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>محطات تشخيصية متطورة</h4>
+                            <p>مختبرات متكاملة، واستدعاء صوتي للأشعة والسونار</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-           
 
-            <div class="luxury-features">
-                <img src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="نظام إدارة المستشفى" style="width: 100%; height: auto; border-radius: var(--border-radius); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1); opacity: 0.7;">
+            <div class="brand-bottom">
+                <div class="hospital-badge">
+                    <div class="status-dot"></div>
+                    <span>مستشفى الكفاءات التخصصي</span>
+                </div>
+                <div class="system-version">v2.4 LTS</div>
             </div>
         </div>
 
-        <!-- بطاقة تسجيل الدخول -->
-        <div class="login-card">
+        <!-- Left Side in RTL: Login Portal Form -->
+        <div class="login-panel">
+            <div class="login-header">
+                <h1 class="login-title">تسجيل الدخول</h1>
+                <p class="login-subtitle">مرحباً بك مجدداً، أدخل بياناتك للنفاذ إلى لوحة العمل</p>
+            </div>
 
-            <form class="login-form" method="POST" action="{{ route('login') }}">
+            <form class="login-form" method="POST" action="{{ route('login') }}" autocomplete="on">
                 @csrf
 
-                <!-- حقل البريد الإلكتروني -->
+                <!-- Email Input -->
                 <div class="form-group">
-                    <label for="email" class="form-label">
-                        <i class="fas fa-envelope"></i>
-                        البريد الإلكتروني
-                    </label>
-                    <input id="email" type="email" class="form-input @error('email') is-invalid @enderror"
-                           name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="أدخل بريدك الإلكتروني">
-                    <i class="fas fa-envelope input-icon"></i>
-
+                    <label for="email" class="form-label">البريد الإلكتروني أو اسم المستخدم</label>
+                    <div class="input-wrapper">
+                        <input id="email" 
+                               type="email" 
+                               class="form-input @error('email') is-invalid @enderror"
+                               name="email" 
+                               value="{{ old('email') }}" 
+                               required 
+                               autocomplete="email" 
+                               autofocus 
+                               placeholder="example@medixerp.com">
+                        <i class="fas fa-envelope input-icon"></i>
+                    </div>
                     @error('email')
-                        <div class="error-message">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            {{ $message }}
+                        <div class="field-error">
+                            <i class="fas fa-circle-exclamation"></i>
+                            <span>{{ $message }}</span>
                         </div>
                     @enderror
                 </div>
 
-                <!-- حقل كلمة المرور -->
+                <!-- Password Input -->
                 <div class="form-group">
-                    <label for="password" class="form-label">
-                        <i class="fas fa-lock"></i>
-                        كلمة المرور
-                    </label>
-                    <input id="password" type="password" class="form-input @error('password') is-invalid @enderror"
-                           name="password" required autocomplete="current-password" placeholder="أدخل كلمة المرور">
-                    <i class="fas fa-lock input-icon"></i>
-                    <button type="button" class="password-toggle" onclick="togglePassword()">
-                        <i class="fas fa-eye" id="password-icon"></i>
-                    </button>
-
+                    <label for="password" class="form-label">كلمة المرور</label>
+                    <div class="input-wrapper">
+                        <input id="password" 
+                               type="password" 
+                               class="form-input @error('password') is-invalid @enderror"
+                               name="password" 
+                               required 
+                               autocomplete="current-password" 
+                               placeholder="••••••••••••">
+                        <i class="fas fa-lock input-icon"></i>
+                        <button type="button" class="password-toggle-btn" onclick="togglePassword()" title="إظهار/إخفاء كلمة المرور">
+                            <i class="fas fa-eye" id="password-icon"></i>
+                        </button>
+                    </div>
                     @error('password')
-                        <div class="error-message">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            {{ $message }}
+                        <div class="field-error">
+                            <i class="fas fa-circle-exclamation"></i>
+                            <span>{{ $message }}</span>
                         </div>
                     @enderror
                 </div>
 
-                <!-- مربع تذكرني -->
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input class="checkbox-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-                        <span class="checkmark"></span>
-                        تذكرني
+                <!-- Remember Me & Forgot Password -->
+                <div class="form-options">
+                    <label class="custom-checkbox">
+                        <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
+                        <span class="checkbox-box">
+                            <i class="fas fa-check"></i>
+                        </span>
+                        <span>تذكر بياناتي</span>
                     </label>
-                </div>
-
-                <!-- أزرار الإجراءات -->
-                <div class="form-actions">
-                    <button type="submit" class="btn-login">
-                        <i class="fas fa-sign-in-alt"></i>
-                        تسجيل الدخول
-                    </button>
 
                     @if (Route::has('password.request'))
-                        <a class="forgot-password-link" href="{{ route('password.request') }}">
-                            <i class="fas fa-key"></i>
+                        <a class="forgot-link" href="{{ route('password.request') }}">
                             نسيت كلمة المرور؟
                         </a>
                     @endif
                 </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-submit" id="btn-submit">
+                    <i class="fas fa-arrow-left-to-bracket"></i>
+                    <span>دخول المنظومة</span>
+                </button>
             </form>
+
+            <!-- Security Notice Footer -->
+            <div class="portal-footer">
+                <i class="fas fa-shield-halved"></i>
+                <span>اتصال آمن ومشفّر بتقنية 256-Bit SSL | معتمد للاستخدام الطبي</span>
+            </div>
         </div>
+
     </div>
 
     {{-- Global Page Loader Ultra --}}
@@ -631,11 +735,11 @@
             <div class="loader-glow-aura"></div>
             <div class="loader-spinner-ring-outer"></div>
             <div class="loader-spinner-ring"></div>
-            <img src="{{ asset('images/logo.jpeg') }}" alt="جاري التحميل..." class="loader-logo-img">
+            <img src="{{ $loginLogoSrc }}" alt="MEDIX ERP" class="loader-logo-img">
         </div>
         <div class="loader-text-wrapper">
             <div class="loader-text">
-                جاري تسجيل الدخول<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+                جاري التحقق والاتصال بالمنظومة<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
         </div>
     </div>
@@ -647,9 +751,9 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(7, 13, 25, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             z-index: 999999;
             display: flex;
             flex-direction: column;
@@ -673,9 +777,9 @@
             left: 0;
             height: 3px;
             width: 0%;
-            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
-            box-shadow: 0 0 10px #3b82f6;
-            transition: width 0.4s ease;
+            background: linear-gradient(90deg, #2563eb, #38bdf8, #10b981);
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.8);
+            transition: width 0.35s ease;
         }
 
         .loader-logo-wrapper {
@@ -689,10 +793,10 @@
 
         .loader-glow-aura {
             position: absolute;
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0) 70%);
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(37, 99, 235, 0) 70%);
             animation: auraPulse 1.8s ease-in-out infinite alternate;
         }
 
@@ -702,28 +806,29 @@
             height: 100%;
             border-radius: 50%;
             border: 3px solid transparent;
-            border-top-color: #3b82f6;
-            border-right-color: #60a5fa;
+            border-top-color: #38bdf8;
+            border-right-color: #2563eb;
             animation: loaderSpin 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
         }
 
         .loader-spinner-ring-outer {
             position: absolute;
-            width: 120%;
-            height: 120%;
+            width: 125%;
+            height: 125%;
             border-radius: 50%;
-            border: 2px dashed rgba(96, 165, 250, 0.35);
+            border: 2px dashed rgba(56, 189, 248, 0.35);
             animation: loaderSpinReverse 3.5s linear infinite;
         }
 
         .loader-logo-img {
-            width: 100px;
-            height: 100px;
+            width: 90px;
+            height: 90px;
             object-fit: contain;
             border-radius: 50%;
-            background: #ffffff;
-            padding: 9px;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            box-shadow: 0 0 35px rgba(37, 99, 235, 0.6);
             z-index: 2;
             animation: logoPulse 1.4s ease-in-out infinite alternate;
         }
@@ -738,7 +843,6 @@
             font-size: 1rem;
             font-weight: 700;
             letter-spacing: 0.5px;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
             display: inline-flex;
             align-items: center;
             gap: 2px;
@@ -764,8 +868,8 @@
         }
 
         @keyframes logoPulse {
-            0% { transform: scale(0.92); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
-            100% { transform: scale(1.06); box-shadow: 0 0 35px rgba(59, 130, 246, 0.9); }
+            0% { transform: scale(0.92); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+            100% { transform: scale(1.06); box-shadow: 0 0 35px rgba(56, 189, 248, 0.9); }
         }
 
         @keyframes auraPulse {
@@ -780,7 +884,6 @@
     </style>
 
     <script>
-        // وظيفة إظهار/إخفاء كلمة المرور
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const passwordIcon = document.getElementById('password-icon');
@@ -794,24 +897,11 @@
             }
         }
 
-        // إضافة تأثيرات تفاعلية بسيطة
         document.addEventListener('DOMContentLoaded', function() {
             const loader = document.getElementById('global-page-loader');
             const topBar = document.getElementById('loader-top-bar');
-
-            // تأثير التركيز على الحقول
-            const inputs = document.querySelectorAll('.form-input');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.parentElement.parentElement.classList.add('focused');
-                });
-                input.addEventListener('blur', function() {
-                    this.parentElement.parentElement.classList.remove('focused');
-                });
-            });
-
-            // إظهار اللودر عند ضغط تسجيل الدخول
             const loginForm = document.querySelector('.login-form');
+
             if (loginForm) {
                 loginForm.addEventListener('submit', function() {
                     if (loader) {
@@ -819,9 +909,14 @@
                         if (topBar) {
                             topBar.style.width = '0%';
                             let w = 0;
-                            setInterval(function() {
-                                if (w < 90) { w += 5; topBar.style.width = w + '%'; }
-                            }, 100);
+                            const interval = setInterval(function() {
+                                if (w < 90) { 
+                                    w += 6; 
+                                    topBar.style.width = w + '%'; 
+                                } else {
+                                    clearInterval(interval);
+                                }
+                            }, 80);
                         }
                     }
                 });
