@@ -255,4 +255,95 @@ class PaymentVoidAndReversalTest extends TestCase
         $response->assertSee('إبطال الوصل المالي وإعادة فتحه للتصحيح');
         $response->assertSee('REC-20261027-0777');
     }
+
+    public function test_void_medical_request_payment_resets_payment_status_and_reappears_in_cashier_queue()
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo(['void payment receipt', 'view cashier', 'process medical requests payments']);
+
+        $hospital = \App\Models\Hospital::firstOrCreate(['name' => 'مستشفى الشفاء'], [
+            'owner_name' => 'د. صاحب المستشفى',
+            'phone' => '07700000000',
+            'email' => 'info@hospital.com',
+            'address' => 'بغداد',
+            'license_number' => 'LIC-002',
+        ]);
+
+        $dept = \App\Models\Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'عيادة باطنية 2',
+            'type' => 'internal',
+            'room_number' => '102',
+            'consultation_fee' => 15000,
+            'working_hours_start' => '08:00:00',
+            'working_hours_end' => '16:00:00',
+        ]);
+
+        $doctorUser = User::factory()->create();
+        $doctor = \App\Models\Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $dept->id,
+            'specialization' => 'باطنية',
+            'qualification' => 'FICMS',
+            'license_number' => 'DOC-'.uniqid(),
+            'consultation_fee' => 15000,
+            'is_active' => true,
+        ]);
+
+        $patientUser = User::factory()->create();
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'female',
+            'date_of_birth' => '1995-05-05',
+        ]);
+
+        $visit = \App\Models\Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'department_id' => $dept->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:00:00',
+            'visit_type' => 'checkup',
+            'chief_complaint' => 'فحص عام واستشارة',
+            'status' => 'completed',
+        ]);
+
+        $medicalRequest = \App\Models\Request::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'description' => 'تحليل دم كامل CBC',
+        ]);
+
+        $payment = Payment::create([
+            'patient_id' => $patient->id,
+            'request_id' => $medicalRequest->id,
+            'amount' => 15000,
+            'receipt_number' => 'REC-20261027-8888',
+            'paid_at' => now()->subDay(),
+            'payment_method' => 'cash',
+            'payment_type' => 'lab',
+        ]);
+
+        $medicalRequest->update(['payment_id' => $payment->id]);
+
+        $response = $this->actingAs($admin)->post(route('cashier.payments.void', $payment->id), [
+            'void_type' => 'rebill',
+            'void_reason' => 'تصحيح إداري لإعادة الفتح واحتساب نسبة الضمان الصحي',
+        ]);
+
+        $response->assertRedirect(route('cashier.index'));
+
+        // التأكد من تصفير وإعادة قيد الطلب الطبي
+        $freshReq = $medicalRequest->fresh();
+        $this->assertEquals('pending', $freshReq->payment_status);
+        $this->assertEquals('pending', $freshReq->status);
+        $this->assertNull($freshReq->payment_id);
+
+        // التأكد من ظهور الطلب في قائمة الانتظار الحالية بالكاشير
+        $cashierResponse = $this->actingAs($admin)->get(route('cashier.index'));
+        $cashierResponse->assertStatus(200);
+        $cashierResponse->assertSee((string) $freshReq->id);
+    }
 }

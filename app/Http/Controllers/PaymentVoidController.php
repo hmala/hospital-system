@@ -120,30 +120,47 @@ class PaymentVoidController extends Controller
                     Emergency::where('id', $payment->emergency_id)->update(['payment_status' => 'pending']);
                     EmergencyLabRequest::where('payment_id', $payment->id)
                         ->orWhere('emergency_id', $payment->emergency_id)
-                        ->update(['payment_status' => 'pending', 'status' => 'pending']);
+                        ->update(['payment_status' => 'pending', 'status' => 'pending', 'payment_id' => null]);
+                    DB::table('payments')->where('id', $payment->id)->update(['created_at' => now()]);
                 }
 
                 // ب) المواعيد والاستشارية
                 if ($payment->appointment_id) {
-                    Appointment::where('id', $payment->appointment_id)->update(['payment_status' => 'pending']);
+                    Appointment::where('id', $payment->appointment_id)->update([
+                        'payment_status' => 'pending',
+                        'appointment_date' => now()->toDateString(),
+                    ]);
                 }
 
                 // ج) الطلبات الطبية (مختبر / أشعة)
                 if ($payment->request_id) {
-                    MedicalRequest::where('id', $payment->request_id)->update([
+                    DB::table('requests')->where('id', $payment->request_id)->update([
                         'status' => 'pending',
+                        'payment_status' => 'pending',
+                        'payment_id' => null,
+                        'created_at' => now(),
                     ]);
                 }
                 if (! empty($payment->lab_request_ids)) {
                     $labIds = is_array($payment->lab_request_ids) ? $payment->lab_request_ids : json_decode($payment->lab_request_ids, true);
                     if (! empty($labIds)) {
-                        MedicalRequest::whereIn('id', $labIds)->update(['status' => 'pending']);
+                        DB::table('requests')->whereIn('id', $labIds)->update([
+                            'status' => 'pending',
+                            'payment_status' => 'pending',
+                            'payment_id' => null,
+                            'created_at' => now(),
+                        ]);
                     }
                 }
                 if (! empty($payment->radiology_request_ids)) {
                     $radIds = is_array($payment->radiology_request_ids) ? $payment->radiology_request_ids : json_decode($payment->radiology_request_ids, true);
                     if (! empty($radIds)) {
-                        MedicalRequest::whereIn('id', $radIds)->update(['status' => 'pending']);
+                        DB::table('requests')->whereIn('id', $radIds)->update([
+                            'status' => 'pending',
+                            'payment_status' => 'pending',
+                            'payment_id' => null,
+                            'created_at' => now(),
+                        ]);
                     }
                 }
             } else {
