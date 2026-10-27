@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Payment extends Model
 {
@@ -31,17 +31,23 @@ class Payment extends Model
         'description',
         'notes',
         'is_inclusive',
-        'paid_at'
+        'paid_at',
+        'voided_at',
+        'voided_by',
+        'void_type',
+        'void_reason',
+        'original_receipt_number',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'voided_at' => 'datetime',
         'amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'patient_share' => 'decimal:2',
         'insurance_share' => 'decimal:2',
         'copay_percentage' => 'decimal:2',
-        'is_inclusive' => 'boolean'
+        'is_inclusive' => 'boolean',
     ];
 
     // طرق الدفع المتاحة
@@ -49,7 +55,7 @@ class Payment extends Model
         'pending' => 'معلق',
         'cash' => 'نقدي',
         'card' => 'بطاقة',
-        'insurance' => 'تأمين'
+        'insurance' => 'تأمين',
     ];
 
     // أنواع الدفع
@@ -60,7 +66,7 @@ class Payment extends Model
         'pharmacy' => 'الصيدلية والعلاج',
         'surgery' => 'العمليات الجراحية',
         'emergency' => 'طوارئ وإسعاف',
-        'other' => 'أخرى'
+        'other' => 'أخرى',
     ];
 
     /**
@@ -133,27 +139,27 @@ class Payment extends Model
     public static function generateReceiptNumber()
     {
         $date = Carbon::now()->format('Ymd');
-        
+
         // البحث عن آخر رقم إيصال بنفس التاريخ
-        $lastPayment = self::where('receipt_number', 'like', 'REC-' . $date . '-%')
+        $lastPayment = self::where('receipt_number', 'like', 'REC-'.$date.'-%')
             ->orderBy('receipt_number', 'desc')
             ->first();
-        
+
         if ($lastPayment && $lastPayment->receipt_number) {
-            $sequence = (int)substr($lastPayment->receipt_number, -4) + 1;
+            $sequence = (int) substr($lastPayment->receipt_number, -4) + 1;
         } else {
             $sequence = 1;
         }
-        
+
         // التحقق من عدم وجود الرقم مسبقاً (حماية إضافية)
         do {
-            $receiptNumber = 'REC-' . $date . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+            $receiptNumber = 'REC-'.$date.'-'.str_pad($sequence, 4, '0', STR_PAD_LEFT);
             $exists = self::where('receipt_number', $receiptNumber)->exists();
             if ($exists) {
                 $sequence++;
             }
         } while ($exists);
-        
+
         return $receiptNumber;
     }
 
@@ -179,7 +185,8 @@ class Payment extends Model
     public function getInsuranceTypeLabelAttribute(): string
     {
         $type = $this->insurance_type ?: ($this->patient?->insurance_type ?? 'hi');
-        return match($type) {
+
+        return match ($type) {
             'hi' => 'الضمان الصحي',
             'moi' => 'قوى الأمن الداخلي',
             'syndicate' => 'نقابات وتعاقدات',
@@ -224,7 +231,8 @@ class Payment extends Model
 
         if ($name) {
             $cleaned = preg_replace('/^(د\.\s*)+/u', '', trim($name));
-            return 'د. ' . $cleaned;
+
+            return 'د. '.$cleaned;
         }
 
         return null;
@@ -240,6 +248,7 @@ class Payment extends Model
         // 1. كشفية استشارية
         if ($this->payment_type === 'appointment') {
             $dept = $this->appointment?->department?->name ?? 'عيادة استشارية';
+
             return "كشفية: {$dept}";
         }
 
@@ -253,18 +262,18 @@ class Payment extends Model
             foreach ($requests as $req) {
                 if ($req->type === 'lab') {
                     $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
-                    if (!empty($details['tests']) && is_array($details['tests'])) {
+                    if (! empty($details['tests']) && is_array($details['tests'])) {
                         $count = count($details['tests']);
                         $slice = array_slice($details['tests'], 0, 4);
-                        $items[] = 'تحاليل: ' . implode(', ', $slice) . ($count > 4 ? ' (+ ' . ($count - 4) . ' أخرى)' : '');
-                    } elseif (!empty($req->description) && !str_starts_with($req->description, 'دفع رسوم')) {
+                        $items[] = 'تحاليل: '.implode(', ', $slice).($count > 4 ? ' (+ '.($count - 4).' أخرى)' : '');
+                    } elseif (! empty($req->description) && ! str_starts_with($req->description, 'دفع رسوم')) {
                         $items[] = $req->description;
                     }
                 } elseif ($req->type === 'radiology') {
                     $radNames = $req->radiology_names;
-                    if (!empty($radNames)) {
-                        $items[] = 'أشعة: ' . implode(', ', $radNames);
-                    } elseif (!empty($req->description)) {
+                    if (! empty($radNames)) {
+                        $items[] = 'أشعة: '.implode(', ', $radNames);
+                    } elseif (! empty($req->description)) {
                         $items[] = $req->description;
                     }
                 }
@@ -275,7 +284,7 @@ class Payment extends Model
         if ($this->payment_type === 'emergency' && $this->emergency) {
             $prio = $this->emergency->priority_level ? "أولوية {$this->emergency->priority_level}" : '';
             $comp = $this->emergency->chief_complaint ?: 'خدمات طوارئ';
-            $items[] = trim("طوارئ: {$comp} " . ($prio ? "({$prio})" : ''));
+            $items[] = trim("طوارئ: {$comp} ".($prio ? "({$prio})" : ''));
         }
 
         // 4. العمليات الجراحية
@@ -290,5 +299,19 @@ class Payment extends Model
 
         return implode(' | ', $items);
     }
-}
 
+    public function voidedBy()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function voidLogs()
+    {
+        return $this->hasMany(PaymentVoidLog::class, 'payment_id');
+    }
+
+    public function isVoided(): bool
+    {
+        return ! is_null($this->voided_at);
+    }
+}

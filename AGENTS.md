@@ -53,6 +53,36 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-27 — المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)
+
+### Done
+- **بنية الصلاحيات والتحصين الأمني (Spatie Permissions & Gating)**:
+  * إضافة صلاحية مستقلة ومحصورة في `RolesAndPermissionsSeeder`: `void payment receipt`.
+  * ربط الصلاحية حصراً بالأدوار الرقابية والمسؤولة (`admin` و `accountant`) مع إمكانية منحها بالاسم للمشرف الإداري أو الاستعلامات، وحجبها عن الكاشير العادي لمنع تضارب المصالح.
+  * حماية مسارات الإبطال وعرض الاستمارة برمجياً عبر `auth()->user()->can('void payment receipt')` في `PaymentVoidController` وميدلوير الصلاحيات.
+- **قاعدة البيانات وسجل التدقيق الرقابي (Database Schema & Audit Trail)**:
+  * إضافة حقول الرقابة إلى جدول `payments`: `voided_at`, `voided_by`, `void_type` (`rebill`, `refund`), `void_reason`, `original_receipt_number`.
+  * إنشاء جدول مخصص لتدقيق الإلغاءات `payment_void_logs` لتوثيق تاريخ وحركة كل وصل ملغى والمستخدم والمبالغ ونوع الإجراء وسبب الإبطال بالثانية.
+  * تحديث موديل `Payment` بدوال `voidedBy()`, `voidLogs()`, و `isVoided()`.
+- **الكنترولر ومنطق الأعمال الصارم (Strict Controller & Form Request)**:
+  * إنشاء `app/Http/Requests/VoidPaymentRequest.php` للتحقق من الصلاحيات وسلامة البيانات والسبب الإلزامي (الحد الأدنى 5 أحرف).
+  * إنشاء `app/Http/Controllers/PaymentVoidController.php` مع دالتين رئيسيتين:
+    1. `showVoidForm(Payment $payment)`: عرض واجهة الإبطال المخصصة مع بطاقات ملخص المريض والوصل والمبالغ.
+    2. `void(VoidPaymentRequest $request, Payment $payment)`: معالجة الإبطال داخل `DB::transaction` متكاملة، ودعم خياري:
+       - **إعادة فتح القيد للتسديد والتصحيح (`rebill`)**: تصفير حالة الدفع وتفريغ رقم الوصل وتاريخ القبض، وإعادة القيد لطابور الكاشير فوراً، مع إعادة السجلات المرتبطة (طوارئ، مواعيد، طلبات مختبر وأشعة) إلى حالة الانتظار غير المسدد `pending`.
+       - **إبطال نهائي واسترداد للمريض (`refund`)**: تثبيت حالة الوصل كمسترد، وإلغاء الطلب أو الموعد المرتبط نهائياً.
+    3. تسجيل حركة النشاط الإداري والرقابي الحساس في `UserActivityLogger`.
+- **واجهات المستخدم الفاخرة وتجربة الاستخدام (Dedicated UI & Visual Excellence)**:
+  * معالجة مشكلة قص المودل وظهوره أسفل الشاشة، بالانتقال إلى صفحة مستقلة متكاملة وواسعة `resources/views/cashier/payments/void.blade.php`:
+    - شريط علوي بلون الرقابة الفاخر (Crimson Gradient) يوضح أبعاد العملية.
+    - بطاقات إحصائية ثلاثية علوية (بيانات الوصل الأصلي، بيانات المريض وتغطيته، والمبلغ المقبوض نقداً وحصة الضمان).
+    - بطاقتان كبسوليتان تفاعليتان للاختيار بين "إعادة فتح القيد للتسديد والتصحيح" و "إبطال نهائي واسترداد نقدي للمريض".
+    - أزرار أسباب سريعة مسبقة التجهيز (خطأ بفئة الضمان، تكرار الفحص، رغبة المريض، تصحيح إداري) لتعبئة حقل السبب بنقرة واحدة.
+    - تنبيه أمني واضح للمستخدم بمسؤولية التدقيق والرقابة المالية.
+  * في شاشة الوصل (`receipt.blade.php`): إظهار زر `[ ⚠️ إبطال الوصل / إعادة فتح للتصحيح ]` للمستخدم المخول فقط، وتلوين الوصل الملغى بشارة ملفتة `[ 🚫 وصل ملغى ومبطل ]`.
+- **حزمة الاختبارات الآلية الشاملة (Automated Feature Tests)**:
+  * إنشاء `tests/Feature/PaymentVoidAndReversalTest.php` بـ 5 اختبارات ميزة تغطي كافة السيناريوهات بنجاح تام (`5 passed, 29 assertions`).
+
 ## Session log (2026-10-26 — المرحلة 115: مطابقة وتوحيد واجهة دفع الطوارئ 100% مع واجهة الكاشير الرئيسية، تحصين نسب فئات الضمان، وإرجاع وصولات المريضة فاطمة Emergency Cashier Form 100% Parity with Request Payment, Strict Category Copay Lockdown & Unpaid Receipt Reversal)
 
 ### Done

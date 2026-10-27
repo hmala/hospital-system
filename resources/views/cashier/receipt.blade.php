@@ -16,7 +16,18 @@
             </h4>
             <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            @if($payment->isVoided())
+                <span class="badge bg-danger fs-6 d-flex align-items-center px-3 py-2 rounded-pill shadow-sm">
+                    <i class="fas fa-ban me-1"></i> وصل ملغى ومبطل ({{ $payment->void_type === 'rebill' ? 'أُعيد فتحه للتصحيح' : 'استرداد مالي' }})
+                </span>
+            @elseif($payment->paid_at)
+                @can('void payment receipt')
+                    <a href="{{ route('cashier.payments.void.form', $payment->id) }}" class="btn btn-outline-danger px-3 rounded-pill shadow-sm">
+                        <i class="fas fa-undo-alt me-1"></i> إبطال الوصل / إعادة فتح للتصحيح
+                    </a>
+                @endcan
+            @endif
             <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
                 <i class="fas fa-print me-1"></i> طباعة الوصل
             </a>
@@ -25,6 +36,23 @@
             </a>
         </div>
     </div>
+
+    @if($payment->isVoided())
+        <div class="alert alert-danger border-2 border-danger rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3">
+            <div class="rounded-circle bg-danger text-white p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i class="fas fa-exclamation-triangle fs-4"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-1 text-danger">تنبيه رقابي: هذا الوصل تم إبطاله رسمياً وغير معتمد مالياً</h6>
+                <div class="small text-dark">
+                    <strong>تاريخ الإبطال:</strong> {{ $payment->voided_at?->format('Y-m-d H:i:s') }} |
+                    <strong>بواسطة:</strong> {{ $payment->voidedBy?->name ?? 'المشرف الإداري' }} |
+                    <strong>نوع الإجراء:</strong> {{ $payment->void_type === 'rebill' ? 'إعادة فتح في الكاشير للتسديد الصحيح' : 'إلغاء واسترداد نقدي' }} <br>
+                    <strong>سبب الإلغاء:</strong> <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">{{ $payment->void_reason }}</span>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @php
         // استخراج بيانات المريض

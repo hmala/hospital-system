@@ -55,6 +55,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'process surgery payments',       // معالجة دفع العمليات
             'process refunds',                // معالجة الاسترجاع المالي
             'process payments',               // معالجة المدفوعات العامة
+            'void payment receipt',           // إبطال وإلغاء وصل دفع مالي وإعادة فتحه للتصحيح
             'view cashier reports',           // عرض تقارير المدفوعات
             'view doctor profits',            // عرض أرباح وحسابات الأطباء
             'review surgery prices',          // مراجعة أسعار العمليات الجراحية
@@ -335,6 +336,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // دور المحاسب (Accountant)
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
         $accountantRole->givePermissionTo([
+            'void payment receipt',
             'view cashier reports',
             'view consultant financial movements',
             'view account statements',
