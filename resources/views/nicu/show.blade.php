@@ -13,17 +13,30 @@
                         <i class="fas fa-baby fa-3x"></i>
                     </div>
                     <div>
-                        <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <h3 class="mb-0 fw-bold">{{ $reservation->baby_name }}</h3>
+                            @if($reservation->is_independent_patient)
+                                <span class="badge bg-success text-white fw-bold px-2 py-1 shadow-xs">
+                                    <i class="fas fa-baby me-1"></i> ملف طفل مستقل
+                                </span>
+                            @endif
                             <span class="badge bg-white text-primary fw-bold px-2 py-1">
                                 حاضنة رقم {{ $reservation->incubator->incubator_number }}
                             </span>
                             <span class="badge bg-warning text-dark fw-bold px-2 py-1">
                                 {{ $reservation->status_name }}
                             </span>
+                            @if($reservation->birth_certificate_no)
+                                <span class="badge bg-info text-dark fw-bold px-2 py-1">
+                                    <i class="fas fa-certificate me-1"></i> بيان ولادة: {{ $reservation->birth_certificate_no }}
+                                </span>
+                            @endif
                         </div>
-                        <p class="mb-0 opacity-75 small">
-                            <span class="me-3"><i class="fas fa-female me-1"></i> الأم: {{ optional($reservation->patient?->user)->name ?? 'غير معروف' }}</span>
+                        <p class="mb-0 opacity-75 small flex-wrap">
+                            <span class="me-3"><i class="fas fa-female me-1"></i> الأم: {{ $reservation->mother_display_name }}</span>
+                            @if($reservation->birth_certificate_date)
+                                <span class="me-3"><i class="fas fa-calendar-alt me-1"></i> تاريخ البيان: {{ $reservation->birth_certificate_date->format('Y-m-d') }}</span>
+                            @endif
                             <span class="me-3"><i class="fas fa-calendar me-1"></i> تاريخ الدخول: {{ $reservation->admission_date->format('Y-m-d') }} ({{ $reservation->admission_time ? $reservation->admission_time->format('H:i') : '' }})</span>
                             <span><i class="fas fa-user-md me-1"></i> الطبيب المشرف: {{ optional($reservation->doctor?->user)->name ?? 'غير محدد' }}</span>
                         </p>

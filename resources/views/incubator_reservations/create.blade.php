@@ -243,7 +243,7 @@ label.incubator-card {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('incubator-reservations.store') }}" method="POST">
+                    <form action="{{ route('incubator-reservations.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <!-- نوع الحساب والتغطية المالية -->
@@ -380,23 +380,82 @@ label.incubator-card {
                                 </div>
                             </div>
 
+                            <!-- خيار صفة المريض المختار (الأم/الأب أم الطفل نفسه؟) -->
+                            <div class="col-md-12 mb-3">
+                                <div class="card p-3 border-0 bg-white shadow-sm" style="border-radius: 10px; border: 1.5px solid #cbd5e1 !important;">
+                                    <label class="form-label fw-bold text-dark mb-2">
+                                        <i class="fas fa-user-tag text-primary me-1"></i>
+                                        صفة المريض المختار في هذا الحجز <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="form-check p-2.5 border rounded h-100 bg-light" id="parentCheckCard">
+                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_parent" value="0" {{ old('is_independent_patient', (isset($patient) && $patient->age !== null && $patient->age < 1 ? '1' : '0')) === '0' ? 'checked' : '' }}>
+                                                <label class="form-check-label w-100 cursor-pointer" for="patient_is_parent">
+                                                    <strong class="text-primary d-block"><i class="fas fa-female me-1"></i> المريض المختار هو الأم أو الأب</strong>
+                                                    <small class="text-muted">المولود مسجل تابعاً لملف الأم/الأب (النمط الشائع بالمستشفيات)</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check p-2.5 border rounded h-100 bg-light" id="babyCheckCard">
+                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_baby" value="1" {{ old('is_independent_patient', (isset($patient) && $patient->age !== null && $patient->age < 1 ? '1' : '0')) === '1' ? 'checked' : '' }}>
+                                                <label class="form-check-label w-100 cursor-pointer" for="patient_is_baby">
+                                                    <strong class="text-success d-block"><i class="fas fa-baby me-1"></i> المريض المختار هو الطفل نفسه</strong>
+                                                    <small class="text-muted">ملف مستقل للطفل (مثلاً: محول من مستشفى خارجي أو مسجل باسمه)</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- حقل اسم الطفل الخديج (اختياري) -->
-                            <div class="col-md-12 mb-2">
+                            <div class="col-md-12 mb-3">
                                 <label for="baby_name" class="form-label fw-bold">
                                     <i class="fas fa-baby text-primary me-1"></i>
                                     اسم الطفل الخديج 
-                                    <small class="text-muted fw-normal">(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)</small>
+                                    <small class="text-muted fw-normal" id="babyNameHint">(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)</small>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white"><i class="fas fa-id-badge text-primary"></i></span>
                                     <input type="text" name="baby_name" id="baby_name" 
                                            class="form-control @error('baby_name') is-invalid @enderror" 
-                                           placeholder="مثال: طفل مريم علي / حيدر احمد" 
+                                           placeholder="مثال: طفل مريم علي / يوسف كرار" 
                                            value="{{ old('baby_name') }}">
                                 </div>
                                 @error('baby_name')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
+                            </div>
+
+                            <!-- حقول بيان الولادة الرسمي (اختياري وغير إلزامي) -->
+                            <div class="col-md-6 mb-2">
+                                <label for="birth_certificate_no" class="form-label fw-bold text-secondary">
+                                    <i class="fas fa-certificate text-warning me-1"></i>
+                                    رقم بيان الولادة الرسمي
+                                    <small class="text-muted fw-normal">(اختياري - إن وجد)</small>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-hashtag text-warning"></i></span>
+                                    <input type="text" name="birth_certificate_no" id="birth_certificate_no" 
+                                           class="form-control @error('birth_certificate_no') is-invalid @enderror" 
+                                           placeholder="مثال: 14820/2026" 
+                                           value="{{ old('birth_certificate_no') }}">
+                                </div>
+                                @error('birth_certificate_no') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label for="birth_certificate_date" class="form-label fw-bold text-secondary">
+                                    <i class="fas fa-calendar-alt text-warning me-1"></i>
+                                    تاريخ إصدار بيان الولادة
+                                    <small class="text-muted fw-normal">(اختياري)</small>
+                                </label>
+                                <input type="date" name="birth_certificate_date" id="birth_certificate_date" 
+                                       class="form-control @error('birth_certificate_date') is-invalid @enderror" 
+                                       value="{{ old('birth_certificate_date') }}">
+                                @error('birth_certificate_date') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                             </div>
                         </div>
 
@@ -610,6 +669,91 @@ label.incubator-card {
                                 @error('admission_time')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                            </div>
+                        </div>
+
+                        <!-- المستندات والمرفقات الرسمية (اختياري - يدعم السكانر والرفع المباشر) -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-paperclip me-2 text-primary"></i>
+                                    المستندات الرسمية ومرفقات الخديج <small class="text-muted fw-normal">(اختياري - يدعم المسح بالسكانر والرفع المباشر)</small>
+                                </h6>
+                            </div>
+
+                            <!-- 1. وثيقة بيان الولادة -->
+                            <div class="col-md-4 mb-3">
+                                <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
+                                    <label class="form-label fw-bold text-dark small mb-2">
+                                        <i class="fas fa-file-medical text-warning me-1"></i> وثيقة بيان الولادة
+                                    </label>
+                                    <div class="d-flex gap-1 mb-2">
+                                        <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_birth_cert_btn" onclick="scanAttachment('birth_cert')" style="height:34px;">
+                                            <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('birth_certificate_file').click()" style="height:34px;">
+                                            <i class="fas fa-upload me-1"></i> رفع ملف
+                                        </button>
+                                        <input type="file" name="birth_certificate_file" id="birth_certificate_file" class="d-none" accept="image/*,application/pdf" onchange="previewSelectedFile(this, 'birth_cert')">
+                                        <textarea id="scanned_birth_certificate" name="scanned_birth_certificate" style="display:none;"></textarea>
+                                    </div>
+                                    <div id="preview_birth_cert" style="display: none;">
+                                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                            <span id="text_birth_cert"><i class="fas fa-check-circle me-1"></i> تم تجهيز الوثيقة</span>
+                                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearAttachment('birth_cert')"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. البطاقة الموحدة / هوية الأحوال -->
+                            <div class="col-md-4 mb-3">
+                                <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
+                                    <label class="form-label fw-bold text-dark small mb-2">
+                                        <i class="fas fa-id-card text-info me-1"></i> هوية / موحدة الأم أو الأب
+                                    </label>
+                                    <div class="d-flex gap-1 mb-2">
+                                        <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_parent_id_btn" onclick="scanAttachment('parent_id')" style="height:34px;">
+                                            <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('parent_id_file').click()" style="height:34px;">
+                                            <i class="fas fa-upload me-1"></i> رفع ملف
+                                        </button>
+                                        <input type="file" name="parent_id_file" id="parent_id_file" class="d-none" accept="image/*,application/pdf" onchange="previewSelectedFile(this, 'parent_id')">
+                                        <textarea id="scanned_parent_id" name="scanned_parent_id" style="display:none;"></textarea>
+                                    </div>
+                                    <div id="preview_parent_id" style="display: none;">
+                                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                            <span id="text_parent_id"><i class="fas fa-check-circle me-1"></i> تم تجهيز الوثيقة</span>
+                                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearAttachment('parent_id')"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. تقرير الإحالة / وثيقة التحويل -->
+                            <div class="col-md-4 mb-3">
+                                <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
+                                    <label class="form-label fw-bold text-dark small mb-2">
+                                        <i class="fas fa-file-export text-success me-1"></i> تقرير التحويل / الإحالة
+                                    </label>
+                                    <div class="d-flex gap-1 mb-2">
+                                        <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_referral_doc_btn" onclick="scanAttachment('referral_doc')" style="height:34px;">
+                                            <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_doc_file').click()" style="height:34px;">
+                                            <i class="fas fa-upload me-1"></i> رفع ملف
+                                        </button>
+                                        <input type="file" name="referral_doc_file" id="referral_doc_file" class="d-none" accept="image/*,application/pdf" onchange="previewSelectedFile(this, 'referral_doc')">
+                                        <textarea id="scanned_referral_doc" name="scanned_referral_doc" style="display:none;"></textarea>
+                                    </div>
+                                    <div id="preview_referral_doc" style="display: none;">
+                                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                            <span id="text_referral_doc"><i class="fas fa-check-circle me-1"></i> تم تجهيز الوثيقة</span>
+                                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearAttachment('referral_doc')"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -865,14 +1009,71 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // اقتراح اسم الطفل إذا كان حقله فارغاً
-        if (babyNameInput && !babyNameInput.value) {
-            babyNameInput.placeholder = p.name.startsWith('طفل') ? p.name : ('طفل ' + p.name);
+        // تحديد صفة المريض واقتراح اسم الطفل بذكاء
+        const radioBaby = document.getElementById('patient_is_baby');
+        const radioParent = document.getElementById('patient_is_parent');
+        const babyHint = document.getElementById('babyNameHint');
+
+        if (p.age !== null && p.age !== undefined && p.age < 1) {
+            // المريض طفل حديث ولادة (أقل من سنة)
+            if (radioBaby) radioBaby.checked = true;
+            if (babyNameInput) {
+                babyNameInput.placeholder = p.name;
+                if (!babyNameInput.value) {
+                    babyNameInput.value = p.name;
+                }
+            }
+            if (babyHint) babyHint.textContent = '(ملف طفل مستقل - تم ضبط الاسم تلقائياً)';
+        } else {
+            // المريض بالغ (الأم أو الأب)
+            if (radioParent) radioParent.checked = true;
+            if (babyNameInput) {
+                babyNameInput.placeholder = p.name.startsWith('طفل') ? p.name : ('طفل ' + p.name);
+                if (babyNameInput.value === p.name) {
+                    babyNameInput.value = '';
+                }
+            }
+            if (babyHint) babyHint.textContent = '(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)';
         }
 
         if (patientSearchResults) patientSearchResults.style.display = 'none';
         if (patientSearchContainer) patientSearchContainer.style.display = 'none';
         if (selectedPatientCard) selectedPatientCard.style.display = 'block';
+    }
+
+    // تفاعل التبديل اليدوي بين صفة المريض (الأم/الأب أو الطفل)
+    const radioBaby = document.getElementById('patient_is_baby');
+    const radioParent = document.getElementById('patient_is_parent');
+    const babyHint = document.getElementById('babyNameHint');
+
+    if (radioBaby) {
+        radioBaby.addEventListener('change', function() {
+            if (this.checked && selectedPatientName && selectedPatientName.textContent.trim()) {
+                const name = selectedPatientName.textContent.trim();
+                if (babyNameInput) {
+                    babyNameInput.placeholder = name;
+                    if (!babyNameInput.value || babyNameInput.value.startsWith('طفل ')) {
+                        babyNameInput.value = name;
+                    }
+                }
+                if (babyHint) babyHint.textContent = '(ملف طفل مستقل - تم ضبط الاسم تلقائياً)';
+            }
+        });
+    }
+
+    if (radioParent) {
+        radioParent.addEventListener('change', function() {
+            if (this.checked && selectedPatientName && selectedPatientName.textContent.trim()) {
+                const name = selectedPatientName.textContent.trim();
+                if (babyNameInput) {
+                    babyNameInput.placeholder = name.startsWith('طفل') ? name : ('طفل ' + name);
+                    if (babyNameInput.value === name) {
+                        babyNameInput.value = '';
+                    }
+                }
+                if (babyHint) babyHint.textContent = '(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)';
+            }
+        });
     }
 
     if (clearSelectedPatientBtn) {
@@ -974,5 +1175,121 @@ document.addEventListener('DOMContentLoaded', function() {
     updateServicePrices();
     updateTierPreview();
 });
+
+// وظائف المسح بالسكانر ومعاينة المرفقات
+window.scanAttachment = async function(type) {
+    const btnMap = {
+        'birth_cert': document.getElementById('scan_birth_cert_btn'),
+        'parent_id': document.getElementById('scan_parent_id_btn'),
+        'referral_doc': document.getElementById('scan_referral_doc_btn')
+    };
+    const inputMap = {
+        'birth_cert': document.getElementById('scanned_birth_certificate'),
+        'parent_id': document.getElementById('scanned_parent_id'),
+        'referral_doc': document.getElementById('scanned_referral_doc')
+    };
+    const previewMap = {
+        'birth_cert': document.getElementById('preview_birth_cert'),
+        'parent_id': document.getElementById('preview_parent_id'),
+        'referral_doc': document.getElementById('preview_referral_doc')
+    };
+    const textMap = {
+        'birth_cert': document.getElementById('text_birth_cert'),
+        'parent_id': document.getElementById('text_parent_id'),
+        'referral_doc': document.getElementById('text_referral_doc')
+    };
+
+    const btn = btnMap[type];
+    if (!btn) return;
+
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
+
+    const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+    let response = null;
+    let lastError = null;
+
+    for (const url of endpoints) {
+        try {
+            const res = await fetch(url, { method: 'POST', mode: 'cors' });
+            if (res.ok) {
+                response = res;
+                break;
+            }
+        } catch (e) {
+            lastError = e;
+        }
+    }
+
+    try {
+        if (!response) {
+            throw lastError || new Error('تعذر الاتصال بالسكانر');
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            const base64data = reader.result;
+            if (inputMap[type]) inputMap[type].value = base64data;
+            if (textMap[type]) textMap[type].innerHTML = '<i class="fas fa-camera me-1"></i> تم سحب الصورة من السكانر بنجاح';
+            if (previewMap[type]) previewMap[type].style.display = 'block';
+        };
+        reader.readAsDataURL(blob);
+    } catch (err) {
+        console.error('Scanner error:', err);
+        if (window.location.protocol === 'https:') {
+            alert('⚠️ تعذر الاتصال بالسكانر المحلي!\n\n1. تأكد من تشغيل ملف (تشغيل_السكانر_التلقائي.bat) على حاسبتك.\n2. على المتصفح: اضغط علامة القفل بجانب الرابط ⬅️ إعدادات الموقع ⬅️ غيّر (Insecure content) إلى سماح (Allow).\n\nأو يمكنك استخدام زر "رفع ملف" كبديل سريع.');
+        } else {
+            alert('برنامج السكانر غير مشغل أو غير متصل. تأكد من تشغيل (تشغيل_السكانر_التلقائي.bat) أو استخدم زر "رفع ملف".');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+    }
+};
+
+window.previewSelectedFile = function(input, type) {
+    const previewMap = {
+        'birth_cert': document.getElementById('preview_birth_cert'),
+        'parent_id': document.getElementById('preview_parent_id'),
+        'referral_doc': document.getElementById('preview_referral_doc')
+    };
+    const textMap = {
+        'birth_cert': document.getElementById('text_birth_cert'),
+        'parent_id': document.getElementById('text_parent_id'),
+        'referral_doc': document.getElementById('text_referral_doc')
+    };
+
+    if (input.files && input.files[0]) {
+        if (textMap[type]) {
+            textMap[type].innerHTML = '<i class="fas fa-file-alt me-1"></i> تم اختيار ملف: ' + input.files[0].name;
+        }
+        if (previewMap[type]) {
+            previewMap[type].style.display = 'block';
+        }
+    }
+};
+
+window.clearAttachment = function(type) {
+    const fileInputMap = {
+        'birth_cert': document.getElementById('birth_certificate_file'),
+        'parent_id': document.getElementById('parent_id_file'),
+        'referral_doc': document.getElementById('referral_doc_file')
+    };
+    const scanInputMap = {
+        'birth_cert': document.getElementById('scanned_birth_certificate'),
+        'parent_id': document.getElementById('scanned_parent_id'),
+        'referral_doc': document.getElementById('scanned_referral_doc')
+    };
+    const previewMap = {
+        'birth_cert': document.getElementById('preview_birth_cert'),
+        'parent_id': document.getElementById('preview_parent_id'),
+        'referral_doc': document.getElementById('preview_referral_doc')
+    };
+
+    if (fileInputMap[type]) fileInputMap[type].value = '';
+    if (scanInputMap[type]) scanInputMap[type].value = '';
+    if (previewMap[type]) previewMap[type].style.display = 'none';
+};
 </script>
 @endsection

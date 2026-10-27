@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class IncubatorReservation extends Model
 {
@@ -14,6 +14,9 @@ class IncubatorReservation extends Model
     protected $fillable = [
         'patient_id',
         'baby_name',
+        'is_independent_patient',
+        'birth_certificate_no',
+        'birth_certificate_date',
         'incubator_id',
         'nicu_service_id',
         'doctor_id',
@@ -48,6 +51,7 @@ class IncubatorReservation extends Model
     protected $casts = [
         'admission_date' => 'date',
         'discharge_date' => 'date',
+        'birth_certificate_date' => 'date',
         'admission_time' => 'datetime:H:i',
         'discharge_time' => 'datetime:H:i',
         'total_cost' => 'decimal:2',
@@ -57,6 +61,7 @@ class IncubatorReservation extends Model
         'expected_duration' => 'integer',
         'current_weight' => 'integer',
         'camera_active' => 'boolean',
+        'is_independent_patient' => 'boolean',
     ];
 
     /**
@@ -67,9 +72,10 @@ class IncubatorReservation extends Model
         if (empty($this->gestational_age)) {
             return null;
         }
-        if (preg_match('/(\d+)/', (string)$this->gestational_age, $matches)) {
-            return (int)$matches[1];
+        if (preg_match('/(\d+)/', (string) $this->gestational_age, $matches)) {
+            return (int) $matches[1];
         }
+
         return null;
     }
 
@@ -78,16 +84,20 @@ class IncubatorReservation extends Model
      */
     public function getIsInsuredAttribute(): bool
     {
-        return in_array(strtolower((string)($this->insurance_type ?? 'none')), ['hi', 'moi', 'health_insurance']);
+        return in_array(strtolower((string) ($this->insurance_type ?? 'none')), ['hi', 'moi', 'health_insurance']);
     }
 
     /**
      * حالات الحجز
      */
     const STATUS_PENDING = 'pending';
+
     const STATUS_ADMITTED = 'admitted';
+
     const STATUS_DISCHARGED = 'discharged';
+
     const STATUS_TRANSFERRED = 'transferred';
+
     const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -254,10 +264,26 @@ class IncubatorReservation extends Model
      */
     public function getBabyTitleAttribute(): string
     {
-        if (!empty($this->baby_name)) {
+        if (! empty($this->baby_name)) {
             return $this->baby_name;
         }
-        return 'طفل ' . ($this->patient?->name ?? 'غير محدد');
+        if ($this->is_independent_patient) {
+            return optional($this->patient?->user)->name ?? 'طفل خديج';
+        }
+
+        return 'طفل '.(optional($this->patient?->user)->name ?? 'غير محدد');
+    }
+
+    /**
+     * الحصول على اسم الأم المعروض بذكاء
+     */
+    public function getMotherDisplayNameAttribute(): string
+    {
+        if ($this->is_independent_patient) {
+            return $this->patient?->mother_name ?: 'غير مسجل (ملف طفل مستقل)';
+        }
+
+        return optional($this->patient?->user)->name ?? 'غير معروف';
     }
 
     /**
@@ -265,7 +291,7 @@ class IncubatorReservation extends Model
      */
     public function getStatusNameAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'قيد الانتظار',
             self::STATUS_ADMITTED => 'داخل الحاضنة',
             self::STATUS_DISCHARGED => 'تم الخروج',
@@ -280,7 +306,7 @@ class IncubatorReservation extends Model
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'warning',
             self::STATUS_ADMITTED => 'success',
             self::STATUS_DISCHARGED => 'info',
@@ -295,7 +321,7 @@ class IncubatorReservation extends Model
      */
     public function getActualDurationAttribute(): ?int
     {
-        if (!$this->discharge_date) {
+        if (! $this->discharge_date) {
             return null;
         }
 
@@ -327,7 +353,7 @@ class IncubatorReservation extends Model
      */
     public function calculateExpectedCost(): float
     {
-        if (!$this->incubator) {
+        if (! $this->incubator) {
             return 0;
         }
 
@@ -339,12 +365,12 @@ class IncubatorReservation extends Model
      */
     public function calculateActualCost(): float
     {
-        if (!$this->incubator) {
+        if (! $this->incubator) {
             return 0;
         }
 
-        $duration = $this->status === self::STATUS_DISCHARGED 
-            ? $this->actual_duration 
+        $duration = $this->status === self::STATUS_DISCHARGED
+            ? $this->actual_duration
             : $this->current_duration;
 
         return ($duration ?? 0) * $this->incubator->daily_fee;
@@ -378,9 +404,9 @@ class IncubatorReservation extends Model
      */
     public function getDurationHoursAttribute(): int
     {
-        $admissionDateTime = Carbon::parse($this->admission_date->format('Y-m-d') . ' ' . ($this->admission_time ? $this->admission_time->format('H:i') : '00:00'));
-        $endDateTime = $this->discharge_date 
-            ? Carbon::parse($this->discharge_date->format('Y-m-d') . ' ' . ($this->discharge_time ? $this->discharge_time->format('H:i') : '23:59'))
+        $admissionDateTime = Carbon::parse($this->admission_date->format('Y-m-d').' '.($this->admission_time ? $this->admission_time->format('H:i') : '00:00'));
+        $endDateTime = $this->discharge_date
+            ? Carbon::parse($this->discharge_date->format('Y-m-d').' '.($this->discharge_time ? $this->discharge_time->format('H:i') : '23:59'))
             : now();
 
         return max(0, $admissionDateTime->diffInHours($endDateTime));
@@ -392,8 +418,9 @@ class IncubatorReservation extends Model
     public function getWeightDifferenceAttribute(): ?int
     {
         if ($this->birth_weight && $this->current_weight) {
-            return (int)$this->current_weight - (int)$this->birth_weight;
+            return (int) $this->current_weight - (int) $this->birth_weight;
         }
+
         return null;
     }
 
@@ -402,7 +429,7 @@ class IncubatorReservation extends Model
      */
     public function getDischargeTypeNameAttribute(): string
     {
-        return match($this->discharge_type) {
+        return match ($this->discharge_type) {
             'improved' => 'خروج تحسن واستقرار (عادي)',
             'step_down' => 'تحويل إلى ردهة الأطفال العادية',
             'transferred_out' => 'تحويل إلى مستشفى خارجي تخصصي',
@@ -417,7 +444,7 @@ class IncubatorReservation extends Model
      */
     public function getAdmissionSourceNameAttribute(): string
     {
-        return match($this->admission_source) {
+        return match ($this->admission_source) {
             'c_section' => 'صالة ولادة / عمليات قيصرية داخلية',
             'external' => 'محال من خارج المستشفى (OUT)',
             default => 'دخول داخلي (IN)',

@@ -65,6 +65,15 @@
                                     <td>{{ $reservation->id }}</td>
                                     <td>
                                         <strong>{{ $reservation->baby_name }}</strong>
+                                        @if($reservation->is_independent_patient)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 11px;">
+                                                <i class="fas fa-baby me-1"></i>طفل مستقل
+                                            </span>
+                                        @endif
+                                        @if($reservation->birth_certificate_no)
+                                            <br>
+                                            <small class="text-primary"><i class="fas fa-certificate me-1"></i>بيان: {{ $reservation->birth_certificate_no }}</small>
+                                        @endif
                                         @if($reservation->birth_weight)
                                             <br>
                                             <small class="text-muted">
@@ -74,7 +83,11 @@
                                         @endif
                                     </td>
                                     <td>
-                                        {{ optional($reservation->patient->user)->name ?? 'غير معروف' }}
+                                        @if($reservation->is_independent_patient)
+                                            <span class="text-secondary small">{{ $reservation->mother_display_name }}</span>
+                                        @else
+                                            {{ optional($reservation->patient->user)->name ?? 'غير معروف' }}
+                                        @endif
                                     </td>
                                     <td>
                                         <span class="badge bg-{{ $reservation->incubator->type_color }}">

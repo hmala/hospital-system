@@ -180,12 +180,26 @@
                                     <div class="mb-3">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <h6 class="mb-0 fw-bold text-dark">
-                                                    <i class="fas fa-child me-1 text-primary"></i>
-                                                    {{ $res->baby_name }}
-                                                </h6>
-                                                <small class="text-muted d-block">
-                                                    الأم: {{ optional($res->patient?->user)->name ?? 'غير معروف' }}
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <h6 class="mb-0 fw-bold text-dark">
+                                                        <i class="fas fa-child me-1 text-primary"></i>
+                                                        {{ $res->baby_name }}
+                                                    </h6>
+                                                    @if($res->is_independent_patient)
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1" style="font-size: 10px;">
+                                                            <i class="fas fa-baby"></i> ملف مستقل
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted d-block mt-0.5">
+                                                    @if($res->is_independent_patient)
+                                                        <i class="fas fa-female me-1"></i>الأم: {{ $res->patient?->mother_name ?: 'غير مسجل (ملف مستقل)' }}
+                                                    @else
+                                                        <i class="fas fa-female me-1"></i>الأم: {{ optional($res->patient?->user)->name ?? 'غير معروف' }}
+                                                    @endif
+                                                    @if($res->birth_certificate_no)
+                                                        <span class="text-secondary ms-1">| بيان: {{ $res->birth_certificate_no }}</span>
+                                                    @endif
                                                 </small>
                                             </div>
                                             @if($res->nicuService)

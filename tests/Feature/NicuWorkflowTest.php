@@ -842,6 +842,116 @@ class NicuWorkflowTest extends TestCase
         $inquiryResponse->assertSee('حجز واستقبال مولود بالحاضنة (مرتبط بالأم أو المسؤول)');
     }
 
+    public function test_nicu_reservation_with_birth_certificate_independent_baby_and_attachments_workflow(): void
+    {
+        // 1. إنشاء مريضة (الأم) مع رقم ضمان خاص بها
+        $motherUser = User::factory()->create([
+            'name' => 'زينب محمود خضير',
+            'phone' => '07709998877',
+        ]);
+        $motherPatient = Patient::create([
+            'user_id' => $motherUser->id,
+            'age' => 28,
+            'gender' => 'female',
+            'phone' => '07709998877',
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'MOTHER-CARD-112233',
+        ]);
+
+        // 2. إنشاء مريض مستقل (الطفل نفسه قادم من مستشفى خارجي وعمره 0)
+        $babyUser = User::factory()->create([
+            'name' => 'علي حيدر كاظم',
+            'date_of_birth' => now()->subDays(2),
+        ]);
+        $babyPatient = Patient::create([
+            'user_id' => $babyUser->id,
+            'gender' => 'male',
+            'mother_name' => 'نور الهدى جاسم',
+            'insurance_type' => 'none',
+        ]);
+
+        $inc = Incubator::create([
+            'incubator_number' => 'INC-ATTACH-01',
+            'incubator_type' => 'normal',
+            'status' => 'available',
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+
+        $service = NicuService::first();
+
+        // 3. اختبار حجز طفل مستقل مع بيان ولادة ومرفقات بالسكانر وملف
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $fakePdf = \Illuminate\Http\UploadedFile::fake()->create('birth_cert.pdf', 200, 'application/pdf');
+        $fakeBase64Scan = 'data:image/jpeg;base64,'.base64_encode('fake image binary content from scanner');
+
+        $storeResponse = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $babyPatient->id,
+            'is_independent_patient' => '1',
+            'birth_certificate_no' => 'BC-2026-9988',
+            'birth_certificate_date' => now()->format('Y-m-d'),
+            'baby_name' => 'علي حيدر كاظم',
+            'incubator_id' => $inc->id,
+            'nicu_service_id' => $service->id,
+            'gestational_age' => '33 أسبوع',
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '12:00',
+            'birth_certificate_file' => $fakePdf,
+            'scanned_parent_id' => $fakeBase64Scan,
+        ]);
+
+        $storeResponse->assertRedirect();
+        $reservation = IncubatorReservation::where('incubator_id', $inc->id)->first();
+        $this->assertNotNull($reservation);
+        $this->assertTrue((bool) $reservation->is_independent_patient);
+        $this->assertEquals('BC-2026-9988', $reservation->birth_certificate_no);
+        $this->assertEquals('علي حيدر كاظم', $reservation->baby_name);
+        $this->assertEquals('نور الهدى جاسم', $reservation->mother_display_name);
+
+        // التحقق من إنشاء المرفقات في جدول nicu_attachments
+        $attachments = $reservation->attachments;
+        $this->assertCount(2, $attachments);
+        $this->assertTrue($attachments->contains(fn ($a) => str_contains($a->title, 'بيان الولادة')));
+        $this->assertTrue($attachments->contains(fn ($a) => str_contains($a->title, 'البطاقة الموحدة')));
+
+        // 4. اختبار أن حجز طفل تابع للأم مع رقم ضمان خاص بالطفل لا يمس رقم ضمان الأم
+        $incMom = Incubator::create([
+            'incubator_number' => 'INC-MOM-02',
+            'incubator_type' => 'normal',
+            'status' => 'available',
+            'daily_fee' => 0,
+            'is_active' => true,
+        ]);
+
+        $storeResponseMom = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $motherPatient->id,
+            'is_independent_patient' => '0',
+            'baby_name' => 'طفل زينب محمود',
+            'incubator_id' => $incMom->id,
+            'nicu_service_id' => $service->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'BABY-NEW-HIA-7788',
+            'gestational_age' => '36 أسبوع',
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '13:00',
+        ]);
+
+        $storeResponseMom->assertRedirect();
+        $resMom = IncubatorReservation::where('incubator_id', $incMom->id)->first();
+        $this->assertNotNull($resMom);
+        $this->assertEquals('BABY-NEW-HIA-7788', $resMom->insurance_card_no);
+        // رقم بطاقة الأم في جدول patients لم يتغير وظل محتفظاً به تماماً
+        $this->assertEquals('MOTHER-CARD-112233', $motherPatient->fresh()->insurance_card_no);
+
+        // 5. التحقق من عرض الواجهات للبيانات الجديدة
+        $showResp = $this->actingAs($this->admin)->get(route('nicu.show', $reservation));
+        $showResp->assertOk();
+        $showResp->assertSee('ملف طفل مستقل');
+        $showResp->assertSee('BC-2026-9988');
+        $showResp->assertSee('نور الهدى جاسم');
+    }
+
     public function test_incubator_reservation_create_page_renders_with_searchable_doctor_select(): void
     {
         $response = $this->actingAs($this->admin)->get(route('incubator-reservations.create', [
