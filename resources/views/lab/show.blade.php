@@ -1337,24 +1337,166 @@ function updateSummary() {
     if (p) p.textContent = pending;
 }
 
+// ──────────────── الحساب الآلي الذكي لمعادلات باقة الدهون (Lipid Profile - Friedewald Eq) ────────────────
+function getNormalizedTestName(row) {
+    if (!row) return '';
+    const input = row.querySelector('.test-value');
+    let name = (row.dataset.test || (input ? input.dataset.test : '') || '').toLowerCase().trim();
+    if (!name) {
+        const titleEl = row.querySelector('td:nth-child(2)');
+        name = (titleEl ? titleEl.textContent : '').toLowerCase().trim();
+    }
+    return name;
+}
+
+function attachCalculatedBadge(row, text, type = 'info') {
+    if (!row) return;
+    const titleCell = row.querySelector('td:nth-child(2) .d-flex');
+    if (!titleCell) return;
+    let badge = titleCell.querySelector('.lipid-calc-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = `badge bg-${type}-subtle text-${type} border border-${type}-subtle rounded-pill ms-2 lipid-calc-badge shadow-xs`;
+        badge.style.fontSize = '0.70rem';
+        badge.style.fontWeight = 'bold';
+        titleCell.appendChild(badge);
+    }
+    badge.className = `badge bg-${type}-subtle text-${type} border border-${type}-subtle rounded-pill ms-2 lipid-calc-badge shadow-xs`;
+    badge.innerHTML = `<i class="fas fa-calculator me-1"></i> ${text}`;
+}
+
+function runLipidProfileCalculations() {
+    let tgRow = null, tcRow = null, hdlRow = null, ldlRow = null, vldlRow = null;
+
+    document.querySelectorAll('.test-row').forEach(row => {
+        const name = getNormalizedTestName(row);
+        if (!name) return;
+
+        // مطابقة الدهون الثلاثية Triglycerides
+        if (name.includes('triglyceride') || name === 'tg' || name.includes('دهون ثلاثية')) {
+            tgRow = row;
+        }
+        // مطابقة الكوليسترول الكلي Total Cholesterol (مع استبعاد HDL, LDL, VLDL)
+        else if ((name.includes('cholesterol') || name === 'tc' || name.includes('كوليسترول') || name.includes('كولسترول')) 
+                 && !name.includes('hdl') && !name.includes('ldl') && !name.includes('vldl') 
+                 && !name.includes('high') && !name.includes('low') && !name.includes('عالي') && !name.includes('منخفض')) {
+            tcRow = row;
+        }
+        // مطابقة الكوليسترول عالي الكثافة HDL
+        else if (name.includes('hdl') || (name.includes('high') && name.includes('density')) || name.includes('عالي الكثافة') || name.includes('عالية الكثافة') || name.includes('نافع')) {
+            hdlRow = row;
+        }
+        // مطابقة VLDL
+        else if (name.includes('vldl') || (name.includes('very') && name.includes('low')) || name.includes('منخفض الكثافة جدا') || name.includes('منخفضة الكثافة جدا')) {
+            vldlRow = row;
+        }
+        // مطابقة LDL (مع استبعاد VLDL)
+        else if ((name.includes('ldl') || (name.includes('low') && name.includes('density')) || name.includes('منخفض الكثافة') || name.includes('منخفضة الكثافة') || name.includes('ضار')) 
+                 && !name.includes('vldl') && !name.includes('very') && !name.includes('جدا')) {
+            ldlRow = row;
+        }
+    });
+
+    const tgInput = tgRow ? tgRow.querySelector('.test-value') : null;
+    const tcInput = tcRow ? tcRow.querySelector('.test-value') : null;
+    const hdlInput = hdlRow ? hdlRow.querySelector('.test-value') : null;
+    const ldlInput = ldlRow ? ldlRow.querySelector('.test-value') : null;
+    const vldlInput = vldlRow ? vldlRow.querySelector('.test-value') : null;
+
+    const tgVal = tgInput && tgInput.value.trim() !== '' ? parseFloat(tgInput.value.replace(/,/g, '')) : NaN;
+    const tcVal = tcInput && tcInput.value.trim() !== '' ? parseFloat(tcInput.value.replace(/,/g, '')) : NaN;
+    const hdlVal = hdlInput && hdlInput.value.trim() !== '' ? parseFloat(hdlInput.value.replace(/,/g, '')) : NaN;
+
+    // 1. حساب VLDL المحسوب: VLDL = TG / 5
+    if (vldlInput && !isNaN(tgVal) && tgVal >= 0) {
+        if (vldlInput.dataset.manual !== '1' || vldlInput.value.trim() === '') {
+            const calculatedVLDL = Math.round((tgVal / 5) * 10) / 10;
+            vldlInput.value = calculatedVLDL;
+            vldlInput.dataset.autoCalc = '1';
+            attachCalculatedBadge(vldlRow, 'محسوب: TG / 5', 'primary');
+            evaluateRow(vldlRow);
+        }
+    }
+
+    // 2. التحقق من تنبيه فريدوالد السريري (TG >= 400 mg/dL)
+    let alertBanner = document.getElementById('lipid-friedewald-alert');
+    if (!isNaN(tgVal) && tgVal >= 400) {
+        if (!alertBanner && (ldlRow || tgRow)) {
+            const targetRow = ldlRow || tgRow;
+            alertBanner = document.createElement('tr');
+            alertBanner.id = 'lipid-friedewald-alert';
+            alertBanner.className = 'table-warning border-warning';
+            alertBanner.innerHTML = `
+                <td colspan="7" class="py-2.5 px-3 bg-warning-subtle text-dark">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning text-dark fs-6 px-2 py-1 shadow-xs"><i class="fas fa-exclamation-triangle"></i> تنبيه سريري</span>
+                            <strong class="text-dark small">
+                                نسبة الدهون الثلاثية (${tgVal} mg/dL) مرتفعة وتساوي أو تتجاوز 400 mg/dL:
+                            </strong>
+                            <span class="text-muted small">
+                                تصبح معادلة فريدوالد (Friedewald) غير دقيقة علمياً في حساب LDL، ويُفضّل الاعتماد على القياس المخبري المباشر (Direct LDL).
+                            </span>
+                        </div>
+                        <span class="badge bg-white text-secondary border font-monospace small">Friedewald: TG ≥ 400 mg/dL</span>
+                    </div>
+                </td>
+            `;
+            targetRow.parentNode.insertBefore(alertBanner, targetRow.nextSibling);
+        } else if (alertBanner) {
+            alertBanner.style.display = '';
+            const strongEl = alertBanner.querySelector('strong');
+            if (strongEl) strongEl.textContent = `نسبة الدهون الثلاثية (${tgVal} mg/dL) مرتفعة وتساوي أو تتجاوز 400 mg/dL:`;
+        }
+    } else if (alertBanner) {
+        alertBanner.style.display = 'none';
+    }
+
+    // 3. حساب LDL المحسوب: LDL = TC - HDL - (TG / 5)
+    if (ldlInput && !isNaN(tcVal) && !isNaN(hdlVal) && !isNaN(tgVal) && tcVal > 0 && hdlVal > 0 && tgVal >= 0) {
+        if (ldlInput.dataset.manual !== '1' || ldlInput.value.trim() === '') {
+            if (tgVal < 400) {
+                const calculatedLDL = Math.round((tcVal - hdlVal - (tgVal / 5)) * 10) / 10;
+                ldlInput.value = calculatedLDL;
+                ldlInput.dataset.autoCalc = '1';
+                attachCalculatedBadge(ldlRow, 'محسوب: TC - HDL - (TG/5)', 'primary');
+                evaluateRow(ldlRow);
+            } else {
+                attachCalculatedBadge(ldlRow, '⚠️ TG ≥ 400: يفضل Direct LDL', 'warning');
+            }
+        }
+    }
+}
+
 function initializeLabResults() {
     document.querySelectorAll('.test-row .test-value').forEach((input) => {
         input.addEventListener('input', function () {
+            if (this.dataset.autoCalc === '1' && document.activeElement === this) {
+                this.dataset.manual = '1';
+                this.dataset.autoCalc = '0';
+                attachCalculatedBadge(this.closest('.test-row'), 'مدخل يدوياً', 'secondary');
+            }
             evaluateRow(this.closest('.test-row'));
+            runLipidProfileCalculations();
             updateSummary();
         });
         input.addEventListener('change', function () {
             evaluateRow(this.closest('.test-row'));
+            runLipidProfileCalculations();
             updateSummary();
         });
         input.addEventListener('keyup', function () {
             evaluateRow(this.closest('.test-row'));
+            runLipidProfileCalculations();
             updateSummary();
         });
         if (input.value.trim() !== '') {
             evaluateRow(input.closest('.test-row'));
         }
     });
+
+    // تشغيل الحساب التلقائي للدهون عند فتح الصفحة
+    runLipidProfileCalculations();
     updateSummary();
 }
 

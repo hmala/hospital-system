@@ -53,6 +53,24 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-27 — المرحلة 117: الحساب الآلي الذكي لمعادلات باقة الدهون Lipid Profile - Friedewald Formula: LDL & VLDL في واجهة المختبر والسيرفر مع التنبيه السريري والتحصين الشامل)
+
+### Done
+- **تجهيز باقة الدهون وفحص VLDL في قاعدة البيانات**:
+  * إنشاء وترحيل `2026_10_27_112000_seed_lipid_profile_composite_test_and_vldl.php`.
+  * إضافة فحص `Very Low Density Lipoprotein` (VLDL) بمدى مرجعي طبيعي (5 - 30 mg/dL).
+  * إنشاء فحص باقة الدهون الشاملة `Lipid Profile` كفحص مركب (`sub_tests`) بالباراميترات الخمسة المعتمدة: Total Cholesterol, Triglyceride, High Density Lipoprotein, Low Density Lipoprotein (Calculated), Very Low Density Lipoprotein (Calculated).
+- **محرك الحساب الآلي اللحظي في واجهة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * مطابقة مرنة للأسماء الطبية للدهون تدعم العربية والإنجليزية والرموز واختصارات TG, TC, HDL, LDL, VLDL.
+  * حساب فوري لـ VLDL بمجرد إدخال قيمة الدهون الثلاثية ($VLDL = TG / 5$) وتحديث وسام `[ ⚡ محسوب: TG / 5 ]`.
+  * حساب فوري لـ LDL بمجرد توفر الكوليسترول الكلي والـ HDL والدهون الثلاثية طبقاً لمعادلة فريدوالد ($LDL = TC - HDL - \frac{TG}{5}$).
+  * إضافة بانيل تنبيه سريري باللون الكهرماني يظهر فورياً أعلى الصف عند تجاوز الدهون الثلاثية 400 mg/dL ($TG \ge 400$) بأن معادلة فريدوالد غير دقيقة علمياً ويُنصح بالقياس المخبري المباشر (Direct LDL).
+  * دعم التعديل اليدوي للفني وإظهار شارة `[ ✍️ مدخل يدوياً ]` عند رغبته في إدخال قيمة يدوية مقاسة مباشرة دون إجبار.
+- **التحصين ومعالجة السيرفر ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * إضافة دالة `autoCalculateLipidResults` لضمان احتساب وتخزين نتائج VLDL و LDL في قاعدة البيانات والـ JSON عند الحفظ حتى في حال تم إرسالها فارغة أو تم حفظ الطلب كمسودة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LipidProfileAutoCalculationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LipidProfileAutoCalculationTest.php))**:
+  * بناء 4 اختبارات ميزة تغطي الحساب الآلي الصحيح لمعادلتي VLDL و LDL، عدم الحساب القسري وظهور التنبيه عند تجاوز الدهون الثلاثية 400، الحساب في الفحوصات الفردية والمركبة، واحترام الإدخال اليدوي بنجاح تام (`4 passed, 25 assertions`).
+
 ## Session log (2026-10-27 — المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)
 
 ### Done

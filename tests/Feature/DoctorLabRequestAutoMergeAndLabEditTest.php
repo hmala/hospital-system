@@ -2,30 +2,37 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Doctor;
 use App\Models\Department;
+use App\Models\Doctor;
 use App\Models\Hospital;
-use App\Models\Patient;
-use App\Models\Visit;
 use App\Models\LabTest;
+use App\Models\Patient;
 use App\Models\Request as MedicalRequest;
+use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class DoctorLabRequestAutoMergeAndLabEditTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $doctorUser;
+
     protected $labStaffUser;
+
     protected $doctor;
+
     protected $patient;
+
     protected $visit;
+
     protected $testCbc;
+
     protected $testRbs;
+
     protected $testLipid;
 
     protected function setUp(): void
@@ -122,7 +129,7 @@ class DoctorLabRequestAutoMergeAndLabEditTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->testLipid = LabTest::create([
+        $this->testLipid = LabTest::where('name', 'Lipid Profile')->first() ?? LabTest::create([
             'name' => 'Lipid Profile',
             'code' => 'LIPID',
             'price' => 20000,

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
+use App\Models\Request as MedicalRequest;
 use Illuminate\Http\Request as HttpRequest;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class LabStaffController extends Controller
 {
@@ -14,45 +14,45 @@ class LabStaffController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+        if (! $user->hasAnyRole(['lab_staff', 'admin'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
             ->where(function ($q) {
                 $q->whereIn('type', ['lab', 'blood_bank'])
-                  ->orWhere(function ($inner) {
-                      $inner->where('type', 'lab')
+                    ->orWhere(function ($inner) {
+                        $inner->where('type', 'lab')
                             ->whereJsonContains('details->blood_bank', true);
-                  });
+                    });
             })
             ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
 
         if (request()->filled('search')) {
             $s = trim(request('search'));
-            $query->where(function($q) use ($s) {
+            $query->where(function ($q) use ($s) {
                 $q->where('id', $s)
-                  ->orWhereHas('visit.patient.user', function($pq) use ($s) {
-                      $pq->where('name', 'like', "%{$s}%")
-                         ->orWhere('phone', 'like', "%{$s}%");
-                  })
-                  ->orWhereHas('visit.doctor.user', function($dq) use ($s) {
-                      $dq->where('name', 'like', "%{$s}%");
-                  });
+                    ->orWhereHas('visit.patient.user', function ($pq) use ($s) {
+                        $pq->where('name', 'like', "%{$s}%")
+                            ->orWhere('phone', 'like', "%{$s}%");
+                    })
+                    ->orWhereHas('visit.doctor.user', function ($dq) use ($s) {
+                        $dq->where('name', 'like', "%{$s}%");
+                    });
             });
         }
 
         $sourceFilter = request('source', 'all');
         if ($sourceFilter === 'consultation') {
-            $query->whereHas('visit', function($vq) {
+            $query->whereHas('visit', function ($vq) {
                 $vq->whereNotNull('doctor_id');
             });
         } elseif ($sourceFilter === 'direct') {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereDoesntHave('visit')
-                  ->orWhereHas('visit', function($vq) {
-                      $vq->whereNull('doctor_id');
-                  });
+                    ->orWhereHas('visit', function ($vq) {
+                        $vq->whereNull('doctor_id');
+                    });
             });
         }
 
@@ -70,17 +70,17 @@ class LabStaffController extends Controller
 
         $baseCountQuery = MedicalRequest::where(function ($q) {
             $q->whereIn('type', ['lab', 'blood_bank'])
-              ->orWhere(function ($inner) {
-                  $inner->where('type', 'lab')
+                ->orWhere(function ($inner) {
+                    $inner->where('type', 'lab')
                         ->whereJsonContains('details->blood_bank', true);
-              });
+                });
         })->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
 
         $activeSourceQuery = clone $baseCountQuery;
         if ($sourceFilter === 'consultation') {
-            $activeSourceQuery->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'));
+            $activeSourceQuery->whereHas('visit', fn ($vq) => $vq->whereNotNull('doctor_id'));
         } elseif ($sourceFilter === 'direct') {
-            $activeSourceQuery->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')));
+            $activeSourceQuery->where(fn ($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn ($vq) => $vq->whereNull('doctor_id')));
         }
 
         // Emergency queries & counts
@@ -103,12 +103,12 @@ class LabStaffController extends Controller
                 $emergencyQuery->whereDate('requested_at', now()->toDateString());
             }
 
-            if (!empty($s)) {
+            if (! empty($s)) {
                 $emergencyQuery->where(function ($eq) use ($s) {
                     $eq->where('emergency_id', 'like', "%{$s}%")
-                       ->orWhereHas('patient.user', function ($puq) use ($s) {
-                           $puq->where('name', 'like', "%{$s}%");
-                       });
+                        ->orWhereHas('patient.user', function ($puq) use ($s) {
+                            $puq->where('name', 'like', "%{$s}%");
+                        });
                 });
             }
 
@@ -121,8 +121,8 @@ class LabStaffController extends Controller
 
             $counts = [
                 'all' => (clone $baseCountQuery)->count(),
-                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
-                'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
+                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn ($vq) => $vq->whereNotNull('doctor_id'))->count(),
+                'direct' => (clone $baseCountQuery)->where(fn ($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn ($vq) => $vq->whereNull('doctor_id')))->count(),
                 'emergency' => $emergencyCount,
                 'pending' => $emergencyPendingCount,
                 'completed' => $emergencyCompletedCount,
@@ -131,8 +131,8 @@ class LabStaffController extends Controller
         } else {
             $counts = [
                 'all' => (clone $baseCountQuery)->count(),
-                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn($vq) => $vq->whereNotNull('doctor_id'))->count(),
-                'direct' => (clone $baseCountQuery)->where(fn($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn($vq) => $vq->whereNull('doctor_id')))->count(),
+                'consultation' => (clone $baseCountQuery)->whereHas('visit', fn ($vq) => $vq->whereNotNull('doctor_id'))->count(),
+                'direct' => (clone $baseCountQuery)->where(fn ($q) => $q->whereDoesntHave('visit')->orWhereHas('visit', fn ($vq) => $vq->whereNull('doctor_id')))->count(),
                 'emergency' => $emergencyCount,
                 'pending' => (clone $activeSourceQuery)->whereIn('status', ['pending', 'pending_service_selection', 'in_progress'])->count(),
                 'completed' => (clone $activeSourceQuery)->where('status', 'completed')->count(),
@@ -153,11 +153,11 @@ class LabStaffController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+        if (! $user->hasAnyRole(['lab_staff', 'admin'])) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
-        if (!in_array($request->type, ['lab', 'blood_bank'])) {
+        if (! in_array($request->type, ['lab', 'blood_bank'])) {
             abort(403, 'هذا الطلب ليس من نوع المختبر');
         }
 
@@ -190,11 +190,11 @@ class LabStaffController extends Controller
         $user = Auth::user();
         $token = $httpRequest->query('token');
         $validToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : null;
-        $isValidToken = $token && $validToken && hash_equals($validToken, (string)$token);
+        $isValidToken = $token && $validToken && hash_equals($validToken, (string) $token);
         $isStaffUser = $user && ($user->hasAnyRole(['admin', 'doctor', 'lab_staff', 'emergency_staff', 'receptionist', 'nurse']) || $user->can('view lab tests'));
 
         // السماح لكافة الكوادر الطبية أو للمريض الحامل للرمز المشفر من الواتساب
-        if (!$isStaffUser && !$isValidToken && !$httpRequest->hasValidSignature()) {
+        if (! $isStaffUser && ! $isValidToken && ! $httpRequest->hasValidSignature()) {
             abort(403, 'غير مصرح لك بعرض المرفقات');
         }
 
@@ -202,13 +202,13 @@ class LabStaffController extends Controller
         $testName = $httpRequest->query('test');
 
         $attachmentPath = null;
-        if ($testName && !empty($details['test_attachments'][$testName]['path'])) {
+        if ($testName && ! empty($details['test_attachments'][$testName]['path'])) {
             $attachmentPath = $details['test_attachments'][$testName]['path'];
-        } elseif (!empty($details['attachment'])) {
+        } elseif (! empty($details['attachment'])) {
             $attachmentPath = $details['attachment'];
         }
 
-        if (!$attachmentPath) {
+        if (! $attachmentPath) {
             abort(404, 'لا يوجد تقرير مرفق لهذا الطلب');
         }
 
@@ -216,7 +216,7 @@ class LabStaffController extends Controller
             return \Illuminate\Support\Facades\Storage::disk('public')->response($attachmentPath);
         }
 
-        $fullPath = storage_path('app/public/' . $attachmentPath);
+        $fullPath = storage_path('app/public/'.$attachmentPath);
         if (file_exists($fullPath)) {
             return response()->file($fullPath);
         }
@@ -231,7 +231,9 @@ class LabStaffController extends Controller
         // 1. اختيار تحاليل أو باقة (pending_service_selection)
         if ($request->status === 'pending_service_selection' && ($httpRequest->has('lab_test_ids') || $httpRequest->has('package_id'))) {
             $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-            if (!is_array($details)) $details = [];
+            if (! is_array($details)) {
+                $details = [];
+            }
 
             if ($httpRequest->has('package_id') && $httpRequest->package_id) {
                 $packageId = $httpRequest->package_id;
@@ -241,9 +243,9 @@ class LabStaffController extends Controller
                     $packageTests = $package ? $package->labTests()->pluck('lab_tests.id')->toArray() : [];
                     if ($package) {
                         $details['package_name'] = $package->name;
-                        $details['package_price'] = (float)$package->price;
+                        $details['package_price'] = (float) $package->price;
                         $details['package_test_ids'] = $packageTests;
-                        $request->total_amount = (float)$package->price;
+                        $request->total_amount = (float) $package->price;
                     }
                 } catch (\Exception $e) {
                     $packageTests = [];
@@ -271,7 +273,7 @@ class LabStaffController extends Controller
 
         // 2. حفظ بيانات مصرف الدم
         $isBloodBankRequest = $request->type === 'blood_bank';
-        if (!$isBloodBankRequest) {
+        if (! $isBloodBankRequest) {
             $details = is_string($request->details) ? (json_decode($request->details, true) ?: []) : ($request->details ?? []);
             $isBloodBankRequest = data_get($details, 'blood_bank', false) === true;
         }
@@ -330,16 +332,18 @@ class LabStaffController extends Controller
 
         // 3. معالجة المرفقات (تقرير عام أو تقارير مخصصة لكل فحص) وحفظ نتائج التحاليل
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
 
         $hasNewAttachment = false;
 
         // أ. معالجة المرفق العام (attachment)
         if ($httpRequest->hasFile('attachment')) {
             $file = $httpRequest->file('attachment');
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $filename = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
             $path = $file->storeAs('lab_attachments', $filename, 'public');
-            
+
             $details['attachment'] = $path;
             $details['attachment_name'] = $file->getClientOriginalName();
             $details['attachment_mime'] = $file->getClientMimeType();
@@ -347,14 +351,14 @@ class LabStaffController extends Controller
             $details['attached_at'] = now()->toDateTimeString();
             $hasNewAttachment = true;
         } elseif ($httpRequest->has('remove_attachment') && $httpRequest->remove_attachment == '1') {
-            if (!empty($details['attachment'])) {
+            if (! empty($details['attachment'])) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($details['attachment']);
             }
             unset($details['attachment'], $details['attachment_name'], $details['attachment_mime'], $details['attachment_title'], $details['attached_at']);
         }
 
         // ب. معالجة المرفقات المخصصة لكل فحص (test_attachments)
-        if (!isset($details['test_attachments']) || !is_array($details['test_attachments'])) {
+        if (! isset($details['test_attachments']) || ! is_array($details['test_attachments'])) {
             $details['test_attachments'] = [];
         }
 
@@ -363,14 +367,14 @@ class LabStaffController extends Controller
             if (is_array($testFiles)) {
                 foreach ($testFiles as $testName => $file) {
                     if ($file && $file->isValid()) {
-                        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                        $filename = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
                         $path = $file->storeAs('lab_attachments', $filename, 'public');
-                        
+
                         $details['test_attachments'][$testName] = [
                             'path' => $path,
                             'name' => $file->getClientOriginalName(),
                             'mime' => $file->getClientMimeType(),
-                            'title' => 'تقرير فحص: ' . $testName,
+                            'title' => 'تقرير فحص: '.$testName,
                             'attached_at' => now()->toDateTimeString(),
                         ];
                         $hasNewAttachment = true;
@@ -383,7 +387,7 @@ class LabStaffController extends Controller
         if ($httpRequest->has('remove_test_attachment')) {
             $removes = (array) $httpRequest->remove_test_attachment;
             foreach ($removes as $tName => $val) {
-                if ($val && !empty($details['test_attachments'][$tName]['path'])) {
+                if ($val && ! empty($details['test_attachments'][$tName]['path'])) {
                     \Illuminate\Support\Facades\Storage::disk('public')->delete($details['test_attachments'][$tName]['path']);
                     unset($details['test_attachments'][$tName]);
                 }
@@ -396,11 +400,14 @@ class LabStaffController extends Controller
         if ($httpRequest->has('test_results') && is_array($httpRequest->test_results)) {
             LabResult::where('request_id', $request->id)->delete();
 
-            $sourceType = !empty($details['package_id']) ? 'package' : 'general';
+            $sourceType = ! empty($details['package_id']) ? 'package' : 'general';
             $packageId = $details['package_id'] ?? null;
 
-            foreach ($httpRequest->test_results as $key => $data) {
-                if (!empty($data['value'])) {
+            $testResults = $httpRequest->test_results;
+            $this->autoCalculateLipidResults($testResults);
+
+            foreach ($testResults as $key => $data) {
+                if (! empty($data['value'])) {
                     $testName = $data['test_name'] ?? $key;
                     $parentTestName = $data['parent_test_name'] ?? null;
                     $subTestId = $data['sub_test_id'] ?? null;
@@ -408,14 +415,14 @@ class LabStaffController extends Controller
                     $unit = $data['unit'] ?? '';
                     $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
                     $status = (new LabResult)->determineStatus($data['value'], $testName, $refRange);
-                    if (!empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
+                    if (! empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
                         $status = $data['status'];
                     }
 
-                    if (!$labTestId && $parentTestName) {
+                    if (! $labTestId && $parentTestName) {
                         $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();
                         $labTestId = $parentTest?->id;
-                    } elseif (!$labTestId) {
+                    } elseif (! $labTestId) {
                         $directTest = \App\Models\LabTest::where('name', $testName)->first();
                         $labTestId = $directTest?->id;
                     }
@@ -447,34 +454,36 @@ class LabStaffController extends Controller
             $targetStatus = 'in_progress';
         } else {
             $targetStatus = $httpRequest->input('status', 'completed');
-            if ($targetStatus !== 'completed' && ($savedResults > 0 || $hasNewAttachment || !empty($details['attachment']) || !empty($details['test_attachments']))) {
+            if ($targetStatus !== 'completed' && ($savedResults > 0 || $hasNewAttachment || ! empty($details['attachment']) || ! empty($details['test_attachments']))) {
                 $targetStatus = 'completed';
             }
         }
         $request->status = $targetStatus;
 
         $existingRes = is_string($request->result) ? (json_decode($request->result, true) ?: []) : ($request->result ?: []);
-        if (!is_array($existingRes)) $existingRes = [];
+        if (! is_array($existingRes)) {
+            $existingRes = [];
+        }
 
         if ($savedResults > 0) {
-            $existingRes['test_results'] = $httpRequest->test_results;
+            $existingRes['test_results'] = $testResults;
         }
-        if (!empty($details['attachment'])) {
+        if (! empty($details['attachment'])) {
             $existingRes['attachment'] = $details['attachment'];
             $existingRes['attachment_name'] = $details['attachment_name'] ?? '';
             $existingRes['attachment_title'] = $details['attachment_title'] ?? '';
         } elseif (isset($existingRes['attachment']) && empty($details['attachment'])) {
             unset($existingRes['attachment'], $existingRes['attachment_name'], $existingRes['attachment_title']);
         }
-        if (!empty($details['test_attachments'])) {
+        if (! empty($details['test_attachments'])) {
             $existingRes['test_attachments'] = $details['test_attachments'];
         } elseif (isset($existingRes['test_attachments']) && empty($details['test_attachments'])) {
             unset($existingRes['test_attachments']);
         }
 
         if ($httpRequest->filled('result_notes') || $httpRequest->filled('result')) {
-            $rawNote = trim((string)($httpRequest->result_notes ?? $httpRequest->result));
-            if (!str_starts_with($rawNote, '{') && !str_starts_with($rawNote, '[')) {
+            $rawNote = trim((string) ($httpRequest->result_notes ?? $httpRequest->result));
+            if (! str_starts_with($rawNote, '{') && ! str_starts_with($rawNote, '[')) {
                 $existingRes['notes'] = $rawNote;
             }
         } elseif ($httpRequest->has('result') && empty($httpRequest->result)) {
@@ -504,11 +513,11 @@ class LabStaffController extends Controller
             try {
                 app(\App\Services\TelegramService::class)->sendResultsReady($request);
             } catch (\Throwable $te) {
-                Log::warning('Telegram lab notification error: ' . $te->getMessage());
+                Log::warning('Telegram lab notification error: '.$te->getMessage());
             }
 
-            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
-            if ($request->visit && !$isDoctorVisit) {
+            $isDoctorVisit = $request->visit && (! empty($request->visit->doctor_id) || ! empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && ! $isDoctorVisit) {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();
                 if ($pending === 0) {
                     $request->visit->status = 'completed';
@@ -520,16 +529,16 @@ class LabStaffController extends Controller
         if ($isDraft) {
             $draftMsg = $savedResults > 0
                 ? "تم حفظ مسودة النتائج ({$savedResults} نتيجة فحص) بنجاح. الطلب لا يزال قيد الفحص بالمختبر ولم يتم إرساله للطبيب بعد."
-                : ($hasNewAttachment ? "تم حفظ تقارير الأجهزة كمسودة بنجاح." : "تم حفظ مسودة نتائج الفحص بنجاح.");
+                : ($hasNewAttachment ? 'تم حفظ تقارير الأجهزة كمسودة بنجاح.' : 'تم حفظ مسودة نتائج الفحص بنجاح.');
 
             return redirect()->route('lab.show', $request)->with('success', $draftMsg);
         }
 
         $msg = $savedResults > 0
-            ? "تم حفظ {$savedResults} نتيجة تحليل" . ($hasNewAttachment ? " مع تقارير الأجهزة المرفقة" : "") . " بنجاح"
-            : ($hasNewAttachment ? "تم حفظ وإرفاق تقارير الأجهزة بنجاح" : "تم حفظ بيانات وتفاصيل الفحص بنجاح");
+            ? "تم حفظ {$savedResults} نتيجة تحليل".($hasNewAttachment ? ' مع تقارير الأجهزة المرفقة' : '').' بنجاح'
+            : ($hasNewAttachment ? 'تم حفظ وإرفاق تقارير الأجهزة بنجاح' : 'تم حفظ بيانات وتفاصيل الفحص بنجاح');
 
-        return redirect()->route('lab.index')->with('success', $msg . ' وتم الاعتماد النهائي والإرسال لعيادة الطبيب.');
+        return redirect()->route('lab.index')->with('success', $msg.' وتم الاعتماد النهائي والإرسال لعيادة الطبيب.');
     }
 
     public function print(MedicalRequest $request)
@@ -537,7 +546,9 @@ class LabStaffController extends Controller
         $request->load(['visit.patient.user', 'visit.doctor.user']);
 
         $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($requestDetails)) $requestDetails = [];
+        if (! is_array($requestDetails)) {
+            $requestDetails = [];
+        }
 
         $isBloodBankRequest = $request->type === 'blood_bank' || data_get($requestDetails, 'blood_bank', false) === true;
         $bloodBankRequest = $isBloodBankRequest
@@ -553,16 +564,17 @@ class LabStaffController extends Controller
     public function cancel(HttpRequest $httpRequest, MedicalRequest $request)
     {
         $user = Auth::user();
-        if (!$user || !$user->hasAnyRole(['lab_staff', 'admin', 'admin-hsop', 'hospital_admin'])) {
+        if (! $user || ! $user->hasAnyRole(['lab_staff', 'admin', 'admin-hsop', 'hospital_admin'])) {
             abort(403, 'غير مصرح لك بإلغاء هذا الطلب');
         }
 
         // 1. فحص هل الطلب صادر من طبيب استشاري داخل العيادات
-        if (!$request->isDirectExternal()) {
+        if (! $request->isDirectExternal()) {
             $msg = 'عذراً، هذا الطلب صادر عن طبيب استشاري داخل العيادات ولا يمكن إلغاؤه من المختبر. الإلغاء يتم حصراً من شاشة الطبيب المعالج.';
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
@@ -572,6 +584,7 @@ class LabStaffController extends Controller
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
@@ -580,6 +593,7 @@ class LabStaffController extends Controller
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('info', $msg);
         }
 
@@ -600,7 +614,7 @@ class LabStaffController extends Controller
             if ($receipt) {
                 $details['paid_receipt_id'] = $receipt->id;
                 $details['paid_receipt_number'] = $receipt->receipt_number;
-                $details['paid_amount'] = (float)$receipt->amount;
+                $details['paid_amount'] = (float) $receipt->amount;
             }
         }
 
@@ -647,5 +661,75 @@ class LabStaffController extends Controller
         }
 
         return redirect()->route('lab.index')->with($wasPaid ? 'warning' : 'success', $successMsg);
+    }
+
+    /**
+     * الحساب التلقائي لمعادلات باقة الدهون (Lipid Profile - Friedewald Formula)
+     * VLDL = TG / 5
+     * LDL = TC - HDL - (TG / 5) (عندما يكون TG < 400 mg/dL)
+     */
+    protected function autoCalculateLipidResults(array &$testResults): void
+    {
+        $tg = null;
+        $tc = null;
+        $hdl = null;
+        $vldlKey = null;
+        $ldlKey = null;
+
+        foreach ($testResults as $key => $item) {
+            $name = mb_strtolower(trim($item['test_name'] ?? $key));
+            $val = isset($item['value']) && $item['value'] !== '' ? (float) str_replace(',', '', (string) $item['value']) : null;
+
+            // الدهون الثلاثية (TG)
+            if (str_contains($name, 'triglyceride') || $name === 'tg' || str_contains($name, 'دهون ثلاثية')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tg = $val;
+                }
+            }
+            // الكوليسترول الكلي (TC) - مع استبعاد HDL, LDL, VLDL
+            elseif ((str_contains($name, 'cholesterol') || $name === 'tc' || str_contains($name, 'كوليسترول') || str_contains($name, 'كولسترول'))
+                    && ! str_contains($name, 'hdl') && ! str_contains($name, 'ldl') && ! str_contains($name, 'vldl')
+                    && ! str_contains($name, 'high') && ! str_contains($name, 'low') && ! str_contains($name, 'عالي') && ! str_contains($name, 'منخفض')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tc = $val;
+                }
+            }
+            // HDL
+            elseif (str_contains($name, 'hdl') || (str_contains($name, 'high') && str_contains($name, 'density')) || str_contains($name, 'عالي الكثافة') || str_contains($name, 'عالية الكثافة') || str_contains($name, 'نافع')) {
+                if ($val !== null && is_numeric($val)) {
+                    $hdl = $val;
+                }
+            }
+            // VLDL
+            elseif (str_contains($name, 'vldl') || (str_contains($name, 'very') && str_contains($name, 'low')) || str_contains($name, 'منخفض الكثافة جدا') || str_contains($name, 'منخفضة الكثافة جدا')) {
+                $vldlKey = $key;
+            }
+            // LDL
+            elseif ((str_contains($name, 'ldl') || (str_contains($name, 'low') && str_contains($name, 'density')) || str_contains($name, 'منخفض الكثافة') || str_contains($name, 'منخفضة الكثافة') || str_contains($name, 'ضار'))
+                    && ! str_contains($name, 'vldl') && ! str_contains($name, 'very') && ! str_contains($name, 'جدا')) {
+                $ldlKey = $key;
+            }
+        }
+
+        // 1. حساب VLDL = TG / 5
+        if ($vldlKey !== null && $tg !== null && $tg >= 0) {
+            if (! isset($testResults[$vldlKey]['value']) || trim((string) $testResults[$vldlKey]['value']) === '') {
+                $testResults[$vldlKey]['value'] = (string) round($tg / 5, 1);
+                $testResults[$vldlKey]['notes'] = trim(($testResults[$vldlKey]['notes'] ?? '').' [محسوب آلياً: TG / 5]');
+            }
+        }
+
+        // 2. حساب LDL = TC - HDL - (TG / 5) بشرط TG < 400
+        if ($ldlKey !== null && $tc !== null && $hdl !== null && $tg !== null && $tc > 0 && $hdl > 0 && $tg >= 0) {
+            if (! isset($testResults[$ldlKey]['value']) || trim((string) $testResults[$ldlKey]['value']) === '') {
+                if ($tg < 400) {
+                    $calcLdl = round($tc - $hdl - ($tg / 5), 1);
+                    $testResults[$ldlKey]['value'] = (string) $calcLdl;
+                    $testResults[$ldlKey]['notes'] = trim(($testResults[$ldlKey]['notes'] ?? '').' [محسوب آلياً: Friedewald Eq]');
+                } else {
+                    $testResults[$ldlKey]['notes'] = trim(($testResults[$ldlKey]['notes'] ?? '').' [⚠️ تنبيه سريري: TG >= 400 mg/dL - معادلة فريدوالد غير دقيقة]');
+                }
+            }
+        }
     }
 }

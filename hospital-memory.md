@@ -861,6 +861,21 @@
   * **حزمة الاختبارات الآلية الشاملة (Automated Feature Tests)**:
     - إنشاء `tests/Feature/PaymentVoidAndReversalTest.php` بـ 8 اختبارات ميزة تغطي: منع غير المصرح، نجاح الإبطال وإعادة الفتح للتصحيح، إلزامية السبب، الإبطال مع الاسترداد، تصفير الطلبات الطبية وإعادة ظهورها في الكاشير، استعراض صفحة التدقيق للأدمن، ومنع غير المخولين بنجاح تام (`8 passed, 40 assertions`).
 
+- **المرحلة 117: الحساب الآلي الذكي لمعادلات باقة الدهون (Lipid Profile - Friedewald Formula: LDL & VLDL) في واجهة المختبر والسيرفر مع التنبيه السريري والتحصين الشامل**:
+  * **تجهيز باقة الدهون وفحص VLDL في قاعدة البيانات**:
+    - إنشاء مايجريشن `2026_10_27_112000_seed_lipid_profile_composite_test_and_vldl.php` لتسجيل فحص `Very Low Density Lipoprotein` (VLDL) بمدى مرجعي طبيعي (5 - 30 mg/dL).
+    - تسجيل فحص باقة الدهون الشاملة `Lipid Profile` كفحص مركب (`sub_tests`) يحتوي على الفحوصات الفرعية الخمسة الرسمية: Total Cholesterol (100 - 200), Triglyceride (60 - 160), HDL (> 35), LDL Calculated (< 130), VLDL Calculated (5 - 30).
+  * **محرك الحساب الآلي اللحظي في واجهة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+    - بناء دالة مطابقة متقدمة مرنة تتعرف على أسماء الفحوصات بالإنجليزية والعربية والرموز.
+    - حساب فوري لـ VLDL بمجرد إدخال الدهون الثلاثية ($VLDL = TG / 5$) مع وسم كبسولي `[ ⚡ محسوب: TG / 5 ]`.
+    - حساب فوري لـ LDL بمجرد توفر الكوليسترول الكلي والـ HDL والـ TG ($LDL = TC - HDL - \frac{TG}{5}$).
+    - إضافة تنبيه سريري تحذيري بارز أعلى الصف عند تجاوز الدهون الثلاثية 400 mg/dL ($TG \ge 400$) بأن معادلة فريدوالد غير دقيقة وينصح بالـ Direct LDL.
+    - احترام الإدخال اليدوي إذا قام الفني بتعديل القيمة بنفسه مع إظهار شارة `[ ✍️ مدخل يدوياً ]`.
+  * **التحصين ومعالجة السيرفر ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+    - دالة `autoCalculateLipidResults` لضمان حساب LDL و VLDL آلياً وتخزينها في قاعدة البيانات وجداول النتائج والـ JSON عند الحفظ.
+  * **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LipidProfileAutoCalculationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LipidProfileAutoCalculationTest.php))**:
+    - 4 اختبارات ميزة تغطي الحساب الدقيق للمعادلة، شرط الدهون الثلاثية 400، الحساب في الفحوصات المفردة والمركبة، وحفظ الإدخال اليدوي بنجاح تام (`4 passed, 25 assertions`).
+
 ### 🟡 In Progress (قيد المتابعة والتنفيذ):
 1. **نشر التحديثات البرمجية والمايجريشنات على سيرفر هوستنجر السحابي (`/deploy`)**:
    - تشغيل المايجريشن الجديد `2026_10_27_081000_add_void_fields_and_create_payment_void_logs_table.php` على قاعدة بيانات هوستنجر ومزامنة الصلاحيات `RolesAndPermissionsSeeder`.
