@@ -779,10 +779,11 @@
                         @endcanany
 
                         <!-- قسم الصندوق والكاشير -->
-                        @canany(['view cashier', 'view cashier surgeries', 'view cashier reports'])
+                        @canany(['view cashier', 'view cashier surgeries', 'view cashier reports', 'void payment receipt'])
                         @php
                             $isCashierSectionActive = request()->routeIs('cashier.index') || 
                                                       request()->routeIs('cashier.payment.*') || 
+                                                      request()->routeIs('cashier.payments.void.*') || 
                                                       request()->routeIs('cashier.receipt*') ||
                                                       request()->routeIs('cashier.surgeries.*') ||
                                                       request()->routeIs('cashier.report');
@@ -830,6 +831,13 @@
                             </a>
                         </li>
                         @endcan
+                        @canany(['void payment receipt', 'view cashier reports'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.payments.void.logs') ? 'active' : '' }}" href="{{ route('cashier.payments.void.logs') }}">
+                                <i class="fas fa-shield-alt text-danger"></i><span> تدقيق الوصولات الملغاة</span>
+                            </a>
+                        </li>
+                        @endcanany
                         </div> <!-- end cashierSection -->
                         @endcanany
 

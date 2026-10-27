@@ -81,6 +81,13 @@
                             <span class="badge bg-success rounded-pill me-1"><i class="fas fa-check"></i></span>
                         @endif
                     </form>
+
+                    @canany(['void payment receipt', 'view cashier reports'])
+                        <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3 shadow-sm d-flex align-items-center gap-1" title="سجل تدقيق الوصولات الملغاة والمبطلة">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>تدقيق الملغيات</span>
+                        </a>
+                    @endcanany
                 </div>
             </div>
         </div>

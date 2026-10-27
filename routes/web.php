@@ -364,6 +364,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
+        Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
         Route::get('/payments/{payment}/void', [\App\Http\Controllers\PaymentVoidController::class, 'showVoidForm'])->name('payments.void.form');
         Route::post('/payments/{payment}/void', [\App\Http\Controllers\PaymentVoidController::class, 'void'])->name('payments.void');
         Route::get('/report', [\App\Http\Controllers\CashierController::class, 'paymentsReport'])->name('report');

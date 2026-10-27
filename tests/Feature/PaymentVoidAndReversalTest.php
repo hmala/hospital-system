@@ -346,4 +346,38 @@ class PaymentVoidAndReversalTest extends TestCase
         $cashierResponse->assertStatus(200);
         $cashierResponse->assertSee((string) $freshReq->id);
     }
+
+    public function test_authorized_user_can_view_void_audit_logs()
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('void payment receipt');
+
+        $payment = Payment::create([
+            'amount' => 50000,
+            'receipt_number' => 'REC-20261027-AUDIT',
+            'payment_method' => 'cash',
+        ]);
+
+        \App\Models\PaymentVoidLog::create([
+            'payment_id' => $payment->id,
+            'receipt_number' => 'REC-20261027-AUDIT',
+            'amount' => 50000,
+            'void_type' => 'rebill',
+            'void_reason' => 'تدقيق رقابي تجريبي للتأكد من الواجهة',
+            'voided_by' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('cashier.payments.void.logs'));
+        $response->assertStatus(200);
+        $response->assertSee('سجل تدقيق الوصولات الملغاة والمبطلة');
+        $response->assertSee('REC-20261027-AUDIT');
+    }
+
+    public function test_unauthorized_user_cannot_view_void_audit_logs()
+    {
+        $regularUser = User::factory()->create();
+
+        $response = $this->actingAs($regularUser)->get(route('cashier.payments.void.logs'));
+        $response->assertStatus(403);
+    }
 }

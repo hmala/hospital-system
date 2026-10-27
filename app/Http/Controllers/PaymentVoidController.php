@@ -12,10 +12,73 @@ use App\Models\Request as MedicalRequest;
 use App\Services\UserActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PaymentVoidController extends Controller
 {
+    /**
+     * عرض سجل تدقيق الوصولات الملغاة والمبطلة للرقابة والتدقيق المالي (Audit Trail).
+     */
+    public function logs(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user->can('void payment receipt') && ! $user->hasRole(['admin', 'accountant', 'hospital_admin'])) {
+            abort(403, 'غير مصرح لك بعرض سجل تدقيق الوصولات الملغاة.');
+        }
+
+        $query = PaymentVoidLog::with(['patient.user', 'cashier', 'voidedBy', 'payment']);
+
+        // فلترة بالبحث (رقم الوصل، اسم المريض، السبب)
+        if ($search = trim($request->get('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('receipt_number', 'like', "%{$search}%")
+                    ->orWhere('void_reason', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('voidedBy', function ($qv) use ($search) {
+                        $qv->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // فلترة بنوع الإجراء (rebill / refund)
+        if ($voidType = $request->get('void_type')) {
+            $query->where('void_type', $voidType);
+        }
+
+        // فلترة بالتاريخ
+        if ($fromDate = $request->get('from_date')) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+        if ($toDate = $request->get('to_date')) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+
+        // إحصائيات التدقيق
+        $statsQuery = clone $query;
+        $totalLogsCount = (clone $statsQuery)->count();
+        $rebillCount = (clone $statsQuery)->where('void_type', 'rebill')->count();
+        $refundCount = (clone $statsQuery)->where('void_type', 'refund')->count();
+        $totalVoidedAmount = (clone $statsQuery)->sum('amount');
+
+        $logs = $query->latest()->paginate(20)->withQueryString();
+
+        return view('cashier.payments.void-logs', compact(
+            'logs',
+            'totalLogsCount',
+            'rebillCount',
+            'refundCount',
+            'totalVoidedAmount',
+            'search',
+            'voidType',
+            'fromDate',
+            'toDate'
+        ));
+    }
+
     /**
      * عرض صفحة إبطال الوصل المالي وإعادة فتحه للتصحيح.
      */
