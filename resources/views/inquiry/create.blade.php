@@ -342,45 +342,25 @@
             @can('create incubator reservations')
                 <!-- بطاقة حجز حاضنة خدج -->
                 <div class="col-md-6 col-lg-3">
-                    @if($patient->age < 1)
-                        <a href="{{ route('incubator-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
-                            <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
-                                <div class="card-body text-center p-4">
-                                    <div class="mb-3">
-                                        <i class="fas fa-baby fa-4x text-pink"></i>
-                                    </div>
-                                    <h5 class="card-title text-dark">حجز حاضنة خدج</h5>
-                                    <p class="card-text text-muted small">
-                                        حجز حاضنة في قسم العناية المركزة بالخدج
-                                    </p>
-                                    <div class="mt-2">
-                                        <span class="badge" style="background-color: #e91e63; color: white;">
-                                            <i class="fas fa-external-link-alt me-1"></i>
-                                            انتقال لنموذج الحجز
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </a>
-                    @else
-                        <div class="card h-100 shadow-sm" style="opacity: 0.6; cursor: not-allowed;">
+                    <a href="{{ route('incubator-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                        <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
                             <div class="card-body text-center p-4">
                                 <div class="mb-3">
-                                    <i class="fas fa-baby fa-4x text-muted"></i>
+                                    <i class="fas fa-baby fa-4x text-pink"></i>
                                 </div>
-                                <h5 class="card-title text-muted">حجز حاضنة خدج</h5>
+                                <h5 class="card-title text-dark">حجز حاضنة خدج</h5>
                                 <p class="card-text text-muted small">
-                                    خدمة مخصصة للأطفال حديثي الولادة فقط
+                                    حجز واستقبال مولود بالحاضنة (مرتبط بالأم أو المسؤول)
                                 </p>
                                 <div class="mt-2">
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-ban me-1"></i>
-                                        غير متاح (عمر المريض {{ $patient->age }} سنة)
+                                    <span class="badge" style="background-color: #e91e63; color: white;">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        انتقال لنموذج الحجز
                                     </span>
                                 </div>
                             </div>
                         </div>
-                    @endif
+                    </a>
                 </div>
             @endcan
         </div>

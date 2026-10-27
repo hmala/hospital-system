@@ -2,39 +2,41 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Patient;
 use App\Models\Doctor;
-use App\Models\Room;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
-use App\Models\NicuService;
-use App\Models\NicuServiceLog;
-use App\Models\NicuVital;
+use App\Models\LabTest;
 use App\Models\NicuConsultation;
 use App\Models\NicuMedicalOrder;
-use App\Models\LabTest;
-use App\Models\RadiologyType;
-use App\Models\Medicine;
-use App\Models\UserLabTestGroup;
 use App\Models\NicuMedicationAdministration;
+use App\Models\NicuService;
+use App\Models\NicuServiceLog;
+use App\Models\Patient;
+use App\Models\RadiologyType;
+use App\Models\Room;
+use App\Models\User;
+use App\Models\UserLabTestGroup;
 use App\Services\NicuBillingService;
+use Carbon\Carbon;
 use Database\Seeders\NicuServicesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 
 class NicuWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
     protected User $admin;
+
     protected Room $nicuRoom;
+
     protected Incubator $incubator;
+
     protected Patient $babyPatient;
+
     protected Doctor $doctor;
 
     protected function setUp(): void
@@ -55,7 +57,7 @@ class NicuWorkflowTest extends TestCase
             'owner_name' => 'د. أحمد',
             'phone' => '07700000000',
             'address' => 'بغداد',
-            'license_number' => 'HOSP-NICU-' . uniqid(),
+            'license_number' => 'HOSP-NICU-'.uniqid(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -77,7 +79,7 @@ class NicuWorkflowTest extends TestCase
             'department_id' => $departmentId,
             'specialization' => 'أخصائي طب الأطفال وحديثي الولادة',
             'qualification' => 'بورد عربي في طب الأطفال وحديثي الولادة',
-            'license_number' => 'DOC-NICU-' . uniqid(),
+            'license_number' => 'DOC-NICU-'.uniqid(),
             'consultation_fee' => 25000,
         ]);
 
@@ -113,19 +115,19 @@ class NicuWorkflowTest extends TestCase
 
         $ventService = NicuService::where('code', 'incubator_ventilator')->first();
         $this->assertNotNull($ventService);
-        $this->assertEquals(360000.00, (float)$ventService->daily_fee);
+        $this->assertEquals(360000.00, (float) $ventService->daily_fee);
 
         $o2Service = NicuService::where('code', 'incubator_o2')->first();
         $this->assertNotNull($o2Service);
-        $this->assertEquals(200000.00, (float)$o2Service->daily_fee);
+        $this->assertEquals(200000.00, (float) $o2Service->daily_fee);
 
         $cpapService = NicuService::where('code', 'incubator_cpap')->first();
         $this->assertNotNull($cpapService);
-        $this->assertEquals(250000.00, (float)$cpapService->daily_fee);
+        $this->assertEquals(250000.00, (float) $cpapService->daily_fee);
 
         $outVentService = NicuService::where('code', 'incubator_ventilator_out')->first();
         $this->assertNotNull($outVentService);
-        $this->assertEquals(300000.00, (float)$outVentService->daily_fee);
+        $this->assertEquals(300000.00, (float) $outVentService->daily_fee);
     }
 
     public function test_admin_can_view_nicu_live_board(): void
@@ -173,7 +175,7 @@ class NicuWorkflowTest extends TestCase
 
     public function test_billing_service_applies_6_hour_grace_period(): void
     {
-        $service = new NicuBillingService();
+        $service = new NicuBillingService;
 
         // دخول الساعة 08:30 صباحاً (أقل من 6 ساعات قبل 12:00 ظهراً)
         $admission = Carbon::create(2026, 10, 11, 8, 30);
@@ -435,12 +437,12 @@ class NicuWorkflowTest extends TestCase
     public function test_admin_can_toggle_nicu_service_status(): void
     {
         $service = NicuService::where('code', 'incubator_o2')->first();
-        $this->assertTrue((bool)$service->is_active);
+        $this->assertTrue((bool) $service->is_active);
 
         $response = $this->actingAs($this->admin)->post(route('nicu.services.toggle', $service));
         $response->assertStatus(200);
         $response->assertJson(['success' => true, 'is_active' => false]);
-        $this->assertFalse((bool)$service->fresh()->is_active);
+        $this->assertFalse((bool) $service->fresh()->is_active);
     }
 
     public function test_rapid_service_switching_within_15_mins_updates_existing_log(): void
@@ -607,8 +609,8 @@ class NicuWorkflowTest extends TestCase
         // Initial service log should use the approved HI fee (200,000)
         $initialLog = $reservation->serviceLogs()->first();
         $this->assertNotNull($initialLog);
-        $this->assertEquals(200000, (float)$initialLog->daily_fee);
-        $this->assertEquals(200000, (float)$initialLog->total_cost);
+        $this->assertEquals(200000, (float) $initialLog->daily_fee);
+        $this->assertEquals(200000, (float) $initialLog->total_cost);
     }
 
     public function test_gestational_age_coverage_tiers_calculation(): void
@@ -676,8 +678,8 @@ class NicuWorkflowTest extends TestCase
 
         $response->assertRedirect(route('nicu.services.index'));
         $service->refresh();
-        $this->assertEquals(210000, (float)$service->daily_fee);
-        $this->assertEquals(160000, (float)$service->hi_price);
+        $this->assertEquals(210000, (float) $service->daily_fee);
+        $this->assertEquals(160000, (float) $service->hi_price);
         $this->assertEquals('رقود حديثي الولادة لليوم الواحد شامل الخدمات التمريضية و الفندقية المحدث', $service->official_claim_name);
         $this->assertTrue($service->is_hi_active);
     }
@@ -737,7 +739,7 @@ class NicuWorkflowTest extends TestCase
         $indexResponse = $this->actingAs($this->admin)->get(route('incubators.index'));
         $indexResponse->assertOk();
         $indexResponse->assertViewHas('stats', function ($stats) {
-            return isset($stats['normal']) && isset($stats['capsule']) && !isset($stats['oxygen']);
+            return isset($stats['normal']) && isset($stats['capsule']) && ! isset($stats['oxygen']);
         });
     }
 
@@ -831,6 +833,13 @@ class NicuWorkflowTest extends TestCase
         $this->assertNotNull($res2);
         $this->assertEquals('يوسف كرار حميد', $res2->baby_name);
         $this->assertEquals($fatherPatient->id, $res2->patient_id);
+
+        // 5. التحقق من أن شاشة الاستعلامات inquiry.create تسمح بحجز الحاضنة لمريض بالغ (الأم)
+        $inquiryResponse = $this->actingAs($this->admin)->get(route('inquiry.create', ['patient_id' => $motherPatient->id]));
+        $inquiryResponse->assertOk();
+        $inquiryResponse->assertSee(route('incubator-reservations.create', ['patient_id' => $motherPatient->id]));
+        $inquiryResponse->assertDontSee('غير متاح (عمر المريض');
+        $inquiryResponse->assertSee('حجز واستقبال مولود بالحاضنة (مرتبط بالأم أو المسؤول)');
     }
 
     public function test_incubator_reservation_create_page_renders_with_searchable_doctor_select(): void
@@ -988,8 +997,8 @@ class NicuWorkflowTest extends TestCase
                     'frequency' => 'مرة يومياً (OD)',
                     'duration' => '3 أيام',
                     'instructions' => 'مراقبة وظائف الكلى',
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $response->assertRedirect();
@@ -1418,4 +1427,3 @@ class NicuWorkflowTest extends TestCase
         $indexNicuResp->assertSee('باقات قسم الخدج والحاضنات (NICU)');
     }
 }
-
