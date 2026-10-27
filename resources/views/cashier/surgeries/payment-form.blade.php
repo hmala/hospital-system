@@ -423,23 +423,17 @@
 
                                 <!-- أزرار النسب الخماسية ونسبة التحمل -->
                                 <div class="col-12" id="copay_section">
-                                    <label class="form-label fw-bold small text-muted mb-1">
-                                        نسبة التحمل على المريض (Co-payment %)
-                                    </label>
-                                    
-                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
-                                        <span class="small text-muted me-2">خيارات خماسية سريعة:</span>
-                                        @foreach([0, 5, 10, 15, 20, 25, 30, 50, 100] as $pct)
-                                            <button type="button" class="btn btn-sm btn-outline-primary copay-btn" data-pct="{{ $pct }}">{{ $pct }}%</button>
-                                        @endforeach
+                                    <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-percentage text-primary"></i>
+                                            <span class="small text-muted">نسبة التحمل المقررة رسمياً على المريض: <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
+                                        </div>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-shield-alt text-success me-1"></i>
+                                            مقفلة ومحددة آلياً وفق فئة المريض الرسمية
+                                        </span>
                                     </div>
-
-                                    <div class="input-group" style="max-width: 250px;">
-                                        <span class="input-group-text bg-light fw-bold">النسبة المعتمدة:</span>
-                                        <input type="number" step="1" min="0" max="100" class="form-control text-center fw-bold" 
-                                               id="copay_percentage" name="copay_percentage" value="{{ old('copay_percentage', $defaultCopay) }}">
-                                        <span class="input-group-text bg-light fw-bold">%</span>
-                                    </div>
+                                    <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
                                 </div>
                             </div>
 

@@ -587,26 +587,30 @@
                                                     <input type="text" id="serviceSearchInput" class="form-control" placeholder="ابحث باسم الخدمة الطبية أو التمريضية...">
                                                     <button class="btn btn-outline-secondary d-none" type="button" id="clearServiceSearch"><i class="fas fa-times"></i></button>
                                                 </div>
-                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 290px; overflow-y: auto;">
+                                                <div class="row g-2 border rounded p-3 bg-white" id="servicesContainer" style="max-height: 320px; overflow-y: auto;">
                                                     @php
                                                         $selectedServiceIds = $emergency->services->pluck('id')->toArray();
+                                                        $serviceQuantities = $emergency->services->pluck('pivot.quantity', 'id')->toArray();
                                                     @endphp
                                                     @foreach($emergencyServices as $service)
                                                         @php
                                                             $isPaid = isset($paidServiceMap[$service->id]);
                                                             $isSelected = in_array($service->id, $selectedServiceIds);
+                                                            $qty = (int) ($serviceQuantities[$service->id] ?? 1);
+                                                            if ($qty < 1) $qty = 1;
+                                                            $unitPrice = (float) $service->price;
                                                             $isSrvInsurance = ($service->is_hi_active ?? true) && ($service->hi_price > 0);
                                                         @endphp
                                                         <div class="col-12 service-item" data-is-insurance="{{ $isSrvInsurance ? '1' : '0' }}">
                                                             <div class="form-check d-flex justify-content-between align-items-center p-2 rounded {{ $isPaid ? 'bg-success-subtle bg-opacity-25 border border-success-subtle' : ($isSelected ? 'bg-light border' : '') }}">
-                                                                <div>
+                                                                <div class="d-flex align-items-center flex-grow-1 me-2">
                                                                     @if($isPaid)
                                                                         <input type="hidden" name="service_ids[]" value="{{ $service->id }}">
-                                                                        <input class="form-check-input service-checkbox" type="checkbox" checked disabled id="srv_{{ $service->id }}">
+                                                                        <input class="form-check-input service-checkbox me-2" type="checkbox" checked disabled id="srv_{{ $service->id }}">
                                                                     @else
-                                                                        <input class="form-check-input service-checkbox" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
+                                                                        <input class="form-check-input service-checkbox me-2" type="checkbox" name="service_ids[]" value="{{ $service->id }}" id="srv_{{ $service->id }}" {{ $isSelected ? 'checked' : '' }}>
                                                                     @endif
-                                                                    <label class="form-check-label fw-bold service-name {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
+                                                                    <label class="form-check-label fw-bold service-name mb-0 {{ $isPaid ? 'text-success' : '' }}" for="srv_{{ $service->id }}">
                                                                         {{ $service->name }}
                                                                         @if($isSrvInsurance)
                                                                             <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.68rem;">
@@ -624,9 +628,32 @@
                                                                         @endif
                                                                     </label>
                                                                 </div>
-                                                                <span class="badge {{ $isPaid ? 'bg-success text-white' : 'bg-success-subtle text-success border border-success-subtle' }}">
-                                                                    {{ number_format($service->price) }} IQD
-                                                                </span>
+
+                                                                <!-- عداد الكمية التفاعلي ومضاعف السعر -->
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="input-group input-group-sm service-qty-group {{ $isSelected || $isPaid ? '' : 'd-none' }}" style="width: 105px;">
+                                                                        <button type="button" class="btn btn-outline-secondary px-2 btn-service-minus" title="إنقاص" {{ $isPaid ? 'disabled' : '' }}>
+                                                                            <i class="fas fa-minus" style="font-size: 0.65rem;"></i>
+                                                                        </button>
+                                                                        <input type="number" 
+                                                                               name="service_quantities[{{ $service->id }}]" 
+                                                                               class="form-control text-center p-0 fw-bold service-qty-input" 
+                                                                               value="{{ $qty }}" 
+                                                                               min="1" 
+                                                                               max="99" 
+                                                                               data-unit-price="{{ $unitPrice }}"
+                                                                               data-service-id="{{ $service->id }}"
+                                                                               style="font-size: 0.85rem;"
+                                                                               {{ $isPaid ? 'readonly' : '' }}>
+                                                                        <button type="button" class="btn btn-outline-secondary px-2 btn-service-plus" title="زيادة" {{ $isPaid ? 'disabled' : '' }}>
+                                                                            <i class="fas fa-plus" style="font-size: 0.65rem;"></i>
+                                                                        </button>
+                                                                    </div>
+
+                                                                    <span class="badge {{ $isPaid ? 'bg-success text-white' : 'bg-success-subtle text-success border border-success-subtle' }} service-price-badge px-2 py-1 text-center" style="min-width: 85px; font-size: 0.8rem;">
+                                                                        <span class="price-val">{{ number_format($unitPrice * $qty) }}</span> IQD
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     @endforeach
@@ -650,637 +677,216 @@
                             </form>
                         </div>
 
-                        <!-- 3. تبويب طلبات الفحوصات الطبية (المختبر والأشعة ونتائجها) -->
+                        <!-- 3. تبويب طلبات الفحوصات الطبية (المختبر والأشعة) -->
                         <div class="tab-pane fade" id="tab-requests" role="tabpanel">
                             <div class="row g-4">
-                                <!-- طلبات واستعراض تحاليل المختبر -->
+                                <!-- طلب تحاليل المختبر -->
                                 <div class="col-lg-6">
-                                    <div class="card border-0 shadow-sm mb-4">
-                                        <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0 fw-bold"><i class="fas fa-flask me-2"></i>الفحوصات المختبرية</h5>
-                                            <button type="button" class="btn btn-light btn-sm fw-bold text-primary" data-bs-toggle="collapse" data-bs-target="#newLabRequestCollapse">
-                                                <i class="fas fa-plus me-1"></i> طلب تحليل جديد
-                                            </button>
-                                        </div>
-                                        <div class="card-body p-3">
-                                            <!-- نموذج إضافة طلب مختبر جديد -->
-                                            <div class="collapse mb-3" id="newLabRequestCollapse">
-                                                <div class="card card-body border-primary p-3 bg-light">
-                                                    <form action="{{ route('emergency.request-lab', $emergency) }}" method="POST">
-                                                        @csrf
-                                                        <h6 class="fw-bold text-primary mb-2">طلب تحاليل عاجلة للمختبر:</h6>
-                                                        <div class="mb-2">
-                                                            <label class="form-label small fw-bold">الأولوية</label>
-                                                            <select name="priority" class="form-select form-select-sm" required>
-                                                                <option value="urgent">عاجل (Urgent)</option>
-                                                                <option value="critical">حرج وطارئ جداً (Critical)</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                <label class="form-label small fw-bold mb-0">التحاليل المطلوبة</label>
-                                                                <span id="labSelectedCount" class="badge bg-primary-subtle text-primary border border-primary-subtle small d-none">0 محدد</span>
-                                                            </div>
-                                                            <!-- أزرار الفلترة السريعة للتحاليل (الكل / ضمان / كاش) -->
-                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2">
-                                                                <div class="btn-group btn-group-sm" role="group" id="labFilterGroup">
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 active lab-filter-btn" data-filter="all" style="font-size: 0.75rem;">الكل</button>
-                                                                    <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 lab-filter-btn" data-filter="insurance" style="font-size: 0.75rem;">
-                                                                        <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 lab-filter-btn text-dark" data-filter="cash" style="font-size: 0.75rem;">
-                                                                        <i class="fas fa-money-bill me-1"></i>كاش فقط
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <div class="input-group input-group-sm mb-2">
-                                                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                                                <input type="text" id="labSearchInput" class="form-control" placeholder="ابحث باسم التحليل أو الفحص...">
-                                                                <button class="btn btn-outline-secondary d-none" type="button" id="clearLabSearch"><i class="fas fa-times"></i></button>
-                                                            </div>
-                                                            <div class="border rounded p-2 bg-white" id="labTestsContainer" style="max-height: 200px; overflow-y: auto;">
-                                                                @foreach($labTests as $test)
-                                                                @php
-                                                                    $isLabInsurance = ($test->is_hi_active ?? true) && ($test->hi_price > 0);
-                                                                @endphp
-                                                                <div class="form-check lab-test-item py-1 border-bottom border-light" data-is-insurance="{{ $isLabInsurance ? '1' : '0' }}">
-                                                                    <input class="form-check-input lab-checkbox" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_chk_{{ $test->id }}">
-                                                                    <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="lab_chk_{{ $test->id }}">
-                                                                        <div>
-                                                                            <span class="lab-name fw-medium">{{ $test->name }}</span>
-                                                                            @if($isLabInsurance)
-                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
-                                                                                    <i class="fas fa-shield-alt"></i> ضمان {{ number_format($test->hi_price) }} د.ع
-                                                                                </span>
-                                                                            @else
-                                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
-                                                                                    كاش فقط
-                                                                                </span>
-                                                                            @endif
-                                                                        </div>
-                                                                        <span class="text-muted">({{ number_format($test->price) }} IQD)</span>
-                                                                    </label>
-                                                                </div>
-                                                                @endforeach
-                                                                <div id="noLabTestsFound" class="text-muted small text-center py-3 d-none">
-                                                                    <i class="fas fa-info-circle me-1"></i> لا توجد تحاليل مطابقة للبحث
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظات سريرية للمختبر...">
-                                                        </div>
-                                                        <div class="text-end">
-                                                            <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
-                                                                <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للمختبر
-                                                            </button>
-                                                        </div>
-                                                    </form>
+                                    <div class="card border-0 shadow-sm mb-3">
+                                        <div class="card-header bg-primary text-white py-2.5 px-3 d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-flask fs-5"></i>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold text-white">طلب تحاليل المختبر</h6>
+                                                    <small class="text-white-50">اختر التحاليل المطلوبة وأرسلها للمختبر</small>
                                                 </div>
                                             </div>
-
-                                            <!-- عرض الطلبات السابقة ونتائجها -->
-                                            @php
-                                                $labRequests = $emergency->labRequests ? $emergency->labRequests->sortByDesc('requested_at') : collect();
-                                                $activeLabRequests = $labRequests->where('status', '!=', 'cancelled');
-                                                $cancelledLabRequests = $labRequests->where('status', 'cancelled');
-                                            @endphp
-                                            @if($activeLabRequests->count() > 0)
-                                                @foreach($activeLabRequests as $labReq)
-                                                    @php
-                                                        $isPaid = !empty($labReq->payment_id) || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived';
-                                                        $isCompleted = ($labReq->status === 'completed');
-                                                    @endphp
-                                                    <div class="card border {{ $isCompleted ? 'border-success' : ($isPaid ? 'border-primary' : 'border-warning') }} shadow-sm rounded-3 mb-3 overflow-hidden" id="emergency-lab-card-{{ $labReq->id }}">
-                                                        <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center border-bottom">
-                                                            <div class="d-flex align-items-center gap-2">
-                                                                <span class="fw-bold text-dark"><i class="fas fa-file-medical-alt text-primary me-1"></i>طلب مختبر #{{ $labReq->id }}</span>
-                                                                <small class="text-muted font-monospace">{{ optional($labReq->requested_at ?: $labReq->created_at)->format('H:i') }}</small>
-                                                                <span class="badge {{ $labReq->priority === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}" style="font-size: 0.68rem;">
-                                                                    {{ $labReq->priority_text }}
-                                                                </span>
-                                                            </div>
-                                                            <div class="d-flex align-items-center gap-1">
-                                                                @if($isPaid)
-                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-check-circle me-1"></i> مسدد
-                                                                    </span>
-                                                                @else
-                                                                    <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-hourglass-half me-1"></i> بانتظار السداد
-                                                                    </span>
-                                                                @endif
-                                                                <span class="badge {{ $labReq->status == 'completed' ? 'bg-success' : ($labReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}" style="font-size: 0.72rem;">
-                                                                    {{ $labReq->status_text }}
-                                                                </span>
-                                                                @if($isCompleted)
-                                                                    <a href="{{ route('staff.emergency-lab.print', $labReq) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="طباعة النتيجة الرسمية">
-                                                                        <i class="fas fa-print me-1"></i>طباعة
-                                                                    </a>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-
-                                                        <!-- شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper) -->
-                                                        <div class="px-2 py-2 bg-light-subtle border-bottom">
-                                                            <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
-                                                                <div class="position-absolute start-0 end-0 top-50 translate-middle-y border-top border-2" style="border-color: #dee2e6 !important; z-index: 1;"></div>
-                                                                
-                                                                <!-- المرحلة 1: طلب الطبيب -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                        <i class="fas fa-check"></i>
-                                                                    </span>
-                                                                    <span class="fw-semibold text-dark" style="font-size: 0.7rem;">طلب الطبيب</span>
-                                                                </div>
-
-                                                                <!-- المرحلة 2: الكاشير -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isPaid)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-check"></i>
-                                                                        </span>
-                                                                        <span class="fw-semibold text-success" style="font-size: 0.7rem;">سُدّد</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-coins"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-danger" style="font-size: 0.7rem;">عند الكاشير</span>
-                                                                    @endif
-                                                                </div>
-
-                                                                <!-- المرحلة 3: المختبر -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isCompleted)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-check"></i>
-                                                                        </span>
-                                                                        <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
-                                                                    @elseif($isPaid)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-spinner fa-spin"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-primary" style="font-size: 0.7rem;">قيد الفحص</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-hourglass-start"></i>
-                                                                        </span>
-                                                                        <span class="text-muted" style="font-size: 0.7rem;">بالانتظار</span>
-                                                                    @endif
-                                                                </div>
-
-                                                                <!-- المرحلة 4: النتيجة -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isCompleted)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-file-medical"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-success" style="font-size: 0.7rem;">النتيجة جاهزة</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-file"></i>
-                                                                        </span>
-                                                                        <span class="text-muted" style="font-size: 0.7rem;">التقرير</span>
-                                                                    @endif
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="card-body p-2.5">
-                                                            @if($labReq->notes)
-                                                                <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات:</strong> {{ $labReq->notes }}</div>
-                                                            @endif
-
-                                                            <!-- الجدول السريري المصغر (Clinical Mini-Table) -->
-                                                            <div class="table-responsive rounded border bg-white mb-0">
-                                                                <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
-                                                                    <thead class="table-light text-muted" style="font-size: 0.72rem;">
-                                                                        <tr>
-                                                                            <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
-                                                                            <th class="py-1 px-2 text-start">اسم التحليل المخبري</th>
-                                                                            @if($isCompleted)
-                                                                                <th>النتيجة</th>
-                                                                                <th>الوحدة</th>
-                                                                                <th>المرجع</th>
-                                                                                <th>الحالة</th>
-                                                                            @else
-                                                                                <th class="py-1 px-2 text-center" style="width: 100px;">الحالة</th>
-                                                                                @if(!$isPaid)
-                                                                                    <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
-                                                                                @endif
-                                                                            @endif
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody id="emergency-lab-tests-tbody-{{ $labReq->id }}">
-                                                                        @foreach($labReq->labTests as $itemIdx => $test)
-                                                                            @php
-                                                                                $rawResult = $test->pivot->result;
-                                                                                $parsed = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
-                                                                                $isObj = is_array($parsed);
-                                                                                $val = $isObj ? ($parsed['value'] ?? '') : $rawResult;
-                                                                                $unit = $isObj ? ($parsed['unit'] ?? $test->unit) : $test->unit;
-                                                                                $range = $isObj ? ($parsed['reference_range'] ?? '') : '';
-                                                                                $status = $isObj ? ($parsed['status'] ?? '') : '';
-                                                                                $notes = $isObj ? ($parsed['notes'] ?? '') : '';
-                                                                                $isAbnormal = in_array($status, ['high', 'low', 'مرتفع', 'منخفض']);
-                                                                            @endphp
-                                                                            <tr id="emergency-req-item-lab-{{ $labReq->id }}-{{ $test->id }}" class="{{ $isAbnormal ? 'table-warning' : '' }}">
-                                                                                <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
-                                                                                <td class="text-start fw-semibold text-dark py-1 px-2">
-                                                                                    <i class="fas fa-vial text-primary me-1 opacity-75"></i> {{ $test->name }}
-                                                                                    @if($notes)
-                                                                                        <div class="text-muted extra-small" style="font-size: 0.72rem;">{{ $notes }}</div>
-                                                                                    @endif
-                                                                                </td>
-                                                                                @if($isCompleted)
-                                                                                    <td>
-                                                                                        @if(!empty($val))
-                                                                                            <span class="fw-bold fs-6 {{ $isAbnormal ? 'text-danger' : 'text-primary' }}">{{ $val }}</span>
-                                                                                        @else
-                                                                                            <span class="text-muted">-</span>
-                                                                                        @endif
-                                                                                    </td>
-                                                                                    <td class="text-muted">{{ $unit ?: '-' }}</td>
-                                                                                    <td class="text-muted"><small>{{ $range ?: '-' }}</small></td>
-                                                                                    <td>
-                                                                                        @if($status === 'normal' || $status === 'طبيعي')
-                                                                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">طبيعي</span>
-                                                                                        @elseif($status === 'high' || $status === 'مرتفع')
-                                                                                            <span class="badge bg-danger text-white" style="font-size: 0.68rem;">↑ مرتفع</span>
-                                                                                        @elseif($status === 'low' || $status === 'منخفض')
-                                                                                            <span class="badge bg-warning text-dark" style="font-size: 0.68rem;">↓ منخفض</span>
-                                                                                        @elseif(!empty($val))
-                                                                                            <span class="badge bg-primary-subtle text-primary" style="font-size: 0.68rem;">تم الفحص</span>
-                                                                                        @else
-                                                                                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">-</span>
-                                                                                        @endif
-                                                                                    </td>
-                                                                                @else
-                                                                                    <td class="text-center py-1 px-2">
-                                                                                        @if($isPaid)
-                                                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">قيد التحليل</span>
-                                                                                        @else
-                                                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
-                                                                                        @endif
-                                                                                    </td>
-                                                                                    @if(!$isPaid)
-                                                                                        <td class="text-center py-1 px-2">
-                                                                                            <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا التحليل من الطلب" onclick="emergencyRemoveRequestItem({{ $emergency->id }}, 'lab', {{ $labReq->id }}, {{ $test->id }}, 'emergency-req-item-lab-{{ $labReq->id }}-{{ $test->id }}')">
-                                                                                                <i class="fas fa-times" style="font-size: 0.68rem;"></i>
-                                                                                            </button>
-                                                                                        </td>
-                                                                                    @endif
-                                                                                @endif
-                                                                            </tr>
-                                                                        @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                            @if(!$isCompleted)
-                                                                <div class="alert alert-light border small text-muted mb-0 py-1.5 mt-2 d-flex align-items-center gap-2">
-                                                                    <i class="fas fa-spinner fa-spin text-warning"></i>
-                                                                    <span>{{ $isPaid ? 'الفحوصات قيد المعالجة في المختبر...' : 'الطلب بانتظار سداد المريض لدى الكاشير لبدء الفحص في المختبر.' }}</span>
-                                                                </div>
-                                                            @endif
-                                                        </div>
+                                            <span id="labSelectedCount" class="badge bg-white text-primary fw-bold px-2.5 py-1.5 d-none">0 محدد</span>
+                                        </div>
+                                        <div class="card-body p-3 bg-white">
+                                            <form action="{{ route('emergency.request-lab', $emergency) }}" method="POST" id="emergencyLabRequestForm">
+                                                @csrf
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label small fw-bold text-dark mb-1">
+                                                            <i class="fas fa-exclamation-triangle text-warning me-1"></i>درجة الأولوية
+                                                        </label>
+                                                        <select name="priority" class="form-select form-select-sm" required>
+                                                            <option value="urgent">عاجل (Urgent)</option>
+                                                            <option value="critical">حرج وطارئ جداً (Critical)</option>
+                                                        </select>
                                                     </div>
-                                                @endforeach
-                                            @else
-                                                <div class="alert alert-light text-center py-3 mb-3 border">
-                                                    <p class="text-muted mb-0">لا توجد طلبات تحاليل نشطة مسجلة حتى الآن.</p>
-                                                </div>
-                                            @endif
-
-                                            <!-- أرشيف طلبات المختبر الملغاة (مخفية داخل أكورديون) -->
-                                            @if($cancelledLabRequests->count() > 0)
-                                                <div class="accordion mb-3" id="cancelledLabAccordion">
-                                                    <div class="accordion-item border-0 bg-transparent">
-                                                        <h2 class="accordion-header" id="headingCancelledLab">
-                                                            <button class="accordion-button collapsed py-2 px-3 bg-light text-muted border rounded-3 fw-bold small shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCancelledLab">
-                                                                <i class="fas fa-archive me-2 text-secondary"></i> أرشيف طلبات المختبر الملغاة ({{ $cancelledLabRequests->count() }})
+                                                    <div class="col-md-7">
+                                                        <label class="form-label small fw-bold text-dark mb-1">
+                                                            <i class="fas fa-filter text-secondary me-1"></i>تصفية التسعير
+                                                        </label>
+                                                        <div class="btn-group btn-group-sm w-100" role="group" id="labFilterGroup">
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 active lab-filter-btn" data-filter="all">الكل</button>
+                                                            <button type="button" class="btn btn-outline-success btn-sm py-1 px-2 lab-filter-btn" data-filter="insurance">
+                                                                <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
                                                             </button>
-                                                        </h2>
-                                                        <div id="collapseCancelledLab" class="accordion-collapse collapse pt-2" data-bs-parent="#cancelledLabAccordion">
-                                                            @foreach($cancelledLabRequests as $cReq)
-                                                                <div class="card border border-danger-subtle bg-light-subtle rounded-3 p-2.5 mb-2 opacity-75">
-                                                                    <div class="d-flex justify-content-between align-items-center small">
-                                                                        <span class="text-muted"><i class="fas fa-ban text-danger me-1"></i> طلب مختبر ملغي #{{ $cReq->id }}</span>
-                                                                        <span class="badge bg-danger-subtle text-danger">ملغي</span>
-                                                                    </div>
-                                                                    <small class="text-muted mt-1">{{ $cReq->notes ?: 'تم إلغاء الطلب من قبل الطبيب' }}</small>
-                                                                </div>
-                                                            @endforeach
+                                                            <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2 lab-filter-btn text-dark" data-filter="cash">
+                                                                كاش فقط
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            @endif
+
+                                                <div class="mb-2">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-muted"><i class="fas fa-search"></i></span>
+                                                        <input type="text" id="labSearchInput" class="form-control" placeholder="ابحث باسم التحليل أو الفحص المخبري...">
+                                                        <button class="btn btn-outline-secondary d-none" type="button" id="clearLabSearch"><i class="fas fa-times"></i></button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="border rounded-3 p-2 bg-light bg-opacity-50 mb-2" id="labTestsContainer" style="max-height: 280px; overflow-y: auto;">
+                                                    @foreach($labTests as $test)
+                                                        @php
+                                                            $isLabInsurance = ($test->is_hi_active ?? true) && ($test->hi_price > 0);
+                                                        @endphp
+                                                        <div class="form-check lab-test-item py-1.5 px-2 border-bottom border-light-subtle rounded-1" data-is-insurance="{{ $isLabInsurance ? '1' : '0' }}">
+                                                            <input class="form-check-input lab-checkbox ms-0 me-2" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="lab_chk_{{ $test->id }}">
+                                                            <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="lab_chk_{{ $test->id }}">
+                                                                <div>
+                                                                    <span class="lab-name fw-medium text-dark">{{ $test->name }}</span>
+                                                                    @if($isLabInsurance)
+                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-shield-alt"></i> ضمان {{ number_format($test->hi_price) }} د.ع
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
+                                                                            كاش فقط
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
+                                                                <span class="text-muted font-monospace small">({{ number_format($test->price) }} IQD)</span>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                    <div id="noLabTestsFound" class="text-muted small text-center py-3 d-none">
+                                                        <i class="fas fa-info-circle me-1"></i> لا توجد تحاليل مطابقة للبحث
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظات سريرية أو تشخيص موجه للمختبر (اختياري)...">
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle text-primary me-1"></i>تظهر النتائج بالسجل الطبي يساراً
+                                                    </small>
+                                                    <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm">
+                                                        <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للمختبر
+                                                    </button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- طلبات واستعراض الأشعة والسونار -->
+                                <!-- طلب فحوصات الأشعة والسونار -->
                                 <div class="col-lg-6">
-                                    <div class="card border-0 shadow-sm mb-4">
-                                        <div class="card-header bg-info text-white py-3 d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0 fw-bold"><i class="fas fa-x-ray me-2"></i>الأشعة والسونار (Radiology)</h5>
-                                            <button type="button" class="btn btn-light btn-sm fw-bold text-info" data-bs-toggle="collapse" data-bs-target="#newRadRequestCollapse">
-                                                <i class="fas fa-plus me-1"></i> طلب أشعة جديد
-                                            </button>
-                                        </div>
-                                        <div class="card-body p-3">
-                                            <!-- نموذج إضافة طلب أشعة جديد -->
-                                            <div class="collapse mb-3" id="newRadRequestCollapse">
-                                                <div class="card card-body border-info p-3 bg-light">
-                                                    <form action="{{ route('emergency.request-radiology', $emergency) }}" method="POST">
-                                                        @csrf
-                                                        <h6 class="fw-bold text-info mb-2">طلب فحص أشعة / سونار عاجل:</h6>
-                                                        <div class="mb-2">
-                                                            <label class="form-label small fw-bold">الأولوية</label>
-                                                            <select name="priority" class="form-select form-select-sm" required>
-                                                                <option value="urgent">عاجل (Urgent)</option>
-                                                                <option value="critical">حرج وطارئ جداً (Critical)</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                <label class="form-label small fw-bold mb-0">أنواع الفحوصات المطلوبة</label>
-                                                                <span id="radSelectedCount" class="badge bg-info-subtle text-info border border-info-subtle small d-none">0 محدد</span>
-                                                            </div>
-                                                            <!-- أزرار الفلترة السريعة للأشعة (الكل / ضمان / كاش) -->
-                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2">
-                                                                <div class="btn-group btn-group-sm" role="group" id="radFilterGroup">
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 active rad-filter-btn" data-filter="all" style="font-size: 0.75rem;">الكل</button>
-                                                                    <button type="button" class="btn btn-outline-info btn-sm py-0 px-2 rad-filter-btn" data-filter="insurance" style="font-size: 0.75rem;">
-                                                                        <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 rad-filter-btn text-dark" data-filter="cash" style="font-size: 0.75rem;">
-                                                                        <i class="fas fa-money-bill me-1"></i>كاش فقط
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <div class="input-group input-group-sm mb-2">
-                                                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                                                <input type="text" id="radSearchInput" class="form-control" placeholder="ابحث بنوع الأشعة أو السونار...">
-                                                                <button class="btn btn-outline-secondary d-none" type="button" id="clearRadSearch"><i class="fas fa-times"></i></button>
-                                                            </div>
-                                                            <div class="border rounded p-2 bg-white" id="radTypesContainer" style="max-height: 200px; overflow-y: auto;">
-                                                                @foreach($radiologyTypes as $radType)
-                                                                @php
-                                                                    $isRadInsurance = ($radType->is_hi_active ?? true) && ($radType->hi_price > 0);
-                                                                @endphp
-                                                                <div class="form-check rad-type-item py-1 border-bottom border-light" data-is-insurance="{{ $isRadInsurance ? '1' : '0' }}">
-                                                                    <input class="form-check-input rad-checkbox" type="checkbox" name="radiology_type_ids[]" value="{{ $radType->id }}" id="rad_chk_{{ $radType->id }}">
-                                                                    <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="rad_chk_{{ $radType->id }}">
-                                                                        <div>
-                                                                            <span class="rad-name fw-medium">{{ $radType->name }}</span>
-                                                                            @if($isRadInsurance)
-                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
-                                                                                    <i class="fas fa-shield-alt"></i> ضمان {{ number_format($radType->hi_price) }} د.ع
-                                                                                </span>
-                                                                            @else
-                                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
-                                                                                    كاش فقط
-                                                                                </span>
-                                                                            @endif
-                                                                        </div>
-                                                                        <span class="text-muted">({{ number_format($radType->price) }} IQD)</span>
-                                                                    </label>
-                                                                </div>
-                                                                @endforeach
-                                                                <div id="noRadTypesFound" class="text-muted small text-center py-3 d-none">
-                                                                    <i class="fas fa-info-circle me-1"></i> لا توجد فحوصات مطابقة للبحث
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="mb-2">
-                                                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظات سريرية لقسم الأشعة...">
-                                                        </div>
-                                                        <div class="text-end">
-                                                            <button type="submit" class="btn btn-info text-white btn-sm fw-bold px-3">
-                                                                <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للأشعة
-                                                            </button>
-                                                        </div>
-                                                    </form>
+                                    <div class="card border-0 shadow-sm mb-3">
+                                        <div class="card-header bg-info text-white py-2.5 px-3 d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-x-ray fs-5"></i>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold text-white">طلب الأشعة والتصوير (Radiology)</h6>
+                                                    <small class="text-white-50">اختر الفحوصات الشعاعية وأرسلها لقسم الأشعة</small>
                                                 </div>
                                             </div>
-
-                                            <!-- عرض طلبات الأشعة السابقة ونتائجها -->
-                                            @php
-                                                $radRequests = $emergency->radiologyRequests ? $emergency->radiologyRequests->sortByDesc('requested_at') : collect();
-                                                $activeRadRequests = $radRequests->where('status', '!=', 'cancelled');
-                                                $cancelledRadRequests = $radRequests->where('status', 'cancelled');
-                                            @endphp
-                                            @if($activeRadRequests->count() > 0)
-                                                @foreach($activeRadRequests as $radReq)
-                                                    @php
-                                                        $isPaid = !empty($radReq->payment_id) || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived';
-                                                        $isCompleted = ($radReq->status === 'completed');
-                                                    @endphp
-                                                    <div class="card border {{ $isCompleted ? 'border-success' : ($isPaid ? 'border-info' : 'border-warning') }} shadow-sm rounded-3 mb-3 overflow-hidden" id="emergency-rad-card-{{ $radReq->id }}">
-                                                        <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center border-bottom">
-                                                            <div class="d-flex align-items-center gap-2">
-                                                                <span class="fw-bold text-dark"><i class="fas fa-x-ray text-info me-1"></i>طلب أشعة #{{ $radReq->id }}</span>
-                                                                <small class="text-muted font-monospace">{{ optional($radReq->requested_at ?: $radReq->created_at)->format('H:i') }}</small>
-                                                                <span class="badge {{ $radReq->priority === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}" style="font-size: 0.68rem;">
-                                                                    {{ $radReq->priority_text }}
-                                                                </span>
-                                                            </div>
-                                                            <div class="d-flex align-items-center gap-1">
-                                                                @if($isPaid)
-                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-check-circle me-1"></i> مسدد
-                                                                    </span>
-                                                                @else
-                                                                    <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-hourglass-half me-1"></i> بانتظار السداد
-                                                                    </span>
-                                                                @endif
-                                                                <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : ($radReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}" style="font-size: 0.72rem;">
-                                                                    {{ $radReq->status_text }}
-                                                                </span>
-                                                                @if($isCompleted)
-                                                                    <a href="{{ route('staff.emergency-radiology.print', $radReq) }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="طباعة التقرير الشعاعي الرسمي">
-                                                                        <i class="fas fa-print me-1"></i>طباعة
-                                                                    </a>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-
-                                                        <!-- شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper) -->
-                                                        <div class="px-2 py-2 bg-light-subtle border-bottom">
-                                                            <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
-                                                                <div class="position-absolute start-0 end-0 top-50 translate-middle-y border-top border-2" style="border-color: #dee2e6 !important; z-index: 1;"></div>
-                                                                
-                                                                <!-- المرحلة 1: طلب الطبيب -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                        <i class="fas fa-check"></i>
-                                                                    </span>
-                                                                    <span class="fw-semibold text-dark" style="font-size: 0.7rem;">طلب الطبيب</span>
-                                                                </div>
-
-                                                                <!-- المرحلة 2: الكاشير -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isPaid)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-check"></i>
-                                                                        </span>
-                                                                        <span class="fw-semibold text-success" style="font-size: 0.7rem;">سُدّد</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-coins"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-danger" style="font-size: 0.7rem;">عند الكاشير</span>
-                                                                    @endif
-                                                                </div>
-
-                                                                <!-- المرحلة 3: قسم الأشعة -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isCompleted)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-check"></i>
-                                                                        </span>
-                                                                        <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
-                                                                    @elseif($isPaid)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-info text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-spinner fa-spin"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-info" style="font-size: 0.7rem;">قيد التصوير</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-hourglass-start"></i>
-                                                                        </span>
-                                                                        <span class="text-muted" style="font-size: 0.7rem;">بالانتظار</span>
-                                                                    @endif
-                                                                </div>
-
-                                                                <!-- المرحلة 4: النتيجة -->
-                                                                <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
-                                                                    @if($isCompleted)
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-file-medical"></i>
-                                                                        </span>
-                                                                        <span class="fw-bold text-success" style="font-size: 0.7rem;">التقرير جاهز</span>
-                                                                    @else
-                                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                                                                            <i class="fas fa-file"></i>
-                                                                        </span>
-                                                                        <span class="text-muted" style="font-size: 0.7rem;">التقرير</span>
-                                                                    @endif
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="card-body p-2.5">
-                                                            @if($radReq->notes)
-                                                                <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات:</strong> {{ $radReq->notes }}</div>
-                                                            @endif
-
-                                                            <!-- الجدول السريري المصغر (Clinical Mini-Table) -->
-                                                            <div class="table-responsive rounded border bg-white mb-0">
-                                                                <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
-                                                                    <thead class="table-light text-muted" style="font-size: 0.72rem;">
-                                                                        <tr>
-                                                                            <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
-                                                                            <th class="py-1 px-2 text-start">نوع الفحص الشعاعي</th>
-                                                                            <th class="py-1 px-2 text-center" style="width: 100px;">الحالة</th>
-                                                                            @if(!$isPaid && !$isCompleted)
-                                                                                <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
-                                                                            @endif
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody id="emergency-rad-tests-tbody-{{ $radReq->id }}">
-                                                                        @foreach($radReq->radiologyTypes as $itemIdx => $type)
-                                                                            <tr id="emergency-req-item-rad-{{ $radReq->id }}-{{ $type->id }}">
-                                                                                <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
-                                                                                <td class="text-start fw-semibold text-dark py-1 px-2">
-                                                                                    <i class="fas fa-x-ray text-info me-1 opacity-75"></i> {{ $type->name }}
-                                                                                </td>
-                                                                                <td class="text-center py-1 px-2">
-                                                                                    @if($isCompleted)
-                                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">مكتمل</span>
-                                                                                    @elseif($isPaid)
-                                                                                        <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;">قيد التصوير</span>
-                                                                                    @else
-                                                                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                                @if(!$isPaid && !$isCompleted)
-                                                                                    <td class="text-center py-1 px-2">
-                                                                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا الفحص من الطلب" onclick="emergencyRemoveRequestItem({{ $emergency->id }}, 'radiology', {{ $radReq->id }}, {{ $type->id }}, 'emergency-req-item-rad-{{ $radReq->id }}-{{ $type->id }}')">
-                                                                                            <i class="fas fa-times" style="font-size: 0.68rem;"></i>
-                                                                                        </button>
-                                                                                    </td>
-                                                                                @endif
-                                                                            </tr>
-                                                                        @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-
-                                                            @if($isCompleted)
-                                                                <div class="mt-2.5 p-2.5 rounded bg-light border">
-                                                                    @foreach($radReq->radiologyTypes as $type)
-                                                                        <div class="border-bottom pb-2 mb-2 last-border-0">
-                                                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                                <span class="fw-bold text-dark"><i class="fas fa-camera-retro text-info me-1"></i>{{ $type->name }}</span>
-                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle small">مكتمل</span>
-                                                                            </div>
-                                                                            <div class="p-2 bg-white rounded border small text-dark mb-2" style="white-space: pre-wrap; line-height: 1.6;">
-                                                                                {!! nl2br(e($type->pivot->result ?: 'تم إنجاز التصوير والفحص الشعاعي بنجاح.')) !!}
-                                                                            </div>
-                                                                            @if(!empty($type->pivot->image_path))
-                                                                                <div class="d-flex align-items-center gap-2 pt-1">
-                                                                                    <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold">
-                                                                                        <i class="fas fa-image me-1"></i>معاينة صورة الأشعة المرفقة
-                                                                                    </a>
-                                                                                    <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                                                                        <i class="fas fa-download me-1"></i>تحميل
-                                                                                    </a>
-                                                                                </div>
-                                                                            @endif
-                                                                        </div>
-                                                                    @endforeach
-                                                                </div>
-                                                            @else
-                                                                <div class="alert alert-light border small text-muted mb-0 py-1.5 mt-2 d-flex align-items-center gap-2">
-                                                                    <i class="fas fa-spinner fa-spin text-info"></i>
-                                                                    <span>{{ $isPaid ? 'بانتظار تصوير المريض وإعداد التقرير الشعاعي...' : 'الطلب بانتظار سداد المريض لدى الكاشير لبدء الفحص بالأشعة.' }}</span>
-                                                                </div>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            @else
-                                                <div class="alert alert-light text-center py-3 mb-3 border">
-                                                    <p class="text-muted mb-0">لا توجد طلبات أشعة نشطة مسجلة حتى الآن.</p>
-                                                </div>
-                                            @endif
-
-                                            <!-- أرشيف طلبات الأشعة الملغاة (مخفية داخل أكورديون) -->
-                                            @if($cancelledRadRequests->count() > 0)
-                                                <div class="accordion mb-3" id="cancelledRadAccordion">
-                                                    <div class="accordion-item border-0 bg-transparent">
-                                                        <h2 class="accordion-header" id="headingCancelledRad">
-                                                            <button class="accordion-button collapsed py-2 px-3 bg-light text-muted border rounded-3 fw-bold small shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCancelledRad">
-                                                                <i class="fas fa-archive me-2 text-secondary"></i> أرشيف طلبات الأشعة الملغاة ({{ $cancelledRadRequests->count() }})
-                                                            </button>
-                                                        </h2>
-                                                        <div id="collapseCancelledRad" class="accordion-collapse collapse pt-2" data-bs-parent="#cancelledRadAccordion">
-                                                            @foreach($cancelledRadRequests as $cReq)
-                                                                <div class="card border border-danger-subtle bg-light-subtle rounded-3 p-2.5 mb-2 opacity-75">
-                                                                    <div class="d-flex justify-content-between align-items-center small">
-                                                                        <span class="text-muted"><i class="fas fa-ban text-danger me-1"></i> طلب أشعة ملغي #{{ $cReq->id }}</span>
-                                                                        <span class="badge bg-danger-subtle text-danger">ملغي</span>
-                                                                    </div>
-                                                                    <small class="text-muted mt-1">{{ $cReq->notes ?: 'تم إلغاء الطلب من قبل الطبيب' }}</small>
-                                                                </div>
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
+                                            <span id="radSelectedCount" class="badge bg-white text-info fw-bold px-2.5 py-1.5 d-none">0 محدد</span>
                                         </div>
+                                        <div class="card-body p-3 bg-white">
+                                            <form action="{{ route('emergency.request-radiology', $emergency) }}" method="POST" id="emergencyRadRequestForm">
+                                                @csrf
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label small fw-bold text-dark mb-1">
+                                                            <i class="fas fa-exclamation-triangle text-warning me-1"></i>درجة الأولوية
+                                                        </label>
+                                                        <select name="priority" class="form-select form-select-sm" required>
+                                                            <option value="urgent">عاجل (Urgent)</option>
+                                                            <option value="critical">حرج وطارئ جداً (Critical)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-7">
+                                                        <label class="form-label small fw-bold text-dark mb-1">
+                                                            <i class="fas fa-filter text-secondary me-1"></i>تصفية التسعير
+                                                        </label>
+                                                        <div class="btn-group btn-group-sm w-100" role="group" id="radFilterGroup">
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 active rad-filter-btn" data-filter="all">الكل</button>
+                                                            <button type="button" class="btn btn-outline-info btn-sm py-1 px-2 rad-filter-btn" data-filter="insurance">
+                                                                <i class="fas fa-shield-alt me-1"></i>مشمول بالضمان
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2 rad-filter-btn text-dark" data-filter="cash">
+                                                                كاش فقط
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-2">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-muted"><i class="fas fa-search"></i></span>
+                                                        <input type="text" id="radSearchInput" class="form-control" placeholder="ابحث بنوع الأشعة، السونار، أو المفراس...">
+                                                        <button class="btn btn-outline-secondary d-none" type="button" id="clearRadSearch"><i class="fas fa-times"></i></button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="border rounded-3 p-2 bg-light bg-opacity-50 mb-2" id="radTypesContainer" style="max-height: 280px; overflow-y: auto;">
+                                                    @foreach($radiologyTypes as $radType)
+                                                        @php
+                                                            $isRadInsurance = ($radType->is_hi_active ?? true) && ($radType->hi_price > 0);
+                                                        @endphp
+                                                        <div class="form-check rad-type-item py-1.5 px-2 border-bottom border-light-subtle rounded-1" data-is-insurance="{{ $isRadInsurance ? '1' : '0' }}">
+                                                            <input class="form-check-input rad-checkbox ms-0 me-2" type="checkbox" name="radiology_type_ids[]" value="{{ $radType->id }}" id="rad_chk_{{ $radType->id }}">
+                                                            <label class="form-check-label small d-flex justify-content-between align-items-center cursor-pointer w-100 mb-0" for="rad_chk_{{ $radType->id }}">
+                                                                <div>
+                                                                    <span class="rad-name fw-medium text-dark">{{ $radType->name }}</span>
+                                                                    @if($isRadInsurance)
+                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-shield-alt"></i> ضمان {{ number_format($radType->hi_price) }} د.ع
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 0.65rem;">
+                                                                            كاش فقط
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
+                                                                <span class="text-muted font-monospace small">({{ number_format($radType->price) }} IQD)</span>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                    <div id="noRadTypesFound" class="text-muted small text-center py-3 d-none">
+                                                        <i class="fas fa-info-circle me-1"></i> لا توجد فحوصات مطابقة للبحث
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="ملاحظات سريرية أو العضو المستهدف لقسم الأشعة (اختياري)...">
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle text-info me-1"></i>تظهر التقارير والصور بالسجل الطبي يساراً
+                                                    </small>
+                                                    <button type="submit" class="btn btn-info text-white btn-sm fw-bold px-3 shadow-sm">
+                                                        <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للأشعة
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- شريط توجيهي يوضح أن نتائج الفحوصات وسير العمل تتابع من السجل الطبي يساراً مطابقاً للاستشارية -->
+                                <div class="col-12">
+                                    <div class="alert alert-light border border-secondary-subtle d-flex flex-wrap align-items-center justify-content-between py-2 px-3 mb-0 rounded-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                <i class="fas fa-notes-medical"></i>
+                                            </div>
+                                            <div class="small">
+                                                <strong class="text-dark">متابعة الفحوصات والنتائج:</strong>
+                                                <span class="text-muted">كافة طلبات المختبر والأشعة الحالية، مراحل سدادها لدى الكاشير، ونتائجها وتقاريرها الطبية الرسمية معروضة ومحدثة لحظياً في قسم <strong>"طلبات الحالة"</strong> داخل لوحة <strong>السجل الطبي والفحوصات</strong> (على يسار الشاشة).</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="document.getElementById('side-cur-tab')?.click(); document.getElementById('side-cur-tab')?.scrollIntoView({behavior: 'smooth', block: 'nearest'});">
+                                            <i class="fas fa-arrow-left me-1"></i> عرض طلبات ونتائج الحالة
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1461,124 +1067,457 @@
                 <div class="card-body p-3 overflow-y-auto" style="max-height: calc(100vh - 180px); min-height: 520px;">
                     <div class="tab-content" id="emergencyHistorySubTabsContent">
                         
-                        <!-- 1. طلبات ونتائج الحالة الحالية للطوارئ -->
+                        <!-- 1. طلبات ونتائج الحالة الحالية للطوارئ (السجل الطبي والفحوصات) -->
                         <div class="tab-pane fade show active" id="side-cur-pane" role="tabpanel">
                             @php
-                                $curLabRequests = $emergency->labRequests ? $emergency->labRequests->where('status', '!=', 'cancelled')->sortByDesc('id') : collect();
-                                $curRadRequests = $emergency->radiologyRequests ? $emergency->radiologyRequests->where('status', '!=', 'cancelled')->sortByDesc('id') : collect();
+                                $allLabRequests = $emergency->labRequests ? $emergency->labRequests->sortByDesc('id') : collect();
+                                $curLabRequests = $allLabRequests->where('status', '!=', 'cancelled');
+                                $cancelledLabRequests = $allLabRequests->where('status', 'cancelled');
+
+                                $allRadRequests = $emergency->radiologyRequests ? $emergency->radiologyRequests->sortByDesc('id') : collect();
+                                $curRadRequests = $allRadRequests->where('status', '!=', 'cancelled');
+                                $cancelledRadRequests = $allRadRequests->where('status', 'cancelled');
+
                                 $curTreatments = $emergency->treatments ? $emergency->treatments->sortByDesc('id') : collect();
                                 $curTotal = $curLabRequests->count() + $curRadRequests->count() + $curTreatments->count();
                             @endphp
 
-                            @if($curTotal > 0)
+                            @if($curTotal > 0 || $cancelledLabRequests->count() > 0 || $cancelledRadRequests->count() > 0)
+                                <!-- شريط تصفية طلبات الحالة الحالية (Sub-Filter Pills مطابق لمحطة الاستشارية) -->
+                                <div class="today-filter-tray d-flex flex-wrap gap-1 mb-3 p-1 bg-light rounded-3 border align-items-center">
+                                    <button type="button" class="btn btn-xs btn-dark rounded-pill px-2.5 py-1 fw-bold emg-cur-filter-pill active" data-filter="all" onclick="filterCurEmergencyRequests('all', this)">
+                                        الكل <span class="badge bg-secondary rounded-pill ms-1">{{ $curTotal }}</span>
+                                    </button>
+                                    @if($curLabRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-bold emg-cur-filter-pill" data-filter="lab" onclick="filterCurEmergencyRequests('lab', this)">
+                                            <i class="fas fa-microscope me-1"></i> المختبر <span class="badge bg-primary rounded-pill ms-1">{{ $curLabRequests->count() }}</span>
+                                        </button>
+                                    @endif
+                                    @if($curRadRequests->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2.5 py-1 fw-bold emg-cur-filter-pill text-dark" data-filter="radiology" onclick="filterCurEmergencyRequests('radiology', this)">
+                                            <i class="fas fa-x-ray me-1 text-info"></i> الأشعة <span class="badge bg-info rounded-pill ms-1 text-dark">{{ $curRadRequests->count() }}</span>
+                                        </button>
+                                    @endif
+                                    @if($curTreatments->count() > 0)
+                                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 fw-bold emg-cur-filter-pill" data-filter="treatment" onclick="filterCurEmergencyRequests('treatment', this)">
+                                            <i class="fas fa-pills me-1"></i> العلاجات <span class="badge bg-success rounded-pill ms-1">{{ $curTreatments->count() }}</span>
+                                        </button>
+                                    @endif
+                                </div>
+
                                 <div class="d-flex flex-column gap-3">
-                                    {{-- طلبات المختبر الحالية --}}
+                                    {{-- 1. بطاقات طلبات المختبر الحالية --}}
                                     @foreach($curLabRequests as $labReq)
-                                        <div class="card border border-primary-subtle shadow-sm rounded-3 overflow-hidden">
-                                            <div class="card-header py-2 px-3 bg-primary-subtle border-primary-subtle d-flex justify-content-between align-items-center">
+                                        @php
+                                            $isPaid = !empty($labReq->payment_id) || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived';
+                                            $isCompleted = ($labReq->status === 'completed');
+                                        @endphp
+                                        <div class="emg-cur-card-item card border {{ $isCompleted ? 'border-success' : ($isPaid ? 'border-primary' : 'border-warning') }} shadow-sm rounded-3 overflow-hidden" id="emergency-lab-card-{{ $labReq->id }}" data-emg-type="lab">
+                                            <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center border-bottom">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-primary">
-                                                        <i class="fas fa-microscope me-1"></i> فحص مختبر #{{ $labReq->id }}
+                                                        <i class="fas fa-microscope me-1"></i> طلب مختبر #{{ $labReq->id }}
                                                     </span>
                                                     <small class="text-muted font-monospace">{{ optional($labReq->requested_at ?: $labReq->created_at)->format('H:i') }}</small>
+                                                    <span class="badge {{ $labReq->priority === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}" style="font-size: 0.68rem;">
+                                                        {{ $labReq->priority_text }}
+                                                    </span>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-1">
+                                                    @if($isPaid)
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-check-circle me-1"></i> مسدد
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-hourglass-half me-1"></i> عند الكاشير
+                                                        </span>
+                                                    @endif
                                                     <span class="badge {{ $labReq->status == 'completed' ? 'bg-success' : ($labReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}" style="font-size: 0.72rem;">
                                                         {{ $labReq->status_text }}
                                                     </span>
-                                                    @if($labReq->status == 'completed')
-                                                        <a href="{{ route('staff.emergency-lab.print', $labReq) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size: 0.72rem;">
+                                                    @if($isCompleted)
+                                                        <a href="{{ route('staff.emergency-lab.print', $labReq) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="طباعة النتيجة الرسمية">
                                                             <i class="fas fa-print me-1"></i> طباعة
                                                         </a>
+                                                    @elseif($labReq->status !== 'cancelled')
+                                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="إلغاء هذا الطلب وتحويله للاسترجاع بالكاشير" onclick="cancelEmergencyRequestAction({{ $emergency->id }}, 'lab', {{ $labReq->id }}, 'emergency-lab-card-{{ $labReq->id }}')">
+                                                            <i class="fas fa-ban me-1"></i> إلغاء الطلب
+                                                        </button>
                                                     @endif
                                                 </div>
                                             </div>
+
+                                            <!-- شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper) -->
+                                            <div class="px-2 py-2 bg-light-subtle border-bottom">
+                                                <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
+                                                    <div class="position-absolute start-0 end-0 top-50 translate-middle-y border-top border-2" style="border-color: #dee2e6 !important; z-index: 1;"></div>
+                                                    
+                                                    <!-- المرحلة 1: طلب الطبيب -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                            <i class="fas fa-check"></i>
+                                                        </span>
+                                                        <span class="fw-semibold text-dark" style="font-size: 0.7rem;">طلب الطبيب</span>
+                                                    </div>
+
+                                                    <!-- المرحلة 2: الكاشير -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">سُدّد</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-coins"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-danger" style="font-size: 0.7rem;">عند الكاشير</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 3: المختبر -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
+                                                        @elseif($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-spinner fa-spin"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-primary" style="font-size: 0.7rem;">قيد الفحص</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-hourglass-start"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">بالانتظار</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 4: النتيجة -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file-medical"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-success" style="font-size: 0.7rem;">النتيجة جاهزة</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">التقرير</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="card-body p-2.5">
-                                                @if($labReq->status == 'completed')
-                                                    <div class="table-responsive rounded border mb-0">
-                                                        <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
-                                                            <thead class="table-light">
-                                                                <tr>
-                                                                    <th class="text-start">الفحص</th>
+                                                @if($labReq->notes)
+                                                    <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات:</strong> {{ $labReq->notes }}</div>
+                                                @endif
+
+                                                <!-- الجدول السريري المصغر (Clinical Mini-Table) -->
+                                                <div class="table-responsive rounded border bg-white mb-0">
+                                                    <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
+                                                        <thead class="table-light text-muted" style="font-size: 0.72rem;">
+                                                            <tr>
+                                                                <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
+                                                                <th class="py-1 px-2 text-start">اسم التحليل المخبري</th>
+                                                                @if($isCompleted)
                                                                     <th>النتيجة</th>
                                                                     <th>الوحدة</th>
                                                                     <th>المرجع</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach($labReq->labTests as $test)
-                                                                    @php
-                                                                        $rawResult = $test->pivot->result;
-                                                                        $parsed = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
-                                                                        $isObj = is_array($parsed);
-                                                                        $val = $isObj ? ($parsed['value'] ?? '') : $rawResult;
-                                                                        $unit = $isObj ? ($parsed['unit'] ?? $test->unit) : $test->unit;
-                                                                        $range = $isObj ? ($parsed['reference_range'] ?? '') : '';
-                                                                        $status = $isObj ? ($parsed['status'] ?? '') : '';
-                                                                        $isAbnormal = in_array($status, ['high', 'low', 'مرتفع', 'منخفض']);
-                                                                    @endphp
-                                                                    <tr class="{{ $isAbnormal ? 'table-warning' : '' }}">
-                                                                        <td class="text-start fw-bold text-dark">{{ $test->name }}</td>
+                                                                    <th>الحالة</th>
+                                                                @else
+                                                                    <th class="py-1 px-2 text-center" style="width: 100px;">الحالة</th>
+                                                                    @if(!$isPaid)
+                                                                        <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
+                                                                    @endif
+                                                                @endif
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="emergency-lab-tests-tbody-{{ $labReq->id }}">
+                                                            @foreach($labReq->labTests as $itemIdx => $test)
+                                                                @php
+                                                                    $rawResult = $test->pivot->result;
+                                                                    $parsed = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
+                                                                    $isObj = is_array($parsed);
+                                                                    $val = $isObj ? ($parsed['value'] ?? '') : $rawResult;
+                                                                    $unit = $isObj ? ($parsed['unit'] ?? $test->unit) : $test->unit;
+                                                                    $range = $isObj ? ($parsed['reference_range'] ?? '') : '';
+                                                                    $status = $isObj ? ($parsed['status'] ?? '') : '';
+                                                                    $notes = $isObj ? ($parsed['notes'] ?? '') : '';
+                                                                    $isAbnormal = in_array($status, ['high', 'low', 'مرتفع', 'منخفض']);
+                                                                @endphp
+                                                                <tr id="emergency-req-item-lab-{{ $labReq->id }}-{{ $test->id }}" class="{{ $isAbnormal ? 'table-warning' : '' }}">
+                                                                    <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
+                                                                    <td class="text-start fw-semibold text-dark py-1 px-2">
+                                                                        <i class="fas fa-vial text-primary me-1 opacity-75"></i> {{ $test->name }}
+                                                                        @if($notes)
+                                                                            <div class="text-muted extra-small" style="font-size: 0.72rem;">{{ $notes }}</div>
+                                                                        @endif
+                                                                    </td>
+                                                                    @if($isCompleted)
                                                                         <td>
-                                                                            <span class="badge bg-{{ $isAbnormal ? 'danger' : 'success' }}">{{ $val ?: '-' }}</span>
+                                                                            @if(!empty($val))
+                                                                                <span class="fw-bold fs-6 {{ $isAbnormal ? 'text-danger' : 'text-primary' }}">{{ $val }}</span>
+                                                                            @else
+                                                                                <span class="text-muted">-</span>
+                                                                            @endif
                                                                         </td>
                                                                         <td class="text-muted">{{ $unit ?: '-' }}</td>
-                                                                        <td><small class="text-muted">{{ $range ?: '-' }}</small></td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                @else
-                                                    <div class="alert alert-light border small text-muted mb-0 py-2 d-flex align-items-center gap-2">
+                                                                        <td class="text-muted"><small>{{ $range ?: '-' }}</small></td>
+                                                                        <td>
+                                                                            @if($status === 'normal' || $status === 'طبيعي')
+                                                                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">طبيعي</span>
+                                                                            @elseif($status === 'high' || $status === 'مرتفع')
+                                                                                <span class="badge bg-danger text-white" style="font-size: 0.68rem;">↑ مرتفع</span>
+                                                                            @elseif($status === 'low' || $status === 'منخفض')
+                                                                                <span class="badge bg-warning text-dark" style="font-size: 0.68rem;">↓ منخفض</span>
+                                                                            @elseif(!empty($val))
+                                                                                <span class="badge bg-primary-subtle text-primary" style="font-size: 0.68rem;">تم الفحص</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">-</span>
+                                                                            @endif
+                                                                        </td>
+                                                                    @else
+                                                                        <td class="text-center py-1 px-2">
+                                                                            @if($isPaid)
+                                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">قيد التحليل</span>
+                                                                            @else
+                                                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        @if(!$isPaid)
+                                                                            <td class="text-center py-1 px-2">
+                                                                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا التحليل من الطلب" onclick="emergencyRemoveRequestItem({{ $emergency->id }}, 'lab', {{ $labReq->id }}, {{ $test->id }}, 'emergency-req-item-lab-{{ $labReq->id }}-{{ $test->id }}')">
+                                                                                    <i class="fas fa-times" style="font-size: 0.68rem;"></i>
+                                                                                </button>
+                                                                            </td>
+                                                                        @endif
+                                                                    @endif
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @if(!$isCompleted)
+                                                    <div class="alert alert-light border small text-muted mb-0 py-1.5 mt-2 d-flex align-items-center gap-2">
                                                         <i class="fas fa-spinner fa-spin text-warning"></i>
-                                                        <span>قيد المعالجة في المختبر ({{ $labReq->labTests->count() }} فحص)...</span>
+                                                        <span>{{ $isPaid ? 'الفحوصات قيد المعالجة في المختبر...' : 'الطلب بانتظار سداد المريض لدى الكاشير لبدء الفحص في المختبر.' }}</span>
                                                     </div>
                                                 @endif
                                             </div>
                                         </div>
                                     @endforeach
 
-                                    {{-- طلبات الأشعة الحالية --}}
+                                    {{-- 2. بطاقات طلبات الأشعة الحالية --}}
                                     @foreach($curRadRequests as $radReq)
-                                        <div class="card border border-info-subtle shadow-sm rounded-3 overflow-hidden">
-                                            <div class="card-header py-2 px-3 bg-info-subtle border-info-subtle d-flex justify-content-between align-items-center">
+                                        @php
+                                            $isPaid = !empty($radReq->payment_id) || $emergency->payment_status === 'paid' || $emergency->payment_status === 'waived';
+                                            $isCompleted = ($radReq->status === 'completed');
+                                        @endphp
+                                        <div class="emg-cur-card-item card border {{ $isCompleted ? 'border-success' : ($isPaid ? 'border-info' : 'border-warning') }} shadow-sm rounded-3 overflow-hidden" id="emergency-rad-card-{{ $radReq->id }}" data-emg-type="radiology">
+                                            <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center border-bottom">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-info text-dark">
-                                                        <i class="fas fa-x-ray me-1"></i> أشعة/سونار #{{ $radReq->id }}
+                                                        <i class="fas fa-x-ray me-1"></i> طلب أشعة #{{ $radReq->id }}
                                                     </span>
                                                     <small class="text-muted font-monospace">{{ optional($radReq->requested_at ?: $radReq->created_at)->format('H:i') }}</small>
+                                                    <span class="badge {{ $radReq->priority === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}" style="font-size: 0.68rem;">
+                                                        {{ $radReq->priority_text }}
+                                                    </span>
                                                 </div>
-                                                <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : 'bg-warning text-dark' }}" style="font-size: 0.72rem;">
-                                                    {{ $radReq->status_text }}
-                                                </span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    @if($isPaid)
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-check-circle me-1"></i> مسدد
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-hourglass-half me-1"></i> عند الكاشير
+                                                        </span>
+                                                    @endif
+                                                    <span class="badge {{ $radReq->status == 'completed' ? 'bg-success' : ($radReq->status == 'in_progress' ? 'bg-info' : 'bg-warning text-dark') }}" style="font-size: 0.72rem;">
+                                                        {{ $radReq->status_text }}
+                                                    </span>
+                                                    @if($isCompleted)
+                                                        <a href="{{ route('staff.emergency-radiology.print', $radReq) }}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="طباعة التقرير الشعاعي الرسمي">
+                                                            <i class="fas fa-print me-1"></i> طباعة
+                                                        </a>
+                                                    @elseif($radReq->status !== 'cancelled')
+                                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 fw-bold" style="font-size: 0.72rem;" title="إلغاء هذا الفحص وتحويله للاسترجاع بالكاشير" onclick="cancelEmergencyRequestAction({{ $emergency->id }}, 'radiology', {{ $radReq->id }}, 'emergency-rad-card-{{ $radReq->id }}')">
+                                                            <i class="fas fa-ban me-1"></i> إلغاء الطلب
+                                                        </button>
+                                                    @endif
+                                                </div>
                                             </div>
-                                            <div class="card-body p-2.5 small">
-                                                <div class="fw-bold text-dark mb-1">{{ $radReq->radiologyType?->name ?? 'فحص أشعة' }}</div>
-                                                @if($radReq->status == 'completed' && $radReq->result)
-                                                    @if($radReq->result->findings)
-                                                        <div class="p-2 bg-light rounded border mb-1.5" style="white-space: pre-line;">
-                                                            <strong class="text-dark d-block">المشاهدات:</strong>
-                                                            {{ $radReq->result->findings }}
-                                                        </div>
-                                                    @endif
-                                                    @if($radReq->result->impression)
-                                                        <div class="p-2 bg-primary-subtle text-primary-emphasis rounded border border-primary-subtle fw-semibold">
-                                                            <strong>الانطباع التشخيصي:</strong> {{ $radReq->result->impression }}
-                                                        </div>
-                                                    @endif
+
+                                            <!-- شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper) -->
+                                            <div class="px-2 py-2 bg-light-subtle border-bottom">
+                                                <div class="d-flex align-items-center justify-content-between position-relative" style="font-size: 0.72rem;">
+                                                    <div class="position-absolute start-0 end-0 top-50 translate-middle-y border-top border-2" style="border-color: #dee2e6 !important; z-index: 1;"></div>
+                                                    
+                                                    <!-- المرحلة 1: طلب الطبيب -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                            <i class="fas fa-check"></i>
+                                                        </span>
+                                                        <span class="fw-semibold text-dark" style="font-size: 0.7rem;">طلب الطبيب</span>
+                                                    </div>
+
+                                                    <!-- المرحلة 2: الكاشير -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">سُدّد</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-warning text-dark mb-1 shadow-xs border border-warning" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-coins"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-danger" style="font-size: 0.7rem;">عند الكاشير</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 3: قسم الأشعة -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-check"></i>
+                                                            </span>
+                                                            <span class="fw-semibold text-success" style="font-size: 0.7rem;">أُنجز</span>
+                                                        @elseif($isPaid)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-info text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-spinner fa-spin"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-info" style="font-size: 0.7rem;">قيد التصوير</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-hourglass-start"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">بالانتظار</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- المرحلة 4: النتيجة والتقرير -->
+                                                    <div class="position-relative text-center d-flex flex-column align-items-center bg-light-subtle px-1" style="z-index: 2;">
+                                                        @if($isCompleted)
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white mb-1 shadow-xs" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file-medical"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-success" style="font-size: 0.7rem;">التقرير جاهز</span>
+                                                        @else
+                                                            <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-white text-muted mb-1 border" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                                                                <i class="fas fa-file"></i>
+                                                            </span>
+                                                            <span class="text-muted" style="font-size: 0.7rem;">التقرير</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card-body p-2.5">
+                                                @if($radReq->notes)
+                                                    <div class="small text-muted mb-2"><i class="fas fa-sticky-note me-1"></i><strong>ملاحظات:</strong> {{ $radReq->notes }}</div>
+                                                @endif
+
+                                                <!-- الجدول السريري المصغر (Clinical Mini-Table) -->
+                                                <div class="table-responsive rounded border bg-white mb-0">
+                                                    <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
+                                                        <thead class="table-light text-muted" style="font-size: 0.72rem;">
+                                                            <tr>
+                                                                <th class="py-1 px-2 text-center" style="width: 28px;">#</th>
+                                                                <th class="py-1 px-2 text-start">نوع الفحص الشعاعي</th>
+                                                                <th class="py-1 px-2 text-center" style="width: 100px;">الحالة</th>
+                                                                @if(!$isPaid && !$isCompleted)
+                                                                    <th class="py-1 px-2 text-center" style="width: 35px;">حذف</th>
+                                                                @endif
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="emergency-rad-tests-tbody-{{ $radReq->id }}">
+                                                            @foreach($radReq->radiologyTypes as $itemIdx => $type)
+                                                                <tr id="emergency-req-item-rad-{{ $radReq->id }}-{{ $type->id }}">
+                                                                    <td class="text-muted font-monospace text-center py-1 px-2">{{ $itemIdx + 1 }}</td>
+                                                                    <td class="text-start fw-semibold text-dark py-1 px-2">
+                                                                        <i class="fas fa-x-ray text-info me-1 opacity-75"></i> {{ $type->name }}
+                                                                    </td>
+                                                                    <td class="text-center py-1 px-2">
+                                                                        @if($isCompleted)
+                                                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">مكتمل</span>
+                                                                        @elseif($isPaid)
+                                                                            <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;">قيد التصوير</span>
+                                                                        @else
+                                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.68rem;">بانتظار السداد</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    @if(!$isPaid && !$isCompleted)
+                                                                        <td class="text-center py-1 px-2">
+                                                                            <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1.5 rounded-circle shadow-none lh-1" title="حذف هذا الفحص من الطلب" onclick="emergencyRemoveRequestItem({{ $emergency->id }}, 'radiology', {{ $radReq->id }}, {{ $type->id }}, 'emergency-req-item-rad-{{ $radReq->id }}-{{ $type->id }}')">
+                                                                                <i class="fas fa-times" style="font-size: 0.68rem;"></i>
+                                                                            </button>
+                                                                        </td>
+                                                                    @endif
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                @if($isCompleted)
+                                                    <div class="mt-2.5 p-2.5 rounded bg-light border">
+                                                        @foreach($radReq->radiologyTypes as $type)
+                                                            <div class="border-bottom pb-2 mb-2 last-border-0">
+                                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                    <span class="fw-bold text-dark"><i class="fas fa-camera-retro text-info me-1"></i>{{ $type->name }}</span>
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle small">مكتمل</span>
+                                                                </div>
+                                                                <div class="p-2 bg-white rounded border small text-dark mb-2" style="white-space: pre-wrap; line-height: 1.6;">
+                                                                    {!! nl2br(e($type->pivot->result ?: 'تم إنجاز التصوير والفحص الشعاعي بنجاح.')) !!}
+                                                                </div>
+                                                                @if(!empty($type->pivot->image_path))
+                                                                    <div class="d-flex align-items-center gap-2 pt-1">
+                                                                        <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold">
+                                                                            <i class="fas fa-image me-1"></i>معاينة صورة الأشعة المرفقة
+                                                                        </a>
+                                                                        <a href="{{ route('staff.emergency-radiology.attachment', ['emergencyRadiology' => $radReq, 'typeId' => $type->id]) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                                                            <i class="fas fa-download me-1"></i>تحميل
+                                                                        </a>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+
+                                                        @if($radReq->result)
+                                                            @if($radReq->result->findings)
+                                                                <div class="p-2 bg-white rounded border mb-1.5 small" style="white-space: pre-line;">
+                                                                    <strong class="text-dark d-block">المشاهدات:</strong>
+                                                                    {{ $radReq->result->findings }}
+                                                                </div>
+                                                            @endif
+                                                            @if($radReq->result->impression)
+                                                                <div class="p-2 bg-primary-subtle text-primary-emphasis rounded border border-primary-subtle small fw-semibold">
+                                                                    <strong>الانطباع التشخيصي:</strong> {{ $radReq->result->impression }}
+                                                                </div>
+                                                            @endif
+                                                        @endif
+                                                    </div>
                                                 @else
-                                                    <div class="alert alert-light border small text-muted mb-0 py-2">
-                                                        <i class="fas fa-clock text-warning me-1"></i> بانتظار إجراء الفحص والتصوير وصدور التقرير...
+                                                    <div class="alert alert-light border small text-muted mb-0 py-1.5 mt-2 d-flex align-items-center gap-2">
+                                                        <i class="fas fa-spinner fa-spin text-info"></i>
+                                                        <span>{{ $isPaid ? 'بانتظار تصوير المريض وإعداد التقرير الشعاعي...' : 'الطلب بانتظار سداد المريض لدى الكاشير لبدء الفحص بالأشعة.' }}</span>
                                                     </div>
                                                 @endif
                                             </div>
                                         </div>
                                     @endforeach
 
-                                    {{-- العلاجات المعطاة حالياً --}}
+                                    {{-- 3. العلاجات المعطاة حالياً --}}
                                     @if($curTreatments->count() > 0)
-                                        <div class="card border border-success-subtle shadow-sm rounded-3 overflow-hidden">
+                                        <div class="emg-cur-card-item card border border-success-subtle shadow-sm rounded-3 overflow-hidden" data-emg-type="treatment">
                                             <div class="card-header py-2 px-3 bg-success-subtle border-success-subtle d-flex justify-content-between align-items-center">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <span class="badge bg-success">
@@ -1606,11 +1545,58 @@
                                             </div>
                                         </div>
                                     @endif
+
+                                    {{-- 4. أرشيف طلبات المختبر والأشعة الملغاة --}}
+                                    @if($cancelledLabRequests->count() > 0)
+                                        <div class="accordion mb-2 emg-cur-card-item" data-emg-type="lab" id="cancelledLabAccordion">
+                                            <div class="accordion-item border-0 bg-transparent">
+                                                <h2 class="accordion-header" id="headingCancelledLab">
+                                                    <button class="accordion-button collapsed py-2 px-3 bg-light text-muted border rounded-3 fw-bold small shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCancelledLab">
+                                                        <i class="fas fa-archive me-2 text-secondary"></i> أرشيف طلبات المختبر الملغاة ({{ $cancelledLabRequests->count() }})
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseCancelledLab" class="accordion-collapse collapse pt-2" data-bs-parent="#cancelledLabAccordion">
+                                                    @foreach($cancelledLabRequests as $cReq)
+                                                        <div class="card border border-danger-subtle bg-light-subtle rounded-3 p-2.5 mb-2 opacity-75">
+                                                            <div class="d-flex justify-content-between align-items-center small">
+                                                                <span class="text-muted"><i class="fas fa-ban text-danger me-1"></i> طلب مختبر ملغي #{{ $cReq->id }}</span>
+                                                                <span class="badge bg-danger-subtle text-danger">ملغي</span>
+                                                            </div>
+                                                            <small class="text-muted mt-1">{{ $cReq->notes ?: 'تم إلغاء الطلب من قبل الطبيب' }}</small>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if($cancelledRadRequests->count() > 0)
+                                        <div class="accordion mb-2 emg-cur-card-item" data-emg-type="radiology" id="cancelledRadAccordion">
+                                            <div class="accordion-item border-0 bg-transparent">
+                                                <h2 class="accordion-header" id="headingCancelledRad">
+                                                    <button class="accordion-button collapsed py-2 px-3 bg-light text-muted border rounded-3 fw-bold small shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCancelledRad">
+                                                        <i class="fas fa-archive me-2 text-secondary"></i> أرشيف طلبات الأشعة الملغاة ({{ $cancelledRadRequests->count() }})
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseCancelledRad" class="accordion-collapse collapse pt-2" data-bs-parent="#cancelledRadAccordion">
+                                                    @foreach($cancelledRadRequests as $cReq)
+                                                        <div class="card border border-danger-subtle bg-light-subtle rounded-3 p-2.5 mb-2 opacity-75">
+                                                            <div class="d-flex justify-content-between align-items-center small">
+                                                                <span class="text-muted"><i class="fas fa-ban text-danger me-1"></i> طلب أشعة ملغي #{{ $cReq->id }}</span>
+                                                                <span class="badge bg-danger-subtle text-danger">ملغي</span>
+                                                            </div>
+                                                            <small class="text-muted mt-1">{{ $cReq->notes ?: 'تم إلغاء الطلب من قبل الطبيب' }}</small>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 <div class="text-center py-5 text-muted">
                                     <i class="fas fa-clipboard-check fa-3x opacity-25 mb-2"></i>
-                                    <h6 class="fw-bold mb-1">لا توجد طلبات مسجلة لهذه الزيارة بعد</h6>
+                                    <h6 class="fw-bold mb-1">لا توجد طلبات مسجلة لهذه الحالة بعد</h6>
                                     <p class="small mb-0">يمكنك طلب تحاليل أو أشعة أو تسجيل أدوية من شاشة العمل على اليمين.</p>
                                 </div>
                             @endif
@@ -2861,6 +2847,76 @@ document.addEventListener('DOMContentLoaded', function() {
     initLiveFilter('labSearchInput', 'clearLabSearch', '.lab-test-item', '.lab-name', 'noLabTestsFound', 'labSelectedCount', '.lab-checkbox', '.lab-filter-btn');
     initLiveFilter('radSearchInput', 'clearRadSearch', '.rad-type-item', '.rad-name', 'noRadTypesFound', 'radSelectedCount', '.rad-checkbox', '.rad-filter-btn');
 
+    // إدارة عداد كميات الخدمات التمريضية والطبية (زيادة / إنقاص / تحديث السعر الفوري)
+    document.querySelectorAll('.service-item').forEach(function(row) {
+        const checkbox = row.querySelector('.service-checkbox');
+        const qtyGroup = row.querySelector('.service-qty-group');
+        const qtyInput = row.querySelector('.service-qty-input');
+        const minusBtn = row.querySelector('.btn-service-minus');
+        const plusBtn = row.querySelector('.btn-service-plus');
+        const priceVal = row.querySelector('.price-val');
+        const formCheck = row.querySelector('.form-check');
+
+        if (!qtyInput) return;
+        const unitPrice = parseFloat(qtyInput.getAttribute('data-unit-price')) || 0;
+
+        function updatePrice() {
+            let q = parseInt(qtyInput.value) || 1;
+            if (q < 1) {
+                q = 1;
+                qtyInput.value = 1;
+            }
+            if (priceVal) {
+                priceVal.textContent = Math.round(unitPrice * q).toLocaleString('en-US');
+            }
+        }
+
+        if (plusBtn) {
+            plusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let current = parseInt(qtyInput.value) || 1;
+                qtyInput.value = current + 1;
+                updatePrice();
+            });
+        }
+
+        if (minusBtn) {
+            minusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let current = parseInt(qtyInput.value) || 1;
+                if (current > 1) {
+                    qtyInput.value = current - 1;
+                    updatePrice();
+                }
+            });
+        }
+
+        if (qtyInput) {
+            qtyInput.addEventListener('input', updatePrice);
+            qtyInput.addEventListener('change', updatePrice);
+        }
+
+        if (checkbox && !checkbox.disabled) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (qtyGroup) qtyGroup.classList.remove('d-none');
+                    if (formCheck) formCheck.classList.add('bg-light', 'border');
+                    if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
+                        qtyInput.value = 1;
+                    }
+                    updatePrice();
+                } else {
+                    if (qtyGroup) qtyGroup.classList.add('d-none');
+                    if (formCheck) formCheck.classList.remove('bg-light', 'border');
+                    qtyInput.value = 1;
+                    updatePrice();
+                }
+            });
+        }
+    });
+
     /**
      * تمكين طبيب الطوارئ من حذف فحص/تحليل محدد من الطلب المعلق مباشرة دون تحديث كامل الصفحة
      */
@@ -2933,6 +2989,93 @@ document.addEventListener('DOMContentLoaded', function() {
             if (el) {
                 el.style.opacity = '1';
                 el.style.pointerEvents = 'auto';
+            }
+        });
+    };
+
+    /**
+     * إلغاء طلب فحص طوارئ معلق أو مسدد وإرساله للاسترجاع في الكاشير
+     */
+    window.cancelEmergencyRequestAction = function(emergencyId, type, requestId, cardId) {
+        var typeTitle = (type === 'lab') ? 'التحليل المخبري' : 'فحص الأشعة';
+        var reason = prompt('يرجى تأكيد سبب إلغاء هذا الطلب (مثال: طلب بالخطأ، تراجع المريض، فحص خارجي):', 'طلب بالخطأ');
+        if (reason === null) return;
+
+        var card = document.getElementById(cardId);
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+        }
+
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+            || document.querySelector('input[name="_token"]')?.value;
+
+        fetch('{{ url("/emergency") }}/' + emergencyId + '/cancel-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                type: type,
+                request_id: requestId,
+                reason: reason
+            })
+        })
+        .then(function(res) {
+            return res.json().then(function(data) {
+                return { ok: res.ok, data: data };
+            });
+        })
+        .then(function(resObj) {
+            if (!resObj.ok || !resObj.data.success) {
+                alert(resObj.data.message || 'تعذر إلغاء الطلب');
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                }
+                return;
+            }
+
+            alert(resObj.data.message);
+            window.location.reload();
+        })
+        .catch(function(err) {
+            console.error(err);
+            alert('حدث خطأ في الاتصال أثناء معالجة الإلغاء');
+            if (card) {
+                card.style.opacity = '1';
+                card.style.pointerEvents = 'auto';
+            }
+        });
+    };
+
+    /**
+     * تصفية طلبات الحالة الحالية بالسجل الطبي (الكل / مختبر / أشعة / علاجات) مطابق لمحطة الاستشارية
+     */
+    window.filterCurEmergencyRequests = function(filterType, btn) {
+        document.querySelectorAll('.emg-cur-filter-pill').forEach(function(pill) {
+            pill.classList.remove('active', 'btn-dark', 'btn-primary', 'btn-info', 'btn-success');
+            var f = pill.getAttribute('data-filter');
+            if (f === 'all') pill.classList.add('btn-outline-secondary');
+            else if (f === 'lab') pill.classList.add('btn-outline-primary');
+            else if (f === 'radiology') pill.classList.add('btn-outline-info');
+            else if (f === 'treatment') pill.classList.add('btn-outline-success');
+        });
+
+        btn.classList.add('active');
+        btn.classList.remove('btn-outline-secondary', 'btn-outline-primary', 'btn-outline-info', 'btn-outline-success');
+        if (filterType === 'all') btn.classList.add('btn-dark');
+        else if (filterType === 'lab') btn.classList.add('btn-primary');
+        else if (filterType === 'radiology') btn.classList.add('btn-info');
+        else if (filterType === 'treatment') btn.classList.add('btn-success');
+
+        document.querySelectorAll('.emg-cur-card-item').forEach(function(card) {
+            if (filterType === 'all' || card.getAttribute('data-emg-type') === filterType) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
             }
         });
     };

@@ -519,6 +519,296 @@ Consult these files before making changes or proposing fixes:
   * إنشاء واجتياز اختبارات الميزة الشاملة [EyeCenterWorkflowTest.php](file:///f:/hospital-system%20p/tests/Feature/EyeCenterWorkflowTest.php) بنجاح 100% (7 passed, 36 assertions) بجانب كافة اختبارات الطوارئ والصيدلية السابقة (23 passed, 106 assertions) دون أي تراجع أو تعارض.
   * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
 
+## Session log (2026-10-27 — المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)
+
+### Done
+- **بنية الصلاحيات والتحصين الأمني (Spatie Permissions & Gating)**:
+  * إضافة صلاحية مستقلة ومحصورة في `RolesAndPermissionsSeeder`: `void payment receipt`.
+  * ربط الصلاحية حصراً بالأدوار الرقابية والمسؤولة (`admin` و `accountant`) مع إمكانية منحها بالاسم للمشرف الإداري أو الاستعلامات، وحجبها عن الكاشير العادي لمنع تضارب المصالح.
+  * حماية مسارات الإبطال وعرض الاستمارة برمجياً عبر `auth()->user()->can('void payment receipt')` في `PaymentVoidController` وميدلوير الصلاحيات.
+- **قاعدة البيانات وسجل التدقيق الرقابي (Database Schema & Audit Trail)**:
+  * إضافة حقول الرقابة إلى جدول `payments`: `voided_at`, `voided_by`, `void_type` (`rebill`, `refund`), `void_reason`, `original_receipt_number`.
+  * إنشاء جدول مخصص لتدقيق الإلغاءات `payment_void_logs` لتوثيق تاريخ وحركة كل وصل ملغى والمستخدم والمبالغ ونوع الإجراء وسبب الإبطال بالثانية.
+  * تحديث موديل `Payment` بدوال `voidedBy()`, `voidLogs()`, و `isVoided()`.
+- **الكنترولر ومنطق الأعمال الصارم (Strict Controller & Form Request)**:
+  * إنشاء `app/Http/Requests/VoidPaymentRequest.php` للتحقق من الصلاحيات وسلامة البيانات والسبب الإلزامي (الحد الأدنى 5 أحرف).
+  * إنشاء `app/Http/Controllers/PaymentVoidController.php` مع دالتين رئيسيتين:
+    1. `showVoidForm(Payment $payment)`: عرض واجهة الإبطال المخصصة مع بطاقات ملخص المريض والوصل والمبالغ.
+    2. `void(VoidPaymentRequest $request, Payment $payment)`: معالجة الإبطال داخل `DB::transaction` متكاملة، ودعم خياري:
+       - **إعادة فتح القيد للتسديد والتصحيح (`rebill`)**: تصفير حالة الدفع وتفريغ رقم الوصل وتاريخ القبض، وإعادة القيد لطابور الكاشير فوراً، مع إعادة السجلات المرتبطة (طوارئ، مواعيد، طلبات مختبر وأشعة) إلى حالة الانتظار غير المسدد `pending`.
+       - **إبطال نهائي واسترداد للمريض (`refund`)**: تثبيت حالة الوصل كمسترد، وإلغاء الطلب أو الموعد المرتبط نهائياً.
+    3. تسجيل حركة النشاط الإداري والرقابي الحساس في `UserActivityLogger`.
+- **واجهات المستخدم الفاخرة وتجربة الاستخدام (Dedicated UI & Visual Excellence)**:
+  * معالجة مشكلة قص المودل وظهوره أسفل الشاشة، بالانتقال إلى صفحة مستقلة متكاملة وواسعة `resources/views/cashier/payments/void.blade.php`:
+    - شريط علوي بلون الرقابة الفاخر (Crimson Gradient) يوضح أبعاد العملية.
+    - بطاقات إحصائية ثلاثية علوية (بيانات الوصل الأصلي، بيانات المريض وتغطيته، والمبلغ المقبوض نقداً وحصة الضمان).
+    - بطاقتان كبسوليتان تفاعليتان للاختيار بين "إعادة فتح القيد للتسديد والتصحيح" و "إبطال نهائي واسترداد نقدي للمريض".
+    - أزرار أسباب سريعة مسبقة التجهيز (خطأ بفئة الضمان، تكرار الفحص، رغبة المريض، تصحيح إداري) لتعبئة حقل السبب بنقرة واحدة.
+    - تنبيه أمني واضح للمستخدم بمسؤولية التدقيق والرقابة المالية.
+  * في شاشة الوصل (`receipt.blade.php`): إظهار زر `[ ⚠️ إبطال الوصل / إعادة فتح للتصحيح ]` للمستخدم المخول فقط، وتلوين الوصل الملغى بشارة ملفتة `[ 🚫 وصل ملغى ومبطل ]`.
+- **حزمة الاختبارات الآلية الشاملة (Automated Feature Tests)**:
+  * إنشاء `tests/Feature/PaymentVoidAndReversalTest.php` بـ 5 اختبارات ميزة تغطي كافة السيناريوهات بنجاح تام (`5 passed, 29 assertions`).
+
+## Session log (2026-10-26 — المرحلة 115: مطابقة وتوحيد واجهة دفع الطوارئ 100% مع واجهة الكاشير الرئيسية، تحصين نسب فئات الضمان، وإرجاع وصولات المريضة فاطمة Emergency Cashier Form 100% Parity with Request Payment, Strict Category Copay Lockdown & Unpaid Receipt Reversal)
+
+### Done
+- **إرجاع وتصحيح وصولات المريضة فاطمة صباح (الفئة H)**:
+  * إرجاع قيد ودفع خدمات الطوارئ رقم #1191 إلى "غير مسدد" ومحمي بنسبة 0% الرسمية للفئة H بمبلغ 0 د.ع للمريض وتغطية 100% للضمان (75,000 د.ع).
+  * إرجاع وتصحيح وصل التحاليل رقم #1187 إلى "غير مسدد" مع إعادة احتسابه وفق نسبة الـ 25% الرسمية المعتمدة للفئة H (حصة المريض: 7,750 د.ع، وحصة الضمان: 23,250 د.ع بدلاً من حساب الـ 15% الخاطئ).
+- **إعادة تصميم وتوحيد واجهة دفع الطوارئ بالكامل ([resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * مطابقة الواجهة بنسبة 100% مع واجهة `request-payment/567` العصرية الفاخرة:
+    - رأس أزرق ملكي مع بطاقتين علويتين لبيانات الحالة وبيانات المريض ورقم الهوية.
+    - بطاقات الإحصاء المالي الثلاثية المباشرة (إجمالي السعر المعتمد، حصة هيئة الضمان، والصافي المطلوب نقداً).
+    - شريط فئة الضمان الصحي المعتمد مع شارة `[ الفئة H ]` ونسبة الاستقطاع الرسمية للطوارئ (0%).
+    - جدول تفصيلي متكامل للبنود والخدمات يوضح السعر المعتمد وحصة المريض وحصة الضمان لكل بند.
+    - قفل خانة المبلغ المحصل `readonly` مع وسام `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الإدخال اليدوي.
+    - التوجيه التلقائي المباشر للوصل فور تأكيد الدفع لطباعة الإيصال الإلكتروني والحراري.
+- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إلزام دالة `processEmergencyPayment` بجلب نسبة فئة المريض تلقائياً عبر `getCopayPercentageFor('emergency')`.
+  * تعديل دالة `upsertUnifiedEmergencyPayment` لإبقاء الفواتير المغطاة بالكامل 100% بالضمان في حالة انتظار لتأكيدها وإصدار وصل رسمي لها عبر الكاشير.
+  * معالجة تحويل الدفعات المسددة مسبقاً تلقائياً إلى صفحة الوصل الرسمي بدلاً من رسائل التحويل التحذيرية.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyCashierCopayLockTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyCashierCopayLockTest.php))**:
+  * بناء اختبار ميزة متكامل واجتيازه بنجاح تام مع اجتياز كامل حزمة اختبارات الكاشير الـ 21 بنجاح (`21 passed, 165 assertions`).
+
+## Session log (2026-10-26 — المرحلة 114: عداد تكرار الخدمات التمريضية والطبية بالطوارئ وتحديث الحسابات والوصولات آلياً Emergency Nursing Services Dynamic Stepper Counter, Realtime Multiplied Pricing & Full Receipt Parity)
+
+### Done
+- **قاعدة البيانات والترحيل السحابي والمحلي ([database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php))**:
+  * إضافة حقل `quantity` الافتراضي 1 بجدول الوسيط `emergency_emergency_service` لتسجيل تكرار أي خدمة تمريضية أو طبية لنفس المريض دون الإخلال بالقيد الفريد.
+  * تطبيق الترحيل بنجاح على قاعدة البيانات المحلية وتطبيق التعديل الهيكلي DDL على قاعدة بيانات هوستنجر السحابية بدقة 100%.
+- **تصميم العداد التفاعلي (Dynamic Stepper Counter) ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * تحويل كل خدمة تمريضية إلى صف تفاعلي أنيق يظهر فيه عداد كبسولي `[-] [ 1 ] [+]` فور تحديد الخدمة.
+  * القيمة الافتراضية تبدأ من 1 (بحد أدنى 1 وحد أقصى 99).
+  * تحديث فوري لشارة السعر الإجمالي للخدمة (`السعر × العدد د.ع`) عند النقر على `+` أو `-` أو الكتابة الرقمية المباشرة في الحقل.
+- **تحديث محرك الحسابات المالية بالطوارئ والكاشير ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php), [app/Models/Emergency.php](file:///c:/wamp64/www/hospital-system/app/Models/Emergency.php) & [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * قراءة وتخزين مصفوفة `service_quantities` في جدول الوسيط أثناء الحفظ والتحديث.
+  * ضرب أسعار الخدمات في الكمية في دوال احتساب الرصيد غير المسدد `getUnpaidAmount` والحساب الموحد `upsertUnifiedEmergencyPayment` وحسابات الكاشير.
+- **مطابقة الوصولات والتقارير الطبية الرسمية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php) & [resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php))**:
+  * استرجاع حقل `quantity` وعرض مضاعف الخدمة `(×N)` في مسميات البنود في الوصل الإلكتروني والحراري والتقرير الطبي للطوارئ واحتساب الإجمالي بدقة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyServiceQuantityStepperTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyServiceQuantityStepperTest.php))**:
+  * بناء اختبارات ميزة تغطي إظهار العداد، حفظ الكميات، وحساب المضاعفات المالية، واجتياز كافة الاختبارات بنجاح (`2 passed, 13 assertions`).
+
+## Session log (2026-10-25 — المرحلة 113: تحصين نسب التحمل المالية، إلغاء التعديل اليدوي للنسب والمبالغ، ومطابقة تسعير الوصل الإلكتروني والحراري للضمان الصحي Strict Cashier Copay Lockdown, Removal of Manual Copay & Amount Overrides, 100% Web & Thermal Receipt Parity & Hostinger Data Fix)
+
+### Done
+- **تشخيص وحل تباين الوصل الإلكتروني والحراري ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php))**:
+  * معالجة مشكلة قراءة السعر الخاص بدلاً من سعر الضمان في جدول البنود للوصل الإلكتروني بمطابقة الدالة `calculateInsurancePricing` لكل من المختبر والأشعة.
+  * تصحيح القيد المالي رقم #1062 للمريضة شكرية أحمد على قاعدة بيانات هوستنجر وقاعدة البيانات المحلية، بإعادة نسبة التحمل إلى 25% الرسمية المعتمدة للفئة H وتعديل المبلغ إلى 18,500 د.ع وتثبيت حصة الضمان 55,500 د.ع بدقة 100%.
+- **إلغاء التعديل اليدوي لنسبة التحمل نهائياً عبر كافة واجهات الكاشير ([resources/views/cashier/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/payment-form.blade.php), [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إزالة زر فتح وتعديل الضمان `[ 🔒 تثبيت آلي ] / [ 🔓 تعديل استثنائي مفتوح ]` ومجموعة حقول الإدخال اليدوية للنسبة (`#manual_copay_input_group`) وأزرار النسب الخماسية السريعة للعمليات.
+  * قفل خانة النسبة لتكون حقل عرض محمي وشارة تأكيد رسمية فقط مع تمرير النسبة تلقائياً عبر حقل مخفي وفق معادلة فئة المريض الرسمية `getCopayPercentageFor()`.
+- **قفل خانة المبلغ المطلوب قبضه (`#amount_input`)**:
+  * جعل حقل المبلغ `readonly` مع خلفية مضاءة ووسم حماية مشفر `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الكاشير من كتابة مبالغ يدوية مغايرة للحسبة الآلية الدقيقة.
+- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * إلزام دالة `processPayment` و `processRequestPayment` و `processSurgeryPayment` بفرض نسبة التحمل الرسمية لفئة المريض تلقائياً وتثبيت `$patientPaidAmount` مساوياً لحصة المريض المحسوبة نظامياً دون الاعتماد على مدخلات الفورم المعدلة يدوياً.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
+  * إضافة اختبار ميزة يضمن دقة تسعير بنود الضمان في الوصل الإلكتروني والحراري، واجتياز كامل حزمة اختبارات الكاشير بـ 20 اختباراً ناجحاً (`20 passed, 154 assertions`).
+
+## Session log (2026-10-24 — المرحلة 112: تفكيك وقرارات طلبات الفحوصات لدى الكاشير بتصميم الكبسولات العصرية Segmented Pills وانعكاسها السريري وتبويب الفحوصات المؤجلة بلوحة الكاشير Cashier Item-Level Pay/Postpone/Cancel Controls, Modern iOS-Style Segmented Pills, Clinical Gate Release, Doctor Alerts & Dedicated Postponed Tab in Cashier Hub)
+
+### Done
+- **تصميم الكبسولات العصرية السلسة (Modern Segmented Pills) ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * استبدال الأزرار الكلاسيكية المزدحمة بشريط كبسولي ناعم ومضغوط (iOS/Tailwind Segmented Control) لكل فحص بروابط بصرية فائقة الأناقة:
+    - `[ ✓ تسديد ]` بتدرج أخضر زمردي وظل خفيف ناعم.
+    - `[ ⏱ تأجيل ]` بتدرج كهرماني دافئ عند الرغبة في تأجيل الفحص.
+    - `[ ✕ إلغاء ]` بتدرج وردي/أحمر لإلغاء الفحص بطلب المريض.
+  * قائمة أسباب مدمجة (Pill Dropdown & Input) تظهر بسلاسة عند اختيار الإلغاء أو التأجيل لتوثيق السبب بدقة.
+- **تفكيك طلبات الفحوصات وحساب الصندوق المالي ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * فصل الفحوصات المؤجلة في طلب طبي مستقل برقم جديد وحالة `status = 'postponed'`.
+  * فصل الفحوصات الملغاة في طلب طبي مستقل برقم جديد وحالة `status = 'cancelled'` مع توثيق السبب المالي/السريري.
+  * احتساب وتحصيل رسوم الفحوصات المسددة فقط ضمن الإيصال المالي الرسمي، أو استكمال العملية بمبلغ 0 في حال ألغى/أجل المريض كل الفحوصات.
+- **استحداث تبويب الفحوصات المؤجلة بلوحة الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * عزل الطلبات المؤجلة عن قائمة العمل اليومية المعتادة بتضمين استعلام مخصص في `CashierController@index`.
+  * إضافة تبويب مستقل في شريط التبويبات الرئيسي: `[ ⏱ الفحوصات المؤجلة (N) ]` مع شارة عداد باللون الكهرماني.
+  * جدول تفصيلي متكامل يعرض: رقم الطلب، القسم التشخيصي، المريض، الفحوصات المؤجلة، سبب التأجيل، الطبيب، المبلغ، وتاريخ التأجيل.
+  * زر إجراء مباشر: `[ 💳 تسديد الآن ]` يفتح استمارة التسديد فوراً بمجرد عودة المريض لاستئناف الفحص دون الحاجة لطلب طبي جديد.
+  * بانيل تنبيه كهرماني علوي بارز يظهر للكاشير بوجود طلبات مؤجلة مع زر انتقال فوري للتبويب.
+- **تحرير القفل السريري بمحطة الطبيب وتنبيهات الكاشير ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * استبعاد الفحوصات المؤجلة والملغاة (`whereNotIn('status', ['completed', 'cancelled', 'postponed'])`) من شرط القفل السريري الإلزامي.
+  * تمكين الطبيب من إنهاء الزيارة فوراً ودون احتجاز متى ما سدد المريض أو ألغى/أجل بقية الفحوصات.
+  * إظهار تنبيهات سريرية بارزة أعلى تبويب الفحوصات توضح الفحوصات التي ألغاها أو أجلها المريض مع أسبابها، مع فلتر سريع `[ ⛔ ملغاة ]`.
+- **عزل الأقسام التشخيصية وطابور العيادة ([app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php) & [app/Http/Controllers/DoctorQueueController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorQueueController.php))**:
+  * استبعاد الفحوصات الملغاة والمؤجلة تلقائياً من قوائم العمل النشطة لمختبر التحاليل وأقسام الأشعة.
+  * منع إدراج المريض في قائمة "بانتظار الفحوصات" في شاشة استدعاء الطبيب إذا كانت الفحوصات ملغاة أو مؤجلة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierItemActionCancellationAndPostponeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierItemActionCancellationAndPostponeTest.php))**:
+  * بناء اختبارات متكاملة تغطي تسديد فحص وإلغاء وتأجيل آخر مع الأسباب وتفكيك السجلات وإنهاء الزيارة، واختبار إلغاء كافة الفحوصات، واختبار ظهور الفحوصات المؤجلة في التبويب المخصص بلوحة الكاشير بنجاح تام (`3 passed, 38 assertions`).
+
+## Session log (2026-10-23 — المرحلة 111: إصلاح استعلام التحقق من الفحوصات المعلقة عند إنهاء الزيارة، وتحسين استجابة AJAX، وتفعيل الحظر الصارم للحجز المكرر في واجهة الاستعلامات Doctor Visit Completion SQL Fix, Clean AJAX Error Handling & Inquiry Hard Block UI)
+
+### Done
+- **إصلاح استعلام SQL لفحص الفحوصات المعلقة ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * معالجة خطأ `SQLSTATE[42S22]: Column not found: 1054 Unknown column 'patient_id' in 'where clause'` الذي تسبب بـ 500 Internal Server Error عند رغبة الطبيب بإنهاء الزيارة المكتملة فحوصاتها.
+  * تصحيح الاستعلام بالاعتماد على معرّفات زيارات اليوم للمريض والطبيب (`whereIn('visit_id', $sameDayVisitIds)`).
+- **تحسين إظهار رسائل AJAX عند إنهاء الزيارة ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * قراءة وعرض رسالة الخطأ السريرية الدقيقة الصادرة من السيرفر (`data.message`) مباشرة بدلاً من الرسالة الافتراضية "حدث خطأ أثناء إنهاء الزيارة".
+- **الحظر الصارم لتكرار الحجز في واجهة الاستعلامات ([resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php))**:
+  * تحويل التنبيه البرتقالي إلى بانيل أحمر مانع (`⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً`).
+  * تعطيل زر الإرسال والحفظ تلقائياً (`Disabled`) بنص `[ ⛔ محظور: مسجل اليوم بالفعل لدى الطبيب ]` ومنع الإرسال فورياً في حال كان المريض مسجلاً اليوم لدى الطبيب.
+
+## Session log (2026-10-23 — المرحلة 110: الحظر الصارم للحجز المكرر لنفس اليوم، والقفل السريري الإلزامي لإنهاء الزيارة بانتظار الفحوصات Strict Same-Day Duplicate Booking Prevention, Hard Validation Block & Mandatory Visit Completion Clinical Gate Pending Test Results)
+
+### Done
+- **الحظر الصارم لتكرار الحجز لنفس اليوم نهائياً ([app/Http/Controllers/AppointmentController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AppointmentController.php) & [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php))**:
+  * منع تسجيل أو قطع أي حجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً (حتى لو برسم 0 د.ع أو تأكيد الاستعلامات).
+  * إرجاع رسالة خطأ وإرشاد واضحة: *"⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض مسجل اليوم بالفعل لدى الطبيب. لا داعي لقطع حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة"*.
+  * ضمان عدم توليد أي قيود أو وصولات إضافية بصندوق الكاشير أو سجلات الحركات المالية.
+- **القفل السريري الإلزامي لإنهاء الزيارة في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * **التحقق البرمجي الصارم (Backend Gate)**: في دالة `update`، يُمنع تحويل الزيارة إلى `completed` في حال وجود أي فحوصات مخبرية أو شعاعية معلقة لم تكتمل نتائجها (`whereNotIn('status', ['completed', 'cancelled'])`).
+  * **التحكم بالواجهة (Frontend Lock)**: استبدال زر "إنهاء الزيارة" بزر مقفل ومعطل (`Disabled`) يحمل أيقونة القفل مع نافذة تنبيهية إرشادية توضح عدد الفحوصات المعلقة، وتوجه الطبيب لاستخدام زر `[ ⏳ تعليق بانتظار الفحوصات ]`.
+  * **شريط تحذيري وإرشادي علوي**: عرض بانيل تنبيه كهرماني بارز أعلى صفحة الزيارة يوضح وجود فحوصات معلقة مع زر سريع `[ تعليق واستدعاء التالي ]` للرجوع لمحطة العيادة ومتابعة باقي المراجعين ريثما تصدر النتائج.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
+  * تحديث وتوسيع الاختبارات للتأكد من حظر حجز نفس اليوم بالكامل، ومنع إنهاء الزيارة عند وجود فحوصات معلقة، والسماح بإنهائها فقط عند اكتمال كافة الفحوصات بنجاح تام (`3 passed, 10 assertions`).
+
+## Session log (2026-10-23 — المرحلة 109: حماية كشفية نفس اليوم من التكرار، وأتمتة مراجعة النتائج المجانية، ودمج فحوصات اليوم في محطة الطبيب، وتنظيف قيود هوستنجر المكررة Same-Day Duplicate Consultation Prevention, Automatic Free Results Recheck, Workstation Requests Aggregation & Hostinger Duplicate Cleanup)
+
+### Done
+- **أتمتة مراجعة النتائج ومنع الحجز المكرر لنفس اليوم ([app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php) & [app/Http/Controllers/AppointmentController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AppointmentController.php))**:
+  * فحص تلقائي لحظي: إذا دخل مريض ولديه كشفية سابقة في نفس اليوم لدى نفس الطبيب، يتم تحويل الحجز تلقائياً إلى "مراجعة نتائج مجانية" برسم `consultation_fee = 0` و `is_free_recheck = true` وربطه بالزيارة الأصلية دون استيفاء أي مبالغ إضافية من المريض.
+  * منع ازدواجية قيود الإيراد والوصولات لدى الكاشير وحماية الصندوق.
+- **دمج فحوصات وزيارات نفس اليوم في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * تجميع ودمج كافة طلبات وفحوصات المريض الطبية لنفس تاريخ اليوم تلقائياً، بحيث تظهر كافة التحاليل والأشعة أمام الطبيب في لوحة العمل حتى لو كان هناك أكثر من زيارة.
+  * رفع حد الذاكرة `ini_set('memory_limit', '512M')` لحل استنفاد الذاكرة وخطأ 500 نهائياً عند فتح الزيارات التي تحتوي على آلاف الأدوية ورموز ICD-10.
+- **تحديث واجهة الطبيب بزر تعليق الفحوصات وتنبيه الإنهاء المبكر ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إضافة زر صريح: `[ ⏳ تعليق بانتظار الفحوصات ]` يسمح للطبيب بالرجوع للعيادة واستدعاء المريض التالي مع إبقاء الزيارة مفتوحة ريثما تصدر النتائج.
+  * تنبيه سريري ذكي عند النقر على "إنهاء الزيارة" بوجود فحوصات مخبرية أو شعاعية معلقة لتنبيه الطبيب بعدم إقفال الزيارة مبكراً.
+- **تنظيف السجلات المكررة على قاعدة بيانات هوستنجر والمحلي**:
+  * معالجة الحالات الـ 4 المكررة ليوم 2026-10-22 (سلمى راضي، والمراجعين الثلاثة الآخرين) بتحويل الزيارات المفرغة إلى `cancelled` وتصفير الحجوزات المكررة كمراجعات مجانية ونقل الوصفات الطبية للزيارات الأصلية، ليصبح عدد المراجعين الفعليين مطابقاً للواقع المالي السليم.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
+  * إضافة اختبارات متكاملة تؤكد تحويل حجز نفس اليوم لمراجعة مجانية برسم 0 د.ع، ودمج كافة فحوصات نفس اليوم داخل محطة الطبيب بنجاح كامل (`2 passed, 10 assertions`).
+
+## Session log (2026-10-23 — المرحلة 108: توحيد وهيكلة محطة الأشعة والتصوير الطبي وفق نمط المختبر حسب الأقسام، وبناء شريط الفلترة الموحد للتاريخ، وتصحيح التبويب الافتراضي وتزامن الفلاتر Radiology Hub Department Architecture Harmonization with Lab, Unified Date Toolbar, Instant Consultation Results Sync & Zero Tab-Switching Glitch)
+
+### Done
+- **توحيد التبويب الافتراضي وحل مشكلة اختفاء نتائج الاستشارية عند اختيار التاريخ**:
+  * تشخيص ومعالجة عدم تطابق المسمى البرمجي القديم (`waiting`) مع معرّف التبويب المعتمد (`station` / `station-pane`)، حيث كان يتسبب في عدم وجود كلاس التفعيل `show active` عند إعادة تحميل الصفحة بعد اختيار أي تاريخ، ما يؤدي لاختفاء جدول النتائج كلياً حتى يتنقل المستخدم بين التبويبات ويعود إليه.
+  * توحيد التبويب الافتراضي في الكنترولر والواجهة إلى `$activeTab = 'station'` وضمان بقاء تبويب الاستشارية وبانيل العرض نشطاً بـ `show active` فورياً.
+  * تحديث جدول الاستشارية ليعرض كافة طلبات العيادات المحولة (`$consultationRequests`) مرتبة بالأولوية السريرية (قيد النداء ⬅️ بالانتظار ⬅️ قيد الفحص ⬅️ المكتملة) بحيث تظهر الفحوصات في التواريخ السابقة مع أزرار الطباعة والمعاينة دون إخفائها خلف قائمة الانتظار فقط.
+  * حصر المزامنة اللحظية لطابور الاستدعاء (`syncRadiologyQueue`) لتعمل حصراً عند اختيار تاريخ "اليوم"، ومنع مسح نتائج التواريخ السابقة من الشاشة.
+- **تزامن حقول الفلترة التلقائي مع التبويبات والبطاقات العلوية**:
+  * ربط مستمعات التبويبات في الجافاسكربت لتحديث حقلي النموذج المخفيين (`radiology-active-tab-input` و `radiology-source-input`) لحظياً عند التنقل، لضمان بقاء المستخدم في نفس التبويب عند اختيار أي تاريخ.
+  * مزامنة تظليل وتمييز بطاقات الأقسام العلوية الأربعة (`#radiology-department-cards`) فورياً مع التبويب النشط.
+- **إعادة هيكلة محطة الأشعة وفق نمط المختبر (Department Breakdown)**:
+  * شريط بطاقات أقسام علوي رباعي: (طلبات العيادات الاستشارية، طلبات الأشعة المباشرة، أشعة وفحوصات قسم الطوارئ، كافة طلبات القسم).
+  * شريط فلترة وبحث موحد وشامل للتاريخ (اليوم، أمس، الأسبوع، الشهر، كافة التواريخ، وتقويم مخصص) بدلاً من الفلاتر المتكررة داخل التبويبات.
+  * تبويب مستقل لطلبات الأشعة المباشرة والاستقبال (`#direct-pane`) مع دعم زر الإلغاء الفوري.
+- **حزمة الاختبارات الآلية الحصينة**:
+  * إضافة اختبارات متقدمة تؤكد بقاء تبويب الاستشارية نشطاً بـ `show active` وظهور الفحوصات فورياً عند فلترة التاريخ بدون تنقل في [RadiologyPriorPendingRequestsTabTest](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyPriorPendingRequestsTabTest.php) بـ 5 اختبارات ناجحة (`5 passed, 36 assertions`).
+  * اجتياز كامل حزمة اختبارات قسم الأشعة والتصوير الطبي بـ 41 اختباراً ناجحاً (`41 passed, 217 assertions`).
+
+## Session log (2026-10-22 — المرحلة 107: تعريب وتوحيد مسميات الأدوار والصلاحيات بالكامل، وإعادة تصميم لوحة الأدوار التنفيذية، وإضافة صلاحية التحكم بمطالبات الضمان الصحي Complete Roles & Permissions Arabic Localization, Executive Roles Hub Redesign, Unified Role Labels Engine, Zero Untranslated Permissions & Insurance Claims Access Control)
+
+### Done
+- **إدراج واجهة مطالبات وسجلات الضمان الصحي في نظام الأدوار والصلاحيات**:
+  * استحداث صلاحية مستقلة ومخصصة باسم `view insurance claims` (عرض ومتابعة كشوفات وسجلات مطالبات الضمان وتصديرها).
+  * إضافة مايجريشن مخصص `database/migrations/2026_10_22_150000_add_view_insurance_claims_permission.php` وتثبيتها في قاعدة البيانات ومنحها لأدوار الإدارة والمحاسب.
+  * حماية مسارات وواجهة `HealthInsuranceClaimController` بميدلوير يمنع الدخول (403 Forbidden) إلا لمن يملك صلاحية `view insurance claims` أو `manage health insurance` أو إدارة المستشفى.
+  * إتاحة التحكم بها وتفعيلها/تعطيلها بسهولة عبر بطاقة "الحسابات العامة والمالية" في شاشة إدارة وتعديل الأدوار `/roles/{role}/edit`.
+- **تعريب وتوحيد منظومة مسميات الأدوار بالكامل (Unified Role Labels Engine)**:
+  * تطوير دالة مركزية موحدة `RoleManagementController::getRoleLabel($roleName)` تشكل المصدر المعتمد لترجمة وتخصيص أي دور (المسمى العربي، الوصف، الأيقونة، ولون الشارة).
+  * تغطية كافة الأدوار الـ 26 المسجلة في النظام بما فيها الأدوار التي كانت تظهر باللغة الإنجليزية:
+    * `accountant` ⬅️ **المحاسب المالي** (أيقونة الحاسبة واللون الأزرق).
+    * `admin-hsop` / `hospital_admin` ⬅️ **مدير المستشفى**.
+    * `thaman` ⬅️ **هيئة الضمان الصحي**.
+    * `gh&est` ⬅️ **كادر الجراحة والاستشارية**.
+    * `staff` ⬅️ **كادر إداري عام**.
+  * تصنيف الأدوار إلى 6 قطاعات وظيفية ذكية عبر `getRoleCategory()`:
+    * `الطبية والجراحية`، `المالية والكاشير`، `التشخيصية`، `الاستقبال والطوارئ`، `الصيدلية والمستودع`، `الإدارة والأنظمة`.
+  * تعميم الدالة الموحدة على شاشات: قائمة الأدوار (`roles.index`)، شاشة تعديل الصلاحيات (`roles.edit`)، إضافة دور (`roles.create`)، وإدارة المستخدمين (`users.index`, `users.create`, `users.edit`).
+- **إعادة تصميم وهيكلة لوحة إدارة الأدوار (`resources/views/roles/index.blade.php`)**:
+  * شريط كروت مؤشرات تنفيذية علوي (إجمالي الأدوار، الكادر المعين، إجمالي الصلاحيات، الأدوار الشاغرة).
+  * شريط تبويبات وفلاتر سريعة للقطاعات الوظيفية (Category Filter Pills) لتصفية الأدوار بنقرة زر واحدة.
+  * بحث لحظي ذكي (Live Search) بالاسم العربي أو الإنجليزي أو الوصف.
+  * مبدل عرض مزدوج (Dual View Mode): عرض البطاقات الحديثة (Cards Grid) مع شريط نسبة تغطية الصلاحيات ووسوم الأقسام البارزة، وعرض الجدول المضغوط (Compact Table).
+  * نافذة تفاعلية منبثقة سريعة (Role Users Modal) عبر AJAX لمعاينة جميع الموظفين المعينين لأي دور بضغطة زر دون مغادرة الصفحة.
+- **تعريب 100% من صلاحيات النظام (Zero Untranslated Permissions)**:
+  * تدقيق كامل الـ 145 صلاحية في قاعدة البيانات وسد النواقص لضمان عدم ظهور أي كود برمجي إنجليزي في الواجهات (إضافة `inquiry.create.radiology` والصلاحيات التراثية المخفية).
+  * تعريب الأقسام الرئيسية في شاشة الصلاحيات (`permissions.index`) وفق بطاقات النظام العشرة.
+- **حزمة الاختبارات الآلية الحصينة**:
+  * اجتياز اختبارات صلاحيات الضمان الصحي في [HealthInsuranceClaimsReportTest](file:///c:/wamp64/www/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php) بـ 8 اختبارات ناجحة (`8 passed, 26 assertions`).
+  * اجتياز كامل اختبارات مصفوفة الأدوار والصلاحيات في [RolePermissionsMatrixTest](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بـ 11 اختباراً ناجحاً (`11 passed, 182 assertions`).
+
+## Session log (2026-10-22 — المرحلة 106: منظومة إلغاء طلبات فحوصات الطوارئ ودورة الاسترجاع المالي لدى الكاشير وإصدار السندات السالبة ومعالجة حالة المريضة نسيمه عطب سلمان Emergency Request Cancellation, Doctor Action, Cashier Refund Processing, Negative Voucher Invoicing & Patient #47 Refund Execution)
+
+### Done
+- **معالجة وتصحيح حالة المريضة نسيمه عطب سلمان (طوارئ #47 - Patient ID 8600)**:
+  * تدقيق كافة الخدمات المسجلة للمريضة وتحديد الفحصين غير المنجزين المطلوبين بالخطأ.
+  * إلغاء فحص رنين الكاحل (`Ankle - Joint MRI` بقيمة 200,000 د.ع) وفحص الأشعة السينية مقطعين (`Two-Section Standard X-Ray` بقيمة 40,000 د.ع).
+  * إصدار سندي استرجاع مالي رسمي لدى الكاشير بمجموع **240,000 د.ع**:
+    - وصل استرجاع **`REC-20261022-0020`** بمبلغ `-200,000 د.ع`.
+    - وصل استرجاع **`REC-20261022-0021`** بمبلغ `-40,000 د.ع`.
+  * تحويل حالة الطلبين إلى `status = 'cancelled'` و `payment_status = 'refunded'` وانتقالهما تلقائياً لأرشيف الطلبات الملغاة.
+- **توسيع محطة عمل الطوارئ بإمكانية إلغاء الفحوصات ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php) & [resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * زر إلغاء فوري للطبيب على بطاقات الفحوصات غير المكتملة في لوحة السجل الطبي والفحوصات مع تسجيل سبب الإلغاء.
+  * في حال كان الطلب مسدداً، يحول إلى `cancelled` ويوجّه فوراً إلى قائمة مستحقات الاسترجاع لدى الكاشير.
+- **تطوير واجهة ونظام الكاشير لدعم استرجاعات الطوارئ ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * إدراج طلبات الأشعة والمختبر الملغاة في طوارئ المستشفى تلقائياً ضمن قائمة مستحقات الاسترجاع (Refunds) مع عداد إشعارات بارز.
+  * نافذة تأكيد وصرف الاسترجاع المالي الفوري وتحديد وسيلة الإرجاع (نقد/شبكة).
+  * إصدار سند استرجاع سالب رسمي (`Payment` بسالب ورقم إيصال رسمي `REC-...`)، وتحديث حالة دفع الطلب إلى `refunded`.
+- **إظهار فحوصات الطوارئ في صفحة طباعة الوصل ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php))**:
+  * دعم عرض بنود وتفاصيل تحاليل وأشعة الطوارئ في جدول تفاصيل الوصل المالي بعد أن كانت محصورة بكشفية الطوارئ فقط.
+- **تطوير الموديلات وقاعدة البيانات**:
+  * إضافة مايجريشن مخصص `database/migrations/2026_10_22_140000_add_refunded_to_emergency_requests_payment_status.php` لدعم حالة الدفع `refunded` في جداول أشعة ومختبر الطوارئ متوافقاً مع كل من MySQL و SQLite.
+  * إضافة علاقة `payment()` وحقل `payment_status` إلى `EmergencyRadiologyRequest` و `EmergencyLabRequest`.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestCancellationAndRefundTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRequestCancellationAndRefundTest.php))**:
+  * اجتياز كامل لجميع اختبارات الميزة الـ 3 (`3 passed, 13 assertions`) مع اجتياز كامل لاختبارات الطوارئ السابقة (14 passed).
+
+## Session log (2026-10-22 — المرحلة 105: توحيد هيكلية محطة عمل الطوارئ مع محطة الاستشارية: تخصيص تبويب طلبات الفحوصات لإنشاء الطلبات الجديدة ونقل كافة بطاقات الطلبات ونتائج المختبر والأشعة إلى السجل الطبي الدائم والفحوصات Emergency Workstation Harmonization with Outpatient Clinic: Dedicated Ordering Forms Tab & Consolidation of Investigation Cards, Steppers & Results into Permanent Medical Record)
+
+### Done
+- **تخصيص تبويب طلبات الفحوصات (Tab 3: `#tab-requests`) للطلبات الجديدة ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * إزالة بطاقات الطلبات والنتائج السابقة التي كانت تملأ تبويب الطلبات وتخفي نماذج الإدخال خلف كتل متراكمة من الوصولات القديمة.
+  * فتح وعرض نماذج طلب المختبر والأشعة بشكل دائم ومباشر دون إخفائها خلف أزرار Collapse منسدلة، مع دعم الفلاتر السريعة (الكل، مشمول بالضمان، كاش فقط)، والبحث اللحظي التفاعلي، وعداد العناصر المحددة.
+  * إضافة شريط إرشادي رسمي ينبه الطبيب إلى أن متابعة مسار الطلبات، مراحل سداد الكاشير، وصدور النتائج والتقارير الطبية الرسمية معروضة ومحدثة لحظياً في لوحة "السجل الطبي والفحوصات" على يسار الشاشة مع زر انتقال سريع.
+- **تطوير وترقية لوحة السجل الطبي الدائم والفحوصات (`#side-cur-pane`)**:
+  * نقل وإعادة هيكلة كافة بطاقات طلبات المختبر والأشعة لتظهر في مكانها المعتمد تحت تبويب "طلبات الحالة" بالسجل الطبي الأيسر (مطابق تماماً لمحطة الطبيب الاستشارية).
+  * إضافة شريط تصفية تفاعلي سريع (Sub-Filter Pills: الكل، المختبر، الأشعة، العلاجات) عبر دالة `filterCurEmergencyRequests`.
+  * تزويد كل بطاقة فحص بشريط التقدم ومراحل المسار التفاعلي ذي الخطوات الأربع (Status Progress Stepper: طلب الطبيب ⬅️ الكاشير ⬅️ المختبر/قسم الأشعة ⬅️ النتيجة/التقرير).
+  * إبراز حالة السداد (مسدد بشارة خضراء / عند الكاشير بشارة تنبيه صفراء)، وأولوية الفحص، وزر الطباعة الرسمية للنتائج المعتمدة.
+  * جدول سريري مصغر لعناصر الفحص يوضح القيم والوحدات والمعدلات الطبيعية مع تمييز النتائج غير الطبيعية باللون الأحمر، مع إتاحة زر الحذف الفوري للعناصر غير المسددة للطبيب (`emergencyRemoveRequestItem`).
+  * عرض تفاصيل تقارير الأشعة والمشاهدات والانطباع التشخيصي، مع أزرار معاينة وتحميل صور الأشعة المرفقة.
+  * تضمين أرشيف الطلبات الملغاة داخل أكورديون منظم أسفل القائمة.
+- **التحقق والاختبارات الآلية الحصينة**:
+  * اجتياز كامل حزمة اختبارات الطوارئ ومحطة العمل (`41 passed, 218 assertions`) واجتياز اختبارات تعديل وحذف الفحوصات وشريط المراحل (`7 passed, 38 assertions`) دون أي تعارض أو كسر في الوظائف.
+
+## Session log (2026-10-22 — المرحلة 104: تحويل كشف مطالبات الضمان الصحي إلى العرض التجميعي حسب المرضى تباعاً مع مجاميع الاستحقاق وتصحيح استعلام البحث Health Insurance Claims Patient-Grouped Sequential View, Service Rows, Subtotals, View Mode Toggle & Search Fix)
+
+### Done
+- **العرض التجميعي الذكي حسب المريض تباعاً ([resources/views/insurance/claims/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/insurance/claims/index.blade.php))**:
+  * تحويل الواجهة الرئيسية لتظهر كل مريض على حدة في ترويسة رئيسية مميزة (الاسم، فئة الضمان بشارتها الملونة، رقم بطاقة الضمان، الهاتف، رقم الملف، وإجمالي عدد خدماته).
+  * عرض كافة خدمات وفحوصات هذا المريض الطبية مسردة تباعاً بسطور تفصيلية (رقم الوصل، وقته، القسم، الطبيب المعالج، تفاصيل الفحص الطبي الدقيق، السعر الكلي، نقد المريض، ومطالبة الضمان ونسبة التغطية مع زر الطباعة).
+  * سطر ملخص ومجاميع خاص بكل مريض (Subtotal) يحسب إجمالي القيمة الاستحقاقية لخدماته، إجمالي تحمله نقداً، وإجمالي مطالبة الضمان للمستشفى.
+  * بعد انتهاء خدمات ومجاميع المريض، يبدأ المريض التالي مباشرة بنفس الترتيب السلس والواضح.
+  * توفير مبدل عرض مرن (View Mode Switcher): `[ حسب المريض (مجمّع) ]` و `[ حسب الوصل (تفصيلي) ]` للتبديل الفوري بنقرة زر واحدة.
+- **تطوير الكنترولر والاستعلامات ([app/Http/Controllers/HealthInsuranceClaimController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceClaimController.php))**:
+  * استعلام تجميعي فائق الكفاءة والسرعة يجمع مطالبات كل مريض مع ترقيم صفحات المرضى (`paginate(15)`) وتحميل العلاقات مسبقاً لمنع أي استعلامات متكررة (N+1).
+  * حصر ومعالجة الدفعات التي قد لا ترتبط بملف مريض محدد في قسم مستقل لضمان عدم ضياع أي دينار.
+  * تصحيح استعلام البحث النصي (`search`): البحث عن اسم المريض ورقم هاتفه عبر علاقة `user` الصحيحة في قاعدة البيانات وحل استثناء `1054 Unknown column 'name'`.
+- **ترقية تصدير ملفات Excel ([app/Exports/HealthInsuranceClaimsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/HealthInsuranceClaimsExport.php))**:
+  * دعم تصدير ملف الإكسيل بنمطين متوافقين مع العرض النشط: تصدير شيت ملخص المرضى واستحقاقاتهم التراكمية، أو تصدير كشف الوصولات الفردية بكامل أعمدته الـ 16.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/HealthInsuranceClaimsReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php))**:
+  * توسيع الاختبارات إلى 6 اختبارات آلية ميزة تؤكد ظهور المرضى وخدماتهم المجمعة ومجاميع الاستحقاق، وعمل البحث بالاسم العربي للمريض بنجاح مع اجتياز كامل (`6 passed, 24 assertions`).
+
+## Session log (2026-10-22 — المرحلة 103: تدشين واجهة وسجلات مطالبات الضمان الصحي الشاملة: فئات المرضى، تفاصيل الخدمات، أسعارها، حصص المرضى والضمان، اسم الطبيب، وتصدير Excel Health Insurance Claims Interface, Patient Categories, Service Details, Pricing, Doctor Names & Excel Export)
+
+### Done
+- **بناء واجهة كشوفات ومطالبات الضمان الصحي المخصصة ([resources/views/insurance/claims/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/insurance/claims/index.blade.php))**:
+  * واجهة تنفيذية متكاملة تتيح تتبع ومراجعة كافة الخدمات المقدمة للمرضى المشمولين بالضمان الصحي الوطني وقوى الأمن والتعاقدات.
+  * عرض اسم المريض، فئة الضمان (`الفئة A`, `الفئة H`, `الفئة D`...) مع شارات ملونة لكل فئة، رقم باج/بطاقة الضمان، نوع الخدمة/القسم، اسم الطبيب المعالج/الاستشاري، تفاصيل الفحوصات الطبية الدقيقة، السعر الكلي، المبلغ المدفوع نقداً، ومطالبة الضمان، مع نسبة التغطية.
+  * شريط كروت مؤشرات تنفيذية خماسي (إجمالي مطالبات الضمان، تحمل المرضى نقداً، إجمالي القيمة الاستحقاقية، عدد الخدمات المسددة، والمرضى المستفيدين).
+  * شريط تصفية سريع حسب فئات الضمان يوضح إحصائيات كل فئة ومطالباتها مع الفلترة بنقرة زر واحدة.
+  * فلاتر متقدمة تشمل: الفترات الزمنية السريعة (اليوم، أمس، هذا الأسبوع، هذا الشهر، الشهر السابق، هذا العام، كل الأوقات)، نطاق التاريخ المخصص، فئة الضمان، القسم، الطبيب، والبحث السريع.
+- **الكنترولر ومنطق احتساب الاستحقاقات ([app/Http/Controllers/HealthInsuranceClaimController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceClaimController.php))**:
+  * استعلام دقيق يغطي كافة الدفعات المسددة التي تشمل حصة ضمان أو تصنيف تأميني مع معالجة حصرية لأسماء الجداول (`payments.`) لمنع أي تضارب بين الحقول.
+  * احتساب المؤشرات اللحظية والإحصائيات التجميعية استحقاقياً وتوزيع الفئات، مع ترقيم الصفحات (`paginate(25)`).
+- **تصدير إكسيل رسمي ومطابق لمعايير هيئات الضمان ([app/Exports/HealthInsuranceClaimsExport.php](file:///c:/wamp64/www/hospital-system/app/Exports/HealthInsuranceClaimsExport.php))**:
+  * توليد شيت إكسيل منسق ومبوب بـ 16 عموداً شاملاً كافة بيانات المطالبة، المريض، فئته، طبيبه، وتفاصيل الخدمة ومبالغها.
+- **توسيع نموذج المدفوعات والوصول الموحد ([app/Models/Payment.php](file:///c:/wamp64/www/hospital-system/app/Models/Payment.php))**:
+  * إضافة دوال الوصول: `attending_doctor_name` (استخراج اسم الطبيب النظيف من الكشفية أو الزيارة أو الطوارئ أو الجراحة)، `service_details_text` (تجميع كافة الفحوصات والخدمات المقدمة في الإيصال)، و `insurance_type_label`.
+- **ربط المسارات والقائمة الجانبية الموحدة ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php) & [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إضافة مسارات `Route::prefix('insurance-claims')` للواجهة والتصدير.
+  * إضافة رابط `مطالبات وسجلات الضمان` ضمن قسم الحسابات العامة والمالية بالقائمة الجانبية.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/HealthInsuranceClaimsReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php))**:
+  * بناء 4 اختبارات ميزة متكاملة تؤكد الحماية، صحة عرض البيانات وأسماء الأطباء وفئات الضمان، فلترة الفئات، وتصدير ملف Excel مع اجتياز كامل (`4 passed, 15 assertions`).
 
 ## Session log (2026-10-22 — المرحلة 102: التدقيق المالي الشامل لخزينة المستشفى، الشريط التنفيذي ذو الـ 6 كروت، مطالبات الضمان ومستحقات الأطباء المعلقة، وتفكيك وسائط الأشعة والتصوير Hospital Treasury Financial Audit, 6 Executive Cards Strip, Insurance Claims Receivable, Doctor Liabilities & Radiology Modalities Decomposition)
 
@@ -2015,3 +2305,285 @@ Consult these files before making changes or proposing fixes:
 
 ## Historical Session Logs Archive (أرشيف الجلسات السابقة)
 تمت أرشفة سجلات الجلسات والمراحل من 1 إلى 30 في الملف المنفصل: [docs/SESSION_ARCHIVE.md](docs/SESSION_ARCHIVE.md) لتسريع معالجة الوكلاء والذاكرة.
+
+===
+
+<laravel-boost-guidelines>
+=== foundation rules ===
+
+# Laravel Boost Guidelines
+
+The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to enhance the user's satisfaction building Laravel applications.
+
+## Foundational Context
+This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
+
+- php - 8.2.12
+- laravel/framework (LARAVEL) - v12
+- laravel/prompts (PROMPTS) - v0
+- laravel/mcp (MCP) - v0
+- laravel/pint (PINT) - v1
+- laravel/sail (SAIL) - v1
+- phpunit/phpunit (PHPUNIT) - v11
+- laravel-echo (ECHO) - v2
+- tailwindcss (TAILWINDCSS) - v4
+
+## Conventions
+- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, naming.
+- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
+- Check for existing components to reuse before writing a new one.
+
+## Verification Scripts
+- Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
+
+## Application Structure & Architecture
+- Stick to existing directory structure - don't create new base folders without approval.
+- Do not change the application's dependencies without approval.
+
+## Frontend Bundling
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+
+## Replies
+- Be concise in your explanations - focus on what's important rather than explaining obvious details.
+
+## Documentation Files
+- You must only create documentation files if explicitly requested by the user.
+
+
+=== boost rules ===
+
+## Laravel Boost
+- Laravel Boost is an MCP server that comes with powerful tools designed specifically for this application. Use them.
+
+## Artisan
+- Use the `list-artisan-commands` tool when you need to call an Artisan command to double check the available parameters.
+
+## URLs
+- Whenever you share a project URL with the user you should use the `get-absolute-url` tool to ensure you're using the correct scheme, domain / IP, and port.
+
+## Tinker / Debugging
+- You should use the `tinker` tool when you need to execute PHP to debug code or query Eloquent models directly.
+- Use the `database-query` tool when you only need to read from the database.
+
+## Reading Browser Logs With the `browser-logs` Tool
+- You can read browser logs, errors, and exceptions using the `browser-logs` tool from Boost.
+- Only recent browser logs will be useful - ignore old logs.
+
+## Searching Documentation (Critically Important)
+- Boost comes with a powerful `search-docs` tool you should use before any other approaches. This tool automatically passes a list of installed packages and their versions to the remote Boost API, so it returns only version-specific documentation specific for the user's circumstance. You should pass an array of packages to filter on if you know you need docs for particular packages.
+- The 'search-docs' tool is perfect for all Laravel related packages, including Laravel, Inertia, Livewire, Filament, Tailwind, Pest, Nova, Nightwatch, etc.
+- You must use this tool to search for Laravel-ecosystem documentation before falling back to other approaches.
+- Search the documentation before making code changes to ensure we are taking the correct approach.
+- Use multiple, broad, simple, topic based queries to start. For example: `['rate limiting', 'routing rate limiting', 'routing']`.
+- Do not add package names to queries - package information is already shared. For example, use `test resource table`, not `filament 4 test resource table`.
+
+### Available Search Syntax
+- You can and should pass multiple queries at once. The most relevant results will be returned first.
+
+1. Simple Word Searches with auto-stemming - query=authentication - finds 'authenticate' and 'auth'
+2. Multiple Words (AND Logic) - query=rate limit - finds knowledge containing both "rate" AND "limit"
+3. Quoted Phrases (Exact Position) - query="infinite scroll" - Words must be adjacent and in that order
+4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit"
+5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms
+
+
+=== php rules ===
+
+## PHP
+
+- Always use curly braces for control structures, even if it has one line.
+
+### Constructors
+- Use PHP 8 constructor property promotion in `__construct()`.
+    - <code-snippet>public function __construct(public GitHub $github) { }</code-snippet>
+- Do not allow empty `__construct()` methods with zero parameters.
+
+### Type Declarations
+- Always use explicit return type declarations for methods and functions.
+- Use appropriate PHP type hints for method parameters.
+
+<code-snippet name="Explicit Return Types and Method Params" lang="php">
+protected function isAccessible(User $user, ?string $path = null): bool
+{
+    ...
+}
+</code-snippet>
+
+## Comments
+- Prefer PHPDoc blocks over comments. Never use comments within the code itself unless there is something _very_ complex going on.
+
+## PHPDoc Blocks
+- Add useful array shape type definitions for arrays when appropriate.
+
+## Enums
+- Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
+
+
+=== tests rules ===
+
+## Test Enforcement
+
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test` with a specific filename or filter.
+
+
+=== laravel/core rules ===
+
+## Do Things the Laravel Way
+
+- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using the `list-artisan-commands` tool.
+- If you're creating a generic PHP class, use `php artisan make:class`.
+- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
+
+### Database
+- Always use proper Eloquent relationship methods with return type hints. Prefer relationship methods over raw queries or manual joins.
+- Use Eloquent models and relationships before suggesting raw database queries
+- Avoid `DB::`; prefer `Model::query()`. Generate code that leverages Laravel's ORM capabilities rather than bypassing them.
+- Generate code that prevents N+1 query problems by using eager loading.
+- Use Laravel's query builder for very complex database operations.
+
+### Model Creation
+- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
+
+### APIs & Eloquent Resources
+- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
+
+### Controllers & Validation
+- Always create Form Request classes for validation rather than inline validation in controllers. Include both validation rules and custom error messages.
+- Check sibling Form Requests to see if the application uses array or string based validation rules.
+
+### Queues
+- Use queued jobs for time-consuming operations with the `ShouldQueue` interface.
+
+### Authentication & Authorization
+- Use Laravel's built-in authentication and authorization features (gates, policies, Sanctum, etc.).
+
+### URL Generation
+- When generating links to other pages, prefer named routes and the `route()` function.
+
+### Configuration
+- Use environment variables only in configuration files - never use the `env()` function directly outside of config files. Always use `config('app.name')`, not `env('APP_NAME')`.
+
+### Testing
+- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
+- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
+- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+
+### Vite Error
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+
+
+=== laravel/v12 rules ===
+
+## Laravel 12
+
+- Use the `search-docs` tool to get version specific documentation.
+- Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
+
+### Laravel 12 Structure
+- No middleware files in `app/Http/Middleware/`.
+- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
+- `bootstrap/providers.php` contains application specific service providers.
+- **No app\Console\Kernel.php** - use `bootstrap/app.php` or `routes/console.php` for console configuration.
+- **Commands auto-register** - files in `app/Console/Commands/` are automatically available and do not require manual registration.
+
+### Database
+- When modifying a column, the migration must include all of the attributes that were previously defined on the column. Otherwise, they will be dropped and lost.
+- Laravel 11 allows limiting eagerly loaded records natively, without external packages: `$query->latest()->limit(10);`.
+
+### Models
+- Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
+
+
+=== pint/core rules ===
+
+## Laravel Pint Code Formatter
+
+- You must run `vendor/bin/pint --dirty` before finalizing changes to ensure your code matches the project's expected style.
+- Do not run `vendor/bin/pint --test`, simply run `vendor/bin/pint` to fix any formatting issues.
+
+
+=== phpunit/core rules ===
+
+## PHPUnit Core
+
+- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit {name}` to create a new test.
+- If you see a test using "Pest", convert it to PHPUnit.
+- Every time a test has been updated, run that singular test.
+- When the tests relating to your feature are passing, ask the user if they would like to also run the entire test suite to make sure everything is still passing.
+- Tests should test all of the happy paths, failure paths, and weird paths.
+- You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files, these are core to the application.
+
+### Running Tests
+- Run the minimal number of tests, using an appropriate filter, before finalizing.
+- To run all tests: `php artisan test`.
+- To run all tests in a file: `php artisan test tests/Feature/ExampleTest.php`.
+- To filter on a particular test name: `php artisan test --filter=testName` (recommended after making a change to a related file).
+
+
+=== tailwindcss/core rules ===
+
+## Tailwind Core
+
+- Use Tailwind CSS classes to style HTML, check and use existing tailwind conventions within the project before writing your own.
+- Offer to extract repeated patterns into components that match the project's conventions (i.e. Blade, JSX, Vue, etc..)
+- Think through class placement, order, priority, and defaults - remove redundant classes, add classes to parent or child carefully to limit repetition, group elements logically
+- You can use the `search-docs` tool to get exact examples from the official documentation when needed.
+
+### Spacing
+- When listing items, use gap utilities for spacing, don't use margins.
+
+    <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+        <div class="flex gap-8">
+            <div>Superior</div>
+            <div>Michigan</div>
+            <div>Erie</div>
+        </div>
+    </code-snippet>
+
+
+### Dark Mode
+- If existing pages and components support dark mode, new pages and components must support dark mode in a similar way, typically using `dark:`.
+
+
+=== tailwindcss/v4 rules ===
+
+## Tailwind 4
+
+- Always use Tailwind CSS v4 - do not use the deprecated utilities.
+- `corePlugins` is not supported in Tailwind v4.
+- In Tailwind v4, configuration is CSS-first using the `@theme` directive — no separate `tailwind.config.js` file is needed.
+<code-snippet name="Extending Theme in CSS" lang="css">
+@theme {
+  --color-brand: oklch(0.72 0.11 178);
+}
+</code-snippet>
+
+- In Tailwind v4, you import Tailwind using a regular CSS `@import` statement, not using the `@tailwind` directives used in v3:
+
+<code-snippet name="Tailwind v4 Import Tailwind Diff" lang="diff">
+   - @tailwind base;
+   - @tailwind components;
+   - @tailwind utilities;
+   + @import "tailwindcss";
+</code-snippet>
+
+
+### Replaced Utilities
+- Tailwind v4 removed deprecated utilities. Do not use the deprecated option - use the replacement.
+- Opacity values are still numeric.
+
+| Deprecated |	Replacement |
+|------------+--------------|
+| bg-opacity-* | bg-black/* |
+| text-opacity-* | text-black/* |
+| border-opacity-* | border-black/* |
+| divide-opacity-* | divide-black/* |
+| ring-opacity-* | ring-black/* |
+| placeholder-opacity-* | placeholder-black/* |
+| flex-shrink-* | shrink-* |
+| flex-grow-* | grow-* |
+| overflow-ellipsis | text-ellipsis |
+| decoration-slice | box-decoration-slice |
+| decoration-clone | box-decoration-clone |
+</laravel-boost-guidelines>

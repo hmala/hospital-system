@@ -28,23 +28,7 @@
                             <h4 class="mb-1 fw-bold">
                                 <i class="fas fa-user-shield me-2"></i> تعديل صلاحيات الدور: 
                                 <span class="badge bg-light text-primary px-3 py-2 ms-2 fs-6">
-                                    @switch($role->name)
-                                        @case('admin') مدير النظام @break
-                                        @case('admin-hsop') مدير المستشفى @break
-                                        @case('hospital_admin') مدير المستشفى @break
-                                        @case('doctor') طبيب استشاري @break
-                                        @case('patient') مريض @break
-                                        @case('receptionist') موظف استقبال @break
-                                        @case('cashier') كاشير الصندوق @break
-                                        @case('lab_staff') موظف مختبر @break
-                                        @case('radiology_staff') موظف أشعة وسونار @break
-                                        @case('pharmacy_staff') موظف صيدلية @break
-                                        @case('surgery_staff') موظف عمليات @break
-                                        @case('nurse') كادر تمريضي @break
-                                        @case('emergency_staff') موظف طوارئ @break
-                                        @case('consultation_receptionist') موظف استعلامات الاستشارية @break
-                                        @default {{ $role->name }}
-                                    @endswitch
+                                    {{ \App\Http\Controllers\RoleManagementController::getRoleLabel($role->name)['label'] }}
                                 </span>
                             </h4>
                             <small class="text-white-50">تحديد وتخصيص الصلاحيات التشغيلية والإدارية الممنوحة لهذا الدور</small>

@@ -177,6 +177,35 @@
     margin-bottom: 1.5rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+
+/* Executive KPI Metrics */
+.kpi-metric-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 0.9rem 1.1rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+    border-color: #cbd5e1;
+}
+.kpi-metric-card.active-card {
+    box-shadow: 0 0 0 2px #2563eb, 0 8px 16px rgba(37,99,235,0.12);
+}
+.kpi-metric-card .icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
 </style>
 
 <div class="container-fluid px-3 px-md-4 py-3" id="radiology-hub-content">
@@ -224,7 +253,7 @@
         </div>
 
         <!-- Quick Category Switcher (Admins & General Roles) -->
-        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist', 'radiology_staff']) || empty($userCategory))
+        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'receptionist']) || empty($userCategory))
             <div class="d-flex flex-wrap gap-1 bg-white p-1 rounded-pill shadow-xs border">
                 <a href="{{ route('radiology-staff.index', ['category' => 'all', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'all' ? 'btn-primary shadow-xs' : 'btn-light text-dark' }}">
@@ -305,66 +334,196 @@
     </div>
     @endif
 
-    <!-- 3. Navigation Tabs -->
-    <ul class="nav nav-tabs mb-3 border-bottom" id="radiologyTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab">
-                <i class="fas {{ $selectedCategory === 'ultrasound' ? 'fa-bullhorn text-primary' : 'fa-list-check text-primary' }}"></i>
-                <span>{{ $selectedCategory === 'ultrasound' ? 'محطة الفحص والمناداة الحية' : 'قائمة الانتظار والطلبات الجديدة' }}</span>
-                <span class="badge bg-primary text-white rounded-pill px-2 py-1" id="badge-tab-waiting-count">{{ $stats['waiting'] }}</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex align-items-center gap-2" id="inprogress-tab" data-bs-toggle="tab" data-bs-target="#inprogress-pane" type="button" role="tab">
-                <i class="fas fa-stethoscope text-info"></i>
-                <span>قيد الفحص والتقرير</span>
-                <span class="badge bg-info text-white rounded-pill px-2 py-1" id="badge-tab-inprogress-count">{{ $stats['in_progress'] }}</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex align-items-center gap-2" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed-pane" type="button" role="tab">
-                <i class="fas fa-check-circle text-success"></i>
-                <span>المكتملة والطباعة</span>
-                <span class="badge bg-success text-white rounded-pill px-2 py-1" id="badge-tab-completed-count">{{ $stats['completed'] }}</span>
-            </button>
-        </li>
-        @if(($stats['emergency'] ?? 0) > 0)
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex align-items-center gap-2" id="emergency-tab" data-bs-toggle="tab" data-bs-target="#emergency-pane" type="button" role="tab">
-                <i class="fas fa-ambulance text-danger"></i>
-                <span>طوارئ</span>
-                <span class="badge bg-danger text-white rounded-pill px-2 py-1">{{ $stats['emergency'] }}</span>
-            </button>
-        </li>
-        @endif
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex align-items-center gap-2" id="nicu-tab" data-bs-toggle="tab" data-bs-target="#nicu-pane" type="button" role="tab">
-                <i class="fas fa-baby text-primary"></i>
-                <span>الخدج والحاضنات</span>
-                <span class="badge {{ ($stats['nicu'] ?? 0) > 0 ? 'bg-danger' : 'bg-primary' }} text-white rounded-pill px-2 py-1">{{ $stats['nicu'] ?? 0 }}</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex align-items-center gap-2" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab">
-                <i class="fas fa-list text-secondary"></i>
-                <span>جميع الطلبات والأرشيف</span>
-                <span class="badge bg-secondary rounded-pill px-2 py-1">{{ $stats['total'] }}</span>
-            </button>
-        </li>
-    </ul>
+    <!-- 2. بطاقات الأقسام: الاستشارية، طلبات الأشعة المباشرة، الطوارئ، وكافة الطلبات (مثل واجهة المختبر تماماً) -->
+    <div class="row g-2 mb-3" id="radiology-department-cards">
+        <!-- أ. طلبات العيادات الاستشارية -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100 kpi-metric-card cursor-pointer border-bottom border-primary border-4 {{ ($sourceFilter ?? '') === 'consultation' || ($activeTab ?? 'station') === 'station' ? 'shadow' : '' }}" 
+                 onclick="switchRadiologyTab('station-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات العيادات الاستشارية</span>
+                        <h4 class="mb-0 fw-bold text-primary font-monospace" id="kpi-consultation-count">{{ $counts['consultation'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.72rem;">فحوصات محولة من الأطباء</small>
+                    </div>
+                    <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <i class="fas fa-user-md fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ب. طلبات الأشعة المباشرة (الخارجية) -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100 kpi-metric-card cursor-pointer border-bottom border-info border-4 {{ ($sourceFilter ?? '') === 'direct' ? 'shadow' : '' }}" 
+                 onclick="switchRadiologyTab('direct-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات الأشعة المباشرة</span>
+                        <h4 class="mb-0 fw-bold text-info font-monospace" id="kpi-direct-count">{{ $counts['direct'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.72rem;">مراجعي الصندوق والاستقبال</small>
+                    </div>
+                    <div class="bg-info-subtle text-info p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <i class="fas fa-x-ray fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ج. أشعة وفحوصات قسم الطوارئ -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100 kpi-metric-card cursor-pointer border-bottom border-danger border-4 {{ ($sourceFilter ?? '') === 'emergency' || ($activeTab ?? '') === 'emergency' ? 'shadow' : '' }}" 
+                 onclick="switchRadiologyTab('emergency-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">أشعة وفحوصات قسم الطوارئ</span>
+                        <h4 class="mb-0 fw-bold text-danger font-monospace" id="kpi-emergency-count">{{ $counts['emergency'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.72rem;">حالات الطوارئ والكسور الحرجة</small>
+                    </div>
+                    <div class="bg-danger-subtle text-danger p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <i class="fas fa-ambulance fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- د. كافة طلبات القسم -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100 kpi-metric-card cursor-pointer border-bottom border-secondary border-4 {{ ($sourceFilter ?? '') === 'all' || ($activeTab ?? '') === 'all' ? 'shadow' : '' }}" 
+                 onclick="switchRadiologyTab('all-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">كافة طلبات القسم</span>
+                        <h4 class="mb-0 fw-bold text-dark font-monospace" id="kpi-all-count">{{ $counts['all'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.72rem;">مكتمل: {{ $counts['completed'] ?? 0 }} • معلق: {{ $counts['pending'] ?? 0 }}</small>
+                    </div>
+                    <div class="bg-secondary-subtle text-secondary p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <i class="fas fa-layer-group fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. شريط الفلترة والبحث والتبويبات حسب كل قسم (مطابق لواجهة طلبات المختبر) -->
+    <div class="card shadow-sm border-0 bg-white mb-3 rounded-3">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center justify-content-between">
+                <!-- التبويبات حسب الأقسام والمصادر -->
+                <div class="col-lg-7 col-12">
+                    <ul class="nav nav-pills gap-1" id="radiologyTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ in_array($activeTab, ['station', 'waiting']) || ($sourceFilter ?? '') === 'consultation' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab">
+                                <i class="fas fa-user-md"></i>
+                                <span>الاستشارية</span>
+                                <span class="badge {{ in_array($activeTab, ['station', 'waiting']) || ($sourceFilter ?? '') === 'consultation' ? 'bg-white text-primary' : 'bg-primary text-white' }} rounded-pill font-monospace" id="badge-tab-waiting-count">{{ $counts['consultation'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'direct' || ($sourceFilter ?? '') === 'direct' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="direct-tab" data-bs-toggle="tab" data-bs-target="#direct-pane" type="button" role="tab">
+                                <i class="fas fa-x-ray"></i>
+                                <span>طلبات مباشرة</span>
+                                <span class="badge {{ $activeTab === 'direct' || ($sourceFilter ?? '') === 'direct' ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill font-monospace" id="badge-tab-direct-count">{{ $counts['direct'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ in_array($activeTab, ['inprogress', 'in-progress']) ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="inprogress-tab" data-bs-toggle="tab" data-bs-target="#inprogress-pane" type="button" role="tab">
+                                <i class="fas fa-stethoscope"></i>
+                                <span>قيد الفحص</span>
+                                <span class="badge {{ in_array($activeTab, ['inprogress', 'in-progress']) ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill font-monospace" id="badge-tab-inprogress-count">{{ $counts['in_progress'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'completed' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed-pane" type="button" role="tab">
+                                <i class="fas fa-check-circle"></i>
+                                <span>المكتملة والطباعة</span>
+                                <span class="badge {{ $activeTab === 'completed' ? 'bg-white text-success' : 'bg-success text-white' }} rounded-pill font-monospace" id="badge-tab-completed-count">{{ $counts['completed'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'pending' || ($sourceFilter ?? '') === 'pending' ? 'active bg-warning text-dark' : 'text-dark' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab">
+                                <i class="fas fa-history text-warning"></i>
+                                <span>الطلبات المعلقة (أيام سابقة)</span>
+                                <span class="badge {{ $activeTab === 'pending' || ($sourceFilter ?? '') === 'pending' ? 'bg-white text-warning' : 'bg-warning text-dark' }} rounded-pill font-monospace" id="badge-tab-pending-count">{{ $counts['prior_pending'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'emergency' || ($sourceFilter ?? '') === 'emergency' ? 'active bg-danger text-white' : 'text-danger' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="emergency-tab" data-bs-toggle="tab" data-bs-target="#emergency-pane" type="button" role="tab">
+                                <i class="fas fa-ambulance"></i>
+                                <span>الطوارئ</span>
+                                <span class="badge {{ $activeTab === 'emergency' || ($sourceFilter ?? '') === 'emergency' ? 'bg-white text-danger' : 'bg-danger text-white' }} rounded-pill font-monospace">{{ $counts['emergency'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'active bg-primary text-white' : 'text-primary' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="nicu-tab" data-bs-toggle="tab" data-bs-target="#nicu-pane" type="button" role="tab">
+                                <i class="fas fa-baby"></i>
+                                <span>الخدج والحاضنات</span>
+                                <span class="badge {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'bg-white text-primary' : (($stats['nicu'] ?? 0) > 0 ? 'bg-danger text-white' : 'bg-primary text-white') }} rounded-pill font-monospace" id="badge-tab-nicu-count">{{ $stats['nicu'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab">
+                                <i class="fas fa-list"></i>
+                                <span>كافة الطلبات</span>
+                                <span class="badge {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'bg-white text-dark' : 'bg-secondary text-white' }} rounded-pill font-monospace">{{ $counts['all'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- شريط البحث والفلترة الموحد والشامل لكافة التبويبات -->
+                <div class="col-lg-5 col-12">
+                    <form method="GET" action="{{ route('radiology-staff.index') }}" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+                        <input type="hidden" name="tab" id="radiology-active-tab-input" value="{{ $activeTab }}">
+                        <input type="hidden" name="source" id="radiology-source-input" value="{{ $sourceFilter ?? ($activeTab === 'station' ? 'consultation' : $activeTab) }}">
+                        <input type="hidden" name="category" value="{{ $selectedCategory }}">
+                        
+                        <!-- فلتر التاريخ الموحد والشامل -->
+                        <div class="d-flex align-items-center gap-1">
+                            <select name="date" class="form-select form-select-sm" style="width: auto; min-width: 125px;" onchange="this.form.submit()">
+                                <option value="today" {{ ($dateFilter ?? '') === 'today' ? 'selected' : '' }}>📅 اليوم</option>
+                                <option value="yesterday" {{ ($dateFilter ?? '') === 'yesterday' ? 'selected' : '' }}>⏮️ أمس</option>
+                                <option value="week" {{ ($dateFilter ?? '') === 'week' ? 'selected' : '' }}>🗓️ هذا الأسبوع</option>
+                                <option value="month" {{ ($dateFilter ?? '') === 'month' ? 'selected' : '' }}>📆 هذا الشهر</option>
+                                <option value="all" {{ ($dateFilter ?? '') === 'all' ? 'selected' : '' }}>🗂️ كافة التواريخ</option>
+                            </select>
+                            <input type="date" name="custom_date" class="form-control form-control-sm" style="width: 130px;" 
+                                   value="{{ !in_array($dateFilter ?? '', ['today', 'yesterday', 'week', 'month', 'all']) ? $dateFilter : '' }}" 
+                                   title="اختر تاريخاً محدداً" onchange="this.form.submit()">
+                        </div>
+
+                        <!-- البحث السريع الموحد -->
+                        <div class="input-group input-group-sm" style="max-width: 220px;">
+                            <input type="text" name="search" id="radiology-search-input" class="form-control" 
+                                   placeholder="بحث باسم، رقم..." 
+                                   value="{{ $search }}">
+                            <button class="btn btn-primary" type="submit" title="بحث">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            @if(!empty($search) || ($dateFilter ?? 'today') !== 'today')
+                                <a href="{{ route('radiology-staff.index', ['category' => $selectedCategory, 'tab' => $activeTab, 'date' => 'today']) }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 4. Tab Content Panels -->
     <div class="tab-content" id="radiologyTabsContent">
         
-        <!-- 1. LIVE STATION TAB (طابور الانتظار الأولي والمناداة) -->
-        <div class="tab-pane fade show active" id="station-pane" role="tabpanel">
+        <!-- 1. LIVE STATION TAB (طلبات العيادات الاستشارية) -->
+        <div class="tab-pane fade {{ in_array($activeTab, ['station', 'waiting']) || ($sourceFilter ?? '') === 'consultation' ? 'show active' : '' }}" id="station-pane" role="tabpanel">
             
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
-                    <i class="fas fa-users-line me-2 text-primary"></i>
-                    طابور الانتظار الأولي (المرضى الجاهزون للفحص)
+                    <i class="fas fa-user-md me-2 text-primary"></i>
+                    طلبات العيادات الاستشارية (المحولة من الأطباء)
                 </h5>
-                <span class="badge bg-primary text-white" id="badge-live-waiting-count">{{ $stats['waiting'] }} منتظر</span>
+                <span class="badge bg-primary text-white" id="badge-live-waiting-count">{{ $counts['consultation'] ?? 0 }} طلب</span>
             </div>
 
             <div class="table-responsive">
@@ -384,7 +543,7 @@
                     </thead>
                     <tbody id="radiology-station-waiting-list">
                         @php $turnNum = 1; @endphp
-                        @forelse($waitingRequests as $req)
+                        @forelse($consultationRequests as $req)
                             @php
                                 $isNicu = !empty($req->incubator_reservation_id);
                                 $nicuRes = $isNicu ? $req->incubatorReservation : null;
@@ -394,7 +553,7 @@
                                 $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
                                 $qNum = $req->visit?->appointment?->queue_number ?? ($turnNum++);
                             @endphp
-                            <tr class="{{ $isCalling ? 'calling-row fw-bold' : '' }}" id="request-row-{{ $req->id }}">
+                            <tr class="{{ $isCalling ? 'calling-row fw-bold' : ($req->status === 'in_progress' ? 'inprogress-row' : ($req->status === 'completed' ? 'completed-row' : '')) }}" id="request-row-{{ $req->id }}">
                                 <td>
                                     <span class="badge {{ $isCalling ? 'bg-warning text-dark' : 'bg-dark bg-opacity-10 text-dark border' }} px-2 py-1 font-monospace fs-6">
                                         #{{ $qNum }}
@@ -467,7 +626,11 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @if($isCalling)
+                                    @if($req->status === 'completed')
+                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> مكتمل</span>
+                                    @elseif($req->status === 'in_progress')
+                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> قيد الفحص</span>
+                                    @elseif($isCalling)
                                         <span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> قيد النداء</span>
                                     @else
                                         <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>
@@ -475,7 +638,19 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end align-items-center">
-                                        @if($selectedCategory === 'ultrasound')
+                                        @if($req->status === 'completed')
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة التقرير">
+                                                <i class="fas fa-print me-1"></i> عرض / طباعة
+                                            </a>
+                                        @elseif($req->status === 'in_progress')
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs" title="كتابة التقرير">
+                                                <i class="fas fa-edit me-1"></i> كتابة التقرير
+                                            </a>
+                                        @elseif($isCalling)
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="إدخال وبدء الفحص">
+                                                <i class="fas fa-door-open me-1"></i> إدخال
+                                            </a>
+                                        @elseif($selectedCategory === 'ultrasound')
                                             @if($isPaid)
                                                 <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
                                                     <i class="fas fa-bullhorn"></i> نداء
@@ -504,7 +679,7 @@
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                                    <i class="fas fa-info-circle text-muted me-1"></i> لا توجد طلبات أشعة محولة من العيادات الاستشارية لهذا التاريخ
                                 </td>
                             </tr>
                         @endforelse
@@ -514,8 +689,119 @@
 
         </div>
 
+        <!-- DIRECT REQUESTS TAB (طلبات الأشعة المباشرة والاستقبال) -->
+        <div class="tab-pane fade {{ ($activeTab ?? '') === 'direct' ? 'show active' : '' }}" id="direct-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-x-ray me-2 text-info"></i>
+                    طلبات الأشعة المباشرة (مراجعي الصندوق وقسم الأشعة الخارجي)
+                </h5>
+                <span class="badge bg-info text-white" id="badge-direct-count">{{ $counts['direct'] ?? 0 }} طلب مباشر</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table unified-table mb-2">
+                    <thead>
+                        <tr>
+                            <th style="width: 75px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
+                            <th><i class="fas fa-user me-2"></i>المريض</th>
+                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
+                            <th><i class="fas fa-hospital me-2"></i>المصدر</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>الوقت</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
+                            <th class="text-end" style="width: 180px;"><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($directRequests as $req)
+                            @php
+                                $isPaid = $req->payment_status === 'paid';
+                                $p = $req->visit?->patient;
+                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                            @endphp
+                            <tr id="direct-row-{{ $req->id }}">
+                                <td class="font-monospace text-muted">#{{ $req->id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle" style="background: #e0f2fe; color: #0284c7; border-color: #bae6fd;">
+                                            {{ mb_substr($pName, 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong class="text-dark">{{ $pName }}</strong>
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if(!empty($req->radiology_names))
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($req->radiology_names as $rName)
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle fw-bold py-1 px-2">
+                                                    <i class="fas fa-x-ray fa-xs me-1"></i> {{ $rName }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">استقبال الصندوق / مباشر</div>
+                                    <small class="badge bg-light text-info border border-info-subtle" style="font-size: 0.68rem;">
+                                        مريض خارجي
+                                    </small>
+                                </td>
+                                <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
+                                <td class="text-center">
+                                    @if($isPaid)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                                    @else
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($req->status === 'completed')
+                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> مكتمل</span>
+                                    @elseif($req->status === 'in_progress')
+                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> قيد الفحص</span>
+                                    @else
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="معاينة وبدء الفحص">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </a>
+                                        @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
+                                            <button type="button" 
+                                                    class="action-btn btn-outline-danger" 
+                                                    title="إلغاء الطلب الخارجي"
+                                                    onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
+                                                <i class="fas fa-ban"></i> إلغاء
+                                            </button>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="fas fa-info-circle text-muted me-1"></i> لا توجد طلبات أشعة مباشرة مسجلة حالياً
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- 2. IN PROGRESS TAB (قيد الفحص والتقرير) -->
-        <div class="tab-pane fade" id="inprogress-pane" role="tabpanel">
+        <div class="tab-pane fade {{ in_array($activeTab, ['inprogress', 'in-progress']) ? 'show active' : '' }}" id="inprogress-pane" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-stethoscope me-2 text-info"></i>
@@ -580,7 +866,7 @@
         </div>
 
         <!-- 3. COMPLETED TAB (المكتملة والطباعة) -->
-        <div class="tab-pane fade" id="completed-pane" role="tabpanel">
+        <div class="tab-pane fade {{ $activeTab === 'completed' ? 'show active' : '' }}" id="completed-pane" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-check-circle me-2 text-success"></i>
@@ -644,63 +930,324 @@
             </div>
         </div>
 
-        <!-- 4. EMERGENCY TAB (If any) -->
-        @if(isset($emergencyRadiologyRequests) && $emergencyRadiologyRequests->count() > 0)
-        <div class="tab-pane fade" id="emergency-pane" role="tabpanel">
+        <!-- 3.5. PRIOR PENDING TAB (الطلبات المعلقة من أيام سابقة) -->
+        <div class="tab-pane fade {{ ($activeTab ?? '') === 'pending' ? 'show active' : '' }}" id="pending-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
+                <div>
+                    <h5 class="mb-1 text-dark fw-bold">
+                        <i class="fas fa-history text-warning me-2"></i>
+                        سجل الطلبات المعلقة وغير المكتملة من الأيام السابقة
+                    </h5>
+                    <small class="text-muted">
+                        الفحوصات المطلوبة في تواريخ سابقة وما زالت قيد الانتظار أو الإجراء ولم يتم اعتماد تقريرها النهائي
+                    </small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge {{ ($stats['prior_pending'] ?? 0) > 0 ? 'bg-danger' : 'bg-success' }} fs-6 px-3 py-2 rounded-pill">
+                        <i class="fas {{ ($stats['prior_pending'] ?? 0) > 0 ? 'fa-clock' : 'fa-check' }} me-1"></i>
+                        {{ $priorPendingRequests->count() }} طلب معلق
+                    </span>
+                </div>
+            </div>
+
             <div class="table-responsive">
-                <table class="table unified-table">
+                <table class="table unified-table mb-2">
                     <thead>
                         <tr>
-                            <th style="width: 90px;" class="text-center">رقم طوارئ</th>
-                            <th>المريض</th>
-                            <th>الفحوصات المطلوبة</th>
-                            <th style="width: 90px;" class="text-center">الأولوية</th>
-                            <th style="width: 80px;" class="text-center">الوقت</th>
-                            <th style="width: 100px;" class="text-center">الحالة</th>
-                            <th style="width: 120px;" class="text-center">الإجراءات</th>
+                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
+                            <th><i class="fas fa-user-md me-2"></i>الطبيب المحول / العيادة</th>
+                            <th style="width: 140px;" class="text-center"><i class="fas fa-calendar-alt me-1"></i>تاريخ الطلب الأصلي</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
+                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء والمتابعة</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($emergencyRadiologyRequests as $emReq)
-                        <tr class="{{ $emReq->status === 'pending' ? 'table-warning' : ($emReq->status === 'in_progress' ? 'table-info' : '') }}">
-                            <td class="text-center fw-bold text-danger">#{{ $emReq->emergency_id }}</td>
-                            <td class="fw-bold">{{ $emReq->patient->user->name ?? $emReq->patient->name ?? 'مريض' }}</td>
-                            <td>
-                                @foreach($emReq->radiologyTypes as $type)
-                                    <span class="badge bg-info text-white me-1">{{ $type->name }}</span>
-                                @endforeach
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ $emReq->priority === 'critical' ? 'danger' : 'warning text-dark' }}">
-                                    {{ $emReq->priority_text }}
-                                </span>
-                            </td>
-                            <td class="text-center small font-monospace">{{ optional($emReq->requested_at)->format('H:i') }}</td>
-                            <td class="text-center">
-                                <span class="{{ $emReq->status_badge_class }}">{{ $emReq->status_text }}</span>
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    @if($emReq->status === 'pending')
-                                        <form action="{{ route('staff.emergency-radiology.start', $emReq) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-primary btn-sm" title="بدء الفحص">
-                                                <i class="fas fa-play"></i>
-                                            </button>
-                                        </form>
-                                    @elseif($emReq->status === 'in_progress')
-                                        <a href="{{ route('staff.emergency-radiology.show', $emReq) }}" class="btn btn-success btn-sm" title="إدخال النتائج">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    @elseif($emReq->status === 'completed')
-                                        <a href="{{ route('staff.emergency-radiology.print', $emReq) }}" class="btn btn-outline-secondary btn-sm" target="_blank" title="طباعة">
-                                            <i class="fas fa-print"></i>
-                                        </a>
+                        @forelse($priorPendingRequests as $req)
+                            @php
+                                $isPaid = $req->payment_status === 'paid';
+                                $p = $req->visit?->patient;
+                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                            @endphp
+                            <tr id="prior-pending-row-{{ $req->id }}">
+                                <td class="font-monospace fw-bold text-dark">#{{ $req->id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ mb_substr($pName, 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong class="text-dark">{{ $pName }}</strong>
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if(!empty($req->radiology_names))
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($req->radiology_names as $rName)
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold py-1 px-2">
+                                                    <i class="fas fa-x-ray fa-xs me-1"></i> {{ $rName }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
                                     @endif
-                                </div>
-                            </td>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
+                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @if(!empty($req->doctor_notes))
+                                        <div class="mt-1">
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
+                                                <i class="fas fa-sticky-note text-warning me-1"></i> {{ $req->doctor_notes }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="text-center font-monospace">
+                                    <span class="d-block text-dark fw-bold" style="font-size: 0.85rem;">
+                                        {{ $req->created_at ? $req->created_at->format('Y-m-d') : '—' }}
+                                    </span>
+                                    <span class="badge bg-secondary-subtle text-muted" style="font-size: 0.7rem;">
+                                        {{ $req->created_at ? $req->created_at->diffForHumans() : '' }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if($isPaid)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold">
+                                            <i class="fas fa-check-circle me-1"></i> مدفوع
+                                        </span>
+                                    @else
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold">
+                                            <i class="fas fa-clock me-1"></i> غير مدفوع
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($req->status === 'in_progress')
+                                        <span class="badge bg-info text-white py-1 px-2">
+                                            <i class="fas fa-stethoscope me-1"></i> قيد الفحص
+                                        </span>
+                                    @elseif($req->status === 'calling')
+                                        <span class="badge bg-warning text-dark py-1 px-2">
+                                            <i class="fas fa-bullhorn me-1"></i> قيد النداء
+                                        </span>
+                                    @else
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">
+                                            ⏳ معلق
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="بدء أو استكمال الفحص">
+                                            <i class="fas fa-play me-1"></i> بدء / متابعة الفحص
+                                        </a>
+                                        @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
+                                            <button type="button" 
+                                                    class="action-btn btn-outline-danger" 
+                                                    title="إلغاء الطلب الخارجي"
+                                                    onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="py-3">
+                                        <i class="fas fa-check-circle text-success fa-3x mb-3 d-block opacity-75"></i>
+                                        <h6 class="fw-bold text-dark">ممتاز! لا توجد أي طلبات معلقة من أيام سابقة</h6>
+                                        <p class="small text-muted mb-0">كافة فحوصات الأيام الماضية مكتملة ومعتمدة بالكامل.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. EMERGENCY TAB (If any) -->
+        @if(isset($emergencyRadiologyRequests) && $emergencyRadiologyRequests->count() > 0)
+        <div class="tab-pane fade {{ ($activeTab ?? '') === 'emergency' ? 'show active' : '' }}" id="emergency-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-danger bg-opacity-10 rounded border border-danger-subtle">
+                <div>
+                    <h5 class="mb-1 text-danger fw-bold">
+                        <i class="fas fa-ambulance me-2"></i>
+                        سجل طلبات فحوصات قسم الطوارئ (الأولوية العاجلة والحرجة)
+                    </h5>
+                    <small class="text-muted">
+                        الفحوصات المطلوبة مباشرة من أطباء طوارئ المستشفى والمصنفة كحالات حرجة وعاجلة
+                    </small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge {{ ($stats['emergency'] ?? 0) > 0 ? 'bg-danger' : 'bg-secondary' }} fs-6 px-3 py-2 rounded-pill shadow-xs">
+                        <i class="fas fa-bolt me-1"></i>
+                        {{ $stats['emergency'] ?? 0 }} قيد الانتظار والفحص
+                    </span>
+                    <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">
+                        إجمالي الطوارئ: {{ $emergencyRadiologyRequests->count() }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table unified-table mb-2">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
+                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
+                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
+                            <th><i class="fas fa-user-md me-2"></i>طبيب الطوارئ المحول</th>
+                            <th style="width: 130px;" class="text-center"><i class="fas fa-exclamation-circle me-1"></i>الأولوية والوقت</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
+                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء والتقرير</th>
                         </tr>
-                        @endforeach
+                    </thead>
+                    <tbody>
+                        @forelse($emergencyRadiologyRequests as $emReq)
+                            @php
+                                $p = $emReq->patient ?? $emReq->emergency?->patient;
+                                $emP = $emReq->emergency?->emergencyPatient;
+                                $pName = $p?->name ?? $p?->user?->name ?? $emP?->name ?? 'مريض طوارئ';
+                                $pAge = $p?->age ?? $emP?->age;
+                                $pGender = $p?->gender ?? $emP?->gender;
+                                $pMedNum = $p?->medical_number ?? $emP?->emergency_number;
+                                $isPaid = ($emReq->payment_status === 'paid' || $emReq->payment_id);
+                                $docName = $emReq->emergency?->doctor?->user?->name ?? $emReq->emergency?->consultantDoctor?->user?->name ?? 'طبيب الطوارئ';
+                                $isCritical = ($emReq->priority === 'critical');
+                            @endphp
+                            <tr class="{{ $emReq->status === 'pending' ? 'table-warning' : ($emReq->status === 'in_progress' ? 'table-info' : '') }}" id="emergency-request-row-{{ $emReq->id }}">
+                                <td>
+                                    <span class="font-monospace fw-bold text-dark d-block">#{{ $emReq->id }}</span>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle font-monospace" style="font-size: 0.68rem;">
+                                        طوارئ #{{ $emReq->emergency_id }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle {{ $isCritical ? 'bg-danger text-white' : '' }}">
+                                            {{ mb_substr($pName, 0, 1) }}
+                                        </div>
+                                        <div class="ms-2">
+                                            <strong class="text-dark">{{ $pName }}</strong>
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                                @if($pGender) <span>{{ $pGender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                @if($pAge) <span>{{ $pAge }} سنة</span> @endif
+                                                @if($pMedNum) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $pMedNum }}</span> @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach($emReq->radiologyTypes as $type)
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold py-1 px-2">
+                                                <i class="fas fa-x-ray fa-xs me-1"></i> {{ $type->name }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                    @if(!empty($emReq->notes))
+                                        <div class="mt-1">
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $emReq->notes }}">
+                                                <i class="fas fa-sticky-note text-warning me-1"></i> {{ $emReq->notes }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">د. {{ $docName }}</div>
+                                    <small class="badge bg-light text-danger border border-danger-subtle" style="font-size: 0.68rem;">
+                                        <i class="fas fa-ambulance me-1"></i> قسم الطوارئ
+                                    </small>
+                                </td>
+                                <td class="text-center font-monospace">
+                                    <span class="badge bg-{{ $isCritical ? 'danger' : 'warning text-dark' }} py-1 px-2 fw-bold d-inline-block">
+                                        <i class="fas {{ $isCritical ? 'fa-exclamation-triangle' : 'fa-bolt' }} me-1"></i>
+                                        {{ $emReq->priority_text }}
+                                    </span>
+                                    <small class="d-block text-muted mt-1" style="font-size: 0.72rem;">
+                                        <i class="fas fa-clock me-1"></i> {{ optional($emReq->requested_at)->format('H:i') }}
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    @if($isPaid)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold">
+                                            <i class="fas fa-check-circle me-1"></i> مدفوع
+                                        </span>
+                                    @elseif($emReq->payment_status === 'refunded')
+                                        <span class="badge bg-secondary text-white py-1 px-2 fw-bold">
+                                            <i class="fas fa-undo me-1"></i> مسترجع
+                                        </span>
+                                    @else
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold">
+                                            <i class="fas fa-clock me-1"></i> غير مدفوع
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @if($emReq->status === 'in_progress')
+                                        <span class="badge bg-info text-white py-1 px-2 fw-bold">
+                                            <i class="fas fa-stethoscope me-1"></i> قيد الفحص
+                                        </span>
+                                    @elseif($emReq->status === 'completed')
+                                        <span class="badge bg-success text-white py-1 px-2 fw-bold">
+                                            <i class="fas fa-check-circle me-1"></i> مكتمل
+                                        </span>
+                                    @elseif($emReq->status === 'cancelled')
+                                        <span class="badge bg-danger-subtle text-danger py-1 px-2">
+                                            ملغي
+                                        </span>
+                                    @else
+                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2 fw-bold">
+                                            ⏳ بالانتظار
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        @if($emReq->status === 'pending')
+                                            <form action="{{ route('staff.emergency-radiology.start', $emReq) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="action-btn btn-primary fw-bold shadow-xs" title="بدء فحص الطوارئ">
+                                                    <i class="fas fa-play me-1"></i> بدء الفحص
+                                                </button>
+                                            </form>
+                                        @elseif($emReq->status === 'in_progress')
+                                            <a href="{{ route('staff.emergency-radiology.show', $emReq) }}" class="action-btn btn-success fw-bold shadow-xs" title="إدخال النتائج والتقرير">
+                                                <i class="fas fa-edit me-1"></i> إدخال التقرير
+                                            </a>
+                                        @elseif($emReq->status === 'completed')
+                                            <a href="{{ route('staff.emergency-radiology.print', $emReq) }}" class="action-btn btn-outline-primary fw-bold shadow-xs" target="_blank" title="عرض وطباعة التقرير">
+                                                <i class="fas fa-print me-1"></i> عرض / طباعة
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="py-3">
+                                        <i class="fas fa-ambulance text-secondary fa-3x mb-3 d-block opacity-50"></i>
+                                        <h6 class="fw-bold text-dark">لا توجد طلبات أشعة طارئة حالياً</h6>
+                                        <p class="small text-muted mb-0">جميع طلبات الطوارئ معالجة أو لا توجد حالات محولة.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -889,24 +1436,13 @@
         </div>
 
         <!-- 5. ALL / ARCHIVE TAB -->
-        <div class="tab-pane fade" id="all-pane" role="tabpanel">
-            <div class="card border-0 shadow-xs mb-3 bg-light p-3">
-                <form action="{{ route('radiology-staff.index') }}" method="GET" class="row g-2 align-items-center">
-                    <input type="hidden" name="tab" value="all">
-                    <input type="hidden" name="category" value="{{ $selectedCategory }}">
-                    <div class="col-auto">
-                        <select name="date" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="today" {{ $dateFilter === 'today' ? 'selected' : '' }}>📅 اليوم</option>
-                            <option value="all" {{ $dateFilter === 'all' ? 'selected' : '' }}>🗂️ كل التواريخ</option>
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <input type="text" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="بحث بالاسم أو الفحص...">
-                    </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm">بحث</button>
-                    </div>
-                </form>
+        <div class="tab-pane fade {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'show active' : '' }}" id="all-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-list text-secondary me-2"></i>
+                    سجل كافة طلبات وأرشيف الأشعة والتصوير الطبي
+                </h5>
+                <span class="badge bg-secondary text-white">{{ $requests->total() }} طلب إجمالي</span>
             </div>
 
             <div class="table-responsive">
@@ -1082,8 +1618,22 @@ async function syncRadiologyQueue() {
             document.getElementById('badge-tab-waiting-count').textContent = data.stats.waiting;
             document.getElementById('badge-tab-inprogress-count').textContent = data.stats.in_progress;
             document.getElementById('badge-tab-completed-count').textContent = data.stats.completed;
+            if (document.getElementById('badge-tab-pending-count') && data.stats.prior_pending !== undefined) {
+                document.getElementById('badge-tab-pending-count').textContent = data.stats.prior_pending;
+                if (data.stats.prior_pending > 0) {
+                    document.getElementById('badge-tab-pending-count').className = 'badge bg-danger text-white rounded-pill px-2 py-1';
+                } else {
+                    document.getElementById('badge-tab-pending-count').className = 'badge bg-secondary text-white rounded-pill px-2 py-1';
+                }
+            }
             document.getElementById('badge-live-waiting-count').textContent = `${data.stats.waiting} منتظر`;
             document.getElementById('badge-live-inprogress-count').textContent = `${data.stats.in_progress} قيد الفحص`;
+
+            // Update Executive KPI Strip Cards
+            if (document.getElementById('kpi-waiting-count')) document.getElementById('kpi-waiting-count').textContent = data.stats.waiting;
+            if (document.getElementById('kpi-inprogress-count')) document.getElementById('kpi-inprogress-count').textContent = data.stats.in_progress;
+            if (document.getElementById('kpi-completed-count')) document.getElementById('kpi-completed-count').textContent = data.stats.completed;
+            if (document.getElementById('kpi-pending-count') && data.stats.prior_pending !== undefined) document.getElementById('kpi-pending-count').textContent = data.stats.prior_pending;
         }
 
         // 3. Render Waiting List Table
@@ -1404,9 +1954,11 @@ function openCancelRadiologyModal(requestId, patientName) {
     modal.show();
 }
 
+@if(($dateFilter ?? 'today') === 'today')
 // Auto poll every 4s (matching doctor's main station)
 setInterval(syncRadiologyQueue, 4000);
 syncRadiologyQueue();
+@endif
 </script>
 
 <!-- مودال إلغاء الطلب الخارجي المباشر للأشعة -->
@@ -1443,7 +1995,6 @@ syncRadiologyQueue();
         </div>
     </div>
 </div>
-
 @if(isset($nicuRadiologyRequests) && $nicuRadiologyRequests->count() > 0)
     @foreach($nicuRadiologyRequests as $nicuRad)
         <div class="modal fade" id="completeNicuRadModal{{ $nicuRad->id }}" tabindex="-1" aria-hidden="true">
@@ -1510,4 +2061,97 @@ syncRadiologyQueue();
         </div>
     @endforeach
 @endif
+
+<!-- مودال المعاينة السريعة لبيانات فحص الأشعة -->
+<div class="modal fade" id="quickViewRadiologyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-file-medical me-2"></i> تفاصيل طلب الفحص <span id="qv-req-id" class="font-monospace"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-end">
+                <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded border">
+                    <div class="avatar-circle fs-4" id="qv-avatar">م</div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark" id="qv-patient-name"></h5>
+                        <small class="text-muted" id="qv-patient-info"></small>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="small text-muted fw-bold d-block">الطبيب المحول:</label>
+                        <span class="fw-semibold text-dark" id="qv-doctor-name"></span>
+                    </div>
+                    <div class="col-6">
+                        <label class="small text-muted fw-bold d-block">حالة السداد:</label>
+                        <span id="qv-payment"></span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="small text-muted fw-bold d-block">الفحوصات المطلوبة:</label>
+                    <div id="qv-tests" class="d-flex flex-wrap gap-1 mt-1"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="small text-muted fw-bold d-block">ملاحظات الطبيب المعالج:</label>
+                    <div class="p-2 bg-warning-subtle rounded border border-warning-subtle text-dark small" id="qv-notes"></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light justify-content-between">
+                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" id="qv-action-btn" class="btn btn-primary fw-bold px-4">
+                    <i class="fas fa-play me-1"></i> فتح محطة الفحص
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchRadiologyTab(tabId) {
+    const tabEl = document.getElementById(tabId);
+    if (tabEl) {
+        bootstrap.Tab.getOrCreateInstance(tabEl).show();
+    }
+}
+
+// Sync active tab inputs & department cards when tabs change
+document.addEventListener('DOMContentLoaded', function() {
+    const tabTriggers = document.querySelectorAll('#radiologyTabs button[data-bs-toggle="tab"]');
+    tabTriggers.forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            const target = e.target.id;
+            const tabName = target.replace('-tab', '');
+            
+            // مزامنة حقل التبويب المخفي في نموذج الفلترة والتاريخ
+            const tabInput = document.getElementById('radiology-active-tab-input');
+            const sourceInput = document.getElementById('radiology-source-input');
+            if (tabInput) tabInput.value = tabName;
+            if (sourceInput) {
+                if (tabName === 'station') sourceInput.value = 'consultation';
+                else if (tabName === 'direct') sourceInput.value = 'direct';
+                else if (tabName === 'emergency') sourceInput.value = 'emergency';
+                else if (tabName === 'nicu') sourceInput.value = 'nicu';
+                else if (tabName === 'all') sourceInput.value = 'all';
+                else sourceInput.value = tabName;
+            }
+
+            // مزامنة حالة التمييز في بطاقات الأقسام العلوية
+            const kpiMap = {
+                'station-tab': 0,
+                'direct-tab': 1,
+                'emergency-tab': 2,
+                'all-tab': 3
+            };
+            const cards = document.querySelectorAll('#radiology-department-cards .kpi-metric-card');
+            cards.forEach(c => c.classList.remove('shadow', 'border-4'));
+            if (kpiMap[target] !== undefined && cards[kpiMap[target]]) {
+                cards[kpiMap[target]].classList.add('shadow', 'border-4');
+            }
+        });
+    });
+});
+</script>
 @endsection

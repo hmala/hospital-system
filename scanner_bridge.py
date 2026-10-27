@@ -13,6 +13,14 @@ import tempfile
 app = Flask(__name__)
 CORS(app)  # السماح بالاتصال من الموقع
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response.headers['Access-Control-Allow-Private-Network'] = 'true'
+    return response
+
 # مسار NAPS2 (سيتم تثبيته مجاناً)
 NAPS2_PATH = r"C:\Program Files\NAPS2\naps2.console.exe"
 TEMP_DIR = tempfile.gettempdir()
@@ -22,7 +30,12 @@ def scan_document():
     """المسح من السكانر وإرجاع الصورة"""
     
     if request.method == 'OPTIONS':
-        return '', 200
+        resp = app.make_response(('', 204))
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        resp.headers['Access-Control-Allow-Private-Network'] = 'true'
+        return resp
     
     try:
         # إنشاء اسم ملف مؤقت
@@ -106,7 +119,8 @@ if __name__ == '__main__':
     print('  🖨️  برنامج الأرشفة - Hospital Scanner Bridge')
     print('═══════════════════════════════════════════════════')
     print()
-    print('✓ الخادم يعمل على: http://localhost:37426')
+    port = int(os.environ.get('SCANNER_PORT', 5000))
+    print(f'✓ الخادم يعمل على: http://localhost:{port}')
     print('✓ جاهز لاستقبال طلبات المسح من الموقع')
     print()
     print('💡 لإيقاف البرنامج: اضغط Ctrl+C')
@@ -114,4 +128,9 @@ if __name__ == '__main__':
     print()
     
     # تشغيل الخادم
-    app.run(host='127.0.0.1', port=37426, debug=False)
+    try:
+        app.run(host='127.0.0.1', port=port, debug=False)
+    except OSError:
+        if port != 37426:
+            print(f"⚠️ المنفذ {port} مشغول، جاري التبديل للمنفذ الاحتياطي 37426...")
+            app.run(host='127.0.0.1', port=37426, debug=False)

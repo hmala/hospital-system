@@ -15,6 +15,11 @@
                     <p class="text-muted mb-0">سجل الوصولات المالية والمقبوضات اليومية والتفصيلية</p>
                 </div>
                 <div class="d-flex gap-2">
+                    @canany(['void payment receipt', 'view cashier reports'])
+                        <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-outline-danger shadow-sm">
+                            <i class="fas fa-shield-alt me-1"></i> تدقيق الملغيات
+                        </a>
+                    @endcanany
                     <a href="{{ request()->fullUrlWithQuery(['print' => '1']) }}" target="_blank" class="btn btn-primary shadow-sm">
                         <i class="fas fa-print me-1"></i> طباعة التقرير (A4)
                     </a>

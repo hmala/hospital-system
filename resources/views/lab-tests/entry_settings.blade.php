@@ -477,7 +477,7 @@
         }
 
         // إرسال طلب التحديث عبر AJAX
-        fetch("{{ route('lab-tests.entry-settings.update', [], false) }}", {
+        fetch("{{ route('lab-tests.entry-settings.update') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -574,7 +574,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
 
-        fetch("{{ route('lab-tests.entry-settings.bulk-update', [], false) }}", {
+        fetch("{{ route('lab-tests.entry-settings.bulk-update') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -315,4 +315,59 @@ class LabGeneralUrinePageBreakAndCollisionFixTest extends TestCase
         $this->assertStringContainsString('Protein', $html);
         $this->assertStringContainsString('Pus cell', $html);
     }
+
+    public function test_requisition_work_order_does_not_duplicate_tests_when_both_ids_and_names_are_present()
+    {
+        $cbc = LabTest::create([
+            'name' => 'Complete blood count & Differential',
+            'code' => 'CBC2',
+            'price' => 10000,
+            'is_active' => true,
+        ]);
+
+        $ferritin = LabTest::create([
+            'name' => 'Ferritin',
+            'code' => 'FER2',
+            'price' => 12000,
+            'is_active' => true,
+        ]);
+
+        $tsh = LabTest::create([
+            'name' => 'Thyroid stimulating hormone',
+            'code' => 'TSH2',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        // Request with BOTH lab_test_ids AND tests containing the identical tests
+        $request = MedicalRequest::create([
+            'visit_id' => $this->visit->id,
+            'patient_id' => $this->patient->id,
+            'description' => 'طلب مختبر',
+            'type' => 'lab',
+            'status' => 'pending',
+            'details' => [
+                'tests' => ['Complete blood count & Differential', 'Ferritin', 'Thyroid stimulating hormone'],
+                'lab_test_ids' => [$cbc->id, $ferritin->id, $tsh->id],
+            ],
+        ]);
+
+        $response = $this->actingAs($this->labStaffUser)->get(route('lab.print', $request));
+        $response->assertStatus(200);
+
+        $html = $response->getContent();
+
+        // Count occurrences of each test in test-card titles
+        preg_match_all('/<div class="test-name">\s*(.*?)\s*<\/div>/s', $html, $matches);
+        $renderedTests = array_map('trim', $matches[1]);
+
+        // Must be exactly 3 tests rendered, not 6
+        $this->assertCount(3, $renderedTests);
+        $this->assertEquals([
+            'Complete blood count &amp; Differential',
+            'Ferritin',
+            'Thyroid stimulating hormone',
+        ], $renderedTests);
+    }
 }
+

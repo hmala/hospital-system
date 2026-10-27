@@ -1338,6 +1338,14 @@
         $sampleTime = $request->created_at ? $request->created_at->format('H:i A') : date('H:i A');
 
         $labResults = \App\Models\LabResult::where('request_id', $request->id)->orderBy('id')->get();
+        // Defensive deduplication of lab results by test identity
+        $seenResultKeys = [];
+        $labResults = $labResults->filter(function($r) use (&$seenResultKeys) {
+            $key = ($r->parent_test_name ?: '') . '::' . ($r->test_name ?: '') . '::' . ($r->sub_test_id ?: '');
+            if (isset($seenResultKeys[$key])) return false;
+            $seenResultKeys[$key] = true;
+            return true;
+        });
         $testsCount = $labResults->count();
 
         $prevResultsMap = method_exists($request, 'getPreviousLabResultsMap') ? $request->getPreviousLabResultsMap() : [];
@@ -1358,15 +1366,40 @@
             $testsCount = count($savedArr);
         }
 
-        // إذا لم تكن هناك نتائج مدخلة بعد، نستخرج قائمة التحاليل المطلوبة (Requisition / Work Order)
+        // إذا لم تكن هناك نتائج مدخلة بعد، نستخرج قائمة التحاليل المطلوبة (Requisition / Work Order) دون أي تكرار
         $requestedLabTestsList = [];
+        $seenTestKeys = [];
         $requestDetails = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         if (!is_array($requestDetails)) $requestDetails = [];
 
+        $addDistinctTest = function($testData) use (&$requestedLabTestsList, &$seenTestKeys) {
+            $id = is_array($testData) ? ($testData['id'] ?? null) : (is_object($testData) ? ($testData->id ?? null) : null);
+            $name = is_array($testData) ? ($testData['name'] ?? $testData['test_name'] ?? '') : (is_object($testData) ? ($testData->name ?? $testData->test_name ?? '') : (string)$testData);
+            $nameNorm = mb_strtolower(trim(preg_replace('/\s+/', ' ', (string)$name)));
+
+            if ($id && isset($seenTestKeys['id_' . $id])) {
+                return;
+            }
+            if ($nameNorm !== '' && isset($seenTestKeys['name_' . $nameNorm])) {
+                return;
+            }
+
+            if ($id) {
+                $seenTestKeys['id_' . $id] = true;
+            }
+            if ($nameNorm !== '') {
+                $seenTestKeys['name_' . $nameNorm] = true;
+            }
+
+            $requestedLabTestsList[] = is_object($testData) ? $testData->toArray() : (is_array($testData) ? $testData : ['name' => trim($name)]);
+        };
+
         if (!empty($requestDetails['package_id'])) {
             $pkg = \App\Models\Package::find($requestDetails['package_id']);
-            if ($pkg) {
-                $requestedLabTestsList = array_merge($requestedLabTestsList, $pkg->labTests->toArray());
+            if ($pkg && $pkg->labTests) {
+                foreach ($pkg->labTests as $pTest) {
+                    $addDistinctTest($pTest);
+                }
             }
         }
 
@@ -1378,7 +1411,7 @@
                 if ($testId === '') continue;
                 $labTestModel = \App\Models\LabTest::find($testId);
                 if ($labTestModel) {
-                    $requestedLabTestsList[] = $labTestModel->toArray();
+                    $addDistinctTest($labTestModel);
                 }
             }
         }
@@ -1388,9 +1421,15 @@
             $testsArr = is_string($rawTests) ? (json_decode($rawTests, true) ?: explode(',', $rawTests)) : (is_array($rawTests) ? $rawTests : []);
             foreach ($testsArr as $tItem) {
                 if (is_array($tItem)) {
-                    $requestedLabTestsList[] = $tItem;
+                    $addDistinctTest($tItem);
                 } elseif (is_string($tItem) && trim($tItem) !== '') {
-                    $requestedLabTestsList[] = ['name' => trim($tItem)];
+                    $nameTrim = trim($tItem);
+                    $dbTest = \App\Models\LabTest::where('name', $nameTrim)->first();
+                    if ($dbTest) {
+                        $addDistinctTest($dbTest);
+                    } else {
+                        $addDistinctTest(['name' => $nameTrim]);
+                    }
                 }
             }
         }
@@ -1436,12 +1475,34 @@
         $hasUrineContent = ($urineResults->count() > 0);
         $hasSavedResults = empty($hasStandardContent) && empty($hasUrineContent) && !empty($request->result) && count($savedArr ?? []) > 0;
         $hasWorkOrder = empty($hasStandardContent) && empty($hasUrineContent) && empty($hasSavedResults) && count($requestedLabTestsList ?? []) > 0;
+
+        // حصر الفحوصات المطلوبة التي لم تكتمل نتائجها بعد (مثل الزرع المخبري urine for c/s أو مرفقات الأجهزة قيد الانتظار)
+        $handledTestNames = $urineResults->pluck('parent_test_name')->filter()->unique()->toArray();
+        $handledTestNames = array_merge(
+            $handledTestNames,
+            $standardResults->pluck('test_name')->toArray(),
+            $standardResults->pluck('parent_test_name')->filter()->toArray()
+        );
+        if ($hasUrineContent) {
+            $handledTestNames[] = 'General Urine Examination';
+            $handledTestNames[] = 'GUE';
+            $handledTestNames[] = 'G.U.E';
+            $handledTestNames[] = 'تحليل البول العام';
+            $handledTestNames[] = 'فحص الإدرار العام';
+        }
+        $pendingTests = collect($requestedLabTestsList ?? [])->filter(function($item) use ($handledTestNames) {
+            $name = is_array($item) ? ($item['name'] ?? '') : (is_object($item) ? $item->name : (string)$item);
+            foreach ($handledTestNames as $hn) {
+                if (strcasecmp(trim($hn), trim($name)) === 0) return false;
+            }
+            return true;
+        });
     @endphp
 
     {{-- =========================================================================
          PAGE 1: Standard Laboratory Tests (or Full G.U.E if it's the only test)
          ========================================================================= --}}
-    @if($hasStandardContent || !$hasUrineContent)
+    @if($hasStandardContent || $hasUrineContent || $hasSavedResults || $hasWorkOrder || $isBloodBankRequest)
     <div class="report-page page-1">
 
         <div class="report-main-content">
@@ -1742,6 +1803,30 @@
                         </div>
                     @endforeach
                 </div>
+
+                @if($pendingTests->count() > 0)
+                    {{-- قسم الفحوصات المطلوبة وقيد الإجراء / الزرع المخبري --}}
+                    <div class="pending-tests-container" style="margin-top: 10px; margin-bottom: 8px; border: 1.2px dashed #0284c7; border-radius: 6px; padding: 6px 12px; background: #f0f9ff;">
+                        <div style="font-size: 11px; font-weight: 800; color: #0369a1; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                            <span><i class="fas fa-hourglass-half me-1"></i> فحص قيد الإجراء / الزرع المخبري (In Progress / Culture Pending):</span>
+                            <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 9.5px; border: 1px solid #bae6fd;">النتيجة تصدر لاحقاً</span>
+                        </div>
+                        @foreach($pendingTests as $pTest)
+                            @php
+                                $pName = is_array($pTest) ? ($pTest['name'] ?? '') : (is_object($pTest) ? $pTest->name : (string)$pTest);
+                                $hasAtt = !empty($testAtts[$pName]);
+                            @endphp
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 3px; font-size: 11px;">
+                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pName }}</span>
+                                @if($hasAtt)
+                                    <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 10px; border: 1px solid #bbf7d0;">✓ التقرير مرفق مع الفحص</span>
+                                @else
+                                    <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 10px; border: 1px solid #fde68a;">⏳ قيد الزرع / الفحص المخبري (Culture / Test In Progress)</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             @elseif($hasSavedResults)
                 @php
                     $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
@@ -1891,7 +1976,7 @@
 
         <!-- Pinned Bottom Block for Page 1 -->
         <div class="report-bottom-block">
-            @if(!$hasUrineContent)
+            @if(!($hasUrineContent && $hasStandardContent))
                 <!-- Official Authentication & Signatures Block (مكان التوقيع للاعتماد) -->
                 <div class="auth-block">
                     <div class="auth-cell">

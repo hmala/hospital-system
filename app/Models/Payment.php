@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Payment extends Model
 {
@@ -31,17 +31,23 @@ class Payment extends Model
         'description',
         'notes',
         'is_inclusive',
-        'paid_at'
+        'paid_at',
+        'voided_at',
+        'voided_by',
+        'void_type',
+        'void_reason',
+        'original_receipt_number',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'voided_at' => 'datetime',
         'amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'patient_share' => 'decimal:2',
         'insurance_share' => 'decimal:2',
         'copay_percentage' => 'decimal:2',
-        'is_inclusive' => 'boolean'
+        'is_inclusive' => 'boolean',
     ];
 
     // طرق الدفع المتاحة
@@ -49,7 +55,7 @@ class Payment extends Model
         'pending' => 'معلق',
         'cash' => 'نقدي',
         'card' => 'بطاقة',
-        'insurance' => 'تأمين'
+        'insurance' => 'تأمين',
     ];
 
     // أنواع الدفع
@@ -61,7 +67,7 @@ class Payment extends Model
         'surgery' => 'العمليات الجراحية',
         'emergency' => 'طوارئ وإسعاف',
         'incubator' => 'الخدج والحاضنات (NICU)',
-        'other' => 'أخرى'
+        'other' => 'أخرى',
     ];
 
     /**
@@ -134,27 +140,27 @@ class Payment extends Model
     public static function generateReceiptNumber()
     {
         $date = Carbon::now()->format('Ymd');
-        
+
         // البحث عن آخر رقم إيصال بنفس التاريخ
-        $lastPayment = self::where('receipt_number', 'like', 'REC-' . $date . '-%')
+        $lastPayment = self::where('receipt_number', 'like', 'REC-'.$date.'-%')
             ->orderBy('receipt_number', 'desc')
             ->first();
-        
+
         if ($lastPayment && $lastPayment->receipt_number) {
-            $sequence = (int)substr($lastPayment->receipt_number, -4) + 1;
+            $sequence = (int) substr($lastPayment->receipt_number, -4) + 1;
         } else {
             $sequence = 1;
         }
-        
+
         // التحقق من عدم وجود الرقم مسبقاً (حماية إضافية)
         do {
-            $receiptNumber = 'REC-' . $date . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+            $receiptNumber = 'REC-'.$date.'-'.str_pad($sequence, 4, '0', STR_PAD_LEFT);
             $exists = self::where('receipt_number', $receiptNumber)->exists();
             if ($exists) {
                 $sequence++;
             }
         } while ($exists);
-        
+
         return $receiptNumber;
     }
 
@@ -172,5 +178,141 @@ class Payment extends Model
     public function getPaymentTypeNameAttribute()
     {
         return self::PAYMENT_TYPES[$this->payment_type] ?? $this->payment_type;
+    }
+
+    /**
+     * الحصول على اسم نوع الضمان / التأمين بالعربية
+     */
+    public function getInsuranceTypeLabelAttribute(): string
+    {
+        $type = $this->insurance_type ?: ($this->patient?->insurance_type ?? 'hi');
+
+        return match ($type) {
+            'hi' => 'الضمان الصحي',
+            'moi' => 'قوى الأمن الداخلي',
+            'syndicate' => 'نقابات وتعاقدات',
+            'private' => 'تأمين خاص',
+            'none' => 'بدون ضمان',
+            default => $type ?: 'الضمان الصحي',
+        };
+    }
+
+    /**
+     * اسم الطبيب المعالج / الاستشاري المرتبط بالإيصال
+     */
+    public function getAttendingDoctorNameAttribute(): ?string
+    {
+        $name = null;
+
+        // 1. من خلال الموعد / الكشفية الاستشارية
+        if ($this->appointment && $this->appointment->doctor && $this->appointment->doctor->user) {
+            $name = $this->appointment->doctor->user->name;
+        }
+        // 2. من خلال الطلب المباشر والزيارة
+        elseif ($this->request && $this->request->visit && $this->request->visit->doctor && $this->request->visit->doctor->user) {
+            $name = $this->request->visit->doctor->user->name;
+        }
+        // 3. من خلال الطلبات المتعددة المرتبطة بالإيصال
+        elseif ($this->relationLoaded('requests') && $this->requests->isNotEmpty()) {
+            foreach ($this->requests as $req) {
+                if ($req->visit && $req->visit->doctor && $req->visit->doctor->user) {
+                    $name = $req->visit->doctor->user->name;
+                    break;
+                }
+            }
+        }
+        // 4. من خلال الطوارئ
+        elseif ($this->emergency && $this->emergency->doctor && $this->emergency->doctor->user) {
+            $name = $this->emergency->doctor->user->name;
+        }
+        // 5. من خلال العمليات الجراحية
+        elseif ($this->surgery && $this->surgery->doctor && $this->surgery->doctor->user) {
+            $name = $this->surgery->doctor->user->name;
+        }
+
+        if ($name) {
+            $cleaned = preg_replace('/^(د\.\s*)+/u', '', trim($name));
+
+            return 'د. '.$cleaned;
+        }
+
+        return null;
+    }
+
+    /**
+     * الوصف التفصيلي للخدمات المقدمة (كشوفات، تحاليل، أشعة، طوارئ، عمليات)
+     */
+    public function getServiceDetailsTextAttribute(): string
+    {
+        $items = [];
+
+        // 1. كشفية استشارية
+        if ($this->payment_type === 'appointment') {
+            $dept = $this->appointment?->department?->name ?? 'عيادة استشارية';
+
+            return "كشفية: {$dept}";
+        }
+
+        // 2. الطلبات الطبية (مختبر، أشعة، مصرف دم)
+        $requests = collect([$this->request])->filter();
+        if ($this->relationLoaded('requests') && $this->requests->isNotEmpty()) {
+            $requests = $requests->concat($this->requests)->unique('id');
+        }
+
+        if ($requests->isNotEmpty()) {
+            foreach ($requests as $req) {
+                if ($req->type === 'lab') {
+                    $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
+                    if (! empty($details['tests']) && is_array($details['tests'])) {
+                        $count = count($details['tests']);
+                        $slice = array_slice($details['tests'], 0, 4);
+                        $items[] = 'تحاليل: '.implode(', ', $slice).($count > 4 ? ' (+ '.($count - 4).' أخرى)' : '');
+                    } elseif (! empty($req->description) && ! str_starts_with($req->description, 'دفع رسوم')) {
+                        $items[] = $req->description;
+                    }
+                } elseif ($req->type === 'radiology') {
+                    $radNames = $req->radiology_names;
+                    if (! empty($radNames)) {
+                        $items[] = 'أشعة: '.implode(', ', $radNames);
+                    } elseif (! empty($req->description)) {
+                        $items[] = $req->description;
+                    }
+                }
+            }
+        }
+
+        // 3. الطوارئ
+        if ($this->payment_type === 'emergency' && $this->emergency) {
+            $prio = $this->emergency->priority_level ? "أولوية {$this->emergency->priority_level}" : '';
+            $comp = $this->emergency->chief_complaint ?: 'خدمات طوارئ';
+            $items[] = trim("طوارئ: {$comp} ".($prio ? "({$prio})" : ''));
+        }
+
+        // 4. العمليات الجراحية
+        if ($this->payment_type === 'surgery' && $this->surgery) {
+            $proc = $this->surgery->procedure_name ?: 'عملية جراحية';
+            $items[] = "عملية: {$proc}";
+        }
+
+        if (empty($items)) {
+            return $this->description ?: ($this->payment_type_name ?? 'خدمة طبية');
+        }
+
+        return implode(' | ', $items);
+    }
+
+    public function voidedBy()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function voidLogs()
+    {
+        return $this->hasMany(PaymentVoidLog::class, 'payment_id');
+    }
+
+    public function isVoided(): bool
+    {
+        return ! is_null($this->voided_at);
     }
 }

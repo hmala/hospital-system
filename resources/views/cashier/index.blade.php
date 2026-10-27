@@ -81,6 +81,13 @@
                             <span class="badge bg-success rounded-pill me-1"><i class="fas fa-check"></i></span>
                         @endif
                     </form>
+
+                    @canany(['void payment receipt', 'view cashier reports'])
+                        <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3 shadow-sm d-flex align-items-center gap-1" title="سجل تدقيق الوصولات الملغاة والمبطلة">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>تدقيق الملغيات</span>
+                        </a>
+                    @endcanany
                 </div>
             </div>
         </div>
@@ -194,6 +201,7 @@
 
                                 $appointmentsCount = ($canConsultation && isset($pendingAppointments)) ? $pendingAppointments->total() : 0;
                                 $requestsCount = ($canMedicalRequests && isset($pendingMedicalRequests)) ? $pendingMedicalRequests->total() : 0;
+                                $postponedCount = ($canMedicalRequests && isset($postponedMedicalRequests)) ? $postponedMedicalRequests->total() : ($postponedRequestsCount ?? 0);
                                 $emergencyCount = ($canEmergency && isset($pendingEmergencyPayments)) ? $pendingEmergencyPayments->total() : 0;
                                 $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount;
                             @endphp
@@ -211,6 +219,23 @@
                                     </div>
                                     <button type="button" class="btn btn-danger btn-sm fw-bold px-3 shadow-sm" onclick="document.getElementById('tab-refunds-btn').click();">
                                         <i class="fas fa-arrow-down me-1"></i> فتح مستحقات الاسترجاع الآن
+                                    </button>
+                                </div>
+                            @endif
+
+                            @if(($postponedCount ?? 0) > 0)
+                                <div class="alert alert-warning border-warning d-flex align-items-center justify-content-between p-3 mb-3 rounded-3 shadow-sm bg-warning bg-opacity-10">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-warning text-dark rounded-circle p-2 me-3 shadow-xs d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                            <i class="fas fa-clock fa-lg"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-dark d-block fs-6 mb-0">تنبيه الكاشير: يوجد ({{ $postponedCount }}) فحوصات مؤجلة بطلب المريض بانتظار تسديدها عند عودته!</strong>
+                                            <span class="small text-muted">يمكنك استعراض الفحوصات المؤجلة ومعرفة أسباب التأجيل وتسديدها فوراً بمجرد حضور المريض.</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-warning btn-sm fw-bold px-3 text-dark shadow-sm" onclick="document.getElementById('tab-postponed-btn').click();">
+                                        <i class="fas fa-arrow-down me-1"></i> فتح الفحوصات المؤجلة الآن
                                     </button>
                                 </div>
                             @endif
@@ -258,6 +283,18 @@
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-emergency-btn" data-bs-toggle="pill" data-bs-target="#tab-emergency" type="button" role="tab">
                                                     <i class="fas fa-ambulance me-1 text-danger"></i> الطوارئ
                                                     <span class="badge bg-danger ms-1 rounded-pill">{{ $emergencyCount }}</span>
+                                                </button>
+                                            </li>
+                                            @endif
+                                            @if($canMedicalRequests)
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($postponedCount ?? 0) > 0 ? 'text-warning' : '' }}" id="tab-postponed-btn" data-bs-toggle="pill" data-bs-target="#tab-postponed" type="button" role="tab">
+                                                    <i class="fas fa-clock me-1 text-warning"></i> الفحوصات المؤجلة
+                                                    @if(($postponedCount ?? 0) > 0)
+                                                        <span class="badge bg-warning text-dark ms-1 rounded-pill">{{ $postponedCount }}</span>
+                                                    @else
+                                                        <span class="badge bg-secondary ms-1 rounded-pill">0</span>
+                                                    @endif
                                                 </button>
                                             </li>
                                             @endif
@@ -547,6 +584,8 @@
                                                                         $em = $payment->emergency;
                                                                         $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
                                                                         $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                        $emServicesCount = $em->services->count();
+                                                                        $emServicesTotalQty = (int) $em->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
                                                                     @endphp
                                                                     <tr>
                                                                         <td><strong>#{{ $payment->id }}</strong></td>
@@ -557,7 +596,7 @@
                                                                         </td>
                                                                         <td>
                                                                             <span class="badge bg-{{ $payment->emergency->priority_color }}">{{ $payment->emergency->priority_text }}</span>
-                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $emServicesTotalQty }}{{ $emServicesTotalQty != $emServicesCount ? " ({$emServicesCount} أنواع)" : '' }}</small>
                                                                         </td>
                                                                         <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                                         <td>
@@ -941,7 +980,11 @@
                                                                          </span>
                                                                      </td>
                                                                      <td>
-                                                                         <small class="text-muted">عدد الخدمات: {{ $payment->emergency->services->count() }}</small>
+                                                                         @php
+                                                                            $emTotalQty = (int) $payment->emergency->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
+                                                                            $emCount = $payment->emergency->services->count();
+                                                                        @endphp
+                                                                        <small class="text-muted">عدد الخدمات: <strong>{{ $emTotalQty }}</strong>{{ $emTotalQty != $emCount ? " ({$emCount} أنواع)" : '' }}</small>
                                                                      </td>
                                                                      <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                                      <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
@@ -965,6 +1008,133 @@
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                                                     <p class="text-muted mb-0">لا توجد خدمات طوارئ معلقة بانتظار الدفع</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @endif
+
+                                        <!-- تبويب الفحوصات والخدمات المؤجلة (Postponed Requests) -->
+                                        @if($canMedicalRequests)
+                                        <div class="tab-pane fade" id="tab-postponed" role="tabpanel">
+                                            @if(($postponedCount ?? 0) > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>رقم الطلب</th>
+                                                                <th>القسم</th>
+                                                                <th>المريض</th>
+                                                                <th>الفحوصات المؤجلة وسبب التأجيل</th>
+                                                                <th>الطبيب الطالب</th>
+                                                                <th class="text-end">المبلغ المطلوب</th>
+                                                                <th>تاريخ ووقت التأجيل</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($postponedMedicalRequests ?? [] as $request)
+                                                                @php
+                                                                    $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
+                                                                    $pName = optional(optional($request->visit)->patient)->user->name ?? 'غير محدد';
+                                                                    $pPhone = optional(optional($request->visit)->patient)->user->phone ?? (optional(optional($request->visit)->patient)->national_id ?? '---');
+                                                                    $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
+                                                                    
+                                                                    // استخراج أسماء الفحوصات
+                                                                    $testsList = [];
+                                                                    if ($request->type === 'lab') {
+                                                                        if (!empty($details['tests'])) {
+                                                                            $testsList = $details['tests'];
+                                                                        } elseif (!empty($details['lab_test_ids'])) {
+                                                                            $testsList = \App\Models\LabTest::whereIn('id', $details['lab_test_ids'])->pluck('name')->toArray();
+                                                                        }
+                                                                    } elseif ($request->type === 'radiology') {
+                                                                        if (!empty($details['radiology_type_names'])) {
+                                                                            $testsList = $details['radiology_type_names'];
+                                                                        } else {
+                                                                            $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? [];
+                                                                            if (!is_array($typeIds)) $typeIds = [$typeIds];
+                                                                            if (!empty($typeIds)) {
+                                                                                $testsList = \App\Models\RadiologyType::whereIn('id', $typeIds)->pluck('name')->toArray();
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    $postponementReason = $details['postponement_reason'] ?? $details['custom_postponement_reason'] ?? $details['cancellation_reason'] ?? 'بطلب من المريض';
+                                                                    $estAmount = (float)($request->total_amount > 0 ? $request->total_amount : 0);
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-warning">#{{ $request->id }}</strong>
+                                                                        <span class="badge bg-warning text-dark border border-warning ms-1" style="font-size: 0.7rem;">
+                                                                            <i class="fas fa-clock me-1"></i> مؤجل
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($request->type === 'lab')
+                                                                            <span class="badge bg-primary text-white"><i class="fas fa-flask me-1"></i> مختبر</span>
+                                                                        @elseif($request->type === 'radiology')
+                                                                            <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة / سونار</span>
+                                                                        @else
+                                                                            <span class="badge bg-secondary text-white">{{ $request->type }}</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $pName }}</div>
+                                                                        <small class="text-muted"><i class="fas fa-phone-alt fa-xs me-1"></i>{{ $pPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-semibold text-dark mb-1">
+                                                                            @if(!empty($testsList))
+                                                                                {{ implode('، ', $testsList) }}
+                                                                            @else
+                                                                                {{ $request->description ?: 'فحوصات طبية مؤجلة' }}
+                                                                            @endif
+                                                                        </div>
+                                                                        <div class="d-inline-flex align-items-center gap-1 bg-warning bg-opacity-10 border border-warning border-opacity-25 px-2 py-0.5 rounded-pill text-dark small">
+                                                                            <i class="fas fa-info-circle text-warning fa-xs"></i>
+                                                                            <span class="small fw-semibold">سبب التأجيل: {{ $postponementReason }}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <small class="text-muted">
+                                                                            @if($docName !== '---') د. {{ $docName }}<br> @endif
+                                                                            {{ optional(optional($request->visit)->department)->name ?? 'العيادة' }}
+                                                                        </small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if($estAmount > 0)
+                                                                            <span class="fw-bold text-dark">{{ number_format($estAmount, 0) }} د.ع</span>
+                                                                        @else
+                                                                            <span class="text-muted small">حسب التسعيرة</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <small class="text-dark fw-semibold">{{ $request->created_at->format('Y-m-d') }}</small><br>
+                                                                        <small class="text-muted">{{ $request->created_at->format('H:i') }}</small>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-warning btn-sm px-3 fw-bold text-dark shadow-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> تسديد الآن
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @if(isset($postponedMedicalRequests) && $postponedMedicalRequests->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">عرض {{ $postponedMedicalRequests->firstItem() }} إلى {{ $postponedMedicalRequests->lastItem() }} من أصل {{ $postponedMedicalRequests->total() }} طلب مؤجل</span>
+                                                        {{ $postponedMedicalRequests->links() }}
+                                                    </div>
+                                                @endif
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3 text-warning">
+                                                        <i class="fas fa-clock fa-3x"></i>
+                                                    </div>
+                                                    <h6 class="fw-bold text-dark mb-1">لا توجد فحوصات أو خدمات مؤجلة حالياً</h6>
+                                                    <p class="text-muted mb-0 small">جميع طلبات المرضى إما مسددة بالكامل أو قيد المتابعة النشطة.</p>
                                                 </div>
                                             @endif
                                         </div>
@@ -1093,8 +1263,10 @@
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
                                             @php
                                                 $hasAnyRefunds = (isset($pendingRefundRequests) && $pendingRefundRequests->count() > 0) 
-                                                              || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0)
-                                                              || (isset($nicuRefundAccounts) && $nicuRefundAccounts->count() > 0);
+                                                               || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0)
+                                                               || (isset($pendingEmergencyRadRefunds) && $pendingEmergencyRadRefunds->count() > 0)
+                                                               || (isset($pendingEmergencyLabRefunds) && $pendingEmergencyLabRefunds->count() > 0)
+                                                               || (isset($nicuRefundAccounts) && count($nicuRefundAccounts) > 0);
                                             @endphp
                                             @if($hasAnyRefunds)
                                                 <div class="table-responsive">
@@ -1228,6 +1400,114 @@
                                                                 </tr>
                                                             @endforeach
 
+                                                            {{-- استرجاع طلبات أشعة الطوارئ الملغاة بعد السداد --}}
+                                                            @foreach($pendingEmergencyRadRefunds ?? [] as $radReq)
+                                                                @php
+                                                                    $emgPatientName = $radReq->emergency?->patient?->user?->name ?? $radReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientPhone = $radReq->emergency?->patient?->user?->phone ?? $radReq->emergency?->emergencyPatient?->phone ?? '---';
+                                                                    $radItems = $radReq->radiologyTypes;
+                                                                    $radRefundAmount = (float)$radItems->sum(fn($t) => $t->base_price ?? $t->price ?? 0);
+                                                                    $receiptNo = optional($radReq->payment)->receipt_number ?? optional($radReq->emergency?->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $radCancelledAt = $radReq->updated_at->format('Y-m-d H:i');
+                                                                    $itemsText = $radItems->pluck('name')->join('، ');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">أشعة طوارئ #{{ $radReq->id }}</strong>
+                                                                        <div class="small text-muted font-monospace">حالة #{{ $radReq->emergency_id }}</div>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة طوارئ</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $itemsText }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <small class="text-muted">{{ $emgPatientPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($receiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $receiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $radReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
+                                                                        <small class="text-muted">بتأريخ: {{ $radCancelledAt }}</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($radRefundAmount, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $radReq->id }}"
+                                                                                data-patient="{{ $emgPatientName }}"
+                                                                                data-receipt="{{ $receiptNo ?? '---' }}"
+                                                                                data-amount="{{ $radRefundAmount }}"
+                                                                                data-service="أشعة طوارئ: {{ $itemsText }}"
+                                                                                data-action="{{ route('cashier.emergency.request.refund.process', ['type' => 'radiology', 'id' => $radReq->id]) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
+                                                            {{-- استرجاع طلبات مختبر الطوارئ الملغاة بعد السداد --}}
+                                                            @foreach($pendingEmergencyLabRefunds ?? [] as $labReq)
+                                                                @php
+                                                                    $emgPatientName = $labReq->emergency?->patient?->user?->name ?? $labReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientPhone = $labReq->emergency?->patient?->user?->phone ?? $labReq->emergency?->emergencyPatient?->phone ?? '---';
+                                                                    $labItems = $labReq->labTests;
+                                                                    $labRefundAmount = (float)$labItems->sum('price');
+                                                                    $receiptNo = optional($labReq->payment)->receipt_number ?? optional($labReq->emergency?->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
+                                                                    $labCancelledAt = $labReq->updated_at->format('Y-m-d H:i');
+                                                                    $itemsText = $labItems->pluck('name')->join('، ');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <strong class="text-danger">مختبر طوارئ #{{ $labReq->id }}</strong>
+                                                                        <div class="small text-muted font-monospace">حالة #{{ $labReq->emergency_id }}</div>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">ملغي بعد الدفع</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-primary text-white"><i class="fas fa-flask me-1"></i> مختبر طوارئ</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $itemsText }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <small class="text-muted">{{ $emgPatientPhone }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($receiptNo)
+                                                                            <span class="badge bg-secondary font-monospace">#{{ $receiptNo }}</span>
+                                                                        @else
+                                                                            <span class="text-muted small">مسدد مسبقاً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $labReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
+                                                                        <small class="text-muted">بتأريخ: {{ $labCancelledAt }}</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($labRefundAmount, 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <button type="button" 
+                                                                                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm btn-open-refund"
+                                                                                data-id="{{ $labReq->id }}"
+                                                                                data-patient="{{ $emgPatientName }}"
+                                                                                data-receipt="{{ $receiptNo ?? '---' }}"
+                                                                                data-amount="{{ $labRefundAmount }}"
+                                                                                data-service="مختبر طوارئ: {{ $itemsText }}"
+                                                                                data-action="{{ route('cashier.emergency.request.refund.process', ['type' => 'lab', 'id' => $labReq->id]) }}">
+                                                                            <i class="fas fa-undo-alt me-1"></i> صرف استرجاع (Refund)
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
                                                             {{-- استرجاع فائض أمانات حاضنات الخدج (NICU Excess Deposits) --}}
                                                             @foreach($nicuRefundAccounts ?? [] as $acc)
                                                                 @php
@@ -1271,6 +1551,10 @@
                                                                     <td class="text-center">
                                                                         <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuRefundModal{{ $res->id }}" title="صرف واسترجاع فائض الأمانات">
                                                                             <i class="fas fa-undo-alt me-1 text-danger"></i> إرجاع الأمانات
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
                                                                         </button>
                                                                     </td>
                                                                 </tr>

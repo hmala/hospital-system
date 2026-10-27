@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use App\Http\Controllers\RoleManagementController;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class RolePermissionsMatrixTest extends TestCase
 {
@@ -80,6 +80,7 @@ class RolePermissionsMatrixTest extends TestCase
         $response->assertSee('العمليات الجراحية والرقود');
         $response->assertSee('خدمات ومراسلات الواتساب');
         $response->assertSee('إدارة النظام والإعدادات');
+        $response->assertSee('إبطال وإلغاء وصل دفع مالي وإعادة فتحه للتصحيح والاسترداد');
     }
 
     #[Test]
@@ -230,7 +231,7 @@ class RolePermissionsMatrixTest extends TestCase
             'blood_group' => 'O+',
         ]);
         $hospital = \App\Models\Hospital::first();
-        if (!$hospital) {
+        if (! $hospital) {
             $hospital = \App\Models\Hospital::create([
                 'name' => 'مستشفى الفحص',
                 'code' => 'TEST',
@@ -259,7 +260,7 @@ class RolePermissionsMatrixTest extends TestCase
             'department_id' => $dept->id,
             'specialization' => 'طب عام',
             'qualification' => 'MBChB',
-            'license_number' => 'DOC-TEST-' . uniqid(),
+            'license_number' => 'DOC-TEST-'.uniqid(),
             'consultation_fee' => 25000,
             'status' => 'active',
             'is_active' => true,

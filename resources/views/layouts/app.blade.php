@@ -191,21 +191,21 @@
         .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
         .sidebar-header img,
         .sidebar-header .logo-badge { 
-            background: rgba(59, 130, 246, 0.12); 
-            border-radius: 18px; 
-            padding: 10px; 
+            background: transparent; 
+            border-radius: 12px; 
+            padding: 2px 4px; 
             max-height: 70px; 
             width: auto; 
-            border: 1px solid rgba(59, 130, 246, 0.45); 
-            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18); 
+            border: none; 
+            box-shadow: none; 
             display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
         }
         .sidebar-header .logo-badge:hover {
-            background: rgba(59, 130, 246, 0.22);
-            border-color: rgba(59, 130, 246, 0.65);
+            background: transparent;
+            border-color: transparent;
             transform: translateY(-1px);
         }
         .sidebar-header .logo-badge img {
@@ -616,10 +616,13 @@
 </head>
 <body>
     @php
-        $logoFilePath = public_path('images/logo.jpeg');
+        $logoFilePath = public_path('images/logo.png');
+        if (!file_exists($logoFilePath)) {
+            $logoFilePath = public_path('images/logo.jpeg');
+        }
         $systemLogoSrc = file_exists($logoFilePath) 
-            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFilePath)) 
-            : asset('images/logo.jpeg');
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFilePath)) 
+            : asset('images/logo.png');
     @endphp
 
     {{-- Global Page Loader Ultra --}}
@@ -645,7 +648,7 @@
                 <div class="position-sticky pt-0">
                     <div class="sidebar-header text-center">
                         <div class="logo-badge">
-                            <img src="{{ $systemLogoSrc }}" alt="HERAMZ RP" class="img-fluid">
+                            <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
                         </div>
                         <div class="sidebar-user">
                             <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
@@ -776,10 +779,11 @@
                         @endcanany
 
                         <!-- قسم الصندوق والكاشير -->
-                        @canany(['view cashier', 'view cashier surgeries', 'view cashier reports'])
+                        @canany(['view cashier', 'view cashier surgeries', 'view cashier reports', 'void payment receipt'])
                         @php
                             $isCashierSectionActive = request()->routeIs('cashier.index') || 
                                                       request()->routeIs('cashier.payment.*') || 
+                                                      request()->routeIs('cashier.payments.void.*') || 
                                                       request()->routeIs('cashier.receipt*') ||
                                                       request()->routeIs('cashier.surgeries.*') ||
                                                       request()->routeIs('cashier.report');
@@ -827,6 +831,13 @@
                             </a>
                         </li>
                         @endcan
+                        @canany(['void payment receipt', 'view cashier reports'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('cashier.payments.void.logs') ? 'active' : '' }}" href="{{ route('cashier.payments.void.logs') }}">
+                                <i class="fas fa-shield-alt text-danger"></i><span> تدقيق الوصولات الملغاة</span>
+                            </a>
+                        </li>
+                        @endcanany
                         </div> <!-- end cashierSection -->
                         @endcanany
 
@@ -834,6 +845,7 @@
                         @canany([
                             'review surgery prices', 
                             'manage health insurance', 
+                            'view insurance claims',
                             'manage doctor commissions',
                             'view consultant financial movements', 
                             'view account statements', 
@@ -846,7 +858,7 @@
                         ])
                         @php
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
-                            $isInsuranceActive = request()->routeIs('health-insurance-categories.*');
+                            $isInsuranceActive = request()->routeIs('health-insurance-categories.*') || request()->routeIs('insurance.claims.*');
                             $isConsultantAccountsActive = request()->routeIs('admin.doctor-commission-settings.*') ||
                                                    request()->routeIs('consultant-availability.financial-movements') ||
                                                    request()->routeIs('cashier.statements') ||
@@ -879,7 +891,7 @@
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
                                 <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
                                 @php
-                                    $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
+                                     $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
                                 @endphp
                                 @if($pendingPriceReviews > 0)
                                     <span class="badge bg-warning text-dark ms-2">{{ $pendingPriceReviews }}</span>
@@ -888,9 +900,17 @@
                         </li>
                         @endcan
 
+                        @canany(['manage health insurance', 'view insurance claims'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('insurance.claims.*') ? 'active' : '' }}" href="{{ route('insurance.claims.index') }}">
+                                <i class="fas fa-file-medical-alt text-primary"></i><span class="fw-bold"> مطالبات وسجلات الضمان</span>
+                            </a>
+                        </li>
+                        @endcanany
+
                         @can('manage health insurance')
                         <li class="nav-item">
-                            <a class="nav-link {{ $isInsuranceActive ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
+                            <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
                                 <i class="fas fa-shield-alt text-info"></i><span> نسب استقطاع الضمان</span>
                             </a>
                         </li>

@@ -14,21 +14,53 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view radiology'))) {
             abort(403, 'غير مصرح لك بالوصول إلى قسم الأشعة والتصوير الطبي');
         }
 
         $userCategory = $this->getRadiologyCategoryForUser($user);
         $selectedCategory = $request->query('category', $userCategory ?? 'all');
-        
+
         // إذا كان الموظف لديه دور محدد وليس مسؤولاً، يتم قفل الفئة على تخصصه
-        if ($userCategory !== null && !$isAdmin) {
+        if ($userCategory !== null && ! $isAdmin) {
             $selectedCategory = $userCategory;
         }
 
-        $activeTab = $request->query('tab', 'waiting'); // الافتراضي: طابور الانتظار
+        $rawTab = $request->query('tab');
+        $rawSource = $request->query('source');
+        if ($rawSource) {
+            $sourceFilter = $rawSource;
+        } elseif ($rawTab === 'emergency') {
+            $sourceFilter = 'emergency';
+        } elseif ($rawTab === 'pending') {
+            $sourceFilter = 'pending';
+        } else {
+            $sourceFilter = 'consultation'; // الافتراضي مثل المختبر: الاستشارية
+        }
+
+        $activeTab = $rawTab ?: ($sourceFilter === 'emergency' ? 'emergency' : ($sourceFilter === 'pending' ? 'pending' : ($sourceFilter === 'direct' ? 'direct' : 'station')));
+        if ($activeTab === 'waiting') {
+            $activeTab = 'station';
+        }
+
+        $statusFilter = $request->query('status');
+        if (! $statusFilter) {
+            if ($activeTab === 'completed') {
+                $statusFilter = 'completed';
+            } elseif ($activeTab === 'in-progress' || $activeTab === 'inprogress') {
+                $statusFilter = 'in_progress';
+            } elseif ($activeTab === 'station') {
+                $statusFilter = 'all';
+            } else {
+                $statusFilter = 'all';
+            }
+        }
+
+        $dateFilter = $request->query('date', 'today'); // 'today', 'yesterday', 'week', 'month', 'all', or 'YYYY-MM-DD'
+        if ($request->filled('custom_date')) {
+            $dateFilter = $request->query('custom_date');
+        }
         $search = $request->query('search');
-        $dateFilter = $request->query('date', 'today'); // 'today', 'all', or 'YYYY-MM-DD'
 
         $baseQuery = MedicalRequest::with([
                 'visit.patient.user', 
@@ -39,17 +71,23 @@ class RadiologyStaffController extends Controller
                 'incubatorReservation.doctor.user'
             ])
             ->where('type', 'radiology')
-            ->where('status', '!=', 'cancelled');
+            ->whereNotIn('status', ['cancelled', 'postponed']);
 
-        // تطبيق فلتر التاريخ
+        // تطبيق فلتر التاريخ الموحد
         if ($dateFilter === 'today') {
             $baseQuery->whereDate('created_at', today());
-        } elseif ($dateFilter !== 'all' && !empty($dateFilter)) {
+        } elseif ($dateFilter === 'yesterday') {
+            $baseQuery->whereDate('created_at', today()->subDay());
+        } elseif ($dateFilter === 'week') {
+            $baseQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($dateFilter === 'month') {
+            $baseQuery->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+        } elseif ($dateFilter !== 'all' && ! empty($dateFilter)) {
             $baseQuery->whereDate('created_at', $dateFilter);
         }
 
         // تطبيق فلترة التخصص / الفئة
-        if ($selectedCategory !== 'all' && !empty($selectedCategory)) {
+        if ($selectedCategory !== 'all' && ! empty($selectedCategory)) {
             if ($selectedCategory === 'echo') {
                 $baseQuery->where('subtype', 'echo');
             } elseif ($selectedCategory === 'ultrasound') {
@@ -59,35 +97,35 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ct') {
                 $baseQuery->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
-                $baseQuery->where(function($q) {
+                $baseQuery->where(function ($q) {
                     $q->where('subtype', 'general')
-                      ->orWhere('subtype', 'radiology')
-                      ->orWhereNull('subtype');
+                        ->orWhere('subtype', 'radiology')
+                        ->orWhereNull('subtype');
                 });
             }
         }
 
         // تطبيق البحث السريع
-        if (!empty($search)) {
-            $baseQuery->where(function($q) use ($search) {
+        if (! empty($search)) {
+            $baseQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('description', 'LIKE', "%{$search}%")
-                  ->orWhereHas('visit.patient.user', function($pq) use ($search) {
-                      $pq->where('name', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhereHas('visit.patient', function($pq) use ($search) {
-                      $pq->where('medical_number', 'LIKE', "%{$search}%")
-                         ->orWhere('phone', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhereHas('visit.doctor.user', function($dq) use ($search) {
-                      $dq->where('name', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhereHas('incubatorReservation', function($rq) use ($search) {
-                      $rq->where('baby_name', 'like', "%{$search}%")
-                         ->orWhere('id', 'like', "%{$search}%")
-                         ->orWhereHas('patient.user', fn($puq) => $puq->where('name', 'like', "%{$search}%"))
-                         ->orWhereHas('doctor.user', fn($duq) => $duq->where('name', 'like', "%{$search}%"));
-                  });
+                    ->orWhere('description', 'LIKE', "%{$search}%")
+                    ->orWhereHas('visit.patient.user', function ($pq) use ($search) {
+                        $pq->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('visit.patient', function ($pq) use ($search) {
+                        $pq->where('medical_number', 'LIKE', "%{$search}%")
+                            ->orWhere('phone', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('visit.doctor.user', function ($dq) use ($search) {
+                        $dq->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('incubatorReservation', function ($rq) use ($search) {
+                        $rq->where('baby_name', 'like', "%{$search}%")
+                            ->orWhere('id', 'like', "%{$search}%")
+                            ->orWhereHas('patient.user', fn ($puq) => $puq->where('name', 'like', "%{$search}%"))
+                            ->orWhereHas('doctor.user', fn ($duq) => $duq->where('name', 'like', "%{$search}%"));
+                    });
             });
         }
 
@@ -96,36 +134,189 @@ class RadiologyStaffController extends Controller
         $allCategoryRequests = $countsQuery->get();
 
         // فلترة خاصة بالإيكو إن كان موظف إيكو مخصص
-        if ($selectedCategory === 'echo' && !$isAdmin && $userCategory === 'echo') {
-            $allCategoryRequests = $allCategoryRequests->filter(function($req) use ($user) {
+        if ($selectedCategory === 'echo' && ! $isAdmin && $userCategory === 'echo') {
+            $allCategoryRequests = $allCategoryRequests->filter(function ($req) use ($user) {
                 $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
-                return !isset($details['echo_staff_id']) || $details['echo_staff_id'] == $user->id;
+
+                return ! isset($details['echo_staff_id']) || $details['echo_staff_id'] == $user->id;
             });
         }
 
-        $stats = [
-            'total' => $allCategoryRequests->count(),
-            'waiting' => $allCategoryRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])->count(),
+        // تصنيف الطلبات حسب المصدر / القسم المحوِل (مثل المختبر)
+        $consultationRequests = $allCategoryRequests->filter(fn ($r) => $r->visit && ! empty($r->visit->doctor_id))
+            ->sortBy(function ($r) {
+                $statusRank = match ($r->status) {
+                    'calling' => 1,
+                    'pending', 'pending_service_selection', 'scheduled' => 2,
+                    'in_progress' => 3,
+                    'completed' => 4,
+                    default => 5,
+                };
+                $prioRank = match ($r->priority) {
+                    'emergency' => 1,
+                    'urgent' => 2,
+                    default => 3,
+                };
+
+                return $statusRank.'_'.$prioRank.'_'.$r->id;
+            })->values();
+
+        $directRequests = $allCategoryRequests->filter(fn ($r) => ! $r->visit || empty($r->visit->doctor_id))->values();
+
+        // جلب طلبات طوارئ الأشعة
+        $emergencyRadiologyRequests = collect();
+        if ($isAdmin || $user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo'])) {
+            $emQuery = \App\Models\EmergencyRadiologyRequest::with([
+                'emergency.doctor.user',
+                'emergency.patient.user',
+                'emergency.emergencyPatient',
+                'patient.user',
+                'radiologyTypes',
+                'payment',
+            ])
+                ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
+                ->orderBy('requested_at', 'desc');
+
+            if ($selectedCategory === 'ultrasound') {
+                $emQuery->whereHas('radiologyTypes', fn ($q) => $q->where('subcategory', 'LIKE', '%سونار%'));
+            } elseif ($selectedCategory === 'mri') {
+                $emQuery->whereHas('radiologyTypes', fn ($q) => $q->where('subcategory', 'LIKE', '%رنين%'));
+            } elseif ($selectedCategory === 'echo') {
+                $emQuery->whereHas('radiologyTypes', fn ($q) => $q->where('subcategory', 'LIKE', '%إيكو%'));
+            } elseif ($selectedCategory === 'radiology') {
+                $emQuery->whereHas('radiologyTypes', fn ($q) => $q->where('subcategory', 'LIKE', '%أشعة%')->orWhereNull('subcategory'));
+            }
+
+            if ($dateFilter === 'today') {
+                $emQuery->whereDate('requested_at', today());
+            } elseif ($dateFilter === 'yesterday') {
+                $emQuery->whereDate('requested_at', today()->subDay());
+            } elseif ($dateFilter === 'week') {
+                $emQuery->whereBetween('requested_at', [now()->startOfWeek(), now()->endOfWeek()]);
+            } elseif ($dateFilter === 'month') {
+                $emQuery->whereMonth('requested_at', now()->month)->whereYear('requested_at', now()->year);
+            } elseif ($dateFilter !== 'all' && ! empty($dateFilter)) {
+                $emQuery->whereDate('requested_at', $dateFilter);
+            }
+
+            if (! empty($search)) {
+                $emQuery->where(function ($eq) use ($search) {
+                    $eq->where('emergency_id', 'LIKE', "%{$search}%")
+                        ->orWhere('notes', 'LIKE', "%{$search}%")
+                        ->orWhereHas('patient.user', fn ($puq) => $puq->where('name', 'LIKE', "%{$search}%"))
+                        ->orWhereHas('emergency.doctor.user', fn ($duq) => $duq->where('name', 'LIKE', "%{$search}%"));
+                });
+            }
+
+            $emergencyRadiologyRequests = $emQuery->get();
+        }
+
+        $emergencyCount = $emergencyRadiologyRequests->count();
+        $emergencyPendingCount = $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
+        $emergencyCompletedCount = $emergencyRadiologyRequests->where('status', 'completed')->count();
+
+        // جلب الطلبات المعلقة من أيام سابقة (التي لم تكتمل بعد)
+        $priorPendingQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
+            ->where('type', 'radiology')
+            ->whereIn('status', ['pending', 'pending_service_selection', 'scheduled', 'in_progress', 'calling'])
+            ->whereDate('created_at', '<', today());
+
+        if ($selectedCategory !== 'all' && ! empty($selectedCategory)) {
+            if ($selectedCategory === 'echo') {
+                $priorPendingQuery->where('subtype', 'echo');
+            } elseif ($selectedCategory === 'ultrasound') {
+                $priorPendingQuery->where('subtype', 'ultrasound');
+            } elseif ($selectedCategory === 'mri') {
+                $priorPendingQuery->where('subtype', 'mri');
+            } elseif ($selectedCategory === 'ct') {
+                $priorPendingQuery->where('subtype', 'ct');
+            } elseif ($selectedCategory === 'radiology') {
+                $priorPendingQuery->where(function ($q) {
+                    $q->where('subtype', 'general')
+                        ->orWhere('subtype', 'radiology')
+                        ->orWhereNull('subtype');
+                });
+            }
+        }
+
+        if (! empty($search)) {
+            $priorPendingQuery->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhere('description', 'LIKE', "%{$search}%")
+                    ->orWhereHas('visit.patient.user', fn ($pq) => $pq->where('name', 'LIKE', "%{$search}%"))
+                    ->orWhereHas('visit.patient', fn ($pq) => $pq->where('medical_number', 'LIKE', "%{$search}%")->orWhere('phone', 'LIKE', "%{$search}%"))
+                    ->orWhereHas('visit.doctor.user', fn ($dq) => $dq->where('name', 'LIKE', "%{$search}%"));
+            });
+        }
+
+        if ($selectedCategory === 'echo' && ! $isAdmin && $userCategory === 'echo') {
+            $priorPendingRequests = $priorPendingQuery->get()->filter(function ($req) use ($user) {
+                $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
+
+                return ! isset($details['echo_staff_id']) || $details['echo_staff_id'] == $user->id;
+            })->values();
+        } else {
+            $priorPendingRequests = $priorPendingQuery->orderBy('created_at', 'desc')->get();
+        }
+
+        $priorPendingCount = $priorPendingRequests->count();
+
+        // حساب عدد الطلبات حسب الأقسام (مماثل لـ Lab تماماً)
+        $activeSourceRequests = match ($sourceFilter) {
+            'consultation' => $consultationRequests,
+            'direct' => $directRequests,
+            'pending' => $priorPendingRequests,
+            default => $allCategoryRequests,
+        };
+
+        $counts = [
+            'all' => $allCategoryRequests->count(),
+            'consultation' => $consultationRequests->count(),
+            'direct' => $directRequests->count(),
+            'emergency' => $emergencyCount,
+            'pending' => $allCategoryRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled', 'calling'])->count(),
             'in_progress' => $allCategoryRequests->where('status', 'in_progress')->count(),
             'completed' => $allCategoryRequests->where('status', 'completed')->count(),
+            'prior_pending' => $priorPendingCount,
+            'tab_total' => $sourceFilter === 'emergency' ? $emergencyCount : $activeSourceRequests->count(),
+        ];
+
+        $stats = [
+            'total' => $allCategoryRequests->count(),
+            'waiting' => $counts['pending'],
+            'in_progress' => $counts['in_progress'],
+            'completed' => $counts['completed'],
+            'emergency' => $emergencyPendingCount,
+            'prior_pending' => $priorPendingCount,
             'paid' => $allCategoryRequests->where('payment_status', 'paid')->count(),
             'unpaid' => $allCategoryRequests->where('payment_status', '!=', 'paid')->count(),
         ];
 
-        // فلترة حسب التبويب النشط
-        $tabFilteredRequests = $allCategoryRequests;
-        if ($activeTab === 'waiting') {
-            $tabFilteredRequests = $allCategoryRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled']);
-        } elseif ($activeTab === 'in_progress') {
-            $tabFilteredRequests = $allCategoryRequests->where('status', 'in_progress');
-        } elseif ($activeTab === 'completed') {
-            $tabFilteredRequests = $allCategoryRequests->where('status', 'completed');
+        // فلترة القائمة المعروضة حسب حالة الفحص (Status Filter)
+        $displayRequests = $activeSourceRequests;
+        if ($statusFilter === 'pending') {
+            $displayRequests = $displayRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled', 'calling']);
+        } elseif ($statusFilter === 'in_progress') {
+            $displayRequests = $displayRequests->where('status', 'in_progress');
+        } elseif ($statusFilter === 'completed') {
+            $displayRequests = $displayRequests->where('status', 'completed');
         }
 
-        // ترتيب الطلبات: المدفوع أولاً ثم حسب الأحدث
-        $sortedRequests = $tabFilteredRequests->sortByDesc(function($r) {
+        // فلترة طلبات الطوارئ بحسب حالة الفحص إن كانت هي التبويب المختار
+        if ($sourceFilter === 'emergency') {
+            if ($statusFilter === 'pending') {
+                $emergencyRadiologyRequests = $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress']);
+            } elseif ($statusFilter === 'completed') {
+                $emergencyRadiologyRequests = $emergencyRadiologyRequests->where('status', 'completed');
+            }
+        }
+
+        // ترتيب الطلبات: المدفوع والأولوية أولاً
+        $sortedRequests = $displayRequests->sortByDesc(function ($r) {
             $priorityScore = $r->priority === 'emergency' ? 300 : ($r->priority === 'urgent' ? 200 : 100);
             $payScore = $r->payment_status === 'paid' ? 50 : 0;
+
             return $priorityScore + $payScore;
         })->values();
 
@@ -140,33 +331,6 @@ class RadiologyStaffController extends Controller
             $currentPage,
             ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
         );
-
-        // جلب طلبات طوارئ الأشعة إن وجدت
-        $emergencyRadiologyRequests = collect();
-        if ($isAdmin || $user->hasAnyRole(['radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo'])) {
-            $emQuery = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
-                ->whereIn('status', ['pending', 'in_progress', 'completed'])
-                ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
-                ->orderBy('requested_at', 'desc');
-
-            if ($selectedCategory === 'ultrasound') {
-                $emQuery->whereHas('radiologyTypes', fn($q) => $q->where('subcategory', 'LIKE', '%سونار%'));
-            } elseif ($selectedCategory === 'mri') {
-                $emQuery->whereHas('radiologyTypes', fn($q) => $q->where('subcategory', 'LIKE', '%رنين%'));
-            } elseif ($selectedCategory === 'echo') {
-                $emQuery->whereHas('radiologyTypes', fn($q) => $q->where('subcategory', 'LIKE', '%إيكو%'));
-            } elseif ($selectedCategory === 'radiology') {
-                $emQuery->whereHas('radiologyTypes', fn($q) => $q->where('subcategory', 'LIKE', '%أشعة%')->orWhereNull('subcategory'));
-            }
-
-            if ($dateFilter === 'today') {
-                $emQuery->whereDate('requested_at', today());
-            }
-
-            $emergencyRadiologyRequests = $emQuery->get();
-        }
-
-        $stats['emergency'] = $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
 
         // جلب طلبات أشعة وسونار الخدج إن وجدت
         $nicuRadiologyRequests = collect();
@@ -232,16 +396,16 @@ class RadiologyStaffController extends Controller
         }
 
         $stats['nicu'] = $nicuRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count();
-
         // جلب المريض الحالي قيد الفحص بالداخل والمريض قيد النداء
         $currentPatient = $allCategoryRequests->where('status', 'in_progress')->first();
         $callingPatient = $allCategoryRequests->where('status', 'calling')->first();
 
         $waitingRequests = $allCategoryRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
-            ->sortBy(function($r) {
+            ->sortBy(function ($r) {
                 $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
                 $pay = $r->payment_status === 'paid' ? 1 : 2;
-                return $prio . '_' . $pay . '_' . $r->id;
+
+                return $prio.'_'.$pay.'_'.$r->id;
             })->values();
 
         $inProgressRequests = $allCategoryRequests->where('status', 'in_progress')->values();
@@ -252,17 +416,24 @@ class RadiologyStaffController extends Controller
             'waitingRequests',
             'inProgressRequests',
             'completedRequests',
+            'priorPendingRequests',
             'emergencyRadiologyRequests',
             'nicuRadiologyRequests',
+            'consultationRequests',
+            'directRequests',
             'stats',
+            'counts',
             'selectedCategory',
             'userCategory',
             'activeTab',
-            'search',
+            'sourceFilter',
+            'statusFilter',
             'dateFilter',
+            'search',
             'currentPatient',
             'callingPatient',
-            'useNicuMedicalRequests'
+            'useNicuMedicalRequests',
+            'isAdmin'
         ));
     }
 
@@ -271,13 +442,13 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view radiology'))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك بالوصول إلى قسم الأشعة'], 403);
         }
 
         $userCategory = $this->getRadiologyCategoryForUser($user);
         $selectedCategory = $httpRequest->query('category', $userCategory ?? 'all');
-        if ($userCategory !== null && !$isAdmin) {
+        if ($userCategory !== null && ! $isAdmin) {
             $selectedCategory = $userCategory;
         }
 
@@ -286,7 +457,7 @@ class RadiologyStaffController extends Controller
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', today());
 
-        if ($selectedCategory !== 'all' && !empty($selectedCategory)) {
+        if ($selectedCategory !== 'all' && ! empty($selectedCategory)) {
             if ($selectedCategory === 'echo') {
                 $baseQuery->where('subtype', 'echo');
             } elseif ($selectedCategory === 'ultrasound') {
@@ -296,10 +467,10 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ct') {
                 $baseQuery->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
-                $baseQuery->where(function($q) {
+                $baseQuery->where(function ($q) {
                     $q->where('subtype', 'general')
-                      ->orWhere('subtype', 'radiology')
-                      ->orWhereNull('subtype');
+                        ->orWhere('subtype', 'radiology')
+                        ->orWhereNull('subtype');
                 });
             }
         }
@@ -329,14 +500,16 @@ class RadiologyStaffController extends Controller
 
         // 2. Waiting List
         $waitingList = $allRequests->whereIn('status', ['pending', 'pending_service_selection', 'scheduled'])
-            ->sortBy(function($r) {
+            ->sortBy(function ($r) {
                 $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
                 $pay = $r->payment_status === 'paid' ? 1 : 2;
-                return $prio . '_' . $pay . '_' . $r->id;
+
+                return $prio.'_'.$pay.'_'.$r->id;
             })
             ->values()
-            ->map(function($r, $idx) {
+            ->map(function ($r, $idx) {
                 $p = $r->visit?->patient;
+
                 return [
                     'id' => $r->id,
                     'visit_id' => $r->visit_id,
@@ -361,8 +534,9 @@ class RadiologyStaffController extends Controller
         // 3. In-Progress List
         $inProgressList = $allRequests->where('status', 'in_progress')
             ->values()
-            ->map(function($r) {
+            ->map(function ($r) {
                 $p = $r->visit?->patient;
+
                 return [
                     'id' => $r->id,
                     'visit_id' => $r->visit_id,
@@ -379,8 +553,9 @@ class RadiologyStaffController extends Controller
             ->sortByDesc('updated_at')
             ->take(15)
             ->values()
-            ->map(function($r) {
+            ->map(function ($r) {
                 $p = $r->visit?->patient;
+
                 return [
                     'id' => $r->id,
                     'visit_id' => $r->visit_id,
@@ -399,6 +574,22 @@ class RadiologyStaffController extends Controller
             'completed' => $allRequests->where('status', 'completed')->count(),
             'paid' => $allRequests->where('payment_status', 'paid')->count(),
             'unpaid' => $allRequests->where('payment_status', '!=', 'paid')->count(),
+            'prior_pending' => MedicalRequest::where('type', 'radiology')
+                ->whereIn('status', ['pending', 'pending_service_selection', 'scheduled', 'in_progress', 'calling'])
+                ->whereDate('created_at', '<', today())
+                ->when($selectedCategory !== 'all' && ! empty($selectedCategory), function ($q) use ($selectedCategory) {
+                    if ($selectedCategory === 'echo') {
+                        $q->where('subtype', 'echo');
+                    } elseif ($selectedCategory === 'ultrasound') {
+                        $q->where('subtype', 'ultrasound');
+                    } elseif ($selectedCategory === 'mri') {
+                        $q->where('subtype', 'mri');
+                    } elseif ($selectedCategory === 'ct') {
+                        $q->where('subtype', 'ct');
+                    } elseif ($selectedCategory === 'radiology') {
+                        $q->where(fn ($sub) => $sub->where('subtype', 'general')->orWhere('subtype', 'radiology')->orWhereNull('subtype'));
+                    }
+                })->count(),
         ];
 
         $roomNumber = $user->doctor?->current_room ?? ($selectedCategory === 'ultrasound' ? 11 : null);
@@ -419,26 +610,26 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process radiology requests') && ! $user->can('view radiology')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المريض'], 403);
         }
 
         $userCategory = $this->getRadiologyCategoryForUser($user);
         $selectedCategory = $httpRequest->query('category', $userCategory ?? 'all');
-        if ($userCategory !== null && !$isAdmin) {
+        if ($userCategory !== null && ! $isAdmin) {
             $selectedCategory = $userCategory;
         }
 
         $query = MedicalRequest::with(['visit.patient.user', 'visit.appointment'])
             ->where('type', 'radiology')
             ->whereIn('status', ['pending', 'scheduled'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('payment_status', 'paid')
-                  ->orWhere('details->priority', 'emergency');
+                    ->orWhere('details->priority', 'emergency');
             })
             ->whereDate('created_at', today());
 
-        if ($selectedCategory !== 'all' && !empty($selectedCategory)) {
+        if ($selectedCategory !== 'all' && ! empty($selectedCategory)) {
             if ($selectedCategory === 'echo') {
                 $query->where('subtype', 'echo');
             } elseif ($selectedCategory === 'ultrasound') {
@@ -448,22 +639,23 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ct') {
                 $query->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('subtype', 'general')
-                      ->orWhere('subtype', 'radiology')
-                      ->orWhereNull('subtype');
+                        ->orWhere('subtype', 'radiology')
+                        ->orWhereNull('subtype');
                 });
             }
         }
 
         $nextRequest = $query->get()
-            ->sortBy(function($r) {
+            ->sortBy(function ($r) {
                 $prio = $r->priority === 'emergency' ? 1 : ($r->priority === 'urgent' ? 2 : 3);
-                return $prio . '_' . str_pad($r->id, 8, '0', STR_PAD_LEFT);
+
+                return $prio.'_'.str_pad($r->id, 8, '0', STR_PAD_LEFT);
             })
             ->first();
 
-        if (!$nextRequest) {
+        if (! $nextRequest) {
             return response()->json(['success' => false, 'message' => 'لا يوجد مرضى بانتظار الفحص في الطابور حالياً.'], 404);
         }
 
@@ -478,7 +670,7 @@ class RadiologyStaffController extends Controller
             ->orderBy('updated_at', 'desc')
             ->first();
 
-        if (!$currentCalling) {
+        if (! $currentCalling) {
             return response()->json(['success' => false, 'message' => 'لا توجد مناداة جارية لإعادة استدعائها.'], 404);
         }
 
@@ -493,7 +685,7 @@ class RadiologyStaffController extends Controller
             ->orderBy('updated_at', 'desc')
             ->first();
 
-        if (!$currentCalling) {
+        if (! $currentCalling) {
             return response()->json(['success' => false, 'message' => 'لا توجد مناداة جارية لتخطيها.'], 404);
         }
 
@@ -507,7 +699,7 @@ class RadiologyStaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تأخير دور المريض ونقله لآخر طابور الانتظار.'
+            'message' => 'تم تأخير دور المريض ونقله لآخر طابور الانتظار.',
         ]);
     }
 
@@ -516,7 +708,7 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process radiology requests') && ! $user->can('view radiology')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك باستدعاء المريض.'], 403);
         }
 
@@ -524,8 +716,8 @@ class RadiologyStaffController extends Controller
 
         if ($request->payment_status !== 'paid' && $request->priority !== 'emergency') {
             return response()->json([
-                'success' => false, 
-                'message' => 'تنبيه: لا يمكن مناداة المريض قبل تسديد رسوم الفحص في الكاشير أولاً.'
+                'success' => false,
+                'message' => 'تنبيه: لا يمكن مناداة المريض قبل تسديد رسوم الفحص في الكاشير أولاً.',
             ], 422);
         }
 
@@ -536,7 +728,9 @@ class RadiologyStaffController extends Controller
             ->update(['status' => 'pending']);
 
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
         $details['called_at'] = now()->toDateTimeString();
         $details['called_by'] = $user->id;
 
@@ -562,7 +756,8 @@ class RadiologyStaffController extends Controller
 
                 try {
                     app(\App\Services\TelegramService::class)->sendTurnAlert($appointment);
-                } catch (\Throwable $te) {}
+                } catch (\Throwable $te) {
+                }
             }
         }
 
@@ -570,7 +765,7 @@ class RadiologyStaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تمت المناداة على المريض (' . $patientName . ') بنجاح.',
+            'message' => 'تمت المناداة على المريض ('.$patientName.') بنجاح.',
             'request_id' => $request->id,
             'patient_name' => $patientName,
             'queue_number' => $queueNumber,
@@ -583,14 +778,16 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process radiology requests') && ! $user->can('view radiology')))) {
             abort(403, 'غير مصرح لك ببدء فحص الأشعة');
         }
 
         $this->authorizeMedicalRequestForUser($request, $user);
 
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
         $details['started_at'] = now()->toDateTimeString();
         $details['started_by'] = $user->id;
 
@@ -603,7 +800,7 @@ class RadiologyStaffController extends Controller
             $request->visit->update(['status' => 'in_progress']);
             if ($request->visit->appointment_id) {
                 \App\Models\Appointment::where('id', $request->visit->appointment_id)->update([
-                    'status' => 'in_consultation'
+                    'status' => 'in_consultation',
                 ]);
             }
         }
@@ -613,7 +810,9 @@ class RadiologyStaffController extends Controller
 
     private function getRadiologyCategoryForUser($user)
     {
-        if (!$user) return null;
+        if (! $user) {
+            return null;
+        }
         if ($user->hasRole('radiology_echo')) {
             return 'echo';
         }
@@ -626,7 +825,7 @@ class RadiologyStaffController extends Controller
         if ($user->hasRole('radiology_ct')) {
             return 'ct';
         }
-        if ($user->hasRole('radiology_general')) {
+        if ($user->hasRole('radiology_general') || $user->hasRole('radiology_staff')) {
             return 'radiology';
         }
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -639,12 +838,13 @@ class RadiologyStaffController extends Controller
                 return 'echo';
             }
         }
+
         return null;
     }
 
     private function authorizeMedicalRequestForUser(MedicalRequest $request, $user)
     {
-        if (!$user) {
+        if (! $user) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -654,17 +854,21 @@ class RadiologyStaffController extends Controller
         }
 
         $category = $this->getRadiologyCategoryForUser($user);
-        if (!$category) {
+        if (! $category) {
             if ($user->can('process radiology requests') || $user->can('view radiology')) {
                 return;
             }
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
+        if ($user->hasRole('radiology_staff') && ! $user->hasRole('radiology_general')) {
+            return;
+        }
+
         $requestSubtype = $request->subtype;
 
         if ($category === 'radiology') {
-            if (!in_array($requestSubtype, ['general', 'radiology', null], true)) {
+            if (! in_array($requestSubtype, ['general', 'radiology', null], true)) {
                 abort(403, 'هذا الطلب خارج نطاق صلاحياتك');
             }
         } elseif ($category === 'echo') {
@@ -673,7 +877,7 @@ class RadiologyStaffController extends Controller
                 abort(403, 'هذا الطلب خارج نطاق صلاحياتك');
             }
             $details = $request->details;
-            
+
             // التعامل مع double JSON encoding
             if (is_string($details)) {
                 $details = json_decode($details, true);
@@ -681,7 +885,7 @@ class RadiologyStaffController extends Controller
                     $details = json_decode($details, true);
                 }
             }
-            
+
             $echoStaffId = $details['echo_staff_id'] ?? null;
             if ($echoStaffId && $echoStaffId != $user->id) {
                 abort(403, 'هذا الطلب مخصص لموظف آخر');
@@ -696,7 +900,7 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('view radiology'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view radiology'))) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -717,8 +921,8 @@ class RadiologyStaffController extends Controller
         $resultData = [];
         if ($request->result) {
             $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-            if (!is_array($resultData)) {
-                $resultData = ['findings' => (string)$request->result];
+            if (! is_array($resultData)) {
+                $resultData = ['findings' => (string) $request->result];
             }
         }
 
@@ -742,7 +946,7 @@ class RadiologyStaffController extends Controller
         $userCategory = $this->getRadiologyCategoryForUser($user);
         $typesQuery = \App\Models\RadiologyType::where('is_active', true);
 
-        if (!$isAdmin && $userCategory !== null) {
+        if (! $isAdmin && $userCategory !== null) {
             $categoryMap = [
                 'radiology' => 'أشعة',
                 'general' => 'أشعة',
@@ -758,12 +962,12 @@ class RadiologyStaffController extends Controller
         }
 
         $availableRadiologyTypes = $typesQuery->orderBy('name')->get();
-        $availableRadiologyTypesArray = $availableRadiologyTypes->map(function($t) {
+        $availableRadiologyTypesArray = $availableRadiologyTypes->map(function ($t) {
             return [
                 'id' => $t->id,
                 'name' => $t->name,
                 'code' => $t->code ?? '',
-                'price' => (float)($t->price ?? 0),
+                'price' => (float) ($t->price ?? 0),
                 'category' => $t->subcategory ?? 'أشعة',
             ];
         })->values()->toArray();
@@ -776,7 +980,7 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('process radiology requests'))) {
+        if (! $isAdmin && (! $user || ! $user->can('process radiology requests'))) {
             abort(403, 'غير مصرح لك بتحديث ومعالجة طلب الأشعة');
         }
 
@@ -786,7 +990,9 @@ class RadiologyStaffController extends Controller
         if ($httpRequest->has('radiology_type_ids') && ($request->status === 'pending_service_selection' || empty($request->radiology_names) || $httpRequest->has('update_services'))) {
             $this->authorizeMedicalRequestForUser($request, $user);
             $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-            if (!is_array($details)) $details = [];
+            if (! is_array($details)) {
+                $details = [];
+            }
 
             $radiologyTypeIds = $httpRequest->radiology_type_ids;
             $details['radiology_type_ids'] = $radiologyTypeIds;
@@ -797,7 +1003,7 @@ class RadiologyStaffController extends Controller
             // تحديد subtype تلقائياً بناءً على أنواع الأشعة المختارة
             $selectedTypes = \App\Models\RadiologyType::whereIn('id', $radiologyTypeIds)->get();
             $subcategories = $selectedTypes->pluck('subcategory')->unique();
-            
+
             // تحديد subtype بناءً على الفئات
             if ($subcategories->count() === 1) {
                 $subcategory = $subcategories->first();
@@ -830,7 +1036,9 @@ class RadiologyStaffController extends Controller
             $existingResult = [];
             if ($request->result) {
                 $existingResult = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-                if (!is_array($existingResult)) $existingResult = [];
+                if (! is_array($existingResult)) {
+                    $existingResult = [];
+                }
             }
 
             $imagePaths = $existingResult['images'] ?? [];
@@ -918,11 +1126,11 @@ class RadiologyStaffController extends Controller
                     app(\App\Services\TelegramService::class)->sendResultsReady($request);
                 }
             } catch (\Throwable $te) {
-                \Illuminate\Support\Facades\Log::warning('Telegram radiology notification error: ' . $te->getMessage());
+                \Illuminate\Support\Facades\Log::warning('Telegram radiology notification error: '.$te->getMessage());
             }
 
-            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
-            if ($request->visit && !$isDoctorVisit && $newStatus === 'completed') {
+            $isDoctorVisit = $request->visit && (! empty($request->visit->doctor_id) || ! empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && ! $isDoctorVisit && $newStatus === 'completed') {
                 $pending = $request->visit->requests()->where('id', '!=', $request->id)->where('status', '!=', 'completed')->count();
                 if ($pending === 0) {
                     $request->visit->status = 'completed';
@@ -965,8 +1173,8 @@ class RadiologyStaffController extends Controller
         $resultData = [];
         if ($request->result) {
             $resultData = is_string($request->result) ? json_decode($request->result, true) : $request->result;
-            if (!is_array($resultData)) {
-                $resultData = ['findings' => (string)$request->result];
+            if (! is_array($resultData)) {
+                $resultData = ['findings' => (string) $request->result];
             }
         }
 
@@ -985,30 +1193,32 @@ class RadiologyStaffController extends Controller
         if ($radiologyReq && $radiologyReq->radiologyType) {
             $radiologyType = $radiologyReq->radiologyType;
         } else {
-            $radiologyType = (object)[
+            $radiologyType = (object) [
                 'name' => implode(', ', $request->radiology_names) ?: ($request->description ?: 'فحص تصوير'),
-                'code' => 'RAD-' . $request->id,
-                'category' => $request->subtype ?? 'الأشعة والتصوير'
+                'code' => 'RAD-'.$request->id,
+                'category' => $request->subtype ?? 'الأشعة والتصوير',
             ];
         }
 
-        $radiologistObj = (object)[
-            'name' => $resultData['radiologist'] ?? auth()->user()->name
+        $radiologistObj = (object) [
+            'name' => $resultData['radiologist'] ?? auth()->user()->name,
         ];
 
-        $resultObj = (object)[
+        $resultObj = (object) [
             'findings' => $resultData['findings'] ?? '',
             'impression' => $resultData['impression'] ?? '',
             'recommendations' => $resultData['recommendations'] ?? '',
             'images' => $resultData['images'] ?? [],
-            'reported_at' => !empty($resultData['reported_at']) ? \Carbon\Carbon::parse($resultData['reported_at']) : ($request->updated_at ?? now()),
-            'radiologist' => $radiologistObj
+            'reported_at' => ! empty($resultData['reported_at']) ? \Carbon\Carbon::parse($resultData['reported_at']) : ($request->updated_at ?? now()),
+            'radiologist' => $radiologistObj,
         ];
 
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
 
-        $radiology = (object)[
+        $radiology = (object) [
             'id' => $request->id,
             'patient' => $request->visit?->patient ?? $request->incubatorReservation?->patient ?? $radiologyReq?->patient,
             'doctor' => $request->visit?->doctor ?? $request->incubatorReservation?->doctor ?? $radiologyReq?->doctor,
@@ -1036,18 +1246,19 @@ class RadiologyStaffController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('process radiology requests') && !$user->can('view radiology')))) {
+        if (! $isAdmin && (! $user || (! $user->can('process radiology requests') && ! $user->can('view radiology')))) {
             abort(403, 'غير مصرح لك بإلغاء هذا الطلب');
         }
 
         $this->authorizeMedicalRequestForUser($request, $user);
 
         // 1. فحص هل الطلب صادر من طبيب استشاري داخل العيادات
-        if (!$request->isDirectExternal()) {
+        if (! $request->isDirectExternal()) {
             $msg = 'عذراً، هذا الطلب صادر عن طبيب استشاري داخل العيادات ولا يمكن إلغاؤه من قسم الأشعة. الإلغاء يتم حصراً من شاشة الطبيب المعالج.';
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
@@ -1057,6 +1268,7 @@ class RadiologyStaffController extends Controller
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('error', $msg);
         }
 
@@ -1065,6 +1277,7 @@ class RadiologyStaffController extends Controller
             if ($httpRequest->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
+
             return redirect()->back()->with('info', $msg);
         }
 
@@ -1085,7 +1298,7 @@ class RadiologyStaffController extends Controller
             if ($receipt) {
                 $details['paid_receipt_id'] = $receipt->id;
                 $details['paid_receipt_number'] = $receipt->receipt_number;
-                $details['paid_amount'] = (float)$receipt->amount;
+                $details['paid_amount'] = (float) $receipt->amount;
             }
         }
 

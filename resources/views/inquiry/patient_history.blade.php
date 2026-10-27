@@ -830,15 +830,29 @@ async function startScannerCapture() {
     statusBox.innerHTML = '<span class="badge bg-warning text-dark p-2"><i class="fas fa-spinner fa-spin me-1"></i> جاري الاتصال بالماسح الضوئي وإجراء المسح... يرجى الانتظار</span>';
     scanBtn.disabled = true;
 
-    try {
-        const response = await fetch('http://127.0.0.1:5000/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dpi: 200, format: 'jpeg' })
-        });
+    const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+    let response = null;
+    let lastError = null;
 
-        if (!response.ok) {
-            throw new Error('فشل السيرفر المحلي في إتمام المسح. تأكد من تشغيل الماسح وتوصيله.');
+    for (const url of endpoints) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dpi: 200, format: 'jpeg' })
+            });
+            if (res.ok) {
+                response = res;
+                break;
+            }
+        } catch (e) {
+            lastError = e;
+        }
+    }
+
+    try {
+        if (!response) {
+            throw lastError || new Error('فشل السيرفر المحلي في إتمام المسح. تأكد من تشغيل الماسح وتوصيله.');
         }
 
         const blob = await response.blob();
@@ -856,7 +870,11 @@ async function startScannerCapture() {
     } catch (error) {
         console.error(error);
         scanBtn.disabled = false;
-        statusBox.innerHTML = '<span class="badge bg-danger p-2"><i class="fas fa-exclamation-triangle me-1"></i> تعذر الاتصال ببرنامج الماسح المحلي (scanner_bridge.py على المنفذ 5000). يرجى التأكد من تشغيله.</span>';
+        let hint = 'تعذر الاتصال ببرنامج الماسح المحلي. يرجى التأكد من تشغيل (تشغيل_السكانر_التلقائي.bat).';
+        if (window.location.protocol === 'https:') {
+            hint += ' وفي هوستنجر (HTTPS): فعّل (محتوى غير آمن / Insecure content) من إعدادات الموقع بجانب الرابط.';
+        }
+        statusBox.innerHTML = `<span class="badge bg-danger p-2"><i class="fas fa-exclamation-triangle me-1"></i> ${hint}</span>`;
     }
 }
 

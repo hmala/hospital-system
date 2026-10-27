@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Models\Prescription;
 
 class Emergency extends Model
 {
@@ -96,7 +95,8 @@ class Emergency extends Model
 
     public function services(): BelongsToMany
     {
-        return $this->belongsToMany(EmergencyService::class, 'emergency_emergency_service');
+        return $this->belongsToMany(EmergencyService::class, 'emergency_emergency_service')
+            ->withPivot(['id', 'quantity', 'payment_id']);
     }
 
     public function treatments(): HasMany
@@ -133,6 +133,7 @@ class Emergency extends Model
     {
         return $this->hasMany(EmergencyRadiologyRequest::class);
     }
+
     /**
      * العلاقة مع قراءات العلامات الحيوية
      */
@@ -157,7 +158,7 @@ class Emergency extends Model
     // مساعدات
     public function getPriorityColorAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'critical' => 'danger',
             'urgent' => 'warning',
             'semi_urgent' => 'info',
@@ -168,7 +169,7 @@ class Emergency extends Model
 
     public function getPriorityTextAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'critical' => 'حرجة',
             'urgent' => 'عاجلة',
             'semi_urgent' => 'شبه عاجلة',
@@ -179,7 +180,7 @@ class Emergency extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'waiting' => 'warning',
             'in_progress' => 'info',
             'completed' => 'success',
@@ -192,7 +193,7 @@ class Emergency extends Model
 
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'waiting' => 'في الانتظار',
             'in_progress' => 'قيد المعالجة',
             'completed' => 'مكتملة',
@@ -205,12 +206,12 @@ class Emergency extends Model
 
     public function getPriorityBadgeClassAttribute()
     {
-        return 'bg-' . $this->priority_color;
+        return 'bg-'.$this->priority_color;
     }
 
     public function getStatusBadgeClassAttribute()
     {
-        return 'bg-' . $this->status_color;
+        return 'bg-'.$this->status_color;
     }
 
     /**
@@ -235,8 +236,8 @@ class Emergency extends Model
         }
 
         $emergencyCopay = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('emergency') ?? 0.0) : 100.0;
-        $labCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
-        $radCopay       = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
+        $labCopay = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('lab') ?? 0.0) : 100.0;
+        $radCopay = $isInsurance && $this->patient ? ($this->patient->getCopayPercentageFor('radiology') ?? 0.0) : 100.0;
 
         $unpaidServiceIds = \DB::table('emergency_emergency_service')
             ->where('emergency_id', $this->id)
@@ -246,25 +247,26 @@ class Emergency extends Model
         $unpaidServices = $this->services()->whereIn('emergency_services.id', $unpaidServiceIds)->get();
         $servicesPatientAmount = 0.0;
         foreach ($unpaidServices as $service) {
+            $qty = max(1, (int) ($service->pivot->quantity ?? 1));
             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
-            $servicesPatientAmount += (float)$pricing['patient_share'];
+            $servicesPatientAmount += ((float) $pricing['patient_share']) * $qty;
         }
-        
+
         $labPatientAmount = 0.0;
         $unpaidLabRequests = $this->labRequests()->whereNull('payment_id')->with('labTests')->get();
         foreach ($unpaidLabRequests as $req) {
             foreach ($req->labTests as $test) {
                 $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
-                $labPatientAmount += (float)$pricing['patient_share'];
+                $labPatientAmount += (float) $pricing['patient_share'];
             }
         }
-            
+
         $radiologyPatientAmount = 0.0;
         $unpaidRadRequests = $this->radiologyRequests()->whereNull('payment_id')->with('radiologyTypes')->get();
         foreach ($unpaidRadRequests as $req) {
             foreach ($req->radiologyTypes as $rad) {
                 $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
-                $radiologyPatientAmount += (float)$pricing['patient_share'];
+                $radiologyPatientAmount += (float) $pricing['patient_share'];
             }
         }
 
@@ -273,10 +275,10 @@ class Emergency extends Model
             ->where('status', '<>', 'cancelled')
             ->sum('consultation_fee');
 
-        $followUpFee = ($this->doctor_follow_up_fee > 0 && !$this->follow_up_payment_id) 
-            ? $this->doctor_follow_up_fee 
+        $followUpFee = ($this->doctor_follow_up_fee > 0 && ! $this->follow_up_payment_id)
+            ? $this->doctor_follow_up_fee
             : 0;
-        $followUpPatientFee = $isInsurance ? (float)round($followUpFee * ($emergencyCopay / 100.0), 2) : (float)$followUpFee;
+        $followUpPatientFee = $isInsurance ? (float) round($followUpFee * ($emergencyCopay / 100.0), 2) : (float) $followUpFee;
 
         return (float) ($servicesPatientAmount + $labPatientAmount + $radiologyPatientAmount + $consultationAmount + $followUpPatientFee);
     }
@@ -293,42 +295,49 @@ class Emergency extends Model
     {
         // Try to get from latest vital sign reading first, fallback to JSON column
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->blood_pressure : ($this->vital_signs['blood_pressure'] ?? null);
     }
 
     public function getHeartRateAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->heart_rate : ($this->vital_signs['heart_rate'] ?? null);
     }
 
     public function getTemperatureAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->temperature : ($this->vital_signs['temperature'] ?? null);
     }
 
     public function getOxygenSaturationAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->oxygen_saturation : ($this->vital_signs['oxygen_saturation'] ?? null);
     }
 
     public function getRespiratoryRateAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->respiratory_rate : ($this->vital_signs['respiratory_rate'] ?? null);
     }
 
     public function getBloodGlucoseAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->blood_glucose : ($this->vital_signs['blood_glucose'] ?? null);
     }
 
     public function getVitalsLastUpdatedAttribute()
     {
         $latest = $this->latestVitalSign;
+
         return $latest ? $latest->created_at : (isset($this->vital_signs['updated_at']) ? \Carbon\Carbon::parse($this->vital_signs['updated_at']) : null);
     }
 
@@ -342,7 +351,7 @@ class Emergency extends Model
      */
     public static function getEmergencyTypeText($type)
     {
-        return match($type) {
+        return match ($type) {
             'trauma' => 'إصابات وكسور',
             'cardiac' => 'مشاكل قلبية',
             'respiratory' => 'مشاكل تنفسية',

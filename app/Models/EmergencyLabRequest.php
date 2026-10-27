@@ -13,11 +13,12 @@ class EmergencyLabRequest extends Model
         'emergency_id',
         'patient_id',
         'payment_id',
+        'payment_status',
         'status',
         'priority',
         'notes',
         'requested_at',
-        'completed_at'
+        'completed_at',
     ];
 
     protected $casts = [
@@ -26,6 +27,11 @@ class EmergencyLabRequest extends Model
     ];
 
     // العلاقات
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
     public function emergency()
     {
         return $this->belongsTo(Emergency::class);
@@ -51,7 +57,7 @@ class EmergencyLabRequest extends Model
     // Accessors
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'في الانتظار',
             'in_progress' => 'قيد التنفيذ',
             'completed' => 'مكتمل',
@@ -62,7 +68,7 @@ class EmergencyLabRequest extends Model
 
     public function getStatusBadgeClassAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'bg-warning',
             'in_progress' => 'bg-info',
             'completed' => 'bg-success',
@@ -73,7 +79,7 @@ class EmergencyLabRequest extends Model
 
     public function getPriorityTextAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'urgent' => 'عاجل',
             'critical' => 'حرج',
             default => $this->priority
@@ -82,7 +88,7 @@ class EmergencyLabRequest extends Model
 
     public function getPriorityBadgeClassAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'urgent' => 'bg-warning',
             'critical' => 'bg-danger',
             default => 'bg-secondary'

@@ -99,43 +99,10 @@
                                                id="role_{{ $role->id }}"
                                                {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}>
                                         <label class="form-check-label" for="role_{{ $role->id }}">
-                                            @switch($role->name)
-                                                @case('admin') 
-                                                    <span class="badge bg-danger">مدير النظام</span>
-                                                @break
-                                                @case('doctor') 
-                                                    <span class="badge bg-success">طبيب</span>
-                                                @break
-                                                @case('patient') 
-                                                    <span class="badge bg-info">مريض</span>
-                                                @break
-                                                @case('receptionist') 
-                                                    <span class="badge bg-warning">موظف استقبال</span>
-                                                @break
-                                                @case('lab_staff') 
-                                                    <span class="badge bg-secondary">موظف مختبر</span>
-                                                @break
-                                                @case('radiology_staff') 
-                                                    <span class="badge bg-dark">موظف أشعة</span>
-                                                @break
-                                                @case('pharmacy_staff') 
-                                                    <span class="badge bg-primary">موظف صيدلية</span>
-                                                @break
-                                                @case('inventory_manager')
-                                                    <span class="badge bg-secondary">موظف مخزن</span>
-                                                @break
-                                                @case('consultation_receptionist') 
-                                                    <span class="badge bg-info">موظف استعلامات استشارية</span>
-                                                @break
-                                                @case('surgery_staff') 
-                                                    <span class="badge bg-danger">موظف عمليات</span>
-                                                @break
-                                                @case('resident') 
-                                                    <span class="badge bg-success">طبيب مقيم</span>
-                                                @break
-                                                @default 
-                                                    <span class="badge bg-secondary">{{ $role->name }}</span>
-                                            @endswitch
+                                            @php
+                                                $roleInfo = \App\Http\Controllers\RoleManagementController::getRoleLabel($role->name);
+                                            @endphp
+                                            <span class="badge bg-{{ $roleInfo['color'] }}"><i class="fas fa-{{ $roleInfo['icon'] }} me-1"></i> {{ $roleInfo['label'] }}</span>
                                         </label>
                                     </div>
                                 </div>

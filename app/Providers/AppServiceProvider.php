@@ -2,21 +2,21 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Blade;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\View;
 use App\Models\Appointment;
-use App\Models\Visit;
+use App\Models\BedReservation;
+use App\Models\Payment;
+use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
 use App\Models\SurgeryRadiologyTest;
-use App\Models\Request as MedicalRequest;
-use App\Models\Payment;
-use App\Models\BedReservation;
+use App\Models\Visit;
 use App\Observers\BedReservationObserver;
 use App\Observers\PaymentObserver;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,11 +28,10 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
+        @ini_set('memory_limit', '512M');
+
         if (request()->isSecure() || request()->header('X-Forwarded-Proto') === 'https' || str_starts_with(config('app.url'), 'https://')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
@@ -115,10 +114,10 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             if (auth()->check()) {
                 $user = auth()->user();
-                
+
                 // إحصائيات المواعيد
                 $confirmedAppointments = Appointment::where('status', 'confirmed')->count();
-                
+
                 // إحصائيات الزيارات
                 $incompleteVisits = Visit::where('status', 'incomplete')->count();
                 $doctorIncompleteVisits = 0;
@@ -127,14 +126,14 @@ class AppServiceProvider extends ServiceProvider
                         ->where('status', 'incomplete')
                         ->count();
                 }
-                
+
                 // إحصائيات العمليات
                 $pendingSurgeries = Surgery::where('status', 'pending')->count();
                 $waitingSurgeries = Surgery::where('status', 'waiting')->count();
-                
+
                 // إحصائيات الاستعلامات (جميع الطلبات المعلقة)
                 $pendingRequests = MedicalRequest::where('status', 'pending')->count();
-                
+
                 // إحصائيات المختبر والأشعة (تشمل مصرف الدم كجزء من المختبر)
                 $pendingLab = MedicalRequest::whereIn('type', ['lab', 'blood_bank'])
                     ->where('status', 'pending')
@@ -146,7 +145,7 @@ class AppServiceProvider extends ServiceProvider
                     ->where('status', 'pending')
                     ->count();
                 $pendingSurgeryRadiology = SurgeryRadiologyTest::where('status', 'pending')->count();
-                
+
                 $view->with(compact(
                     'confirmedAppointments',
                     'incompleteVisits',

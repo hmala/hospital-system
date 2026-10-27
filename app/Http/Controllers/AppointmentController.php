@@ -1,16 +1,15 @@
 <?php
+
 // app/Http/Controllers/AppointmentController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\Patient;
-use App\Models\Doctor;
 use App\Models\Department;
-use App\Models\Payment;
+use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\Visit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class AppointmentController extends Controller
 {
@@ -18,22 +17,22 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->hasRole('patient')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view appointments') && ! $user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بعرض المواعيد');
         }
-        
+
         // إذا كان المستخدم مريضاً، يرى مواعيده فقط
         if ($user->hasRole('patient')) {
             // التحقق من وجود سجل مريض وإنشاءه إذا لم يكن موجوداً
-            if (!$user->patient) {
+            if (! $user->patient) {
                 Patient::create([
                     'user_id' => $user->id,
-                    'medical_record_number' => 'P' . str_pad($user->id, 6, '0', STR_PAD_LEFT),
+                    'medical_record_number' => 'P'.str_pad($user->id, 6, '0', STR_PAD_LEFT),
                     'blood_type' => null,
                 ]);
                 $user->load('patient');
             }
-            
+
             $activeAppointments = Appointment::with(['patient.user', 'doctor.user', 'department'])
                 ->where('patient_id', $user->patient->id)
                 ->whereIn('status', ['scheduled', 'confirmed'])
@@ -92,16 +91,16 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create appointments') && !$user->hasRole('patient')))) {
+        if (! $isAdmin && (! $user || (! $user->can('create appointments') && ! $user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بحجز موعد');
         }
 
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('type', '!=', 'consultant')
-                      ->orWhere('is_available_today', true);
+                    ->orWhere('is_available_today', true);
             })
             ->get();
         $departments = Department::where('is_active', true)->orderBy('name')->get();
@@ -113,7 +112,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create appointments') && !$user->hasRole('patient')))) {
+        if (! $isAdmin && (! $user || (! $user->can('create appointments') && ! $user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بحجز موعد');
         }
 
@@ -123,12 +122,12 @@ class AppointmentController extends Controller
             'department_id' => 'required|exists:departments,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|date_format:H:i',
-            'reason' => 'required|in:' . implode(',', array_keys(\App\Models\Appointment::VISIT_REASONS)),
-            'consultation_fee' => 'required|numeric|min:0',
+            'reason' => 'required|in:'.implode(',', array_keys(\App\Models\Appointment::VISIT_REASONS)),
+            'consultation_fee' => 'nullable|numeric|min:0',
         ]);
 
         // تحديد التاريخ والوقت الكامل
-        $appointmentDateTime = $request->appointment_date . ' ' . $request->appointment_time . ':00';
+        $appointmentDateTime = $request->appointment_date.' '.$request->appointment_time.':00';
 
         // التحقق من توفر التاريخ والوقت
         $existingAppointment = Appointment::where('doctor_id', $request->doctor_id)
@@ -140,23 +139,42 @@ class AppointmentController extends Controller
             return back()->withErrors(['appointment_time' => 'يوجد موعد محجوز مسبقاً لهذا الطبيب في هذا التاريخ والوقت'])->withInput();
         }
 
-        // الحصول على أجر الكشف من الطبيب إذا لم يتم تحديده
-        $consultationFee = $request->consultation_fee;
-        if (!$consultationFee) {
-            $doctor = Doctor::find($request->doctor_id);
-            $consultationFee = $doctor->consultation_fee;
+        // منع تكرار الحجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً
+        $apptDateOnly = \Carbon\Carbon::parse($request->appointment_date)->toDateString();
+
+        $existingSameDayAppt = Appointment::where('patient_id', $request->patient_id)
+            ->where('doctor_id', $request->doctor_id)
+            ->whereDate('appointment_date', $apptDateOnly)
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->first();
+
+        $existingSameDayVisit = Visit::where('patient_id', $request->patient_id)
+            ->where('doctor_id', $request->doctor_id)
+            ->whereDate('visit_date', $apptDateOnly)
+            ->where('status', '!=', 'cancelled')
+            ->first();
+
+        if ($existingSameDayAppt || $existingSameDayVisit) {
+            return back()->withErrors([
+                'patient_id' => '⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض لديه كشفية/حجز مسجل اليوم بالفعل لدى هذا الطبيب، ويدخل للعيادة مباشرة لمتابعة الفحوصات دون الحاجة لقطع حجز جديد.',
+            ])->withInput();
         }
+
+        $doctor = Doctor::find($request->doctor_id);
+        $consultationFee = $request->consultation_fee ?: ($doctor?->consultation_fee ?? 0);
 
         Appointment::create([
             'patient_id' => $request->patient_id,
             'doctor_id' => $request->doctor_id,
             'department_id' => $request->department_id,
-            'appointment_date' => $request->appointment_date . ' ' . $request->appointment_time . ':00',
-            'reason' => $request->reason,
+            'appointment_date' => $request->appointment_date.' '.$request->appointment_time.':00',
+            'reason' => $request->reason ?: 'كشف طبي عام',
             'notes' => $request->notes,
             'consultation_fee' => $consultationFee,
+            'is_free_recheck' => false,
             'duration' => $request->duration ?? 30,
-            'status' => 'scheduled'
+            'status' => 'scheduled',
+            'payment_status' => 'pending',
         ]);
 
         return redirect()->route('appointments.index')
@@ -167,11 +185,12 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->hasRole('patient')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view appointments') && ! $user->hasRole('patient')))) {
             abort(403, 'غير مصرح لك بعرض بيانات الموعد');
         }
 
         $appointment->load(['patient.user', 'doctor.user', 'department']);
+
         return view('appointments.show', compact('appointment'));
     }
 
@@ -179,16 +198,16 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit appointments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit appointments'))) {
             abort(403, 'غير مصرح لك بتعديل الموعد');
         }
 
         $patients = Patient::with('user')->get();
         $doctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('type', '!=', 'consultant')
-                      ->orWhere('is_available_today', true);
+                    ->orWhere('is_available_today', true);
             })
             ->get();
         $departments = Department::where('is_active', true)->orderBy('name')->get();
@@ -200,7 +219,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit appointments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit appointments'))) {
             abort(403, 'غير مصرح لك بتعديل الموعد');
         }
 
@@ -210,13 +229,13 @@ class AppointmentController extends Controller
             'department_id' => 'required|exists:departments,id',
             'appointment_date' => 'required|date',
             'appointment_time' => 'required|date_format:H:i',
-            'reason' => 'required|in:' . implode(',', array_keys(\App\Models\Appointment::VISIT_REASONS)),
+            'reason' => 'required|in:'.implode(',', array_keys(\App\Models\Appointment::VISIT_REASONS)),
             'consultation_fee' => 'required|numeric|min:0',
             'status' => 'required|in:scheduled,confirmed,completed,cancelled,no_show',
         ]);
 
         // تحديد التاريخ والوقت الكامل
-        $appointmentDateTime = $request->appointment_date . ' ' . $request->appointment_time . ':00';
+        $appointmentDateTime = $request->appointment_date.' '.$request->appointment_time.':00';
 
         // التحقق من توفر التاريخ والوقت (استثناء الموعد الحالي)
         $existingAppointment = Appointment::where('doctor_id', $request->doctor_id)
@@ -239,13 +258,13 @@ class AppointmentController extends Controller
                 'notes' => $request->notes,
                 'consultation_fee' => $request->consultation_fee,
                 'duration' => $request->duration ?? 30,
-                'status' => $request->status
+                'status' => $request->status,
             ]);
 
             return redirect()->route('appointments.index')
                 ->with('success', 'تم تحديث الموعد بنجاح');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ الموعد: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ الموعد: '.$e->getMessage())->withInput();
         }
     }
 
@@ -253,7 +272,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('delete appointments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('delete appointments'))) {
             abort(403, 'غير مصرح لك بحذف الموعد');
         }
 
@@ -268,7 +287,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('edit appointments') && !$user->can('change appointment status')))) {
+        if (! $isAdmin && (! $user || (! $user->can('edit appointments') && ! $user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بتغيير حالة الموعد');
         }
 
@@ -282,7 +301,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('edit appointments') && !$user->can('change appointment status')))) {
+        if (! $isAdmin && (! $user || (! $user->can('edit appointments') && ! $user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بتغيير حالة الموعد');
         }
 
@@ -297,12 +316,12 @@ class AppointmentController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $isOwnPatient = $user && $user->hasRole('patient') && $user->patient && $appointment->patient_id === $user->patient->id;
-        if (!$isAdmin && !$isOwnPatient && (!$user || (!$user->can('edit appointments') && !$user->can('cancel appointments') && !$user->can('change appointment status')))) {
+        if (! $isAdmin && ! $isOwnPatient && (! $user || (! $user->can('edit appointments') && ! $user->can('cancel appointments') && ! $user->can('change appointment status')))) {
             abort(403, 'غير مصرح لك بإلغاء الموعد');
         }
 
         $request->validate([
-            'cancellation_reason' => 'nullable|string|max:500'
+            'cancellation_reason' => 'nullable|string|max:500',
         ]);
 
         // التحقق من أن الموعد لم تكتمل زيارته
@@ -324,7 +343,7 @@ class AppointmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view appointments') && !$user->can('create appointments') && !$user->can('manage consultant availability') && !$user->can('view own visits') && !$user->can('view visits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view appointments') && ! $user->can('create appointments') && ! $user->can('manage consultant availability') && ! $user->can('view own visits') && ! $user->can('view visits')))) {
             abort(403, 'غير مصرح لك بطباعة وصل الموعد والمراجعة');
         }
 
@@ -344,9 +363,15 @@ class AppointmentController extends Controller
             'follow_up_date' => $appointment->appointment_date,
             'follow_up_notes' => $appointment->notes ?: $appointment->reason,
         ]);
-        if ($appointment->patient) $visit->setRelation('patient', $appointment->patient);
-        if ($appointment->doctor) $visit->setRelation('doctor', $appointment->doctor);
-        if ($appointment->department) $visit->setRelation('department', $appointment->department);
+        if ($appointment->patient) {
+            $visit->setRelation('patient', $appointment->patient);
+        }
+        if ($appointment->doctor) {
+            $visit->setRelation('doctor', $appointment->doctor);
+        }
+        if ($appointment->department) {
+            $visit->setRelation('department', $appointment->department);
+        }
 
         return view('doctors.visits.appointment-print', compact('appointment', 'visit', 'followUpAppointment'));
     }

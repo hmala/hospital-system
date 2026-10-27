@@ -23,7 +23,7 @@ class ConsultantAvailabilityController extends Controller
             if ($request->is('api/*')) {
                 return $next($request);
             }
-            
+
             $user = auth()->user();
             $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
             $allowedPerms = [
@@ -33,7 +33,7 @@ class ConsultantAvailabilityController extends Controller
                 'view account statements',
                 'view doctor accounts',
                 'view doctor profits',
-                'view appointments'
+                'view appointments',
             ];
             $hasPerm = false;
             if ($user) {
@@ -44,9 +44,10 @@ class ConsultantAvailabilityController extends Controller
                     }
                 }
             }
-            if (!$isAdmin && (!$user || !$hasPerm)) {
+            if (! $isAdmin && (! $user || ! $hasPerm)) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
             }
+
             return $next($request);
         });
     }
@@ -58,7 +59,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage consultant availability') && !$user->can('view appointments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage consultant availability') && ! $user->can('view appointments')))) {
             abort(403, 'غير مصرح لك بعرض جدول توفر الاستشاريين');
         }
 
@@ -77,16 +78,16 @@ class ConsultantAvailabilityController extends Controller
         $defaultDay = $daysMap[date('l')] ?? 'السبت';
 
         $selectedDay = $request->query('day', $defaultDay);
-        if (!in_array($selectedDay, $weekDays)) {
+        if (! in_array($selectedDay, $weekDays)) {
             $selectedDay = $defaultDay;
         }
 
         $consultantDoctors = Doctor::with(['user', 'department'])
             ->join('users', 'doctors.user_id', '=', 'users.id')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('doctors.type', 'consultant')
-                  ->orWhere('doctors.type', 'sonar')
-                  ->orWhere('doctors.specialization', 'LIKE', '%سونار%');
+                    ->orWhere('doctors.type', 'sonar')
+                    ->orWhere('doctors.specialization', 'LIKE', '%سونار%');
             })
             ->where('doctors.is_active', true)
             ->orderBy('doctors.specialization')
@@ -111,15 +112,15 @@ class ConsultantAvailabilityController extends Controller
 
         // 3. جلب عدد المنتظرين لكل طبيب (الذين دفعوا ولم يدخلوا بعد)
         $waitingCounts = \App\Models\Appointment::whereDate('appointment_date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('payment_status', 'paid')
-                  ->orWhereNotNull('emergency_id');
+                    ->orWhereNotNull('emergency_id');
             })
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereDoesntHave('visit')
-                  ->orWhereHas('visit', function($vq) {
-                      $vq->whereNotIn('status', ['completed', 'cancelled']);
-                  });
+                    ->orWhereHas('visit', function ($vq) {
+                        $vq->whereNotIn('status', ['completed', 'cancelled']);
+                    });
             })
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->selectRaw('doctor_id, count(*) as count')
@@ -128,7 +129,7 @@ class ConsultantAvailabilityController extends Controller
 
         $consultantDoctors = $consultantDoctors->map(function ($doc) use ($selectedDay, $activeVisits, $inConsultationAppointments, $waitingCounts) {
             $doc->is_working_selected_day = $doc->isWorkingOnDay($selectedDay);
-            $doc->is_available_for_view = $doc->is_working_selected_day && (bool)$doc->is_available_today;
+            $doc->is_available_for_view = $doc->is_working_selected_day && (bool) $doc->is_available_today;
 
             $activeVisit = $activeVisits->get($doc->id)?->first();
             $inConsultApp = $inConsultationAppointments->get($doc->id)?->first();
@@ -160,12 +161,12 @@ class ConsultantAvailabilityController extends Controller
 
         // جلب المواعيد المحجوزة اليوم للأطباء الاستشاريين وحجوزات السونار (المجدولة والمؤكدة والتي يتم استدعاؤها)
         $todayAppointments = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'emergency'])
-            ->where(function($query) {
-                $query->whereHas('doctor', function($q) {
+            ->where(function ($query) {
+                $query->whereHas('doctor', function ($q) {
                     $q->where('type', 'consultant')
-                      ->orWhere('specialization', 'LIKE', '%سونار%');
+                        ->orWhere('specialization', 'LIKE', '%سونار%');
                 })
-                ->orWhere('reason', 'LIKE', '%سونار%');
+                    ->orWhere('reason', 'LIKE', '%سونار%');
             })
             ->whereDate('appointment_date', today())
             ->whereIn('status', ['scheduled', 'confirmed', 'calling'])
@@ -179,42 +180,42 @@ class ConsultantAvailabilityController extends Controller
             ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', today())
-            ->where(function($q) {
-                $q->whereHas('visit.doctor', function($dq) {
+            ->where(function ($q) {
+                $q->whereHas('visit.doctor', function ($dq) {
                     $dq->where('type', 'consultant');
                 })->orWhere('subtype', 'ultrasound')
-                  ->orWhere('description', 'LIKE', '%سونار%');
+                    ->orWhere('description', 'LIKE', '%سونار%');
             })
             ->latest()
             ->get();
 
         // جلب المراجعات والمواعيد التي تم جدولتها اليوم من محطة الأطباء
         $todayScheduledFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('is_free_recheck', true)
-                  ->orWhereNotNull('recheck_parent_visit_id');
+                    ->orWhereNotNull('recheck_parent_visit_id');
             })
             ->whereDate('created_at', today())
             ->latest('created_at')
             ->get();
 
-        $pendingPrintFollowUps = $todayScheduledFollowUps->filter(function($f) {
+        $pendingPrintFollowUps = $todayScheduledFollowUps->filter(function ($f) {
             return empty($f->printed_at) && ($f->print_count ?? 0) === 0;
         });
 
-        $printedTodayFollowUps = $todayScheduledFollowUps->filter(function($f) {
-            return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
+        $printedTodayFollowUps = $todayScheduledFollowUps->filter(function ($f) {
+            return ! empty($f->printed_at) || ($f->print_count ?? 0) > 0;
         });
 
         return view('consultant-availability.index', compact(
-            'consultantDoctors', 
-            'groupedDoctors', 
-            'todayAppointments', 
-            'pendingConsultantRequests', 
-            'todayScheduledFollowUps', 
+            'consultantDoctors',
+            'groupedDoctors',
+            'todayAppointments',
+            'pendingConsultantRequests',
+            'todayScheduledFollowUps',
             'pendingPrintFollowUps',
             'printedTodayFollowUps',
-            'weekDays', 
+            'weekDays',
             'selectedDay'
         ));
     }
@@ -228,10 +229,10 @@ class ConsultantAvailabilityController extends Controller
 
         // 1. العيادات الجارية الآن
         $consultantDoctors = Doctor::with(['user', 'department'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('type', 'consultant')
-                  ->orWhere('type', 'sonar')
-                  ->orWhere('specialization', 'LIKE', '%سونار%');
+                    ->orWhere('type', 'sonar')
+                    ->orWhere('specialization', 'LIKE', '%سونار%');
             })
             ->where('is_active', true)
             ->get();
@@ -255,11 +256,11 @@ class ConsultantAvailabilityController extends Controller
 
             if ($activeVisit || $inConsultApp) {
                 $status = $activeVisit ? 'in_consultation' : $inConsultApp->status;
-                $patientName = $activeVisit 
+                $patientName = $activeVisit
                     ? (optional(optional($activeVisit->patient)->user)->name ?? optional($activeVisit->patient)->name ?? 'مريض بالداخل')
                     : (optional(optional($inConsultApp->patient)->user)->name ?? optional($inConsultApp->patient)->name ?? 'مريض قيد الاستدعاء');
                 $queue = $activeVisit ? optional($activeVisit->appointment)->queue_number : $inConsultApp->queue_number;
-                $since = $activeVisit 
+                $since = $activeVisit
                     ? ($activeVisit->created_at ? $activeVisit->created_at->diffForHumans(null, true) : 'الآن')
                     : ($inConsultApp->called_at ? \Carbon\Carbon::parse($inConsultApp->called_at)->diffForHumans(null, true) : 'الآن');
 
@@ -277,17 +278,18 @@ class ConsultantAvailabilityController extends Controller
 
         // 2. المراجعات المجدولة اليوم
         $allTodayFollowUps = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('is_free_recheck', true)
-                  ->orWhereNotNull('recheck_parent_visit_id');
+                    ->orWhereNotNull('recheck_parent_visit_id');
             })
             ->whereDate('created_at', $today)
             ->latest('created_at')
             ->get();
 
-        $mapFollowUp = function($fApp) {
+        $mapFollowUp = function ($fApp) {
             $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
-            $isPrinted = !empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+            $isPrinted = ! empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+
             return [
                 'id' => $fApp->id,
                 'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
@@ -302,12 +304,12 @@ class ConsultantAvailabilityController extends Controller
             ];
         };
 
-        $pendingFollowUps = $allTodayFollowUps->filter(function($f) {
+        $pendingFollowUps = $allTodayFollowUps->filter(function ($f) {
             return empty($f->printed_at) && ($f->print_count ?? 0) === 0;
         })->map($mapFollowUp)->values();
 
-        $printedTodayFollowUps = $allTodayFollowUps->filter(function($f) {
-            return !empty($f->printed_at) || ($f->print_count ?? 0) > 0;
+        $printedTodayFollowUps = $allTodayFollowUps->filter(function ($f) {
+            return ! empty($f->printed_at) || ($f->print_count ?? 0) > 0;
         })->map($mapFollowUp)->values();
 
         // 3. طابور الحجوزات والقبض لليوم
@@ -319,7 +321,7 @@ class ConsultantAvailabilityController extends Controller
             ->orderBy('queue_number', 'asc')
             ->orderBy('id', 'asc')
             ->get()
-            ->map(function($app) use ($canProcessPayments) {
+            ->map(function ($app) use ($canProcessPayments) {
                 $patientName = 'مريض غير محدد';
                 if ($app->patient && $app->patient->user) {
                     $patientName = $app->patient->user->name;
@@ -331,11 +333,11 @@ class ConsultantAvailabilityController extends Controller
                     'id' => $app->id,
                     'queue_number' => $app->queue_number ?: $app->id,
                     'patient_name' => $patientName,
-                    'is_emergency' => (bool)$app->emergency_id,
+                    'is_emergency' => (bool) $app->emergency_id,
                     'doctor_name' => optional(optional($app->doctor)->user)->name ?? 'غير محدد',
                     'status' => $app->status,
                     'payment_status' => $app->payment_status,
-                    'is_free_recheck' => (bool)$app->is_free_recheck,
+                    'is_free_recheck' => (bool) $app->is_free_recheck,
                     'can_process_payments' => $canProcessPayments,
                     'payment_url' => route('cashier.payment.form', $app->id),
                     'print_url' => route('appointments.print', $app->id),
@@ -349,21 +351,22 @@ class ConsultantAvailabilityController extends Controller
             ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', $today)
-            ->where(function($q) {
-                $q->whereHas('visit.doctor', function($dq) {
+            ->where(function ($q) {
+                $q->whereHas('visit.doctor', function ($dq) {
                     $dq->where('type', 'consultant');
                 })->orWhere('subtype', 'ultrasound')
-                  ->orWhere('description', 'LIKE', '%سونار%');
+                    ->orWhere('description', 'LIKE', '%سونار%');
             })
             ->latest()
             ->get()
-            ->map(function($req) {
+            ->map(function ($req) {
                 $patientName = optional(optional($req->visit)->patient)->name ?? optional(optional(optional($req->visit)->patient)->user)->name ?? 'مريض';
+
                 return [
                     'id' => $req->id,
                     'patient_name' => $patientName,
                     'type_label' => $req->subtype === 'ultrasound' ? 'سونار' : ($req->type === 'radiology' ? 'أشعة' : $req->type),
-                    'total_amount' => number_format($req->total_amount ?? 0)
+                    'total_amount' => number_format($req->total_amount ?? 0),
                 ];
             })->values();
 
@@ -393,9 +396,9 @@ class ConsultantAvailabilityController extends Controller
         $date = $request->query('date');
 
         $query = \App\Models\Appointment::with(['patient.user', 'doctor.user', 'department'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('is_free_recheck', true)
-                  ->orWhereNotNull('recheck_parent_visit_id');
+                    ->orWhereNotNull('recheck_parent_visit_id');
             });
 
         if ($date) {
@@ -403,27 +406,28 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($searchQuery) {
-            $query->where(function($q) use ($searchQuery) {
-                $q->whereHas('patient.user', function($uq) use ($searchQuery) {
+            $query->where(function ($q) use ($searchQuery) {
+                $q->whereHas('patient.user', function ($uq) use ($searchQuery) {
                     $uq->where('name', 'LIKE', "%{$searchQuery}%")
-                      ->orWhere('phone', 'LIKE', "%{$searchQuery}%");
+                        ->orWhere('phone', 'LIKE', "%{$searchQuery}%");
                 })
-                ->orWhereHas('patient', function($pq) use ($searchQuery) {
-                    $pq->where('name', 'LIKE', "%{$searchQuery}%")
-                      ->orWhere('national_id', 'LIKE', "%{$searchQuery}%")
-                      ->orWhere('medical_record_number', 'LIKE', "%{$searchQuery}%");
-                })
-                ->orWhere('notes', 'LIKE', "%{$searchQuery}%")
-                ->orWhere('reason', 'LIKE', "%{$searchQuery}%");
+                    ->orWhereHas('patient', function ($pq) use ($searchQuery) {
+                        $pq->where('name', 'LIKE', "%{$searchQuery}%")
+                            ->orWhere('national_id', 'LIKE', "%{$searchQuery}%")
+                            ->orWhere('medical_record_number', 'LIKE', "%{$searchQuery}%");
+                    })
+                    ->orWhere('notes', 'LIKE', "%{$searchQuery}%")
+                    ->orWhere('reason', 'LIKE', "%{$searchQuery}%");
             });
         }
 
         $results = $query->latest('appointment_date')
             ->limit(30)
             ->get()
-            ->map(function($fApp) {
+            ->map(function ($fApp) {
                 $appDate = $fApp->appointment_date ? \Carbon\Carbon::parse($fApp->appointment_date) : null;
-                $isPrinted = !empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+                $isPrinted = ! empty($fApp->printed_at) || (($fApp->print_count ?? 0) > 0);
+
                 return [
                     'id' => $fApp->id,
                     'patient_name' => optional($fApp->patient)->name ?? optional(optional($fApp->patient)->user)->name ?? 'مريض',
@@ -452,7 +456,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view consultant financial movements'))) {
             abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للاستشارية');
         }
 
@@ -460,9 +464,13 @@ class ConsultantAvailabilityController extends Controller
             ->where(function ($q) {
                 $q->whereHas('appointment.doctor', function ($dq) {
                     $dq->where('type', 'consultant')
-                       ->orWhere('type', 'sonar')
-                       ->orWhere('specialization', 'LIKE', '%سونار%');
-                })->orWhere('consultation_revenues.payment_type', 'ultrasound');
+                        ->orWhere('type', 'sonar')
+                        ->orWhere('specialization', 'LIKE', '%سونار%');
+                })->orWhere('consultation_revenues.payment_type', 'ultrasound')
+                    ->orWhere('consultation_revenues.department_id', 7)
+                    ->orWhereHas('appointment', function ($aq) {
+                        $aq->where('department_id', 7);
+                    });
             });
 
         $fromDate = $request->query('from_date');
@@ -483,9 +491,9 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($serviceCategory === 'consultation') {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereNull('consultation_revenues.payment_type')
-                  ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
+                    ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
             });
         } elseif ($serviceCategory === 'ultrasound') {
             $query->where('consultation_revenues.payment_type', 'ultrasound');
@@ -499,23 +507,23 @@ class ConsultantAvailabilityController extends Controller
 
         if ($filterType === 'payment') {
             $query->where('consultation_revenues.movement_type', 'payment')
-                  ->where(function ($q) {
-                      $q->whereDoesntHave('appointment', function ($aq) {
-                          $aq->whereIn('payment_status', ['refunded', 'cancelled'])
-                             ->orWhere('status', 'cancelled');
-                      });
-                  });
+                ->where(function ($q) {
+                    $q->whereDoesntHave('appointment', function ($aq) {
+                        $aq->whereIn('payment_status', ['refunded', 'cancelled'])
+                            ->orWhere('status', 'cancelled');
+                    });
+                });
         } elseif ($filterType === 'refund') {
             $query->where('consultation_revenues.movement_type', 'refund');
         } elseif ($filterType === 'appointment_paid') {
             $query->whereHas('appointment', function ($q) {
                 $q->where('payment_status', 'paid')
-                  ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             });
         } elseif ($filterType === 'appointment_refunded') {
             $query->whereHas('appointment', function ($q) {
                 $q->where('payment_status', 'refunded')
-                  ->orWhere('status', 'cancelled');
+                    ->orWhere('status', 'cancelled');
             });
         }
 
@@ -525,35 +533,35 @@ class ConsultantAvailabilityController extends Controller
 
         if ($insuranceStatus) {
             if ($insuranceStatus === 'insurance') {
-                $query->where(function($sub) {
+                $query->where(function ($sub) {
                     $sub->whereHas('appointment', function ($q) {
                         $q->whereIn('insurance_type', ['hi', 'moi'])
-                          ->orWhere(function($sq) {
-                              $sq->whereNotNull('insurance_type')
-                                 ->whereNotIn('insurance_type', ['none', '']);
-                          });
+                            ->orWhere(function ($sq) {
+                                $sq->whereNotNull('insurance_type')
+                                    ->whereNotIn('insurance_type', ['none', '']);
+                            });
                     })->orWhereHas('payment', function ($pq) {
                         $pq->whereIn('insurance_type', ['hi', 'moi'])
-                           ->orWhere('insurance_share', '>', 0);
+                            ->orWhere('insurance_share', '>', 0);
                     });
                 });
             } elseif ($insuranceStatus === 'cash') {
-                $query->where(function($sub) {
-                    $sub->where(function($sq) {
+                $query->where(function ($sub) {
+                    $sub->where(function ($sq) {
                         $sq->whereHas('appointment', function ($q) {
                             $q->whereNull('insurance_type')
-                              ->orWhere('insurance_type', 'none')
-                              ->orWhere('insurance_type', '');
+                                ->orWhere('insurance_type', 'none')
+                                ->orWhere('insurance_type', '');
                         })->orWhereDoesntHave('appointment');
-                    })->where(function($pq) {
+                    })->where(function ($pq) {
                         $pq->whereHas('payment', function ($p) {
-                            $p->where(function($pp) {
+                            $p->where(function ($pp) {
                                 $pp->whereNull('insurance_type')
-                                   ->orWhere('insurance_type', 'none')
-                                   ->orWhere('insurance_type', '');
-                            })->where(function($pp) {
+                                    ->orWhere('insurance_type', 'none')
+                                    ->orWhere('insurance_type', '');
+                            })->where(function ($pp) {
                                 $pp->whereNull('insurance_share')
-                                   ->orWhere('insurance_share', '<=', 0);
+                                    ->orWhere('insurance_share', '<=', 0);
                             });
                         })->orWhereDoesntHave('payment');
                     });
@@ -562,16 +570,16 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('consultation_revenues.receipt_number', 'like', '%' . $search . '%')
-                  ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
-                      $uq->where('name', 'like', '%' . $search . '%')
-                         ->orWhere('phone', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('patient.user', function($puq) use ($search) {
-                      $puq->where('name', 'like', '%' . $search . '%')
-                          ->orWhere('phone', 'like', '%' . $search . '%');
-                  });
+            $query->where(function ($q) use ($search) {
+                $q->where('consultation_revenues.receipt_number', 'like', '%'.$search.'%')
+                    ->orWhereHas('appointment.patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('phone', 'like', '%'.$search.'%');
+                    })
+                    ->orWhereHas('patient.user', function ($puq) use ($search) {
+                        $puq->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('phone', 'like', '%'.$search.'%');
+                    });
             });
         }
 
@@ -579,18 +587,18 @@ class ConsultantAvailabilityController extends Controller
         $totalsQuery = (clone $query)->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
 
         $totalReceived = (float) (clone $totalsQuery)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('consultation_revenues.movement_type', 'payment')
-                  ->orWhere(function($sq) {
-                      $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
-                  });
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
+                    });
             })
             ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)'));
 
         $totalRefunded = abs((float) (clone $totalsQuery)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('consultation_revenues.movement_type', 'refund')
-                  ->orWhere('consultation_revenues.total_amount', '<', 0);
+                    ->orWhere('consultation_revenues.total_amount', '<', 0);
             })
             ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)')));
 
@@ -623,7 +631,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view consultant financial movements'))) {
             abort(403, 'غير مصرح لك بطباعة تقرير الحركات المالية للاستشارية');
         }
 
@@ -631,9 +639,13 @@ class ConsultantAvailabilityController extends Controller
             ->where(function ($q) {
                 $q->whereHas('appointment.doctor', function ($dq) {
                     $dq->where('type', 'consultant')
-                       ->orWhere('type', 'sonar')
-                       ->orWhere('specialization', 'LIKE', '%سونار%');
-                })->orWhere('consultation_revenues.payment_type', 'ultrasound');
+                        ->orWhere('type', 'sonar')
+                        ->orWhere('specialization', 'LIKE', '%سونار%');
+                })->orWhere('consultation_revenues.payment_type', 'ultrasound')
+                    ->orWhere('consultation_revenues.department_id', 7)
+                    ->orWhereHas('appointment', function ($aq) {
+                        $aq->where('department_id', 7);
+                    });
             });
 
         $fromDate = $request->query('from_date');
@@ -654,9 +666,9 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($serviceCategory === 'consultation') {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereNull('consultation_revenues.payment_type')
-                  ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
+                    ->orWhere('consultation_revenues.payment_type', '!=', 'ultrasound');
             });
         } elseif ($serviceCategory === 'ultrasound') {
             $query->where('consultation_revenues.payment_type', 'ultrasound');
@@ -670,23 +682,23 @@ class ConsultantAvailabilityController extends Controller
 
         if ($filterType === 'payment') {
             $query->where('consultation_revenues.movement_type', 'payment')
-                  ->where(function ($q) {
-                      $q->whereDoesntHave('appointment', function ($aq) {
-                          $aq->whereIn('payment_status', ['refunded', 'cancelled'])
-                             ->orWhere('status', 'cancelled');
-                      });
-                  });
+                ->where(function ($q) {
+                    $q->whereDoesntHave('appointment', function ($aq) {
+                        $aq->whereIn('payment_status', ['refunded', 'cancelled'])
+                            ->orWhere('status', 'cancelled');
+                    });
+                });
         } elseif ($filterType === 'refund') {
             $query->where('consultation_revenues.movement_type', 'refund');
         } elseif ($filterType === 'appointment_paid') {
             $query->whereHas('appointment', function ($q) {
                 $q->where('payment_status', 'paid')
-                  ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             });
         } elseif ($filterType === 'appointment_refunded') {
             $query->whereHas('appointment', function ($q) {
                 $q->where('payment_status', 'refunded')
-                  ->orWhere('status', 'cancelled');
+                    ->orWhere('status', 'cancelled');
             });
         }
 
@@ -696,35 +708,35 @@ class ConsultantAvailabilityController extends Controller
 
         if ($insuranceStatus) {
             if ($insuranceStatus === 'insurance') {
-                $query->where(function($sub) {
+                $query->where(function ($sub) {
                     $sub->whereHas('appointment', function ($q) {
                         $q->whereIn('insurance_type', ['hi', 'moi'])
-                          ->orWhere(function($sq) {
-                              $sq->whereNotNull('insurance_type')
-                                 ->whereNotIn('insurance_type', ['none', '']);
-                          });
+                            ->orWhere(function ($sq) {
+                                $sq->whereNotNull('insurance_type')
+                                    ->whereNotIn('insurance_type', ['none', '']);
+                            });
                     })->orWhereHas('payment', function ($pq) {
                         $pq->whereIn('insurance_type', ['hi', 'moi'])
-                           ->orWhere('insurance_share', '>', 0);
+                            ->orWhere('insurance_share', '>', 0);
                     });
                 });
             } elseif ($insuranceStatus === 'cash') {
-                $query->where(function($sub) {
-                    $sub->where(function($sq) {
+                $query->where(function ($sub) {
+                    $sub->where(function ($sq) {
                         $sq->whereHas('appointment', function ($q) {
                             $q->whereNull('insurance_type')
-                              ->orWhere('insurance_type', 'none')
-                              ->orWhere('insurance_type', '');
+                                ->orWhere('insurance_type', 'none')
+                                ->orWhere('insurance_type', '');
                         })->orWhereDoesntHave('appointment');
-                    })->where(function($pq) {
+                    })->where(function ($pq) {
                         $pq->whereHas('payment', function ($p) {
-                            $p->where(function($pp) {
+                            $p->where(function ($pp) {
                                 $pp->whereNull('insurance_type')
-                                   ->orWhere('insurance_type', 'none')
-                                   ->orWhere('insurance_type', '');
-                            })->where(function($pp) {
+                                    ->orWhere('insurance_type', 'none')
+                                    ->orWhere('insurance_type', '');
+                            })->where(function ($pp) {
                                 $pp->whereNull('insurance_share')
-                                   ->orWhere('insurance_share', '<=', 0);
+                                    ->orWhere('insurance_share', '<=', 0);
                             });
                         })->orWhereDoesntHave('payment');
                     });
@@ -733,34 +745,34 @@ class ConsultantAvailabilityController extends Controller
         }
 
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('consultation_revenues.receipt_number', 'like', '%' . $search . '%')
-                  ->orWhereHas('appointment.patient.user', function($uq) use ($search) {
-                      $uq->where('name', 'like', '%' . $search . '%')
-                         ->orWhere('phone', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('patient.user', function($puq) use ($search) {
-                      $puq->where('name', 'like', '%' . $search . '%')
-                          ->orWhere('phone', 'like', '%' . $search . '%');
-                  });
+            $query->where(function ($q) use ($search) {
+                $q->where('consultation_revenues.receipt_number', 'like', '%'.$search.'%')
+                    ->orWhereHas('appointment.patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('phone', 'like', '%'.$search.'%');
+                    })
+                    ->orWhereHas('patient.user', function ($puq) use ($search) {
+                        $puq->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('phone', 'like', '%'.$search.'%');
+                    });
             });
         }
 
         $totalsQuery = (clone $query)->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id');
 
         $totalReceived = (float) (clone $totalsQuery)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('consultation_revenues.movement_type', 'payment')
-                  ->orWhere(function($sq) {
-                      $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
-                  });
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('consultation_revenues.movement_type')->where('consultation_revenues.total_amount', '>=', 0);
+                    });
             })
             ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)'));
 
         $totalRefunded = abs((float) (clone $totalsQuery)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('consultation_revenues.movement_type', 'refund')
-                  ->orWhere('consultation_revenues.total_amount', '<', 0);
+                    ->orWhere('consultation_revenues.total_amount', '<', 0);
             })
             ->sum(DB::raw('COALESCE(payments.amount, consultation_revenues.total_amount)')));
 
@@ -794,7 +806,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view consultant financial movements'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view consultant financial movements'))) {
             abort(403, 'غير مصرح لك بتصدير الحركات المالية للاستشارية');
         }
 
@@ -809,7 +821,7 @@ class ConsultantAvailabilityController extends Controller
 
         return Excel::download(
             new ConsultantFinancialMovementsExport($fromDate, $toDate, $filterType, $search, $paymentMethod, $insuranceStatus, $shift, $serviceCategory),
-            'financial_movements_' . now()->format('Ymd_His') . '.xlsx'
+            'financial_movements_'.now()->format('Ymd_His').'.xlsx'
         );
     }
 
@@ -820,14 +832,14 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('manage doctor commissions'))) {
+        if (! $isAdmin && (! $user || ! $user->can('manage doctor commissions'))) {
             abort(403, 'غير مصرح لك بتعديل الحصص المالية للكشفيات.');
         }
 
         $total = abs((float) $revenue->total_amount);
 
         $data = $request->validate([
-            'doctor_share' => 'required|numeric|min:0|max:' . $total,
+            'doctor_share' => 'required|numeric|min:0|max:'.$total,
             'reason' => 'nullable|string|max:500',
         ]);
 
@@ -840,13 +852,13 @@ class ConsultantAvailabilityController extends Controller
         DB::transaction(function () use ($revenue, $newDoctorShare, $newHospitalShare, $newPercentage, $data, $oldDoctorShare, $oldHospitalShare) {
             // 1. تحديث سجل إيرادات الاستشارة
             $notes = $revenue->notes ?? '';
-            $reasonNote = !empty($data['reason']) ? " [تعديل إداري: {$data['reason']}]" : " [تعديل إداري للحصص بواسطة " . auth()->user()->name . "]";
-            
+            $reasonNote = ! empty($data['reason']) ? " [تعديل إداري: {$data['reason']}]" : ' [تعديل إداري للحصص بواسطة '.auth()->user()->name.']';
+
             $revenue->update([
                 'doctor_share' => $newDoctorShare,
                 'hospital_share' => $newHospitalShare,
                 'doctor_percentage' => $newPercentage,
-                'notes' => trim($notes . $reasonNote),
+                'notes' => trim($notes.$reasonNote),
             ]);
 
             // 2. تحديث سجل مستحقات الطبيب
@@ -860,7 +872,7 @@ class ConsultantAvailabilityController extends Controller
                         [
                             'amount' => $newDoctorShare,
                             'status' => 'pending',
-                            'notes' => 'مستحقات الطبيب بعد تعديل يدوي للقيد ' . ($revenue->receipt_number ?? $revenue->id),
+                            'notes' => 'مستحقات الطبيب بعد تعديل يدوي للقيد '.($revenue->receipt_number ?? $revenue->id),
                         ]
                     );
                 } else {
@@ -887,7 +899,7 @@ class ConsultantAvailabilityController extends Controller
             \App\Services\UserActivityLogger::log(
                 action: 'update_financial_shares',
                 category: 'treasury',
-                description: "تعديل يدوي لحصة الطبيب بالقيد #{$revenue->receipt_number} من " . number_format($oldDoctorShare, 0) . " د.ع إلى " . number_format($newDoctorShare, 0) . " د.ع",
+                description: "تعديل يدوي لحصة الطبيب بالقيد #{$revenue->receipt_number} من ".number_format($oldDoctorShare, 0).' د.ع إلى '.number_format($newDoctorShare, 0).' د.ع',
                 subject: $revenue,
                 isSensitive: true,
                 properties: [
@@ -906,8 +918,8 @@ class ConsultantAvailabilityController extends Controller
                 'message' => 'تم تعديل الحصص المالية وتحديث حساب الطبيب بنجاح 💾',
                 'doctor_share' => $newDoctorShare,
                 'hospital_share' => $newHospitalShare,
-                'doctor_share_formatted' => number_format($newDoctorShare, 2) . ' IQD',
-                'hospital_share_formatted' => number_format($newHospitalShare, 2) . ' IQD',
+                'doctor_share_formatted' => number_format($newDoctorShare, 2).' IQD',
+                'hospital_share_formatted' => number_format($newHospitalShare, 2).' IQD',
             ]);
         }
 
@@ -918,7 +930,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بتصدير حسابات الأطباء');
         }
 
@@ -927,7 +939,7 @@ class ConsultantAvailabilityController extends Controller
 
         return Excel::download(
             new DoctorPaymentsDuesExport($doctor->id, $fromDate, $toDate),
-            'doctor_' . optional($doctor->user)->name . '_payments_dues_' . now()->format('Ymd_His') . '.xlsx'
+            'doctor_'.optional($doctor->user)->name.'_payments_dues_'.now()->format('Ymd_His').'.xlsx'
         );
     }
 
@@ -935,7 +947,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى حسابات الأطباء');
         }
 
@@ -955,7 +967,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بالوصول إلى كشف حساب الطبيب');
         }
 
@@ -986,12 +998,12 @@ class ConsultantAvailabilityController extends Controller
             ->where('doctor_id', $doctor->id)
             ->when($payoutSearch, function ($query) use ($payoutSearch) {
                 $query->where(function ($sub) use ($payoutSearch) {
-                    $sub->where('notes', 'like', '%' . $payoutSearch . '%')
-                        ->orWhere('amount', 'like', '%' . $payoutSearch . '%');
+                    $sub->where('notes', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('amount', 'like', '%'.$payoutSearch.'%');
                 });
             })
-            ->when($fromDate, fn($query) => $query->whereDate('created_at', '>=', $fromDate))
-            ->when($toDate, fn($query) => $query->whereDate('created_at', '<=', $toDate));
+            ->when($fromDate, fn ($query) => $query->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('created_at', '<=', $toDate));
 
         $paidDues = (clone $baseDuesQuery)
             ->where('status', 'paid')
@@ -1022,7 +1034,7 @@ class ConsultantAvailabilityController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view doctor accounts') && !$user->can('view doctor profits')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
             abort(403, 'غير مصرح لك بصرف مستحقات الأطباء');
         }
 
@@ -1097,7 +1109,7 @@ class ConsultantAvailabilityController extends Controller
             ]);
         }
 
-        $voucherNumber = 'EXP-DOC-' . now()->format('ymd') . '-' . rand(1000, 9999);
+        $voucherNumber = 'EXP-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
         FinancialTransaction::create([
             'transaction_type' => 'expense',
             'voucher_type' => 'outflow',
@@ -1108,7 +1120,7 @@ class ConsultantAvailabilityController extends Controller
             'amount' => $amount,
             'currency' => 'IQD',
             'payment_method' => 'cash',
-            'description' => 'صرف مستحقات للطبيب ' . optional($doctor->user)->name,
+            'description' => 'صرف مستحقات للطبيب '.optional($doctor->user)->name,
             'notes' => 'سند صرف نقدي - حسابات الاستشارية',
             'performed_by_id' => auth()->id(),
             'performed_at' => now(),
@@ -1182,7 +1194,7 @@ class ConsultantAvailabilityController extends Controller
             $day = $request->input('day');
 
             if ($isAvailable) {
-                if (!in_array($day, $workingDays)) {
+                if (! in_array($day, $workingDays)) {
                     $workingDays[] = $day;
                 }
             } else {
@@ -1216,7 +1228,7 @@ class ConsultantAvailabilityController extends Controller
     {
         try {
             // التحقق من الصلاحيات (للـ web routes)
-            if (auth()->check() && !auth()->user()->can('manage consultant availability')) {
+            if (auth()->check() && ! auth()->user()->can('manage consultant availability')) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
             }
 
@@ -1261,27 +1273,27 @@ class ConsultantAvailabilityController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => $message,
-                    'affected_doctors' => $affected
+                    'affected_doctors' => $affected,
                 ]);
             }
 
             // إعادة توجيه للـ web interface
             return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
-            \Log::error('Bulk update error: ' . $e->getMessage(), [
+            \Log::error('Bulk update error: '.$e->getMessage(), [
                 'request' => $request->all(),
                 'user' => auth()->check() ? auth()->user()->name : 'guest',
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'حدث خطأ: ' . $e->getMessage()
+                    'message' => 'حدث خطأ: '.$e->getMessage(),
                 ], 500);
             }
 
-            return redirect()->back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'حدث خطأ: '.$e->getMessage());
         }
     }
 }

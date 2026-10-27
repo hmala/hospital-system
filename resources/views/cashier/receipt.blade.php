@@ -16,7 +16,18 @@
             </h4>
             <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            @if($payment->isVoided())
+                <span class="badge bg-danger fs-6 d-flex align-items-center px-3 py-2 rounded-pill shadow-sm">
+                    <i class="fas fa-ban me-1"></i> وصل ملغى ومبطل ({{ $payment->void_type === 'rebill' ? 'أُعيد فتحه للتصحيح' : 'استرداد مالي' }})
+                </span>
+            @elseif($payment->paid_at)
+                @can('void payment receipt')
+                    <a href="{{ route('cashier.payments.void.form', $payment->id) }}" class="btn btn-outline-danger px-3 rounded-pill shadow-sm">
+                        <i class="fas fa-undo-alt me-1"></i> إبطال الوصل / إعادة فتح للتصحيح
+                    </a>
+                @endcan
+            @endif
             <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
                 <i class="fas fa-print me-1"></i> طباعة الوصل
             </a>
@@ -25,6 +36,23 @@
             </a>
         </div>
     </div>
+
+    @if($payment->isVoided())
+        <div class="alert alert-danger border-2 border-danger rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3">
+            <div class="rounded-circle bg-danger text-white p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i class="fas fa-exclamation-triangle fs-4"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-1 text-danger">تنبيه رقابي: هذا الوصل تم إبطاله رسمياً وغير معتمد مالياً</h6>
+                <div class="small text-dark">
+                    <strong>تاريخ الإبطال:</strong> {{ $payment->voided_at?->format('Y-m-d H:i:s') }} |
+                    <strong>بواسطة:</strong> {{ $payment->voidedBy?->name ?? 'المشرف الإداري' }} |
+                    <strong>نوع الإجراء:</strong> {{ $payment->void_type === 'rebill' ? 'إعادة فتح في الكاشير للتسديد الصحيح' : 'إلغاء واسترداد نقدي' }} <br>
+                    <strong>سبب الإلغاء:</strong> <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">{{ $payment->void_reason }}</span>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @php
         // استخراج بيانات المريض
@@ -116,43 +144,75 @@
                     foreach ($extraTestIds as $testId) {
                         $test = \App\Models\LabTest::find($testId);
                         if ($test) {
-                            $base = (float)$test->price;
-                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
                                 'name' => '🔬 تحليل إضافي: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
                                 'category' => 'تحاليل مختبرية إضافية',
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
-                                'insurance' => max(0, $base - $pat),
+                                'insurance' => $ins,
                             ];
                         }
                     }
-                } elseif (isset($details['lab_test_ids'])) {
+                } elseif (!empty($details['lab_test_ids'])) {
                     foreach ($details['lab_test_ids'] as $testId) {
                         $test = \App\Models\LabTest::find($testId);
                         if ($test) {
-                            $base = (float)$test->price;
-                            $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
                                 'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
                                 'category' => 'تحاليل مختبرية',
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
-                                'insurance' => max(0, $base - $pat),
+                                'insurance' => $ins,
+                            ];
+                        }
+                    }
+                } elseif (!empty($details['tests'])) {
+                    foreach ($details['tests'] as $tName) {
+                        $test = \App\Models\LabTest::where('name', $tName)->orWhere('code', $tName)->first();
+                        if ($test) {
+                            $pricing = $isInsured && method_exists($test, 'calculateInsurancePricing')
+                                ? $test->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['approved_price'] : (float)$test->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                            $lineItems[] = [
+                                'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => 'تحاليل مختبرية',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => $ins,
                             ];
                         }
                     }
                 }
             } elseif ($reqItem->type === 'radiology') {
-                $typeIds = $details['radiology_type_ids'] ?? $details['radiology_types'] ?? [];
+                $typeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? $details['radiology_type_id'] ?? []);
                 $radTargets = $details['radiology_targets'] ?? [];
                 foreach ($typeIds as $typeId) {
                     $type = \App\Models\RadiologyType::find($typeId);
                     if ($type) {
-                        $base = (float)$type->base_price;
-                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $pricing = $isInsured && method_exists($type, 'calculateInsurancePricing')
+                            ? $type->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                            : null;
+                        $base = $pricing ? (float)$pricing['approved_price'] : (float)($type->base_price ?? $type->price ?? 0);
+                        $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                        $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                         $targetPart = isset($radTargets[$typeId]) && !empty($radTargets[$typeId]) ? trim($radTargets[$typeId]) : null;
                         $lineItems[] = [
                             'name' => 'أشعة: ' . $type->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
@@ -160,7 +220,7 @@
                             'doctor' => $doctorName,
                             'approved' => $base,
                             'patient' => $pat,
-                            'insurance' => max(0, $base - $pat),
+                            'insurance' => $ins,
                         ];
                     }
                 }
@@ -172,13 +232,16 @@
             $paidServices = \DB::table('emergency_emergency_service')
                 ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                 ->where('emergency_emergency_service.payment_id', $payment->id)
-                ->select('emergency_services.name', 'emergency_services.price')
+                ->select('emergency_services.name', 'emergency_services.price', 'emergency_emergency_service.quantity')
                 ->get();
             foreach ($paidServices as $svc) {
-                $base = (float)($svc->price ?? 0);
+                $qty = max(1, (int) ($svc->quantity ?? 1));
+                $unitBase = (float) ($svc->price ?? 0);
+                $base = $unitBase * $qty;
                 $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                $nameStr = 'خدمة طوارئ: ' . $svc->name . ($qty > 1 ? " (×{$qty})" : '');
                 $lineItems[] = [
-                    'name' => 'خدمة طوارئ: ' . $svc->name,
+                    'name' => $nameStr,
                     'category' => 'طوارئ',
                     'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'كادر الطوارئ',
                     'approved' => $base,
@@ -205,6 +268,48 @@
                     'patient' => $pat,
                     'insurance' => max(0, $fee - $pat),
                 ];
+            }
+
+            // طلبات تحاليل المختبر المسددة بهذا الإيصال
+            $paidLabs = $payment->emergency->labRequests()->where('payment_id', $payment->id)->with('labTests')->get();
+            foreach ($paidLabs as $labReq) {
+                foreach ($labReq->labTests as $lt) {
+                    $base = (float)($lt->price ?? 0);
+                    $pricing = $isInsured && method_exists($lt, 'calculateInsurancePricing')
+                        ? $lt->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                        : null;
+                    $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                    $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    $lineItems[] = [
+                        'name' => 'تحليل طوارئ: ' . $lt->name . ($lt->code ? ' (' . $lt->code . ')' : ''),
+                        'category' => 'مختبر طوارئ',
+                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'المختبر',
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
+            }
+
+            // طلبات الأشعة والتصوير الطبي المسددة بهذا الإيصال
+            $paidRads = $payment->emergency->radiologyRequests()->where('payment_id', $payment->id)->with('radiologyTypes')->get();
+            foreach ($paidRads as $radReq) {
+                foreach ($radReq->radiologyTypes as $rt) {
+                    $base = (float)($rt->base_price ?? $rt->price ?? 0);
+                    $pricing = $isInsured && method_exists($rt, 'calculateInsurancePricing')
+                        ? $rt->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                        : null;
+                    $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                    $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    $lineItems[] = [
+                        'name' => 'أشعة طوارئ: ' . $rt->name,
+                        'category' => 'أشعة وتصوير',
+                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'قسم الأشعة',
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
             }
         }
 

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleManagementController extends Controller
 {
@@ -15,11 +16,113 @@ class RoleManagementController extends Controller
     }
 
     // ============ إدارة الأدوار ============
-    
+
     public function rolesIndex()
     {
-        $roles = Role::withCount('users', 'permissions')->get();
-        return view('roles.index', compact('roles'));
+        $roles = Role::withCount('users', 'permissions')
+            ->with(['permissions:id,name'])
+            ->get();
+        $totalPermissionsCount = Permission::count();
+        $totalUsersCount = User::count();
+
+        return view('roles.index', compact('roles', 'totalPermissionsCount', 'totalUsersCount'));
+    }
+
+    public function roleUsers(Role $role)
+    {
+        $users = $role->users()->select('users.id', 'users.name', 'users.email', 'users.phone', 'users.created_at')->get();
+
+        return response()->json([
+            'role' => self::getRoleLabel($role->name),
+            'role_name' => $role->name,
+            'count' => $users->count(),
+            'users' => $users,
+        ]);
+    }
+
+    public static function getRoleCategory(string $roleName): array
+    {
+        return match ($roleName) {
+            'doctor', 'resident', 'الجراح', 'التخدير' => [
+                'key' => 'medical',
+                'name' => 'الكوادر الطبية والجراحية',
+                'icon' => 'user-md',
+                'color' => 'success',
+            ],
+            'accountant', 'cashier', 'thaman' => [
+                'key' => 'financial',
+                'name' => 'المالية والمحاسبة والكاشير',
+                'icon' => 'cash-register',
+                'color' => 'warning',
+            ],
+            'lab_staff', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_echo', 'radiology_mri' => [
+                'key' => 'diagnostic',
+                'name' => 'المحطات التشخيصية',
+                'icon' => 'flask',
+                'color' => 'info',
+            ],
+            'receptionist', 'consultation_receptionist', 'inquiry_staff', 'emergency_staff', 'nurse' => [
+                'key' => 'reception_nursing',
+                'name' => 'الاستقبال والتمريض والطوارئ',
+                'icon' => 'ambulance',
+                'color' => 'danger',
+            ],
+            'pharmacy_staff', 'inventory_manager', 'surgery_staff', 'gh&est', 'patient' => [
+                'key' => 'pharmacy_services',
+                'name' => 'الصيدلية والمستودع والخدمات',
+                'icon' => 'pills',
+                'color' => 'primary',
+            ],
+            'admin', 'admin-hsop', 'hospital_admin', 'staff' => [
+                'key' => 'admin_system',
+                'name' => 'الإدارة والأنظمة العامة',
+                'icon' => 'crown',
+                'color' => 'dark',
+            ],
+            default => [
+                'key' => 'other',
+                'name' => 'أدوار أخرى ومخصصة',
+                'icon' => 'user-tag',
+                'color' => 'secondary',
+            ],
+        };
+    }
+
+    public static function getRoleLabel(string $roleName): array
+    {
+        return match ($roleName) {
+            'admin' => ['label' => 'مدير النظام العام', 'icon' => 'crown', 'color' => 'danger'],
+            'admin-hsop', 'hospital_admin' => ['label' => 'مدير المستشفى', 'icon' => 'hospital-user', 'color' => 'danger'],
+            'doctor' => ['label' => 'طبيب استشاري', 'icon' => 'user-md', 'color' => 'success'],
+            'resident' => ['label' => 'طبيب مقيم', 'icon' => 'user-graduate', 'color' => 'success'],
+            'الجراح' => ['label' => 'طبيب جراح', 'icon' => 'user-md', 'color' => 'info'],
+            'التخدير' => ['label' => 'طبيب / مقيم تخدير', 'icon' => 'syringe', 'color' => 'warning'],
+            'accountant' => ['label' => 'المحاسب المالي', 'icon' => 'calculator', 'color' => 'primary'],
+            'cashier' => ['label' => 'كاشير الصندوق', 'icon' => 'cash-register', 'color' => 'success'],
+            'patient' => ['label' => 'مريض', 'icon' => 'user-injured', 'color' => 'info'],
+            'receptionist' => ['label' => 'موظف استقبال', 'icon' => 'user-tie', 'color' => 'warning'],
+            'consultation_receptionist' => ['label' => 'موظف استعلامات استشارية', 'icon' => 'user-tie', 'color' => 'info'],
+            'inquiry_staff' => ['label' => 'موظف استعلامات عامة', 'icon' => 'info-circle', 'color' => 'info'],
+            'emergency_staff' => ['label' => 'كادر قسم الطوارئ', 'icon' => 'ambulance', 'color' => 'danger'],
+            'nurse' => ['label' => 'كادر تمريضي', 'icon' => 'user-nurse', 'color' => 'success'],
+            'lab_staff' => ['label' => 'كادر المختبر والتحاليل', 'icon' => 'flask', 'color' => 'secondary'],
+            'radiology_staff' => ['label' => 'كادر الأشعة والتصوير', 'icon' => 'x-ray', 'color' => 'secondary'],
+            'radiology_general' => ['label' => 'فني أشعة عامة (X-Ray)', 'icon' => 'x-ray', 'color' => 'secondary'],
+            'radiology_ultrasound' => ['label' => 'فني سونار وموجات صوتية', 'icon' => 'wave-square', 'color' => 'secondary'],
+            'radiology_echo' => ['label' => 'فني إيكو القلب', 'icon' => 'heartbeat', 'color' => 'secondary'],
+            'radiology_mri' => ['label' => 'فني رنين مغناطيسي (MRI)', 'icon' => 'x-ray', 'color' => 'secondary'],
+            'pharmacy_staff' => ['label' => 'كادر الصيدلية', 'icon' => 'pills', 'color' => 'secondary'],
+            'inventory_manager' => ['label' => 'أمين المخزن والمستودع', 'icon' => 'boxes', 'color' => 'secondary'],
+            'surgery_staff' => ['label' => 'كادر العمليات والرقود', 'icon' => 'procedures', 'color' => 'secondary'],
+            'thaman' => ['label' => 'هيئة الضمان الصحي', 'icon' => 'shield-alt', 'color' => 'info'],
+            'gh&est' => ['label' => 'كادر الجراحة والاستشارية', 'icon' => 'hospital', 'color' => 'dark'],
+            'staff' => ['label' => 'كادر إداري عام', 'icon' => 'user', 'color' => 'dark'],
+            default => [
+                'label' => ucwords(str_replace(['_', '-'], ' ', $roleName)),
+                'icon' => 'user-shield',
+                'color' => 'dark',
+            ],
+        };
     }
 
     public static function getHiddenPermissions(): array
@@ -57,12 +160,14 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view insurance claims', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'void payment receipt', 'guard_name' => 'web']);
         // صلاحيات قسم الخدج والحاضنات (NICU)
         Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
@@ -80,9 +185,10 @@ class RoleManagementController extends Controller
 
         $permissions = Permission::whereNotIn('name', self::getHiddenPermissions())
             ->get()
-            ->groupBy(function($permission) {
+            ->groupBy(function ($permission) {
                 return $this->permissionGroup($permission->name);
             });
+
         return view('roles.create', compact('permissions', 'moduleOrder', 'permissionDefinitions'));
     }
 
@@ -106,7 +212,7 @@ class RoleManagementController extends Controller
         $permissionModels = [];
         if ($request->has('permissions') && is_array($request->permissions)) {
             foreach ($request->permissions as $permName) {
-                if (!empty($permName)) {
+                if (! empty($permName)) {
                     $permissionModels[] = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
                 }
             }
@@ -121,13 +227,14 @@ class RoleManagementController extends Controller
 
     public function rolesEdit(Role $role)
     {
-        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+        if ($role->name === 'admin' && ! auth()->user()->hasRole('admin')) {
             return redirect()->route('roles.index')->with('error', 'دور مدير النظام الرئيسي (Admin) محمي بالكامل ولا يمكن التعديل عليه من قبل المشرفين.');
         }
 
         Permission::firstOrCreate(['name' => 'manage emergency services', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view patient history', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage health insurance', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view insurance claims', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'process refunds', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create medicine groups', 'guard_name' => 'web']);
@@ -136,6 +243,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'void payment receipt', 'guard_name' => 'web']);
         // صلاحيات قسم الخدج والحاضنات (NICU)
         Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
@@ -153,16 +261,17 @@ class RoleManagementController extends Controller
 
         $permissions = Permission::whereNotIn('name', self::getHiddenPermissions())
             ->get()
-            ->groupBy(function($permission) {
+            ->groupBy(function ($permission) {
                 return $this->permissionGroup($permission->name);
             });
         $rolePermissions = $role->permissions->pluck('name')->toArray();
+
         return view('roles.edit', compact('role', 'permissions', 'rolePermissions', 'moduleOrder', 'permissionDefinitions'));
     }
 
     public function rolesUpdate(Request $request, Role $role)
     {
-        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+        if ($role->name === 'admin' && ! auth()->user()->hasRole('admin')) {
             return redirect()->route('roles.index')->with('error', 'دور مدير النظام الرئيسي (Admin) محمي بالكامل ولا يمكن التعديل عليه.');
         }
 
@@ -176,7 +285,7 @@ class RoleManagementController extends Controller
         $permissionModels = [];
         if ($request->has('permissions') && is_array($request->permissions)) {
             foreach ($request->permissions as $permName) {
-                if (!empty($permName)) {
+                if (! empty($permName)) {
                     $permissionModels[] = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
                 }
             }
@@ -191,10 +300,10 @@ class RoleManagementController extends Controller
 
     public function togglePermission(Request $request, Role $role)
     {
-        if ($role->name === 'admin' && !auth()->user()->hasRole('admin')) {
+        if ($role->name === 'admin' && ! auth()->user()->hasRole('admin')) {
             return response()->json([
                 'success' => false,
-                'message' => 'دور مدير النظام الرئيسي محمي ولا يمكن التعديل عليه.'
+                'message' => 'دور مدير النظام الرئيسي محمي ولا يمكن التعديل عليه.',
             ], 403);
         }
 
@@ -204,7 +313,7 @@ class RoleManagementController extends Controller
         if ($request->has('permissions') && is_array($request->permissions)) {
             $perms = $request->permissions;
             foreach ($perms as $permName) {
-                if (!empty($permName)) {
+                if (! empty($permName)) {
                     $permission = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
                     if ($status) {
                         $role->givePermissionTo($permission);
@@ -213,7 +322,7 @@ class RoleManagementController extends Controller
                     }
                 }
             }
-        } 
+        }
         // أو إذا تم إرسال صلاحية فردية واحدة
         elseif ($request->filled('permission')) {
             $permName = $request->input('permission');
@@ -259,55 +368,55 @@ class RoleManagementController extends Controller
                 'name' => 'الاستعلامات والحجوزات',
                 'icon' => 'fa-concierge-bell',
                 'color' => 'info',
-                'description' => 'حجز الاستشارية والسونار والفحوصات، فتح ملفات المرضى، واستعلامات الأرشيف'
+                'description' => 'حجز الاستشارية والسونار والفحوصات، فتح ملفات المرضى، واستعلامات الأرشيف',
             ],
             'consultant_doctors' => [
                 'name' => 'العيادات والاستشارية ومحطة الأطباء',
                 'icon' => 'fa-stethoscope',
                 'color' => 'primary',
-                'description' => 'توفر الاستشاريين، محطة كشف الطبيب، إدارة العيادات والمواعيد والزيارات'
+                'description' => 'توفر الاستشاريين، محطة كشف الطبيب، إدارة العيادات والمواعيد والزيارات',
             ],
             'cashier' => [
                 'name' => 'الصندوق والكاشير',
                 'icon' => 'fa-cash-register',
                 'color' => 'success',
-                'description' => 'الكاشير العام، كشفية الاستشارية، كاشير السونار والأشعة، كاشير الطوارئ والعمليات، وإرجاع المبالغ'
+                'description' => 'الكاشير العام، كشفية الاستشارية، كاشير السونار والأشعة، كاشير الطوارئ والعمليات، وإرجاع المبالغ',
             ],
             'accounting' => [
                 'name' => 'الحسابات العامة والمالية',
                 'icon' => 'fa-file-invoice-dollar',
                 'color' => 'secondary',
-                'description' => 'مراجعة أسعار العمليات، الضمان، سجل وتقارير الفواتير، الحركات المالية، كشوفات الحسابات، وحسابات الأطباء'
+                'description' => 'مراجعة أسعار العمليات، الضمان، سجل وتقارير الفواتير، الحركات المالية، كشوفات الحسابات، وحسابات الأطباء',
             ],
             'radiology' => [
                 'name' => 'الأشعة والسونار والإيكو',
                 'icon' => 'fa-x-ray',
                 'color' => 'teal',
-                'description' => 'محطة فحص الأشعة والسونار، كتابة التقارير، تسعير وإدارة الفحوصات الإشعاعية'
+                'description' => 'محطة فحص الأشعة والسونار، كتابة التقارير، تسعير وإدارة الفحوصات الإشعاعية',
             ],
             'lab' => [
                 'name' => 'المختبر والتحاليل الطبية',
                 'icon' => 'fa-vial',
                 'color' => 'purple',
-                'description' => 'محطة التحاليل وسحب العينات، إدخال النتائج، تسعير الفحوصات ومجموعات المفضلات'
+                'description' => 'محطة التحاليل وسحب العينات، إدخال النتائج، تسعير الفحوصات ومجموعات المفضلات',
             ],
             'pharmacy' => [
                 'name' => 'الصيدلية والمخزن الطبي',
                 'icon' => 'fa-pills',
                 'color' => 'success',
-                'description' => 'نقطة بيع وصرف الصيدلية (POS Kanban)، صرف الوصفات، المخزن، والمشتريات'
+                'description' => 'نقطة بيع وصرف الصيدلية (POS Kanban)، صرف الوصفات، المخزن، والمشتريات',
             ],
             'emergency' => [
                 'name' => 'قسم الطوارئ',
                 'icon' => 'fa-ambulance',
                 'color' => 'danger',
-                'description' => 'استقبال وترياج الطوارئ، محطة كشف وعلاج الحالات الحرجة، والخدمات التمريضية'
+                'description' => 'استقبال وترياج الطوارئ، محطة كشف وعلاج الحالات الحرجة، والخدمات التمريضية',
             ],
             'surgeries' => [
                 'name' => 'العمليات الجراحية والرقود',
                 'icon' => 'fa-procedures',
                 'color' => 'warning',
-                'description' => 'محطات الجراح والتخدير والتمريض والمقيم، صالات العمليات، وإدارة الأسرّة والغرف'
+                'description' => 'محطات الجراح والتخدير والتمريض والمقيم، صالات العمليات، وإدارة الأسرّة والغرف',
             ],
             'nicu' => [
                 'name' => 'قسم الخدج والحاضنات (NICU)',
@@ -319,13 +428,13 @@ class RoleManagementController extends Controller
                 'name' => 'خدمات ومراسلات الواتساب (WhatsApp)',
                 'icon' => 'fab fa-whatsapp',
                 'color' => 'success',
-                'description' => 'إرسال ومشاركة التقارير والنتائج الطبية مع المرضى عبر واتساب للأقسام المختلفة'
+                'description' => 'إرسال ومشاركة التقارير والنتائج الطبية مع المرضى عبر واتساب للأقسام المختلفة',
             ],
             'system_admin' => [
                 'name' => 'إدارة النظام والإعدادات',
                 'icon' => 'fa-cogs',
                 'color' => 'dark',
-                'description' => 'المستخدمين، الأدوار، الصلاحيات، وإعدادات المستشفى العامة'
+                'description' => 'المستخدمين، الأدوار، الصلاحيات، وإعدادات المستشفى العامة',
             ],
         ];
     }
@@ -344,6 +453,7 @@ class RoleManagementController extends Controller
             'view patient history' => ['label' => 'عرض وبحث في أرشيف وسجل المرضى الشامل', 'action' => 'عرض', 'badge' => 'info'],
             'view occupancy' => ['label' => 'عرض إشغال الأسرّة والمرضى المقيمين', 'action' => 'عرض', 'badge' => 'info'],
             'inquiry.create.checkup' => ['label' => 'حجز موعد كشفية عيادة استشارية', 'action' => 'حجز', 'badge' => 'primary'],
+            'inquiry.create.radiology' => ['label' => 'حجز فحوصات الأشعة والتصوير من الاستعلامات', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.radiology.ultrasound' => ['label' => 'حجز فحص سونار (Ultrasound)', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.radiology.general' => ['label' => 'حجز فحص أشعة عامة (X-Ray)', 'action' => 'حجز', 'badge' => 'primary'],
             'inquiry.create.radiology.mri' => ['label' => 'حجز فحص رنين مغناطيسي (MRI)', 'action' => 'حجز', 'badge' => 'primary'],
@@ -396,8 +506,10 @@ class RoleManagementController extends Controller
             'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'process surgery payments' => ['label' => 'قبض وتثبيت دفعات العمليات وأجور الغرف', 'action' => 'معالجة', 'badge' => 'success'],
             'process refunds' => ['label' => 'استرجاع مبالغ العمليات الملغاة وفوارق الغرف للمرضى', 'action' => 'معالجة', 'badge' => 'warning'],
+            'void payment receipt' => ['label' => 'إبطال وإلغاء وصل دفع مالي وإعادة فتحه للتصحيح والاسترداد (مع تدقيق الملغيات)', 'action' => 'إلغاء / تدقيق', 'badge' => 'danger'],
 
             // 📊 4. الحسابات العامة والمالية
+            'view insurance claims' => ['label' => 'عرض ومتابعة كشوفات وسجلات مطالبات الضمان وتصديرها', 'action' => 'عرض', 'badge' => 'info'],
             'review surgery prices' => ['label' => 'مراجعة وتأكيد أسعار وتكاليف العمليات (محاسب)', 'action' => 'مراجعة', 'badge' => 'warning'],
             'manage health insurance' => ['label' => 'إدارة نسب وفئات استقطاع الضمان الصحي الوطني', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage doctor commissions' => ['label' => 'إعدادات وتخصيص عمولات ونسب الأطباء', 'action' => 'إدارة', 'badge' => 'primary'],
@@ -489,6 +601,23 @@ class RoleManagementController extends Controller
             'delete activity logs' => ['label' => 'تنظيف وأرشفة سجل الحركات القديم', 'action' => 'حذف', 'badge' => 'danger'],
             'manage database sync' => ['label' => 'مزامنة وسحب ورفع قواعد البيانات السحابية', 'action' => 'إدارة', 'badge' => 'danger'],
 
+            // 🔒 صلاحيات المواعيد والمدفوعات
+            'view appointments' => ['label' => 'عرض سجل المواعيد والحجوزات', 'action' => 'عرض', 'badge' => 'info'],
+            'create appointments' => ['label' => 'حجز وإنشاء موعد جديد', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit appointments' => ['label' => 'تعديل بيانات الموعد', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete appointments' => ['label' => 'حذف موعد من السجل', 'action' => 'حذف', 'badge' => 'danger'],
+            'view payments' => ['label' => 'عرض سجل المدفوعات والوصولات', 'action' => 'عرض', 'badge' => 'info'],
+            'create payments' => ['label' => 'إصدار سند أو وصل دفع', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit payments' => ['label' => 'تعديل سند دفع', 'action' => 'تعديل', 'badge' => 'warning'],
+            'view cashier appointments' => ['label' => 'عرض كاشير مواعيد الاستشارية', 'action' => 'عرض', 'badge' => 'info'],
+            'view cashier medical requests' => ['label' => 'عرض كاشير الفحوصات الطبية', 'action' => 'عرض', 'badge' => 'info'],
+            'view cashier emergency' => ['label' => 'عرض كاشير قسم الطوارئ', 'action' => 'عرض', 'badge' => 'info'],
+            'view doctor profits' => ['label' => 'عرض أرباح وحسابات الأطباء', 'action' => 'عرض', 'badge' => 'info'],
+            'view radiology types' => ['label' => 'عرض قائمة خدمات وأنواع الأشعة', 'action' => 'عرض', 'badge' => 'info'],
+            'create radiology types' => ['label' => 'إضافة نوع أو خدمة أشعة جديدة', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit radiology types' => ['label' => 'تعديل نوع أو سعر خدمة أشعة', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete radiology types' => ['label' => 'حذف خدمة أشعة', 'action' => 'حذف', 'badge' => 'danger'],
+
             // 📲 10. خدمات ومراسلات الواتساب (WhatsApp)
             'send lab whatsapp' => ['label' => 'إرسال ومشاركة نتائج التحاليل المخبرية للمرضى عبر واتساب', 'action' => 'إرسال', 'badge' => 'success'],
 
@@ -505,7 +634,7 @@ class RoleManagementController extends Controller
         ];
     }
 
-    private function permissionGroup(string $permissionName): string
+    public function permissionGroup(string $permissionName): string
     {
         // 0. NICU Services
         if (str_contains($permissionName, 'incubator') || str_contains($permissionName, 'nicu')) {
@@ -519,23 +648,23 @@ class RoleManagementController extends Controller
 
         // 1. Inquiry & Bookings (All Reception & Inpatient Booking Types)
         if (str_starts_with($permissionName, 'inquiry.') || in_array($permissionName, [
-            'view inquiries', 'create inquiries', 'manage inquiries', 
-            'view patient history', 'view occupancy', 
+            'view inquiries', 'create inquiries', 'manage inquiries',
+            'view patient history', 'view occupancy',
             'view patients', 'create patients', 'edit patients', 'delete patients',
             'create emergencies',
             'view bed reservations', 'create bed reservations',
         ])) {
             return 'inquiry';
         }
-        
+
         // 2. Accounting & Financial Management
         if (in_array($permissionName, [
-            'review surgery prices', 
+            'review surgery prices',
             'manage health insurance',
             'manage doctor commissions',
             'view treasury',
             'manage treasury',
-            'view cashier reports', 
+            'view cashier reports',
             'view consultant financial movements',
             'view account statements',
             'view doctor accounts',
@@ -550,7 +679,7 @@ class RoleManagementController extends Controller
         }
 
         // 3. Cashier & POS
-        if (str_contains($permissionName, 'cashier') || str_contains($permissionName, 'payment') || str_contains($permissionName, 'refund')) {
+        if (str_contains($permissionName, 'void') || str_contains($permissionName, 'cashier') || str_contains($permissionName, 'payment') || str_contains($permissionName, 'refund')) {
             return 'cashier';
         }
 
@@ -560,14 +689,14 @@ class RoleManagementController extends Controller
         }
 
         // 4. Laboratory
-        if ((str_contains($permissionName, 'lab ') || str_contains($permissionName, 'lab_') || str_contains($permissionName, 'package') || $permissionName === 'manage surgery lab tests') && !str_contains($permissionName, 'lab test group')) {
+        if ((str_contains($permissionName, 'lab ') || str_contains($permissionName, 'lab_') || str_contains($permissionName, 'package') || $permissionName === 'manage surgery lab tests') && ! str_contains($permissionName, 'lab test group')) {
             return 'lab';
         }
 
         // 5. Pharmacy & Inventory
-        if ((str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') || 
-            str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') || 
-            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) && !str_contains($permissionName, 'medicine group')) {
+        if ((str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') ||
+            str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') ||
+            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) && ! str_contains($permissionName, 'medicine group')) {
             return 'pharmacy';
         }
 
@@ -582,9 +711,9 @@ class RoleManagementController extends Controller
         }
 
         // 8. Outpatient & Consultant & Doctors (Clinics, Appointments, Visits, Medicine & Lab Groups)
-        if (str_contains($permissionName, 'consultant') || str_contains($permissionName, 'own visits') || 
-            str_contains($permissionName, 'doctor') || str_contains($permissionName, 'department') || 
-            str_contains($permissionName, 'appointment') || str_contains($permissionName, 'visit') || 
+        if (str_contains($permissionName, 'consultant') || str_contains($permissionName, 'own visits') ||
+            str_contains($permissionName, 'doctor') || str_contains($permissionName, 'department') ||
+            str_contains($permissionName, 'appointment') || str_contains($permissionName, 'visit') ||
             str_contains($permissionName, 'referral') || str_contains($permissionName, 'medicine group') ||
             str_contains($permissionName, 'lab test group')) {
             return 'consultant_doctors';
@@ -599,12 +728,13 @@ class RoleManagementController extends Controller
     }
 
     // ============ إدارة الصلاحيات ============
-    
+
     public function permissionsIndex()
     {
-        $permissions = Permission::withCount('roles')->get()->groupBy(function($permission) {
+        $permissions = Permission::withCount('roles')->get()->groupBy(function ($permission) {
             return $this->permissionGroup($permission->name);
         });
+
         return view('permissions.index', compact('permissions'));
     }
 

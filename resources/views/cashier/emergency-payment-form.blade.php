@@ -3,17 +3,24 @@
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-lg-9 col-md-11">
+        <div class="col-md-9">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-                <!-- رأس الصفحة -->
-                <div class="card-header bg-gradient bg-primary text-white p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0 fw-bold">
-                        <i class="fas fa-file-invoice-dollar me-2"></i>
-                        فاتورة وتسديد خدمات الطوارئ
-                    </h5>
-                    <span class="badge bg-white text-primary font-monospace fs-7 px-3 py-1 rounded-pill">
-                        حالة طوارئ #{{ $payment->emergency->id }}
-                    </span>
+                <!-- رأس الصفحة بتدرج أزرق ملكي متطابق مع واجهات الكاشير -->
+                <div class="card-header bg-gradient-primary text-white p-3" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 38px; height: 38px;">
+                                <i class="fas fa-file-invoice-dollar fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">تسوية ودفع رسوم خدمات الطوارئ</h5>
+                                <small class="text-white-50">رقم الإشعار المالي: #{{ $payment->id }} | حالة الطوارئ: #{{ $payment->emergency->id }}</small>
+                            </div>
+                        </div>
+                        <a href="{{ route('cashier.index') }}" class="btn btn-sm btn-outline-light rounded-pill px-3 shadow-sm">
+                            <i class="fas fa-arrow-right me-1"></i>العودة لقائمة الكاشير
+                        </a>
+                    </div>
                 </div>
 
                 <div class="card-body p-4">
@@ -21,11 +28,13 @@
                         $em = $payment->emergency;
                         $patient = $em->patient;
                         
-                        // فحص حالة الضمان
+                        // فحص حالة الضمان بدقة
                         $isInsurance = false;
                         if (isset($em->is_insured)) {
                             $isInsurance = (bool) $em->is_insured;
                         } elseif (isset($em->insurance_type) && $em->insurance_type !== 'none') {
+                            $isInsurance = true;
+                        } elseif ($patient && $patient->insurance_type !== 'none' && !empty($patient->insurance_type)) {
                             $isInsurance = true;
                         }
 
@@ -35,99 +44,78 @@
                             $isInsurance = true;
                         }
 
-                        $insuranceType = $isInsurance ? 'hi' : 'none';
-                        $emergencyCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('emergency') : 100.0;
-                        $labCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('lab') : 100.0;
-                        $radCopay = $isInsurance && $patient ? $patient->getCopayPercentageFor('radiology') : 100.0;
+                        $insuranceType = $isInsurance ? ($payment->insurance_type ?: ($em->insurance_type ?: 'hi')) : 'none';
+                        $hiCategory = $patient?->healthInsuranceCategory;
+                        $emergencyCopay = $isInsurance && $patient ? (float)$patient->getCopayPercentageFor('emergency') : 100.0;
+                        $labCopay = $isInsurance && $patient ? (float)$patient->getCopayPercentageFor('lab') : 100.0;
+                        $radCopay = $isInsurance && $patient ? (float)$patient->getCopayPercentageFor('radiology') : 100.0;
+                        $defaultCardNo = ($insuranceType !== 'none' && $patient) ? ($patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '') : '';
 
                         // بيانات المريض
                         if ($patient) {
                             $pname = $patient->user->name ?? 'غير محدد';
                             $pphone = $patient->user->phone ?? ($patient->phone ?? '---');
                             $pid = '#' . $patient->id;
-                            $insCategory = $patient->healthInsuranceCategory?->name ?? 'ضمان صحي';
+                            $nationalId = $patient->national_id ?? '---';
+                            $insCategoryName = $hiCategory?->name ?? 'ضمان صحي وطني';
                         } elseif ($em->emergencyPatient) {
                             $pname = $em->emergencyPatient->name;
                             $pphone = $em->emergencyPatient->phone ?? '---';
                             $pid = '(طوارئ)';
-                            $insCategory = null;
+                            $nationalId = '---';
+                            $insCategoryName = null;
                         } else {
                             $pname = 'غير محدد';
                             $pphone = '---';
                             $pid = '-';
-                            $insCategory = null;
+                            $nationalId = '---';
+                            $insCategoryName = null;
                         }
-                    @endphp
 
-                    <!-- بطاقة المريض الموحدة -->
-                    <div class="card bg-light border-0 rounded-3 p-3 mb-4 shadow-xs">
-                        <div class="row align-items-center g-3">
-                            <div class="col-md-6 d-flex align-items-center gap-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.2rem;">
-                                    <i class="fas fa-user-injured"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 fw-bold text-dark">{{ $pname }}</h6>
-                                    <div class="d-flex align-items-center gap-2 flex-wrap text-muted small">
-                                        <span><i class="fas fa-id-card me-1"></i>{{ $pid }}</span>
-                                        <span>•</span>
-                                        <span><i class="fas fa-phone me-1"></i>{{ $pphone }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 text-md-end">
-                                <div class="d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
-                                    <span class="badge bg-{{ $em->priority_color ?? 'warning' }} px-3 py-1 rounded-pill">
-                                        الأولوية: {{ $em->priority_text ?? $em->priority }}
-                                    </span>
-                                    @if($isInsurance)
-                                        <span class="badge bg-success text-white px-3 py-1 rounded-pill">
-                                            <i class="fas fa-shield-alt me-1"></i> {{ $insCategory ?: 'مشمول بالضمان الصحي' }}
-                                        </span>
-                                    @else
-                                        <span class="badge bg-secondary text-white px-3 py-1 rounded-pill">
-                                            <i class="fas fa-money-bill me-1"></i> كاش عادي
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    @php
+                        // جمع وحساب بنود الفاتورة
                         $invoiceItems = [];
 
-                        // 1. خدمات الطوارئ غير المدفوعة
+                        // 1. خدمات الطوارئ التمريضية والطبية
                         $unpaidServiceIds = \DB::table('emergency_emergency_service')
                             ->where('emergency_id', $payment->emergency_id)
-                            ->whereNull('payment_id')
+                            ->where(function ($q) use ($payment) {
+                                $q->whereNull('payment_id')->orWhere('payment_id', $payment->id);
+                            })
                             ->pluck('emergency_service_id');
 
                         foreach($em->services->whereIn('id', $unpaidServiceIds) as $service) {
                             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
+                            $qty = max(1, (int) ($service->pivot->quantity ?? 1));
+                            $approvedPrice = (float) $pricing['approved_price'];
+                            $patientShare = (float) $pricing['patient_share'];
+                            $insuranceShare = (float) $pricing['insurance_share'];
+
                             $invoiceItems[] = [
                                 'category' => 'خدمة طوارئ',
                                 'badge_class' => 'bg-info text-dark',
                                 'icon' => 'fa-medkit',
-                                'name' => $service->name,
-                                'qty' => 1,
+                                'name' => $service->name . ($qty > 1 ? " (×{$qty})" : ''),
+                                'qty' => $qty,
                                 'is_covered' => $isInsurance && $pricing['is_covered'],
-                                'price' => (float) $pricing['approved_price'],
-                                'total' => (float) $pricing['approved_price'],
-                                'patient_share' => (float) $pricing['patient_share'],
-                                'insurance_share' => (float) $pricing['insurance_share'],
+                                'price' => $approvedPrice,
+                                'total' => round($approvedPrice * $qty, 2),
+                                'patient_share' => round($patientShare * $qty, 2),
+                                'insurance_share' => round($insuranceShare * $qty, 2),
                             ];
                         }
 
-                        // 2. التحاليل المخبرية غير المدفوعة
-                        foreach($em->labRequests->whereNull('payment_id') as $labReq) {
+                        // 2. التحاليل المخبرية
+                        $applicableLabRequests = $em->labRequests->filter(function ($labReq) use ($payment) {
+                            return is_null($labReq->payment_id) || $labReq->payment_id == $payment->id;
+                        });
+                        foreach($applicableLabRequests as $labReq) {
                             foreach($labReq->labTests as $test) {
                                 $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
                                 $invoiceItems[] = [
                                     'category' => 'تحليل مختبر',
                                     'badge_class' => 'bg-primary text-white',
                                     'icon' => 'fa-vial',
-                                    'name' => $test->name,
+                                    'name' => $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
                                     'qty' => 1,
                                     'is_covered' => $isInsurance && $pricing['is_covered'],
                                     'price' => (float) $pricing['approved_price'],
@@ -138,8 +126,11 @@
                             }
                         }
 
-                        // 3. الأشعة والتصوير غير المدفوعة
-                        foreach($em->radiologyRequests->whereNull('payment_id') as $radReq) {
+                        // 3. الأشعة والتصوير
+                        $applicableRadRequests = $em->radiologyRequests->filter(function ($radReq) use ($payment) {
+                            return is_null($radReq->payment_id) || $radReq->payment_id == $payment->id;
+                        });
+                        foreach($applicableRadRequests as $radReq) {
                             foreach($radReq->radiologyTypes as $type) {
                                 $pricing = $type->calculateInsurancePricing($insuranceType, $radCopay);
                                 $invoiceItems[] = [
@@ -198,163 +189,329 @@
                             ];
                         }
 
+                        // الحسابات المالية الإجمالية الدقيقة
                         $subtotal = array_sum(array_column($invoiceItems, 'total'));
                         $insuranceCoveredTotal = array_sum(array_column($invoiceItems, 'insurance_share'));
+                        $calculatedPatientShare = array_sum(array_column($invoiceItems, 'patient_share'));
+                        
                         if ($insuranceCoveredTotal <= 0 && $payment->insurance_share > 0) {
                             $insuranceCoveredTotal = (float) $payment->insurance_share;
                         }
                         
-                        $patientRequiredAmount = (float) $payment->amount;
+                        $patientRequiredAmount = !empty($invoiceItems) ? $calculatedPatientShare : (float) $payment->amount;
                         $paidAmount = $payment->paid_at ? (float) $payment->amount : 0.0;
                         $dueAmount = max(0.0, $patientRequiredAmount - $paidAmount);
                         $totalInvoiceAmount = $subtotal > 0 ? $subtotal : (float) ($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
                     @endphp
 
-                    <!-- جدول الفاتورة الموحد والوحيد -->
-                    <div class="card border rounded-3 overflow-hidden mb-4 shadow-xs">
-                        <div class="card-header bg-light py-2 px-3">
-                            <h6 class="mb-0 fw-bold text-dark">
-                                <i class="fas fa-list-check me-1 text-primary"></i>
-                                تفاصيل البنود والخدمات المطلوبة
-                            </h6>
+                    <!-- بطاقتان علويتان: معلومات الحالة ومعلومات المريض (مطابقة 100% لواجهة request-payment) -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 bg-light h-100 shadow-xs">
+                                <h6 class="text-primary fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fas fa-truck-medical"></i>
+                                    بيانات حالة الطوارئ
+                                </h6>
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <span class="text-muted">رقم الحالة:</span>
+                                    <strong class="font-monospace">#{{ $em->id }}</strong>
+                                </div>
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <span class="text-muted">درجة الأولوية:</span>
+                                    <span class="badge bg-{{ $em->priority_color ?? 'warning' }} px-3 py-1 rounded-pill">
+                                        {{ $em->priority_text ?? $em->priority }}
+                                    </span>
+                                </div>
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <span class="text-muted">طريقة الوصول:</span>
+                                    <span>{{ $em->arrival_mode ?? 'وصول مباشر' }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">تاريخ ووقت الدخول:</span>
+                                    <span class="font-monospace text-muted small">{{ $em->admission_time ? \Carbon\Carbon::parse($em->admission_time)->format('Y-m-d H:i') : $em->created_at->format('Y-m-d H:i') }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light text-secondary small text-nowrap">
-                                    <tr>
-                                        <th style="width: 40px;" class="text-center">#</th>
-                                        <th style="width: 120px;">النوع</th>
-                                        <th>اسم البند / الخدمة</th>
-                                        <th style="width: 60px;" class="text-center">الكمية</th>
-                                        <th style="width: 140px;" class="text-end">السعر المعتمد</th>
-                                        <th style="width: 140px;" class="text-end">الإجمالي</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($invoiceItems as $idx => $item)
-                                        <tr>
-                                            <td class="text-center font-monospace text-muted small">{{ $idx + 1 }}</td>
-                                            <td>
-                                                <span class="badge {{ $item['badge_class'] }} font-monospace" style="font-size: 0.72rem;">
-                                                    <i class="fas {{ $item['icon'] }} me-1"></i> {{ $item['category'] }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="fw-semibold text-dark">{{ $item['name'] }}</span>
-                                                @if($item['is_covered'])
-                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 ms-1" style="font-size: 0.7rem;">
-                                                        <i class="fas fa-shield-alt me-1"></i> ضمان صحي
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center font-monospace">{{ $item['qty'] }}</td>
-                                            <td class="text-end font-monospace">{{ number_format($item['price'], 0) }} د.ع</td>
-                                            <td class="text-end font-monospace fw-bold text-dark">{{ number_format($item['total'], 0) }} د.ع</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center py-4 text-muted">
-                                                لا توجد بنود غير مسددة لهذه الحالة
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                                <tfoot class="table-light">
-                                    <tr>
-                                        <th colspan="4" class="text-end text-muted">المجموع الإجمالي للخدمات:</th>
-                                        <th colspan="2" class="text-end font-monospace fw-bold">{{ number_format($totalInvoiceAmount, 0) }} د.ع</th>
-                                    </tr>
-                                    @if($isInsurance && $insuranceCoveredTotal > 0)
-                                        <tr class="table-success bg-opacity-25">
-                                            <th colspan="4" class="text-end text-success">
-                                                <i class="fas fa-shield-alt me-1"></i> تغطية ومطالبة هيئة الضمان الصحي:
-                                            </th>
-                                            <th colspan="2" class="text-end font-monospace fw-bold text-success">- {{ number_format($insuranceCoveredTotal, 0) }} د.ع</th>
-                                        </tr>
-                                    @endif
-                                    <tr class="table-warning bg-opacity-50">
-                                        <th colspan="4" class="text-end fs-6 fw-bold text-dark">
-                                            💵 الصافي المطلوب قبضه من المريض نقدياً:
-                                        </th>
-                                        <th colspan="2" class="text-end font-monospace fs-5 fw-bold text-primary">{{ number_format($dueAmount, 0) }} د.ع</th>
-                                    </tr>
-                                </tfoot>
-                            </table>
+
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 bg-light h-100 shadow-xs">
+                                <h6 class="text-success fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fas fa-user-injured"></i>
+                                    معلومات المريض
+                                </h6>
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <span class="text-muted">الاسم:</span>
+                                    <strong class="text-dark">{{ $pname }}</strong>
+                                </div>
+                                <div class="mb-2 d-flex justify-content-between">
+                                    <span class="text-muted">رقم الهوية / الملف:</span>
+                                    <span class="font-monospace">{{ $nationalId !== '---' ? $nationalId : $pid }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">رقم الهاتف:</span>
+                                    <span class="font-monospace">{{ $pphone }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- نموذج الدفع والقبض الفوري -->
-                    <div class="card border-primary bg-primary-subtle bg-opacity-10 rounded-3 p-3 shadow-sm">
-                        <form action="{{ route('cashier.emergency.payment.process', $payment) }}" method="POST">
-                            @csrf
-                            <h6 class="fw-bold text-primary mb-3">
-                                <i class="fas fa-cash-register me-1"></i>
-                                تسجيل العملية والقبض
-                            </h6>
+                    <form action="{{ route('cashier.emergency.payment.process', $payment) }}" method="POST" id="emergencyPaymentForm">
+                        @csrf
+                        @method('POST')
+
+                        <!-- قسم الضمان الصحي ونسبة التحمل التلقائية المحمية (مطابقة تامة 100% لواجهة request-payment) -->
+                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                                    <i class="fas fa-shield-alt"></i>
+                                    تغطية الضمان ونسبة التحمل (Co-payment)
+                                </h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge {{ $isInsurance ? 'bg-success' : 'bg-secondary' }} px-3 py-1 rounded-pill" id="copayBadge">
+                                        {{ $isInsurance ? ($insuranceType === 'hi' ? 'مشمول بالضمان الصحي الوطني' : 'مشمول بضمان قوى الأمن') : 'دفع نقدي كامل (100%)' }}
+                                    </span>
+                                    @if($isInsurance)
+                                        <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
+                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
 
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="payment_method" class="form-label fw-bold">طريقة الدفع <span class="text-danger">*</span></label>
-                                    <select name="payment_method" id="payment_method" class="form-select @error('payment_method') is-invalid @enderror" required>
-                                        @if($dueAmount <= 0 && $isInsurance)
-                                            <option value="insurance" selected>تأمين / ضمان صحي (مغطى 100%)</option>
-                                            <option value="cash">نقدي (كاش)</option>
-                                            <option value="card">بطاقة إلكترونية (POS)</option>
+                                <!-- جهة الضمان (مقفل ومحمي) -->
+                                <div class="col-md-6" id="insurance_type_wrapper">
+                                    <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين *</label>
+                                    @if($isInsurance)
+                                        <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between">
+                                            <span class="fw-bold text-dark">
+                                                <i class="fas fa-check-circle text-success me-1"></i>
+                                                {{ $insuranceType === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : 'ضمان قوى الأمن الداخلي (وزارة الداخلية)' }}
+                                            </span>
+                                            <input type="hidden" name="insurance_type" id="insurance_type" value="{{ $insuranceType }}">
+                                        </div>
+                                    @else
+                                        <div class="p-2 rounded bg-white border text-muted">
+                                            <i class="fas fa-money-bill me-1"></i> بدون ضمان (دفع نقدي كامل 100%)
+                                            <input type="hidden" name="insurance_type" id="insurance_type" value="none">
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- رقم بطاقة الضمان -->
+                                <div class="col-md-6" id="insurance_card_col" style="{{ !$isInsurance ? 'display: none;' : '' }}">
+                                    <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
+                                    <input type="text" class="form-control bg-light" id="insurance_card_no" name="insurance_card_no" 
+                                           value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر" readonly>
+                                </div>
+
+                                @if($hiCategory)
+                                <div class="col-12" id="patient_hi_category_badge">
+                                    <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                            <small class="text-muted">نسبة استقطاع خدمات الطوارئ: <strong class="text-primary fs-6">{{ (float)$emergencyCopay }}%</strong></small>
+                                        </div>
+                                        @if($hiCategory->requires_thermal_stamp)
+                                            <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
                                         @else
-                                            <option value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'selected' : '' }}>نقدي (كاش)</option>
-                                            <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>بطاقة إلكترونية (POS)</option>
-                                            <option value="insurance" {{ old('payment_method') == 'insurance' ? 'selected' : '' }}>تأمين / ضمان صحي</option>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="fas fa-check me-1"></i> فئة معتمدة رسمياً
+                                            </span>
                                         @endif
-                                    </select>
-                                    @error('payment_method')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="amount" class="form-label fw-bold">المبلغ المقبوض نقدياً <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" 
-                                               name="amount" 
-                                               id="amount" 
-                                               class="form-control font-monospace fw-bold fs-6 @error('amount') is-invalid @enderror"
-                                               value="{{ old('amount', $dueAmount) }}" 
-                                               step="500" 
-                                               min="0" 
-                                               required>
-                                        <span class="input-group-text bg-light text-muted">د.ع</span>
                                     </div>
-                                    @error('amount')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
                                 </div>
+                                @endif
 
-                                <div class="col-12">
-                                    <label for="notes" class="form-label text-muted small">ملاحظات إضافية (اختياري)</label>
-                                    <input type="text" 
-                                           name="notes" 
-                                           id="notes" 
-                                           class="form-control form-control-sm @error('notes') is-invalid @enderror" 
-                                           placeholder="أي ملاحظات حول السند أو الدفع..."
-                                           value="{{ old('notes') }}">
-                                    @error('notes')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                <!-- نسبة التحمل (تلقائية ومقفلة ومحمية تماماً) -->
+                                <div class="col-12" id="copay_section" style="{{ !$isInsurance ? 'display: none;' : '' }}">
+                                    <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-percentage text-primary"></i>
+                                            <label class="form-label fw-bold small text-muted mb-0">
+                                                نسبة التحمل المعتمدة رسمياً على المريض للطوارئ (Co-payment):
+                                            </label>
+                                            <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
+                                                {{ (float)$emergencyCopay }}%
+                                            </span>
+                                        </div>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-shield-alt text-success me-1"></i>
+                                            مقفلة ومحددة آلياً وفق فئة المريض الرسمية المعتمدة
+                                        </span>
+                                    </div>
+                                    <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$emergencyCopay }}">
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center mt-4 pt-2 border-top">
-                                <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-3">
-                                    <i class="fas fa-arrow-right me-1"></i> العودة لقائمة الكاشير
-                                </a>
-                                <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    {{ $dueAmount <= 0 && $isInsurance ? 'اعتماد وتسديد بالضمان (0 د.ع)' : 'تأكيد القبض وإصدار الوصل' }}
-                                </button>
+                            <!-- بطاقة معاينة الحسبة المالية المباشرة (مطابقة 100% لواجهة request-payment) -->
+                            <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border">
+                                        <small class="text-muted d-block">إجمالي السعر المعتمد</small>
+                                        <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($totalInvoiceAmount) }} د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-success">
+                                        <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
+                                        <strong class="text-success fs-6" id="display_patient_share">{{ number_format($dueAmount) }} د.ع</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="bg-white p-2 rounded border border-primary">
+                                        <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
+                                        <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($insuranceCoveredTotal) }} د.ع</strong>
+                                    </div>
+                                </div>
                             </div>
-                        </form>
-                    </div>
+                        </div>
 
+                        <!-- جدول تفاصيل الخدمات والأسعار المعتمدة -->
+                        <div class="mb-4">
+                            <h6 class="text-dark fw-bold mb-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-list-ol text-primary"></i>
+                                تفاصيل الخدمات والبنود المشمولة بالفاتورة
+                            </h6>
+                            <div class="border rounded-3 p-3 bg-white shadow-xs">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover align-middle mb-0" id="itemsTable">
+                                        <thead class="table-light text-secondary small">
+                                            <tr>
+                                                <th width="35" class="text-center">#</th>
+                                                <th width="120">النوع</th>
+                                                <th>اسم الخدمة / البند</th>
+                                                <th width="65" class="text-center">الكمية</th>
+                                                <th width="120" class="text-end">السعر المعتمد</th>
+                                                <th width="120" class="text-end text-success">تحمل المريض</th>
+                                                <th width="120" class="text-end text-primary">حصة الضمان</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($invoiceItems as $idx => $item)
+                                                <tr>
+                                                    <td class="text-center text-muted font-monospace small">{{ $idx + 1 }}</td>
+                                                    <td>
+                                                        <span class="badge {{ $item['badge_class'] }} font-monospace" style="font-size: 0.72rem;">
+                                                            <i class="fas {{ $item['icon'] }} me-1"></i> {{ $item['category'] }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="fw-semibold text-dark">{{ $item['name'] }}</span>
+                                                        @if($item['is_covered'])
+                                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 ms-1" style="font-size: 0.7rem;">
+                                                                <i class="fas fa-shield-alt me-1"></i> ضمان صحي
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center font-monospace">{{ $item['qty'] }}</td>
+                                                    <td class="text-end font-monospace">{{ number_format($item['price'], 0) }} د.ع</td>
+                                                    <td class="text-end font-monospace fw-bold text-success">{{ number_format($item['patient_share'], 0) }} د.ع</td>
+                                                    <td class="text-end font-monospace fw-bold text-primary">{{ number_format($item['insurance_share'], 0) }} د.ع</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-4 text-muted">
+                                                        لا توجد بنود أو خدمات معلقة لهذه الحالة
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                        <tfoot class="table-success">
+                                            <tr>
+                                                <th colspan="4" class="text-end fw-bold">المجموع الإجمالي:</th>
+                                                <th class="text-end fw-bold font-monospace fs-6 text-dark">{{ number_format($totalInvoiceAmount, 0) }} د.ع</th>
+                                                <th class="text-end fw-bold font-monospace fs-6 text-success">{{ number_format($dueAmount, 0) }} د.ع</th>
+                                                <th class="text-end fw-bold font-monospace fs-6 text-primary">{{ number_format($insuranceCoveredTotal, 0) }} د.ع</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- قسم طريقة الدفع وقفل المبلغ الصارم (مطابقة تامة 100% لواجهة request-payment) -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-credit-card me-1 text-primary"></i>
+                                    طريقة الدفع والتحصيل *
+                                </label>
+                                <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column justify-content-center">
+                                    @if($dueAmount <= 0 && $isInsurance)
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_insurance" value="insurance" checked>
+                                            <label class="form-check-label fw-bold text-success" for="payment_insurance">
+                                                <i class="fas fa-shield-alt me-1"></i> تأمين / ضمان صحي (مغطى 100% - صفر د.ع)
+                                            </label>
+                                        </div>
+                                    @else
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="payment_cash">
+                                                <i class="fas fa-money-bill-wave text-success me-1"></i> نقدي (Cash IQD)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="payment_card">
+                                                <i class="fas fa-credit-card text-primary me-1"></i> بطاقة دفع إلكتروني (Electronic POS)
+                                            </label>
+                                        </div>
+                                    @endif
+                                </div>
+                                @error('payment_method')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold d-flex justify-content-between align-items-center mb-1">
+                                    <span>
+                                        <i class="fas fa-hand-holding-usd me-1 text-success"></i>
+                                        المبلغ المطلوب قبضه نقداً من المريض (IQD) *
+                                    </span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle small fw-bold" style="font-size: 0.72rem;">
+                                        <i class="fas fa-lock me-1"></i>محسوب آلياً ومطابق للوصل
+                                    </span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number" 
+                                           class="form-control fw-bold text-success bg-light @error('amount') is-invalid @enderror" 
+                                           id="amount" 
+                                           name="amount" 
+                                           step="0.01" 
+                                           min="0" 
+                                           value="{{ old('amount', $dueAmount) }}" 
+                                           readonly
+                                           required>
+                                    <span class="input-group-text bg-success text-white fw-bold">IQD</span>
+                                </div>
+                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض (محسوب بدقة من جدول الخدمات لضمان تطابق الوصل).</small>
+                                @error('amount')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- ملاحظات إضافية -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label small text-muted">ملاحظات السند المالي (اختياري)</label>
+                            <input type="text" class="form-control" id="notes" name="notes" 
+                                   value="{{ old('notes') }}" placeholder="أي تفاصيل أو ملاحظات حول القبض أو الإعفاء...">
+                        </div>
+
+                        <!-- أزرار الإجراءات السفلية -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-4 rounded-pill">
+                                <i class="fas fa-times me-1"></i>إلغاء والعودة
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg px-5 fw-bold rounded-pill shadow">
+                                <i class="fas fa-check-circle me-2"></i>
+                                {{ $dueAmount <= 0 && $isInsurance ? 'اعتماد وتسديد بالضمان (0 د.ع)' : 'تأكيد القبض وإصدار الوصل (' . number_format($dueAmount, 0) . ' د.ع)' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

@@ -555,15 +555,17 @@
                 $paidServices = \DB::table('emergency_emergency_service')
                     ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                     ->where('emergency_emergency_service.payment_id', $payment->id)
-                    ->select('emergency_services.*')
+                    ->select('emergency_services.*', 'emergency_emergency_service.quantity')
                     ->get();
                 foreach ($paidServices as $svc) {
+                    $qty = max(1, (int) ($svc->quantity ?? 1));
                     $esModel = \App\Models\EmergencyService::find($svc->id);
                     $pricing = $esModel && $payment->insurance_type && $payment->insurance_type !== 'none'
                         ? $esModel->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                         : null;
-                    $price = $pricing ? (float)$pricing['patient_share'] : ($svc->price ?? 0);
-                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => 1, 'price' => $price];
+                    $unitPrice = $pricing ? (float) $pricing['patient_share'] : ($svc->price ?? 0);
+                    $price = $unitPrice * $qty;
+                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => $qty, 'price' => $price];
                 }
 
                 // استشارات الطوارئ للأطباء الاستشاريين

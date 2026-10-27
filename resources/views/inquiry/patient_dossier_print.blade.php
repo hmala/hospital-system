@@ -64,7 +64,7 @@
     {{-- ترويسة المستشفى الرسمية --}}
     <div class="header-box d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-3">
-            <img src="{{ asset('images/logo.jpeg') }}" alt="شعار المستشفى" style="max-height: 65px;">
+            <img src="{{ asset('images/logo.png') }}" alt="شعار المستشفى" style="max-height: 65px;">
             <div>
                 <h4 class="fw-bold mb-0 text-primary">مستشفى الكفاءات الأهلي</h4>
                 <div class="text-muted small">Al-Kafaat Specialized Hospital - Medical Records Dept.</div>

@@ -608,10 +608,13 @@
     }
 
     // Official System Logo (Login & Sidebar Logo) for Watermark & Footer
-    $systemLogoFile = public_path('images/logo.jpeg');
+    $systemLogoFile = public_path('images/logo.png');
+    if (!file_exists($systemLogoFile)) {
+        $systemLogoFile = public_path('images/logo.jpeg');
+    }
     $systemLogoSrc = file_exists($systemLogoFile)
-        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($systemLogoFile))
-        : asset('images/logo.jpeg');
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($systemLogoFile))
+        : asset('images/logo.png');
 
     // Triage badge calculation
     $priority = $emergency->priority ?? 'urgent';
@@ -777,23 +780,23 @@
                 </div>
                 <table class="demographics-table">
                     <tr>
-                        <td>
-                            <span class="cell-label">طريقة الوصول</span>
-                            <span class="cell-val">{{ $emergency->arrival_mode ?: 'إسعاف المستشفى (الوصول)' }}</span>
+                        <td style="width: 25%;">
+                            <span class="cell-label">اسم المريض الرباعي</span>
+                            <span class="cell-val" style="color: #005a9c; font-weight: 900; font-size: 11px;" title="{{ $patientName }}">{{ $patientName }}</span>
                         </td>
-                        <td>
-                            <span class="cell-label">رقم المراجعة</span>
-                            <span class="cell-val">{{ $referenceNumber }}</span>
-                        </td>
-                        <td>
+                        <td style="width: 18%;">
                             <span class="cell-label">رقم ملف المريض</span>
-                            <span class="cell-val">{{ $fileNumber }}</span>
+                            <span class="cell-val font-monospace">{{ $fileNumber }}</span>
                         </td>
-                        <td>
+                        <td style="width: 18%;">
                             <span class="cell-label">الجنس / العمر</span>
                             <span class="cell-val">{{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }} / {{ $patientAge }} سنة</span>
                         </td>
-                        <td>
+                        <td style="width: 19%;">
+                            <span class="cell-label">رقم المراجعة</span>
+                            <span class="cell-val font-monospace">{{ $referenceNumber }}</span>
+                        </td>
+                        <td style="width: 20%;">
                             <span class="cell-label">التاريخ والوقت</span>
                             <span class="cell-val">{{ $emergency->created_at->format('d-m-Y H:i') }}</span>
                         </td>
@@ -801,15 +804,15 @@
                     <tr>
                         <td>
                             <span class="cell-label">الطبيب المناوب</span>
-                            <span class="cell-val">{{ $doctorName }}</span>
-                        </td>
-                        <td>
-                            <span class="cell-label">الشكوى الرئيسية</span>
-                            <span class="cell-val">{{ $emergency->symptoms ?: 'ألم في البطن' }}</span>
+                            <span class="cell-val" style="font-weight: 800;">{{ $doctorName }}</span>
                         </td>
                         <td>
                             <span class="cell-label">التصنيف الفرزي (Triage)</span>
                             <span class="triage-badge {{ $triageClass }}">{{ $triageLabel }}</span>
+                        </td>
+                        <td>
+                            <span class="cell-label">طريقة الوصول</span>
+                            <span class="cell-val">{{ $emergency->arrival_mode ?: 'إسعاف المستشفى (الوصول)' }}</span>
                         </td>
                         <td>
                             <span class="cell-label">الجهة المحولة (إن وجدت)</span>
@@ -942,7 +945,7 @@
                                 <tr>
                                     <td>{{ $emergency->created_at->format('d-m-Y') }}</td>
                                     <td>{{ $emergency->created_at->format('H:i') }}</td>
-                                    <td><strong>{{ $srv->name }}</strong></td>
+                                    <td><strong>{{ $srv->name }}{{ ($srv->pivot && $srv->pivot->quantity > 1) ? ' (×' . $srv->pivot->quantity . ')' : '' }}</strong></td>
                                     <td>{{ $emergency->diagnosis ?? '' }}</td>
                                     <td>{{ $doctorName }}</td>
                                 </tr>
@@ -1017,6 +1020,14 @@
                     EMERGENCY MEDICAL REPORT — التقرير الطبي في قسم الطوارئ
                     <span style="display:none;">التقرير الطبي لحالة طوارئ</span>
                 </div>
+            </div>
+
+            <!-- Page 2 Patient Mini-Header -->
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; padding: 3px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700;">
+                <div><span style="color: #64748b;">اسم المريض:</span> <strong style="color: #005a9c; font-size: 11px;">{{ $patientName }}</strong></div>
+                <div><span style="color: #64748b;">رقم الملف (MRN):</span> <span style="font-family: monospace;">{{ $fileNumber }}</span></div>
+                <div><span style="color: #64748b;">العمر / الجنس:</span> {{ $patientAge }} سنة / {{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }}</div>
+                <div><span style="color: #64748b;">الطبيب المعالج:</span> {{ $doctorName }}</div>
             </div>
 
             <!-- Section 1: Medico-Legal Notes -->

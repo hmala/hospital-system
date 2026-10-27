@@ -1431,10 +1431,25 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
 
+        const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+        let response = null;
+        let lastError = null;
+
+        for (const url of endpoints) {
+            try {
+                const res = await fetch(url, { method: 'POST', mode: 'cors' });
+                if (res.ok) {
+                    response = res;
+                    break;
+                }
+            } catch (e) {
+                lastError = e;
+            }
+        }
+
         try {
-            const response = await fetch('http://127.0.0.1:5000/scan', { method: 'POST', mode: 'cors' });
-            if (!response.ok) {
-                throw new Error('فشل المسح من السكانر');
+            if (!response) {
+                throw lastError || new Error('تعذر الاتصال بالسكانر');
             }
             const blob = await response.blob();
             const reader = new FileReader();
@@ -1446,8 +1461,12 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             reader.readAsDataURL(blob);
         } catch (err) {
-            console.error(err);
-            alert('برنامج السكانر غير مشغل أو غير متصل. يمكنك استخدام زر "رفع ملف" بدلاً منه.');
+            console.error('Scanner error:', err);
+            if (window.location.protocol === 'https:') {
+                alert('⚠️ تعذر الاتصال بالسكانر المحلي!\n\n1. تأكد من تشغيل ملف (تشغيل_السكانر_التلقائي.bat) على حاسبتك.\n2. على هوستنجر (HTTPS): اضغط علامة القفل/الضبط بجانب الرابط في كروم ⬅️ إعدادات الموقع ⬅️ غيّر (محتوى غير آمن / Insecure content) إلى سماح (Allow).\n\nأو يمكنك استخدام زر "رفع ملف" كبديل سريع.');
+            } else {
+                alert('برنامج السكانر غير مشغل أو غير متصل. تأكد من تشغيل (تشغيل_السكانر_التلقائي.bat) أو استخدم زر "رفع ملف".');
+            }
         } finally {
             btn.disabled = false;
             btn.innerHTML = origText;
