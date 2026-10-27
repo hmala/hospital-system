@@ -167,6 +167,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'edit medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete medicine groups', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'void payment receipt', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -232,6 +233,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'delete activity logs', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'send lab whatsapp', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'void payment receipt', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -478,6 +480,7 @@ class RoleManagementController extends Controller
             'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'process surgery payments' => ['label' => 'قبض وتثبيت دفعات العمليات وأجور الغرف', 'action' => 'معالجة', 'badge' => 'success'],
             'process refunds' => ['label' => 'استرجاع مبالغ العمليات الملغاة وفوارق الغرف للمرضى', 'action' => 'معالجة', 'badge' => 'warning'],
+            'void payment receipt' => ['label' => 'إبطال وإلغاء وصل دفع مالي وإعادة فتحه للتصحيح والاسترداد (مع تدقيق الملغيات)', 'action' => 'إلغاء / تدقيق', 'badge' => 'danger'],
 
             // 📊 4. الحسابات العامة والمالية
             'view insurance claims' => ['label' => 'عرض ومتابعة كشوفات وسجلات مطالبات الضمان وتصديرها', 'action' => 'عرض', 'badge' => 'info'],
@@ -635,7 +638,7 @@ class RoleManagementController extends Controller
         }
 
         // 3. Cashier & POS
-        if (str_contains($permissionName, 'cashier') || str_contains($permissionName, 'payment') || str_contains($permissionName, 'refund')) {
+        if (str_contains($permissionName, 'void') || str_contains($permissionName, 'cashier') || str_contains($permissionName, 'payment') || str_contains($permissionName, 'refund')) {
             return 'cashier';
         }
 
