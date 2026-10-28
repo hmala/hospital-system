@@ -453,10 +453,20 @@
     opacity: 1 !important;
     cursor: pointer !important;
 }
+#referDoctorPanel {
+    position: relative !important;
+    z-index: 1050 !important;
+    overflow: visible !important;
+}
+#referDoctorPanel .card-body {
+    position: relative !important;
+    z-index: 1051 !important;
+    overflow: visible !important;
+}
 #referDoctorSuggestions {
     background-color: #ffffff !important;
     z-index: 99999 !important;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35) !important;
     border: 2px solid #0284c7 !important;
     border-radius: 8px !important;
 }
@@ -466,10 +476,12 @@
     border-bottom: 1px solid #e2e8f0 !important;
     text-align: right !important;
     direction: rtl !important;
+    cursor: pointer !important;
+    user-select: none !important;
     transition: all 0.15s ease-in-out;
 }
 #referDoctorSuggestions .refer-doc-item:hover,
-#referDoctorSuggestions .refer-doc-item:focus {
+#referDoctorSuggestions .refer-doc-item:active {
     background-color: #f0f9ff !important;
     color: #0369a1 !important;
     transform: translateX(-3px);
@@ -598,7 +610,7 @@
     @endif
 
     @if($visit->status == 'in_progress')
-        <div id="referDoctorPanel" class="card border-primary mb-4 d-none">
+        <div id="referDoctorPanel" class="card border-primary mb-4 d-none" style="position: relative; z-index: 1050; overflow: visible !important;">
             <div class="card-header bg-primary text-white">
                 <i class="fas fa-exchange-alt me-2"></i>
                 تحويل المريض للطبيب الآخر
@@ -5842,27 +5854,7 @@ function confirmSurgeryReferral() {
 .hover-shadow:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
-#referDoctorSuggestions {
-    background-color: #ffffff !important;
-    z-index: 99999 !important;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
-    border: 2px solid #0284c7 !important;
-    border-radius: 8px !important;
-}
-#referDoctorSuggestions .refer-doc-item {
-    background-color: #ffffff !important;
-    color: #1e293b !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    text-align: right !important;
-    direction: rtl !important;
-    transition: all 0.15s ease-in-out;
-}
-#referDoctorSuggestions .refer-doc-item:hover,
-#referDoctorSuggestions .refer-doc-item:focus {
-    background-color: #f0f9ff !important;
-    color: #0369a1 !important;
-    transform: translateX(-3px);
-}
+
 </style>
 
 <!-- Modal تحويل المريض لحجز عملية -->
@@ -6003,14 +5995,17 @@ function confirmSurgeryReferral() {
             referSuggestionsBox.classList.remove('d-none');
 
             referSuggestionsBox.querySelectorAll('.refer-doc-item').forEach(item => {
-                item.addEventListener('click', function(e) {
+                const handleSelection = function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     selectReferDoctor({
                         id: this.getAttribute('data-id'),
                         name: this.getAttribute('data-name'),
                         spec: this.getAttribute('data-spec')
                     });
-                });
+                };
+                item.addEventListener('mousedown', handleSelection);
+                item.addEventListener('click', handleSelection);
             });
         }
 
@@ -6064,7 +6059,7 @@ function confirmSurgeryReferral() {
             referClearBtn.addEventListener('click', clearReferDoctorSelection);
         }
 
-        document.addEventListener('click', function(e) {
+        document.addEventListener('mousedown', function(e) {
             if (referSuggestionsBox && !referSuggestionsBox.contains(e.target) && e.target !== referSearchInput) {
                 referSuggestionsBox.classList.add('d-none');
             }
@@ -6458,27 +6453,7 @@ function confirmSurgeryReferral() {
     #saveRxAsPkgModal .modal-content {
         pointer-events: auto !important;
     }
-#referDoctorSuggestions {
-    background-color: #ffffff !important;
-    z-index: 99999 !important;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
-    border: 2px solid #0284c7 !important;
-    border-radius: 8px !important;
-}
-#referDoctorSuggestions .refer-doc-item {
-    background-color: #ffffff !important;
-    color: #1e293b !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    text-align: right !important;
-    direction: rtl !important;
-    transition: all 0.15s ease-in-out;
-}
-#referDoctorSuggestions .refer-doc-item:hover,
-#referDoctorSuggestions .refer-doc-item:focus {
-    background-color: #f0f9ff !important;
-    color: #0369a1 !important;
-    transform: translateX(-3px);
-}
+
 </style>
 
 <!-- Modal: حفظ الروشتة الحالية كباقة علاجية سريعة -->
