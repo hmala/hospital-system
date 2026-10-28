@@ -508,7 +508,7 @@ class DoctorVisitController extends Controller
             ->orderBy('specialization')
             ->orderBy('id')
             ->get()
-            ->sortByDesc(fn ($doc) => $doc->isWorkingOnDay($currentDay))
+            ->filter(fn ($doc) => $doc->isWorkingOnDay($currentDay))
             ->values();
 
         $availableMedicines = Medicine::where('is_active', true)

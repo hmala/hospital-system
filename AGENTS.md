@@ -57,8 +57,7 @@ Consult these files before making changes or proposing fixes:
 
 ### Done
 - **معالجة استعلام الأطباء المتاحين في الكنترولر ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * إلغاء قيد `workingOnDay` الصارم في استعلام SQL الذي كان يرجع صفر أطباء في بيئة هوستنجر بسبب اختلاف MariaDB في التعامل مع JSON واليونيكود.
-  * جلب جميع الأطباء النشطين (استشاريين وجراحين) وترتيبهم برمجياً عبر دالة PHP `isWorkingOnDay` لوضع أطباء اليوم في مقدمة القائمة مع تمييزهم بـ `⭐ (متاح اليوم)`.
+  * استبدال قيد SQL البرمجي بدالة PHP `isWorkingOnDay($currentDay)` لعزل وحصر القائمة **بأطباء اليوم المتاحين حصراً** (استشاريين وجراحين) بدقة 100% مع ضمان توافق كامل مع MariaDB و MySQL دون إخفاء الزر.
 - **تحسين واجهة فحص المريض ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
   * إظهار زر `[ ⇄ تحويل للطبيب الآخر ]` وبطاقة التحويل دائماً طالما الزيارة جارية (`$visit->status == 'in_progress'`) دون إخفاء الزر إذا كان العداد فارغاً.
 - **تكامل طابور الانتظار عند التحويل (`referToDoctor`)**:

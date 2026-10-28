@@ -593,7 +593,7 @@
                             <select id="doctor_id" name="doctor_id" class="form-select" required>
                                 <option value="">اختر الطبيب</option>
                                 @foreach($availableDoctors as $doctor)
-                                    <option value="{{ $doctor->id }}">{{ optional($doctor->user)->name }} - {{ $doctor->specialization }} {{ (isset($currentDay) && $doctor->isWorkingOnDay($currentDay)) ? '⭐ (متاح اليوم)' : '' }}</option>
+                                    <option value="{{ $doctor->id }}">{{ optional($doctor->user)->name }} - {{ $doctor->specialization }}</option>
                                 @endforeach
                             </select>
                         </div>
