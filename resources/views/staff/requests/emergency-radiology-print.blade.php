@@ -448,7 +448,7 @@
             ->implode("\n\n");
 
         $attachments = $emergencyRadiology->radiologyTypes
-            ->map(function ($type) {
+            ->map(function ($type) use ($emergencyRadiology) {
                 $rawPath = $type->pivot->image_path ?? null;
                 if (empty($rawPath)) {
                     return null;
@@ -471,28 +471,6 @@
             ->filter()
             ->values();
     @endphp
-
-    {{-- debug info: show attachment array when empty so we know what the view is seeing --}}
-    @if($attachments->isEmpty())
-        <div style="padding:10px; background:#f8d7da; color:#721c24; margin-bottom:15px;">
-            <strong>تنبيه:</strong> لم يتم العثور على مرفقات في العرض.
-            تحقق من أن الطلب يحوي مسار الصورة في قاعدة البيانات.
-            <br>
-            {{-- raw pivot values for inspection --}}
-            <pre style="font-size:12px; white-space:pre-wrap;">{{
-                $emergencyRadiology->radiologyTypes->map(function($t){
-                    $path = $t->pivot->image_path;
-                    $url = '';
-                    if ($path) {
-                        $p = str_replace('\\', '/', trim($path));
-                        $p = ltrim($p, '/');
-                        $url = asset('storage/' . implode('/', array_map('rawurlencode', explode('/', $p))));
-                    }
-                    return [$t->name, $path, $url];
-                })->toJson(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-            }}</pre>
-        </div>
-    @endif
 
     <div class="print-buttons">
         <button class="btn btn-print" onclick="window.print()">🖨️ طباعة</button>

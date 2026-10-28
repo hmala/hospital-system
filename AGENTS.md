@@ -53,6 +53,15 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-28 — المرحلة 122: معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage)
+
+### Done
+- **معالجة الخطأ في واجهة طباعة أشعة الطوارئ ([resources/views/staff/requests/emergency-radiology-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-print.blade.php))**:
+  * تصحيح استدعاء الدالة المجهولة `radiologyTypes->map(function ($type) use ($emergencyRadiology) { ... })` وتمرير المتغير عبر `use ($emergencyRadiology)` في السطر 451، مما حل خطأ `ErrorException: Undefined variable $emergencyRadiology` نهائياً.
+  * إزالة كود التنبيه التجريبي والتطويري القديم (`debug info`) الذي كان يطبع شريطاً أحمر عند عدم وجود مرفقات.
+- **حزمة الاختبارات الآلية ([tests/Feature/EmergencyRadiologyPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRadiologyPrintTest.php))**:
+  * بناء واجتياز اختبارين يغطيان طباعة تقرير أشعة الطوارئ بوجود مرفقات وبدون مرفقات بنجاح تام (`2 passed, 12 assertions`).
+
 ## Session log (2026-10-28 — المرحلة 121: توحيد تقرير طباعة تحاليل الطوارئ 100% مع التقرير السريري الموحد، وعزل فحص الإدرار العام G.U.E في صفحة منفصلة بالكامل Emergency Lab Print Report 100% Unification & Dedicated G.U.E Page 2 Separation)
 
 ### Done
