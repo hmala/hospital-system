@@ -502,13 +502,14 @@ class DoctorVisitController extends Controller
         $currentDay = $daysMap[date('l')] ?? 'السبت';
 
         $availableDoctors = Doctor::with('user')
-            ->where('type', 'consultant')
+            ->whereIn('type', ['consultant', 'surgeon'])
             ->where('is_active', true)
-            ->workingOnDay($currentDay)
             ->where('id', '<>', $visit->doctor_id)
             ->orderBy('specialization')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->sortByDesc(fn ($doc) => $doc->isWorkingOnDay($currentDay))
+            ->values();
 
         $availableMedicines = Medicine::where('is_active', true)
             ->orderBy('name')
@@ -587,7 +588,8 @@ class DoctorVisitController extends Controller
             'pastSurgeries',
             'pastEmergencies',
             'patientAppointments',
-            'patientInsuranceType'
+            'patientInsuranceType',
+            'currentDay'
         ));
     }
 
@@ -985,9 +987,9 @@ class DoctorVisitController extends Controller
             'doctor_id' => 'required|exists:doctors,id',
         ]);
 
-        $newDoctor = Doctor::find($request->doctor_id);
-        if (! $newDoctor || ! $newDoctor->is_active || $newDoctor->type !== 'consultant') {
-            return redirect()->back()->with('error', 'الطبيب المختار غير صالح');
+        $newDoctor = Doctor::with('user')->find($request->doctor_id);
+        if (! $newDoctor || ! $newDoctor->is_active || ! in_array($newDoctor->type, ['consultant', 'surgeon'])) {
+            return redirect()->back()->with('error', 'الطبيب المختار غير متاح للتحويل');
         }
 
         if ($newDoctor->id === $visit->doctor_id) {
@@ -1002,9 +1004,18 @@ class DoctorVisitController extends Controller
             $appointment = $visit->appointment;
             $appointment->doctor_id = $newDoctor->id;
             $appointment->department_id = $newDoctor->department_id;
+            $appointment->status = 'confirmed';
+            $appointment->called_at = null;
+
+            // Generate next queue number for new doctor's clinic today
+            $maxQueue = Appointment::where('doctor_id', $newDoctor->id)
+                ->whereDate('appointment_date', today())
+                ->max('queue_number') ?? 0;
+            $appointment->queue_number = $maxQueue + 1;
 
             if ($appointment->payment_status === 'paid' && $appointment->payment) {
-                $note = 'تم تحويل المريض لطبيب آخر دون دفع إضافي';
+                $newDoctorName = optional($newDoctor->user)->name ?? $newDoctor->id;
+                $note = 'تم تحويل المريض إلى د. '.$newDoctorName.' دون دفع إضافي';
                 $appointment->payment->description = trim($appointment->payment->description.' | '.$note);
                 $appointment->payment->notes = trim(($appointment->payment->notes ?? '').' | '.$note, ' | ');
                 $appointment->payment->save();
@@ -1013,7 +1024,7 @@ class DoctorVisitController extends Controller
             $appointment->save();
         }
 
-        return redirect()->back()->with('success', 'تم تحويل المريض للطبيب الجديد بنجاح. سيتم احتساب الأتعاب للطبيب الجديد في السجل المالي.');
+        return redirect()->route('doctor.visits.index')->with('success', 'تم تحويل المريض إلى د. '.(optional($newDoctor->user)->name ?? '').' بنجاح.');
     }
 
     public function storeRequest(HttpRequest $request)

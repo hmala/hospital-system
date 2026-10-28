@@ -463,7 +463,7 @@
                     فحص المريض
                 </h2>
                 <div class="d-flex gap-2">
-                    @if($visit->status == 'in_progress' && isset($availableDoctors) && $availableDoctors->count())
+                    @if($visit->status == 'in_progress')
                         <button type="button" id="referDoctorButton" class="btn btn-primary">
                             <i class="fas fa-exchange-alt me-1"></i>
                             تحويل للطبيب الآخر
@@ -576,7 +576,7 @@
         </div>
     @endif
 
-    @if(isset($availableDoctors) && $availableDoctors->count())
+    @if($visit->status == 'in_progress')
         <div id="referDoctorPanel" class="card border-primary mb-4 d-none">
             <div class="card-header bg-primary text-white">
                 <i class="fas fa-exchange-alt me-2"></i>
@@ -593,7 +593,7 @@
                             <select id="doctor_id" name="doctor_id" class="form-select" required>
                                 <option value="">اختر الطبيب</option>
                                 @foreach($availableDoctors as $doctor)
-                                    <option value="{{ $doctor->id }}">{{ optional($doctor->user)->name }} - {{ $doctor->specialization }}</option>
+                                    <option value="{{ $doctor->id }}">{{ optional($doctor->user)->name }} - {{ $doctor->specialization }} {{ (isset($currentDay) && $doctor->isWorkingOnDay($currentDay)) ? '⭐ (متاح اليوم)' : '' }}</option>
                                 @endforeach
                             </select>
                         </div>

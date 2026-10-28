@@ -62,6 +62,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 123 (إصلاح وتفعيل زر تحويل المريض لطبيب آخر وتوافق MariaDB ومحطة الانتظار Doctor Referral to Another Doctor & Live Queue Integration):**
+  * **معالجة استعلام الأطباء المتاحين في الكنترولر (`DoctorVisitController.php`)**:
+    - إلغاء قيد `workingOnDay` الصارم في استعلام SQL الذي كان يرجع صفر أطباء في بيئة هوستنجر بسبب اختلاف MariaDB في التعامل مع JSON واليونيكود.
+    - جلب جميع الأطباء النشطين (استشاريين وجراحين) وترتيبهم برمجياً عبر دالة PHP `isWorkingOnDay` لوضع أطباء اليوم في مقدمة القائمة مع تمييزهم بـ `⭐ (متاح اليوم)`.
+  * **تحسين واجهة فحص المريض (`resources/views/doctors/visits/show.blade.php`)**:
+    - إظهار زر `[ ⇄ تحويل للطبيب الآخر ]` وبطاقة التحويل دائماً طالما الزيارة جارية (`$visit->status == 'in_progress'`) دون إخفاء الزر إذا كان العداد فارغاً.
+  * **تكامل طابور الانتظار عند التحويل (`referToDoctor`)**:
+    - تحويل حالة موعد المريض إلى `status = 'confirmed'` وتصفير وقت الاستدعاء وتوليد رقم دور جديد لعيادة الطبيب المحول إليه ليظهر فوراً في طابور الانتظار الأولي وتتم مناداته.
+    - السماح بالتحويل إلى الاستشاريين والجراحين على حد سواء.
+  * **حزمة الاختبارات الآلية (`tests/Feature/DoctorReferralToAnotherDoctorTest.php`)**:
+    - بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
+
 - **المرحلة 122 (معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage):**
   * **معالجة الخطأ في واجهة طباعة أشعة الطوارئ (`resources/views/staff/requests/emergency-radiology-print.blade.php`)**:
     - تصحيح استدعاء الدالة المجهولة `radiologyTypes->map(function ($type) use ($emergencyRadiology) { ... })` وتمرير المتغير عبر `use ($emergencyRadiology)` في السطر 451، مما حل خطأ `ErrorException: Undefined variable $emergencyRadiology` نهائياً.

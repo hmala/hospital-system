@@ -53,6 +53,20 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-28 — المرحلة 123: إصلاح وتفعيل زر تحويل المريض لطبيب آخر وتوافق MariaDB ومحطة الانتظار Doctor Referral to Another Doctor & Live Queue Integration)
+
+### Done
+- **معالجة استعلام الأطباء المتاحين في الكنترولر ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * إلغاء قيد `workingOnDay` الصارم في استعلام SQL الذي كان يرجع صفر أطباء في بيئة هوستنجر بسبب اختلاف MariaDB في التعامل مع JSON واليونيكود.
+  * جلب جميع الأطباء النشطين (استشاريين وجراحين) وترتيبهم برمجياً عبر دالة PHP `isWorkingOnDay` لوضع أطباء اليوم في مقدمة القائمة مع تمييزهم بـ `⭐ (متاح اليوم)`.
+- **تحسين واجهة فحص المريض ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إظهار زر `[ ⇄ تحويل للطبيب الآخر ]` وبطاقة التحويل دائماً طالما الزيارة جارية (`$visit->status == 'in_progress'`) دون إخفاء الزر إذا كان العداد فارغاً.
+- **تكامل طابور الانتظار عند التحويل (`referToDoctor`)**:
+  * تحويل حالة موعد المريض إلى `status = 'confirmed'` وتصفير وقت الاستدعاء وتوليد رقم دور جديد لعيادة الطبيب المحول إليه ليظهر فوراً في طابور الانتظار الأولي وتتم مناداته.
+  * السماح بالتحويل إلى الاستشاريين والجراحين على حد سواء.
+- **حزمة الاختبارات الآلية ([tests/Feature/DoctorReferralToAnotherDoctorTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorReferralToAnotherDoctorTest.php))**:
+  * بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
+
 ## Session log (2026-10-28 — المرحلة 122: معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage)
 
 ### Done
