@@ -125,7 +125,10 @@ $testsList = array_values(array_unique(array_filter($testsList, fn($t) => !empty
 
 // خريطة أسماء بديلة واختصارات شائعة لربط التحاليل بدقة
 $codeAliases = [
-    'CBC' => 'CBC_3DIFF',
+    'CBC' => 'cbc_3DIFF',
+    'CBC & Blood Film' => 'cbc_3DIFF',
+    'Complete blood count & Differential' => 'cbc_3DIFF',
+    'Complete Blood Count' => 'cbc_3DIFF',
 ];
 $normalizedSearchTerms = array_values(array_unique(array_merge(
     $testsList,
@@ -630,7 +633,8 @@ if (!empty($emergencyLab->notes)) {
                                             $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                             
                                             $rt = $labTestObj ? $requestTestsKeyed->get($labTestObj->id) : null;
-                                            $hasSpecificAttachment = !empty($rt?->image_path) || !empty($testAttachments[$test]);
+                                            $altTestName = ($test === 'CBC & Blood Film') ? 'Complete blood count & Differential' : (($test === 'Complete blood count & Differential') ? 'CBC & Blood Film' : null);
+                                            $hasSpecificAttachment = !empty($rt?->image_path) || !empty($testAttachments[$test]) || ($altTestName && !empty($testAttachments[$altTestName]));
                                             
                                             // تحديد نمط إدخال النتائج
                                             $entryType = $labTestObj?->result_entry_type;
@@ -669,9 +673,10 @@ if (!empty($emergencyLab->notes)) {
                                                 <td class="text-center">
                                                     @if($hasSpecificAttachment)
                                                         @php
+                                                            $attPathValue = $testAttachments[$test] ?? ($altTestName ? ($testAttachments[$altTestName] ?? null) : null);
                                                             $attUrl = !empty($rt?->image_path)
                                                                 ? route('staff.emergency-lab.attachment', ['emergencyLab' => $emergencyLab, 'testId' => $labTestObj?->id])
-                                                                : (isset($testAttachments[$test]) ? asset('storage/' . $testAttachments[$test]) : '');
+                                                                : (!empty($attPathValue) ? asset('storage/' . $attPathValue) : '');
                                                         @endphp
                                                         <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-sm">
                                                             <a href="{{ $attUrl }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.72rem;" title="معاينة التقرير المرفق">

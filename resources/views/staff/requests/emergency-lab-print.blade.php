@@ -902,6 +902,23 @@
         $testAtts = is_array($emergencyDetails['test_attachments'] ?? null) ? $emergencyDetails['test_attachments'] : [];
         $waShareUrl = method_exists($emergencyLab, 'getWhatsAppShareUrl') ? $emergencyLab->getWhatsAppShareUrl() : null;
 
+        // دالة تطبيع الأسماء الطبية لضمان توحيد مسمى فحص الدم والفيلم CBC & Blood Film
+        $canonicalTestName = function($name) {
+            $norm = trim((string)$name);
+            $lower = mb_strtolower($norm);
+            if (in_array($lower, [
+                'complete blood count & differential',
+                'complete blood count',
+                'complete blood count (cbc)',
+                'cbc 3 diff',
+                'cbc 3 diff.',
+                'cbc_3diff',
+            ], true)) {
+                return 'CBC & Blood Film';
+            }
+            return $norm;
+        };
+
         // Logo Base64 Generator
         $hospitalLogoPath = public_path('images/1.jpg');
         if (!file_exists($hospitalLogoPath)) {
@@ -1046,7 +1063,9 @@
         $allResults = collect();
         $seenKeys = [];
 
-        $addResultItem = function($testName, $parentTestName, $value, $unit, $refRange, $status, $notes = '', $hasImage = false, $imagePath = null, $category = null, $labTestId = null) use (&$allResults, &$seenKeys) {
+        $addResultItem = function($testName, $parentTestName, $value, $unit, $refRange, $status, $notes = '', $hasImage = false, $imagePath = null, $category = null, $labTestId = null) use (&$allResults, &$seenKeys, $canonicalTestName) {
+            $testName = $canonicalTestName($testName);
+            $parentTestName = !empty($parentTestName) ? $canonicalTestName($parentTestName) : null;
             $normKey = mb_strtolower(trim(($parentTestName ? $parentTestName . '::' : '') . $testName));
             if (isset($seenKeys[$normKey])) {
                 $existing = $allResults->first(fn($x) => mb_strtolower(trim(($x->parent_test_name ? $x->parent_test_name . '::' : '') . $x->test_name)) === $normKey);
@@ -1187,7 +1206,7 @@
 
         @foreach($testAtts as $tName => $attPath)
             <a href="{{ asset('storage/' . $attPath) }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;">
-                🔬 مرفق: {{ $tName }}
+                🔬 مرفق: {{ $canonicalTestName($tName) }}
             </a>
         @endforeach
 

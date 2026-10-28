@@ -2063,13 +2063,31 @@ class StaffRequestController extends Controller
         }
 
         $path = null;
+        $details = is_string($emergencyLab->details) ? json_decode($emergencyLab->details, true) : ($emergencyLab->details ?? []);
+        $testAtts = $details['test_attachments'] ?? [];
+
         if ($testId) {
             $rt = $emergencyLab->requestTests()->where('lab_test_id', $testId)->first();
             $path = $rt?->image_path;
+
+            if (! $path && is_array($testAtts)) {
+                $tModel = \App\Models\LabTest::find($testId);
+                $lookupKeys = array_filter([
+                    $testId,
+                    $tModel?->name,
+                    'CBC & Blood Film',
+                    'Complete blood count & Differential',
+                ]);
+                foreach ($lookupKeys as $k) {
+                    if (! empty($testAtts[$k])) {
+                        $path = $testAtts[$k];
+                        break;
+                    }
+                }
+            }
         }
 
         if (! $path) {
-            $details = is_string($emergencyLab->details) ? json_decode($emergencyLab->details, true) : ($emergencyLab->details ?? []);
             $path = $details['attachment'] ?? null;
         }
 
