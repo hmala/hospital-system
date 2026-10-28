@@ -453,6 +453,27 @@
     opacity: 1 !important;
     cursor: pointer !important;
 }
+#referDoctorSuggestions {
+    background-color: #ffffff !important;
+    z-index: 99999 !important;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid #0284c7 !important;
+    border-radius: 8px !important;
+}
+#referDoctorSuggestions .refer-doc-item {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    text-align: right !important;
+    direction: rtl !important;
+    transition: all 0.15s ease-in-out;
+}
+#referDoctorSuggestions .refer-doc-item:hover,
+#referDoctorSuggestions .refer-doc-item:focus {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    transform: translateX(-3px);
+}
 </style>
 <div class="container-fluid">
     <div class="row mb-4">
@@ -583,22 +604,51 @@
                 تحويل المريض للطبيب الآخر
             </div>
             <div class="card-body">
-                <p class="text-muted mb-3">اختر طبيباً استشارياً متاحاً اليوم لإكمال الفحص.</p>
-                <form action="{{ route('doctor.visits.refer', $visit) }}" method="POST">
+                <p class="text-muted small mb-3">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    اكتب اسم الطبيب أو الاختصاص في المربع أدناه وستظهر لك قائمة الاقتراحات التفاعلية فوراً للاختيار منها.
+                </p>
+                <form action="{{ route('doctor.visits.refer', $visit) }}" method="POST" id="referDoctorForm">
                     @csrf
                     @method('PUT')
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-8">
-                            <label for="doctor_id" class="form-label">اختر الطبيب الجديد</label>
-                            <select id="doctor_id" name="doctor_id" class="form-select" required>
-                                <option value="">اختر الطبيب</option>
-                                @foreach($availableDoctors as $doctor)
-                                    <option value="{{ $doctor->id }}">{{ optional($doctor->user)->name }} - {{ $doctor->specialization }}</option>
-                                @endforeach
-                            </select>
+                        <div class="col-md-8 position-relative">
+                            <label for="refer_doctor_search" class="form-label fw-bold">
+                                <i class="fas fa-search me-1 text-primary"></i> اكتب اسم الطبيب أو الاختصاص (المتاحين اليوم):
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-user-md text-primary"></i></span>
+                                <input type="text" 
+                                       id="refer_doctor_search" 
+                                       class="form-control border-start-0 ps-0" 
+                                       placeholder="ابدأ بكتابة الاسم أو التخصص (مثال: د. قمر، باطنية، أسنان، جراحة...)" 
+                                       autocomplete="off"
+                                       required>
+                                <button type="button" class="btn btn-outline-secondary" id="clearReferDoctorSearch" style="display: none;" title="مسح">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" name="doctor_id" id="refer_doctor_id" required>
+
+                            <!-- صندوق الاقتراحات الذكية المنسدلة -->
+                            <div id="referDoctorSuggestions" class="list-group shadow-lg position-absolute w-100 mt-1 d-none" 
+                                 style="z-index: 99999 !important; max-height: 280px; overflow-y: auto; background-color: #ffffff !important; border: 2px solid #0284c7 !important; border-radius: 8px; box-shadow: 0 14px 35px rgba(0,0,0,0.3) !important;">
+                            </div>
+
+                            <!-- بطاقة التأكيد على الطبيب المختار -->
+                            <div id="selectedDoctorCard" class="mt-2 p-2 rounded bg-light border border-success d-none align-items-center justify-content-between">
+                                <div>
+                                    <i class="fas fa-check-circle text-success me-2 fs-5"></i>
+                                    <strong class="text-dark fs-6" id="selectedDoctorName"></strong>
+                                    <span class="badge bg-primary text-white ms-2" id="selectedDoctorSpec"></span>
+                                </div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                    <i class="fas fa-calendar-check me-1"></i> متاح اليوم
+                                </span>
+                            </div>
                         </div>
                         <div class="col-md-4 text-end">
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" id="submitReferDoctorBtn">
                                 <i class="fas fa-paper-plane me-1"></i>
                                 تأكيد التحويل
                             </button>
@@ -5792,6 +5842,27 @@ function confirmSurgeryReferral() {
 .hover-shadow:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
+#referDoctorSuggestions {
+    background-color: #ffffff !important;
+    z-index: 99999 !important;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid #0284c7 !important;
+    border-radius: 8px !important;
+}
+#referDoctorSuggestions .refer-doc-item {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    text-align: right !important;
+    direction: rtl !important;
+    transition: all 0.15s ease-in-out;
+}
+#referDoctorSuggestions .refer-doc-item:hover,
+#referDoctorSuggestions .refer-doc-item:focus {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    transform: translateX(-3px);
+}
 </style>
 
 <!-- Modal تحويل المريض لحجز عملية -->
@@ -5850,6 +5921,165 @@ function confirmSurgeryReferral() {
         if (closeReferPanel && referPanel) {
             closeReferPanel.addEventListener('click', function() {
                 referPanel.classList.add('d-none');
+            });
+        }
+
+        // ==========================================
+        // البحث التفاعلي والاقتراحات الذكية لتحويل الطبيب
+        // ==========================================
+        const availableDocsData = @json(($availableDoctors ?? collect())->map(function($d) {
+            return [
+                'id' => $d->id,
+                'name' => optional($d->user)->name ?? 'طبيب #'.$d->id,
+                'spec' => $d->specialization ?? 'عام'
+            ];
+        })->values());
+
+        const referSearchInput = document.getElementById('refer_doctor_search');
+        const referHiddenId = document.getElementById('refer_doctor_id');
+        const referSuggestionsBox = document.getElementById('referDoctorSuggestions');
+        const referSelectedCard = document.getElementById('selectedDoctorCard');
+        const referSelectedName = document.getElementById('selectedDoctorName');
+        const referSelectedSpec = document.getElementById('selectedDoctorSpec');
+        const referClearBtn = document.getElementById('clearReferDoctorSearch');
+        const referFormEl = document.getElementById('referDoctorForm');
+
+        function normalizeArabicDoc(text) {
+            if (!text) return '';
+            return text.toString()
+                .toLowerCase()
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[\u064B-\u065F]/g, '')
+                .trim();
+        }
+
+        function renderReferSuggestions(query) {
+            if (!referSuggestionsBox) return;
+            const normQuery = normalizeArabicDoc(query);
+            
+            let filtered = availableDocsData;
+            if (normQuery.length > 0) {
+                filtered = availableDocsData.filter(d => {
+                    const normName = normalizeArabicDoc(d.name);
+                    const normSpec = normalizeArabicDoc(d.spec);
+                    return normName.includes(normQuery) || normSpec.includes(normQuery);
+                });
+            }
+
+            if (filtered.length === 0) {
+                referSuggestionsBox.innerHTML = `
+                    <div class="list-group-item text-muted text-center py-3">
+                        <i class="fas fa-search me-1"></i> لا يوجد طبيب متاح اليوم مطابق لبحثك "${query}"
+                    </div>
+                `;
+                referSuggestionsBox.classList.remove('d-none');
+                return;
+            }
+
+            let html = '';
+            filtered.slice(0, 15).forEach(doc => {
+                html += `
+                    <a href="javascript:void(0)" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 refer-doc-item" 
+                       style="background-color: #ffffff !important; color: #1e293b !important; border-bottom: 1px solid #e2e8f0 !important;"
+                       data-id="${doc.id}" data-name="${doc.name}" data-spec="${doc.spec}">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="avatar-circle" style="width: 32px; height: 32px; min-width: 32px; font-size: 0.85rem; background-color: #e0f2fe; color: #0284c7; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                <i class="fas fa-user-md"></i>
+                            </span>
+                            <div class="text-end">
+                                <strong class="text-dark d-block" style="font-size: 0.95rem;">${doc.name}</strong>
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.75rem;">${doc.spec}</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-success text-white px-2 py-1" style="font-size: 0.75rem;">
+                            <i class="fas fa-calendar-check me-1"></i> متاح اليوم
+                        </span>
+                    </a>
+                `;
+            });
+            referSuggestionsBox.innerHTML = html;
+            referSuggestionsBox.classList.remove('d-none');
+
+            referSuggestionsBox.querySelectorAll('.refer-doc-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    selectReferDoctor({
+                        id: this.getAttribute('data-id'),
+                        name: this.getAttribute('data-name'),
+                        spec: this.getAttribute('data-spec')
+                    });
+                });
+            });
+        }
+
+        function selectReferDoctor(doc) {
+            if (!referHiddenId || !referSearchInput) return;
+            referHiddenId.value = doc.id;
+            referSearchInput.value = doc.name;
+            if (referSelectedCard) {
+                referSelectedName.textContent = doc.name;
+                referSelectedSpec.textContent = doc.spec;
+                referSelectedCard.classList.remove('d-none');
+                referSelectedCard.classList.add('d-flex');
+            }
+            if (referClearBtn) referClearBtn.style.display = 'block';
+            if (referSuggestionsBox) referSuggestionsBox.classList.add('d-none');
+        }
+
+        function clearReferDoctorSelection() {
+            if (referHiddenId) referHiddenId.value = '';
+            if (referSearchInput) {
+                referSearchInput.value = '';
+                referSearchInput.focus();
+            }
+            if (referSelectedCard) {
+                referSelectedCard.classList.add('d-none');
+                referSelectedCard.classList.remove('d-flex');
+            }
+            if (referClearBtn) referClearBtn.style.display = 'none';
+            renderReferSuggestions('');
+        }
+
+        if (referSearchInput) {
+            referSearchInput.addEventListener('input', function() {
+                if (referHiddenId && referHiddenId.value) {
+                    referHiddenId.value = '';
+                    if (referSelectedCard) {
+                        referSelectedCard.classList.add('d-none');
+                        referSelectedCard.classList.remove('d-flex');
+                    }
+                }
+                if (referClearBtn) referClearBtn.style.display = this.value.length > 0 ? 'block' : 'none';
+                renderReferSuggestions(this.value);
+            });
+
+            referSearchInput.addEventListener('focus', function() {
+                renderReferSuggestions(this.value);
+            });
+        }
+
+        if (referClearBtn) {
+            referClearBtn.addEventListener('click', clearReferDoctorSelection);
+        }
+
+        document.addEventListener('click', function(e) {
+            if (referSuggestionsBox && !referSuggestionsBox.contains(e.target) && e.target !== referSearchInput) {
+                referSuggestionsBox.classList.add('d-none');
+            }
+        });
+
+        if (referFormEl) {
+            referFormEl.addEventListener('submit', function(e) {
+                if (!referHiddenId || !referHiddenId.value) {
+                    e.preventDefault();
+                    alert('⚠️ يرجى اختيار الطبيب من قائمة الاقتراحات المتاحة اليوم أولاً.');
+                    if (referSearchInput) {
+                        referSearchInput.focus();
+                        renderReferSuggestions(referSearchInput.value);
+                    }
+                }
             });
         }
 
@@ -6228,6 +6458,27 @@ function confirmSurgeryReferral() {
     #saveRxAsPkgModal .modal-content {
         pointer-events: auto !important;
     }
+#referDoctorSuggestions {
+    background-color: #ffffff !important;
+    z-index: 99999 !important;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid #0284c7 !important;
+    border-radius: 8px !important;
+}
+#referDoctorSuggestions .refer-doc-item {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    text-align: right !important;
+    direction: rtl !important;
+    transition: all 0.15s ease-in-out;
+}
+#referDoctorSuggestions .refer-doc-item:hover,
+#referDoctorSuggestions .refer-doc-item:focus {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    transform: translateX(-3px);
+}
 </style>
 
 <!-- Modal: حفظ الروشتة الحالية كباقة علاجية سريعة -->

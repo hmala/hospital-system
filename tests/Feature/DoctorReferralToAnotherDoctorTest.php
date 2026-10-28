@@ -92,6 +92,9 @@ class DoctorReferralToAnotherDoctorTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('id="referDoctorButton"', false);
         $response->assertSee('id="referDoctorPanel"', false);
+        $response->assertSee('id="refer_doctor_search"', false);
+        $response->assertSee('id="referDoctorSuggestions"', false);
+        $response->assertSee('id="selectedDoctorCard"', false);
         $response->assertSee($doctor2->specialization);
     }
 
