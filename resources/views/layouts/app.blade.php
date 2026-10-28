@@ -1152,6 +1152,11 @@
                                 @endif
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgery-stations.tab-settings.*') ? 'active' : '' }}" href="{{ route('surgery-stations.tab-settings.index') }}">
+                                <i class="fas fa-sliders-h text-warning"></i><span> صلاحيات تبويبات المحطة</span>
+                            </a>
+                        </li>
                         @endcan
                         @can('view surgical operations')
                         <li class="nav-item">

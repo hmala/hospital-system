@@ -112,7 +112,7 @@ class LabStaffController extends Controller
                 });
             }
 
-            $emergencyLabRequests = $emergencyQuery->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+            $emergencyLabRequests = $emergencyQuery->orderByRaw("CASE priority WHEN 'critical' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'desc')
                 ->paginate(15)
                 ->withQueryString();

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Payment;
-use App\Models\ResidentStationFollowUp;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -65,6 +63,7 @@ class Surgery extends Model
         'cancellation_reason',
         'referral_letter_path',
         'location_id',
+        'operation_theater_id',
     ];
 
     protected $casts = [
@@ -101,6 +100,11 @@ class Surgery extends Model
     public function room()
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function operationTheater()
+    {
+        return $this->belongsTo(OperationTheater::class);
     }
 
     public function surgicalOperation()
@@ -212,8 +216,8 @@ class Surgery extends Model
     public function medicalDevices()
     {
         return $this->belongsToMany(MedicalDevice::class, 'surgery_medical_device')
-                    ->withPivot('assigned_by', 'price')
-                    ->withTimestamps();
+            ->withPivot('assigned_by', 'price')
+            ->withTimestamps();
     }
 
     public function nursingStation()
@@ -226,33 +230,33 @@ class Surgery extends Model
     {
         // 1. Resident (Pre-op) - التهيئة قبل العملية
         $preOpResident = $this->preOpResidentStation;
-        if (!$preOpResident || $preOpResident->status !== 'completed') {
+        if (! $preOpResident || $preOpResident->status !== 'completed') {
             return 'resident_pre_op';
         }
 
         // 2. Operation Theater - صالة العمليات
-        if (!$this->operationTheaterStation || $this->operationTheaterStation->status !== 'completed') {
+        if (! $this->operationTheaterStation || $this->operationTheaterStation->status !== 'completed') {
             return 'operation_theater';
         }
 
         // 3. Surgeon - تسجيل تفاصيل العملية
-        if (!$this->surgeonStation || $this->surgeonStation->status !== 'completed') {
+        if (! $this->surgeonStation || $this->surgeonStation->status !== 'completed') {
             return 'surgeon';
         }
 
         // 4. Anesthesia - توثيق التخدير
-        if (!$this->anesthesiaStation || $this->anesthesiaStation->status !== 'completed') {
+        if (! $this->anesthesiaStation || $this->anesthesiaStation->status !== 'completed') {
             return 'anesthesia';
         }
 
         // 5. Resident (Post-op) - متابعة ما بعد العملية
         $postOpResident = $this->postOpResidentStation;
-        if (!$postOpResident || $postOpResident->status !== 'completed') {
+        if (! $postOpResident || $postOpResident->status !== 'completed') {
             return 'resident_post_op';
         }
 
         // 6. Nursing - التمريض
-        if (!$this->nursingStation || $this->nursingStation->status !== 'completed') {
+        if (! $this->nursingStation || $this->nursingStation->status !== 'completed') {
             return 'nursing';
         }
 
@@ -262,7 +266,7 @@ class Surgery extends Model
     public function canProceedToNextStation()
     {
         $currentStation = $this->getCurrentStation();
-        
+
         if ($currentStation === 'surgeon') {
             return $this->surgeonStation && $this->surgeonStation->status === 'completed';
         }
@@ -272,7 +276,7 @@ class Surgery extends Model
         if ($currentStation === 'anesthesia') {
             return $this->anesthesiaStation && $this->anesthesiaStation->status === 'completed';
         }
-        
+
         return false;
     }
 
@@ -282,7 +286,7 @@ class Surgery extends Model
      */
     public static function getInitialRoomFeeForType(?string $roomType): float
     {
-        return match($roomType) {
+        return match ($roomType) {
             'vvip' => 200000.0,
             'vip' => 100000.0,
             default => 0.0,
@@ -295,7 +299,7 @@ class Surgery extends Model
     public function calculateStayDetails($asOfTime = null): array
     {
         $room = $this->room;
-        if (!$room) {
+        if (! $room) {
             return [
                 'has_room' => false,
                 'room_type' => null,
@@ -305,7 +309,7 @@ class Surgery extends Model
                 'extra_nights' => 0,
                 'extra_nights_fee' => 0,
                 'total_fee' => 0,
-                'paid_amount' => (float)($this->room_fee_paid_amount ?? 0),
+                'paid_amount' => (float) ($this->room_fee_paid_amount ?? 0),
                 'remaining_amount' => 0,
                 'excess_amount' => 0,
                 'checkin_at' => null,
@@ -315,16 +319,16 @@ class Surgery extends Model
         }
 
         $tz = 'Asia/Baghdad';
-        
+
         // وقت الدخول (Checkin): إما started_at أو وقت الحجز أو وقت الإنشاء
-        $checkin = $this->started_at 
+        $checkin = $this->started_at
             ? \Carbon\Carbon::parse($this->started_at)->setTimezone($tz)
-            : ($this->scheduled_date 
-                ? \Carbon\Carbon::parse($this->scheduled_date->format('Y-m-d') . ' ' . ($this->scheduled_time ? (is_string($this->scheduled_time) ? $this->scheduled_time : $this->scheduled_time->format('H:i:s')) : '08:00:00'))->setTimezone($tz)
+            : ($this->scheduled_date
+                ? \Carbon\Carbon::parse($this->scheduled_date->format('Y-m-d').' '.($this->scheduled_time ? (is_string($this->scheduled_time) ? $this->scheduled_time : $this->scheduled_time->format('H:i:s')) : '08:00:00'))->setTimezone($tz)
                 : ($this->created_at ? \Carbon\Carbon::parse($this->created_at)->setTimezone($tz) : now($tz)));
 
         // وقت الخروج (Checkout): إما وقت الخروج الفعلي أو الوقت الحالي
-        $checkout = $asOfTime 
+        $checkout = $asOfTime
             ? \Carbon\Carbon::parse($asOfTime)->setTimezone($tz)
             : ($this->discharged_at ? \Carbon\Carbon::parse($this->discharged_at)->setTimezone($tz) : now($tz));
 
@@ -342,10 +346,10 @@ class Surgery extends Model
         }
 
         $initialFee = self::getInitialRoomFeeForType($room->room_type);
-        $dailyFee = (float)$room->daily_fee;
+        $dailyFee = (float) $room->daily_fee;
         $extraNightsFee = $extraNights * $dailyFee;
         $totalFee = $initialFee + $extraNightsFee;
-        $paidAmount = (float)($this->room_fee_paid_amount ?? 0);
+        $paidAmount = (float) ($this->room_fee_paid_amount ?? 0);
         $remainingAmount = max(0, $totalFee - $paidAmount);
         $excessAmount = max(0, $paidAmount - $totalFee);
 
@@ -370,7 +374,7 @@ class Surgery extends Model
 
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'scheduled' => 'مجدولة',
             'in_progress' => 'جارية',
             'completed' => 'مكتملة',

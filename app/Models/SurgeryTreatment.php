@@ -49,6 +49,7 @@ class SurgeryTreatment extends Model
             'notes' => $notes,
         ];
         $this->update([
+            'status' => 'administered',
             'administrations' => $current,
             'administered_by' => $userId,
             'administered_at' => now(),

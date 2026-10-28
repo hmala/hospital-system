@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SurgeryUpdated;
+use App\Models\Department;
+use App\Models\Doctor;
+use App\Models\LabTest;
+use App\Models\OperationTheater;
+use App\Models\Patient;
+use App\Models\PatientDocument;
+use App\Models\RadiologyType;
+use App\Models\Room;
 use App\Models\Surgery;
 use App\Models\SurgeryTreatment;
-use App\Models\Patient;
-use App\Models\Doctor;
-use App\Models\Department;
-use App\Models\LabTest;
-use App\Models\RadiologyType;
 use App\Models\SurgicalOperation;
-use App\Models\Room;
-use App\Models\PatientDocument;
-use App\Events\SurgeryUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth;
 
 class SurgeryController extends Controller
 {
@@ -25,7 +26,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view surgeries'))) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -48,14 +49,14 @@ class SurgeryController extends Controller
         // تطبيق البحث والفلترة
         if (request('search')) {
             $search = request('search');
-            $activeSurgeriesQuery->where(function($query) use ($search) {
-                $query->whereHas('patient.user', function($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
+            $activeSurgeriesQuery->where(function ($query) use ($search) {
+                $query->whereHas('patient.user', function ($q) use ($search) {
+                    $q->where('name', 'like', '%'.$search.'%');
                 })
-                ->orWhereHas('doctor.user', function($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                })
-                ->orWhere('surgery_type', 'like', '%' . $search . '%');
+                    ->orWhereHas('doctor.user', function ($q) use ($search) {
+                        $q->where('name', 'like', '%'.$search.'%');
+                    })
+                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
             });
         }
 
@@ -90,14 +91,14 @@ class SurgeryController extends Controller
 
         if (request('search')) {
             $search = request('search');
-            $completedSurgeriesQuery->where(function($query) use ($search) {
-                $query->whereHas('patient.user', function($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
+            $completedSurgeriesQuery->where(function ($query) use ($search) {
+                $query->whereHas('patient.user', function ($q) use ($search) {
+                    $q->where('name', 'like', '%'.$search.'%');
                 })
-                ->orWhereHas('doctor.user', function($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                })
-                ->orWhere('surgery_type', 'like', '%' . $search . '%');
+                    ->orWhereHas('doctor.user', function ($q) use ($search) {
+                        $q->where('name', 'like', '%'.$search.'%');
+                    })
+                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
             });
         }
 
@@ -121,29 +122,30 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create surgeries'))) {
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
         // احضر البيانات مع الترتيب الأبجدي للأسماء
-        $patients = Patient::with('user')->get()->sortBy(function($p) {
+        $patients = Patient::with('user')->get()->sortBy(function ($p) {
             return optional($p->user)->name ?? '';
         });
         $doctors = Doctor::with('user')
-                        ->where('is_active', true)
-                        ->where(function($query) {
-                            $query->where('type', 'surgeon')
-                                  ->orWhere('specialization', 'جراحة');
-                        })
-                        ->get()
-                        ->sortBy(function($d) {
-                            return optional($d->user)->name ?? '';
-                        });
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->where('type', 'surgeon')
+                    ->orWhere('specialization', 'جراحة');
+            })
+            ->get()
+            ->sortBy(function ($d) {
+                return optional($d->user)->name ?? '';
+            });
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
+
         return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations'));
     }
 
@@ -151,7 +153,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create surgeries'))) {
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
@@ -198,13 +200,13 @@ class SurgeryController extends Controller
         ]);
 
         $doctor = Doctor::find($request->doctor_id);
-        if (!$doctor || !$doctor->department_id) {
+        if (! $doctor || ! $doctor->department_id) {
             return back()->withInput()->withErrors(['doctor_id' => 'الطبيب المختار يجب أن يكون مرتبطاً بقسم.']);
         }
         $request->merge(['department_id' => $doctor->department_id]);
 
         $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter', 'additional_operations']);
-        
+
         $patient = Patient::find($request->patient_id);
         $applyInsurance = $request->input('apply_insurance', '1') == '1';
         $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
@@ -217,7 +219,7 @@ class SurgeryController extends Controller
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {
             $surgeryData['surgery_type'] = $operation->name;
-            
+
             // استخدام السعر المخصص دائماً (يدوياً في كلتا الحالتين)
             if ($request->filled('custom_surgery_fee')) {
                 $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
@@ -226,9 +228,9 @@ class SurgeryController extends Controller
                 $surgeryData['surgery_fee'] = $operation->fee;
             }
         }
-        
+
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
-        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
+        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date.' '.$scheduledTimeStr);
 
         // حساب أجرة الغرفة المبدئية عند الحجز (الليلة الأولى: عادية=0, VIP=100,000, VVIP=200,000)
         if ($request->room_id) {
@@ -256,8 +258,8 @@ class SurgeryController extends Controller
             }
             $base64Data = base64_decode($base64Data);
             if ($base64Data !== false) {
-                $storedName = 'referral_scan_' . time() . '_' . uniqid() . '.' . $ext;
-                $relativePath = 'referrals/' . $storedName;
+                $storedName = 'referral_scan_'.time().'_'.uniqid().'.'.$ext;
+                $relativePath = 'referrals/'.$storedName;
                 Storage::disk('public')->put($relativePath, $base64Data);
                 $path = $relativePath;
                 $surgeryData['referral_letter_path'] = $path;
@@ -269,10 +271,10 @@ class SurgeryController extends Controller
         // حفظ العمليات الجراحية المرافقة / الإضافية إن وجدت
         if ($request->filled('additional_operations') && is_array($request->additional_operations)) {
             foreach ($request->additional_operations as $addOp) {
-                if (!empty($addOp['surgical_operation_id'])) {
+                if (! empty($addOp['surgical_operation_id'])) {
                     $rawFee = $addOp['fee'] ?? 0;
-                    $normalizedAddFee = is_numeric($rawFee) ? (float)$rawFee : (float)str_replace([',', ' '], ['', ''], $rawFee);
-                    
+                    $normalizedAddFee = is_numeric($rawFee) ? (float) $rawFee : (float) str_replace([',', ' '], ['', ''], $rawFee);
+
                     $surgery->additionalOperations()->create([
                         'surgical_operation_id' => $addOp['surgical_operation_id'],
                         'fee' => $normalizedAddFee,
@@ -286,20 +288,20 @@ class SurgeryController extends Controller
         // أرشفة الوثيقة تلقائياً في سجل وأرشيف المريض
         if ($path && $surgery->patient_id) {
             PatientDocument::create([
-                'patient_id'  => $surgery->patient_id,
-                'title'       => 'ورقة تحويل / مستند عملية: ' . ($surgery->surgery_type ?? 'عملية جراحية'),
-                'category'    => 'surgery_consent',
-                'file_path'   => $path,
-                'file_name'   => basename($path),
-                'file_type'   => 'image/jpeg',
-                'file_size'   => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
-                'notes'       => 'مرفق تلقائي من حجز العملية #' . $surgery->id,
+                'patient_id' => $surgery->patient_id,
+                'title' => 'ورقة تحويل / مستند عملية: '.($surgery->surgery_type ?? 'عملية جراحية'),
+                'category' => 'surgery_consent',
+                'file_path' => $path,
+                'file_name' => basename($path),
+                'file_type' => 'image/jpeg',
+                'file_size' => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                'notes' => 'مرفق تلقائي من حجز العملية #'.$surgery->id,
                 'uploaded_by' => Auth::id(),
             ]);
         }
 
         // إنشاء زيارة للعملية إذا لم تكن موجودة
-        if (!$surgery->visit_id) {
+        if (! $surgery->visit_id) {
             $visit = \App\Models\Visit::create([
                 'patient_id' => $surgery->patient_id,
                 'department_id' => $surgery->department_id,
@@ -307,9 +309,9 @@ class SurgeryController extends Controller
                 'visit_date' => $surgery->scheduled_date,
                 'visit_time' => $surgery->scheduled_time,
                 'visit_type' => 'surgery',
-                'chief_complaint' => 'عملية جراحية: ' . $surgery->surgery_type,
+                'chief_complaint' => 'عملية جراحية: '.$surgery->surgery_type,
                 'status' => 'pending_payment',
-                'notes' => 'زيارة خاصة بالعملية الجراحية #' . $surgery->id
+                'notes' => 'زيارة خاصة بالعملية الجراحية #'.$surgery->id,
             ]);
             $surgery->update(['visit_id' => $visit->id]);
         } else {
@@ -320,11 +322,11 @@ class SurgeryController extends Controller
         $labTestIds = $request->input('lab_tests', []);
         if (is_array($labTestIds) && count($labTestIds)) {
             foreach ($labTestIds as $labTestId) {
-                if ($labTestId && !$surgery->labTests()->where('lab_test_id', $labTestId)->exists()) {
+                if ($labTestId && ! $surgery->labTests()->where('lab_test_id', $labTestId)->exists()) {
                     $surgery->labTests()->create([
                         'lab_test_id' => $labTestId,
                         'status' => 'pending',
-                        'payment_status' => 'pending'
+                        'payment_status' => 'pending',
                     ]);
                 }
             }
@@ -336,11 +338,11 @@ class SurgeryController extends Controller
         $radiologyTypeIds = $request->input('radiology_tests', []);
         if (is_array($radiologyTypeIds) && count($radiologyTypeIds)) {
             foreach ($radiologyTypeIds as $radiologyTypeId) {
-                if ($radiologyTypeId && !$surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
+                if ($radiologyTypeId && ! $surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
                     $surgery->radiologyTests()->create([
                         'radiology_type_id' => $radiologyTypeId,
                         'status' => 'pending',
-                        'payment_status' => 'pending'
+                        'payment_status' => 'pending',
                     ]);
                 }
             }
@@ -358,12 +360,12 @@ class SurgeryController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $hasStationAccess = $user && $user->hasAnyPermission([
-            'view surgeries', 'view resident station', 'view surgeon station', 
-            'view anesthesia station', 'view nursing station', 'view operation theater station'
+            'view surgeries', 'view resident station', 'view surgeon station',
+            'view anesthesia station', 'view nursing station', 'view operation theater station',
         ]);
         $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id || $user->doctor->id == $surgery->anesthesiologist_id);
 
-        if (!$isAdmin && !$hasStationAccess && !$isAssignedDoctor) {
+        if (! $isAdmin && ! $hasStationAccess && ! $isAssignedDoctor) {
             abort(403, 'غير مصرح لك باستعراض تفاصيل العمليات الجراحية');
         }
 
@@ -373,13 +375,13 @@ class SurgeryController extends Controller
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation', 'residentStationFollowUps', 'medicalDevices']);
-        $patients = Patient::with('user')->get()->sortBy(function($p) {
+        $patients = Patient::with('user')->get()->sortBy(function ($p) {
             return optional($p->user)->name ?? '';
         });
         $anesthesiaDoctors = Doctor::with('user')
             ->anesthesia()
             ->get()
-            ->sortBy(function($d) {
+            ->sortBy(function ($d) {
                 return optional($d->user)->name ?? '';
             });
         $departments = Department::where('is_active', true)->orderBy('name')->get();
@@ -390,6 +392,7 @@ class SurgeryController extends Controller
             ->orderBy('name')
             ->get();
         $locations = \App\Models\Location::orderBy('name')->get();
+
         return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'devices', 'locations'));
     }
 
@@ -397,37 +400,37 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room', 'additionalOperations.surgicalOperation']);
-        $patients = Patient::with('user')->get()->sortBy(function($p) {
+        $patients = Patient::with('user')->get()->sortBy(function ($p) {
             return optional($p->user)->name ?? '';
         });
         $doctors = Doctor::with('user')
-                        ->where('is_active', true)
-                        ->where(function($query) {
-                            $query->where('type', 'surgeon')
-                                  ->orWhere('specialization', 'جراحة')
-                                  ->orWhere('type', 'anesthesia');
-                        })
-                        ->get()
-                        ->sortBy(function($d) {
-                            return optional($d->user)->name ?? '';
-                        });
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->where('type', 'surgeon')
+                    ->orWhere('specialization', 'جراحة')
+                    ->orWhere('type', 'anesthesia');
+            })
+            ->get()
+            ->sortBy(function ($d) {
+                return optional($d->user)->name ?? '';
+            });
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         // إحضار الغرف مع الغرفة المحجوزة حالياً
         $rooms = Room::where('room_purpose', 'beds')
-                     ->where(function($query) use ($surgery) {
-                         $query->where('is_active', true);
-                         if ($surgery->room_id) {
-                             $query->orWhere('id', $surgery->room_id);
-                         }
-                     })
-                     ->orderBy('room_type')
-                     ->orderBy('room_number')
-                     ->get();
+            ->where(function ($query) use ($surgery) {
+                $query->where('is_active', true);
+                if ($surgery->room_id) {
+                    $query->orWhere('id', $surgery->room_id);
+                }
+            })
+            ->orderBy('room_type')
+            ->orderBy('room_number')
+            ->get();
 
         return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'surgicalOperations', 'rooms'));
     }
@@ -439,7 +442,7 @@ class SurgeryController extends Controller
         $canView = $user && ($user->can('view surgeries') || $user->can('view surgeon station'));
         $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id);
 
-        if (!$isAdmin && !$canView && !$isAssignedDoctor) {
+        if (! $isAdmin && ! $canView && ! $isAssignedDoctor) {
             abort(403, 'غير مصرح لك بطباعة تفاصيل العملية');
         }
 
@@ -448,6 +451,7 @@ class SurgeryController extends Controller
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
+
         return view('surgeries.print', compact('surgery'));
     }
 
@@ -455,7 +459,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
@@ -495,7 +499,7 @@ class SurgeryController extends Controller
 
         $surgeryData = $request->except(['referral_letter', 'scanned_referral_letter', 'additional_operations']);
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
-        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date . ' ' . $scheduledTimeStr);
+        $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date.' '.$scheduledTimeStr);
 
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {
@@ -542,8 +546,8 @@ class SurgeryController extends Controller
             }
             $base64Data = base64_decode($base64Data);
             if ($base64Data !== false) {
-                $storedName = 'referral_scan_' . time() . '_' . uniqid() . '.' . $ext;
-                $relativePath = 'referrals/' . $storedName;
+                $storedName = 'referral_scan_'.time().'_'.uniqid().'.'.$ext;
+                $relativePath = 'referrals/'.$storedName;
                 Storage::disk('public')->put($relativePath, $base64Data);
                 $path = $relativePath;
                 $surgeryData['referral_letter_path'] = $path;
@@ -563,10 +567,10 @@ class SurgeryController extends Controller
         $surgery->additionalOperations()->delete();
         if ($request->has('additional_operations') && is_array($request->additional_operations)) {
             foreach ($request->additional_operations as $addOp) {
-                if (!empty($addOp['surgical_operation_id'])) {
+                if (! empty($addOp['surgical_operation_id'])) {
                     $rawFee = $addOp['fee'] ?? 0;
-                    $normalizedAddFee = is_numeric($rawFee) ? (float)$rawFee : (float)str_replace([',', ' '], ['', ''], $rawFee);
-                    
+                    $normalizedAddFee = is_numeric($rawFee) ? (float) $rawFee : (float) str_replace([',', ' '], ['', ''], $rawFee);
+
                     $surgery->additionalOperations()->create([
                         'surgical_operation_id' => $addOp['surgical_operation_id'],
                         'fee' => $normalizedAddFee,
@@ -580,14 +584,14 @@ class SurgeryController extends Controller
         // أرشفة الوثيقة في سجل المريض إن وجدت
         if ($path && $surgery->patient_id) {
             PatientDocument::create([
-                'patient_id'  => $surgery->patient_id,
-                'title'       => 'ورقة تحويل / مستند عملية: ' . ($surgery->surgery_type ?? 'عملية جراحية'),
-                'category'    => 'surgery_consent',
-                'file_path'   => $path,
-                'file_name'   => basename($path),
-                'file_type'   => 'image/jpeg',
-                'file_size'   => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
-                'notes'       => 'مرفق محدث للعملية الجراحية #' . $surgery->id,
+                'patient_id' => $surgery->patient_id,
+                'title' => 'ورقة تحويل / مستند عملية: '.($surgery->surgery_type ?? 'عملية جراحية'),
+                'category' => 'surgery_consent',
+                'file_path' => $path,
+                'file_name' => basename($path),
+                'file_type' => 'image/jpeg',
+                'file_size' => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                'notes' => 'مرفق محدث للعملية الجراحية #'.$surgery->id,
                 'uploaded_by' => Auth::id(),
             ]);
         }
@@ -596,11 +600,11 @@ class SurgeryController extends Controller
         $radiologyTypeIds = $request->input('radiology_tests', []);
         if (is_array($radiologyTypeIds) && count($radiologyTypeIds)) {
             foreach ($radiologyTypeIds as $radiologyTypeId) {
-                if ($radiologyTypeId && !$surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
+                if ($radiologyTypeId && ! $surgery->radiologyTests()->where('radiology_type_id', $radiologyTypeId)->exists()) {
                     $surgery->radiologyTests()->create([
                         'radiology_type_id' => $radiologyTypeId,
                         'status' => 'pending',
-                        'payment_status' => 'pending'
+                        'payment_status' => 'pending',
                     ]);
                 }
             }
@@ -614,35 +618,180 @@ class SurgeryController extends Controller
             ->with('success', 'تم تعديل حجز العملية الجراحية بنجاح');
     }
 
-    public function waiting()
+    public function waiting(?Request $request = null)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('manage surgery waiting list'))) {
+        if (! $isAdmin && (! $user || ! $user->can('manage surgery waiting list'))) {
             abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
         }
 
-        // العمليات المجدولة
-        $scheduledSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department', 'room'])
-            ->where('status', 'scheduled')
-            ->orderBy('scheduled_date', 'asc')
+        $request = $request ?? request();
+        $selectedDate = $request->query('date', today()->format('Y-m-d'));
+        try {
+            $parsedDate = \Carbon\Carbon::createFromFormat('Y-m-d', $selectedDate);
+        } catch (\Exception $e) {
+            $parsedDate = today();
+            $selectedDate = $parsedDate->format('Y-m-d');
+        }
+
+        // حساب أيام الأسبوع المحيطة باليوم المختار (من السبت إلى الجمعة)
+        $startOfWeek = $parsedDate->copy()->startOfWeek(\Carbon\Carbon::SATURDAY);
+        $weekDays = [];
+        $arabicDayNames = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الاثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+
+        for ($i = 0; $i < 7; $i++) {
+            $d = $startOfWeek->copy()->addDays($i);
+            $dayKey = $d->format('Y-m-d');
+            $count = Surgery::whereDate('scheduled_date', $dayKey)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+
+            $englishDay = $d->format('l');
+            $arabicDay = $arabicDayNames[$englishDay] ?? $englishDay;
+
+            $weekDays[] = [
+                'date' => $dayKey,
+                'day_name' => $arabicDay,
+                'formatted_date' => $d->format('d/m'),
+                'is_selected' => $dayKey === $selectedDate,
+                'is_today' => $d->isToday(),
+                'count' => $count,
+            ];
+        }
+
+        // جلب كافة عمليات اليوم المحدد
+        $daySurgeries = Surgery::with([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'room',
+            'operationTheater',
+            'operationTheaterStation',
+            'anesthesiologist.user',
+            'additionalOperations.surgicalOperation',
+            'payment',
+            'preOpResidentStation',
+        ])
+            ->whereDate('scheduled_date', $selectedDate)
+            ->where('status', '!=', 'cancelled')
             ->orderBy('scheduled_time', 'asc')
             ->get();
 
-        // العمليات في الانتظار والجارية (التي لم تنتهِ بعد من صالة العمليات)
-        $activeSurgeries = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
-            ->whereIn('status', ['waiting', 'checked_in', 'in_progress'])
-            ->where(function($query) {
-                $query->whereDoesntHave('operationTheaterStation')
-                    ->orWhereHas('operationTheaterStation', function($q) {
-                        $q->where('status', '!=', 'completed');
-                    });
-            })
-            ->orderBy('scheduled_date', 'asc')
-            ->orderBy('scheduled_time', 'asc')
-            ->get();
-            
-        return view('surgeries.waiting', compact('scheduledSurgeries', 'activeSurgeries'));
+        if ($parsedDate->isToday()) {
+            $extraActive = Surgery::with([
+                'patient.user',
+                'doctor.user',
+                'department',
+                'room',
+                'operationTheater',
+                'operationTheaterStation',
+                'anesthesiologist.user',
+                'additionalOperations.surgicalOperation',
+                'payment',
+                'preOpResidentStation',
+            ])
+                ->whereIn('status', ['waiting', 'checked_in', 'in_progress'])
+                ->whereDate('scheduled_date', '!=', $selectedDate)
+                ->get();
+
+            $daySurgeries = $daySurgeries->merge($extraActive)->unique('id');
+        }
+
+        $scheduledSurgeries = $daySurgeries->where('status', 'scheduled')->values();
+        $activeSurgeries = $daySurgeries->whereIn('status', ['waiting', 'checked_in', 'in_progress'])->values();
+        $recoverySurgeries = $daySurgeries->where('status', 'completed')->values();
+
+        // صالات العمليات المتاحة
+        $operationTheaters = OperationTheater::where('is_active', true)->orderBy('name')->get();
+
+        return view('surgeries.waiting', compact(
+            'scheduledSurgeries',
+            'activeSurgeries',
+            'recoverySurgeries',
+            'daySurgeries',
+            'weekDays',
+            'selectedDate',
+            'parsedDate',
+            'operationTheaters'
+        ));
+    }
+
+    public function quickStoreTheater(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('manage surgery waiting list'))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بإضافة صالة'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:150|unique:operation_theaters,name',
+            'code' => 'nullable|string|max:50',
+        ]);
+
+        $theater = OperationTheater::create([
+            'name' => $validated['name'],
+            'code' => $validated['code'] ?? null,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'theater' => $theater,
+            'message' => 'تم إضافة صالة العمليات بنجاح',
+        ]);
+    }
+
+    public function quickUpdateSchedule(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('manage surgery waiting list') && ! $user->can('control surgeries') && ! $user->can('edit surgeries')))) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل الموعد والصالة'], 403);
+        }
+
+        $validated = $request->validate([
+            'operation_theater_id' => 'nullable|exists:operation_theaters,id',
+            'scheduled_time' => 'nullable|string',
+            'scheduled_date' => 'nullable|date',
+        ]);
+
+        if ($request->has('operation_theater_id')) {
+            $surgery->operation_theater_id = $validated['operation_theater_id'] ?: null;
+        }
+
+        if ($request->filled('scheduled_time')) {
+            $dateStr = $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : today()->format('Y-m-d');
+            $surgery->scheduled_time = \Carbon\Carbon::parse($dateStr.' '.$validated['scheduled_time']);
+        } elseif ($request->has('scheduled_time') && empty($validated['scheduled_time'])) {
+            $surgery->scheduled_time = null;
+        }
+
+        if ($request->filled('scheduled_date')) {
+            $surgery->scheduled_date = $validated['scheduled_date'];
+        }
+
+        $surgery->save();
+        $surgery->load('operationTheater');
+
+        broadcast(new SurgeryUpdated($surgery));
+
+        return response()->json([
+            'success' => true,
+            'surgery' => $surgery,
+            'theater_name' => $surgery->operationTheater->name ?? 'غير محددة',
+            'formatted_time' => $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : 'غير محدد',
+            'message' => 'تم تحديث موعد وصالة العملية بنجاح',
+        ]);
     }
 
     public function waitingList()
@@ -654,7 +803,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage surgery waiting list') && !$user->can('control surgeries') && !$user->can('edit surgeries')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage surgery waiting list') && ! $user->can('control surgeries') && ! $user->can('edit surgeries')))) {
             abort(403, 'غير مصرح لك بتسجيل دخول المريض');
         }
 
@@ -670,7 +819,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك ببدء العملية');
         }
 
@@ -680,7 +829,7 @@ class SurgeryController extends Controller
 
         // بدء محطة صالة العمليات
         $otStation = $surgery->operationTheaterStation;
-        if (!$otStation) {
+        if (! $otStation) {
             $otStation = $surgery->operationTheaterStation()->create([
                 'status' => 'in_progress',
                 'started_at' => now(),
@@ -691,20 +840,20 @@ class SurgeryController extends Controller
 
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم بدء العملية وبدء محطة صالة العمليات في ' . now()->format('H:i'));
+        return redirect()->back()->with('success', 'تم بدء العملية وبدء محطة صالة العمليات في '.now()->format('H:i'));
     }
 
     public function complete(Surgery $surgery)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك بإكمال العملية');
         }
 
         // إتمام محطة صالة العمليات
         $otStation = $surgery->operationTheaterStation;
-        if (!$otStation) {
+        if (! $otStation) {
             $otStation = $surgery->operationTheaterStation()->create([
                 'status' => 'pending',
             ]);
@@ -712,7 +861,7 @@ class SurgeryController extends Controller
         $otStation->markAsCompleted();
 
         // إنشاء وتوجيه العملية لمحطة الجراح التالية
-        if (!$surgery->surgeonStation) {
+        if (! $surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'pending',
@@ -733,7 +882,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('control surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('control surgeries'))) {
             abort(403, 'غير مصرح لك بإخراج المريض');
         }
 
@@ -767,7 +916,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('delete surgeries') && !$user->can('control surgeries')))) {
+        if (! $isAdmin && (! $user || (! $user->can('delete surgeries') && ! $user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإلغاء العملية');
         }
 
@@ -813,7 +962,7 @@ class SurgeryController extends Controller
 
         $successMsg = 'تم إلغاء العملية وتحرير الغرفة وإيقاف الفحوصات المرتبطة بها بنجاح.';
         if ($hasPaidRecord) {
-            $successMsg .= ' المبالغ المسددة مسبقاً (' . number_format($totalPaid, 0) . ' د.ع) أصبحت جاهزة الآن في شاشة الكاشير لعمل استرجاع مالي (Refund) للمريض.';
+            $successMsg .= ' المبالغ المسددة مسبقاً ('.number_format($totalPaid, 0).' د.ع) أصبحت جاهزة الآن في شاشة الكاشير لعمل استرجاع مالي (Refund) للمريض.';
         }
 
         return redirect()->back()->with('success', $successMsg);
@@ -823,7 +972,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('manage surgery waiting list') && !$user->can('control surgeries')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage surgery waiting list') && ! $user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإعادة العملية إلى الانتظار');
         }
 
@@ -842,7 +991,7 @@ class SurgeryController extends Controller
         $canEdit = $user && ($user->can('edit surgeries') || $user->can('view surgeon station'));
         $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id);
 
-        if (!$isAdmin && !$canEdit && !$isAssignedDoctor) {
+        if (! $isAdmin && ! $canEdit && ! $isAssignedDoctor) {
             abort(403, 'غير مصرح لك بتحديث تفاصيل العملية');
         }
 
@@ -852,16 +1001,16 @@ class SurgeryController extends Controller
         }
 
         \Log::info('=== Update Surgery Details Started ===');
-        \Log::info('Surgery ID: ' . $surgery->id);
+        \Log::info('Surgery ID: '.$surgery->id);
         \Log::info('Request data:', $request->all());
-        \Log::info('Request method: ' . $request->method());
-        \Log::info('User: ' . $user->name . ' (' . $user->id . ')');
+        \Log::info('Request method: '.$request->method());
+        \Log::info('User: '.$user->name.' ('.$user->id.')');
 
         // Log specific fields
-        \Log::info('Diagnosis from request: ' . $request->input('diagnosis'));
-        \Log::info('Anesthesia type from request: ' . $request->input('anesthesia_type'));
-        \Log::info('Start time from request: ' . $request->input('start_time'));
-        \Log::info('End time from request: ' . $request->input('end_time'));
+        \Log::info('Diagnosis from request: '.$request->input('diagnosis'));
+        \Log::info('Anesthesia type from request: '.$request->input('anesthesia_type'));
+        \Log::info('Start time from request: '.$request->input('start_time'));
+        \Log::info('End time from request: '.$request->input('end_time'));
 
         $validated = $request->validate([
             'location_id' => 'nullable|exists:locations,id',
@@ -901,34 +1050,34 @@ class SurgeryController extends Controller
         \Log::info('Validation passed, validated data: ', $validated);
 
         // Validate time formats manually
-        if (!empty($validated['start_time']) && !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['start_time'])) {
+        if (! empty($validated['start_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['start_time'])) {
             return redirect()->back()->withErrors(['start_time' => 'وقت البدء غير صحيح']);
         }
-        if (!empty($validated['end_time']) && !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['end_time'])) {
+        if (! empty($validated['end_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['end_time'])) {
             return redirect()->back()->withErrors(['end_time' => 'وقت الانتهاء غير صحيح']);
         }
 
         // Convert time fields to full datetime using surgery's scheduled date
-        if (isset($validated['start_time']) && !empty($validated['start_time'])) {
-            $validated['start_time'] = $surgery->scheduled_date->format('Y-m-d') . ' ' . $validated['start_time'] . ':00';
+        if (isset($validated['start_time']) && ! empty($validated['start_time'])) {
+            $validated['start_time'] = $surgery->scheduled_date->format('Y-m-d').' '.$validated['start_time'].':00';
         } else {
             $validated['start_time'] = null;
         }
-        if (isset($validated['end_time']) && !empty($validated['end_time'])) {
-            $validated['end_time'] = $surgery->scheduled_date->format('Y-m-d') . ' ' . $validated['end_time'] . ':00';
+        if (isset($validated['end_time']) && ! empty($validated['end_time'])) {
+            $validated['end_time'] = $surgery->scheduled_date->format('Y-m-d').' '.$validated['end_time'].':00';
         } else {
             $validated['end_time'] = null;
         }
 
         // Convert follow_up_date to Carbon instance
-        if (isset($validated['follow_up_date']) && !empty($validated['follow_up_date'])) {
+        if (isset($validated['follow_up_date']) && ! empty($validated['follow_up_date'])) {
             $validated['follow_up_date'] = \Carbon\Carbon::parse($validated['follow_up_date']);
         } else {
             $validated['follow_up_date'] = null;
         }
 
         // If the current user does not have surgeon station access or admin, allow only team, timing, supplies and location fields to be updated.
-        if (!$isAdmin && !$user->can('view surgeon station')) {
+        if (! $isAdmin && ! $user->can('view surgeon station')) {
             $validated = Arr::only($validated, [
                 'anesthesiologist_id',
                 'anesthesiologist_2_id',
@@ -944,14 +1093,14 @@ class SurgeryController extends Controller
         if (isset($validated['estimated_duration_minutes'])) {
             $validated['estimated_duration'] = $validated['estimated_duration_minutes'];
             unset($validated['estimated_duration_minutes']);
-        } elseif (isset($validated['estimated_duration']) && !empty($validated['estimated_duration'])) {
+        } elseif (isset($validated['estimated_duration']) && ! empty($validated['estimated_duration'])) {
             // Check if it's already in minutes (number) or in HH:MM format
             if (is_numeric($validated['estimated_duration'])) {
                 // Already in minutes, keep it as is
-                $validated['estimated_duration'] = (int)$validated['estimated_duration'];
+                $validated['estimated_duration'] = (int) $validated['estimated_duration'];
             } elseif (strpos($validated['estimated_duration'], ':') !== false) {
                 // Convert HH:MM to minutes
-                list($hours, $minutes) = explode(':', $validated['estimated_duration']);
+                [$hours, $minutes] = explode(':', $validated['estimated_duration']);
                 $validated['estimated_duration'] = ($hours * 60) + $minutes;
             }
         } else {
@@ -961,26 +1110,26 @@ class SurgeryController extends Controller
         // Handle prescribed_medications - save surgery treatments to separate table
         \Log::info('=== Surgery Update Details Debug ===');
         \Log::info('Raw request data:', $request->all());
-        \Log::info('Request method: ' . $request->method());
-        \Log::info('Prescribed medications from request: ' . json_encode($request->input('prescribed_medications')));
+        \Log::info('Request method: '.$request->method());
+        \Log::info('Prescribed medications from request: '.json_encode($request->input('prescribed_medications')));
         \Log::info('===================================');
 
         // Check if we have surgery treatments to save
         $prescribedMedications = $request->input('prescribed_medications');
-        
+
         if ($prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
-            \Log::info('Surgery treatments for surgery ' . $surgery->id . ': ' . json_encode($prescribedMedications['surgery_treatments'][$surgery->id]));
+            \Log::info('Surgery treatments for surgery '.$surgery->id.': '.json_encode($prescribedMedications['surgery_treatments'][$surgery->id]));
 
             // Delete existing treatments
             $surgery->surgeryTreatments()->delete();
 
             // Save new treatments
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
-            \Log::info('Treatments array: ' . json_encode($treatments));
+            \Log::info('Treatments array: '.json_encode($treatments));
             foreach ($treatments as $index => $treatment) {
-                \Log::info('Processing treatment ' . $index . ': ' . json_encode($treatment));
-                if (!empty($treatment['description'])) {
-                    \Log::info('Creating treatment for index ' . $index);
+                \Log::info('Processing treatment '.$index.': '.json_encode($treatment));
+                if (! empty($treatment['description'])) {
+                    \Log::info('Creating treatment for index '.$index);
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
                         'description' => $treatment['description'],
@@ -992,7 +1141,7 @@ class SurgeryController extends Controller
                     ]);
                     \Log::info('Treatment created successfully');
                 } else {
-                    \Log::info('Skipping treatment ' . $index . ' - empty description');
+                    \Log::info('Skipping treatment '.$index.' - empty description');
                 }
             }
         } else {
@@ -1005,7 +1154,7 @@ class SurgeryController extends Controller
         // Save required_fluids to surgeon station
         if ($request->has('required_fluids')) {
             $station = $surgery->surgeonStation;
-            if (!$station) {
+            if (! $station) {
                 $station = $surgery->surgeonStation()->create(['status' => 'pending', 'surgeon_id' => $surgery->doctor_id]);
             }
             $station->update(['required_fluids' => $request->input('required_fluids', [])]);
@@ -1026,7 +1175,7 @@ class SurgeryController extends Controller
                         $stationSync[$field] = $validated[$field];
                     }
                 }
-                if (!empty($stationSync)) {
+                if (! empty($stationSync)) {
                     $surgery->anesthesiaStation->update($stationSync);
                 }
             }
@@ -1034,17 +1183,18 @@ class SurgeryController extends Controller
             // إتمام محطة الجراح تلقائياً عند حفظ التفاصيل الطبية
             if ($surgery->surgeonStation && $surgery->surgeonStation->status !== 'completed') {
                 $surgery->surgeonStation->markAsCompleted();
-                
+
                 // إنشاء محطة التخدير التالية
-                if (!$surgery->anesthesiaStation) {
+                if (! $surgery->anesthesiaStation) {
                     $surgery->anesthesiaStation()->create([
                         'status' => 'pending',
                     ]);
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Error updating surgery: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'حدث خطأ في حفظ البيانات: ' . $e->getMessage());
+            \Log::error('Error updating surgery: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ في حفظ البيانات: '.$e->getMessage());
         }
 
         return redirect()->route('surgeries.show', $surgery)->with('success', 'تم حفظ تفاصيل العملية بنجاح وإرسالها لمحطة التخدير');
@@ -1055,7 +1205,7 @@ class SurgeryController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك'], 403)
                 : abort(403, 'غير مصرح لك بتغيير نوع العملية');
@@ -1075,7 +1225,7 @@ class SurgeryController extends Controller
 
         if ($validated['surgery_type'] !== $oldType) {
             $opId = $validated['surgical_operation_id'];
-            if (!$opId && $validated['surgery_type'] !== 'other') {
+            if (! $opId && $validated['surgery_type'] !== 'other') {
                 $op = \App\Models\SurgicalOperation::where('name', $validated['surgery_type'])->first();
                 $opId = $op?->id;
             }
@@ -1091,7 +1241,7 @@ class SurgeryController extends Controller
                 'changed_by' => $user->id,
             ]);
 
-            $msg = 'تم تغيير نوع العملية من "' . $oldType . '" إلى "' . $validated['surgery_type'] . '"';
+            $msg = 'تم تغيير نوع العملية من "'.$oldType.'" إلى "'.$validated['surgery_type'].'"';
 
             return $request->expectsJson()
                 ? response()->json(['success' => $msg, 'type' => $validated['surgery_type']])
@@ -1107,7 +1257,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك'], 403)
                 : abort(403, 'غير مصرح لك بإضافة عمليات إضافية');
@@ -1134,7 +1284,7 @@ class SurgeryController extends Controller
         $surgery->save();
 
         $names = $ops->pluck('name')->join('، ');
-        $msg = 'تم إضافة ' . $ops->count() . ' عملية: ' . $names;
+        $msg = 'تم إضافة '.$ops->count().' عملية: '.$names;
 
         return $request->expectsJson()
             ? response()->json(['success' => $msg])
@@ -1145,7 +1295,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بحذف العملية الإضافية');
         }
         $additionalOp->delete();
@@ -1160,7 +1310,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك'], 403)
                 : abort(403, 'غير مصرح لك بإضافة أجهزة طبية');
@@ -1174,7 +1324,7 @@ class SurgeryController extends Controller
         $existingDeviceIds = $surgery->medicalDevices()->pluck('medical_devices.id')->toArray();
         $newDeviceIds = array_diff($validated['device_ids'], $existingDeviceIds);
 
-        if (!empty($newDeviceIds)) {
+        if (! empty($newDeviceIds)) {
             $syncData = [];
             foreach ($newDeviceIds as $deviceId) {
                 $syncData[$deviceId] = ['assigned_by' => $user->id];
@@ -1187,7 +1337,7 @@ class SurgeryController extends Controller
 
         $devices = \App\Models\MedicalDevice::whereIn('id', $validated['device_ids'])->get();
         $names = $devices->pluck('name')->join('، ');
-        $msg = 'تم إضافة أجهزة طبية: ' . $names;
+        $msg = 'تم إضافة أجهزة طبية: '.$names;
 
         return $request->expectsJson()
             ? response()->json(['success' => $msg])
@@ -1198,7 +1348,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
             abort(403, 'غير مصرح لك بإزالة أجهزة طبية');
         }
 
@@ -1217,7 +1367,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('delete surgeries'))) {
+        if (! $isAdmin && (! $user || ! $user->can('delete surgeries'))) {
             abort(403, 'غير مصرح لك بحذف العملية');
         }
 
@@ -1260,7 +1410,7 @@ class SurgeryController extends Controller
             broadcast(new SurgeryUpdated($surgery));
 
             return redirect()->route('surgeries.index')
-                ->with('warning', 'تم إلغاء حجز العملية (' . $surgery->surgery_type . ') وتحرير الغرفة بنجاح. نظراً لوجود مبالغ مدفوعة مسبقاً (' . number_format($totalPaid, 0) . ' د.ع)، تم توجيه العملية إلى الكاشير كـ (مستحق استرجاع Refund) لتسليم المبلغ للمريض.');
+                ->with('warning', 'تم إلغاء حجز العملية ('.$surgery->surgery_type.') وتحرير الغرفة بنجاح. نظراً لوجود مبالغ مدفوعة مسبقاً ('.number_format($totalPaid, 0).' د.ع)، تم توجيه العملية إلى الكاشير كـ (مستحق استرجاع Refund) لتسليم المبلغ للمريض.');
         }
 
         try {
@@ -1306,11 +1456,12 @@ class SurgeryController extends Controller
             DB::commit();
 
             return redirect()->route('surgeries.index')
-                ->with('success', 'تم حذف حجز العملية (' . $surgeryName . ') بنجاح وتحرير الغرفة');
+                ->with('success', 'تم حذف حجز العملية ('.$surgeryName.') بنجاح وتحرير الغرفة');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء حذف العملية: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حذف العملية: '.$e->getMessage());
         }
     }
 }

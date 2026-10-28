@@ -1729,7 +1729,7 @@ class EmergencyController extends Controller
      * ملاحظة: رسوم الاستشاري تبقى منفصلة لأنها مرتبطة بموعد (appointment_id)
      * تحسب فقط الخدمات غير المدفوعة (payment_id = null)
      */
-    private function upsertUnifiedEmergencyPayment(Emergency $emergency): ?\App\Models\Payment
+    public function upsertUnifiedEmergencyPayment(Emergency $emergency): ?\App\Models\Payment
     {
         $emergency->loadMissing([
             'services',

@@ -480,9 +480,12 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/emergency-radiology/{emergencyRadiology}/complete', [StaffRequestController::class, 'completeEmergencyRadiology'])->name('emergency-radiology.complete');
 
         // طلبات الطوارئ - التحاليل
+        Route::get('/emergency-lab/{emergencyLab}', [StaffRequestController::class, 'showEmergencyLab'])->name('emergency-lab.show');
         Route::post('/emergency-lab/{emergencyLab}/start', [StaffRequestController::class, 'startEmergencyLab'])->name('emergency-lab.start');
         Route::match(['post', 'put'], '/emergency-lab/{emergencyLab}/complete', [StaffRequestController::class, 'completeEmergencyLab'])->name('emergency-lab.complete');
         Route::get('/emergency-lab/{emergencyLab}/print', [StaffRequestController::class, 'printEmergencyLab'])->name('emergency-lab.print');
+        Route::get('/emergency-lab/{emergencyLab}/attachment/{testId?}', [StaffRequestController::class, 'emergencyLabAttachment'])->name('emergency-lab.attachment');
+        Route::post('/emergency-lab/{emergencyLab}/append-tests', [StaffRequestController::class, 'appendEmergencyLabTests'])->name('emergency-lab.append-tests');
     });
 
     // ======= مسارات قسم المختبر =======
@@ -652,6 +655,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
+    Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
+    Route::post('/surgeries/{surgery}/quick-update-schedule', [SurgeryController::class, 'quickUpdateSchedule'])->name('surgeries.quick-update-schedule');
 
     // محطات العمليات
     Route::prefix('surgery-stations')->group(function () {
@@ -697,6 +702,20 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
             Route::post('/nursing/{surgery}/follow-ups', [\App\Http\Controllers\NursingStationController::class, 'storeFollowUp'])->name('nursing-station.follow-ups.store');
         });
+
+        // إعدادات مصفوفة صلاحيات التبويبات السريرية (Tab Permissions Matrix)
+        Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
+        Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
+        Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
+
+        // المحطة السريرية الموحدة (Unified Clinical Station)
+        Route::get('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'show'])->name('clinical-station.show');
+        Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
+        Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
+        Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
+        Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
+        Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
+        Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
 
         // إعطاء العلاج (مشترك للمقيم والتمريض)
         Route::post('/treatments/{treatment}/administer', [\App\Http\Controllers\ResidentStationController::class, 'administerTreatment'])->name('surgery-treatments.administer');
