@@ -62,6 +62,16 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 125 (دمج وتكامل قسم الرنين المغناطيسي والمفراس تحت محطة عمل واحدة MRI & CT Workstation Integration):**
+  * **توحيد فلاتر وقنوات المفراس والرنين في الكنترولر (`RadiologyStaffController.php` & `RadiologyController.php`)**:
+    - توسيع استعلام قسم الرنين `selectedCategory === 'mri'` ليشمل تلقائياً كلاً من فحوصات الرنين والمفراس معاً (`whereIn('subtype', ['mri', 'ct'])`) في كافة استعلامات القائمة الرئيسية، طلبات الانتظار، الرادار اللحظي، والطابور.
+    - تحديث التحقق الأمني من صلاحيات الطلب (`authorizeRequestAccess`) للسماح لحسابات الرنين (`radiology_mri`) بفتح وفحص وكتابة تقارير فحوصات المفراس (`ct`) دون أي خطأ 403.
+    - دعم تصنيف المفراس في استعلامات طوارئ الأشعة لحساب الرنين (`subcategory in ['الرنين', 'مفراس', 'رنين']`).
+  * **تحسين واجهة محطة الأشعة (`resources/views/radiology-staff/index.blade.php`)**:
+    - تحديث زر التبديل السريع ليظهر بالمسمى الرسمي الموحد `🧲 الرنين والمفراس`.
+  * **حزمة الاختبارات الآلية (`tests/Feature/MriAndCtMergedStationAccessTest.php`)**:
+    - بناء واجتياز اختبار ميزة يضمن قدرة فني الرنين على استعراض وفتح فحوصات الرنين والمفراس (CT & MRI) بسلاسة تامة (`1 passed, 5 assertions`).
+
 - **المرحلة 124 (توحيد مسمى تحليل الدم وفيلم الدم CBC & Blood Film ومعالجة ظهوره القديم Complete blood count & Differential):**
   * **قاعدة البيانات ونموذج الفحوصات الطبية (`2026_10_28_224500_standardize_cbc_test_name_to_cbc_and_blood_film.php`)**:
     - تحديث اسم الفحص الأساسي رقم (43) المربوط به كافة البارامترات الـ 27 (WBC, RBC, HGB, PLT...) من `Complete blood count & Differential` إلى الاسم الطبي الرسمي المعتمد `CBC & Blood Film`.

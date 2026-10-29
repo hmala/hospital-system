@@ -53,6 +53,18 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 125: دمج وتكامل قسم الرنين المغناطيسي والمفراس تحت محطة عمل واحدة MRI & CT Workstation Integration)
+
+### Done
+- **توحيد فلاتر وقنوات المفراس والرنين في الكنترولر ([app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php) & [app/Http/Controllers/RadiologyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyController.php))**:
+  * توسيع استعلام قسم الرنين `selectedCategory === 'mri'` ليشمل تلقائياً كلاً من فحوصات الرنين والمفراس معاً (`whereIn('subtype', ['mri', 'ct'])`) في كافة استعلامات القائمة الرئيسية، طلبات الانتظار، الرادار اللحظي، وطابور النداء.
+  * تحديث التحقق الأمني من صلاحيات الطلب (`authorizeRequestAccess`) للسماح لحسابات الرنين (`radiology_mri`) بفتح وفحص وكتابة وتعديل تقارير فحوصات المفراس (`ct`) دون أي خطأ 403.
+  * دعم تصنيف المفراس في استعلامات طوارئ الأشعة لحساب الرنين (`subcategory in ['الرنين', 'مفراس', 'رنين']`).
+- **تحسين واجهة محطة الأشعة والتصوير الطبي ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php))**:
+  * تحديث زر التبديل السريع ليظهر بالمسمى الرسمي الموحد `🧲 الرنين والمفراس`.
+- **حزمة الاختبارات الآلية ([tests/Feature/MriAndCtMergedStationAccessTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MriAndCtMergedStationAccessTest.php))**:
+  * بناء واجتياز اختبار ميزة يضمن قدرة فني الرنين على استعراض وفتح فحوصات الرنين والمفراس (CT & MRI) بسلاسة تامة (`1 passed, 5 assertions`).
+
 ## Session log (2026-10-28 — المرحلة 124: توحيد مسمى تحليل الدم وفيلم الدم CBC & Blood Film ومعالجة ظهوره القديم Complete blood count & Differential)
 
 ### Done

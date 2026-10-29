@@ -269,7 +269,7 @@
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'mri', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'mri' ? 'btn-dark text-white shadow-xs' : 'btn-light text-dark' }}">
-                    🧲 الرنين
+                    🧲 الرنين والمفراس
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'echo', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'echo' ? 'btn-danger text-white shadow-xs' : 'btn-light text-dark' }}">
