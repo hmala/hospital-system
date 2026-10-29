@@ -4,11 +4,15 @@ namespace Tests\Feature;
 
 use App\Models\Appointment;
 use App\Models\Emergency;
+use App\Models\LabTest;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\Request as MedicalRequest;
 use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class PaymentVoidAndReversalTest extends TestCase
@@ -379,5 +383,267 @@ class PaymentVoidAndReversalTest extends TestCase
 
         $response = $this->actingAs($regularUser)->get(route('cashier.payments.void.logs'));
         $response->assertStatus(403);
+    }
+
+    public function test_rebill_unbinds_all_linked_requests_and_cashier_exclusion_cancels_them_from_lab()
+    {
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'lab_staff', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view lab tests', 'guard_name' => 'web']);
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->givePermissionTo('void payment receipt');
+        $admin->assignRole('admin');
+
+        $labStaff = User::factory()->create(['role' => 'lab_staff']);
+        $labStaff->assignRole('lab_staff');
+        $labStaff->givePermissionTo('view lab tests');
+
+        $patientUser = User::factory()->create(['name' => 'مريض تجريبي للفحص']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'male',
+            'date_of_birth' => '1990-01-01',
+        ]);
+
+        $hospital = \App\Models\Hospital::firstOrCreate(['name' => 'مستشفى الكفاءات'], [
+            'owner_name' => 'د. صاحب المستشفى',
+            'phone' => '07700000000',
+            'email' => 'info@hospital.com',
+            'address' => 'بغداد',
+            'license_number' => 'LIC-001',
+        ]);
+
+        $doctorUser = User::factory()->create(['name' => 'د. معالج']);
+        $dept = \App\Models\Department::firstOrCreate(['name' => 'عيادة باطنية تجريبية'], [
+            'hospital_id' => $hospital->id,
+            'type' => 'internal',
+            'room_number' => '102',
+            'consultation_fee' => 15000,
+            'working_hours_start' => '08:00:00',
+            'working_hours_end' => '16:00:00',
+        ]);
+        $doctor = \App\Models\Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $dept->id,
+            'specialization' => 'باطنية',
+            'qualification' => 'بورد',
+            'license_number' => 'DOC-'.uniqid(),
+            'consultation_fee' => 15000,
+            'is_active' => true,
+        ]);
+
+        $visit = Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'department_id' => $dept->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:00:00',
+            'visit_type' => 'consultation',
+            'chief_complaint' => 'فحص روتيني',
+            'status' => 'scheduled',
+            'payment_status' => 'paid',
+        ]);
+
+        $test1 = LabTest::create(['name' => 'CBC & Blood Film', 'code' => 'CBC', 'price' => 10000, 'is_active' => true]);
+        $test2 = LabTest::create(['name' => 'Free thyroxin', 'code' => 'FT4', 'price' => 15000, 'is_active' => true]);
+
+        $req1 = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'description' => 'طلب مختبر 1',
+            'status' => 'pending',
+            'payment_status' => 'paid',
+            'details' => [
+                'tests' => ['CBC & Blood Film'],
+                'lab_test_ids' => [$test1->id],
+            ],
+        ]);
+
+        $req2 = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'description' => 'طلب مختبر 2',
+            'status' => 'pending',
+            'payment_status' => 'paid',
+            'details' => [
+                'tests' => ['Free thyroxin'],
+                'lab_test_ids' => [$test2->id],
+            ],
+        ]);
+
+        $payment = Payment::create([
+            'patient_id' => $patient->id,
+            'request_id' => $req1->id,
+            'lab_request_ids' => json_encode([$req1->id, $req2->id]),
+            'amount' => 25000,
+            'receipt_number' => 'REC-20261029-REOPEN',
+            'paid_at' => now(),
+            'payment_method' => 'cash',
+            'payment_type' => 'lab',
+        ]);
+
+        $req1->update(['payment_id' => $payment->id]);
+        $req2->update(['payment_id' => $payment->id]);
+
+        // 1. إجراء إعادة فتح للوصل (rebill)
+        $voidResp = $this->actingAs($admin)->post(route('cashier.payments.void', $payment->id), [
+            'void_type' => 'rebill',
+            'void_reason' => 'إعادة فتح لإلغاء تحليل بطلب المريض وتعديل الوصل',
+        ]);
+        $voidResp->assertRedirect(route('cashier.index'));
+
+        // التأكد من فك ارتباط كِلا الطلبين وعودتهما للانتظار غير المسدد
+        $this->assertEquals('pending', $req1->fresh()->payment_status);
+        $this->assertNull($req1->fresh()->payment_id);
+        $this->assertEquals('pending', $req2->fresh()->payment_status);
+        $this->assertNull($req2->fresh()->payment_id);
+        $this->assertEquals('pending_payment', $visit->fresh()->status);
+
+        // 2. الكاشير يقوم بتسديد الطلب الأول req1 فقط مع إلغاء الطلب الثاني req2
+        $payResp = $this->actingAs($admin)->post(route('cashier.request.payment.process', $req1->id), [
+            'payment_method' => 'cash',
+            'amount' => 10000,
+            'included_request_ids' => [$req1->id, $req2->id],
+            'item_actions' => [
+                $req1->id => ['lab' => [$test1->id => 'pay']],
+                $req2->id => ['lab' => [$test2->id => 'cancel']],
+            ],
+            'item_reasons' => [
+                $req2->id => ['lab' => [$test2->id => 'lack_of_funds']],
+            ],
+        ]);
+        $payResp->assertRedirect();
+
+        // التأكد من أن الطلب الأول أصبح مسدداً بصل جديد
+        $freshReq1 = $req1->fresh();
+        $this->assertEquals('paid', $freshReq1->payment_status);
+        $this->assertNotNull($freshReq1->payment_id);
+        $this->assertNotEquals($payment->id, $freshReq1->payment_id);
+
+        // التأكد من أن الطلب الثاني أُلغي تماماً
+        $freshReq2 = $req2->fresh();
+        $this->assertEquals('cancelled', $freshReq2->status);
+        $this->assertEquals('cancelled', $freshReq2->payment_status);
+
+        // 3. التحقق من طابور المختبر: الطلب الملغي لا يظهر نهائياً بينما المسدد يظهر
+        $labIndex = $this->actingAs($labStaff)->get(route('lab.index'));
+        $labIndex->assertStatus(200);
+        $labIndex->assertSee('CBC &amp; Blood Film', false);
+        $labIndex->assertDontSee('Free thyroxin');
+
+        // 4. التحقق من شاشة الطبيب: يظهر تنبيه سريري بإلغاء الفحص
+        $doctorVisit = $this->actingAs($admin)->get(route('doctor.visits.show', $visit->id));
+        $doctorVisit->assertStatus(200);
+        $doctorVisit->assertSee('تنبيه سريري: تم إلغاء فحوصات بطلب المريض لدى الكاشير');
+        $doctorVisit->assertSee('Free thyroxin');
+    }
+
+    public function test_refund_cancels_all_associated_requests_and_excludes_them_from_lab_queue()
+    {
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'lab_staff', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view lab tests', 'guard_name' => 'web']);
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->givePermissionTo('void payment receipt');
+        $admin->assignRole('admin');
+
+        $labStaff = User::factory()->create(['role' => 'lab_staff']);
+        $labStaff->assignRole('lab_staff');
+        $labStaff->givePermissionTo('view lab tests');
+
+        $patientUser = User::factory()->create();
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'female',
+            'date_of_birth' => '1993-04-04',
+        ]);
+
+        $hospital = \App\Models\Hospital::firstOrCreate(['name' => 'مستشفى الكفاءات'], [
+            'owner_name' => 'د. صاحب المستشفى',
+            'phone' => '07700000000',
+            'email' => 'info@hospital.com',
+            'address' => 'بغداد',
+            'license_number' => 'LIC-001',
+        ]);
+
+        $dept = \App\Models\Department::firstOrCreate(['name' => 'عيادة باطنية استرداد'], [
+            'hospital_id' => $hospital->id,
+            'type' => 'internal',
+            'room_number' => '103',
+            'consultation_fee' => 15000,
+            'working_hours_start' => '08:00:00',
+            'working_hours_end' => '16:00:00',
+        ]);
+
+        $doctorUser2 = User::factory()->create(['name' => 'د. معالج 2']);
+        $doctor2 = \App\Models\Doctor::create([
+            'user_id' => $doctorUser2->id,
+            'department_id' => $dept->id,
+            'specialization' => 'باطنية',
+            'qualification' => 'بورد',
+            'license_number' => 'DOC-'.uniqid(),
+            'consultation_fee' => 15000,
+            'is_active' => true,
+        ]);
+
+        $visit = Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor2->id,
+            'department_id' => $dept->id,
+            'visit_date' => now()->toDateString(),
+            'visit_time' => '10:00:00',
+            'visit_type' => 'consultation',
+            'chief_complaint' => 'فحص روتيني',
+            'status' => 'scheduled',
+            'payment_status' => 'paid',
+        ]);
+
+        $test = LabTest::create(['name' => 'Lipid Profile Full', 'code' => 'LIPID', 'price' => 20000, 'is_active' => true]);
+
+        $req = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'description' => 'طلب فحص دهون كامل',
+            'status' => 'pending',
+            'payment_status' => 'paid',
+            'details' => [
+                'tests' => ['Lipid Profile Full'],
+                'lab_test_ids' => [$test->id],
+            ],
+        ]);
+
+        $payment = Payment::create([
+            'patient_id' => $patient->id,
+            'request_id' => $req->id,
+            'amount' => 20000,
+            'receipt_number' => 'REC-20261029-REFUND',
+            'paid_at' => now(),
+            'payment_method' => 'cash',
+            'payment_type' => 'lab',
+        ]);
+        $req->update(['payment_id' => $payment->id]);
+
+        // إجراء استرداد نقدي كامل (refund)
+        $voidResp = $this->actingAs($admin)->post(route('cashier.payments.void', $payment->id), [
+            'void_type' => 'refund',
+            'void_reason' => 'استرداد نقدي بناءً على طلب المريض لعدم رغبته بالفحص',
+        ]);
+        $voidResp->assertRedirect(route('cashier.index'));
+
+        // التأكد من تحول الطلب إلى ملغي
+        $freshReq = $req->fresh();
+        $this->assertEquals('cancelled', $freshReq->status);
+        $this->assertEquals('cancelled', $freshReq->payment_status);
+        $this->assertStringContainsString('استرداد نقدي لدى الكاشير', $freshReq->details['cancellation_reason']);
+
+        // التأكد من عدم ظهوره في طابور المختبر
+        $labIndex = $this->actingAs($labStaff)->get(route('lab.index'));
+        $labIndex->assertStatus(200);
+        $labIndex->assertDontSee('Lipid Profile Full');
     }
 }

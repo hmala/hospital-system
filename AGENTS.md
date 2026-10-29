@@ -53,6 +53,26 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 128: فك ارتباط وإلغاء كافة الطلبات الطبية عند إبطال الوصل Rebill و Refund ومنع ظهورها في طابور المختبر والأشعة وإظهارها كملغاة عند الطبيب Reopened & Refunded Payment Medical Requests Cascade Cancellation, Departmental Queue Purification & Clinical Doctor Alerts)
+
+### Done
+- **التحصين الشامل في كنترولر إبطال وإعادة فتح الوصولات ([app/Http/Controllers/PaymentVoidController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/PaymentVoidController.php))**:
+  * حصر وجمع كافة معرفات الطلبات الطبية المرتبطة بالوصل المالي المُراد إبطاله بأي شكل (`$payment->request_id`, `$payment->lab_request_ids`, `$payment->radiology_request_ids`, وكذلك أي طلب يشير معرف دفعه صراحة `where payment_id = payment->id`).
+  * **عند إعادة الفتح للتسديد والتصحيح (`void_type === 'rebill'`)**: فك ارتباط وتصفير كافة الطلبات المدمجة دفعة واحدة (`payment_id = null`, `status = 'pending'`, `payment_status = 'pending'`) وإعادة حالة الزيارة إلى `pending_payment` لضمان ظهور كافة طلبات المريض في طابور الكاشير للتسديد دون نسيان أي فحص ملحق.
+  * **عند الاسترداد والإلغاء النهائي (`void_type === 'refund'`)**: إلغاء كافة الطلبات المرتبطة دفعة واحدة (`status = 'cancelled'`, `payment_status = 'cancelled'`) وتوثيق سبب الإلغاء وتاريخه ومعرف الكاشير في بيانات الطلب `details` لتظهر فوراً في شاشة الطبيب.
+  * شمول طوارئ الأشعة `EmergencyRadiologyRequest` في عمليتي إعادة الفتح والاسترداد بجانب طوارئ المختبر.
+- **تحديث وإحكام معالجة الدفع لدى الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تخزين مصفوفات معرفات الفحوصات المسددة فعلياً في حقلي `lab_request_ids` و `radiology_request_ids` بجدول `payments` لتوثيق الفحوصات المشمولة بالوصل بدقة ومنع ضياع أي فحص مدمج.
+  * إضافة صمام أمان رقابي: أي طلب طبي كان مشمولاً في فاتورة الزيارة ولم يتم تسديده ولم يؤجل، يُعتبر ملغياً بطلب المريض وتُحدث حالته إلى `cancelled` مع توثيق السبب ليختفي من طابور الفحص ويظهر للطبيب.
+- **تحصين وتطهير طوابير العمل في المختبر والأشعة ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) & [app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * منع ظهور أي طلب طبي حالته `cancelled` أو حالة دفعه `payment_status = 'cancelled'`.
+  * استبعاد أي طلب طبي مرتبط بوصل مالي تم إبطاله أو استرداده (`whereDoesntHave('payment', fn ($pq) => $pq->whereNotNull('voided_at'))`).
+  * إضافة علاقة `payment()` من نوع `belongsTo` في نموذج [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php).
+- **تنظيف وتصحيح السجلات العالقة ([database/migrations/2026_10_29_192000_unbind_and_cleanup_voided_payments_requests.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_192000_unbind_and_cleanup_voided_payments_requests.php))**:
+  * معالجة وترقية كافة الطلبات السابقة المرتبطة بوصولات ملغاة، وتصحيح حالة الفحص 859 (Free thyroxin) العالق في الوصل 1677 على السيرفر الحي وتحويله لملغي.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/PaymentVoidAndReversalTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PaymentVoidAndReversalTest.php))**:
+  * بناء واجتياز اختبارين ميزة شاملين يغطيان دورة حياة إعادة الفتح الكاملة وتصفير كافة الطلبات المدمجة، وإلغاء الفحوصات غير المسددة واختفائها من طابور المختبر وظهورها في شاشة الطبيب كتنبيه سريري (`10 passed, 66 assertions`).
+
 ## Session log (2026-10-29 — المرحلة 127: توحيد آلية فحص الدم CBC & Blood Film وفحص فيلم الدم المجهري Blood Film في طوارئ المختبر والاستشارية 100% ومنع تفريغ البارامترات الفارغة Emergency Lab CBC & Blood Film Parity, Dedicated Microscopic Blood Film & Clean Device Report Architecture)
 
 ### Done

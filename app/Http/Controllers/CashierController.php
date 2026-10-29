@@ -1259,6 +1259,8 @@ class CashierController extends Controller
                 'description' => $paymentDescription,
                 'notes' => $combinedNotes,
                 'paid_at' => Carbon::now(),
+                'lab_request_ids' => json_encode($actuallyPaidRequests->where('type', 'lab')->pluck('id')->values()->toArray()),
+                'radiology_request_ids' => json_encode($actuallyPaidRequests->where('type', 'radiology')->pluck('id')->values()->toArray()),
             ]);
 
             \Log::info('Payment created successfully: #'.$payment->id);
@@ -1271,7 +1273,27 @@ class CashierController extends Controller
                 ]);
             }
 
-            \Log::info('All included requests ('.$allRequestsToPay->pluck('id')->join(',').') updated to paid');
+            // تحصين رقابي: أي طلب طبي كان مشمولاً بقائمة الدفع ولم يُسدد ولم يُؤجل يُعتبر ملغياً بطلب المريض
+            $unpaidExcludedRequests = $allRequestsToPay->whereNotIn('id', $actuallyPaidRequests->pluck('id'));
+            foreach ($unpaidExcludedRequests as $unpaidReq) {
+                if (! in_array($unpaidReq->status, ['cancelled', 'postponed'])) {
+                    $uDetails = is_string($unpaidReq->details) ? json_decode($unpaidReq->details, true) : ($unpaidReq->details ?? []);
+                    if (! is_array($uDetails)) {
+                        $uDetails = [];
+                    }
+                    $uDetails['cancellation_reason'] = $uDetails['cancellation_reason'] ?? 'استبعاد وإلغاء بطلب المريض عند إصدار الوصل لدى الكاشير';
+                    $uDetails['cancelled_by_cashier_id'] = $user->id;
+                    $uDetails['cancelled_at'] = Carbon::now()->toDateTimeString();
+                    $unpaidReq->update([
+                        'status' => 'cancelled',
+                        'payment_status' => 'cancelled',
+                        'payment_id' => null,
+                        'details' => $uDetails,
+                    ]);
+                }
+            }
+
+            \Log::info('All included requests ('.$allRequestsToPay->pluck('id')->join(',').') updated. Paid: '.$actuallyPaidRequests->pluck('id')->join(','));
 
             // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة (فقط للزيارات قيد انتظار الدفع)
             if ($request->visit) {

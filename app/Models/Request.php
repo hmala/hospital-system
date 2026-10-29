@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\LabTest;
-use App\Models\Package;
-use App\Models\RadiologyType;
 use Illuminate\Database\Eloquent\Model;
 
 class Request extends Model
@@ -19,7 +16,7 @@ class Request extends Model
         'payment_status',
         'insurance_type',
         'payment_id',
-        'result'
+        'result',
     ];
 
     protected $casts = [
@@ -34,7 +31,7 @@ class Request extends Model
             $details = json_decode($details, true) ?: [];
         }
 
-        if (!is_array($details)) {
+        if (! is_array($details)) {
             return null;
         }
 
@@ -48,20 +45,22 @@ class Request extends Model
 
         switch ($this->type) {
             case 'lab':
-                if (!empty($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
+                if (! empty($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
                     return LabTest::whereIn('id', $details['lab_test_ids'])->where('is_active', true)->sum('price');
                 }
 
-                if (!empty($details['tests']) && is_array($details['tests'])) {
+                if (! empty($details['tests']) && is_array($details['tests'])) {
                     $total = 0;
                     $seenTests = [];
                     foreach ($details['tests'] as $testName) {
-                        $normName = mb_strtolower(trim((string)$testName));
-                        if (in_array($normName, $seenTests)) continue;
+                        $normName = mb_strtolower(trim((string) $testName));
+                        if (in_array($normName, $seenTests)) {
+                            continue;
+                        }
                         $seenTests[] = $normName;
 
                         $test = LabTest::where('is_active', true)
-                            ->where(function($q) use ($testName) {
+                            ->where(function ($q) use ($testName) {
                                 $q->where('name', $testName)->orWhere('code', $testName);
                             })
                             ->first();
@@ -69,10 +68,11 @@ class Request extends Model
                             $total += $test->price ?? 0;
                         }
                     }
+
                     return $total;
                 }
 
-                if (!empty($details['package_id'])) {
+                if (! empty($details['package_id'])) {
                     $package = Package::find($details['package_id']);
                     if ($package) {
                         return (float) $package->price;
@@ -83,17 +83,17 @@ class Request extends Model
 
             case 'radiology':
                 $radIds = [];
-                if (!empty($details['radiology_type_ids'])) {
+                if (! empty($details['radiology_type_ids'])) {
                     $radIds = (array) $details['radiology_type_ids'];
-                } elseif (!empty($details['radiology_types'])) {
+                } elseif (! empty($details['radiology_types'])) {
                     $radIds = (array) $details['radiology_types'];
-                } elseif (!empty($details['radiology_type_id'])) {
+                } elseif (! empty($details['radiology_type_id'])) {
                     $radIds = (array) $details['radiology_type_id'];
-                } elseif (!empty($details['ultrasound_type_id'])) {
+                } elseif (! empty($details['ultrasound_type_id'])) {
                     $radIds = (array) $details['ultrasound_type_id'];
                 }
 
-                if (!empty($radIds)) {
+                if (! empty($radIds)) {
                     return (float) RadiologyType::whereIn('id', $radIds)->sum('base_price');
                 }
 
@@ -103,19 +103,21 @@ class Request extends Model
                 return $this->bloodBankRequest ? (float) $this->bloodBankRequest->total_amount : null;
 
             case 'emergency':
-                if (!empty($details['emergency_priority'])) {
+                if (! empty($details['emergency_priority'])) {
                     $fees = [
                         'critical' => 50000,
                         'urgent' => 35000,
                         'semi_urgent' => 25000,
                         'non_urgent' => 15000,
                     ];
+
                     return $fees[$details['emergency_priority']] ?? 25000;
                 }
+
                 return null;
 
             case 'pharmacy':
-                if (!empty($details['tests']) && is_array($details['tests'])) {
+                if (! empty($details['tests']) && is_array($details['tests'])) {
                     $total = 0;
                     foreach ($details['tests'] as $itemName) {
                         $test = LabTest::where('name', $itemName)
@@ -125,8 +127,10 @@ class Request extends Model
                             $total += $test->price ?? 0;
                         }
                     }
+
                     return $total;
                 }
+
                 return null;
         }
 
@@ -148,6 +152,11 @@ class Request extends Model
         return $this->hasMany(\App\Models\Payment::class, 'request_id');
     }
 
+    public function payment()
+    {
+        return $this->belongsTo(\App\Models\Payment::class, 'payment_id');
+    }
+
     public function labResults()
     {
         return $this->hasMany(\App\Models\LabResult::class, 'request_id');
@@ -161,16 +170,16 @@ class Request extends Model
     public function getPreviousLabResultsMap(): array
     {
         $patientId = $this->visit?->patient_id ?? $this->patient_id;
-        if (!$patientId) {
+        if (! $patientId) {
             return [];
         }
 
         $resultsMap = [];
 
         // 1. استخراج النتائج السابقة من جدول lab_results لزيارات نفس المريض قبل الطلب الحالي
-        $prevResults = \App\Models\LabResult::whereHas('request.visit', function($q) use ($patientId) {
-                $q->where('patient_id', $patientId);
-            })
+        $prevResults = \App\Models\LabResult::whereHas('request.visit', function ($q) use ($patientId) {
+            $q->where('patient_id', $patientId);
+        })
             ->where('request_id', '!=', $this->id)
             ->whereNotNull('value')
             ->where('value', '!=', '')
@@ -181,17 +190,17 @@ class Request extends Model
 
         foreach ($prevResults as $row) {
             $key = mb_strtolower(trim($row->test_name));
-            if (!isset($resultsMap[$key])) {
+            if (! isset($resultsMap[$key])) {
                 $resultsMap[$key] = [];
             }
             if (count($resultsMap[$key]) < 3) {
                 $existingReqIds = array_column($resultsMap[$key], 'request_id');
-                if (!in_array($row->request_id, $existingReqIds)) {
+                if (! in_array($row->request_id, $existingReqIds)) {
                     $resultsMap[$key][] = [
                         'request_id' => $row->request_id,
-                        'value' => (string)$row->value,
-                        'unit' => (string)($row->unit ?? ''),
-                        'status' => (string)($row->status ?? 'normal'),
+                        'value' => (string) $row->value,
+                        'unit' => (string) ($row->unit ?? ''),
+                        'status' => (string) ($row->status ?? 'normal'),
                         'date' => $row->created_at ? $row->created_at->format('d-M-Y') : '',
                         'date_short' => $row->created_at ? $row->created_at->format('d/m/y') : '',
                     ];
@@ -200,9 +209,9 @@ class Request extends Model
         }
 
         // 2. فحص الطلبات السابقة المخزنة بصيغة JSON القديمة في requests.result (إن وجدت)
-        $prevJsonRequests = static::whereHas('visit', function($q) use ($patientId) {
-                $q->where('patient_id', $patientId);
-            })
+        $prevJsonRequests = static::whereHas('visit', function ($q) use ($patientId) {
+            $q->where('patient_id', $patientId);
+        })
             ->where('id', '!=', $this->id)
             ->where('type', 'lab')
             ->whereNotNull('result')
@@ -215,15 +224,15 @@ class Request extends Model
             $pResData = is_string($pReq->result) ? json_decode($pReq->result, true) : $pReq->result;
             $pTestResults = is_array($pResData) ? ($pResData['test_results'] ?? []) : [];
             foreach ($pTestResults as $tName => $tVal) {
-                $tKey = mb_strtolower(trim((string)$tName));
-                if (!isset($resultsMap[$tKey])) {
+                $tKey = mb_strtolower(trim((string) $tName));
+                if (! isset($resultsMap[$tKey])) {
                     $resultsMap[$tKey] = [];
                 }
                 if (count($resultsMap[$tKey]) < 3) {
-                    $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : (string)$tVal;
+                    $valStr = is_array($tVal) ? ($tVal['value'] ?? '') : (string) $tVal;
                     if ($valStr !== '' && $valStr !== '—') {
                         $existingReqIds = array_column($resultsMap[$tKey], 'request_id');
-                        if (!in_array($pReq->id, $existingReqIds)) {
+                        if (! in_array($pReq->id, $existingReqIds)) {
                             $resultsMap[$tKey][] = [
                                 'request_id' => $pReq->id,
                                 'value' => $valStr,
@@ -252,7 +261,7 @@ class Request extends Model
         }
 
         // 1. إذا كان معلماً صراحة أنه مباشر أو صادر من الاستعلامات
-        if (!empty($details['created_at_inquiry']) || !empty($details['direct_lab_visit']) || !empty($details['direct_radiology_visit'])) {
+        if (! empty($details['created_at_inquiry']) || ! empty($details['direct_lab_visit']) || ! empty($details['direct_radiology_visit'])) {
             return true;
         }
 
@@ -262,7 +271,7 @@ class Request extends Model
         }
 
         // 3. إذا لم تكن هناك زيارة أو لا يوجد طبيب استشاري مرتبط بالزيارة والموعد
-        if (!$this->visit || (empty($this->visit->doctor_id) && empty($this->visit->appointment_id) && empty($this->visit->appointment?->doctor_id))) {
+        if (! $this->visit || (empty($this->visit->doctor_id) && empty($this->visit->appointment_id) && empty($this->visit->appointment?->doctor_id))) {
             return true;
         }
 
@@ -291,7 +300,7 @@ class Request extends Model
             return 'مصرف الدم';
         }
 
-        return match($this->type) {
+        return match ($this->type) {
             'lab' => 'مختبر',
             'radiology' => 'أشعة',
             'pharmacy' => 'صيدلية',
@@ -304,7 +313,7 @@ class Request extends Model
 
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'في الانتظار',
             'in_progress' => 'قيد التنفيذ',
             'completed' => 'مكتمل',
@@ -315,7 +324,7 @@ class Request extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'warning',
             'in_progress' => 'info',
             'completed' => 'success',
@@ -334,12 +343,13 @@ class Request extends Model
             $details = json_decode($details, true) ?: [];
         }
         $typeIds = $details['radiology_types'] ?? $details['radiology_type_ids'] ?? [];
-        if (!empty($typeIds) && is_array($typeIds)) {
+        if (! empty($typeIds) && is_array($typeIds)) {
             return \App\Models\RadiologyType::whereIn('id', $typeIds)->pluck('name')->toArray();
         }
-        if (!empty($this->description)) {
+        if (! empty($this->description)) {
             return [str_replace('طلب أشعة: ', '', $this->description)];
         }
+
         return [];
     }
 
@@ -349,7 +359,8 @@ class Request extends Model
         if (is_string($details)) {
             $details = json_decode($details, true) ?: [];
         }
-        return $details['doctor_notes'] ?? $details['notes'] ?? (!empty($details['description']) && !str_starts_with($details['description'], 'طلب ') ? $details['description'] : null);
+
+        return $details['doctor_notes'] ?? $details['notes'] ?? (! empty($details['description']) && ! str_starts_with($details['description'], 'طلب ') ? $details['description'] : null);
     }
 
     /**
@@ -360,26 +371,30 @@ class Request extends Model
         $patient = $this->visit?->patient;
         $patientUser = $patient?->user;
         $details = is_string($this->details) ? json_decode($this->details, true) : $this->details;
-        
-        $phone = $patientUser?->phone 
-            ?: ($patient?->phone 
-            ?? ($details['patient_phone'] 
+
+        $phone = $patientUser?->phone
+            ?: ($patient?->phone
+            ?? ($details['patient_phone']
             ?? ($this->visit?->emergency?->emergencyPatient?->phone ?? null)));
 
-        if (!$phone) return null;
+        if (! $phone) {
+            return null;
+        }
 
         // تنظيف الرقم من أي مسافات أو رموز
-        $clean = preg_replace('/[^0-9]/', '', (string)$phone);
-        if (empty($clean)) return null;
+        $clean = preg_replace('/[^0-9]/', '', (string) $phone);
+        if (empty($clean)) {
+            return null;
+        }
 
         // إذا كان بالصيغة العراقية المحلية: 07XXXXXXXXX (11 رقماً تبدأ بـ 07)
         if (str_starts_with($clean, '07') && strlen($clean) === 11) {
-            return '964' . substr($clean, 1);
+            return '964'.substr($clean, 1);
         }
 
         // إذا كان يبدأ بـ 7 ومكون من 10 أرقام (بدون الصفر الأولي)
         if (str_starts_with($clean, '7') && strlen($clean) === 10) {
-            return '964' . $clean;
+            return '964'.$clean;
         }
 
         // إذا كان يبدأ بـ 00964
@@ -395,7 +410,7 @@ class Request extends Model
      */
     public function getPublicReportToken(): string
     {
-        return hash_hmac('sha256', $this->id . '|' . ($this->created_at?->timestamp ?? 0), config('app.key') ?: 'kafaat_hospital_secret_key');
+        return hash_hmac('sha256', $this->id.'|'.($this->created_at?->timestamp ?? 0), config('app.key') ?: 'kafaat_hospital_secret_key');
     }
 
     /**
@@ -415,24 +430,24 @@ class Request extends Model
     public function getWhatsAppShareUrl(): ?string
     {
         $phone = $this->getPatientPhone();
-        $patientName = $this->visit?->patient?->user?->name 
+        $patientName = $this->visit?->patient?->user?->name
             ?? ($this->visit?->patient?->name ?? 'المريض');
         $reportUrl = $this->getPublicReportUrl();
         $details = is_string($this->details) ? json_decode($this->details, true) : ($this->details ?? []);
-        $hasAttachments = !empty($details['attachment']) || !empty($details['test_attachments']);
+        $hasAttachments = ! empty($details['attachment']) || ! empty($details['test_attachments']);
 
-        $attachmentNote = $hasAttachments 
-            ? "📎 ملاحظة: يحتوي تقريركم على مرفقات وتقارير أجهزة طبية يمكنك استعراضها وتحميلها مباشرة من الرابط أعلاه.\n\n" 
-            : "";
+        $attachmentNote = $hasAttachments
+            ? "📎 ملاحظة: يحتوي تقريركم على مرفقات وتقارير أجهزة طبية يمكنك استعراضها وتحميلها مباشرة من الرابط أعلاه.\n\n"
+            : '';
 
         $text = "السلام عليكم ورحمة الله وبركاته\n"
-              . "الأخ/الأخت: {$patientName} المحترم،\n\n"
-              . "نود إعلامكم بأن نتائج الفحوصات المخبرية الخاصة بكم لدى مستشفى الكفاءات الأهلي للطلب رقم (#{$this->id}) جاهزة ومكتملة.\n\n"
-              . "📄 يمكنكم الاطلاع على التقرير الطبي والنتائج المعتمدة مباشرة عبر الرابط التالي:\n"
-              . "{$reportUrl}\n\n"
-              . $attachmentNote
-              . "مع تمنياتنا لكم بالصحة والعافية.\n"
-              . "مختبر مستشفى الكفاءات الأهلي 🏥";
+              ."الأخ/الأخت: {$patientName} المحترم،\n\n"
+              ."نود إعلامكم بأن نتائج الفحوصات المخبرية الخاصة بكم لدى مستشفى الكفاءات الأهلي للطلب رقم (#{$this->id}) جاهزة ومكتملة.\n\n"
+              ."📄 يمكنكم الاطلاع على التقرير الطبي والنتائج المعتمدة مباشرة عبر الرابط التالي:\n"
+              ."{$reportUrl}\n\n"
+              .$attachmentNote
+              ."مع تمنياتنا لكم بالصحة والعافية.\n"
+              .'مختبر مستشفى الكفاءات الأهلي 🏥';
 
         $encodedText = rawurlencode($text);
 
@@ -452,9 +467,9 @@ class Request extends Model
             if ($request->isCompleted() && $request->visit) {
                 // زيارات الطبيب الاستشارية لا تكتمل تلقائياً من قبل المختبر أو الأشعة
                 // لأن الطبيب هو صاحب القرار في مراجعة النتائج مع المريض وإنهاء الزيارة
-                $isDoctorVisit = !empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup';
+                $isDoctorVisit = ! empty($request->visit->doctor_id) || ! empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup';
 
-                if (!$isDoctorVisit) {
+                if (! $isDoctorVisit) {
                     $remaining = $request->visit->requests()
                         ->where('status', '!=', 'completed')
                         ->count();

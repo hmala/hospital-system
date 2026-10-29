@@ -63,7 +63,11 @@ class RadiologyStaffController extends Controller
 
         $baseQuery = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user', 'visit.department'])
             ->where('type', 'radiology')
-            ->whereNotIn('status', ['cancelled', 'postponed']);
+            ->whereNotIn('status', ['cancelled', 'postponed'])
+            ->where('payment_status', '!=', 'cancelled')
+            ->whereDoesntHave('payment', function ($pq) {
+                $pq->whereNotNull('voided_at');
+            });
 
         // تطبيق فلتر التاريخ الموحد
         if ($dateFilter === 'today') {
@@ -161,6 +165,9 @@ class RadiologyStaffController extends Controller
                 'payment',
             ])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->where('status', '!=', 'cancelled')
+                ->where('payment_status', '!=', 'cancelled')
+                ->whereDoesntHave('payment', fn ($pq) => $pq->whereNotNull('voided_at'))
                 ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'desc');
 
