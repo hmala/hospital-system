@@ -1248,116 +1248,129 @@ class EmergencyController extends Controller
         //     return redirect()->back()->with('error', 'لا يمكن إنشاء موعد استشاري إلا لحالات مدفوعة');
         // }
 
+        $doctorId = $request->input('doctor_id');
+        if (! $doctorId && $request->has('doctor_ids')) {
+            $docIds = (array) $request->input('doctor_ids');
+            $doctorId = $docIds[0] ?? null;
+        }
+
+        $request->merge(['resolved_doctor_id' => $doctorId]);
+
         $request->validate([
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|date_format:H:i',
-            'doctor_ids' => 'required|array|min:1',
-            'doctor_ids.*' => 'required|exists:doctors,id',
+            'resolved_doctor_id' => 'required|exists:doctors,id',
             'reason' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
+        ], [
+            'resolved_doctor_id.required' => 'يجب اختيار الطبيب الاستشاري المطلوب.',
+            'resolved_doctor_id.exists' => 'الطبيب الاستشاري المختار غير موجود في النظام.',
         ]);
 
+        $doctorId = (int) $request->resolved_doctor_id;
         $appointmentDateTime = $request->appointment_date.' '.$request->appointment_time.':00';
-        $selectedDoctorIds = collect($request->doctor_ids)->unique();
-        $appointmentsCreated = 0;
 
-        foreach ($selectedDoctorIds as $doctorId) {
-            $doctor = Doctor::find($doctorId);
-            if (! $doctor) {
-                return redirect()->back()->with('error', 'تم اختيار طبيب غير موجود');
-            }
-
-            if (! in_array($doctor->type, ['consultant', 'sonar']) && ! str_contains($doctor->specialization ?? '', 'سونار')) {
-                return redirect()->back()->with('error', 'يجب اختيار أطباء استشاريين فقط');
-            }
-
-            if (! $doctor->is_available_today) {
-                return redirect()->back()->with('error', "الطبيب {$doctor->user?->name} غير متاح اليوم");
-            }
-
-            $existingAppointment = Appointment::where('doctor_id', $doctorId)
-                ->where('appointment_date', $appointmentDateTime)
-                ->whereIn('status', ['scheduled', 'confirmed'])
-                ->exists();
-
-            if ($existingAppointment) {
-                return redirect()->back()->with('error', "يوجد موعد محجوز مسبقاً للطبيب {$doctor->user?->name} في هذا التاريخ والوقت");
-            }
-
-            $appointmentsCreated++;
+        $doctor = Doctor::find($doctorId);
+        if (! $doctor) {
+            return redirect()->back()->with('error', 'تم اختيار طبيب غير موجود');
         }
 
-        if ($appointmentsCreated === 0) {
-            return redirect()->back()->with('error', 'لم يتم تحديد أي طبيب صالح لإنشاء موعد استشاري');
+        if (! in_array($doctor->type, ['consultant', 'sonar']) && ! str_contains($doctor->specialization ?? '', 'سونار')) {
+            return redirect()->back()->with('error', 'يجب اختيار أطباء استشاريين فقط');
+        }
+
+        if (! $doctor->is_available_today) {
+            return redirect()->back()->with('error', "الطبيب {$doctor->user?->name} غير متاح اليوم");
+        }
+
+        $existingAppointment = Appointment::where('doctor_id', $doctorId)
+            ->where('appointment_date', $appointmentDateTime)
+            ->whereIn('status', ['scheduled', 'confirmed', 'in_consultation'])
+            ->exists();
+
+        if ($existingAppointment) {
+            $appointmentDateTime = date('Y-m-d H:i:s', strtotime($appointmentDateTime.' +1 minute'));
         }
 
         // migrate emergency patient to main table if necessary
         if ($emergency->emergency_patient_id && ! $emergency->patient_migrated) {
             $emergencyPatient = $emergency->emergencyPatient;
-            // create user and main patient
-            $userAccount = User::create([
-                'name' => $emergencyPatient->name,
-                'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
-                'role' => 'patient',
-                'password' => bcrypt(Str::random(12)),
-            ]);
-            $mainPatient = Patient::create([
-                'user_id' => $userAccount->id,
-                'date_of_birth' => $emergencyPatient->date_of_birth,
-                'gender' => $emergencyPatient->gender,
-                'phone' => $emergencyPatient->phone,
-            ]);
+            if ($emergencyPatient) {
+                $userAccount = User::create([
+                    'name' => $emergencyPatient->name,
+                    'email' => 'emergency_'.time().'_'.rand(1000, 9999).'@example.com',
+                    'role' => 'patient',
+                    'password' => bcrypt(Str::random(12)),
+                ]);
+                $mainPatient = Patient::create([
+                    'user_id' => $userAccount->id,
+                    'date_of_birth' => $emergencyPatient->date_of_birth,
+                    'gender' => $emergencyPatient->gender,
+                    'phone' => $emergencyPatient->phone,
+                ]);
 
-            $emergency->update([
-                'patient_id' => $mainPatient->id,
-                'patient_migrated' => true,
-            ]);
+                $emergency->update([
+                    'patient_id' => $mainPatient->id,
+                    'patient_migrated' => true,
+                ]);
 
-            // mark emergency patient inactive
-            $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
-        }
-
-        // أجرة استشارة الطوارئ الثابتة (مقطوعة)
-        $emergencyConsultationFee = 50000;
-        $createdAppointmentIds = [];
-
-        foreach ($selectedDoctorIds as $doctorId) {
-            $doctor = Doctor::find($doctorId);
-            if (! $doctor) {
-                continue;
+                $emergencyPatient->update(['is_active' => false, 'migrated' => true]);
             }
-
-            $appointment = Appointment::create([
-                'patient_id' => $emergency->patient_id,
-                'doctor_id' => $doctorId,
-                'department_id' => $doctor->department_id,
-                'emergency_id' => $emergency->id,
-                'appointment_date' => $appointmentDateTime,
-                'reason' => $request->reason ?: ($request->notes ? Str::limit($request->notes, 100) : 'استشارة طوارئ'),
-                'notes' => $request->notes,
-                'consultation_fee' => $emergencyConsultationFee,
-                'duration' => 30,
-                'status' => 'scheduled',
-                'payment_status' => 'pending',
-            ]);
-
-            $createdAppointmentIds[] = $appointment->id;
         }
 
-        if (count($createdAppointmentIds) === 0) {
-            return redirect()->back()->with('error', 'لم يتم إنشاء أي موعد استشاري. تحقق من الأطباء المحددين وحاول مرة أخرى.');
+        // 1. إضافة خدمة "استشارة اخصائي من العيادة الاستشارية" إلى جدول خدمات الطوارئ (30,000 د.ع)
+        $consultationService = EmergencyService::where('id', 115)
+            ->orWhere('name', 'like', '%استشارة اخصائي من العيادة الاستشارية%')
+            ->first();
+
+        if ($consultationService) {
+            $existingPivot = \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $emergency->id)
+                ->where('emergency_service_id', $consultationService->id)
+                ->whereNull('payment_id')
+                ->first();
+
+            if ($existingPivot) {
+                \DB::table('emergency_emergency_service')
+                    ->where('id', $existingPivot->id)
+                    ->update([
+                        'quantity' => ($existingPivot->quantity ?? 1) + 1,
+                    ]);
+            } else {
+                $emergency->services()->attach($consultationService->id, [
+                    'quantity' => 1,
+                    'payment_id' => null,
+                ]);
+            }
         }
 
-        // دمج الاستشارة في فاتورة طوارئ موحدة
-        $unifiedPayment = $this->upsertUnifiedEmergencyPayment($emergency);
-
-        // ربط المواعيد بفاتورة الطوارئ الموحدة (لمساعدتنا لاحقاً في التقارير)
-        Appointment::whereIn('id', $createdAppointmentIds)->update([
-            'payment_id' => $unifiedPayment->id,
+        // 2. إنشاء الموعد للطبيب الاستشاري ليدخل المريض في طابور عيادته فوراً
+        $doctorName = $doctor->user?->name ?? 'طبيب';
+        $appointment = Appointment::create([
+            'patient_id' => $emergency->patient_id,
+            'doctor_id' => $doctorId,
+            'department_id' => $doctor->department_id,
+            'emergency_id' => $emergency->id,
+            'appointment_date' => $appointmentDateTime,
+            'reason' => $request->reason ?: ($request->notes ? Str::limit($request->notes, 100) : 'استشارة طوارئ: د. '.$doctorName),
+            'notes' => $request->notes,
+            'consultation_fee' => 0, // الرسوم محتسبة رسمياً عبر خدمة الطوارئ المضافة (استشارة اخصائي من العيادة الاستشارية - 30,000 د.ع)
+            'duration' => 30,
+            'status' => 'scheduled',
             'payment_status' => 'pending',
         ]);
 
-        return redirect()->back()->with('success', 'تم إنشاء طلب الاستشارة بنجاح وإضافته إلى حساب الحالة ويبقى المريض في الطوارئ');
+        // 3. تحديث ودمج الفاتورة الموحدة للطوارئ
+        $unifiedPayment = $this->upsertUnifiedEmergencyPayment($emergency);
+
+        if ($unifiedPayment) {
+            $appointment->update([
+                'payment_id' => $unifiedPayment->id,
+                'payment_status' => 'pending',
+            ]);
+        }
+
+        return redirect()->back()->with('success', "تم طلب استشارة د. {$doctorName} بنجاح وإضافة خدمة الاستشارة (30,000 د.ع) إلى حساب الطوارئ.");
     }
 
     /**

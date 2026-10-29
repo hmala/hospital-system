@@ -53,6 +53,24 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 130: ترقية وتوحيد طلب استشارة الطوارئ إلى اختيار استشاري فردي وربطها مالياً بخدمة استشارة اخصائي من العيادة الاستشارية بسعر 30,000 د.ع Emergency Single Consultant Selection & Automated 30,000 IQD Emergency Service Billing)
+
+### Done
+- **ترقية واجهة نافذة طلب الاستشارة الطبية ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * استبدال صندوق الاختيار المتعدد القديم (`select multiple` المعتمد على زر `Ctrl`) بقائمة منسدلة حديثة وسلسة (`Dropdown single select`) لاختيار الطبيب الاستشاري المطلوب بعينه.
+  * حصر الأطباء المتاحين في الأطباء الاستشاريين (`consultant`) وأطباء السونار (`sonar`) المتاحين اليوم بالدوام فقط.
+  * ترقية وسم الاستشارة في شريط رأس محطة الطوارئ ليعرض صراحة اسم الطبيب الاستشاري وقسمه: `[ تم طلب استشارة: د. فلان (باطنية) ]`.
+- **الربط المالي الصارم بخدمات الطوارئ ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إلغاء الرقم المقطوع القديم (50,000 د.ع) وتصفير رسوم الموعد الإضافية (`consultation_fee = 0`) منعاً للازدواجية.
+  * إلحاق خدمة الطوارئ الرسمية **"استشارة اخصائي من العيادة الاستشارية"** (رقم #115) بسعرها الرسمي المعتمد **30,000 د.ع** تلقائياً إلى خدمات الحالة في جدول `emergency_emergency_service`.
+  * إذا قام الطبيب بطلب استشارة إضافية لاحقاً، يتم زيادة كمية الخدمة تلقائياً بمقدار 1 (لتصبح 2 × 30,000 = 60,000 د.ع).
+  * إدراج الخدمة رسمياً في فاتورة الطوارئ الموحدة ووصل الكاشير الإلكتروني والحراري وحسابات الضمان الصحي.
+- **تحديث كاشير الطوارئ ومستحقات الطبيب ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * ضبط القيد المالي الافتراضي لاستشارة الطوارئ ليصبح 30,000 د.ع (بدلاً من 50,000 د.ع) وتوزيع الحصص بنسبة 80% للطبيب (24,000 د.ع) و 20% للمستشفى (6,000 د.ع).
+- **حزم الاختبارات الآلية الشاملة**:
+  * إضافة اختبار ميزة متكامل `test_requesting_emergency_consultation_attaches_emergency_service_and_schedules_appointment` في [`tests/Feature/EmergencyWorkflowTest.php`](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php).
+  * اجتياز كامل حزمة اختبارات الطوارئ والـ CBC بنجاح 100% (11 passed, 49 assertions).
+
 ## Session log (2026-10-29 — المرحلة 129: توحيد فحص عد الدم الشامل الآلي باسمه الطبي المعتمد CBC (5-Part Diff) وفصل فحص فيلم الدم المجهري Blood Film وتحديث المطبوعات والاختبارات Automated CBC (5-Part Diff) Medical Standardization, Standalone Microscopic Blood Film & Complete Print Parity)
 
 ### Done

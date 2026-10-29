@@ -2879,9 +2879,9 @@ class CashierController extends Controller
                 ]);
 
                 if ($appointment->doctor_id) {
-                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
-                    // حصة استشارة الطوارئ: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى (نسبة 80% / 20%)
-                    $doctorShare = ($fee == 50000.0) ? 40000.0 : round($fee * 0.80, 2);
+                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 30000);
+                    // حصة استشارة الطوارئ: 24,000 د.ع للطبيب و 6,000 د.ع للمستشفى (نسبة 80% / 20%)
+                    $doctorShare = ($fee == 30000.0) ? 24000.0 : round($fee * 0.80, 2);
                     $hospitalShare = round($fee - $doctorShare, 2);
                     $percentage = round(($doctorShare / $fee) * 100, 2);
 
