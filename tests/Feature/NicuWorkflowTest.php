@@ -1536,4 +1536,51 @@ class NicuWorkflowTest extends TestCase
         $indexNicuResp->assertSee('باقة خدج تنفسية جديدة');
         $indexNicuResp->assertSee('باقات قسم الخدج والحاضنات (NICU)');
     }
+
+    public function test_incubator_reservation_renders_insurance_categories_matching_patient_registration_with_category_e_default(): void
+    {
+        $this->seed(\Database\Seeders\HealthInsuranceCategorySeeder::class);
+
+        // 1. فحص شاشة حجز الخدج والتأكد من مطابقة خيارات الفئات والتحديد الافتراضي للفئة E
+        $nicuCreateResp = $this->actingAs($this->admin)->get(route('incubator-reservations.create'));
+        $nicuCreateResp->assertStatus(200);
+        $nicuCreateResp->assertSee('فئة المشمول بالضمان');
+        $nicuCreateResp->assertSee('الفئة E (E) - الأطفال دون سن الخامسة');
+        $nicuCreateResp->assertSee('الفئة A (A)');
+        $nicuCreateResp->assertSee('الفئة H (H)');
+        $nicuCreateResp->assertSee('الفئة الافتراضية للخدج هي الفئة E (الأطفال دون سن الخامسة)');
+
+        // 2. فحص شاشة تسجيل مريض جديد والتأكد من تطابق المسميات والترتيب
+        $patientCreateResp = $this->actingAs($this->admin)->get(route('patients.create'));
+        $patientCreateResp->assertStatus(200);
+        $patientCreateResp->assertSee('فئة المشمول بالضمان');
+        $patientCreateResp->assertSee('الفئة E (E) - الأطفال دون سن الخامسة');
+        $patientCreateResp->assertSee('الفئة A (A)');
+        $patientCreateResp->assertSee('الفئة H (H)');
+
+        // 3. اختبار تعيين الفئة E تلقائياً عند إنشاء حجز ضمان صحي دون تحديد الفئة يدوياً
+        $newBaby = Patient::create([
+            'user_id' => User::factory()->create()->id,
+            'birth_date' => now()->subDays(2),
+            'insurance_type' => 'hi',
+        ]);
+
+        $storeResp = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $newBaby->id,
+            'baby_name' => 'طفل الفئة الافتراضية',
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '12:00',
+            'birth_weight' => 2100,
+            'gestational_age' => '33 أسبوع',
+            'insurance_type' => 'hi',
+            'policy_category' => '', // ترك الحقل فارغاً لاختبار الـ Default
+            'insurance_card_no' => 'HIA-AUTO-DEF',
+        ]);
+
+        $storeResp->assertRedirect();
+        $res = IncubatorReservation::where('patient_id', $newBaby->id)->first();
+        $this->assertNotNull($res);
+        $this->assertEquals('E', $res->policy_category);
+    }
 }

@@ -94,6 +94,7 @@ class IncubatorReservationController extends Controller
         $doctors = Doctor::with('user')->get();
         $departments = Department::where('is_active', true)->get();
         $nicuServices = \App\Models\NicuService::active()->get();
+        $healthInsuranceCategories = \App\Models\HealthInsuranceCategory::where('is_active', true)->orderBy('sort_order')->get();
 
         return view('incubator_reservations.create', compact(
             'patient',
@@ -104,7 +105,8 @@ class IncubatorReservationController extends Controller
             'selectedType',
             'incubatorTypes',
             'existingReservation',
-            'nicuServices'
+            'nicuServices',
+            'healthInsuranceCategories'
         ));
     }
 
@@ -179,6 +181,15 @@ class IncubatorReservationController extends Controller
 
         $validated['current_weight'] = $validated['birth_weight'] ?? null;
         $validated['insurance_type'] = $validated['insurance_type'] ?? 'none';
+
+        if ($validated['insurance_type'] === 'hi' || ! empty($validated['policy_category'])) {
+            if (empty($validated['policy_category'])) {
+                $validated['policy_category'] = 'E';
+            } elseif (is_numeric($validated['policy_category'])) {
+                $catModel = \App\Models\HealthInsuranceCategory::find($validated['policy_category']);
+                $validated['policy_category'] = $catModel ? $catModel->code : 'E';
+            }
+        }
 
         // تم إلغاء شرط العمر للسماح بحجز الحاضنة باسم الأم أو المسؤول
 

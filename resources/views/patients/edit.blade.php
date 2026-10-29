@@ -329,7 +329,7 @@
                                                         data-code="{{ $cat->code }}"
                                                         data-stamp="{{ $cat->requires_thermal_stamp ? 1 : 0 }}"
                                                         {{ old('health_insurance_category_id', $patient->health_insurance_category_id) == $cat->id ? 'selected' : '' }}>
-                                                    {{ $cat->name }} ({{ $cat->code }})
+                                                    {{ $cat->name }} ({{ $cat->code }}){{ !empty($cat->description) ? ' - ' . $cat->description : '' }}
                                                 </option>
                                             @endforeach
                                         </select>

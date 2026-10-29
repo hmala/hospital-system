@@ -55,6 +55,25 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-10-29 — مطابقة فئات الضمان الصحي بين حجز الخدج وتسجيل المريض وجعل الفئة E للأطفال دون سن الخامسة هي الافتراضية)
+
+### Done
+- **مطابقة خيارات وترتيب فئات الضمان الصحي (A إلى I) مع شاشة تسجيل المريض**:
+  * جلب الفئات ديناميكياً من جدول `health_insurance_categories` بالترتيب القياسي المعتمد (`orderBy('sort_order')`) في متحكم حجز الحاضنات `IncubatorReservationController::create`.
+  * تحديث القائمة المنسدلة في `resources/views/incubator_reservations/create.blade.php` لتعرض كافة فئات هيئة الضمان الصحي الوطني مع الرمز والوصف التفصيلي الدقيق.
+  * توحيد عرض الوصف في شاشتي تسجيل وتعديل المرضى (`patients/create.blade.php` و `patients/edit.blade.php`) لتشمل وصف كل فئة بوضوح.
+- **تثبيت الفئة E كفئة افتراضية قياسية لحديثي الولادة والخدج**:
+  * جعل الخيار الافتراضي في حجز الحاضنات هو `الفئة E (الأطفال دون سن الخامسة)` سواء عند فتح النموذج لأول مرة أو عند استرجاع بيانات مريض غير مشمول مسبقاً.
+  * ضبط التحقق والمعالجة في `IncubatorReservationController::store` بحيث يتم اعتماد الفئة `E` تلقائياً لأي حجز ضمان صحي في حال عدم تحديد الفئة أو إرسال معرف عددي.
+  * تحديث المعاينة الفورية لشرائح تغطية الضمان `updateTierPreview` لتوضيح شرائح العمر الحملي الخاصة بالفئة E.
+  * تعزيز الجافاسكربت في تسجيل المرضى بحيث يتم اقتراح واختيار الفئة E تلقائياً عند إدخال تاريخ ميلاد لعمر أقل من 5 سنوات.
+- **الاختبارات وضمان الجودة**:
+  * إضافة اختبار ميزة شامل `test_incubator_reservation_renders_insurance_categories_matching_patient_registration_with_category_e_default` واجتيازه بنجاح تام.
+  * اجتياز كامل حزمة اختبارات الخدج `NicuWorkflowTest` بنسبة 100% (38 اختباراً، 330 تأكيداً).
+  * اجتياز كامل اختبارات دورة العمل المركزية `NicuLabRadiologyCashierWorkflowTest` بنسبة 100% (4 اختبارات، 82 تأكيداً).
+  * تحديث الشجرة المعرفية Graphify إلى 5,898 عقدة و 10,946 علاقة.
+  * الالتزام الصارم بقاعدة Git: الحفظ والرفع حصراً على فرع `hr`.
+
 ## Session log (2026-10-26 — تخصيص وعزل باقات تحاليل الخدج الديناميكية التخصصية NICU-Specific Lab Packages & Departmental Isolation)
 
 ### Done

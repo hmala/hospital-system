@@ -246,64 +246,6 @@ label.incubator-card {
                     <form action="{{ route('incubator-reservations.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
-                        <!-- نوع الحساب والتغطية المالية -->
-                        <div class="card p-3 mb-4 bg-light border-0 shadow-sm" style="border-radius: 12px;">
-                            <div class="row align-items-center">
-                                <div class="col-md-5 mb-2 mb-md-0">
-                                    <label class="form-label fw-bold mb-1 text-dark">
-                                        <i class="fas fa-file-invoice-dollar text-primary me-1"></i>
-                                        نوع الحساب والتغطية المالية <span class="text-danger">*</span>
-                                    </label>
-                                    <p class="text-muted small mb-0">حدد ما إذا كان الحجز كاش (خاص) أو مشمولاً بالضمان الصحي العراقي (HIA)</p>
-                                </div>
-                                <div class="col-md-7">
-                                    <div class="btn-group w-100 shadow-sm" role="group">
-                                        <input type="radio" class="btn-check" name="insurance_type" id="type_cash" value="none" autocomplete="off" {{ old('insurance_type', 'none') === 'none' ? 'checked' : '' }}>
-                                        <label class="btn btn-outline-primary fw-bold py-2" for="type_cash">
-                                            <i class="fas fa-money-bill-wave me-1"></i> كاش / خاص
-                                        </label>
-
-                                        <input type="radio" class="btn-check" name="insurance_type" id="type_hi" value="hi" autocomplete="off" {{ old('insurance_type') === 'hi' ? 'checked' : '' }}>
-                                        <label class="btn btn-outline-success fw-bold py-2" for="type_hi">
-                                            <i class="fas fa-shield-alt me-1"></i> ضمان صحي (HIA)
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- قسم تفاصيل الضمان الصحي (يظهر فقط عند اختيار ضمان صحي) -->
-                        <div id="insuranceDetailsSection" class="card border border-success-subtle bg-success bg-opacity-10 p-3 mb-4 {{ old('insurance_type') === 'hi' ? '' : 'd-none' }}" style="border-radius: 12px;">
-                            <h6 class="fw-bold text-success mb-3">
-                                <i class="fas fa-id-card me-2"></i> بيانات وثيقة الضمان الصحي والمطالبة الإلكترونية
-                            </h6>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="policy_category" class="form-label fw-bold">فئة المشمول بالضمان <span class="text-danger">*</span></label>
-                                    <select name="policy_category" id="policy_category" class="form-select border-success">
-                                        <option value="E" {{ old('policy_category', 'E') === 'E' ? 'selected' : '' }}>الفئة E (موظفو دوائر الدولة المشمولون)</option>
-                                        <option value="H" {{ old('policy_category') === 'H' ? 'selected' : '' }}>الفئة H (المتقاعدون / المواطنون المشمولون)</option>
-                                        <option value="A" {{ old('policy_category') === 'A' ? 'selected' : '' }}>الفئة A (الرعاية الاجتماعية / الشهداء - إعفاء 100%)</option>
-                                        <option value="D" {{ old('policy_category') === 'D' ? 'selected' : '' }}>الفئة D (قوى الأمن الداخلي والدفاع)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة الضمان الصحي</label>
-                                    <input type="text" name="insurance_card_no" id="insurance_card_no" class="form-control" placeholder="مثال: HIA-987654321" value="{{ old('insurance_card_no') }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="encounter_number" class="form-label fw-bold">رقم مراجعة / مطالبة الضمان</label>
-                                    <input type="text" name="encounter_number" id="encounter_number" class="form-control" placeholder="مثال: ENC-2026-00123" value="{{ old('encounter_number') }}">
-                                </div>
-                                <div class="col-12">
-                                    <div class="alert alert-info py-2 px-3 mb-0 small" id="tierPreviewAlert">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <span id="tierPreviewText">يتم احتساب التغطية وفق ضوابط هيئة الضمان الصحي للعمر الحملي.</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- بيانات المريض (الأم أو المسؤول) والطفل الخديج -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -456,6 +398,84 @@ label.incubator-card {
                                        class="form-control @error('birth_certificate_date') is-invalid @enderror" 
                                        value="{{ old('birth_certificate_date') }}">
                                 @error('birth_certificate_date') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+
+                        <!-- نوع الحساب والتغطية المالية -->
+                        <div class="card p-3 mb-4 bg-light border-0 shadow-sm" style="border-radius: 12px;">
+                            <div class="row align-items-center">
+                                <div class="col-md-5 mb-2 mb-md-0">
+                                    <label class="form-label fw-bold mb-1 text-dark">
+                                        <i class="fas fa-file-invoice-dollar text-primary me-1"></i>
+                                        نوع الحساب والتغطية المالية <span class="text-danger">*</span>
+                                    </label>
+                                    <p class="text-muted small mb-0">حدد ما إذا كان الحجز كاش (خاص) أو مشمولاً بالضمان الصحي العراقي (HIA)</p>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="btn-group w-100 shadow-sm" role="group">
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_cash" value="none" autocomplete="off" {{ old('insurance_type', 'none') === 'none' ? 'checked' : '' }}>
+                                        <label class="btn btn-outline-primary fw-bold py-2" for="type_cash">
+                                            <i class="fas fa-money-bill-wave me-1"></i> كاش / خاص
+                                        </label>
+
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_hi" value="hi" autocomplete="off" {{ old('insurance_type') === 'hi' ? 'checked' : '' }}>
+                                        <label class="btn btn-outline-success fw-bold py-2" for="type_hi">
+                                            <i class="fas fa-shield-alt me-1"></i> ضمان صحي (HIA)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- قسم تفاصيل الضمان الصحي (يظهر فقط عند اختيار ضمان صحي) -->
+                        @php
+                            $categoriesList = (isset($healthInsuranceCategories) && $healthInsuranceCategories->isNotEmpty())
+                                ? $healthInsuranceCategories
+                                : \App\Models\HealthInsuranceCategory::where('is_active', true)->orderBy('sort_order')->get();
+
+                            if ($categoriesList->isEmpty()) {
+                                $categoriesList = collect([
+                                    (object)['code' => 'A', 'name' => 'الفئة A', 'description' => 'أمراض الدم الوراثية، عجز الكلى، المعالج بالديلزة، العوق الذهني بما في ذلك التوحد وذوي الاحتياجات الخاصة (شرط ختم حراري)'],
+                                    (object)['code' => 'B', 'name' => 'الفئة B', 'description' => 'يتيم الأبوين (شرط ختم حراري)'],
+                                    (object)['code' => 'C', 'name' => 'الفئة C', 'description' => 'معاقو القوات الأمنية والعسكرية (شرط ختم حراري)'],
+                                    (object)['code' => 'D', 'name' => 'الفئة D', 'description' => 'المشمولين بالرعاية الاجتماعية'],
+                                    (object)['code' => 'E', 'name' => 'الفئة E', 'description' => 'الأطفال دون سن الخامسة'],
+                                    (object)['code' => 'F', 'name' => 'الفئة F', 'description' => 'الإناث من غير الموظفات المتقاعدات فوق سن الـ 55'],
+                                    (object)['code' => 'G', 'name' => 'الفئة G', 'description' => 'الذكور من غير الموظفين المتقاعدين فوق سن الـ 60'],
+                                    (object)['code' => 'H', 'name' => 'الفئة H', 'description' => 'موظفو الدولة المدنيين، العسكريين، والمتقاعدين'],
+                                    (object)['code' => 'I', 'name' => 'الفئة I', 'description' => 'الدرجات العليا والخاصة من مدير عام فما فوق'],
+                                ]);
+                            }
+                        @endphp
+                        <div id="insuranceDetailsSection" class="card border border-success-subtle bg-success bg-opacity-10 p-3 mb-4 {{ old('insurance_type') === 'hi' ? '' : 'd-none' }}" style="border-radius: 12px;">
+                            <h6 class="fw-bold text-success mb-3">
+                                <i class="fas fa-id-card me-2"></i> بيانات وثيقة الضمان الصحي والمطالبة الإلكترونية
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="policy_category" class="form-label fw-bold">فئة المشمول بالضمان <span class="text-danger">*</span></label>
+                                    <select name="policy_category" id="policy_category" class="form-select border-success">
+                                        @foreach($categoriesList as $cat)
+                                            <option value="{{ $cat->code }}" 
+                                                    data-id="{{ $cat->id ?? '' }}"
+                                                    data-code="{{ $cat->code }}"
+                                                    {{ old('policy_category', 'E') === $cat->code ? 'selected' : '' }}>
+                                                {{ $cat->name }} ({{ $cat->code }}){{ !empty($cat->description) ? ' - ' . $cat->description : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">الفئة الافتراضية للخدج هي الفئة E (الأطفال دون سن الخامسة).</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة الضمان الصحي</label>
+                                    <input type="text" name="insurance_card_no" id="insurance_card_no" class="form-control" placeholder="مثال: HIA-987654321" value="{{ old('insurance_card_no') }}">
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-info py-2 px-3 mb-0 small" id="tierPreviewAlert">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <span id="tierPreviewText">يتم احتساب التغطية وفق ضوابط هيئة الضمان الصحي للعمر الحملي.</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -991,12 +1011,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     hiRadio.checked = true;
                     hiRadio.dispatchEvent(new Event('change'));
                 }
-                if (p.policy_category) {
-                    const polCat = document.getElementById('policy_category');
-                    if (polCat) {
-                        polCat.value = p.policy_category;
-                        polCat.dispatchEvent(new Event('change'));
-                    }
+                const polCat = document.getElementById('policy_category');
+                if (polCat) {
+                    polCat.value = p.policy_category || 'E';
+                    polCat.dispatchEvent(new Event('change'));
                 }
                 if (p.insurance_card_no) {
                     const cardInput = document.getElementById('insurance_card_no');
@@ -1006,6 +1024,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 selectedPatientInsuranceBadge.style.display = 'none';
+                const polCat = document.getElementById('policy_category');
+                if (polCat && (!polCat.value || polCat.value === '')) {
+                    polCat.value = 'E';
+                    polCat.dispatchEvent(new Event('change'));
+                }
             }
         }
 
@@ -1130,14 +1153,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (category === 'A') {
             tierPreviewAlert.className = 'alert alert-success py-2 px-3 mb-0 small';
-            tierPreviewText.innerHTML = '<strong>الفئة A (الرعاية الاجتماعية / الشهداء):</strong> إعفاء تام وتغطية 100% لكامل مدة الرقود بدون أي أجور أو نسبة تحمل على المريض.';
+            tierPreviewText.innerHTML = '<strong>الفئة A (أمراض الدم الوراثية / العجز الكلوي / الشهداء):</strong> إعفاء تام وتغطية 100% لكامل مدة الرقود بدون أي أجور أو نسبة تحمل على المريض.';
             return;
         }
 
         tierPreviewAlert.className = 'alert alert-info py-2 px-3 mb-0 small';
 
         if (!weeks) {
-            tierPreviewText.innerHTML = '<strong>تغطية الضمان:</strong> يرجى اختيار عمر الحمل بالأسابيع لمعاينة شرائح التحمل المعتمدة وزارياً.';
+            tierPreviewText.innerHTML = '<strong>تغطية الضمان (الفئة E - الأطفال دون سن الخامسة):</strong> يرجى اختيار عمر الحمل بالأسابيع لمعاينة شرائح التحمل المعتمدة وزارياً.';
             return;
         }
 
