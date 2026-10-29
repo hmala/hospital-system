@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Surgery;
-use App\Models\NursingStation;
 use App\Models\User;
+use App\Notifications\NursingUpdateNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Notifications\NursingUpdateNotification;
 
 class NursingStationController extends Controller
 {
@@ -15,17 +14,17 @@ class NursingStationController extends Controller
     {
         // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
         $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation'])
-            ->where(function($query) {
-                $query->where(function($q) {
+            ->where(function ($query) {
+                $query->where(function ($q) {
                     $q->where('status', 'scheduled')
-                      ->whereDoesntHave('residentStations', function($sq) {
-                          $sq->where('phase', 'pre_op');
-                      });
+                        ->whereDoesntHave('residentStations', function ($sq) {
+                            $sq->where('phase', 'pre_op');
+                        });
                 })
-                ->orWhereHas('residentStations', function($sq) {
-                    $sq->where('phase', 'pre_op')
-                      ->where('status', '!=', 'completed');
-                });
+                    ->orWhereHas('residentStations', function ($sq) {
+                        $sq->where('phase', 'pre_op')
+                            ->where('status', '!=', 'completed');
+                    });
             })
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
@@ -33,12 +32,12 @@ class NursingStationController extends Controller
 
         // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد الصالة)
         $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation'])
-            ->whereHas('anesthesiaStation', function($sq) {
+            ->whereHas('anesthesiaStation', function ($sq) {
                 $sq->where('status', 'completed');
             })
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereDoesntHave('nursingStation')
-                    ->orWhereHas('nursingStation', function($q) {
+                    ->orWhereHas('nursingStation', function ($q) {
                         $q->where('status', '!=', 'completed');
                     });
             })
@@ -49,7 +48,7 @@ class NursingStationController extends Controller
 
         // 3. جلب العمليات التي أتمت مرحلة التمريض (الأرشيف)
         $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse'])
-            ->whereHas('nursingStation', function($q) {
+            ->whereHas('nursingStation', function ($q) {
                 $q->where('status', 'completed');
             })
             ->orderBy('updated_at', 'desc')
@@ -58,30 +57,9 @@ class NursingStationController extends Controller
         return view('surgery-stations.nursing.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries'));
     }
 
-    public function show(Surgery $surgery)
+    public function show(Surgery $surgery, Request $request)
     {
-        // إنشاء محطة إذا لم تكن موجودة
-        if (!$surgery->nursingStation) {
-            $surgery->nursingStation()->create([
-                'status' => 'pending',
-            ]);
-        }
-
-        $surgery->load([
-            'patient.user', 
-            'doctor.user', 
-            'nursingStation.nurse', 
-            'surgeryTreatments.administeredBy',
-            'preOpResidentStation.followUps.resident.user',
-            'preOpResidentStation.readings.resident.user',
-            'postOpResidentStation.followUps.resident.user',
-            'postOpResidentStation.readings.resident.user',
-            'residentStationFollowUps',
-        ]);
-        
-        $nurses = User::role('nurse')->where('is_active', true)->get();
-
-        return view('surgery-stations.nursing.show', compact('surgery', 'nurses'));
+        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -113,11 +91,11 @@ class NursingStationController extends Controller
 
         $intake = ($validated['intake_iv_fluids'] ?? 0) + ($validated['intake_oral'] ?? 0) + ($validated['intake_blood'] ?? 0);
         $output = ($validated['output_urine'] ?? 0) + ($validated['output_drain'] ?? 0) + ($validated['output_gtube_ng'] ?? 0) + ($validated['output_vomiting'] ?? 0) + ($validated['output_stool'] ?? 0);
-        
+
         $anyFluids = isset($validated['intake_iv_fluids']) || isset($validated['intake_oral']) || isset($validated['intake_blood']) ||
                      isset($validated['output_urine']) || isset($validated['output_drain']) || isset($validated['output_gtube_ng']) ||
                      isset($validated['output_vomiting']) || isset($validated['output_stool']);
-                     
+
         $validated['fluid_balance'] = $anyFluids ? ($intake - $output) : null;
 
         $user = Auth::user();
@@ -126,7 +104,7 @@ class NursingStationController extends Controller
         }
 
         $station = $surgery->nursingStation;
-        if (!$station) {
+        if (! $station) {
             $station = $surgery->nursingStation()->create([
                 'status' => 'in_progress',
                 'started_at' => now(),
@@ -143,11 +121,11 @@ class NursingStationController extends Controller
             'vital_signs' => $validated['vital_signs'] ?? (
                 (($validated['bp'] ?? null) || ($validated['temp'] ?? null) || ($validated['pr'] ?? null) || ($validated['rr'] ?? null) || ($validated['spo2'] ?? null))
                 ? implode(' | ', array_filter([
-                    ($validated['bp'] ?? null) ? "ضغط الدم: " . $validated['bp'] : null,
-                    ($validated['temp'] ?? null) ? "الحرارة: " . $validated['temp'] : null,
-                    ($validated['pr'] ?? null) ? "النبض: " . $validated['pr'] : null,
-                    ($validated['rr'] ?? null) ? "التنفس: " . $validated['rr'] : null,
-                    ($validated['spo2'] ?? null) ? "الأكسجين: " . $validated['spo2'] : null,
+                    ($validated['bp'] ?? null) ? 'ضغط الدم: '.$validated['bp'] : null,
+                    ($validated['temp'] ?? null) ? 'الحرارة: '.$validated['temp'] : null,
+                    ($validated['pr'] ?? null) ? 'النبض: '.$validated['pr'] : null,
+                    ($validated['rr'] ?? null) ? 'التنفس: '.$validated['rr'] : null,
+                    ($validated['spo2'] ?? null) ? 'الأكسجين: '.$validated['spo2'] : null,
                 ]))
                 : null
             ),
@@ -190,17 +168,17 @@ class NursingStationController extends Controller
         }
         if (isset($changes['ملاحظات تمريض'])) {
             $v = $changes['ملاحظات تمريض'];
-            $changes['ملاحظات تمريض'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100) . '...' : $v;
+            $changes['ملاحظات تمريض'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100).'...' : $v;
         }
         if (isset($changes['ملاحظات الخروج'])) {
             $v = $changes['ملاحظات الخروج'];
-            $changes['ملاحظات الخروج'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100) . '...' : $v;
+            $changes['ملاحظات الخروج'] = mb_strlen($v) > 100 ? mb_substr($v, 0, 100).'...' : $v;
         }
         // ──────────────────────────────────────────────────────────────────────
 
         // تحديث العلامات الحيوية في محطة المقيم (ما قبل أو ما بعد العملية حسب المرحلة الحالية)
         $currentStationName = $surgery->getCurrentStation();
-        $activeResidentStation = ($currentStationName === 'resident_pre_op' || !$surgery->postOpResidentStation)
+        $activeResidentStation = ($currentStationName === 'resident_pre_op' || ! $surgery->postOpResidentStation)
             ? $surgery->preOpResidentStation
             : $surgery->postOpResidentStation;
 
@@ -284,7 +262,7 @@ class NursingStationController extends Controller
         }
 
         // 2) إذا لم نجد مقيماً في المحطة النشطة، نبحث في محطات المقيم الأخرى
-        if ($recipients->isEmpty() || !$recipients->first()) {
+        if ($recipients->isEmpty() || ! $recipients->first()) {
             $allResidentStations = collect([$surgery->preOpResidentStation, $surgery->postOpResidentStation])
                 ->filter()
                 ->unique('id');
@@ -296,7 +274,7 @@ class NursingStationController extends Controller
         }
 
         // 3) إذا لم نجد مقيماً في أي محطة، نرسل لجميع المستخدمين بدور مقيم
-        if ($recipients->isEmpty() || !$recipients->first()) {
+        if ($recipients->isEmpty() || ! $recipients->first()) {
             $residentUsers = \App\Models\User::role('resident')->get();
             foreach ($residentUsers as $ru) {
                 $recipients->push($ru);
@@ -304,7 +282,7 @@ class NursingStationController extends Controller
         }
 
         // 3.5) إذا لم نجد، نبحث عن أطباء من نوع resident (مقيم) ونجلب حساباتهم
-        if ($recipients->isEmpty() || !$recipients->first()) {
+        if ($recipients->isEmpty() || ! $recipients->first()) {
             $residentDoctors = \App\Models\Doctor::where('type', 'resident')
                 ->where('is_active', true)
                 ->with('user')
@@ -336,7 +314,7 @@ class NursingStationController extends Controller
     public function complete(Surgery $surgery)
     {
         $station = $surgery->nursingStation;
-        if (!$station) {
+        if (! $station) {
             return redirect()->back()->with('error', 'المحطة غير موجودة');
         }
 
@@ -352,11 +330,11 @@ class NursingStationController extends Controller
     public function storeFollowUp(Request $request, Surgery $surgery)
     {
         $currentStationName = $surgery->getCurrentStation();
-        $station = ($currentStationName === 'resident_pre_op' || !$surgery->postOpResidentStation)
+        $station = ($currentStationName === 'resident_pre_op' || ! $surgery->postOpResidentStation)
             ? $surgery->preOpResidentStation
             : $surgery->postOpResidentStation;
 
-        if (!$station) {
+        if (! $station) {
             return redirect()->back()->with('error', 'لا توجد محطة مقيم لتسجيل المتابعة.');
         }
 
@@ -373,7 +351,7 @@ class NursingStationController extends Controller
             'surgery_id' => $surgery->id,
             'resident_station_id' => $station->id,
             'resident_id' => null,
-            'resident_name' => $nurseName . ' (كادر التمريض)',
+            'resident_name' => $nurseName.' (كادر التمريض)',
             'follow_up_date' => $validated['follow_up_date'],
             'session' => $validated['session'],
             'notes' => $validated['notes'],

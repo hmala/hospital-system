@@ -12,7 +12,8 @@ class EmergencyLabRequestTest extends Model
     protected $fillable = [
         'emergency_lab_request_id',
         'lab_test_id',
-        'result'
+        'result',
+        'image_path',
     ];
 
     public function emergencyLabRequest()

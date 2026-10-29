@@ -309,22 +309,19 @@
                                             @endif
                                         </td>
                                         <td class="text-center">
-                                            @if($emergencyRequest->status == 'pending')
-                                                <form action="{{ route('staff.emergency-lab.start', $emergencyRequest) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-primary fw-bold shadow-sm px-3">
-                                                        <i class="fas fa-play me-1"></i> بدء الفحص
-                                                    </button>
-                                                </form>
-                                            @elseif($emergencyRequest->status == 'in_progress')
-                                                <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#completeEmergencyLabModal{{ $emergencyRequest->id }}">
-                                                    <i class="fas fa-check me-1"></i> إدخال النتائج
-                                                </button>
-                                            @else
-                                                <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-sm" target="_blank">
-                                                    <i class="fas fa-print me-1"></i> طباعة
+                                            <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                                <a href="{{ route('staff.emergency-lab.show', $emergencyRequest) }}" class="btn btn-sm btn-primary fw-bold shadow-xs px-2.5 py-1" title="معاينة وإدخال نتائج الفحص">
+                                                    <i class="fas fa-microscope me-1"></i> {{ $emCompleted ? 'معاينة' : 'إدخال النتائج' }}
                                                 </a>
-                                            @endif
+                                                <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة التقرير">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                @if($emergencyRequest->getPatientPhone())
+                                                    <a href="{{ $emergencyRequest->getWhatsAppShareUrl() }}" target="_blank" class="btn btn-sm text-white fw-bold px-2 py-1 shadow-xs" style="background-color: #25d366;" title="إرسال عبر واتساب">
+                                                        <i class="fab fa-whatsapp"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

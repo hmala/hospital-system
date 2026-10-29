@@ -1,19 +1,16 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use App\Events\SurgeryLabTestUpdated;
-use App\Models\Request as MedicalRequest;
 use App\Models\LabResult;
 use App\Models\LabTest;
-use App\Models\Surgery;
-use App\Models\SurgeryLabTest;
-use App\Models\SurgeryRadiologyTest;
 use App\Models\RadiologyType;
+use App\Models\Request as MedicalRequest;
+use App\Models\Surgery;
 use Illuminate\Http\Request as HttpRequest;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StaffRequestController extends Controller
 {
@@ -22,7 +19,7 @@ class StaffRequestController extends Controller
      */
     private function determineResultStatus($value, $testName): string
     {
-        if (!$value) {
+        if (! $value) {
             return 'normal';
         }
 
@@ -30,27 +27,34 @@ class StaffRequestController extends Controller
         $value = floatval($value);
 
         if (strpos($testName, 'سكر') !== false || strpos($testName, 'glucose') !== false) {
-            if ($value < 70) return 'low';
-            if ($value > 140) return 'high';
-        }
-        elseif (strpos($testName, 'ضغط') !== false || strpos($testName, 'pressure') !== false) {
-            if ($value > 140) return 'high';
-        }
-        elseif (strpos($testName, 'كوليسترول') !== false || strpos($testName, 'cholesterol') !== false) {
-            if ($value > 200) return 'high';
+            if ($value < 70) {
+                return 'low';
+            }
+            if ($value > 140) {
+                return 'high';
+            }
+        } elseif (strpos($testName, 'ضغط') !== false || strpos($testName, 'pressure') !== false) {
+            if ($value > 140) {
+                return 'high';
+            }
+        } elseif (strpos($testName, 'كوليسترول') !== false || strpos($testName, 'cholesterol') !== false) {
+            if ($value > 200) {
+                return 'high';
+            }
         }
 
         return 'normal';
     }
+
     public function index($type = null)
     {
         $user = Auth::user();
 
         // إعادة التوجيه للصفحات الجديدة المخصصة
-        if ($user->hasRole('lab_staff') && !$user->hasRole('admin')) {
+        if ($user->hasRole('lab_staff') && ! $user->hasRole('admin')) {
             return redirect()->route('lab.index');
         }
-        if ($user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']) && !$user->hasRole('admin')) {
+        if ($user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general']) && ! $user->hasRole('admin')) {
             return redirect()->route('radiology-staff.index');
         }
 
@@ -81,11 +85,11 @@ class StaffRequestController extends Controller
 
         // فلترة الطلبات حسب النوع المسموح (تشمل مصرف الدم القديم في حالة lab.details.blood_bank)
         $query = MedicalRequest::with(['visit.patient.user', 'visit.doctor.user'])
-            ->where(function($q) use ($allowedTypes) {
+            ->where(function ($q) use ($allowedTypes) {
                 $q->whereIn('type', $allowedTypes);
 
                 if (in_array('lab', $allowedTypes)) {
-                    $q->orWhere(function($inner) {
+                    $q->orWhere(function ($inner) {
                         $inner->where('type', 'lab')
                             ->whereJsonContains('details->blood_bank', true);
                     });
@@ -97,12 +101,12 @@ class StaffRequestController extends Controller
         if ($type && in_array($type, $allowedTypes)) {
             if ($type === 'lab') {
                 // لعرض تحاليل + طلبات مصرف الدم ضمن نفس تبويب المختبر عند اختيار lab
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->whereIn('type', ['lab', 'blood_bank'])
-                      ->orWhere(function($inner) {
-                          $inner->where('type', 'lab')
+                        ->orWhere(function ($inner) {
+                            $inner->where('type', 'lab')
                                 ->whereJsonContains('details->blood_bank', true);
-                      });
+                        });
                 });
             } elseif ($type === 'blood_bank') {
                 // عرض طلبات مصرف الدم المخصصة
@@ -144,10 +148,21 @@ class StaffRequestController extends Controller
     public function printEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view lab tests')) {
+        if (! $user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view lab tests')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
-        $emergencyLab->load(['patient.user', 'labTests', 'requestTests.labTest']);
+        $emergencyLab->load([
+            'emergency.doctor.user',
+            'emergency.patient.user',
+            'patient.user',
+            'labTests.references',
+            'labTests.subTests',
+            'requestTests.labTest.references',
+            'requestTests.labTest.subTests',
+            'performedByUser',
+            'verifiedByUser',
+        ]);
+
         return view('staff.requests.emergency-lab-print', compact('emergencyLab'));
     }
 
@@ -170,13 +185,13 @@ class StaffRequestController extends Controller
         if ($user->hasRole('emergency_staff')) {
             $allowedTypes[] = 'nursing';
         }
-        
+
         // admin يستطيع رؤية كل شيء
         if ($user->hasRole(['admin', 'receptionist', 'doctor'])) {
             $allowedTypes = ['lab', 'radiology', 'pharmacy', 'blood_bank', 'nursing'];
         }
 
-        if (!in_array($request->type, $allowedTypes)) {
+        if (! in_array($request->type, $allowedTypes)) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -219,7 +234,7 @@ class StaffRequestController extends Controller
             'request_type' => $request->type,
             'visit_id' => $request->visit_id,
             'has_tests' => $httpRequest->has('tests'),
-            'has_test_results' => $httpRequest->has('test_results')
+            'has_test_results' => $httpRequest->has('test_results'),
         ]);
 
         // تحميل النموذج مع العلاقات
@@ -231,7 +246,7 @@ class StaffRequestController extends Controller
             if (is_string($details)) {
                 $details = json_decode($details, true) ?? [];
             }
-            if (!is_array($details)) {
+            if (! is_array($details)) {
                 $details = [];
             }
             // دعم اختيار باقة: إذا استلمنا package_id نترجمها إلى lab_test_ids ونحفظ بيانات الباقة وسعرها
@@ -243,9 +258,9 @@ class StaffRequestController extends Controller
                     $packageTests = $package ? $package->labTests()->pluck('lab_tests.id')->toArray() : [];
                     if ($package) {
                         $details['package_name'] = $package->name;
-                        $details['package_price'] = (float)$package->price;
+                        $details['package_price'] = (float) $package->price;
                         $details['package_test_ids'] = $packageTests;
-                        $request->total_amount = (float)$package->price;
+                        $request->total_amount = (float) $package->price;
                     }
                 } catch (\Exception $e) {
                     $packageTests = [];
@@ -259,18 +274,18 @@ class StaffRequestController extends Controller
             $details['services_selected_at'] = now()->toDateTimeString();
             $details['services_selected_by'] = auth()->id();
             $details['service_selection_type'] = $httpRequest->service_selection_type ?? ($httpRequest->package_id ? 'package' : 'general');
-            
+
             $request->details = $details;
             $request->status = 'pending';
             $request->payment_status = 'pending';
             $request->save();
-            
+
             // تحديث حالة الزيارة
             $request->visit->status = 'pending_payment';
             $request->visit->save();
 
             // تسجيل استخدام التحاليل المختارة
-            if (!empty($details['lab_test_ids'])) {
+            if (! empty($details['lab_test_ids'])) {
                 foreach ($details['lab_test_ids'] as $labTestId) {
                     \App\Models\UserLabTestStat::recordUsage(auth()->id(), (int) $labTestId);
                 }
@@ -279,7 +294,7 @@ class StaffRequestController extends Controller
             Log::info('تم تحديد الخدمات المطلوبة (مختبر)', [
                 'request_id' => $request->id,
                 'lab_test_ids' => $httpRequest->lab_test_ids,
-                'selected_by' => auth()->user()->name
+                'selected_by' => auth()->user()->name,
             ]);
 
             return redirect()
@@ -289,7 +304,7 @@ class StaffRequestController extends Controller
 
         // حفظ بيانات مصرف الدم
         $isBloodBankRequest = $request->type === 'blood_bank';
-        if (!$isBloodBankRequest) {
+        if (! $isBloodBankRequest) {
             $details = $request->details;
             if (is_string($details)) {
                 $details = json_decode($details, true) ?: [];
@@ -355,7 +370,7 @@ class StaffRequestController extends Controller
             $request->save();
 
             return redirect()->route('staff.requests.show', $request)
-                        ->with('success', 'تم حفظ بيانات مصرف الدم بنجاح');
+                ->with('success', 'تم حفظ بيانات مصرف الدم بنجاح');
         }
 
         // حفظ اختيار خدمات الأشعة (للطلبات pending_service_selection)
@@ -364,20 +379,20 @@ class StaffRequestController extends Controller
             if (is_string($details)) {
                 $details = json_decode($details, true) ?? [];
             }
-            if (!is_array($details)) {
+            if (! is_array($details)) {
                 $details = [];
             }
-            
+
             $details['radiology_type_ids'] = $httpRequest->radiology_type_ids;
             $details['services_selected'] = true;
             $details['services_selected_at'] = now()->toDateTimeString();
             $details['services_selected_by'] = auth()->id();
-            
+
             $request->details = $details;
             $request->status = 'pending';
             $request->payment_status = 'pending';
             $request->save();
-            
+
             // تحديث حالة الزيارة
             $request->visit->status = 'pending_payment';
             $request->visit->save();
@@ -385,7 +400,7 @@ class StaffRequestController extends Controller
             Log::info('تم تحديد الخدمات المطلوبة (أشعة)', [
                 'request_id' => $request->id,
                 'radiology_type_ids' => $httpRequest->radiology_type_ids,
-                'selected_by' => auth()->user()->name
+                'selected_by' => auth()->user()->name,
             ]);
 
             return redirect()
@@ -400,10 +415,10 @@ class StaffRequestController extends Controller
             if (is_string($details)) {
                 $details = json_decode($details, true) ?? [];
             }
-            if (!is_array($details)) {
+            if (! is_array($details)) {
                 $details = [];
             }
-            
+
             $details['tests'] = $httpRequest->tests;
             $request->details = $details;
             $request->status = 'in_progress';
@@ -412,7 +427,7 @@ class StaffRequestController extends Controller
             Log::info('تم حفظ التحاليل المختارة', [
                 'request_id' => $request->id,
                 'tests_count' => count($httpRequest->tests),
-                'tests' => $httpRequest->tests
+                'tests' => $httpRequest->tests,
             ]);
 
             return redirect()
@@ -424,11 +439,11 @@ class StaffRequestController extends Controller
         if ($httpRequest->has('test_results') && is_array($httpRequest->test_results)) {
             $savedResults = 0;
             $errors = [];
-            
+
             Log::info('بدء حفظ نتائج التحاليل', [
                 'request_id' => $request->id,
                 'test_results_count' => count($httpRequest->test_results),
-                'visit_id' => $request->visit_id
+                'visit_id' => $request->visit_id,
             ]);
 
             // حذف النتائج السابقة لهذا الطلب
@@ -438,19 +453,19 @@ class StaffRequestController extends Controller
             if (is_string($details)) {
                 $details = json_decode($details, true) ?? [];
             }
-            if (!is_array($details)) {
+            if (! is_array($details)) {
                 $details = [];
             }
 
             $sourceType = 'general';
             $packageId = null;
-            if (!empty($details['package_id'])) {
+            if (! empty($details['package_id'])) {
                 $sourceType = 'package';
                 $packageId = $details['package_id'];
             }
 
             foreach ($httpRequest->test_results as $key => $data) {
-                if (!empty($data['value'])) {
+                if (! empty($data['value'])) {
                     try {
                         $testName = $data['test_name'] ?? $key;
                         $parentTestName = $data['parent_test_name'] ?? null;
@@ -459,14 +474,14 @@ class StaffRequestController extends Controller
                         $unit = $data['unit'] ?? '';
                         $refRange = $data['reference_range'] ?? ((new LabResult)->getReferenceRange($testName));
                         $status = (new LabResult)->determineStatus($data['value'], $testName, $refRange);
-                        if (!empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
+                        if (! empty($data['status']) && in_array($data['status'], ['high', 'low', 'abnormal', 'positive'])) {
                             $status = $data['status'];
                         }
 
-                        if (!$labTestId && $parentTestName) {
+                        if (! $labTestId && $parentTestName) {
                             $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();
                             $labTestId = $parentTest?->id;
-                        } elseif (!$labTestId) {
+                        } elseif (! $labTestId) {
                             if (isset($details['lab_test_ids'][$testName])) {
                                 $labTestId = $details['lab_test_ids'][$testName];
                             } else {
@@ -492,15 +507,15 @@ class StaffRequestController extends Controller
                         ]);
 
                         Log::info("تم حفظ نتيجة التحليل: {$testName}", [
-                            'lab_result_id' => $labResult->id
+                            'lab_result_id' => $labResult->id,
                         ]);
 
                         $savedResults++;
                     } catch (\Exception $e) {
                         Log::error("خطأ في حفظ نتيجة التحليل: {$testName}", [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
-                        $errors[] = "خطأ في حفظ {$testName}: " . $e->getMessage();
+                        $errors[] = "خطأ في حفظ {$testName}: ".$e->getMessage();
                     }
                 }
             }
@@ -509,7 +524,7 @@ class StaffRequestController extends Controller
             $request->status = 'completed';
             $request->result = json_encode([
                 'test_results' => $httpRequest->test_results,
-                'notes' => $httpRequest->result_notes ?? ''
+                'notes' => $httpRequest->result_notes ?? '',
             ]);
             $request->save();
 
@@ -518,29 +533,29 @@ class StaffRequestController extends Controller
             $request->load('visit');
 
             // تحديث حالة الزيارة إلى completed فقط للزيارات المباشرة للمختبر التي ليس لها طبيب استشاري
-            $isDoctorVisit = $request->visit && (!empty($request->visit->doctor_id) || !empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
-            if ($request->visit && !$isDoctorVisit) {
+            $isDoctorVisit = $request->visit && (! empty($request->visit->doctor_id) || ! empty($request->visit->appointment_id) || $request->visit->visit_type === 'checkup');
+            if ($request->visit && ! $isDoctorVisit) {
                 $allRequestsCompleted = $request->visit->requests()
                     ->where('id', '!=', $request->id)
                     ->where('status', '!=', 'completed')
                     ->count() === 0;
-                
+
                 if ($allRequestsCompleted) {
                     $request->visit->status = 'completed';
                     $request->visit->save();
                     Log::info('تم تحديث حالة الزيارة المباشرة إلى completed', [
-                        'visit_id' => $request->visit->id
+                        'visit_id' => $request->visit->id,
                     ]);
                 } else {
                     Log::info('لا تزال هناك طلبات غير مكتملة', [
                         'visit_id' => $request->visit->id,
-                        'pending_requests' => $request->visit->requests()->where('status', '!=', 'completed')->pluck('id')->toArray()
+                        'pending_requests' => $request->visit->requests()->where('status', '!=', 'completed')->pluck('id')->toArray(),
                     ]);
                 }
             }
 
             $message = "تم حفظ {$savedResults} نتيجة تحليل بنجاح في قاعدة البيانات";
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 $message .= ' مع بعض الأخطاء';
             }
 
@@ -558,13 +573,12 @@ class StaffRequestController extends Controller
         Log::info('بيانات التحديث المعدة', [
             'update_data' => $updateData,
             'http_request_status' => $httpRequest->status ?? 'null',
-            'current_request_status' => $request->status ?? 'null'
+            'current_request_status' => $request->status ?? 'null',
         ]);
 
         // التحقق من البيانات المرسلة بشكل مفصل
 
-    
-// ...existing code...
+        // ...existing code...
 
         $request->update($updateData);
 
@@ -576,7 +590,7 @@ class StaffRequestController extends Controller
             'updated_result' => $request->result ?? 'null',
             'update_data_used' => $updateData,
             'update_result' => $request->wasChanged() ? 'changed' : 'not changed',
-            'changed_fields' => $request->getChanges()
+            'changed_fields' => $request->getChanges(),
         ]);
 
         return redirect()->back()->with('success', 'تم تحديث حالة الطلب بنجاح');
@@ -591,14 +605,14 @@ class StaffRequestController extends Controller
         \Log::info('محاولة الوصول لإنشاء زيارة مختبرية', [
             'user_id' => $user->id,
             'user_role' => $user->role,
-            'user_name' => $user->name
+            'user_name' => $user->name,
         ]);
 
         // التحقق من الصلاحية (موظف استقبال أو أدمن أو موظف مختبر أو أي موظف)
-        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
             \Log::warning('تم رفض الوصول لإنشاء زيارة مختبرية', [
                 'user_id' => $user->id,
-                'roles' => $user->roles->pluck('name')->toArray()
+                'roles' => $user->roles->pluck('name')->toArray(),
             ]);
             abort(403, 'غير مصرح لك بإنشاء زيارات مختبرية');
         }
@@ -612,9 +626,9 @@ class StaffRequestController extends Controller
     public function storeLabVisit(HttpRequest $request)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'receptionist', 'lab_staff', 'radiology_staff', 'pharmacy_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بإنشاء زيارات مختبرية');
         }
 
@@ -635,7 +649,7 @@ class StaffRequestController extends Controller
             'visit_type' => 'lab',
             'chief_complaint' => $request->chief_complaint,
             'status' => 'in_progress',
-            'notes' => 'زيارة مختبرية مباشرة - ' . now()->format('Y-m-d H:i:s')
+            'notes' => 'زيارة مختبرية مباشرة - '.now()->format('Y-m-d H:i:s'),
         ]);
 
         // إنشاء طلب مختبر فارغ (سيتم تحديد التحاليل في المختبر)
@@ -647,8 +661,8 @@ class StaffRequestController extends Controller
             'details' => [
                 'direct_lab_visit' => true,
                 'tests_to_be_selected' => true,
-                'priority' => 'normal'
-            ]
+                'priority' => 'normal',
+            ],
         ]);
 
         return redirect()->route('doctor.visits.index')
@@ -662,14 +676,14 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بإضافة تحاليل');
         }
 
         $httpRequest->validate([
-            'extra_lab_test_ids'   => 'nullable|array',
+            'extra_lab_test_ids' => 'nullable|array',
             'extra_lab_test_ids.*' => 'integer|exists:lab_tests,id',
-            'package_id'           => 'nullable|integer|exists:packages,id',
+            'package_id' => 'nullable|integer|exists:packages,id',
         ]);
 
         $extraTestIds = array_map('intval', $httpRequest->extra_lab_test_ids ?? []);
@@ -691,7 +705,7 @@ class StaffRequestController extends Controller
         if (is_string($details)) {
             $details = json_decode($details, true) ?? [];
         }
-        if (!is_array($details)) {
+        if (! is_array($details)) {
             $details = [];
         }
 
@@ -708,7 +722,7 @@ class StaffRequestController extends Controller
             $details['lab_test_ids'] = array_values(array_unique(array_merge($existingIds, $extraTestIds)));
 
             $extraTestNames = \App\Models\LabTest::whereIn('id', $extraTestIds)->pluck('name')->toArray();
-            $existingTests = (array)($details['tests'] ?? []);
+            $existingTests = (array) ($details['tests'] ?? []);
             $details['tests'] = array_values(array_unique(array_merge($existingTests, $extraTestNames)));
 
             $details['services_selected'] = true;
@@ -736,21 +750,21 @@ class StaffRequestController extends Controller
         }
 
         $newRequest = \App\Models\Request::create([
-            'visit_id'       => $request->visit_id,
-            'type'           => 'lab',
-            'description'    => 'تحاليل إضافية - مضافة من طلب #' . $request->id,
-            'status'         => 'pending',
+            'visit_id' => $request->visit_id,
+            'type' => 'lab',
+            'description' => 'تحاليل إضافية - مضافة من طلب #'.$request->id,
+            'status' => 'pending',
             'payment_status' => 'pending',
-            'details'        => array_merge([
-                'lab_test_ids'      => $extraTestIds,
-                'tests'             => \App\Models\LabTest::whereIn('id', $extraTestIds)->pluck('name')->toArray(),
+            'details' => array_merge([
+                'lab_test_ids' => $extraTestIds,
+                'tests' => \App\Models\LabTest::whereIn('id', $extraTestIds)->pluck('name')->toArray(),
                 'services_selected' => true,
-                'added_from_request'=> $request->id,
-                'added_by'          => $user->id,
-                'added_at'          => now()->toDateTimeString(),
+                'added_from_request' => $request->id,
+                'added_by' => $user->id,
+                'added_at' => now()->toDateTimeString(),
             ], $package ? [
-                'package_id'    => $package->id,
-                'package_name'  => $package->name,
+                'package_id' => $package->id,
+                'package_name' => $package->name,
                 'package_price' => $package->price,
                 'service_selection_type' => 'package',
             ] : []),
@@ -763,9 +777,9 @@ class StaffRequestController extends Controller
 
         Log::info('تم إنشاء طلب تحاليل إضافية', [
             'original_request_id' => $request->id,
-            'new_request_id'      => $newRequest->id,
-            'added_tests'         => $extraTestIds,
-            'by_user'             => $user->id,
+            'new_request_id' => $newRequest->id,
+            'added_tests' => $extraTestIds,
+            'by_user' => $user->id,
         ]);
 
         return redirect()->route('lab.show', $newRequest)
@@ -780,7 +794,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحيات
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بحذف التحاليل');
         }
 
@@ -799,7 +813,7 @@ class StaffRequestController extends Controller
         if (is_string($details)) {
             $details = json_decode($details, true) ?? [];
         }
-        if (!is_array($details)) {
+        if (! is_array($details)) {
             $details = [];
         }
 
@@ -809,7 +823,7 @@ class StaffRequestController extends Controller
         if (isset($details['lab_test_ids']) && is_array($details['lab_test_ids'])) {
             $prevCount = count($details['lab_test_ids']);
             $details['lab_test_ids'] = array_values(
-                array_filter($details['lab_test_ids'], fn($id) => (int)$id !== (int)$labTest->id)
+                array_filter($details['lab_test_ids'], fn ($id) => (int) $id !== (int) $labTest->id)
             );
             if (count($details['lab_test_ids']) !== $prevCount) {
                 $modified = true;
@@ -820,11 +834,12 @@ class StaffRequestController extends Controller
         if (isset($details['tests']) && is_array($details['tests'])) {
             $prevCount = count($details['tests']);
             $details['tests'] = array_values(
-                array_filter($details['tests'], function($t) use ($labTest) {
-                    $tName = trim(strtolower((string)$t));
-                    $isMatch = $tName === trim(strtolower($labTest->name)) 
+                array_filter($details['tests'], function ($t) use ($labTest) {
+                    $tName = trim(strtolower((string) $t));
+                    $isMatch = $tName === trim(strtolower($labTest->name))
                         || ($labTest->code && $tName === trim(strtolower($labTest->code)));
-                    return !$isMatch;
+
+                    return ! $isMatch;
                 })
             );
             if (count($details['tests']) !== $prevCount) {
@@ -832,7 +847,7 @@ class StaffRequestController extends Controller
             }
         }
 
-        if (!$modified) {
+        if (! $modified) {
             return redirect()->back()->with('error', 'لم يتم العثور على التحليل في الطلب');
         }
 
@@ -876,7 +891,7 @@ class StaffRequestController extends Controller
     public function appendRadiologyTypes(HttpRequest $httpRequest, MedicalRequest $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
             abort(403, 'غير مصرح لك بإضافة فحوصات أشعة');
         }
 
@@ -888,16 +903,18 @@ class StaffRequestController extends Controller
         ]);
 
         $inputIds = $httpRequest->extra_radiology_type_ids ?? $httpRequest->radiology_type_ids ?? [];
-        $extraTypeIds = array_map('intval', (array)$inputIds);
+        $extraTypeIds = array_map('intval', (array) $inputIds);
         if (empty($extraTypeIds)) {
             return redirect()->back()->with('error', 'يرجى اختيار فحص أشعة واحد على الأقل.');
         }
 
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
 
         if ($request->payment_status !== 'paid') {
-            $prevIds = array_map('intval', (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
+            $prevIds = array_map('intval', (array) ($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
             $mergedIds = array_values(array_unique(array_merge($prevIds, $extraTypeIds)));
 
             $details['radiology_type_ids'] = $mergedIds;
@@ -915,7 +932,7 @@ class StaffRequestController extends Controller
                     $names[] = $target ? "{$rt->name} [العضو: {$target}]" : $rt->name;
                 }
             }
-            $details['description'] = !empty($names) ? ('طلب أشعة: ' . implode(', ', $names)) : $request->description;
+            $details['description'] = ! empty($names) ? ('طلب أشعة: '.implode(', ', $names)) : $request->description;
             $request->description = $details['description'];
 
             $request->details = $details;
@@ -946,7 +963,7 @@ class StaffRequestController extends Controller
     public function removeRadiologyType(MedicalRequest $request, RadiologyType $radiologyType)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'radiology_staff', 'radiology_general', 'radiology_ultrasound', 'radiology_mri', 'radiology_echo', 'doctor'])) {
             abort(403, 'غير مصرح لك بحذف فحوصات الأشعة');
         }
 
@@ -959,16 +976,18 @@ class StaffRequestController extends Controller
         }
 
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
-        if (!is_array($details)) $details = [];
+        if (! is_array($details)) {
+            $details = [];
+        }
 
-        $typeIds = array_map('intval', (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
-        $filteredIds = array_values(array_filter($typeIds, fn($id) => (int)$id !== (int)$radiologyType->id));
+        $typeIds = array_map('intval', (array) ($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []));
+        $filteredIds = array_values(array_filter($typeIds, fn ($id) => (int) $id !== (int) $radiologyType->id));
 
         $details['radiology_type_ids'] = $filteredIds;
         $details['radiology_types'] = $filteredIds;
 
-        if (isset($details['radiology_targets'][(string)$radiologyType->id])) {
-            unset($details['radiology_targets'][(string)$radiologyType->id]);
+        if (isset($details['radiology_targets'][(string) $radiologyType->id])) {
+            unset($details['radiology_targets'][(string) $radiologyType->id]);
         }
         if (isset($details['radiology_targets'][$radiologyType->id])) {
             unset($details['radiology_targets'][$radiologyType->id]);
@@ -991,7 +1010,7 @@ class StaffRequestController extends Controller
                     $names[] = $target ? "{$rt->name} [العضو: {$target}]" : $rt->name;
                 }
             }
-            $details['description'] = !empty($names) ? ('طلب أشعة: ' . implode(', ', $names)) : 'طلب أشعة';
+            $details['description'] = ! empty($names) ? ('طلب أشعة: '.implode(', ', $names)) : 'طلب أشعة';
             $request->description = $details['description'];
         }
 
@@ -1021,7 +1040,7 @@ class StaffRequestController extends Controller
             $decoded = json_decode($requestDetails, true);
             $requestDetails = is_array($decoded) ? $decoded : [];
         }
-        if (!is_array($requestDetails)) {
+        if (! is_array($requestDetails)) {
             $requestDetails = [];
         }
 
@@ -1043,12 +1062,12 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحية
-        if (!$user->hasAnyRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بالوصول إلى طلبات المختبر للعمليات');
         }
 
         // منع الأطباء الاستشاريين من الوصول إلا إذا كانوا موظفي مختبر أيضاً
-        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        if (! $user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 
@@ -1059,35 +1078,35 @@ class StaffRequestController extends Controller
         // البحث
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('patient.user', function($patientQuery) use ($search) {
-                    $patientQuery->where('name', 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('patient.user', function ($patientQuery) use ($search) {
+                    $patientQuery->where('name', 'like', '%'.$search.'%');
                 })
-                ->orWhere('surgery_type', 'like', '%' . $search . '%')
-                ->orWhereHas('labTests.labTest', function($labTestQuery) use ($search) {
-                    $labTestQuery->where('name', 'like', '%' . $search . '%')
-                                 ->orWhere('category', 'like', '%' . $search . '%');
-                });
+                    ->orWhere('surgery_type', 'like', '%'.$search.'%')
+                    ->orWhereHas('labTests.labTest', function ($labTestQuery) use ($search) {
+                        $labTestQuery->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('category', 'like', '%'.$search.'%');
+                    });
             });
         }
 
         // فلترة حسب الحالة لـ surgery_lab_tests
         if ($request->filled('status')) {
             $status = $request->status;
-            $query->whereHas('labTests', function($q) use ($status) {
+            $query->whereHas('labTests', function ($q) use ($status) {
                 $q->where('status', $status);
             });
         }
 
         // فلترة حسب التاريخ لـ surgery_lab_tests
         if ($request->filled('date_from')) {
-            $query->whereHas('labTests', function($q) use ($request) {
+            $query->whereHas('labTests', function ($q) use ($request) {
                 $q->whereDate('created_at', '>=', $request->date_from);
             });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereHas('labTests', function($q) use ($request) {
+            $query->whereHas('labTests', function ($q) use ($request) {
                 $q->whereDate('created_at', '<=', $request->date_to);
             });
         }
@@ -1095,23 +1114,23 @@ class StaffRequestController extends Controller
         $surgeries = $query->orderBy('id', 'desc')->paginate(20)->appends($request->query());
 
         // حساب إحصائيات الفحوصات المطابقة للتصفية
-        $statsQuery = \App\Models\SurgeryLabTest::whereHas('surgery', function($q) use ($request) {
+        $statsQuery = \App\Models\SurgeryLabTest::whereHas('surgery', function ($q) use ($request) {
             if ($request->filled('search')) {
                 $search = $request->search;
-                $q->where(function($sq) use ($search) {
-                    $sq->whereHas('patient.user', function($pq) use ($search) {
-                        $pq->where('name', 'like', '%' . $search . '%');
+                $q->where(function ($sq) use ($search) {
+                    $sq->whereHas('patient.user', function ($pq) use ($search) {
+                        $pq->where('name', 'like', '%'.$search.'%');
                     })
-                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+                        ->orWhere('surgery_type', 'like', '%'.$search.'%');
                 });
             }
         });
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $statsQuery->where(function($q) use ($search) {
-                $q->whereHas('labTest', function($ltq) use ($search) {
-                    $ltq->where('name', 'like', '%' . $search . '%');
+            $statsQuery->where(function ($q) use ($search) {
+                $q->whereHas('labTest', function ($ltq) use ($search) {
+                    $ltq->where('name', 'like', '%'.$search.'%');
                 });
             });
         }
@@ -1138,11 +1157,11 @@ class StaffRequestController extends Controller
     public function surgeryLabTestsSelection(HttpRequest $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض ذلك');
         }
 
-        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        if (! $user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض هذه القائمة');
         }
 
@@ -1154,11 +1173,11 @@ class StaffRequestController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('patient.user', function($patientQuery) use ($search) {
-                        $patientQuery->where('name', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('patient.user', function ($patientQuery) use ($search) {
+                    $patientQuery->where('name', 'like', '%'.$search.'%');
+                })
+                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
             });
         }
 
@@ -1173,20 +1192,20 @@ class StaffRequestController extends Controller
     public function createSurgeryLabTestSelection(Surgery $surgery)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بهذه العملية');
         }
 
-        if (!$user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        if (! $user->hasRole('lab_staff') && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بهذه العملية');
         }
 
         $test = $surgery->labTests()->whereNull('lab_test_id')->first();
-        if (!$test) {
+        if (! $test) {
             $test = $surgery->labTests()->create([
                 'lab_test_id' => null,
                 'status' => 'pending',
-                'payment_status' => 'pending'
+                'payment_status' => 'pending',
             ]);
         }
 
@@ -1199,7 +1218,7 @@ class StaffRequestController extends Controller
     public function surgeryRadiologyTestsSelection(HttpRequest $request)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض ذلك');
         }
 
@@ -1215,11 +1234,11 @@ class StaffRequestController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('patient.user', function($patientQuery) use ($search) {
-                        $patientQuery->where('name', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('surgery_type', 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('patient.user', function ($patientQuery) use ($search) {
+                    $patientQuery->where('name', 'like', '%'.$search.'%');
+                })
+                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
             });
         }
 
@@ -1234,7 +1253,7 @@ class StaffRequestController extends Controller
     public function createSurgeryRadiologyTestSelection(Surgery $surgery)
     {
         $user = Auth::user();
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بهذه العملية');
         }
 
@@ -1243,11 +1262,11 @@ class StaffRequestController extends Controller
         }
 
         $test = $surgery->radiologyTests()->whereNull('radiology_type_id')->first();
-        if (!$test) {
+        if (! $test) {
             $test = $surgery->radiologyTests()->create([
                 'radiology_type_id' => null,
                 'status' => 'pending',
-                'payment_status' => 'pending'
+                'payment_status' => 'pending',
             ]);
         }
 
@@ -1260,9 +1279,9 @@ class StaffRequestController extends Controller
     public function showSurgeryLabTest(\App\Models\SurgeryLabTest $test)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -1282,9 +1301,9 @@ class StaffRequestController extends Controller
     public function updateSurgeryLabTest(HttpRequest $request, \App\Models\SurgeryLabTest $test)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
         }
 
@@ -1307,7 +1326,7 @@ class StaffRequestController extends Controller
 
         // حفظ الملف إذا تم رفعه
         if ($request->hasFile('result_file')) {
-            $fileName = time() . '_' . $request->file('result_file')->getClientOriginalName();
+            $fileName = time().'_'.$request->file('result_file')->getClientOriginalName();
             $filePath = $request->file('result_file')->storeAs('surgery_lab_results', $fileName, 'public');
             $validated['result_file'] = $filePath;
         }
@@ -1331,9 +1350,9 @@ class StaffRequestController extends Controller
     public function selectTestsForSurgeryLabTest(HttpRequest $request, \App\Models\SurgeryLabTest $test)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
         }
 
@@ -1348,7 +1367,7 @@ class StaffRequestController extends Controller
         ]);
 
         $labTestIds = $validated['lab_test_ids'];
-        
+
         // حذف الطلب العام
         $surgery = $test->surgery;
         $test->delete();
@@ -1358,12 +1377,12 @@ class StaffRequestController extends Controller
             $surgery->labTests()->create([
                 'lab_test_id' => $labTestId,
                 'status' => 'pending',
-                'payment_status' => 'pending'
+                'payment_status' => 'pending',
             ]);
         }
 
         return redirect()->route('staff.surgery-lab-tests.index')
-            ->with('success', 'تم اختيار التحاليل بنجاح. عدد التحاليل: ' . count($labTestIds));
+            ->with('success', 'تم اختيار التحاليل بنجاح. عدد التحاليل: '.count($labTestIds));
     }
 
     /**
@@ -1372,9 +1391,9 @@ class StaffRequestController extends Controller
     public function updateAllSurgeryLabTests(HttpRequest $request, \App\Models\Surgery $surgery)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذه التحاليل');
         }
 
@@ -1397,11 +1416,11 @@ class StaffRequestController extends Controller
             if ($surgeryTest && $surgeryTest->surgery_id === $surgery->id) {
                 $surgeryTest->update([
                     'result' => $resultData['value'] ?? null,
-                    'status' => !empty($resultData['value']) ? 'completed' : 'pending',
-                    'completed_at' => !empty($resultData['value']) ? now() : null,
+                    'status' => ! empty($resultData['value']) ? 'completed' : 'pending',
+                    'completed_at' => ! empty($resultData['value']) ? now() : null,
                 ]);
-                
-                if (!empty($resultData['value'])) {
+
+                if (! empty($resultData['value'])) {
                     $completedCount++;
                 }
             }
@@ -1409,7 +1428,7 @@ class StaffRequestController extends Controller
 
         // حفظ الملاحظات على مستوى العملية (إذا كان هناك حقل في جدول surgeries)
         // يمكنك إضافة حقل lab_notes في جدول surgeries إذا أردت
-        
+
         return redirect()->back()->with('success', "تم حفظ النتائج بنجاح. عدد التحاليل المكتملة: {$completedCount} من {$surgery->labTests()->count()}");
     }
 
@@ -1421,7 +1440,7 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بطباعة هذا الطلب');
         }
 
@@ -1450,9 +1469,9 @@ class StaffRequestController extends Controller
     public function surgeryRadiologyTests(HttpRequest $request)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بالوصول إلى طلبات الأشعة للعمليات');
         }
 
@@ -1467,17 +1486,17 @@ class StaffRequestController extends Controller
         // البحث
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('surgery.patient.user', function($patientQuery) use ($search) {
-                    $patientQuery->where('name', 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('surgery.patient.user', function ($patientQuery) use ($search) {
+                    $patientQuery->where('name', 'like', '%'.$search.'%');
                 })
-                ->orWhereHas('surgery', function($surgeryQuery) use ($search) {
-                    $surgeryQuery->where('surgery_type', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('radiologyType', function($radiologyTypeQuery) use ($search) {
-                    $radiologyTypeQuery->where('name', 'like', '%' . $search . '%')
-                                      ->orWhere('category', 'like', '%' . $search . '%');
-                });
+                    ->orWhereHas('surgery', function ($surgeryQuery) use ($search) {
+                        $surgeryQuery->where('surgery_type', 'like', '%'.$search.'%');
+                    })
+                    ->orWhereHas('radiologyType', function ($radiologyTypeQuery) use ($search) {
+                        $radiologyTypeQuery->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('category', 'like', '%'.$search.'%');
+                    });
             });
         }
 
@@ -1506,9 +1525,9 @@ class StaffRequestController extends Controller
     public function showSurgeryRadiologyTest(\App\Models\SurgeryRadiologyTest $test)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بعرض هذا الطلب');
         }
 
@@ -1529,7 +1548,7 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بطباعة هذا الطلب');
         }
 
@@ -1552,9 +1571,9 @@ class StaffRequestController extends Controller
     public function updateSurgeryRadiologyTest(HttpRequest $request, \App\Models\SurgeryRadiologyTest $test)
     {
         $user = Auth::user();
-        
+
         // التحقق من الصلاحية
-        if (!$user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
             abort(403, 'غير مصرح لك بتحديث هذا الطلب');
         }
 
@@ -1573,7 +1592,7 @@ class StaffRequestController extends Controller
 
         // حفظ الملف إذا تم رفعه
         if ($request->hasFile('result_file')) {
-            $fileName = time() . '_' . $request->file('result_file')->getClientOriginalName();
+            $fileName = time().'_'.$request->file('result_file')->getClientOriginalName();
             $filePath = $request->file('result_file')->storeAs('surgery_radiology_results', $fileName, 'public');
             $validated['result_file'] = $filePath;
         }
@@ -1587,7 +1606,7 @@ class StaffRequestController extends Controller
 
         // رسالة نجاح مخصصة بناءً على نوع العملية
         $successMessage = 'تم تحديث الطلب بنجاح';
-        if ($request->filled('radiology_type_id') && !$test->wasChanged('result')) {
+        if ($request->filled('radiology_type_id') && ! $test->wasChanged('result')) {
             $successMessage = 'تم اختيار نوع الأشعة بنجاح';
         } elseif ($request->filled('result') || $request->hasFile('result_file')) {
             $successMessage = 'تم حفظ نتائج التصوير بنجاح';
@@ -1604,7 +1623,7 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
+        if (! $user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1621,7 +1640,7 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
+        if (! $user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view radiology')) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1640,12 +1659,12 @@ class StaffRequestController extends Controller
     ) {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && !$user->can('view emergencies') && !$user->can('view radiology')) {
+        if (! $user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view radiology')) {
             abort(403, 'غير مصرح لك بعرض هذا المرفق');
         }
 
         $reqType = $emergencyRadiology->requestTypes()->where('radiology_type_id', $typeId)->first();
-        if (!$reqType || empty($reqType->image_path)) {
+        if (! $reqType || empty($reqType->image_path)) {
             // التحقق من pivot مباشرة
             $pivotType = $emergencyRadiology->radiologyTypes()->where('radiology_type_id', $typeId)->first();
             $path = $pivotType?->pivot?->image_path;
@@ -1653,7 +1672,7 @@ class StaffRequestController extends Controller
             $path = $reqType->image_path;
         }
 
-        if (!$path) {
+        if (! $path) {
             abort(404, 'لا توجد صورة أو ملف مرفق لهذا الفحص');
         }
 
@@ -1661,7 +1680,7 @@ class StaffRequestController extends Controller
             return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
         }
 
-        $fullPath = storage_path('app/public/' . $path);
+        $fullPath = storage_path('app/public/'.$path);
         if (file_exists($fullPath)) {
             return response()->file($fullPath);
         }
@@ -1676,12 +1695,12 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
+        if (! $user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
         $emergencyRadiology->update([
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         return redirect()->back()->with('success', 'تم بدء العمل على طلب الأشعة');
@@ -1694,7 +1713,7 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
+        if (! $user->hasAnyRole(['radiology_staff', 'radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
@@ -1712,7 +1731,7 @@ class StaffRequestController extends Controller
 
                 if ($request->hasFile("images.$typeId")) {
                     $file = $request->file("images.$typeId");
-                    $fileName = time() . '_' . $typeId . '_' . $file->getClientOriginalName();
+                    $fileName = time().'_'.$typeId.'_'.$file->getClientOriginalName();
                     $filePath = $file->storeAs('emergency_radiology_results', $fileName, 'public');
                     $updateData['image_path'] = $filePath;
                 }
@@ -1726,10 +1745,50 @@ class StaffRequestController extends Controller
         $emergencyRadiology->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'notes' => $request->notes
+            'notes' => $request->notes,
         ]);
 
         return redirect()->back()->with('success', 'تم إكمال طلب الأشعة بنجاح');
+    }
+
+    /**
+     * عرض تفاصيل طلب تحاليل الطوارئ في محطة المختبر السريرية الموحدة
+     */
+    public function showEmergencyLab(\App\Models\EmergencyLabRequest $emergencyLab)
+    {
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view lab tests')) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        $emergencyLab->load([
+            'emergency.doctor.user',
+            'emergency.patient.user',
+            'patient.user',
+            'labTests.references',
+            'labTests.subTests',
+            'requestTests.labTest.references',
+            'requestTests.labTest.subTests',
+            'performedByUser',
+            'verifiedByUser',
+        ]);
+
+        $savedResults = [];
+        foreach ($emergencyLab->requestTests as $rt) {
+            $raw = $rt->result;
+            $data = is_string($raw) ? json_decode($raw, true) : $raw;
+            if (is_array($data)) {
+                $savedResults[$rt->lab_test_id] = $data;
+            } elseif (! empty($raw)) {
+                $savedResults[$rt->lab_test_id] = ['value' => (string) $raw];
+            }
+        }
+
+        $packages = \App\Models\Package::where('is_active', true)->with('labTests')->orderBy('name')->get();
+        $userGroups = \App\Models\UserLabTestGroup::where('user_id', $user->id)->with('labTests')->orderBy('name')->get();
+
+        return view('staff.requests.emergency-lab-show', compact('emergencyLab', 'savedResults', 'packages', 'userGroups'));
     }
 
     /**
@@ -1739,49 +1798,422 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole(['lab_staff', 'admin'])) {
+        if (! $user->hasRole(['lab_staff', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
         $emergencyLab->update([
-            'status' => 'in_progress'
+            'status' => 'in_progress',
+            'performed_by' => $emergencyLab->performed_by ?: $user->id,
         ]);
 
         return redirect()->back()->with('success', 'تم بدء العمل على طلب التحاليل');
     }
 
     /**
-     * إكمال طلب تحاليل من الطوارئ
+     * إكمال أو حفظ مسودة طلب تحاليل من الطوارئ مع المرفقات وحساب معادلات الدهون
      */
     public function completeEmergencyLab(HttpRequest $request, \App\Models\EmergencyLabRequest $emergencyLab)
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['lab_staff', 'admin'])) {
+        if (! $user->hasAnyRole(['lab_staff', 'admin'])) {
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
         $request->validate([
             'results' => 'nullable|array',
-            'notes' => 'nullable|string|max:1000',
+            'test_results' => 'nullable|array',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'test_attachments' => 'nullable|array',
+            'test_attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'remove_test_attachment' => 'nullable|array',
+            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'notes' => 'nullable|string|max:2000',
+            'result' => 'nullable|string|max:2000',
+            'action' => 'nullable|in:draft,complete',
+            'status' => 'nullable|string',
         ]);
 
-        if ($request->has('results')) {
-            foreach ($request->results as $testId => $result) {
-                $resultVal = is_array($result) ? json_encode($result, JSON_UNESCAPED_UNICODE) : $result;
-                $emergencyLab->requestTests()
-                    ->where('lab_test_id', $testId)
-                    ->update(['result' => $resultVal]);
+        $details = is_string($emergencyLab->details) ? (json_decode($emergencyLab->details, true) ?? []) : ($emergencyLab->details ?? []);
+        if (! is_array($details)) {
+            $details = [];
+        }
+
+        // معالجة المرفق العام
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $filename = time().'_em_lab_'.uniqid().'.'.$file->getClientOriginalExtension();
+            $path = $file->storeAs('emergency_lab_results', $filename, 'public');
+
+            $details['attachment'] = $path;
+            $details['attachment_name'] = $file->getClientOriginalName();
+            $details['attached_at'] = now()->toDateTimeString();
+        } elseif ($request->has('remove_attachment') && $request->remove_attachment == '1') {
+            if (! empty($details['attachment'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($details['attachment']);
+            }
+            unset($details['attachment'], $details['attachment_name'], $details['attached_at']);
+        }
+
+        // معالجة نتائج التحاليل من نمط test_results الموحد
+        if ($request->has('test_results') && is_array($request->test_results)) {
+            $incomingTestResults = $request->test_results;
+            $this->autoCalculateLipidOnTestResults($incomingTestResults);
+            $details['test_results'] = $incomingTestResults;
+
+            // تجميع النتائج وتحديث جدول emergency_lab_request_tests
+            foreach ($incomingTestResults as $key => $data) {
+                $testName = $data['test_name'] ?? $key;
+                $subTestId = $data['sub_test_id'] ?? null;
+                $labTestId = $data['lab_test_id'] ?? null;
+                $parentTestName = $data['parent_test_name'] ?? null;
+
+                if (! $labTestId && $parentTestName) {
+                    $parentTest = \App\Models\LabTest::where('name', $parentTestName)->first();
+                    $labTestId = $parentTest?->id;
+                } elseif (! $labTestId) {
+                    $directTest = \App\Models\LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                    $labTestId = $directTest?->id;
+                }
+
+                if ($labTestId) {
+                    $rt = $emergencyLab->requestTests()->firstOrCreate([
+                        'lab_test_id' => $labTestId,
+                    ]);
+
+                    $currentVal = $rt->result ? (is_string($rt->result) ? json_decode($rt->result, true) : $rt->result) : [];
+                    if (! is_array($currentVal)) {
+                        $currentVal = ! empty($currentVal) ? ['value' => (string) $currentVal] : [];
+                    }
+
+                    if ($subTestId) {
+                        $currentVal[$key] = $data;
+                    } else {
+                        $currentVal = array_merge($currentVal, $data);
+                    }
+
+                    $rt->update([
+                        'result' => json_encode($currentVal, JSON_UNESCAPED_UNICODE),
+                    ]);
+                }
             }
         }
 
+        // معالجة المرفقات الفردية test_attachments
+        if ($request->hasFile('test_attachments')) {
+            $detailsTestAttachments = $details['test_attachments'] ?? [];
+            foreach ($request->file('test_attachments') as $testName => $file) {
+                if ($file && $file->isValid()) {
+                    $labTest = \App\Models\LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                    $fileName = time().'_test_'.uniqid().'_'.$file->getClientOriginalName();
+                    $filePath = $file->storeAs('emergency_lab_results', $fileName, 'public');
+
+                    if ($labTest) {
+                        $rt = $emergencyLab->requestTests()->firstOrCreate([
+                            'lab_test_id' => $labTest->id,
+                        ]);
+                        $rt->update(['image_path' => $filePath]);
+                    }
+                    $detailsTestAttachments[$testName] = $filePath;
+                }
+            }
+            $details['test_attachments'] = $detailsTestAttachments;
+        }
+
+        if ($request->has('remove_test_attachment') && is_array($request->remove_test_attachment)) {
+            $detailsTestAttachments = $details['test_attachments'] ?? [];
+            foreach ($request->remove_test_attachment as $testName => $val) {
+                if ($val == '1') {
+                    $labTest = \App\Models\LabTest::where('name', $testName)->orWhere('code', $testName)->first();
+                    if ($labTest) {
+                        $rt = $emergencyLab->requestTests()->where('lab_test_id', $labTest->id)->first();
+                        if ($rt && ! empty($rt->image_path)) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($rt->image_path);
+                            $rt->update(['image_path' => null]);
+                        }
+                    }
+                    unset($detailsTestAttachments[$testName]);
+                }
+            }
+            $details['test_attachments'] = $detailsTestAttachments;
+        }
+
+        // معالجة النتائج والمرفقات الفردية لكل فحص (النمط الكلاسيكي)
+        if ($request->has('results') && is_array($request->results)) {
+            $incomingResults = $request->results;
+            $this->autoCalculateEmergencyLipid($incomingResults, $emergencyLab);
+
+            foreach ($incomingResults as $testId => $resultData) {
+                $rt = $emergencyLab->requestTests()->where('lab_test_id', $testId)->first();
+                $currentVal = $rt ? (is_string($rt->result) ? json_decode($rt->result, true) : $rt->result) : [];
+                if (! is_array($currentVal)) {
+                    $currentVal = ! empty($currentVal) ? ['value' => (string) $currentVal] : [];
+                }
+
+                if (is_array($resultData)) {
+                    $merged = array_merge($currentVal, $resultData);
+                } else {
+                    $merged = array_merge($currentVal, ['value' => (string) $resultData]);
+                }
+
+                $updateData = [
+                    'result' => json_encode($merged, JSON_UNESCAPED_UNICODE),
+                ];
+
+                // رفع مرفق فحص محدد إن وجد
+                if ($request->hasFile("images.{$testId}")) {
+                    $file = $request->file("images.{$testId}");
+                    $fileName = time().'_test_'.$testId.'_'.$file->getClientOriginalName();
+                    $filePath = $file->storeAs('emergency_lab_results', $fileName, 'public');
+                    $updateData['image_path'] = $filePath;
+                } elseif ($request->has("remove_image_{$testId}") && $request->input("remove_image_{$testId}") == '1') {
+                    if ($rt && ! empty($rt->image_path)) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($rt->image_path);
+                    }
+                    $updateData['image_path'] = null;
+                }
+
+                if ($rt) {
+                    $rt->update($updateData);
+                }
+            }
+        }
+
+        // تحديد الحالة (مسودة قيد التنفيذ أو اعتماد نهائي)
+        $action = $request->input('action', 'complete');
+        $isDraft = ($action === 'draft') || ($request->input('status') === 'in_progress');
+        $notes = $request->input('result') ?: ($request->input('notes') ?: $emergencyLab->notes);
+
         $emergencyLab->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'notes' => $request->notes
+            'status' => $isDraft ? 'in_progress' : 'completed',
+            'completed_at' => $isDraft ? null : ($emergencyLab->completed_at ?? now()),
+            'performed_by' => $emergencyLab->performed_by ?? $user->id,
+            'verified_by' => $isDraft ? null : $user->id,
+            'notes' => $notes,
+            'details' => $details,
         ]);
 
-        return redirect()->back()->with('success', 'تم إكمال طلب التحاليل الطبية وحفظ النتائج بنجاح');
+        $msg = $isDraft
+            ? 'تم حفظ مسودة نتائج التحاليل بنجاح (الطلب قيد التنفيذ).'
+            : 'تم اعتماد نتائج تحاليل الطوارئ الطبية وإكمال الطلب بنجاح.';
+
+        if ($request->filled('from_station') || $request->header('referer')) {
+            return redirect()->route('staff.emergency-lab.show', $emergencyLab)->with('success', $msg);
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * إلحاق تحاليل أو باقات إضافية لطلب الطوارئ وتحديث رسوم الكاشير
+     */
+    public function appendEmergencyLabTests(HttpRequest $request, \App\Models\EmergencyLabRequest $emergencyLab)
+    {
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'lab_staff', 'doctor', 'emergency_staff'])) {
+            abort(403, 'غير مصرح لك بإضافة تحاليل');
+        }
+
+        $request->validate([
+            'extra_lab_test_ids' => 'nullable|array',
+            'extra_lab_test_ids.*' => 'integer|exists:lab_tests,id',
+            'package_id' => 'nullable|integer|exists:packages,id',
+        ]);
+
+        $extraTestIds = array_map('intval', $request->extra_lab_test_ids ?? []);
+
+        if ($request->filled('package_id')) {
+            $package = \App\Models\Package::find($request->package_id);
+            if ($package) {
+                $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                $extraTestIds = array_values(array_unique(array_merge($extraTestIds, $pkgTestIds)));
+            }
+        }
+
+        if (empty($extraTestIds)) {
+            return redirect()->back()->with('error', 'يرجى اختيار تحليل واحد على الأقل أو باقة طبية.');
+        }
+
+        // إلحاق التحاليل دون حذف التحاليل السابقة
+        $emergencyLab->labTests()->syncWithoutDetaching($extraTestIds);
+
+        // تحديث رسوم الطوارئ الموحدة في الكاشير
+        if ($emergencyLab->emergency) {
+            $emergencyCtrl = app(\App\Http\Controllers\EmergencyController::class);
+            if (method_exists($emergencyCtrl, 'upsertUnifiedEmergencyPayment')) {
+                $emergencyCtrl->upsertUnifiedEmergencyPayment($emergencyLab->emergency);
+            }
+        }
+
+        return redirect()->route('staff.emergency-lab.show', $emergencyLab)
+            ->with('success', 'تم إلحاق التحاليل الإضافية بنجاح وتحديث حساب الكاشير.');
+    }
+
+    /**
+     * معاينة أو تحميل المرفق الطبي لتحاليل الطوارئ
+     */
+    public function emergencyLabAttachment(\App\Models\EmergencyLabRequest $emergencyLab, $testId = null)
+    {
+        $user = Auth::user();
+        if (! $user->hasAnyRole(['lab_staff', 'admin', 'doctor', 'nurse', 'emergency_staff']) && ! $user->can('view emergencies') && ! $user->can('view lab tests')) {
+            abort(403, 'غير مصرح لك بعرض هذا المرفق');
+        }
+
+        $path = null;
+        $details = is_string($emergencyLab->details) ? json_decode($emergencyLab->details, true) : ($emergencyLab->details ?? []);
+        $testAtts = $details['test_attachments'] ?? [];
+
+        if ($testId) {
+            $rt = $emergencyLab->requestTests()->where('lab_test_id', $testId)->first();
+            $path = $rt?->image_path;
+
+            if (! $path && is_array($testAtts)) {
+                $tModel = \App\Models\LabTest::find($testId);
+                $lookupKeys = array_filter([
+                    $testId,
+                    $tModel?->name,
+                    'CBC & Blood Film',
+                    'Complete blood count & Differential',
+                ]);
+                foreach ($lookupKeys as $k) {
+                    if (! empty($testAtts[$k])) {
+                        $path = $testAtts[$k];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (! $path) {
+            $path = $details['attachment'] ?? null;
+        }
+
+        if (! $path) {
+            abort(404, 'لا يوجد ملف مرفق لهذا التحليل');
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+        }
+
+        $fullPath = storage_path('app/public/'.$path);
+        if (file_exists($fullPath)) {
+            return response()->file($fullPath);
+        }
+
+        abort(404, 'الملف المرفق غير موجود في وحدة التخزين');
+    }
+
+    /**
+     * الحساب الآلي لمعادلات باقة الدهون (Friedewald) لطوارئ المختبر
+     */
+    protected function autoCalculateEmergencyLipid(array &$results, \App\Models\EmergencyLabRequest $emergencyLab): void
+    {
+        $tests = $emergencyLab->labTests->keyBy('id');
+        $tg = null;
+        $tc = null;
+        $hdl = null;
+        $vldlId = null;
+        $ldlId = null;
+
+        foreach ($results as $id => $item) {
+            $test = $tests->get($id);
+            $name = mb_strtolower(trim(($test?->name ?? '').' '.($item['test_name'] ?? '')));
+            $val = isset($item['value']) && $item['value'] !== '' ? (float) str_replace(',', '', (string) $item['value']) : null;
+
+            if (str_contains($name, 'triglyceride') || $name === 'tg' || str_contains($name, 'دهون ثلاثية')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tg = $val;
+                }
+            } elseif ((str_contains($name, 'cholesterol') || $name === 'tc' || str_contains($name, 'كوليسترول'))
+                    && ! str_contains($name, 'hdl') && ! str_contains($name, 'ldl') && ! str_contains($name, 'vldl')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tc = $val;
+                }
+            } elseif (str_contains($name, 'hdl') || str_contains($name, 'نافع')) {
+                if ($val !== null && is_numeric($val)) {
+                    $hdl = $val;
+                }
+            } elseif (str_contains($name, 'vldl') || (str_contains($name, 'very') && str_contains($name, 'low'))) {
+                $vldlId = $id;
+            } elseif (str_contains($name, 'ldl') && ! str_contains($name, 'vldl')) {
+                $ldlId = $id;
+            }
+        }
+
+        if ($vldlId !== null && $tg !== null && $tg >= 0) {
+            if (! isset($results[$vldlId]['value']) || trim((string) $results[$vldlId]['value']) === '') {
+                $results[$vldlId]['value'] = (string) round($tg / 5, 1);
+                $results[$vldlId]['notes'] = trim(($results[$vldlId]['notes'] ?? '').' [محسوب آلياً: TG / 5]');
+            }
+        }
+
+        if ($ldlId !== null && $tc !== null && $hdl !== null && $tg !== null && $tc > 0 && $hdl > 0 && $tg >= 0) {
+            if (! isset($results[$ldlId]['value']) || trim((string) $results[$ldlId]['value']) === '') {
+                if ($tg < 400) {
+                    $results[$ldlId]['value'] = (string) round($tc - $hdl - ($tg / 5), 1);
+                    $results[$ldlId]['notes'] = trim(($results[$ldlId]['notes'] ?? '').' [محسوب آلياً: Friedewald Eq]');
+                } else {
+                    $results[$ldlId]['notes'] = trim(($results[$ldlId]['notes'] ?? '').' [⚠️ تنبيه سريري: TG >= 400 mg/dL - معادلة فريدوالد غير دقيقة]');
+                }
+            }
+        }
+    }
+
+    /**
+     * الحساب الآلي لمعادلات باقة الدهون لمصفوفة test_results
+     */
+    protected function autoCalculateLipidOnTestResults(array &$testResults): void
+    {
+        $tg = null;
+        $tc = null;
+        $hdl = null;
+        $vldlKey = null;
+        $ldlKey = null;
+
+        foreach ($testResults as $key => $item) {
+            $name = mb_strtolower(trim(($item['test_name'] ?? $key)));
+            $val = isset($item['value']) && $item['value'] !== '' ? (float) str_replace(',', '', (string) $item['value']) : null;
+
+            if (str_contains($name, 'triglyceride') || $name === 'tg' || str_contains($name, 'دهون ثلاثية')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tg = $val;
+                }
+            } elseif ((str_contains($name, 'cholesterol') || $name === 'tc' || str_contains($name, 'كوليسترول'))
+                    && ! str_contains($name, 'hdl') && ! str_contains($name, 'ldl') && ! str_contains($name, 'vldl')) {
+                if ($val !== null && is_numeric($val)) {
+                    $tc = $val;
+                }
+            } elseif (str_contains($name, 'hdl') || str_contains($name, 'نافع')) {
+                if ($val !== null && is_numeric($val)) {
+                    $hdl = $val;
+                }
+            } elseif (str_contains($name, 'vldl') || (str_contains($name, 'very') && str_contains($name, 'low'))) {
+                $vldlKey = $key;
+            } elseif (str_contains($name, 'ldl') && ! str_contains($name, 'vldl')) {
+                $ldlKey = $key;
+            }
+        }
+
+        if ($vldlKey !== null && $tg !== null && $tg >= 0) {
+            if (! isset($testResults[$vldlKey]['value']) || trim((string) $testResults[$vldlKey]['value']) === '') {
+                $testResults[$vldlKey]['value'] = (string) round($tg / 5, 1);
+                $testResults[$vldlKey]['notes'] = trim(($testResults[$vldlKey]['notes'] ?? '').' [محسوب آلياً: TG / 5]');
+            }
+        }
+
+        if ($ldlKey !== null && $tc !== null && $hdl !== null && $tg !== null && $tc > 0 && $hdl > 0 && $tg >= 0) {
+            if (! isset($testResults[$ldlKey]['value']) || trim((string) $testResults[$ldlKey]['value']) === '') {
+                if ($tg < 400) {
+                    $testResults[$ldlKey]['value'] = (string) round($tc - $hdl - ($tg / 5), 1);
+                    $testResults[$ldlKey]['notes'] = trim(($testResults[$ldlKey]['notes'] ?? '').' [محسوب آلياً: Friedewald Eq]');
+                } else {
+                    $testResults[$ldlKey]['notes'] = trim(($testResults[$ldlKey]['notes'] ?? '').' [⚠️ تنبيه سريري: TG >= 400 mg/dL - معادلة فريدوالد غير دقيقة]');
+                }
+            }
+        }
     }
 }
-

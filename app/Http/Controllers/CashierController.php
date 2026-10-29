@@ -2452,6 +2452,7 @@ class CashierController extends Controller
      */
     public function showSurgeryPaymentForm(Surgery $surgery)
     {
+        $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
             abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');

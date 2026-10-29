@@ -519,6 +519,151 @@ Consult these files before making changes or proposing fixes:
   * إنشاء واجتياز اختبارات الميزة الشاملة [EyeCenterWorkflowTest.php](file:///f:/hospital-system%20p/tests/Feature/EyeCenterWorkflowTest.php) بنجاح 100% (7 passed, 36 assertions) بجانب كافة اختبارات الطوارئ والصيدلية السابقة (23 passed, 106 assertions) دون أي تراجع أو تعارض.
   * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
 
+## Session log (2026-10-28 — المرحلة 124: توحيد مسمى تحليل الدم وفيلم الدم CBC & Blood Film ومعالجة ظهوره القديم Complete blood count & Differential)
+
+### Done
+- **قاعدة البيانات ونموذج الفحوصات الطبية ([database/migrations/2026_10_28_224500_standardize_cbc_test_name_to_cbc_and_blood_film.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_28_224500_standardize_cbc_test_name_to_cbc_and_blood_film.php))**:
+  * تحديث اسم الفحص الأساسي رقم (43) المربوط به كافة البارامترات الـ 27 (WBC, RBC, HGB, PLT...) من `Complete blood count & Differential` إلى الاسم الطبي الرسمي المعتمد `CBC & Blood Film`.
+  * دمج وإعادة توجيه أي طلبات طوارئ ارتبطت بالسجل المكرر (1440) إلى الفحص الأساسي (43) وتعطيل السجل المكرر لمنع الازدواجية.
+  * تحديث تفاصيل طلبات الطوارئ السابقة `details` (المرفقات والنتائج المحفوظة) من الاسم القديم إلى الاسم الرسمي المعتمد.
+- **تطوير واجهة طباعة تقارير طوارئ المختبر ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
+  * إضافة دالة تطبيع وتحويل ذكية `$canonicalTestName` تُعيد أي مسمى بديل أو قديم (مثل `Complete blood count & Differential` أو `Complete Blood Count (CBC)`) إلى الاسم الرسمي `CBC & Blood Film`.
+  * تطبيق التطبيع على أسماء الفحوصات المفردة والمركبة وترويسات المجموعات وعناوين أزرار المرفقات في الشريط العلوي (`🔬 مرفق: CBC & Blood Film`).
+- **تطوير واجهة محطة تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php))**:
+  * توسيع خريطة الأسماء البديلة والأكواد `$codeAliases` لتشمل كافة متغيرات CBC وربطها التلقائي بـ `cbc_3DIFF`.
+  * دعم التعرّف على المرفقات ومعاينتها سواء تم حفظها بالاسم الجديد `CBC & Blood Film` أو بالاسم القديم.
+- **التحصين في الكنترولر ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * دعم جلب المرفق الطبي في `emergencyLabAttachment` عبر معرف الفحص الرقمي أو اسمه المعتمد أو البديل دون أي أخطاء 404.
+- **حزمة الاختبارات الآلية ([tests/Feature/CbcTestNameStandardizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CbcTestNameStandardizationTest.php))**:
+  * بناء واجتياز اختبار ميزة يضمن ظهور المسمى الموحد `CBC & Blood Film` ومنع ظهور `Complete blood count & Differential` في تقرير الطباعة بنجاح تام (`1 passed, 4 assertions`).
+
+## Session log (2026-10-28 — المرحلة 123: إصلاح وتفعيل زر تحويل المريض لطبيب آخر وتوافق MariaDB ومحطة الانتظار Doctor Referral to Another Doctor & Live Queue Integration)
+
+### Done
+- **معالجة استعلام الأطباء المتاحين في الكنترولر ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * استبدال قيد SQL البرمجي بدالة PHP `isWorkingOnDay($currentDay)` لعزل وحصر القائمة **بأطباء اليوم المتاحين حصراً** (استشاريين وجراحين) بدقة 100% مع ضمان توافق كامل مع MariaDB و MySQL دون إخفاء الزر.
+- **تحسين واجهة فحص المريض ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إظهار زر `[ ⇄ تحويل للطبيب الآخر ]` وبطاقة التحويل دائماً طالما الزيارة جارية (`$visit->status == 'in_progress'`) دون إخفاء الزر إذا كان العداد فارغاً.
+  * استبدال القائمة المنسدلة التقليدية بمحرك بحث واقتراحات تفاعلي ذكي فوري (*Instant Autocomplete*) يبحث بالاسم والاختصاص مع بطاقة تأكيد خضراء ومسح بنقرة واحدة.
+  * معالجة شفافية قائمة الاقتراحات ومنع تداخلها البصري مع بطاقة بيانات المريض بالخلفية عبر خلفية بيضاء نقية صلبة (`#ffffff !important`) و `z-index: 99999` وظلال مرتفعة `box-shadow`.
+- **تكامل طابور الانتظار عند التحويل (`referToDoctor`)**:
+  * تحويل حالة موعد المريض إلى `status = 'confirmed'` وتصفير وقت الاستدعاء وتوليد رقم دور جديد لعيادة الطبيب المحول إليه ليظهر فوراً في طابور الانتظار الأولي وتتم مناداته.
+  * السماح بالتحويل إلى الاستشاريين والجراحين على حد سواء.
+- **حزمة الاختبارات الآلية ([tests/Feature/DoctorReferralToAnotherDoctorTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorReferralToAnotherDoctorTest.php))**:
+  * بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
+
+## Session log (2026-10-28 — المرحلة 122: معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage)
+
+### Done
+- **معالجة الخطأ في واجهة طباعة أشعة الطوارئ ([resources/views/staff/requests/emergency-radiology-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-print.blade.php))**:
+  * تصحيح استدعاء الدالة المجهولة `radiologyTypes->map(function ($type) use ($emergencyRadiology) { ... })` وتمرير المتغير عبر `use ($emergencyRadiology)` في السطر 451، مما حل خطأ `ErrorException: Undefined variable $emergencyRadiology` نهائياً.
+  * إزالة كود التنبيه التجريبي والتطويري القديم (`debug info`) الذي كان يطبع شريطاً أحمر عند عدم وجود مرفقات.
+- **حزمة الاختبارات الآلية ([tests/Feature/EmergencyRadiologyPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRadiologyPrintTest.php))**:
+  * بناء واجتياز اختبارين يغطيان طباعة تقرير أشعة الطوارئ بوجود مرفقات وبدون مرفقات بنجاح تام (`2 passed, 12 assertions`).
+
+## Session log (2026-10-28 — المرحلة 121: توحيد تقرير طباعة تحاليل الطوارئ 100% مع التقرير السريري الموحد، وعزل فحص الإدرار العام G.U.E في صفحة منفصلة بالكامل Emergency Lab Print Report 100% Unification & Dedicated G.U.E Page 2 Separation)
+
+### Done
+- **إعادة بناء وتوحيد واجهة طباعة تقرير تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
+  * مطابقة بصرية وهيكلية تامة 1:1 مع `resources/views/staff/requests/print.blade.php` بألوان المستشفى الرسمية (`#005a9c` أزرق داكن، `#0284c7` أزرق سماوي) بدلاً من النمط القديم.
+  * شريط علوي موحد متكامل يحتوي على أزرار: `[ 🖨️ طباعة التقرير ]`، `[ 💬 إرسال واتساب للمريض ]`، روابط تقارير الأجهزة المرفقة، أزرار تبديل نمط الطباعة (ورق مروس Letterhead مقابل ورق أبيض كامل Full)، وضابط المسافة العلوية.
+  * ترويسة رسمية ثنائية باللغتين العربية والإنجليزية تتوسطها صورة شعار المستشفى المضمنة بتقنية base64 للظهور الفوري دون أي تأخير طباعي.
+  * بطاقة بيانات المريض وقسم الطوارئ السريرية ثلاثية المناطق (Patient Demographics, Order & STAT Coverage, Direct QR Code).
+- **عزل فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة مستقلة (Page 2 Dedicated Architecture)**:
+  * فحص وتقسيم النتائج آلياً عبر دالة الفلترة الذكية `$isGeneralUrine`.
+  * عند وجود فحوصات عامة مع فحص الإدرار:
+    - **الصفحة الأولى (Page 1)**: تتضمن الفحوصات العامة مع الترويسة الكاملة وبطاقة المريض وجدول النتائج والتذييل والتوقيعات الرسمية.
+    - **الصفحة الثانية (Page 2 - Dedicated G.U.E Page)**: فاصل صفحات طباعي صارم (`.gue-page-break`)، ترويسة مصغرة، شريط مريض مختصر، شريط عنوان فحص الإدرار، وجدول الـ 4 أعمدة المتخصص (`INVESTIGATION / TEST NAME`, `Result`, `Reference Range`, `Status`)، ومربع التوقيعات والختم المعتمد الخاص بالصفحة الثانية.
+  * عند طلب فحص الإدرار كفحص وحيد مستقل: يطبع كتقرير رئيسي متكامل على الصفحة الأولى مع الجدول الرباعي دون إنشاء صفحة ثانية فارغة.
+- **توسيع المعالجة بالكنترولر وتحديث العلاقات ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * تحميل الفحوصات الفرعية للتحاليل المركبة (`labTests.subTests`, `requestTests.labTest.subTests`) لمنع استعلامات N+1.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
+  * إضافة اختبارات ميزة تغطي عزل فحص الإدرار في الصفحة الثانية عند دمجه مع فحوصات أخرى، وطباعته منفرداً على الصفحة الأولى عند عدم وجود فحوصات أخرى بنجاح تام (`8 passed, 52 assertions`).
+
+## Session log (2026-10-28 — المرحلة 120: توحيد ومطابقة محطة تحاليل الطوارئ 100% مع محطة المختبر السريرية Emergency Lab Station 100% Parity with Standard Lab Station & Clinical Architecture)
+
+### Done
+- **إعادة بناء وتوحيد واجهة محطة تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php))**:
+  * مطابقة تامة 1:1 لجميع تفاصيل التصميم، البنية الهيكلية، وأدوات العمل الموجودة في `resources/views/lab/show.blade.php`.
+  * شريط علوي موحد متكامل يحتوي على أزرار الإجراءات: `[ 🖨️ طباعة التقرير ]`، `[ 💬 إرسال النتيجة عبر واتساب ]`، `[ 💾 حفظ مؤقت (مسودة) ]`، `[ 🚀 اعتماد نهائي وإرسال للطبيب ]`، `[ ➕ إضافة تحاليل ]`، و `[ ⬅️ القائمة ]`.
+  * بطاقة بيانات المريض والطلب السداسية بالأيقونات الدائرية الملونة: اسم المريض، رقم الهاتف مع زر واتساب، العمر/الجنس، فصيلة الدم، الطبيب وقسم الطوارئ، وحالة السداد المالي.
+  * قسم إلحاق التحاليل الذكي القابل للطي `#appendTestsSection`: عارض باقات التحاليل (Packages)، مجموعات المفضلات، المفضلات الفردية، البحث السريع مع الفلترة العربية، وقائمة الفحوصات المقسمة حسب التصنيف الرئيسي.
+  * جدول النتائج السريرية الموحد `#resultsTable` بكافة أعمدته: الرقم، اسم الفحص (مع دعم الفحوصات المركبة والشجرية `subTests`، وفحوصات مرفقات الأجهزة)، النتيجة، الوحدة، المدى المرجعي، مؤشر الحالة الحي (Flag: طبيعي، مرتفع، منخفض)، وحقل مرفق تقرير الجهاز بنمط الكبسولة الأنيقة `pill-upload-wrapper`.
+  * شريط ملخص تقييم النتائج اللحظي: عداد النتائج الطبيعية، المرتفعة، المنخفضة، وغير المدخلة.
+  * محرك JavaScript الموحد: تقييم النتائج الفوري بالألوان، معادلة فريدوالد لباقة الدهون (Friedewald: VLDL & LDL)، وتنبيه الدهون الثلاثية $\ge 400\text{ mg/dL}$.
+- **التحصين ومعالجة السيرفر ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * تطوير دالة `completeEmergencyLab` لدعم حفظ نمط `test_results` الموحد ونمط `results` الكلاسيكي معاً.
+  * معالجة مرفقات الفحوصات الفردية `test_attachments` وإزالتها وحفظ المرفق العام.
+  * إضافة دالة `autoCalculateLipidOnTestResults` لحساب معادلات باقة الدهون آلياً على السيرفر.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
+  * 6 اختبارات ميزة تغطي أزرار الطوارئ في قائمة المختبر، تحميل الواجهة السريرية المطابقة بالكامل، حفظ واعتماد النتائج بالنمطين، طباعة التقرير الطبي، وإلحاق التحاليل بنجاح تام (`6 passed, 38 assertions`).
+
+## Session log (2026-10-28 — المرحلة 119: توحيد المحطة السريرية الجراحية للمقيم والتمريض، ومصفوفة صلاحيات التبويبات بالكامل Unified Clinical Surgery Station & Dynamic Role-Based Tab Permissions Matrix)
+
+### Done
+- **قاعدة البيانات وموديل مصفوفة صلاحيات التبويبات السريرية ([database/migrations/2026_10_28_091831_create_surgery_tab_permissions_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_28_091831_create_surgery_tab_permissions_table.php))**:
+  * إنشاء جدول مخصص `surgery_tab_permissions` (`role_name`, `tab_key`, `access_level: hidden, read, write`).
+  * بناء الموديل [app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php) متضمناً ثوابت التبويبات الـ 8، مصفوفة الضبط الطبي الافتراضي، ودوال احتساب الصلاحيات التراكمية للمستخدم (`getUserTabPermissions`).
+- **لوحة تحكم الإدارة لمصفوفة الصلاحيات ([app/Http/Controllers/SurgeryTabPermissionController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryTabPermissionController.php) & [resources/views/surgeries/settings/tabs.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
+  * واجهة مصفوفية مركزية تعرض الأدوار (طبيب مقيم، كادر تمريض، طبيب جراح، منسق عمليات، كادر عمليات، مدير نظام) أمام التبويبات الثمانية مع قوائم منسدلة فورية ملونة (`🚫 مخفي`, `👁️ قراءة فقط`, `✍️ قراءة وإدخال`).
+  * إمكانية حفظ التعديلات الجماعية، واستعادة الضبط الطبي الافتراضي بنقرة زر واحدة، وتوثيق النشاط الإداري في `UserActivityLogger`.
+- **المحطة السريرية الجراحية الموحدة الذكية ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php) & [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * واجهة موحدة ونقية تستبدل الواجهات السابقة وتتشكل وتتكيف لحظياً حسب صلاحيات هوية المستخدم المسجل:
+    1. **السيرة المرضية (History)**: الشكوى، التاريخ المرضي والجراحي والدوائي، والحساسية.
+    2. **العلامات الحيوية والفحص (Vitals & Physical Exam)**: بطاقات الضغط والحرارة والنبض والتنفس والأكسجين والسكر والوعي (GCS/CRT)، مع منحنيات Chart.js البيانية وجدول السجل التاريخي.
+    3. **الفحوصات والمختبر والأشعة (Lab & Radiology Tests)**: عرض نتائج التحاليل والتقارير الإشعاعية.
+    4. **الخطة الطبية وتوصيات الجراحة (Medical Plan)**: خطة ما قبل الجراحة، توصيات ما بعد العملية، ومراجعة الأجهزة.
+    5. **الأدوية وجدول الإعطاء (Treatments)**: وصف الأدوية، وتسجيل إعطاء الجرعات للممرض بنقرة واحدة، وسجل الإعطاء.
+    6. **سجل المتابعة الدوري (Follow Up Sheet)**: جولات المرور الصباحية والمسائية وتدوين ملاحظات الأطباء والتمريض.
+    7. **رصد السوائل (Intake & Output)**: ميزان السوائل الوريدية والفموية والدم في مقابل الإدرار والنزح، واحتساب الصافي آلياً.
+    8. **الرعاية وملاحظات التمريض (Nursing Care & Discharge)**: ملاحظات التمريض، وتعيين الممرض، وتعليمات التخريج.
+  * تحويل الروابط القديمة (`resident-station.show` و `nursing-station.show`) بسلاسة وشفافية 100% للمحطة الموحدة لضمان التوافق التام بدون كسر أي زر قديم.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
+  * بناء 8 اختبارات ميزة تغطي عرض وتعديل المصفوفة، استعادة الافتراضي، تشكل التبويبات حسب الصلاحيات، تسجيل العلامات الحيوية، إضافة وإعطاء الأدوية، تسجيل المتابعة، والتحويل الشفاف للروابط القديمة بنجاح تام (`8 passed, 37 assertions`).
+
+## Session log (2026-10-28 — المرحلة 118: إعادة هيكلة جدول وقائمة انتظار العمليات الجراحية، تبويبات أيام الأسبوع، وتخصيص الصالات والأوقات يدوياً مع إضافة صالات جديدة فورياً Operation Theaters & Realtime Manual Schedule Customization)
+
+### Done
+- **قاعدة البيانات ونموذج صالات العمليات الجراحية المخصص ([database/migrations/2026_10_28_083000_create_operation_theaters_table_and_add_to_surgeries.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_28_083000_create_operation_theaters_table_and_add_to_surgeries.php))**:
+  * إنشاء جدول مخصص لصالات العمليات الجراحية `operation_theaters` (`id`, `name`, `code`, `is_active`, `timestamps`) لفصل صالات العمليات الجراحية عن غرف الرقود وأسرة الإقامة.
+  * إضافة حقل `operation_theater_id` إلى جدول `surgeries` للربط الرسمي والمباشر.
+  * إنشاء الموديل [app/Models/OperationTheater.php](file:///c:/wamp64/www/hospital-system/app/Models/OperationTheater.php) وتحديث [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php) بالعلاقة `operationTheater()`.
+- **الكنترولر والمسارات البرمجية للتخصيص اللحظي ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إضافة مسار ودالة `quickStoreTheater` لإنشاء صالة عمليات جديدة فورياً عبر AJAX وإضافتها لقائمة الصالات المعتمدة.
+  * إضافة مسار ودالة `quickUpdateSchedule` لتحديث صالة العملية ووقتها اليدوي المخصص فورياً لأي مريض عبر AJAX وبث التحديثات.
+  * تطوير دالة `waiting()` لجلب عمليات اليوم المختار وتبويبات أيام الأسبوع وقائمة الصالات النشطة.
+- **إعادة تصميم واجهة قائمة الانتظار والجدول اليومي ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * تبويبات أيام الأسبوع العلوية (السبت إلى الجمعة) للتنقل السلس مع عداد العمليات وتمييز اليوم الحالي.
+  * جدول سريري نقي وواضح لعمليات اليوم المختار بالأعمدة المتفق عليها:
+    - **المريض**: الاسم، رقم الملف، والعمر/الجنس.
+    - **العملية الجراحية**: نوع العملية وشارة العمليات الإضافية.
+    - **الطبيب الجراح**: اسم الطبيب المسؤول.
+    - **الصالة المخصصة (Customizable)**: عرض اسم الصالة الفعلي مع أيقونة تعديل سريعة بنقرة واحدة.
+    - **الوقت (Customizable)**: عرض الوقت اليدوي المخصص (مع مؤقت حي بالثواني للعملية الجارية) وإمكانية تعديله فورياً.
+    - **حالة المسار**: أوسمة واضحة (🔵 مجدولة، 🟡 بالانتظار، 🟢 داخل الصالة جارية، 🟣 منتهية/خرج).
+    - **الإجراءات السريعة**: أزرار النقل المباشر (`[دخول]`، `[تحويل وبدء]`، `[إنهاء]`) وملف العملية.
+  * نافذة مودال منبثقة تفاعلية لتعديل الصالة والوقت يدوياً مع إمكانية إضافة اسم صالة جديدة من نفس النافذة فورياً بدون مغادرة الصفحة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * بناء 8 اختبارات ميزة تغطي الصلاحيات، عرض القائمة وأيام الأسبوع، حالات المسار، الدخول والبدء والإنهاء، إضافة الصالات الجديدة عبر AJAX، وتحديث الموعد والصالة بنجاح تام (`8 passed, 28 assertions`).
+
+## Session log (2026-10-27 — المرحلة 117: الحساب الآلي الذكي لمعادلات باقة الدهون Lipid Profile - Friedewald Formula: LDL & VLDL في واجهة المختبر والسيرفر مع التنبيه السريري والتحصين الشامل)
+
+### Done
+- **تجهيز باقة الدهون وفحص VLDL في قاعدة البيانات**:
+  * إنشاء وترحيل `2026_10_27_112000_seed_lipid_profile_composite_test_and_vldl.php`.
+  * إضافة فحص `Very Low Density Lipoprotein` (VLDL) بمدى مرجعي طبيعي (5 - 30 mg/dL).
+  * إنشاء فحص باقة الدهون الشاملة `Lipid Profile` كفحص مركب (`sub_tests`) بالباراميترات الخمسة المعتمدة: Total Cholesterol, Triglyceride, High Density Lipoprotein, Low Density Lipoprotein (Calculated), Very Low Density Lipoprotein (Calculated).
+- **محرك الحساب الآلي اللحظي في واجهة المختبر ([resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * مطابقة مرنة للأسماء الطبية للدهون تدعم العربية والإنجليزية والرموز واختصارات TG, TC, HDL, LDL, VLDL.
+  * حساب فوري لـ VLDL بمجرد إدخال قيمة الدهون الثلاثية ($VLDL = TG / 5$) وتحديث وسام `[ ⚡ محسوب: TG / 5 ]`.
+  * حساب فوري لـ LDL بمجرد توفر الكوليسترول الكلي والـ HDL والدهون الثلاثية طبقاً لمعادلة فريدوالد ($LDL = TC - HDL - \frac{TG}{5}$).
+  * إضافة بانيل تنبيه سريري باللون الكهرماني يظهر فورياً أعلى الصف عند تجاوز الدهون الثلاثية 400 mg/dL ($TG \ge 400$) بأن معادلة فريدوالد غير دقيقة علمياً ويُنصح بالقياس المخبري المباشر (Direct LDL).
+  * دعم التعديل اليدوي للفني وإظهار شارة `[ ✍️ مدخل يدوياً ]` عند رغبته في إدخال قيمة يدوية مقاسة مباشرة دون إجبار.
+- **التحصين ومعالجة السيرفر ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * إضافة دالة `autoCalculateLipidResults` لضمان احتساب وتخزين نتائج VLDL و LDL في قاعدة البيانات والـ JSON عند الحفظ حتى في حال تم إرسالها فارغة أو تم حفظ الطلب كمسودة.
+- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LipidProfileAutoCalculationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LipidProfileAutoCalculationTest.php))**:
+  * بناء 4 اختبارات ميزة تغطي الحساب الآلي الصحيح لمعادلتي VLDL و LDL، عدم الحساب القسري وظهور التنبيه عند تجاوز الدهون الثلاثية 400، الحساب في الفحوصات الفردية والمركبة، واحترام الإدخال اليدوي بنجاح تام (`4 passed, 25 assertions`).
+
 ## Session log (2026-10-27 — المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)
 
 ### Done
