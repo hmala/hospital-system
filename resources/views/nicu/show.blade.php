@@ -1163,9 +1163,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- 1. شريط باقات المفضلات السريعة بنقر واحدة (UserLabTestGroup) -->
+                                    <!-- 1. شريط باقات المفضلات السريعة بنقر واحدة (UserLabTestGroup) - مخفي بطلب الإدارة دون مسح الكود -->
                                     @if(isset($labTestGroups) && $labTestGroups->isNotEmpty())
-                                        <div class="mb-3 p-2 bg-white rounded-3 border">
+                                        <div class="mb-3 p-2 bg-white rounded-3 border d-none" id="nicuQuickLabPackagesBar">
                                             <div class="d-flex align-items-center justify-content-between mb-1">
                                                 <span class="small fw-bold text-dark">
                                                     <i class="fas fa-baby text-primary me-1"></i> باقات الخدج السريعة (نقرة واحدة للإضافة):
@@ -1193,7 +1193,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <div class="mb-3 p-2 bg-white rounded-3 border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="mb-3 p-2 bg-white rounded-3 border d-flex align-items-center justify-content-between flex-wrap gap-2 d-none" id="nicuQuickLabPackagesEmptyBar">
                                             <span class="small text-muted">
                                                 <i class="fas fa-baby text-primary me-1"></i> يمكنك إنشاء باقات تحاليل خاصة بقسم الخدج لتسهيل طلبها بنقرة واحدة
                                             </span>
@@ -1756,8 +1756,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- 1. شريط فحوصات التصوير الشائعة لحديثي الولادة -->
-                                    <div class="mb-3 p-2 bg-white rounded-3 border">
+                                    <!-- 1. شريط فحوصات التصوير الشائعة لحديثي الولادة - مخفي بطلب الإدارة دون مسح الكود -->
+                                    <div class="mb-3 p-2 bg-white rounded-3 border d-none" id="nicuQuickRadiologyBar">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
                                             <span class="small fw-bold text-dark">
                                                 <i class="fas fa-bolt text-warning me-1"></i> تصوير الخدج الشائع (نقرة واحدة للإضافة):
@@ -2380,12 +2380,15 @@
                                             </div>
 
                                             <div class="mb-2 position-relative">
-                                                <label class="form-label small fw-bold text-dark mb-1">اسم الدواء:</label>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-bold text-dark mb-0">اسم الدواء:</label>
+                                                    <span class="text-muted" style="font-size: 11px;">(اختر من الصيدلية أو اكتب أي دواء مخصص بحرية)</span>
+                                                </div>
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
-                                                    <input type="text" name="medications[0][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي..." autocomplete="off" required>
+                                                    <input type="text" name="medications[0][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي أو التركيبة المخصصة..." autocomplete="off" required>
                                                 </div>
-                                                <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 180px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                                                <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1060;"></div>
                                             </div>
 
                                             <div class="row g-2 mb-2">
@@ -4217,7 +4220,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input || !menu) return;
 
         input.addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
+            const rawVal = this.value.trim();
+            const query = rawVal.toLowerCase();
             if (!query) {
                 menu.style.display = 'none';
                 return;
@@ -4227,17 +4231,18 @@ document.addEventListener('DOMContentLoaded', function() {
             ).slice(0, 15);
 
             menu.innerHTML = '';
-            if (matches.length === 0) {
-                menu.style.display = 'none';
-                return;
-            }
+            
+            // الأدوية المطابقة من صيدلية المستشفى
             matches.forEach(m => {
                 const item = document.createElement('a');
                 item.href = 'javascript:void(0);';
                 item.className = 'list-group-item list-group-item-action py-2';
                 item.innerHTML = `
-                    <strong class="text-dark small d-block">${m.name}</strong>
-                    <small class="text-muted" style="font-size: 10px;">${m.form} ${m.strength ? '• ' + m.strength : ''}</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-dark small">${m.name}</strong>
+                        <span class="badge bg-light text-primary border" style="font-size: 10px;">صيدلية المستشفى</span>
+                    </div>
+                    <small class="text-muted" style="font-size: 10px;">${m.form || ''} ${m.strength ? '• ' + m.strength : ''}</small>
                 `;
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -4246,7 +4251,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 menu.appendChild(item);
             });
+
+            // خيار دائم لاعتماد الاسم المكتوب كعلاج مخصص / تركيبة خاصة حتى لو لم يكن بالصيدلية
+            const customItem = document.createElement('a');
+            customItem.href = 'javascript:void(0);';
+            customItem.className = 'list-group-item list-group-item-action py-2 bg-light border-top text-primary';
+            customItem.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-plus-circle me-2 text-success"></i>
+                    <div>
+                        <strong class="small d-block text-dark">اعتماد الدواء المكتوب: "${rawVal}"</strong>
+                        <small class="text-muted" style="font-size: 10px;">(علاج مخصص / تركيبة خاصة غير مسجلة بقائمة الصيدلية)</small>
+                    </div>
+                </div>
+            `;
+            customItem.addEventListener('click', function(e) {
+                e.preventDefault();
+                input.value = rawVal;
+                menu.style.display = 'none';
+            });
+            menu.appendChild(customItem);
+
             menu.style.display = 'block';
+        });
+
+        // إغلاق القائمة عند النقر خارج السطر
+        document.addEventListener('click', function(e) {
+            if (!row.contains(e.target)) {
+                menu.style.display = 'none';
+            }
         });
 
         input.addEventListener('keydown', function(e) {
@@ -4275,12 +4308,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <div class="mb-2 position-relative">
-                    <label class="form-label small fw-bold text-dark mb-1">اسم الدواء:</label>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold text-dark mb-0">اسم الدواء:</label>
+                        <span class="text-muted" style="font-size: 11px;">(اختر من الصيدلية أو اكتب أي دواء مخصص بحرية)</span>
+                    </div>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
-                        <input type="text" name="medications[${prescriptionRowIndex}][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي..." autocomplete="off" required>
+                        <input type="text" name="medications[${prescriptionRowIndex}][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي أو التركيبة المخصصة..." autocomplete="off" required>
                     </div>
-                    <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 180px; overflow-y: auto; display: none; z-index: 1060;"></div>
+                    <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1060;"></div>
                 </div>
 
                 <div class="row g-2 mb-2">
