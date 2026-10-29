@@ -62,6 +62,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 127 (توحيد آلية فحص الدم CBC & Blood Film وفحص فيلم الدم المجهري Blood Film في طوارئ المختبر والاستشارية 100% ومنع تفريغ البارامترات الفارغة Emergency Lab CBC & Blood Film Parity, Dedicated Microscopic Blood Film & Clean Device Report Architecture):**
+  * **عزل وضبط فحصي الدم CBC & Blood Film و Blood Film في تقارير طوارئ المختبر (`resources/views/staff/requests/emergency-lab-print.blade.php`)**:
+    - منع تفريغ الـ 27 بارامتراً فرعياً كصفوف فارغة أو معلقة (`Pending`) في جدول نتائج الفحوصات البيوكيميائية عند طلب فحص `CBC & Blood Film` المعتمد على مرفق الجهاز الآلي (`isAttachmentOnly`).
+    - مزامنة المرفقات الفردية لطلبات الطوارئ مع جدول `emergency_lab_request_tests` لضمان ظهور زر تقرير الجهاز الآلي في الشريط العلوي بنمط `[ 🔬 مرفق: CBC & Blood Film (PDF) ]` أياً كان مصدر حفظ المرفق.
+    - إضافة قسم وبانيل سريري مخصص للفحوصات المرفقة (`Attached Device Reports / Diagnostics`) أسفل جدول النتائج يوضح أن الفحص تم إرفاق تقرير جهازه بنجاح وتوفره عبر الزر العلوي مطابقاً 1:1 لنمط الاستشارية.
+    - عزل فحص فيلم الدم المجهري اليدوي `Blood Film` (رقم 1243، بسعر 50,000 د.ع) كفحص سريري مستقل (`single_value`) يظهر في جدول النتائج المباشرة بقيمته وتفاصيله المجهرية دون أي تداخل مع فحص الجهاز الآلي.
+  * **تحديث وتوحيد مسمى الفحص في طباعة الاستشارية (`resources/views/staff/requests/print.blade.php`)**:
+    - تعميم دالة التطبيع السريرية `$canonicalTestName` على شريط الأدوات العلوي وقوائم المرفقات في طباعة الاستشارية والطلبات المباشرة لمنع ظهور المسمى القديم `Complete blood count & Differential` واستبداله بالمسمى الرسمي المعتمد `CBC & Blood Film`.
+  * **حزم الاختبارات الآلية الشاملة (`tests/Feature/UnifiedEmergencyLabStationAndReportTest.php`)**:
+    - إضافة وتوسيع اختبارات الميزة لتغطية عدم تفريغ البارامترات الـ 27 لـ CBC في التقرير، والتعامل السليم مع المرفقات، والتمييز التام بين فحص CBC الآلي وفيلم الدم المجهري اليدوي (`10 passed, 62 assertions`).
+
 - **المرحلة 126 (توحيد محطة إدخال وتقارير طوارئ الأشعة 100% مع محطة الأشعة والتقرير السريري الموحد Emergency Radiology Station & Print Report 100% Unification):**
   * **قاعدة البيانات ونموذج الطلبات (`2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php` & `app/Models/EmergencyRadiologyRequest.php`)**:
     - إضافة حقل `results_data` (longText/json) لحفظ البيانات السريرية المنظمة (المشاهدات Findings، الاستنتاج Impression، التوصيات Recommendations، والمرفقات التشخيصية images، ومعلومات الطبيب المعتمد وتاريخ الاعتماد).

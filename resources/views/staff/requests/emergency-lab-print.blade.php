@@ -919,6 +919,16 @@
             return $norm;
         };
 
+        // مزامنة المرفقات الفردية من requestTests مع مصفوفة المرفقات $testAtts
+        foreach ($emergencyLab->requestTests as $rtItem) {
+            if (!empty($rtItem->image_path) && $rtItem->labTest) {
+                $tNameNorm = $canonicalTestName($rtItem->labTest->name);
+                if (!isset($testAtts[$tNameNorm]) && !isset($testAtts[$rtItem->labTest->name])) {
+                    $testAtts[$tNameNorm] = $rtItem->image_path;
+                }
+            }
+        }
+
         // Logo Base64 Generator
         $hospitalLogoPath = public_path('images/1.jpg');
         if (!file_exists($hospitalLogoPath)) {
@@ -1062,6 +1072,7 @@
         $incomingTestResults = $emergencyDetails['test_results'] ?? [];
         $allResults = collect();
         $seenKeys = [];
+        $attachedOrPendingTests = collect();
 
         $addResultItem = function($testName, $parentTestName, $value, $unit, $refRange, $status, $notes = '', $hasImage = false, $imagePath = null, $category = null, $labTestId = null) use (&$allResults, &$seenKeys, $canonicalTestName) {
             $testName = $canonicalTestName($testName);
@@ -1115,6 +1126,17 @@
             $lt = $rt->labTest;
             if (!$lt) continue;
 
+            $isAttTest = $lt->isAttachmentOnly() || !empty($rt->image_path) || isset($testAtts[$lt->name]) || isset($testAtts[$canonicalTestName($lt->name)]);
+            if ($isAttTest) {
+                if (!$attachedOrPendingTests->contains(fn($x) => $x->id === $lt->id)) {
+                    $attachedOrPendingTests->push($lt);
+                }
+                // إذا كان الفحص يعتمد تقرير الجهاز المرفق حصراً، لا نضيف حقولاً فارغة أو بارامترات معلقة للجدول
+                if ($lt->isAttachmentOnly()) {
+                    continue;
+                }
+            }
+
             $rawResult = $rt->result;
             $data = is_string($rawResult) ? json_decode($rawResult, true) : $rawResult;
 
@@ -1146,19 +1168,31 @@
                     }
                     $st = $data['status'] ?? 'normal';
                     $notes = $data['notes'] ?? '';
-                    $addResultItem($lt->name, null, $val, $unit, $ref, $st, $notes, !empty($rt->image_path), $rt->image_path, $lt->main_category, $lt->id);
+                    if ($val !== '') {
+                        $addResultItem($lt->name, null, $val, $unit, $ref, $st, $notes, !empty($rt->image_path), $rt->image_path, $lt->main_category, $lt->id);
+                    }
                 }
             } else {
                 $val = trim((string)$rawResult);
                 $refObj = $lt->referenceForPatient($patientGender, (int)$patientAge) ?? $lt->references->first();
                 $ref = $refObj?->range_display ?? (new \App\Models\LabResult())->getReferenceRange($lt->name);
                 $unit = $lt->unit ?: ((new \App\Models\LabResult())->getUnit($lt->name));
-                $addResultItem($lt->name, null, $val, $unit, $ref, 'normal', '', !empty($rt->image_path), $rt->image_path, $lt->main_category, $lt->id);
+                if ($val !== '') {
+                    $addResultItem($lt->name, null, $val, $unit, $ref, 'normal', '', !empty($rt->image_path), $rt->image_path, $lt->main_category, $lt->id);
+                }
             }
         }
 
         // 3. From emergencyLab->labTests
         foreach ($emergencyLab->labTests as $t) {
+            // استثناء الفحوصات المعتمدة على مرفق الجهاز من تفريغ البارامترات الفرعية الفارغة
+            if ($t->isAttachmentOnly()) {
+                if (!$attachedOrPendingTests->contains(fn($x) => $x->id === $t->id)) {
+                    $attachedOrPendingTests->push($t);
+                }
+                continue;
+            }
+
             if ($t->subTests && $t->subTests->count() > 0) {
                 foreach ($t->subTests as $st) {
                     $addResultItem($st->name, $t->name, '', $st->unit, $st->reference_range, 'normal', '', false, null, $t->main_category, $t->id);
@@ -1182,7 +1216,7 @@
         $standardResults = $allResults->filter(fn($r) => !$isGeneralUrine($r));
         $urineResults = $allResults->filter(fn($r) => $isGeneralUrine($r));
 
-        $hasStandardContent = ($standardResults->count() > 0);
+        $hasStandardContent = ($standardResults->count() > 0) || ($attachedOrPendingTests->count() > 0);
         $hasUrineContent = ($urineResults->count() > 0);
     @endphp
 
@@ -1205,8 +1239,15 @@
         @endif
 
         @foreach($testAtts as $tName => $attPath)
-            <a href="{{ asset('storage/' . $attPath) }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;">
-                🔬 مرفق: {{ $canonicalTestName($tName) }}
+            @php
+                $canonicalTitle = $canonicalTestName($tName);
+                $ltModel = \App\Models\LabTest::where('name', $tName)->orWhere('name', $canonicalTitle)->orWhere('code', $tName)->first();
+                $btnUrl = $ltModel
+                    ? route('staff.emergency-lab.attachment', ['emergencyLab' => $emergencyLab, 'testId' => $ltModel->id])
+                    : asset('storage/' . $attPath);
+            @endphp
+            <a href="{{ $btnUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;" title="فتح تقرير {{ $canonicalTitle }} المرفق">
+                🔬 مرفق: {{ $canonicalTitle }} (PDF)
             </a>
         @endforeach
 
@@ -1343,99 +1384,126 @@
             </div>
 
             @if($hasStandardContent)
-                <!-- Standard Tests Column Headers -->
-                <div class="tests-header-bar">
-                    <div class="header-col">INVESTIGATION / TEST NAME</div>
-                    <div class="header-col center">Conventional Units / Result</div>
-                    <div class="header-col right">Status / Flag</div>
-                </div>
+                @if($standardResults->count() > 0)
+                    <!-- Standard Tests Column Headers -->
+                    <div class="tests-header-bar">
+                        <div class="header-col">INVESTIGATION / TEST NAME</div>
+                        <div class="header-col center">Conventional Units / Result</div>
+                        <div class="header-col right">Status / Flag</div>
+                    </div>
 
-                @php $currentGroup = null; @endphp
-                <div class="standard-tests-section">
-                    @foreach($standardResults as $res)
-                        @php
-                            $parentName = $res->parent_test_name;
-                            $val = trim($res->value ?? '');
-                            $unit = trim($res->unit ?? '');
-                            $refRange = trim($res->reference_range ?? '');
+                    @php $currentGroup = null; @endphp
+                    <div class="standard-tests-section">
+                        @foreach($standardResults as $res)
+                            @php
+                                $parentName = $res->parent_test_name;
+                                $val = trim($res->value ?? '');
+                                $unit = trim($res->unit ?? '');
+                                $refRange = trim($res->reference_range ?? '');
 
-                            $displayName = !empty($parentName) ? ($parentName . ' — ' . $res->test_name) : $res->test_name;
-                            $headerTitle = !empty($parentName) ? $parentName : ($res->category ?? 'General Laboratory Tests');
+                                $displayName = !empty($parentName) ? ($parentName . ' — ' . $res->test_name) : $res->test_name;
+                                $headerTitle = !empty($parentName) ? $parentName : ($res->category ?? 'General Laboratory Tests');
 
-                            if ($headerTitle !== $currentGroup) {
-                                $currentGroup = $headerTitle;
-                                $showHeader = true;
-                            } else {
-                                $showHeader = false;
-                            }
+                                if ($headerTitle !== $currentGroup) {
+                                    $currentGroup = $headerTitle;
+                                    $showHeader = true;
+                                } else {
+                                    $showHeader = false;
+                                }
 
-                            $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
-                            $valClass = 'val-normal';
-                            if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
-                                $valClass = 'val-high';
-                            } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
-                                $valClass = 'val-low';
-                            } elseif ($status === 'abnormal') {
-                                $valClass = 'val-abnormal';
-                            }
-                        @endphp
+                                $status = calcLabStatus($val, $refRange, $res->status ?? 'normal');
+                                $valClass = 'val-normal';
+                                if ($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+') {
+                                    $valClass = 'val-high';
+                                } elseif ($status === 'low' || str_contains($status, 'low') || $status === '-') {
+                                    $valClass = 'val-low';
+                                } elseif ($status === 'abnormal') {
+                                    $valClass = 'val-abnormal';
+                                }
+                            @endphp
 
-                        @if(!empty($showHeader))
-                            <div class="category-header-row">
-                                {{ strtoupper($currentGroup) }}
-                            </div>
-                        @endif
-
-                        <div class="test-card">
-                            <div class="test-main-row">
-                                <div class="test-name">
-                                    {{ $displayName }}
-                                    @if(!empty($res->has_image))
-                                        <small style="color: #0284c7; font-size: 8.5px; margin-left: 4px;">[📎 تقرير الجهاز المرفق]</small>
-                                    @endif
-                                    @if(!empty($res->notes))
-                                        <div style="font-size: 9px; color: #475569; font-style: italic; margin-top: 1px;">
-                                            • {{ $res->notes }}
-                                        </div>
-                                    @endif
-                                </div>
-                                <div class="test-value-cell">
-                                    <div class="current-val-line">
-                                        <span class="{{ $valClass }}">{{ $val !== '' ? $val : 'Pending' }}</span>
-                                        @if($unit)
-                                            <span class="unit-label">{{ $unit }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="test-value-cell right">
-                                    @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
-                                        <span class="val-status-high">High</span>
-                                    @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
-                                        <span class="val-status-low">Low</span>
-                                    @elseif($status === 'abnormal')
-                                        <span class="val-status-high">Abnormal</span>
-                                    @elseif($val !== '' && $val !== '—')
-                                        <span class="val-status-normal">Normal</span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </div>
-                            </div>
-
-                            @if($refRange)
-                                <div class="test-meta-row">
-                                    <div class="meta-label">Reference Range :</div>
-                                    <div class="meta-conv-range">{{ $refRange }}</div>
-                                    <div class="meta-status-blank"></div>
+                            @if(!empty($showHeader))
+                                <div class="category-header-row">
+                                    {{ strtoupper($currentGroup) }}
                                 </div>
                             @endif
 
-                            <div class="test-device-row">
-                                STAT Emergency Lab Diagnostic System • Rapid Automated Analysis
+                            <div class="test-card">
+                                <div class="test-main-row">
+                                    <div class="test-name">
+                                        {{ $displayName }}
+                                        @if(!empty($res->has_image))
+                                            <small style="color: #0284c7; font-size: 8.5px; margin-left: 4px;">[📎 تقرير الجهاز المرفق]</small>
+                                        @endif
+                                        @if(!empty($res->notes))
+                                            <div style="font-size: 9px; color: #475569; font-style: italic; margin-top: 1px;">
+                                                • {{ $res->notes }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="test-value-cell">
+                                        <div class="current-val-line">
+                                            <span class="{{ $valClass }}">{{ $val !== '' ? $val : 'Pending' }}</span>
+                                            @if($unit)
+                                                <span class="unit-label">{{ $unit }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="test-value-cell right">
+                                        @if($status === 'high' || $status === 'positive' || str_contains($status, 'high') || str_contains($status, 'pos') || $status === '+')
+                                            <span class="val-status-high">High</span>
+                                        @elseif($status === 'low' || str_contains($status, 'low') || $status === '-')
+                                            <span class="val-status-low">Low</span>
+                                        @elseif($status === 'abnormal')
+                                            <span class="val-status-high">Abnormal</span>
+                                        @elseif($val !== '' && $val !== '—')
+                                            <span class="val-status-normal">Normal</span>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                @if($refRange)
+                                    <div class="test-meta-row">
+                                        <div class="meta-label">Reference Range :</div>
+                                        <div class="meta-conv-range">{{ $refRange }}</div>
+                                        <div class="meta-status-blank"></div>
+                                    </div>
+                                @endif
+
+                                <div class="test-device-row">
+                                    STAT Emergency Lab Diagnostic System • Rapid Automated Analysis
+                                </div>
                             </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if(isset($attachedOrPendingTests) && $attachedOrPendingTests->count() > 0)
+                    {{-- قسم الفحوصات المرفقة وتقارير الأجهزة الآلية (مطابقة تامة لنمط الاستشارية المعتمد) --}}
+                    <div class="pending-tests-container" style="margin-top: 10px; margin-bottom: 8px; border: 1.2px dashed #0284c7; border-radius: 6px; padding: 6px 12px; background: #f0f9ff; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="font-size: 11px; font-weight: 800; color: #0369a1; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                            <span><i class="fas fa-paperclip me-1"></i> تقارير الأجهزة والفحوصات المرفقة (Attached Device Reports / Diagnostics):</span>
+                            <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 9.5px; border: 1px solid #bae6fd;">تقرير الجهاز الآلي المرفق</span>
                         </div>
-                    @endforeach
-                </div>
+                        @foreach($attachedOrPendingTests as $pTest)
+                            @php
+                                $pName = is_object($pTest) ? $pTest->name : (is_array($pTest) ? ($pTest['name'] ?? '') : (string)$pTest);
+                                $pNameCanonical = $canonicalTestName($pName);
+                                $hasAtt = !empty($testAtts[$pNameCanonical]) || !empty($testAtts[$pName]) || !empty($hasGeneralAtt);
+                            @endphp
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 3px; font-size: 11px;">
+                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pNameCanonical }}</span>
+                                @if($hasAtt)
+                                    <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 10px; border: 1px solid #bbf7d0;">✓ تم إرفاق تقرير الجهاز (PDF) ومتاح عبر الشريط العلوي</span>
+                                @else
+                                    <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 10px; border: 1px solid #fde68a;">⏳ قيد الفحص وإصدار التقرير</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             @elseif($hasUrineContent)
                 {{-- Standalone G.U.E on Page 1 --}}
                 <div class="gue-banner-header" style="margin-top: 10px; margin-bottom: 6px;">

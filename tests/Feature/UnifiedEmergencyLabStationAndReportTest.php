@@ -360,4 +360,107 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
         $response->assertSee('GENERAL URINE EXAMINATION (G.U.E) - فحص الإدرار العام');
         $response->assertSee('Yellow');
     }
+
+    public function test_emergency_lab_print_report_handles_cbc_as_attachment_only_and_does_not_dump_empty_subtests(): void
+    {
+        $cbcTest = LabTest::create([
+            'name' => 'CBC & Blood Film',
+            'code' => 'cbc_3DIFF',
+            'main_category' => 'Hematology',
+            'result_entry_type' => LabTest::ENTRY_TYPE_ATTACHMENT,
+            'price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $sub1 = \App\Models\LabTestSubTest::create([
+            'lab_test_id' => $cbcTest->id,
+            'name' => 'WBC',
+            'unit' => '10^3/uL',
+            'reference_range' => '4.0 - 10.0',
+            'sort_order' => 1,
+        ]);
+        $sub2 = \App\Models\LabTestSubTest::create([
+            'lab_test_id' => $cbcTest->id,
+            'name' => 'RBC',
+            'unit' => '10^6/uL',
+            'reference_range' => '4.5 - 5.5',
+            'sort_order' => 2,
+        ]);
+
+        $req = EmergencyLabRequest::create([
+            'emergency_id' => $this->emergency->id,
+            'patient_id' => $this->emergency->patient_id,
+            'status' => 'completed',
+            'priority' => 'critical',
+            'requested_at' => now(),
+            'details' => [
+                'test_attachments' => [
+                    'CBC & Blood Film' => 'emergency_lab_results/dummy_cbc.pdf',
+                ],
+            ],
+        ]);
+        $req->labTests()->attach($cbcTest->id);
+
+        $response = $this->actingAs($this->labStaffUser)
+            ->get(route('staff.emergency-lab.print', $req));
+
+        $response->assertStatus(200);
+        $response->assertSee('CBC &amp; Blood Film (PDF)', false);
+        $response->assertSee('تقارير الأجهزة والفحوصات المرفقة');
+        $response->assertDontSee('CBC & Blood Film — WBC', false);
+        $response->assertDontSee('CBC & Blood Film — RBC', false);
+    }
+
+    public function test_emergency_lab_print_report_differentiates_cbc_attachment_from_blood_film_microscopic(): void
+    {
+        $cbcTest = LabTest::create([
+            'name' => 'CBC & Blood Film',
+            'code' => 'cbc_test_diff',
+            'main_category' => 'Hematology',
+            'result_entry_type' => LabTest::ENTRY_TYPE_ATTACHMENT,
+            'price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $bloodFilmTest = LabTest::create([
+            'name' => 'Blood Film',
+            'code' => 'BLOOD_FILM_SPECIAL',
+            'main_category' => 'Hematology',
+            'result_entry_type' => LabTest::ENTRY_TYPE_SINGLE,
+            'price' => 50000,
+            'is_active' => true,
+        ]);
+
+        $req = EmergencyLabRequest::create([
+            'emergency_id' => $this->emergency->id,
+            'patient_id' => $this->emergency->patient_id,
+            'status' => 'completed',
+            'priority' => 'urgent',
+            'requested_at' => now(),
+            'details' => [
+                'test_results' => [
+                    'Blood Film' => [
+                        'value' => 'Normocytic Normochromic Smear',
+                        'unit' => '',
+                        'reference_range' => 'Normal Morphology',
+                        'lab_test_id' => $bloodFilmTest->id,
+                        'test_name' => 'Blood Film',
+                    ],
+                ],
+                'test_attachments' => [
+                    'CBC & Blood Film' => 'emergency_lab_results/dummy_cbc.pdf',
+                ],
+            ],
+        ]);
+        $req->labTests()->attach([$cbcTest->id, $bloodFilmTest->id]);
+
+        $response = $this->actingAs($this->labStaffUser)
+            ->get(route('staff.emergency-lab.print', $req));
+
+        $response->assertStatus(200);
+        $response->assertSee('Blood Film');
+        $response->assertSee('Normocytic Normochromic Smear');
+        $response->assertSee('CBC &amp; Blood Film (PDF)', false);
+        $response->assertSee('تقارير الأجهزة والفحوصات المرفقة');
+    }
 }

@@ -1125,6 +1125,23 @@
         $testAtts = is_array($requestDetails['test_attachments'] ?? null) ? $requestDetails['test_attachments'] : [];
         $hasAnyAtt = $hasGeneralAtt || count($testAtts) > 0;
         $publicToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : request('token');
+
+        // دالة تطبيع الأسماء الطبية لتوحيد مسمى فحص الدم والفيلم CBC & Blood Film
+        $canonicalTestName = function($name) {
+            $norm = trim((string)$name);
+            $lower = mb_strtolower($norm);
+            if (in_array($lower, [
+                'complete blood count & differential',
+                'complete blood count',
+                'complete blood count (cbc)',
+                'cbc 3 diff',
+                'cbc 3 diff.',
+                'cbc_3diff',
+            ], true)) {
+                return 'CBC & Blood Film';
+            }
+            return $norm;
+        };
     @endphp
 
     @if(!empty($isPublicView))
@@ -1147,9 +1164,10 @@
             @foreach($testAtts as $tName => $attData)
                 @php
                     $attUrl = route('lab.attachment', array_filter(['request' => $request, 'test' => $tName, 'token' => $publicToken]));
+                    $displayName = $canonicalTestName($tName);
                 @endphp
-                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #ffffff; font-weight: 800; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
-                    🔬 تقرير: {{ $tName }} (PDF)
+                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #ffffff; font-weight: 800; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;" title="فتح تقرير {{ $displayName }} المرفق">
+                    🔬 تقرير: {{ $displayName }} (PDF)
                 </a>
             @endforeach
         </div>
@@ -1182,9 +1200,10 @@
             @foreach($testAtts as $tName => $attData)
                 @php
                     $attUrl = route('lab.attachment', array_filter(['request' => $request, 'test' => $tName, 'token' => $publicToken]));
+                    $displayName = $canonicalTestName($tName);
                 @endphp
-                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;" title="فتح تقرير {{ $tName }} المرفق">
-                    🔬 تقرير: {{ $tName }}
+                <a href="{{ $attUrl }}" target="_blank" class="toolbar-btn" style="background: #0d9488; color: #fff; font-size: 11.5px; padding: 6px 12px;" title="فتح تقرير {{ $displayName }} المرفق">
+                    🔬 تقرير: {{ $displayName }}
                 </a>
             @endforeach
 
@@ -1813,10 +1832,11 @@
                         @foreach($pendingTests as $pTest)
                             @php
                                 $pName = is_array($pTest) ? ($pTest['name'] ?? '') : (is_object($pTest) ? $pTest->name : (string)$pTest);
-                                $hasAtt = !empty($testAtts[$pName]);
+                                $pNameCanonical = $canonicalTestName($pName);
+                                $hasAtt = !empty($testAtts[$pName]) || !empty($testAtts[$pNameCanonical]);
                             @endphp
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 3px; font-size: 11px;">
-                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pName }}</span>
+                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pNameCanonical }}</span>
                                 @if($hasAtt)
                                     <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 10px; border: 1px solid #bbf7d0;">✓ التقرير مرفق مع الفحص</span>
                                 @else
