@@ -1216,7 +1216,7 @@
         $standardResults = $allResults->filter(fn($r) => !$isGeneralUrine($r));
         $urineResults = $allResults->filter(fn($r) => $isGeneralUrine($r));
 
-        $hasStandardContent = ($standardResults->count() > 0) || ($attachedOrPendingTests->count() > 0);
+        $hasStandardContent = ($standardResults->count() > 0) || ($urineResults->count() === 0);
         $hasUrineContent = ($urineResults->count() > 0);
     @endphp
 
@@ -1475,31 +1475,6 @@
                                 <div class="test-device-row">
                                     STAT Emergency Lab Diagnostic System • Rapid Automated Analysis
                                 </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-
-                @if(isset($attachedOrPendingTests) && $attachedOrPendingTests->count() > 0)
-                    {{-- قسم الفحوصات المرفقة وتقارير الأجهزة الآلية (مطابقة تامة لنمط الاستشارية المعتمد) --}}
-                    <div class="pending-tests-container" style="margin-top: 10px; margin-bottom: 8px; border: 1.2px dashed #0284c7; border-radius: 6px; padding: 6px 12px; background: #f0f9ff; page-break-inside: avoid; break-inside: avoid;">
-                        <div style="font-size: 11px; font-weight: 800; color: #0369a1; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
-                            <span><i class="fas fa-paperclip me-1"></i> تقارير الأجهزة والفحوصات المرفقة (Attached Device Reports / Diagnostics):</span>
-                            <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 9.5px; border: 1px solid #bae6fd;">تقرير الجهاز الآلي المرفق</span>
-                        </div>
-                        @foreach($attachedOrPendingTests as $pTest)
-                            @php
-                                $pName = is_object($pTest) ? $pTest->name : (is_array($pTest) ? ($pTest['name'] ?? '') : (string)$pTest);
-                                $pNameCanonical = $canonicalTestName($pName);
-                                $hasAtt = !empty($testAtts[$pNameCanonical]) || !empty($testAtts[$pName]) || !empty($hasGeneralAtt);
-                            @endphp
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 3px; font-size: 11px;">
-                                <span style="font-weight: 800; color: #1e293b;">🔬 {{ $pNameCanonical }}</span>
-                                @if($hasAtt)
-                                    <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 10px; border: 1px solid #bbf7d0;">✓ تم إرفاق تقرير الجهاز (PDF) ومتاح عبر الشريط العلوي</span>
-                                @else
-                                    <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 10px; border: 1px solid #fde68a;">⏳ قيد الفحص وإصدار التقرير</span>
-                                @endif
                             </div>
                         @endforeach
                     </div>

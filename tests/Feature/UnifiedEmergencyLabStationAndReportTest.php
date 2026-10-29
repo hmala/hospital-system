@@ -406,7 +406,7 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('CBC &amp; Blood Film (PDF)', false);
-        $response->assertSee('تقارير الأجهزة والفحوصات المرفقة');
+        $response->assertDontSee('تقارير الأجهزة والفحوصات المرفقة');
         $response->assertDontSee('CBC & Blood Film — WBC', false);
         $response->assertDontSee('CBC & Blood Film — RBC', false);
     }
@@ -461,6 +461,7 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
         $response->assertSee('Blood Film');
         $response->assertSee('Normocytic Normochromic Smear');
         $response->assertSee('CBC &amp; Blood Film (PDF)', false);
-        $response->assertSee('تقارير الأجهزة والفحوصات المرفقة');
+        $response->assertDontSee('تقارير الأجهزة والفحوصات المرفقة');
+        $response->assertDontSee('CBC & Blood Film — WBC', false);
     }
 }
