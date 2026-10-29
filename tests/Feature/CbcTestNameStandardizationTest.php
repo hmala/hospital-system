@@ -1,55 +1,5 @@
-<?php
 
-namespace Tests\Feature;
 
-use App\Models\Emergency;
-use App\Models\EmergencyLabRequest;
-use App\Models\Hospital;
-use App\Models\LabTest;
-use App\Models\Patient;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
-use Tests\TestCase;
-
-class CbcTestNameStandardizationTest extends TestCase
-{
-    use RefreshDatabase;
-
-    protected $hospital;
-
-    protected $labStaff;
-
-    protected $patient;
-
-    protected $emergency;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'lab_staff']);
-
-        $this->hospital = Hospital::create([
-            'name' => 'مستشفى الكفاءات الأهلي',
-            'owner_name' => 'الإدارة',
-            'phone' => '07700000000',
-            'address' => 'بغداد',
-            'license_number' => 'LIC-CBC-'.rand(100, 999),
-        ]);
-
-        $user = User::factory()->create();
-        $this->patient = Patient::create([
-            'user_id' => $user->id,
-            'hospital_id' => $this->hospital->id,
-            'name' => 'محمد خلف',
-            'gender' => 'male',
-            'age' => 45,
-            'phone' => '07712345678',
-        ]);
-
-        $this->emergency = Emergency::create([
             'patient_id' => $this->patient->id,
             'emergency_type' => 'cardiac',
             'status' => 'in_progress',
