@@ -447,7 +447,7 @@ class PaymentVoidAndReversalTest extends TestCase
             'payment_status' => 'paid',
         ]);
 
-        $test1 = LabTest::create(['name' => 'CBC & Blood Film', 'code' => 'CBC', 'price' => 10000, 'is_active' => true]);
+        $test1 = LabTest::create(['name' => 'CBC (5-Part Diff)', 'code' => 'CBC', 'price' => 10000, 'is_active' => true]);
         $test2 = LabTest::create(['name' => 'Free thyroxin', 'code' => 'FT4', 'price' => 15000, 'is_active' => true]);
 
         $req1 = MedicalRequest::create([
@@ -531,7 +531,7 @@ class PaymentVoidAndReversalTest extends TestCase
         // 3. التحقق من طابور المختبر: الطلب الملغي لا يظهر نهائياً بينما المسدد يظهر
         $labIndex = $this->actingAs($labStaff)->get(route('lab.index'));
         $labIndex->assertStatus(200);
-        $labIndex->assertSee('CBC &amp; Blood Film', false);
+        $labIndex->assertSee('CBC (5-Part Diff)');
         $labIndex->assertDontSee('Free thyroxin');
 
         // 4. التحقق من شاشة الطبيب: يظهر تنبيه سريري بإلغاء الفحص

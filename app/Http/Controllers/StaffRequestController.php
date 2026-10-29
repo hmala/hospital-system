@@ -2183,6 +2183,7 @@ class StaffRequestController extends Controller
                 $lookupKeys = array_filter([
                     $testId,
                     $tModel?->name,
+                    'CBC (5-Part Diff)',
                     'CBC & Blood Film',
                     'Complete blood count & Differential',
                 ]);

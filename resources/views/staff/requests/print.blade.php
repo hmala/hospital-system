@@ -1126,19 +1126,25 @@
         $hasAnyAtt = $hasGeneralAtt || count($testAtts) > 0;
         $publicToken = method_exists($request, 'getPublicReportToken') ? $request->getPublicReportToken() : request('token');
 
-        // دالة تطبيع الأسماء الطبية لتوحيد مسمى فحص الدم والفيلم CBC & Blood Film
+        // دالة تطبيع الأسماء الطبية لتوحيد مسمى فحص الدم CBC (5-Part Diff)
         $canonicalTestName = function($name) {
             $norm = trim((string)$name);
             $lower = mb_strtolower($norm);
             if (in_array($lower, [
+                'cbc & blood film',
                 'complete blood count & differential',
                 'complete blood count',
                 'complete blood count (cbc)',
+                'cbc (5-part diff)',
+                'cbc (5-part diff.)',
+                'cbc 5-part diff',
+                'cbc 5 diff',
                 'cbc 3 diff',
                 'cbc 3 diff.',
                 'cbc_3diff',
+                'cbc_5diff',
             ], true)) {
-                return 'CBC & Blood Film';
+                return 'CBC (5-Part Diff)';
             }
             return $norm;
         };

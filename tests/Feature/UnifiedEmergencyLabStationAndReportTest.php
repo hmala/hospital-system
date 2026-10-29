@@ -364,7 +364,7 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
     public function test_emergency_lab_print_report_handles_cbc_as_attachment_only_and_does_not_dump_empty_subtests(): void
     {
         $cbcTest = LabTest::create([
-            'name' => 'CBC & Blood Film',
+            'name' => 'CBC (5-Part Diff)',
             'code' => 'cbc_3DIFF',
             'main_category' => 'Hematology',
             'result_entry_type' => LabTest::ENTRY_TYPE_ATTACHMENT,
@@ -395,7 +395,7 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
             'requested_at' => now(),
             'details' => [
                 'test_attachments' => [
-                    'CBC & Blood Film' => 'emergency_lab_results/dummy_cbc.pdf',
+                    'CBC (5-Part Diff)' => 'emergency_lab_results/dummy_cbc.pdf',
                 ],
             ],
         ]);
@@ -405,16 +405,16 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
             ->get(route('staff.emergency-lab.print', $req));
 
         $response->assertStatus(200);
-        $response->assertSee('CBC &amp; Blood Film (PDF)', false);
+        $response->assertSee('CBC (5-Part Diff) (PDF)', false);
         $response->assertDontSee('تقارير الأجهزة والفحوصات المرفقة');
-        $response->assertDontSee('CBC & Blood Film — WBC', false);
-        $response->assertDontSee('CBC & Blood Film — RBC', false);
+        $response->assertDontSee('CBC (5-Part Diff) — WBC', false);
+        $response->assertDontSee('CBC (5-Part Diff) — RBC', false);
     }
 
     public function test_emergency_lab_print_report_differentiates_cbc_attachment_from_blood_film_microscopic(): void
     {
         $cbcTest = LabTest::create([
-            'name' => 'CBC & Blood Film',
+            'name' => 'CBC (5-Part Diff)',
             'code' => 'cbc_test_diff',
             'main_category' => 'Hematology',
             'result_entry_type' => LabTest::ENTRY_TYPE_ATTACHMENT,
@@ -448,7 +448,7 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
                     ],
                 ],
                 'test_attachments' => [
-                    'CBC & Blood Film' => 'emergency_lab_results/dummy_cbc.pdf',
+                    'CBC (5-Part Diff)' => 'emergency_lab_results/dummy_cbc.pdf',
                 ],
             ],
         ]);
@@ -460,8 +460,8 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Blood Film');
         $response->assertSee('Normocytic Normochromic Smear');
-        $response->assertSee('CBC &amp; Blood Film (PDF)', false);
+        $response->assertSee('CBC (5-Part Diff) (PDF)', false);
         $response->assertDontSee('تقارير الأجهزة والفحوصات المرفقة');
-        $response->assertDontSee('CBC & Blood Film — WBC', false);
+        $response->assertDontSee('CBC (5-Part Diff) — WBC', false);
     }
 }

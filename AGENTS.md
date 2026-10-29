@@ -53,6 +53,23 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 129: توحيد فحص عد الدم الشامل الآلي باسمه الطبي المعتمد CBC (5-Part Diff) وفصل فحص فيلم الدم المجهري Blood Film وتحديث المطبوعات والاختبارات Automated CBC (5-Part Diff) Medical Standardization, Standalone Microscopic Blood Film & Complete Print Parity)
+
+### Done
+- **توحيد المسمى الطبي لفحص الدم الشامل في قاعدة البيانات ([database/migrations/2026_10_29_200000_standardize_cbc_test_name_to_cbc_5_part_diff.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_200000_standardize_cbc_test_name_to_cbc_5_part_diff.php))**:
+  * توحيد واعتماد المسمى الطبي الدقيق `CBC (5-Part Diff)` لفحص الجهاز الآلي (رقم 43 و 44) بسعر 20,000 د.ع مع كافة البارامترات الـ 27 الفرعية.
+  * تعطيل السجل المكرر (رقم 1440) منعاً للازدواجية.
+  * عزل وتثبيت فحص فيلم الدم المجهري اليدوي المستقل `Blood Film` (رقم 1243) بسعر 50,000 د.ع كفحص سريري منفصل.
+  * تطبيق المايجريشن وتحديث السجلات محلياً وعلى قاعدة بيانات هوستنجر الحية بدقة 100%.
+- **تحديث وضبط شاشات طباعة تقارير المختبر ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php) & [resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * تحديث دالة التطبيع السريرية `$canonicalTestName` لترقية كافة المسميات القديمة والبديلة (`CBC & Blood Film`, `Complete blood count & Differential`, إلخ) إلى المسمى الرسمي المعتمد `CBC (5-Part Diff)`.
+  * تحديث مسميات أزرار المرفقات في الشريط العلوي التفاعلي لتظهر بنمط `[ 🔬 مرفق: CBC (5-Part Diff) (PDF) ]`.
+- **ترقية واجهة محطة تحاليل الطوارئ ومعالجة المرفقات ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php) & [app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * إضافة المسمى الجديد `CBC (5-Part Diff)` في قائمة الأكواد البديلة `$codeAliases` لربطه التلقائي مع `cbc_3DIFF`.
+  * دعم جلب المرفق الطبي للجهاز الآلي باسم `CBC (5-Part Diff)` أو الأسماء السابقة دون أي فقد للمرفقات السابقة.
+- **حزم الاختبارات الآلية الشاملة**:
+  * تحديث واجتياز اختبارات `CbcTestNameStandardizationTest.php`, `UnifiedEmergencyLabStationAndReportTest.php`, و `PaymentVoidAndReversalTest.php` بإجمالي 21 اختباراً ناجحاً بنسبة 100% (133 assertions).
+
 ## Session log (2026-10-29 — المرحلة 128: فك ارتباط وإلغاء كافة الطلبات الطبية عند إبطال الوصل Rebill و Refund ومنع ظهورها في طابور المختبر والأشعة وإظهارها كملغاة عند الطبيب Reopened & Refunded Payment Medical Requests Cascade Cancellation, Departmental Queue Purification & Clinical Doctor Alerts)
 
 ### Done

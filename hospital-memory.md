@@ -987,6 +987,18 @@
       * بناء اختبار ميزة متكامل `tests/Feature/EmergencyCashierCopayLockTest.php` واجتيازه بنجاح تام مع اجتياز كامل حزمة اختبارات الكاشير الـ 21 بنجاح (`21 passed, 165 assertions`).
 
 ### 🟢 Done (المراحل المنجزة والموثقة):
+- **المرحلة 129 (2026-10-29): توحيد فحص عد الدم الشامل الآلي باسمه الطبي المعتمد CBC (5-Part Diff) وفصل فحص فيلم الدم المجهري Blood Film وتحديث المطبوعات والاختبارات (Automated CBC (5-Part Diff) Medical Standardization, Standalone Microscopic Blood Film & Complete Print Parity)**:
+  * توحيد واعتماد المسمى الطبي الدقيق `CBC (5-Part Diff)` لفحص الجهاز الآلي (رقم 43 و 44) بسعر 20,000 د.ع مع كافة البارامترات الـ 27 الفرعية.
+  * تعطيل السجل المكرر (رقم 1440) منعاً للازدواجية، وتثبيت فحص فيلم الدم المجهري اليدوي المستقل `Blood Film` (رقم 1243) بسعر 50,000 د.ع.
+  * تحديث دالة التطبيع السريرية `$canonicalTestName` في طباعة الطوارئ والاستشارية ومحطة الإدخال ومرفقات الجهاز بنمط `[ 🔬 مرفق: CBC (5-Part Diff) (PDF) ]`.
+  * تطبيق المايجريشن وتحديث السجلات محلياً وعلى قاعدة بيانات هوستنجر الحية واجتياز كافة الاختبارات الآلية (21 passed, 133 assertions).
+
+- **المرحلة 128 (2026-10-29): فك ارتباط وإلغاء كافة الطلبات الطبية عند إبطال الوصل Rebill و Refund ومنع ظهورها في طابور المختبر والأشعة وإظهارها كملغاة عند الطبيب (Reopened & Refunded Payment Medical Requests Cascade Cancellation, Departmental Queue Purification & Clinical Doctor Alerts)**:
+  * حصر وجمع كافة معرفات الطلبات الطبية المرتبطة بالوصل المالي المُراد إبطاله بأي شكل (`$payment->request_id`, `$payment->lab_request_ids`, `$payment->radiology_request_ids`).
+  * فك ارتباط وتصفير كافة الطلبات المدمجة دفعة واحدة عند إعادة الفتح (`rebill`) وإلغاؤها عند الاسترداد (`refund`) مع توثيق السبب ليظهر كملغي لدى الطبيب.
+  * تطهير طوابير العمل في المختبر والأشعة باستبعاد الطلبات الملغاة أو المرتبطة بوصولات مبطلة.
+  * تصحيح السجلات العالقة (مثل الطلب رقم 859 العالق في الوصل 1677 على هوستنجر) واجتياز اختبارات الميزة الشاملة.
+
 - **المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة (Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)**:
   * **بنية الصلاحيات والتحصين الأمني (Spatie Permissions & Gating)**:
     - إضافة صلاحية مستقلة ومحصورة في `RolesAndPermissionsSeeder`: `void payment receipt`.

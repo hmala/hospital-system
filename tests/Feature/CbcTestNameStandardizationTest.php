@@ -67,10 +67,10 @@ class CbcTestNameStandardizationTest extends TestCase
         $this->labStaff = $labUser;
     }
 
-    public function test_cbc_test_name_displays_as_cbc_and_blood_film_in_print_even_with_legacy_keys()
+    public function test_cbc_test_name_displays_as_cbc_5_part_diff_in_print_even_with_legacy_keys()
     {
         $cbcTest = LabTest::create([
-            'name' => 'CBC & Blood Film',
+            'name' => 'CBC (5-Part Diff)',
             'code' => 'cbc_3DIFF',
             'price' => 20000,
             'is_active' => true,
@@ -102,8 +102,8 @@ class CbcTestNameStandardizationTest extends TestCase
             ->get(route('staff.emergency-lab.print', $emergencyLab));
 
         $response->assertStatus(200);
-        $response->assertSee('CBC &amp; Blood Film', false);
+        $response->assertSee('CBC (5-Part Diff)');
         $response->assertDontSee('Complete blood count &amp; Differential', false);
-        $response->assertSee('مرفق: CBC &amp; Blood Film', false);
+        $response->assertSee('مرفق: CBC (5-Part Diff)');
     }
 }
