@@ -53,6 +53,16 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 131: دمج وتوحيد فحوصات CBC في فحص نشط وحيد رقم 43 ونقل باقات الأطباء وتعطيل المكرر كأرشيف CBC Tests Consolidation into Single Active ID 43 & Legacy Archiving)
+
+### Done
+- **الدمج الشامل وتوحيد سجلات فحص الدم ([database/migrations/2026_10_29_213000_consolidate_cbc_tests_to_single_active_test_43.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_213000_consolidate_cbc_tests_to_single_active_test_43.php))**:
+  * اعتماد السجل رقم **#43** كفحص نشط ورسمي وحيد باسم **`CBC (5-Part Diff)`** وبسعر 20,000 د.ع مع كامل البارامترات الـ 27.
+  * تمييز السجل رقم **#44** كأرشيف مدمج (`CBC (5-Part Diff) [أرشيف مدمج]`) وتعطيله نهائياً (`is_active = 0`).
+  * تمييز السجل رقم **#1440** كمكرر ملغي (`CBC [مكرر ملغي]`) وتعطيله نهائياً (`is_active = 0`).
+  * ترحيل ونقل كافة الباقات المفضلة لجميع أطباء المستشفى في جدول `user_lab_test_group_lab_test` من 44 و 1440 إلى 43 مباشرة ليصبح إجمالي باقات الأطباء المرتبطة بـ #43 هو 21 باقة.
+  * تطبيق المايجريشن والدمج محلياً وعلى قاعدة بيانات هوستنجر الحية بدقة 100%.
+
 ## Session log (2026-10-29 — المرحلة 130: ترقية وتوحيد طلب استشارة الطوارئ إلى اختيار استشاري فردي وربطها مالياً بخدمة استشارة اخصائي من العيادة الاستشارية بسعر 30,000 د.ع Emergency Single Consultant Selection & Automated 30,000 IQD Emergency Service Billing)
 
 ### Done
