@@ -297,7 +297,7 @@ label.incubator-card {
                                     <div class="card-body p-3 d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px;">
-                                                <i class="fas fa-female fa-lg"></i>
+                                                <i class="fas fa-user-check fa-lg"></i>
                                             </div>
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">
@@ -309,7 +309,26 @@ label.incubator-card {
                                                     <span class="badge bg-info text-dark" id="selectedPatientAgeBadge" style="{{ isset($patient) && $patient->age !== null ? '' : 'display: none;' }}">
                                                         <span id="selectedPatientAgeText">{{ isset($patient) && $patient->age !== null ? ($patient->age < 1 ? 'أقل من سنة' : $patient->age . ' سنة') : '' }}</span>
                                                     </span>
-                                                    <span class="badge bg-success" id="selectedPatientInsuranceBadge" style="{{ isset($patient) && $patient->insurance_type === 'hi' ? '' : 'display: none;' }}">
+
+                                                    <!-- شارة صفة القيد المحددة تلقائياً حسب العمر -->
+                                                    @php
+                                                        $isBabyPatient = (isset($patient) && $patient->age !== null && $patient->age < 1);
+                                                        $defaultRoleValue = old('is_independent_patient', $isBabyPatient ? '1' : '0');
+                                                    @endphp
+                                                    <span class="badge {{ $defaultRoleValue === '1' ? 'bg-success-subtle text-success border border-success' : 'bg-primary-subtle text-primary border border-primary' }} px-2 py-1" id="selectedPatientRoleBadge" style="{{ old('patient_id') || isset($patient) ? 'display: inline-flex;' : 'display: none;' }}">
+                                                        <span id="selectedPatientRoleText">
+                                                            @if($defaultRoleValue === '1')
+                                                                <i class="fas fa-baby me-1"></i> صفة القيد: طفل خديج (ملف مستقل)
+                                                            @else
+                                                                <i class="fas fa-user-friends me-1"></i> صفة القيد: الأم أو الأب (ولي أمر بالغ{{ isset($patient) && $patient->age !== null ? ' - ' . $patient->age . ' سنة' : '' }})
+                                                            @endif
+                                                        </span>
+                                                    </span>
+                                                    <a href="javascript:void(0);" id="toggleManualRoleBtn" class="small text-decoration-underline text-secondary ms-1" title="تغيير صفة القيد يدوياً إذا لزم الأمر" style="{{ old('patient_id') || isset($patient) ? 'display: inline;' : 'display: none;' }}">
+                                                        <i class="fas fa-sliders-h me-1"></i>تعديل الصفة
+                                                    </a>
+
+                                                    <span class="badge bg-success" id="selectedPatientInsuranceBadge" style="{{ (isset($patient) && $patient->insurance_type === 'hi') || old('insurance_type') === 'hi' ? 'display: inline-flex;' : 'display: none;' }}">
                                                         <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">مشمول بالضمان الصحي</span>
                                                     </span>
                                                 </div>
@@ -322,29 +341,34 @@ label.incubator-card {
                                 </div>
                             </div>
 
-                            <!-- خيار صفة المريض المختار (الأم/الأب أم الطفل نفسه؟) -->
-                            <div class="col-md-12 mb-3">
-                                <div class="card p-3 border-0 bg-white shadow-sm" style="border-radius: 10px; border: 1.5px solid #cbd5e1 !important;">
-                                    <label class="form-label fw-bold text-dark mb-2">
-                                        <i class="fas fa-user-tag text-primary me-1"></i>
-                                        صفة المريض المختار في هذا الحجز <span class="text-danger">*</span>
-                                    </label>
+                            <!-- خيار تعديل صفة المريض يدوياً (مخفي افتراضياً لأن النظام يحددها تلقائياً بحسب العمر دون إرباك المستخدم) -->
+                            <div class="col-md-12 mb-3" id="manualRoleContainer" style="display: none;">
+                                <div class="card p-3 border-0 bg-white shadow-sm" style="border-radius: 10px; border: 1.5px dashed #94a3b8 !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-bold text-dark mb-0 small">
+                                            <i class="fas fa-sliders-h text-primary me-1"></i>
+                                            تعديل صفة القيد يدوياً (اختياري - تم تحديدها تلقائياً بناءً على العمر)
+                                        </label>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="closeManualRoleBtn" title="اعتماد وإخفاء الخيارات اليدوية">
+                                            <i class="fas fa-check me-1"></i> تم
+                                        </button>
+                                    </div>
                                     <div class="row g-2">
                                         <div class="col-md-6">
                                             <div class="form-check p-2.5 border rounded h-100 bg-light" id="parentCheckCard">
-                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_parent" value="0" {{ old('is_independent_patient', (isset($patient) && $patient->age !== null && $patient->age < 1 ? '1' : '0')) === '0' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_parent" value="0" {{ $defaultRoleValue === '0' ? 'checked' : '' }}>
                                                 <label class="form-check-label w-100 cursor-pointer" for="patient_is_parent">
                                                     <strong class="text-primary d-block"><i class="fas fa-female me-1"></i> المريض المختار هو الأم أو الأب</strong>
-                                                    <small class="text-muted">المولود مسجل تابعاً لملف الأم/الأب (النمط الشائع بالمستشفيات)</small>
+                                                    <small class="text-muted">المولود مسجل تابعاً لملف الأم/الأب (النمط الشائع للبالغين)</small>
                                                 </label>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-check p-2.5 border rounded h-100 bg-light" id="babyCheckCard">
-                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_baby" value="1" {{ old('is_independent_patient', (isset($patient) && $patient->age !== null && $patient->age < 1 ? '1' : '0')) === '1' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="is_independent_patient" id="patient_is_baby" value="1" {{ $defaultRoleValue === '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label w-100 cursor-pointer" for="patient_is_baby">
                                                     <strong class="text-success d-block"><i class="fas fa-baby me-1"></i> المريض المختار هو الطفل نفسه</strong>
-                                                    <small class="text-muted">ملف مستقل للطفل (مثلاً: محول من مستشفى خارجي أو مسجل باسمه)</small>
+                                                    <small class="text-muted">ملف مستقل للطفل (أقل من سنة - محول أو مسجل مباشرة)</small>
                                                 </label>
                                             </div>
                                         </div>
@@ -402,6 +426,11 @@ label.incubator-card {
                         </div>
 
                         <!-- نوع الحساب والتغطية المالية -->
+                        @php
+                            $initInsuranceType = old('insurance_type', (isset($patient) && $patient->insurance_type === 'hi') ? 'hi' : 'none');
+                            $initPolicyCategory = old('policy_category', (isset($patient) && $patient->healthInsuranceCategory?->code) ? $patient->healthInsuranceCategory->code : 'E');
+                            $initInsuranceCardNo = old('insurance_card_no', isset($patient) ? ($patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number)) : '');
+                        @endphp
                         <div class="card p-3 mb-4 bg-light border-0 shadow-sm" style="border-radius: 12px;">
                             <div class="row align-items-center">
                                 <div class="col-md-5 mb-2 mb-md-0">
@@ -413,12 +442,12 @@ label.incubator-card {
                                 </div>
                                 <div class="col-md-7">
                                     <div class="btn-group w-100 shadow-sm" role="group">
-                                        <input type="radio" class="btn-check" name="insurance_type" id="type_cash" value="none" autocomplete="off" {{ old('insurance_type', 'none') === 'none' ? 'checked' : '' }}>
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_cash" value="none" autocomplete="off" {{ $initInsuranceType === 'none' ? 'checked' : '' }}>
                                         <label class="btn btn-outline-primary fw-bold py-2" for="type_cash">
                                             <i class="fas fa-money-bill-wave me-1"></i> كاش / خاص
                                         </label>
 
-                                        <input type="radio" class="btn-check" name="insurance_type" id="type_hi" value="hi" autocomplete="off" {{ old('insurance_type') === 'hi' ? 'checked' : '' }}>
+                                        <input type="radio" class="btn-check" name="insurance_type" id="type_hi" value="hi" autocomplete="off" {{ $initInsuranceType === 'hi' ? 'checked' : '' }}>
                                         <label class="btn btn-outline-success fw-bold py-2" for="type_hi">
                                             <i class="fas fa-shield-alt me-1"></i> ضمان صحي (HIA)
                                         </label>
@@ -447,7 +476,7 @@ label.incubator-card {
                                 ]);
                             }
                         @endphp
-                        <div id="insuranceDetailsSection" class="card border border-success-subtle bg-success bg-opacity-10 p-3 mb-4 {{ old('insurance_type') === 'hi' ? '' : 'd-none' }}" style="border-radius: 12px;">
+                        <div id="insuranceDetailsSection" class="card border border-success-subtle bg-success bg-opacity-10 p-3 mb-4 {{ $initInsuranceType === 'hi' ? '' : 'd-none' }}" style="border-radius: 12px;">
                             <h6 class="fw-bold text-success mb-3">
                                 <i class="fas fa-id-card me-2"></i> بيانات وثيقة الضمان الصحي والمطالبة الإلكترونية
                             </h6>
@@ -459,7 +488,7 @@ label.incubator-card {
                                             <option value="{{ $cat->code }}" 
                                                     data-id="{{ $cat->id ?? '' }}"
                                                     data-code="{{ $cat->code }}"
-                                                    {{ old('policy_category', 'E') === $cat->code ? 'selected' : '' }}>
+                                                    {{ $initPolicyCategory === $cat->code ? 'selected' : '' }}>
                                                 {{ $cat->name }} ({{ $cat->code }}){{ !empty($cat->description) ? ' - ' . $cat->description : '' }}
                                             </option>
                                         @endforeach
@@ -468,7 +497,7 @@ label.incubator-card {
                                 </div>
                                 <div class="col-md-6">
                                     <label for="insurance_card_no" class="form-label fw-bold">رقم بطاقة الضمان الصحي</label>
-                                    <input type="text" name="insurance_card_no" id="insurance_card_no" class="form-control" placeholder="مثال: HIA-987654321" value="{{ old('insurance_card_no') }}">
+                                    <input type="text" name="insurance_card_no" id="insurance_card_no" class="form-control" placeholder="مثال: HIA-987654321" value="{{ $initInsuranceCardNo }}">
                                 </div>
                                 <div class="col-12">
                                     <div class="alert alert-info py-2 px-3 mb-0 small" id="tierPreviewAlert">
@@ -1002,9 +1031,64 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // عناصر صفة المريض المختار والتحديد التلقائي
+        const radioBaby = document.getElementById('patient_is_baby');
+        const radioParent = document.getElementById('patient_is_parent');
+        const roleBadge = document.getElementById('selectedPatientRoleBadge');
+        const roleText = document.getElementById('selectedPatientRoleText');
+        const toggleManualRoleBtn = document.getElementById('toggleManualRoleBtn');
+        const manualRoleContainer = document.getElementById('manualRoleContainer');
+        const babyHint = document.getElementById('babyNameHint');
+
+        // التحديد التلقائي لصفة القيد بناءً على العمر (إذا العمر أقل من سنة فهو طفل، وإلا فهو الأم أو الأب)
+        const isBaby = (p.age !== null && p.age !== undefined && p.age < 1);
+        if (isBaby) {
+            if (radioBaby) radioBaby.checked = true;
+            if (roleBadge) {
+                roleBadge.className = 'badge bg-success-subtle text-success border border-success px-2 py-1';
+                roleBadge.style.display = 'inline-flex';
+            }
+            if (roleText) {
+                roleText.innerHTML = '<i class="fas fa-baby me-1"></i> صفة القيد: طفل خديج (ملف طفل مستقل - العمر أقل من سنة)';
+            }
+            if (babyNameInput) {
+                babyNameInput.placeholder = p.name;
+                if (!babyNameInput.value) {
+                    babyNameInput.value = p.name;
+                }
+            }
+            if (babyHint) {
+                babyHint.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i> تم التعرف على المريض كـ (طفل مستقل) تلقائياً بحسب العمر (أقل من سنة). تم اعتماد الاسم.</span>';
+            }
+        } else {
+            if (radioParent) radioParent.checked = true;
+            if (roleBadge) {
+                roleBadge.className = 'badge bg-primary-subtle text-primary border border-primary px-2 py-1';
+                roleBadge.style.display = 'inline-flex';
+            }
+            if (roleText) {
+                const ageLabel = (p.age !== null && p.age !== undefined) ? ` (${p.age} سنة)` : '';
+                roleText.innerHTML = `<i class="fas fa-user-friends me-1"></i> صفة القيد: الأم أو الأب (ولي أمر بالغ${ageLabel})`;
+            }
+            if (babyNameInput) {
+                const autoPlaceholder = p.name.startsWith('طفل') ? p.name : ('طفل ' + p.name);
+                babyNameInput.placeholder = autoPlaceholder;
+                if (babyNameInput.value === p.name) {
+                    babyNameInput.value = '';
+                }
+            }
+            if (babyHint) {
+                const ageLabel = (p.age !== null && p.age !== undefined) ? ` (${p.age} سنة)` : '';
+                babyHint.innerHTML = `<span class="text-primary"><i class="fas fa-magic me-1"></i> تم التعرف تلقائياً على أن المريض هو (الأم أو الأب) لأن العمر أكبر من سنة${ageLabel}. يولد اسم الطفل تلقائياً كـ "طفل + اسم ولي الأمر" إن تُرِك فارغاً.</span>`;
+            }
+        }
+
+        if (toggleManualRoleBtn) toggleManualRoleBtn.style.display = 'inline';
+        if (manualRoleContainer) manualRoleContainer.style.display = 'none';
+
         if (selectedPatientInsuranceBadge) {
             if (p.insurance_type === 'hi') {
-                selectedPatientInsuranceBadge.style.display = 'inline-block';
+                selectedPatientInsuranceBadge.style.display = 'inline-flex';
                 // تفعيل خيار الضمان الصحي تلقائياً إن كان المريض مشمولاً
                 const hiRadio = document.getElementById('type_hi');
                 if (hiRadio && !hiRadio.checked) {
@@ -1024,6 +1108,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 selectedPatientInsuranceBadge.style.display = 'none';
+                const cashRadio = document.getElementById('type_cash');
+                const hiRadio = document.getElementById('type_hi');
+                if (cashRadio && (!hiRadio || !hiRadio.checked)) {
+                    cashRadio.checked = true;
+                    cashRadio.dispatchEvent(new Event('change'));
+                }
                 const polCat = document.getElementById('policy_category');
                 if (polCat && (!polCat.value || polCat.value === '')) {
                     polCat.value = 'E';
@@ -1032,69 +1122,83 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // تحديد صفة المريض واقتراح اسم الطفل بذكاء
-        const radioBaby = document.getElementById('patient_is_baby');
-        const radioParent = document.getElementById('patient_is_parent');
-        const babyHint = document.getElementById('babyNameHint');
-
-        if (p.age !== null && p.age !== undefined && p.age < 1) {
-            // المريض طفل حديث ولادة (أقل من سنة)
-            if (radioBaby) radioBaby.checked = true;
-            if (babyNameInput) {
-                babyNameInput.placeholder = p.name;
-                if (!babyNameInput.value) {
-                    babyNameInput.value = p.name;
-                }
-            }
-            if (babyHint) babyHint.textContent = '(ملف طفل مستقل - تم ضبط الاسم تلقائياً)';
-        } else {
-            // المريض بالغ (الأم أو الأب)
-            if (radioParent) radioParent.checked = true;
-            if (babyNameInput) {
-                babyNameInput.placeholder = p.name.startsWith('طفل') ? p.name : ('طفل ' + p.name);
-                if (babyNameInput.value === p.name) {
-                    babyNameInput.value = '';
-                }
-            }
-            if (babyHint) babyHint.textContent = '(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)';
-        }
-
         if (patientSearchResults) patientSearchResults.style.display = 'none';
         if (patientSearchContainer) patientSearchContainer.style.display = 'none';
         if (selectedPatientCard) selectedPatientCard.style.display = 'block';
     }
 
-    // تفاعل التبديل اليدوي بين صفة المريض (الأم/الأب أو الطفل)
+    // تفاعل التبديل اليدوي بين صفة المريض (الأم/الأب أو الطفل) إن رغب المستخدم في تغييره
     const radioBaby = document.getElementById('patient_is_baby');
     const radioParent = document.getElementById('patient_is_parent');
+    const roleBadge = document.getElementById('selectedPatientRoleBadge');
+    const roleText = document.getElementById('selectedPatientRoleText');
+    const toggleManualRoleBtn = document.getElementById('toggleManualRoleBtn');
+    const closeManualRoleBtn = document.getElementById('closeManualRoleBtn');
+    const manualRoleContainer = document.getElementById('manualRoleContainer');
     const babyHint = document.getElementById('babyNameHint');
+
+    if (toggleManualRoleBtn && manualRoleContainer) {
+        toggleManualRoleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (manualRoleContainer.style.display === 'none' || manualRoleContainer.style.display === '') {
+                manualRoleContainer.style.display = 'block';
+                manualRoleContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                manualRoleContainer.style.display = 'none';
+            }
+        });
+    }
+
+    if (closeManualRoleBtn && manualRoleContainer) {
+        closeManualRoleBtn.addEventListener('click', function() {
+            manualRoleContainer.style.display = 'none';
+        });
+    }
 
     if (radioBaby) {
         radioBaby.addEventListener('change', function() {
-            if (this.checked && selectedPatientName && selectedPatientName.textContent.trim()) {
-                const name = selectedPatientName.textContent.trim();
-                if (babyNameInput) {
-                    babyNameInput.placeholder = name;
-                    if (!babyNameInput.value || babyNameInput.value.startsWith('طفل ')) {
-                        babyNameInput.value = name;
+            if (this.checked) {
+                if (roleBadge) {
+                    roleBadge.className = 'badge bg-success-subtle text-success border border-success px-2 py-1';
+                    roleBadge.style.display = 'inline-flex';
+                }
+                if (roleText) {
+                    roleText.innerHTML = '<i class="fas fa-baby me-1"></i> صفة القيد: طفل خديج (ملف طفل مستقل)';
+                }
+                if (selectedPatientName && selectedPatientName.textContent.trim()) {
+                    const name = selectedPatientName.textContent.trim();
+                    if (babyNameInput) {
+                        babyNameInput.placeholder = name;
+                        if (!babyNameInput.value || babyNameInput.value.startsWith('طفل ')) {
+                            babyNameInput.value = name;
+                        }
                     }
                 }
-                if (babyHint) babyHint.textContent = '(ملف طفل مستقل - تم ضبط الاسم تلقائياً)';
+                if (babyHint) babyHint.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i> تم تعيين الصفة يدوياً: ملف طفل مستقل.</span>';
             }
         });
     }
 
     if (radioParent) {
         radioParent.addEventListener('change', function() {
-            if (this.checked && selectedPatientName && selectedPatientName.textContent.trim()) {
-                const name = selectedPatientName.textContent.trim();
-                if (babyNameInput) {
-                    babyNameInput.placeholder = name.startsWith('طفل') ? name : ('طفل ' + name);
-                    if (babyNameInput.value === name) {
-                        babyNameInput.value = '';
+            if (this.checked) {
+                if (roleBadge) {
+                    roleBadge.className = 'badge bg-primary-subtle text-primary border border-primary px-2 py-1';
+                    roleBadge.style.display = 'inline-flex';
+                }
+                if (roleText) {
+                    roleText.innerHTML = '<i class="fas fa-user-friends me-1"></i> صفة القيد: الأم أو الأب (ولي أمر بالغ)';
+                }
+                if (selectedPatientName && selectedPatientName.textContent.trim()) {
+                    const name = selectedPatientName.textContent.trim();
+                    if (babyNameInput) {
+                        babyNameInput.placeholder = name.startsWith('طفل') ? name : ('طفل ' + name);
+                        if (babyNameInput.value === name) {
+                            babyNameInput.value = '';
+                        }
                     }
                 }
-                if (babyHint) babyHint.textContent = '(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)';
+                if (babyHint) babyHint.innerHTML = '<span class="text-primary"><i class="fas fa-magic me-1"></i> تم تعيين الصفة يدوياً: الأم أو الأب (بالغ).</span>';
             }
         });
     }
@@ -1104,6 +1208,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (patientIdInput) patientIdInput.value = '';
             if (patientSearchInput) patientSearchInput.value = '';
             if (selectedPatientCard) selectedPatientCard.style.display = 'none';
+            if (roleBadge) roleBadge.style.display = 'none';
+            if (toggleManualRoleBtn) toggleManualRoleBtn.style.display = 'none';
+            if (manualRoleContainer) manualRoleContainer.style.display = 'none';
             if (patientSearchContainer) patientSearchContainer.style.display = 'block';
             if (patientSearchInput) patientSearchInput.focus();
         });
@@ -1193,6 +1300,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (policyCategorySelect) {
         policyCategorySelect.addEventListener('change', updateTierPreview);
     }
+
+    @if(isset($patient))
+        // مزامنة وتشغيل التحديد التلقائي الأولي لبيانات المريض المحمل عبر الرابط (?patient_id=...)
+        selectPatient({
+            id: {{ $patient->id }},
+            name: @json(optional($patient->user)->name ?? ''),
+            phone: @json(optional($patient->user)->phone ?? ''),
+            age: {{ $patient->age !== null ? $patient->age : 'null' }},
+            gender: @json($patient->gender),
+            insurance_type: @json($patient->insurance_type ?? 'none'),
+            policy_category: @json($patient->healthInsuranceCategory?->code ?? null),
+            insurance_card_no: @json($patient->insurance_card_no ?: ($patient->insurance_number ?: $patient->insurance_booklet_number))
+        });
+    @endif
 
     // تشغيل التحديث الأولي عند تحميل الصفحة
     updateServicePrices();

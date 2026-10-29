@@ -154,9 +154,19 @@ class IncubatorReservationController extends Controller
 
         // سحب وتوليد اسم الطفل وتحديد صفة المريض (طفل مستقل أو تابع للأم/الأب)
         $patientUser = Patient::with('user')->findOrFail($validated['patient_id']);
-        $isIndependent = $request->boolean('is_independent_patient');
-        if (! $isIndependent && $patientUser->age !== null && $patientUser->age < 1) {
-            $isIndependent = true;
+        $isIndependent = $request->input('is_independent_patient');
+        if ($isIndependent === null || $isIndependent === '') {
+            if ($patientUser->age !== null) {
+                $isIndependent = ($patientUser->age < 1);
+            } else {
+                $pName = optional($patientUser->user)->name ?? '';
+                $isIndependent = str_starts_with($pName, 'طفل') || str_starts_with($pName, 'مولود') || str_starts_with($pName, 'رضيع');
+            }
+        } else {
+            $isIndependent = filter_var($isIndependent, FILTER_VALIDATE_BOOLEAN);
+            if ($patientUser->age !== null && $patientUser->age < 1) {
+                $isIndependent = true;
+            }
         }
         $validated['is_independent_patient'] = $isIndependent;
 

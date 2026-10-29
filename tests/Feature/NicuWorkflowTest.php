@@ -1583,4 +1583,54 @@ class NicuWorkflowTest extends TestCase
         $this->assertNotNull($res);
         $this->assertEquals('E', $res->policy_category);
     }
+
+    public function test_incubator_reservation_auto_detects_role_by_age(): void
+    {
+        // 1. مريض بالغ (الأم أو الأب: العمر 29 سنة)
+        $adultUser = User::factory()->create([
+            'name' => 'منير سمير يوسف',
+            'date_of_birth' => now()->subYears(29),
+        ]);
+        $adultPatient = Patient::create([
+            'user_id' => $adultUser->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'HIA-CARD-2929',
+        ]);
+
+        $adultResp = $this->actingAs($this->admin)->get(route('incubator-reservations.create', ['patient_id' => $adultPatient->id]));
+        $adultResp->assertStatus(200);
+        $adultResp->assertSee('منير سمير يوسف');
+        $adultResp->assertSee('صفة القيد: الأم أو الأب');
+        $adultResp->assertSee('HIA-CARD-2929');
+
+        // 2. مريض طفل خديج (العمر أقل من سنة: 5 أيام)
+        $babyUser = User::factory()->create([
+            'name' => 'طفل وليد جديد',
+            'date_of_birth' => now()->subDays(5),
+        ]);
+        $babyP = Patient::create([
+            'user_id' => $babyUser->id,
+            'birth_date' => now()->subDays(5),
+            'insurance_type' => 'none',
+        ]);
+
+        $babyResp = $this->actingAs($this->admin)->get(route('incubator-reservations.create', ['patient_id' => $babyP->id]));
+        $babyResp->assertStatus(200);
+        $babyResp->assertSee('طفل وليد جديد');
+        $babyResp->assertSee('صفة القيد: طفل خديج (ملف مستقل)');
+
+        // 3. تخزين حجز لمريض بالغ دون تمرير is_independent_patient يجب أن يعتمد تلقائياً صفة الأب/الأم (false)
+        $storeAdult = $this->actingAs($this->admin)->post(route('incubator-reservations.store'), [
+            'patient_id' => $adultPatient->id,
+            'incubator_id' => $this->incubator->id,
+            'admission_date' => now()->format('Y-m-d'),
+            'admission_time' => '10:00',
+            'birth_weight' => 2200,
+        ]);
+        $storeAdult->assertRedirect();
+        $adultRes = IncubatorReservation::where('patient_id', $adultPatient->id)->first();
+        $this->assertNotNull($adultRes);
+        $this->assertFalse((bool) $adultRes->is_independent_patient);
+        $this->assertEquals('طفل منير سمير يوسف', $adultRes->baby_name);
+    }
 }
