@@ -53,6 +53,28 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-29 — المرحلة 126: توحيد محطة ومطبوعات طوارئ الأشعة 100% مع محطة الأشعة والتقرير السريري الموحد Emergency Radiology Station & Print Report 100% Unification)
+
+### Done
+- **قاعدة البيانات وموديل الطلبات الطبية ([database/migrations/2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php) & [app/Models/EmergencyRadiologyRequest.php](file:///c:/wamp64/www/hospital-system/app/Models/EmergencyRadiologyRequest.php))**:
+  * إضافة حقل `results_data` لتخزين المشاهدات (Findings)، الاستنتاج (Impression)، التوصيات (Recommendations)، مصفوفة المرفقات (Images)، وبيانات الاعتماد.
+  * تحديث `$fillable` و `$casts` في نموذج `EmergencyRadiologyRequest`.
+- **ترقية وتوحيد واجهة محطة إدخال طوارئ الأشعة ([resources/views/staff/requests/emergency-radiology-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-show.blade.php))**:
+  * مطابقة تامة 1:1 مع التصميم السريري الهادئ (`Calm Clinical Design`) المعتمد في محطة الأشعة.
+  * إضافة قوالب التقارير السريعة بنقرة واحدة (`Quick Templates Chips`): فحص سليم طبيعي، أشعة صدر سليمة، سونار بطن وحوض سليم، أشعة عظام سليمة، نتائج طارئة غير طبيعية.
+  * حقول سريرية مفصلة: Findings و Impression و Recommendations مع منطقة سحب وإفلات ومعاينة فورية للصور وحذف المرفقات.
+  * شريط المريض المتكامل مع بطاقة تنبيه بالأعراض السريرية ودواعي الفحص المسجلة من طبيب الطوارئ.
+- **إعادة بناء وتوحيد تقرير طباعة طوارئ الأشعة ([resources/views/staff/requests/emergency-radiology-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-print.blade.php))**:
+  * مطابقة 100% مع الهوية الرسمية للأشعة والمستشفى (`#005a9c` أزرق داكن، `#0284c7` أزرق سماوي) وخط Cairo.
+  * شريط أدوات علوي تفاعلي: طباعة، حفظ PDF، رابط واتساب مباشر للمريض، ومبدل الورق المروس (`Letterhead Mode`) مع ضابط الهامش.
+  * شعار المستشفى المدمج Base64 للظهور الفوري، وبطاقة المريض، والتقسيم السريري الدقيق، ومربع التوقيع والختم المعتمد، ورمز التحقق QR Code المباشر.
+- **التحصين في الكنترولر ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * تصحيح مسار علاقات القسم `emergency.doctor.department`.
+  * دعم استخراج وعرض البيانات القديمة مثل نص `CXR` والمرفقات القديمة بدقة 100% دون أي فقدان.
+  * دعم حفظ وتحديث `results_data` مع مزامنة جدول `emergency_radiology_request_types` لضمان التوافق العكسي التام.
+- **حزم الاختبارات الآلية ([tests/Feature/UnifiedEmergencyRadiologyStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyRadiologyStationAndReportTest.php) & [tests/Feature/EmergencyRadiologyPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRadiologyPrintTest.php))**:
+  * اجتياز 5 اختبارات ميزة تغطي المحطة السريرية الجديدة، واعتماد التقرير، والطباعة بوجود مرفقات أو بدونها (`5 passed, 37 assertions`).
+
 ## Session log (2026-10-29 — المرحلة 125: دمج وتكامل قسم الرنين المغناطيسي والمفراس تحت محطة عمل واحدة MRI & CT Workstation Integration)
 
 ### Done

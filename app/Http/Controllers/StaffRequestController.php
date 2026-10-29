@@ -1627,9 +1627,41 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
+        $emergencyRadiology->load([
+            'emergency.doctor.user',
+            'emergency.doctor.department',
+            'patient.user',
+            'radiologyTypes',
+            'requestTypes.radiologyType',
+        ]);
 
-        return view('staff.requests.emergency-radiology-show', compact('emergencyRadiology'));
+        $resultData = is_array($emergencyRadiology->results_data) ? $emergencyRadiology->results_data : (json_decode($emergencyRadiology->results_data ?? '[]', true) ?: []);
+        if (empty($resultData['findings'])) {
+            $types = $emergencyRadiology->radiologyTypes;
+            $resultData['findings'] = $types->map(function ($type) use ($types) {
+                $res = trim((string) ($type->pivot->result ?? ''));
+                if ($res === '') {
+                    return null;
+                }
+
+                return $types->count() > 1 ? $type->name.': '.$res : $res;
+            })->filter()->implode("\n\n");
+        }
+        if (! isset($resultData['impression'])) {
+            $resultData['impression'] = '';
+        }
+        if (! isset($resultData['recommendations'])) {
+            $resultData['recommendations'] = $emergencyRadiology->notes ?? '';
+        }
+        if (empty($resultData['images'])) {
+            $resultData['images'] = $emergencyRadiology->radiologyTypes
+                ->map(fn ($t) => $t->pivot->image_path ?? null)
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        return view('staff.requests.emergency-radiology-show', compact('emergencyRadiology', 'resultData'));
     }
 
     /**
@@ -1644,7 +1676,14 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بهذا الإجراء');
         }
 
-        $emergencyRadiology->load(['emergency', 'patient.user', 'radiologyTypes', 'requestTypes.radiologyType']);
+        $emergencyRadiology->load([
+            'emergency.doctor.user',
+            'emergency.doctor.department',
+            'emergency.emergencyPatient',
+            'patient.user',
+            'radiologyTypes',
+            'requestTypes.radiologyType',
+        ]);
 
         return view('staff.requests.emergency-radiology-print', compact('emergencyRadiology'));
     }
@@ -1707,7 +1746,7 @@ class StaffRequestController extends Controller
     }
 
     /**
-     * إكمال طلب أشعة من الطوارئ
+     * إكمال وحفظ تقرير أشعة من الطوارئ
      */
     public function completeEmergencyRadiology(HttpRequest $request, \App\Models\EmergencyRadiologyRequest $emergencyRadiology)
     {
@@ -1718,37 +1757,106 @@ class StaffRequestController extends Controller
         }
 
         $request->validate([
-            'results' => 'nullable|array',
-            'results.*' => 'nullable|string',
-            'images' => 'nullable|array',
-            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'findings' => 'nullable|string',
+            'impression' => 'nullable|string',
+            'recommendations' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
+            'status' => 'nullable|string|in:pending,in_progress,completed',
+            'results' => 'nullable|array',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,dcm,dicom,tiff|max:10240',
+            'remove_images' => 'nullable|array',
         ]);
 
-        if ($request->has('results')) {
-            foreach ($request->results as $typeId => $result) {
-                $updateData = ['result' => $result];
+        $resultsData = is_array($emergencyRadiology->results_data) ? $emergencyRadiology->results_data : (json_decode($emergencyRadiology->results_data ?? '[]', true) ?: []);
+        $currentImages = (array) ($resultsData['images'] ?? []);
+        if (empty($currentImages)) {
+            $currentImages = $emergencyRadiology->radiologyTypes
+                ->map(fn ($t) => $t->pivot->image_path ?? null)
+                ->filter()
+                ->values()
+                ->toArray();
+        }
 
-                if ($request->hasFile("images.$typeId")) {
-                    $file = $request->file("images.$typeId");
-                    $fileName = time().'_'.$typeId.'_'.$file->getClientOriginalName();
-                    $filePath = $file->storeAs('emergency_radiology_results', $fileName, 'public');
-                    $updateData['image_path'] = $filePath;
+        if ($request->has('remove_images')) {
+            $toRemove = (array) $request->remove_images;
+            $currentImages = array_values(array_filter($currentImages, fn ($img) => ! in_array($img, $toRemove, true)));
+        }
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                if ($file && $file->isValid()) {
+                    $fileName = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+                    $path = $file->storeAs('emergency_radiology_results', $fileName, 'public');
+                    $currentImages[] = $path;
                 }
-
-                $emergencyRadiology->requestTypes()
-                    ->where('radiology_type_id', $typeId)
-                    ->update($updateData);
             }
         }
 
-        $emergencyRadiology->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'notes' => $request->notes,
-        ]);
+        // دعم الرفع القديم المفرد حسب الفحص
+        if ($request->has('results')) {
+            foreach ($request->results as $typeId => $result) {
+                if ($request->hasFile("images.$typeId")) {
+                    $file = $request->file("images.$typeId");
+                    $fileName = time().'_'.$typeId.'_'.$file->getClientOriginalName();
+                    $path = $file->storeAs('emergency_radiology_results', $fileName, 'public');
+                    $currentImages[] = $path;
+                }
+            }
+        }
 
-        return redirect()->back()->with('success', 'تم إكمال طلب الأشعة بنجاح');
+        $findings = $request->findings;
+        if ($findings === null && $request->has('results')) {
+            $findings = collect($request->results)->filter()->implode("\n\n");
+        }
+
+        $impression = $request->impression ?? ($resultsData['impression'] ?? '');
+        $recommendations = $request->recommendations ?? ($resultsData['recommendations'] ?? '');
+
+        $resultsData = [
+            'findings' => $findings,
+            'impression' => $impression,
+            'recommendations' => $recommendations,
+            'images' => array_values(array_unique($currentImages)),
+            'radiologist' => $user->name,
+            'reported_at' => now()->toDateTimeString(),
+        ];
+
+        $newStatus = $request->status ?: 'completed';
+        $emergencyRadiology->results_data = $resultsData;
+        $emergencyRadiology->status = $newStatus;
+        if ($newStatus === 'completed' && ! $emergencyRadiology->completed_at) {
+            $emergencyRadiology->completed_at = now();
+        }
+        if ($request->filled('notes')) {
+            $emergencyRadiology->notes = $request->notes;
+        } elseif (! empty($recommendations) && empty($emergencyRadiology->notes)) {
+            $emergencyRadiology->notes = $recommendations;
+        }
+        $emergencyRadiology->save();
+
+        // مزامنة مع جدول emergency_radiology_request_types للتوافق العكسي
+        $firstImage = ! empty($currentImages) ? $currentImages[0] : null;
+        foreach ($emergencyRadiology->radiologyTypes as $type) {
+            $typeResult = $request->input("results.{$type->id}") ?: $findings;
+            $emergencyRadiology->requestTypes()
+                ->where('radiology_type_id', $type->id)
+                ->update([
+                    'result' => $typeResult,
+                    'image_path' => $firstImage,
+                ]);
+        }
+
+        \App\Services\UserActivityLogger::log(
+            action: 'save_emergency_radiology_results',
+            category: 'radiology',
+            description: 'تم حفظ واعتماد تقرير أشعة الطوارئ للمريض: '.($emergencyRadiology->patient?->user?->name ?? 'مريض')." - طلب #{$emergencyRadiology->id}",
+            subject: $emergencyRadiology,
+            isSensitive: false,
+            properties: ['status' => $newStatus, 'emergency_id' => $emergencyRadiology->emergency_id]
+        );
+
+        return redirect()->back()->with('success', 'تم حفظ واعتماد تقرير فحص الأشعة بنجاح');
     }
 
     /**

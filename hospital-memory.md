@@ -62,6 +62,26 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 126 (توحيد محطة إدخال وتقارير طوارئ الأشعة 100% مع محطة الأشعة والتقرير السريري الموحد Emergency Radiology Station & Print Report 100% Unification):**
+  * **قاعدة البيانات ونموذج الطلبات (`2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php` & `app/Models/EmergencyRadiologyRequest.php`)**:
+    - إضافة حقل `results_data` (longText/json) لحفظ البيانات السريرية المنظمة (المشاهدات Findings، الاستنتاج Impression، التوصيات Recommendations، والمرفقات التشخيصية images، ومعلومات الطبيب المعتمد وتاريخ الاعتماد).
+    - تحديث مصفوفة `$fillable` و `$casts` في موديل `EmergencyRadiologyRequest`.
+  * **ترقية وتوحيد واجهة إدخال تقرير طوارئ الأشعة (`resources/views/staff/requests/emergency-radiology-show.blade.php`)**:
+    - تطبيق التصميم السريري الهادئ (`Calm Clinical Design`) المتطابق 1:1 مع `radiology-staff/show.blade.php`.
+    - توفير قوالب سريرية سريعة بنقرة واحدة (`Quick Templates Chips`): فحص سليم طبيعي، أشعة صدر سليمة، سونار بطن وحوض سليم، أشعة عظام سليمة، نتائج طارئة غير طبيعية.
+    - فصل الحقول الطبية السريرية: Findings و Impression و Recommendations.
+    - منطقة رفع وسحب وإفلات للملفات والصور التشخيصية (DICOM/PDF/JPG/PNG) مع معاينة فورية مصغرة وإمكانية حذف المرفقات.
+    - شريط المريض المتكامل مع تنبيه بالأعراض السريرية ودواعي الفحص المسجلة من طبيب الطوارئ.
+  * **إعادة بناء وتوحيد تقرير طباعة طوارئ الأشعة (`resources/views/staff/requests/emergency-radiology-print.blade.php`)**:
+    - مطابقة بصرية وهيكلية 100% مع `radiology/print.blade.php` بالألوان الرسمية المعتمدة للمستشفى (`#005a9c` أزرق داكن، `#0284c7` أزرق سماوي) وخط Cairo.
+    - شريط أدوات علوي تفاعلي: طباعة، حفظ PDF، زر واتساب المريض المباشر، ومبدل الورق المروس (`Letterhead Mode`) مع ضابط الهامش.
+    - شعار المستشفى المدمج Base64 للظهور الفوري، وبطاقة المريض السريرية، وبانر الفحص، ومربعات Findings و Impression و Recommendations، ومعرض الصور التشخيصية، ومربع التوقيع والختم المعتمد، ورمز التحقق QR Code المباشر.
+  * **معالجة السيرفر والتحصين في الكنترولر (`app/Http/Controllers/StaffRequestController.php`)**:
+    - تحديث `showEmergencyRadiology` و `printEmergencyRadiology` لتحميل العلاقات الصحيحة واستخراج النتائج السابقة بدقة مع الحفاظ الكامل على التوافق العكسي.
+    - تحديث `completeEmergencyRadiology` لحفظ النتائج المنظمة في `results_data` ومزامنتها مع جدول `emergency_radiology_request_types`.
+  * **حزمة الاختبارات الآلية (`tests/Feature/UnifiedEmergencyRadiologyStationAndReportTest.php` & `tests/Feature/EmergencyRadiologyPrintTest.php`)**:
+    - 5 اختبارات ميزة مؤتمتة تغطي استعراض المحطة، حفظ واعتماد التقرير، وطباعة التقرير مع وبدون مرفقات بنجاح تام (`5 passed, 37 assertions`).
+
 - **المرحلة 125 (دمج وتكامل قسم الرنين المغناطيسي والمفراس تحت محطة عمل واحدة MRI & CT Workstation Integration):**
   * **توحيد فلاتر وقنوات المفراس والرنين في الكنترولر (`RadiologyStaffController.php` & `RadiologyController.php`)**:
     - توسيع استعلام قسم الرنين `selectedCategory === 'mri'` ليشمل تلقائياً كلاً من فحوصات الرنين والمفراس معاً (`whereIn('subtype', ['mri', 'ct'])`) في كافة استعلامات القائمة الرئيسية، طلبات الانتظار، الرادار اللحظي، والطابور.

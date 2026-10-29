@@ -17,6 +17,7 @@ class EmergencyRadiologyRequest extends Model
         'status',
         'priority',
         'notes',
+        'results_data',
         'requested_at',
         'completed_at',
     ];
@@ -24,6 +25,7 @@ class EmergencyRadiologyRequest extends Model
     protected $casts = [
         'requested_at' => 'datetime',
         'completed_at' => 'datetime',
+        'results_data' => 'array',
     ];
 
     // العلاقات
