@@ -231,6 +231,60 @@
                                         }
                                     }
                                 }
+                            } elseif ($reqItem->type === 'nursing') {
+                                $nursingServiceIds = (array)($rDetails['nursing_services'] ?? []);
+                                if (!empty($nursingServiceIds)) {
+                                    foreach ($nursingServiceIds as $nsId) {
+                                        $nSvc = \App\Models\EmergencyService::find($nsId);
+                                        if ($nSvc) {
+                                            $nKey = 'nursing_' . $nSvc->id;
+                                            if (isset($seenItemKeys[$nKey])) continue;
+                                            $seenItemKeys[$nKey] = true;
+                                            $items[] = [
+                                                'id' => $nSvc->id,
+                                                'name' => $nSvc->name,
+                                                'code' => $nSvc->code ?? 'NUR-' . $nSvc->id,
+                                                'type' => 'nursing',
+                                                'request_id' => $reqItem->id,
+                                                'base_price' => (float)$nSvc->price,
+                                                'moi_price' => (float)($nSvc->moi_price > 0 ? $nSvc->moi_price : $nSvc->price),
+                                                'hi_price' => (float)($nSvc->hi_price > 0 ? $nSvc->hi_price : $nSvc->price),
+                                                'is_moi_active' => (bool)($nSvc->moi_price > 0),
+                                                'is_hi_active' => (bool)($nSvc->hi_price > 0),
+                                            ];
+                                        }
+                                    }
+                                } else {
+                                    $desc = trim($rDetails['description'] ?? $reqItem->description ?? 'خدمة تمريضية');
+                                    $matchedSvc = null;
+                                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                                        $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                            ?? \App\Models\EmergencyService::find(93)
+                                            ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                                    }
+
+                                    $basePrice = $matchedSvc ? (float)$matchedSvc->price : 15000.00;
+                                    $hiPrice = $matchedSvc ? (float)$matchedSvc->hi_price : 10000.00;
+                                    $moiPrice = $matchedSvc ? (float)$matchedSvc->moi_price : $basePrice;
+                                    $cleanName = (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط')) ? 'تخطيط قلب (ECG)' : $desc;
+
+                                    $nKey = 'nursing_req_' . $reqItem->id;
+                                    if (!isset($seenItemKeys[$nKey])) {
+                                        $seenItemKeys[$nKey] = true;
+                                        $items[] = [
+                                            'id' => $matchedSvc ? $matchedSvc->id : $reqItem->id,
+                                            'name' => $cleanName,
+                                            'code' => 'ECG-01',
+                                            'type' => 'nursing',
+                                            'request_id' => $reqItem->id,
+                                            'base_price' => $basePrice,
+                                            'moi_price' => $moiPrice,
+                                            'hi_price' => $hiPrice,
+                                            'is_moi_active' => (bool)($moiPrice > 0),
+                                            'is_hi_active' => (bool)($hiPrice > 0),
+                                        ];
+                                    }
+                                }
                             }
                         }
 
@@ -681,13 +735,17 @@
                                                                 <i class="fas fa-box text-warning me-2"></i>
                                                             @elseif($item['type'] === 'lab')
                                                                 <i class="fas fa-vial text-primary me-2"></i>
-                                                            @else
+                                                            @elseif($item['type'] === 'radiology')
                                                                 <i class="fas fa-x-ray text-info me-2"></i>
+                                                            @elseif($item['type'] === 'nursing')
+                                                                <i class="fas fa-heartbeat text-danger me-2"></i>
+                                                            @else
+                                                                <i class="fas fa-notes-medical text-secondary me-2"></i>
                                                             @endif
                                                             <span class="fw-semibold item-name-label">{{ $item['name'] }}</span>
-                                                            @if(count($allRequests) > 1)
-                                                                <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : 'bg-primary' }} ms-1" style="font-size:0.68rem;">
-                                                                    {{ $item['type'] === 'radiology' ? 'أشعة' : 'مختبر' }}
+                                                            @if(count($allRequests) > 1 || $item['type'] === 'nursing')
+                                                                <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : ($item['type'] === 'nursing' ? 'bg-danger text-white' : 'bg-primary') }} ms-1" style="font-size:0.68rem;">
+                                                                    {{ $item['type'] === 'radiology' ? 'أشعة' : ($item['type'] === 'nursing' ? 'تخطيط قلب / تمريض' : 'مختبر') }}
                                                                 </span>
                                                             @endif
                                                             <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">

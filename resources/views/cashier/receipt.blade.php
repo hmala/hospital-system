@@ -219,6 +219,58 @@
                         ];
                     }
                 }
+            } elseif ($reqItem->type === 'nursing') {
+                $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                if (!empty($nursingServiceIds)) {
+                    foreach ($nursingServiceIds as $nsId) {
+                        $nSvc = \App\Models\EmergencyService::find($nsId);
+                        if ($nSvc) {
+                            $pricing = $isInsured && method_exists($nSvc, 'calculateInsurancePricing')
+                                ? $nSvc->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['total_amount'] : (float)$nSvc->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                            $lineItems[] = [
+                                'name' => 'تمريض: ' . $nSvc->name,
+                                'category' => 'خدمات تمريضية وتخطيط قلب',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                    }
+                } else {
+                    $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                    $matchedSvc = null;
+                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                        $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                            ?? \App\Models\EmergencyService::find(93)
+                            ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                    }
+                    if ($matchedSvc) {
+                        $pricing = $isInsured && method_exists($matchedSvc, 'calculateInsurancePricing')
+                            ? $matchedSvc->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                            : null;
+                        $base = $pricing ? (float)$pricing['total_amount'] : (float)$matchedSvc->price;
+                        $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                        $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    } else {
+                        $base = 15000.00;
+                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $ins = max(0, $base - $pat);
+                    }
+                    $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                    $lineItems[] = [
+                        'name' => $cleanTitle,
+                        'category' => 'خدمات تمريضية وتخطيط قلب',
+                        'doctor' => $doctorName,
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
             }
         }
 

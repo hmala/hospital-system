@@ -53,6 +53,21 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-30 — المرحلة 136: دعم وتكامل طلبات تخطيط القلب والتمريض الصادرة من الاستشارية لدى الكاشير بتسعير الضمان الصحي الدقيق Doctor ECG & Nursing Requests Cashier Billing with Accurate Insurance Pricing)
+
+### Done
+- **معالجة طلبات التمريض وتخطيط القلب في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * دعم طلبات التمريض (`type === 'nursing'`) في واجهة كاشير الطلبات الطبية بعد أن كانت مقتصرة سابقاً على المختبر والأشعة فقط.
+  * تصحيح وتدقيق مطابقة خدمة "تخطيط قلب" لاستهداف خدمة الطوارئ المعتمدة رقم **#93** (`تخطيط قلب`) بسعر 15,000 د.ع كاش وسعر 10,000 د.ع للضمان الصحي (HI)، ومنع مطابقتها الخاطئة مع خدمة #68 ("مراقبة الفعاليات الحيوية مع او بدون تخطيط القلب" بسعر 25,000 د.ع).
+  * احتساب حصة المريض التأمينية بدقة بناءً على نسبة التحمل (10% = 1,000 د.ع، 15% = 1,500 د.ع) وتثبيت حصة الضمان الصحي (9,000 د.ع أو 8,500 د.ع).
+  * إضافة نوع `nursing` لفحص حالات الدفع (`$hasAnyPay`) لمنع تصنيف الطلب كملغي أو توجيهه خطأ إلى شاشة الكاشير الرئيسية.
+- **شاشة الطبيب وإحالات الطوارئ السريعة ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إضافة زر إحالة سريعة مخصص `+ تخطيط قلب (ECG)` في بطاقة إحالة الطوارئ بمحطة الطبيب لإرسال الطلب فورياً للكاشير.
+- **سندات القبض المطبوعة والحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إدراج بنود التمريض وتخطيط القلب (ECG) في جدول الإيصال المالي والوصل الحراري المطبوع مع تفصيل المبلغ المعتمد وحصة المريض وحصة الضمان.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/DoctorECGRequestPaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorECGRequestPaymentTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (2 passed, 11 assertions).
+
 ## Session log (2026-10-30 — المرحلة 135: تعميم نظام الخدمات الإضافية والفندقية على واجهة كاشير الفحوصات والطلبات الطبية بتسعير ديناميكي حر خارج الضمان Medical Requests & Visits Dynamic Extra Services with Non-Insurance Direct Billing)
 
 ### Done

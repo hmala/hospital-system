@@ -1722,6 +1722,7 @@
                                     <!-- أزرار سريعة للتوجيهات الشائعة -->
                                     <div class="d-flex flex-wrap gap-1 align-items-center mt-2 pt-2 border-top">
                                         <span class="small text-muted me-1" style="font-size: 0.72rem;"><i class="fas fa-magic text-warning me-1"></i>إضافة سريعة:</span>
+                                        <button type="button" class="btn btn-xs btn-outline-danger fw-bold rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('تخطيط قلب (ECG)')"><i class="fas fa-heartbeat me-1"></i>+ تخطيط قلب (ECG)</button>
                                         <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إعطاء محلول وريدي (Normal Saline 500ml) STAT')">+ محلول وريدي STAT</button>
                                         <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('جلسة تبخيرة فنتولين (Ventolin Nebulizer)')">+ تبخيرة فنتولين</button>
                                         <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2" style="font-size: 0.72rem;" onclick="appendReferralText('إبرة مسكن عضلي / وريدي')">+ مسكن ألم</button>

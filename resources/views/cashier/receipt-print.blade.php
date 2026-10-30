@@ -544,6 +544,41 @@
                             $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => 0];
                         }
                     }
+                } elseif ($reqItem->type === 'nursing') {
+                    $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                    if (!empty($nursingServiceIds)) {
+                        foreach ($nursingServiceIds as $nsId) {
+                            $nSvc = \App\Models\EmergencyService::find($nsId);
+                            if ($nSvc) {
+                                $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                    ? $nSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                    : null;
+                                $price = $pricing ? (float)$pricing['patient_share'] : ($nSvc->price ?? 0);
+                                $lineItems[] = ['name' => 'تمريض: ' . $nSvc->name, 'qty' => 1, 'price' => $price];
+                            }
+                        }
+                    } else {
+                        $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                        $matchedSvc = null;
+                        if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                            $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                ?? \App\Models\EmergencyService::find(93)
+                                ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                        }
+                        if ($matchedSvc) {
+                            $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                ? $matchedSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                : null;
+                            $price = $pricing ? (float)$pricing['patient_share'] : ($matchedSvc->price ?? 0);
+                        } else {
+                            $price = 15000.00;
+                            if ($payment->insurance_type && $payment->insurance_type !== 'none') {
+                                $price = round($price * ((float)($payment->copay_percentage ?? 0) / 100));
+                            }
+                        }
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $lineItems[] = ['name' => $cleanTitle, 'qty' => 1, 'price' => $price];
+                    }
                 }
             }
 

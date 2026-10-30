@@ -839,6 +839,21 @@ class CashierController extends Controller
                         $hasAnyPostpone = true;
                     }
                 }
+            } elseif ($reqItem->type === 'nursing') {
+                $nActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                if (! empty($nActions)) {
+                    foreach ($nActions as $act) {
+                        if ($act === 'pay') {
+                            $hasAnyPay = true;
+                        } elseif ($act === 'cancel') {
+                            $hasAnyCancel = true;
+                        } elseif ($act === 'postpone') {
+                            $hasAnyPostpone = true;
+                        }
+                    }
+                } else {
+                    $hasAnyPay = true;
+                }
             }
         }
 
@@ -867,6 +882,11 @@ class CashierController extends Controller
                         $radIds = (array) ($rDetails['radiology_type_ids'] ?? $rDetails['radiology_types'] ?? $rDetails['radiology_type_id'] ?? []);
                         foreach ($radIds as $rId) {
                             $itemActionsForReq[$rId] = $itemActions[$reqItem->id]['radiology'][$rId] ?? 'cancel';
+                        }
+                    } elseif ($reqItem->type === 'nursing') {
+                        $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                        foreach ($nursingActions as $nId => $actVal) {
+                            $itemActionsForReq[$nId] = $actVal;
                         }
                     }
 
@@ -1226,6 +1246,57 @@ class CashierController extends Controller
                         }
                         $descParts[] = 'أشعة #'.$reqItem->id;
                     }
+                } elseif ($reqItem->type === 'nursing') {
+                    $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                    $isPaid = true;
+                    foreach ($nursingActions as $actionVal) {
+                        if ($actionVal === 'cancel' || $actionVal === 'postponed' || $actionVal === 'postpone') {
+                            $isPaid = false;
+                            break;
+                        }
+                    }
+
+                    if ($isPaid) {
+                        $actuallyPaidRequests->push($reqItem);
+
+                        $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                        if (! empty($nursingServiceIds)) {
+                            foreach ($nursingServiceIds as $nsId) {
+                                $nSvc = \App\Models\EmergencyService::find($nsId);
+                                if ($nSvc) {
+                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
+                                }
+                            }
+                        } else {
+                            $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                            $matchedSvc = null;
+                            if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                                $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                    ?? \App\Models\EmergencyService::find(93)
+                                    ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                            }
+                            if ($matchedSvc) {
+                                $p = $matchedSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $computedTotal += $p['total_amount'];
+                                $computedPatientShare += $p['patient_share'];
+                                $computedInsuranceShare += $p['insurance_share'];
+                                if ($p['is_covered']) {
+                                    $hasCoveredItem = true;
+                                }
+                            } else {
+                                $computedTotal += 15000.00;
+                                $computedPatientShare += 15000.00;
+                            }
+                        }
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $descParts[] = $cleanTitle.' #'.$reqItem->id;
+                    }
                 }
             }
 
@@ -1276,10 +1347,22 @@ class CashierController extends Controller
                 }
             }
 
-            $paymentType = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray()) && ! in_array('lab', $actuallyPaidRequests->pluck('type')->toArray()) ? 'radiology' : 'lab';
-            $paymentDescription = count($actuallyPaidRequests) > 1
-                ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
-                : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+            $hasRadiology = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray());
+            $hasNursing = in_array('nursing', $actuallyPaidRequests->pluck('type')->toArray());
+            $hasLab = in_array('lab', $actuallyPaidRequests->pluck('type')->toArray());
+            $paymentType = $hasRadiology && ! $hasLab && ! $hasNursing ? 'radiology' : ($hasNursing && ! $hasLab && ! $hasRadiology ? 'nursing' : ($hasLab ? 'lab' : 'consultation'));
+
+            if (count($actuallyPaidRequests) === 1 && $actuallyPaidRequests->first()->type === 'nursing') {
+                $nDesc = $actuallyPaidRequests->first()->description ?: 'خدمة تمريضية';
+                if (str_contains($nDesc, 'تخطيط') || str_contains($nDesc, 'تحطيط')) {
+                    $nDesc = 'تخطيط قلب (ECG)';
+                }
+                $paymentDescription = 'دفع رسوم '.$nDesc.' - طلب #'.$actuallyPaidRequests->first()->id;
+            } else {
+                $paymentDescription = count($actuallyPaidRequests) > 1
+                    ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
+                    : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+            }
 
             if (! empty($extraServicesNames)) {
                 $paymentDescription .= ' + خدمات إضافية: '.implode('، ', $extraServicesNames);
