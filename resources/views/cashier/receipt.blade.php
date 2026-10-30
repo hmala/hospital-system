@@ -222,6 +222,28 @@
             }
         }
 
+        // 2.1 خدمات إضافية وفندقية ملحقة بالطلب والزيارة
+        $paidVisitExtraServices = \App\Models\VisitExtraService::where('payment_id', $payment->id)->get();
+        if ($paidVisitExtraServices->isEmpty() && $payment->request_id) {
+            $paidVisitExtraServices = \App\Models\VisitExtraService::where(function($q) use ($payment) {
+                $q->where('request_id', $payment->request_id);
+                if ($payment->request?->visit_id) {
+                    $q->orWhere('visit_id', $payment->request->visit_id);
+                }
+            })->where('payment_status', 'paid')->get();
+        }
+        foreach ($paidVisitExtraServices as $extraSvc) {
+            $eTotal = (float)$extraSvc->total_amount;
+            $lineItems[] = [
+                'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                'category' => 'خدمات إضافية وفندقية',
+                'doctor' => 'الكاشير',
+                'approved' => $eTotal,
+                'patient' => $eTotal,
+                'insurance' => 0,
+            ];
+        }
+
         // 3. خدمات واستشارات الطوارئ
         if ($payment->emergency) {
             $paidServices = \DB::table('emergency_emergency_service')

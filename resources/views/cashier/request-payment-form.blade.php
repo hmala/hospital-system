@@ -261,6 +261,15 @@
                             $initialPatient = $initialApproved;
                             $initialInsurance = 0;
                         }
+
+                        $pendingExtraFee = 0;
+                        if (isset($pendingExtraServices) && $pendingExtraServices->isNotEmpty()) {
+                            foreach ($pendingExtraServices as $pes) {
+                                $pendingExtraFee += (float)$pes->total_amount;
+                            }
+                        }
+                        $initialApproved += $pendingExtraFee;
+                        $initialPatient += $pendingExtraFee;
                     @endphp
 
                     @if(count($allRequests) > 1)
@@ -348,6 +357,63 @@
                                     <span>{{ optional($request->visit->patient)->user->phone ?? 'غير محدد' }}</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- صندوق إضافة خدمات إضافية وفندقية للطلب الطبي -->
+                    <div class="card border border-warning border-opacity-50 rounded-3 mb-4 shadow-2xs" style="background: linear-gradient(to bottom, #fffdf8, #fff);">
+                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fas fa-concierge-bell text-warning fs-5"></i>
+                                إضافة خدمات إضافية وفندقية للطلب الطبي (تخطيط قلب، مرافق، تزيين، طبلة، غرامات...)
+                            </h6>
+                            <span class="badge bg-warning text-dark border border-warning small">
+                                <i class="fas fa-edit me-1"></i>الكاشير يحدد ويعدل السعر مباشرة
+                            </span>
+                        </div>
+                        <div class="card-body p-3">
+                            <form action="{{ route('cashier.request.extra-services.add', $request->id) }}" method="POST" id="addExtraServiceForm">
+                                @csrf
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label small text-muted mb-1 fw-bold">اسم الخدمة الإضافية *</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-warning"><i class="fas fa-tags"></i></span>
+                                            <input type="text" class="form-control form-control-sm fw-bold" id="req_service_name_input" name="service_name" placeholder="اختر من المقترحات أو اكتب خدمة مخصصة..." list="req_extra_services_catalog_list" required autocomplete="off">
+                                            <datalist id="req_extra_services_catalog_list">
+                                                @if(isset($availableExtraServices))
+                                                    @foreach($availableExtraServices as $asrv)
+                                                        <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}">
+                                                            {{ $asrv->name }} (افتراضي: {{ number_format($asrv->default_price, 0) }} د.ع)
+                                                        </option>
+                                                    @endforeach
+                                                @endif
+                                            </datalist>
+                                            <input type="hidden" name="service_id" id="req_service_id_hidden">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1 fw-bold">السعر المعتمد للوحدة (IQD) *</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-success fw-bold">IQD</span>
+                                            <input type="number" class="form-control form-control-sm fw-bold text-success" id="req_service_price_input" name="service_price" min="0" step="1000" placeholder="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted mb-1 fw-bold">الكمية</label>
+                                        <input type="number" class="form-control form-control-sm text-center fw-bold" id="req_service_qty_input" name="service_quantity" min="1" value="1">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted mb-1 fw-bold">ملاحظات (اختياري)</label>
+                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="ملاحظة أو تفصيل...">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs">
+                                            <i class="fas fa-plus me-1"></i> إضافة
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -687,6 +753,50 @@
                                                         </td>
                                                     </tr>
                                                 @endforeach
+
+                                                @if(isset($pendingExtraServices) && $pendingExtraServices->isNotEmpty())
+                                                    @foreach($pendingExtraServices as $extraIdx => $extraService)
+                                                        <tr class="extra-service-item-row table-warning-subtle"
+                                                            data-extra-service-id="{{ $extraService->id }}"
+                                                            data-price="{{ (float)$extraService->price }}"
+                                                            data-total="{{ (float)$extraService->total_amount }}"
+                                                            data-quantity="{{ $extraService->quantity }}">
+                                                            <td class="text-center text-muted">
+                                                                <i class="fas fa-concierge-bell text-warning"></i>
+                                                            </td>
+                                                            <td>
+                                                                <div class="d-flex align-items-center justify-content-between">
+                                                                    <div>
+                                                                        <strong class="text-dark">{{ $extraService->name }}</strong>
+                                                                        @if($extraService->quantity > 1)
+                                                                            <span class="badge bg-secondary ms-1">الكمية: {{ $extraService->quantity }}</span>
+                                                                        @endif
+                                                                        @if($extraService->notes)
+                                                                            <small class="text-muted d-block"><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</small>
+                                                                        @endif
+                                                                    </div>
+                                                                    <div>
+                                                                        <span class="badge bg-warning text-dark border border-warning">
+                                                                            <i class="fas fa-coins me-1"></i>خدمة إضافية (كاش 100%)
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td><code>EXTRA</code></td>
+                                                            <td class="text-end fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
+                                                            <td class="text-end text-success fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
+                                                            <td class="text-end text-muted">-</td>
+                                                            <td class="text-center">
+                                                                <button type="button" 
+                                                                        class="btn btn-outline-danger btn-sm px-2 py-1 delete-extra-service-btn shadow-2xs" 
+                                                                        data-url="{{ route('cashier.request.extra-services.remove', [$request->id, $extraService->id]) }}"
+                                                                        title="حذف هذه الخدمة الإضافية من الفاتورة">
+                                                                    <i class="fas fa-trash-alt me-1"></i> حذف
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
                                             </tbody>
                                             <tfoot class="table-success">
                                                 <tr>
@@ -987,6 +1097,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // إضافة بنود الخدمات الإضافية والفندقية الملحقة (100% نقداً)
+        const extraRows = document.querySelectorAll('.extra-service-item-row');
+        extraRows.forEach(erow => {
+            const eTotal = parseFloat(erow.getAttribute('data-total')) || 0;
+            totalApproved += eTotal;
+            totalPatient += eTotal;
+        });
+
         const alertBox = document.getElementById('insuranceErrorAlert');
         const submitBtn = document.getElementById('submitPaymentBtn');
 
@@ -1126,6 +1244,41 @@ document.addEventListener('DOMContentLoaded', function() {
         dSelect.addEventListener('input', recalculate);
         dSelect.addEventListener('change', recalculate);
     }
+
+    // ملء سعر الخدمة الإضافية تلقائياً عند اختيارها من قائمة المقترحات
+    const reqSrvNameInput = document.getElementById('req_service_name_input');
+    const reqSrvPriceInput = document.getElementById('req_service_price_input');
+    const reqSrvIdHidden = document.getElementById('req_service_id_hidden');
+    const reqDatalist = document.getElementById('req_extra_services_catalog_list');
+
+    if (reqSrvNameInput && reqSrvPriceInput && reqDatalist) {
+        reqSrvNameInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            const option = Array.from(reqDatalist.options).find(opt => opt.value === val);
+            if (option) {
+                reqSrvPriceInput.value = option.dataset.price || 0;
+                if (reqSrvIdHidden) reqSrvIdHidden.value = option.dataset.id || '';
+            }
+        });
+    }
+
+    // معالجة حذف الخدمة الإضافية المعلقة
+    document.querySelectorAll('.delete-extra-service-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('هل أنت متأكد من حذف هذه الخدمة الإضافية من الطلب؟')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = this.dataset.url;
+                form.innerHTML = `
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'}">
+                    <input type="hidden" name="_method" value="DELETE">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
 
     // Initial calculation
     recalculate();

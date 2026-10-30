@@ -124,6 +124,22 @@ class Payment extends Model
     }
 
     /**
+     * الخدمات الإضافية المسددة للزيارات والطلبات الطبية
+     */
+    public function visitExtraServices()
+    {
+        return $this->hasMany(VisitExtraService::class);
+    }
+
+    /**
+     * الخدمات الإضافية المسددة للعمليات الجراحية
+     */
+    public function surgeryExtraServices()
+    {
+        return $this->hasMany(SurgeryExtraService::class);
+    }
+
+    /**
      * العلاقة مع الكاشير (المستخدم)
      */
     public function cashier()

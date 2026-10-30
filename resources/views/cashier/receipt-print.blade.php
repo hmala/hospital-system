@@ -547,6 +547,24 @@
                 }
             }
 
+            // 3.1 Extra Services for Requests / Visits
+            $paidVisitExtraServices = \App\Models\VisitExtraService::where('payment_id', $payment->id)->get();
+            if ($paidVisitExtraServices->isEmpty() && $payment->request_id) {
+                $paidVisitExtraServices = \App\Models\VisitExtraService::where(function($q) use ($payment) {
+                    $q->where('request_id', $payment->request_id);
+                    if ($payment->request?->visit_id) {
+                        $q->orWhere('visit_id', $payment->request->visit_id);
+                    }
+                })->where('payment_status', 'paid')->get();
+            }
+            foreach ($paidVisitExtraServices as $extraSvc) {
+                $lineItems[] = [
+                    'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
+                    'qty' => $extraSvc->quantity ?: 1,
+                    'price' => (float)$extraSvc->total_amount,
+                ];
+            }
+
             // 4. Emergency
             if ($payment->emergency) {
                 $paidServices = \DB::table('emergency_emergency_service')

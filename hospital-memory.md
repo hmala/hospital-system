@@ -62,6 +62,25 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 135 (تعميم نظام الخدمات الإضافية والفندقية على واجهة كاشير الفحوصات والطلبات الطبية بتسعير ديناميكي حر خارج الضمان Medical Requests & Visits Dynamic Extra Services with Non-Insurance Direct Billing):**
+  * **قاعدة البيانات والترحيل (`database/migrations/2026_10_30_202000_create_visit_extra_services_table.php`)**:
+    - إنشاء جدول `visit_extra_services` لربط الخدمات الإضافية والفندقية بالطلب الطبي والزيارة وسند الدفع (`visit_id`, `request_id`, `service_id`, `name`, `price`, `quantity`, `total_amount`, `notes`, `payment_status`, `payment_id`, `created_by`).
+    - تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+  * **النماذج والعلاقات (`app/Models/VisitExtraService.php`, `app/Models/Visit.php`, `app/Models/Payment.php`)**:
+    - بناء نموذج `VisitExtraService` مع العلاقات مع الزيارة والطلب والدفع والخدمة المرجعية والمستخدم.
+    - إضافة علاقة `extraServices()` في `Visit` وعلاقة `visitExtraServices()` في `Payment`.
+  * **معالجة العمليات في الكنترولر والمسارات (`app/Http/Controllers/CashierController.php`, `routes/web.php`)**:
+    - تمرير قائمة الخدمات المرجعية والخدمات المعلقة لواجهة كاشير الطلبات `showRequestPaymentForm`.
+    - إضافة مسار ودالة `addRequestExtraService` لإضافة خدمة إضافية بسعر ديناميكي حر يحدده أو يعدله الكاشير لحظياً.
+    - إضافة مسار ودالة `removeRequestExtraService` لحذف أي خدمة معلقة قبل السداد.
+    - ترقية `processRequestPayment` لحساب بنود الخدمات الإضافية 100% نقداً وإضافتها لمجموع القبض وربطها بسند القبض المالي وتحويل حالتها إلى `paid`.
+  * **الواجهات وسندات القبض المطبوعة والحرارية (`resources/views/cashier/request-payment-form.blade.php`, `receipt.blade.php`, `receipt-print.blade.php`)**:
+    - إدراج بطاقة إضافة الخدمات الإضافية والفندقية في شاشة دفع الطلبات الطبية (`cashier/request-payment/{id}`).
+    - إدراج بنود الخدمات الإضافية المعلقة في جدول الفحوصات مع أزرار الحذف الفوري وشارة كاش 100%.
+    - شمول بنود الخدمات الإضافية في سند القبض والشاشة التفاعلية وإيصال الطابعة الحرارية.
+  * **حزمة الاختبارات الآلية (`tests/Feature/RequestExtraServicesTest.php`)**:
+    - 3 اختبارات ميزة تغطي إضافة الخدمة للطلب، حذف الخدمة المعلقة، وسداد الطلب الطبي مع الخدمات الإضافية بنجاح 100% (13 assertions).
+
 - **المرحلة 134 (نظام الخدمات الإضافية والفندقية للعمليات الجراحية والرقود بتسعير ديناميكي للكاشير مع العزل الكامل عن الضمان Surgery Accommodation & Extra Services with Dynamic Cashier Pricing):**
   * **قاعدة البيانات والترحيل (`database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php`)**:
     - إنشاء جدول `hospital_extra_services` كدليل مرجعي للخدمات الإضافية والفندقية (تخطيط قلب، خدمة مرافق مريض مبيت، رقود إضافي، أجور فتح طبلة، طبيب أطفال، تزيين الغرف Decorating 50/100، غرامات التدخين وإدخال الأكل، بيان الولادة، مواد مصروفة، خدمات إدارية، خدمات فندقة نواظير) مع استبعاد تصنيفات الغرف (VIP/VVIP) لأنها مدعومة ومحسوبة تلقائياً في نظام الغرف `rooms`.

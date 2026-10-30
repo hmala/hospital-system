@@ -351,6 +351,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
         Route::get('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'showRequestPaymentForm'])->name('request.payment.form');
         Route::post('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestPayment'])->name('request.payment.process');
+        Route::post('/request-payment/{request}/extra-services', [\App\Http\Controllers\CashierController::class, 'addRequestExtraService'])->name('request.extra-services.add');
+        Route::delete('/request-payment/{request}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeRequestExtraService'])->name('request.extra-services.remove');
         Route::post('/request-refund/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestRefund'])->name('request.refund.process');
         Route::post('/emergency-refund/{emergency}', [\App\Http\Controllers\CashierController::class, 'processEmergencyRefund'])->name('emergency.refund.process');
         Route::post('/emergency-request-refund/{type}/{id}', [\App\Http\Controllers\CashierController::class, 'processEmergencyRequestRefund'])->name('emergency.request.refund.process');

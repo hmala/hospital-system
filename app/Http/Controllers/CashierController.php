@@ -13,6 +13,7 @@ use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
 use App\Models\SurgeryExtraService;
 use App\Models\Visit;
+use App\Models\VisitExtraService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -678,7 +679,16 @@ class CashierController extends Controller
             ->where('status', '!=', 'cancelled')
             ->get();
 
-        return view('cashier.request-payment-form', compact('request', 'otherPendingRequests'));
+        $availableExtraServices = HospitalExtraService::where('is_active', true)->orderBy('id', 'asc')->get();
+
+        $pendingExtraServices = VisitExtraService::where(function ($q) use ($request) {
+            $q->where('request_id', $request->id);
+            if ($request->visit_id) {
+                $q->orWhere('visit_id', $request->visit_id);
+            }
+        })->where('payment_status', 'pending')->get();
+
+        return view('cashier.request-payment-form', compact('request', 'otherPendingRequests', 'availableExtraServices', 'pendingExtraServices'));
     }
 
     /**
@@ -1219,9 +1229,28 @@ class CashierController extends Controller
                 }
             }
 
-            if ($actuallyPaidRequests->isEmpty()) {
+            // جلب الخدمات الإضافية والفندقية المعلقة للطلب والزيارة
+            $pendingExtraServices = VisitExtraService::where(function ($q) use ($request) {
+                $q->where('request_id', $request->id);
+                if ($request->visit_id) {
+                    $q->orWhere('visit_id', $request->visit_id);
+                }
+            })->where('payment_status', 'pending')->get();
+
+            $extraServicesAmount = 0;
+            $extraServicesNames = [];
+            foreach ($pendingExtraServices as $pes) {
+                $extraServicesAmount += (float) $pes->total_amount;
+                $extraServicesNames[] = $pes->name.($pes->quantity > 1 ? " (×{$pes->quantity})" : '');
+            }
+
+            if ($actuallyPaidRequests->isEmpty() && $pendingExtraServices->isEmpty()) {
                 throw new \Exception('لم يتم العثور على أي خدمات مسددة لمعالجة الدفع.');
             }
+
+            // الخدمات الإضافية تحسب نقداً 100% خارج الضمان
+            $computedTotal += $extraServicesAmount;
+            $computedPatientShare += $extraServicesAmount;
 
             $totalApproved = $computedTotal > 0 ? $computedTotal : (float) $httpRequest->amount;
             // ضمان تطابق المبلغ المقبوض وحصة المريض مع المجموع الفعلي لأسطر الفحوصات والوصل المالي
@@ -1251,6 +1280,10 @@ class CashierController extends Controller
             $paymentDescription = count($actuallyPaidRequests) > 1
                 ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
                 : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+
+            if (! empty($extraServicesNames)) {
+                $paymentDescription .= ' + خدمات إضافية: '.implode('، ', $extraServicesNames);
+            }
 
             $combinedNotes = $httpRequest->notes ?: '';
             if (! empty($excludedNotes)) {
@@ -1287,6 +1320,14 @@ class CashierController extends Controller
             ]);
 
             \Log::info('Payment created successfully: #'.$payment->id);
+
+            // تحديث حالة الخدمات الإضافية إلى مدفوعة وربطها بسند القبض
+            foreach ($pendingExtraServices as $pes) {
+                $pes->update([
+                    'payment_status' => 'paid',
+                    'payment_id' => $payment->id,
+                ]);
+            }
 
             // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الفعلي
             foreach ($actuallyPaidRequests as $reqItem) {
@@ -1512,6 +1553,80 @@ class CashierController extends Controller
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * إضافة خدمة إضافية أو فندقية للطلب الطبي / الزيارة بسعر ديناميكي حر
+     */
+    public function addRequestExtraService(Request $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canPay = $isAdmin
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments'))
+            || ($user && $user->can('process consultation payments'));
+
+        if (! $canPay) {
+            abort(403, 'غير مصرح لك بإضافة خدمات إضافية للطلب الطبي');
+        }
+
+        $validated = $httpRequest->validate([
+            'service_name' => 'required|string|max:255',
+            'service_price' => 'required|numeric|min:0',
+            'service_quantity' => 'nullable|integer|min:1',
+            'service_notes' => 'nullable|string|max:500',
+            'service_id' => 'nullable|exists:hospital_extra_services,id',
+        ]);
+
+        $qty = max(1, (int) ($validated['service_quantity'] ?? 1));
+        $price = (float) $validated['service_price'];
+        $total = $price * $qty;
+
+        VisitExtraService::create([
+            'visit_id' => $request->visit_id,
+            'request_id' => $request->id,
+            'service_id' => $validated['service_id'] ?? null,
+            'name' => trim($validated['service_name']),
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $total,
+            'notes' => $validated['service_notes'] ?? null,
+            'payment_status' => 'pending',
+            'created_by' => $user->id,
+        ]);
+
+        return redirect()->route('cashier.request.payment.form', $request)
+            ->with('success', 'تمت إضافة الخدمة الإضافية بنجاح إلى الطلب الطبي.');
+    }
+
+    /**
+     * حذف خدمة إضافية معلقة من الطلب الطبي
+     */
+    public function removeRequestExtraService(MedicalRequest $request, VisitExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canPay = $isAdmin
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments'))
+            || ($user && $user->can('process consultation payments'));
+
+        if (! $canPay) {
+            abort(403, 'غير مصرح لك بحذف خدمات الطلب الطبي');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return redirect()->route('cashier.request.payment.form', $request)
+                ->with('error', 'لا يمكن حذف خدمة إضافية تم تسديدها مسبقاً.');
+        }
+
+        $extraService->delete();
+
+        return redirect()->route('cashier.request.payment.form', $request)
+            ->with('success', 'تم حذف الخدمة الإضافية بنجاح.');
     }
 
     /**

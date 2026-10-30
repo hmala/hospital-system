@@ -53,6 +53,24 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-30 — المرحلة 135: تعميم نظام الخدمات الإضافية والفندقية على واجهة كاشير الفحوصات والطلبات الطبية بتسعير ديناميكي حر خارج الضمان Medical Requests & Visits Dynamic Extra Services with Non-Insurance Direct Billing)
+
+### Done
+- **قاعدة البيانات والترحيل ([database/migrations/2026_10_30_202000_create_visit_extra_services_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_202000_create_visit_extra_services_table.php), [app/Models/VisitExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/VisitExtraService.php))**:
+  * إنشاء جدول `visit_extra_services` لربط الخدمات الإضافية بالطلب الطبي والزيارة وسند الدفع المالي.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+  * ربط العلاقات بنموذجي `Visit` و `Payment`.
+- **معالجة العمليات في الكنترولر والمسارات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * شمول واجهة كاشير الطلبات `showRequestPaymentForm` بقائمة الخدمات ودعم جلب الخدمات المعلقة للطلب والزيارة.
+  * إضافة مساري `cashier.request.extra-services.add` و `cashier.request.extra-services.remove`.
+  * ترقية `processRequestPayment` لحساب الخدمات الإضافية 100% نقداً وربطها بسند القبض المالي وتحويل حالتها إلى `paid`.
+- **ترقية واجهات الكاشير والوصولات ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إضافة بطاقة الخدمات الإضافية والفندقية لشاشة دفع الطلبات الطبية `http://127.0.0.1:8000/cashier/request-payment/{id}`.
+  * ظهور بنود الخدمات المضافة في جدول الفحوصات مع أزرار الحذف الفوري قبل السداد.
+  * ظهور الخدمات الإضافية في سند القبض والشاشة التفاعلية والوصل الحراري المطبوع.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/RequestExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RequestExtraServicesTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (3 passed, 13 assertions).
+
 ## Session log (2026-10-30 — المرحلة 134: نظام الخدمات الإضافية والفندقية للعمليات الجراحية والرقود بتسعير ديناميكي للكاشير مع العزل الكامل عن الضمان Surgery Accommodation & Extra Services with Dynamic Cashier Pricing)
 
 ### Done
