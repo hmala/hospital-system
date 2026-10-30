@@ -1843,8 +1843,11 @@ class CashierController extends Controller
             }
         }
 
-        // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
-        if (! $user->hasRole(['admin', 'accountant', 'super_admin'])) {
+        $canViewAllCashiers = $user->hasRole(['admin', 'accountant', 'super_admin', 'casshieradmin', 'hospital_admin', 'admin-hsop'])
+            || $user->can('void payment receipt');
+
+        // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً، محاسباً، كاشير إداري، أو يملك صلاحية الرقابة والإبطال)
+        if (! $canViewAllCashiers) {
             $query->where('cashier_id', $user->id);
         } elseif ($cashierId) {
             $query->where('cashier_id', $cashierId);
@@ -1888,7 +1891,7 @@ class CashierController extends Controller
             ];
         });
 
-        $cashiers = $user->hasRole(['admin', 'accountant', 'super_admin'])
+        $cashiers = $canViewAllCashiers
             ? \App\Models\User::whereIn('id', \App\Models\Payment::select('cashier_id')->distinct())->orderBy('name')->get()
             : collect();
 
@@ -1898,7 +1901,7 @@ class CashierController extends Controller
 
             return view('cashier.report-print', compact(
                 'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers', 'canViewAllCashiers'
             ));
         }
 
@@ -1906,7 +1909,7 @@ class CashierController extends Controller
 
         return view('cashier.report', compact(
             'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers', 'canViewAllCashiers'
         ));
     }
 

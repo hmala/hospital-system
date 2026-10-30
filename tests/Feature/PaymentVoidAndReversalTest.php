@@ -646,4 +646,61 @@ class PaymentVoidAndReversalTest extends TestCase
         $labIndex->assertStatus(200);
         $labIndex->assertDontSee('Lipid Profile Full');
     }
+
+    public function test_cashier_admin_or_void_authorized_user_can_view_all_cashiers_receipts_in_reports()
+    {
+        Permission::firstOrCreate(['name' => 'view cashier reports', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'casshieradmin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
+
+        $regularCashier = User::factory()->create(['name' => 'كاشير عادي 1']);
+        $regularCashier->assignRole('cashier');
+        $regularCashier->givePermissionTo('view cashier reports');
+
+        $adminCashier = User::factory()->create(['name' => 'رفل كاشير إداري']);
+        $adminCashier->assignRole('casshieradmin');
+        $adminCashier->givePermissionTo(['view cashier reports', 'void payment receipt']);
+
+        $patientUser = User::factory()->create(['name' => 'مريض 1']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'female',
+            'date_of_birth' => '1990-01-01',
+        ]);
+
+        // دفعة حررها الكاشير العادي 1
+        $payment1 = Payment::create([
+            'patient_id' => $patient->id,
+            'cashier_id' => $regularCashier->id,
+            'amount' => 15000,
+            'receipt_number' => 'REC-REGULAR-001',
+            'paid_at' => now(),
+            'payment_method' => 'cash',
+            'payment_type' => 'radiology',
+        ]);
+
+        // دفعة حررها الكاشير الإداري رفل
+        $payment2 = Payment::create([
+            'patient_id' => $patient->id,
+            'cashier_id' => $adminCashier->id,
+            'amount' => 25000,
+            'receipt_number' => 'REC-ADMIN-002',
+            'paid_at' => now(),
+            'payment_method' => 'cash',
+            'payment_type' => 'lab',
+        ]);
+
+        // الكاشير العادي 1 يرى فقط وصله الخاص (REC-REGULAR-001) ولا يرى وصل رفل
+        $respRegular = $this->actingAs($regularCashier)->get(route('cashier.report'));
+        $respRegular->assertStatus(200);
+        $respRegular->assertSee('REC-REGULAR-001');
+        $respRegular->assertDontSee('REC-ADMIN-002');
+
+        // الكاشير الإداري (رفل) يرى كل الوصولات (وصلها ووصل الكاشير العادي 1)
+        $respAdminCashier = $this->actingAs($adminCashier)->get(route('cashier.report'));
+        $respAdminCashier->assertStatus(200);
+        $respAdminCashier->assertSee('REC-REGULAR-001');
+        $respAdminCashier->assertSee('REC-ADMIN-002');
+        $respAdminCashier->assertSee('جميع الكاشيرات');
+    }
 }

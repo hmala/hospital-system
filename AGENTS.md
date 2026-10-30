@@ -53,6 +53,19 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-30 — المرحلة 132: تمكين الكاشير الإداري casshieradmin والمخولين بالإبطال من استعراض كافة الوصولات وفلترة الكاشيرات Cashier Admin & Void Authorized Users Full Receipts Access & Departmental Cross-Drawer Filter Parity)
+
+### Done
+- **إزالة القيد الحصري عن الكاشير الإداري والمخولين بالإبطال ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * توسيع صلاحية استعراض الوصولات في دالة `reports()` لتشمل دور الكاشير الإداري `casshieradmin` وصلاحية إبطال الوصولات `void payment receipt` بالإضافة إلى الأدوار الإدارية (`admin`, `accountant`, `hospital_admin`).
+  * إلغاء فرض شرط `where('cashier_id', $user->id)` التلقائي عليهم، مما يسمح لهم بمشاهدة والبحث في وصولات جميع الكاشيرات والصناديق بالمستشفى دفعة واحدة.
+  * تزويدهم بقائمة كاشيرات المستشفى للفلترة المخصصة حسب الكاشير أو عرض "جميع الكاشيرات".
+- **تحديث واجهة تقرير الوصولات والمقبوضات ([resources/views/cashier/report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report.blade.php))**:
+  * إظهار القائمة المنسدلة لفلترة الكاشير لمن يملك دور `casshieradmin` أو صلاحية `void payment receipt` ليتمكن المشرف من تدقيق وإبطال أو مراجعة أي وصل تم إصداره من أي نقطة كاشير أخرى.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/PaymentVoidAndReversalTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PaymentVoidAndReversalTest.php))**:
+  * إضافة اختبار ميزة متكامل `test_cashier_admin_or_void_authorized_user_can_view_all_cashiers_receipts_in_reports` يؤكد عزل الكاشير العادي لوصولاته الخاصة فقط، وقدرة الكاشير الإداري (`casshieradmin`) على رؤية جميع وصولات الكاشيرات دفعة واحدة.
+  * اجتياز كامل حزمة اختبارات إبطال الوصولات بنجاح 100% (11 passed, 73 assertions).
+
 ## Session log (2026-10-29 — المرحلة 131: دمج وتوحيد فحوصات CBC في فحص نشط وحيد رقم 43 ونقل باقات الأطباء وتعطيل المكرر كأرشيف CBC Tests Consolidation into Single Active ID 43 & Legacy Archiving)
 
 ### Done
