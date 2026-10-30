@@ -53,6 +53,25 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-30 — المرحلة 134: نظام الخدمات الإضافية والفندقية للعمليات الجراحية والرقود بتسعير ديناميكي للكاشير مع العزل الكامل عن الضمان Surgery Accommodation & Extra Services with Dynamic Cashier Pricing)
+
+### Done
+- **قاعدة البيانات وموديلات الخدمات الإضافية ([database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php), [app/Models/HospitalExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/HospitalExtraService.php), [app/Models/SurgeryExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryExtraService.php), [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php))**:
+  * إنشاء جدول الدليل المرجعي للخدمات الإضافية `hospital_extra_services` وتغذيته بـ 17 خدمة تم استخراجها من صور النظام القديم (تخطيط قلب، مبيت مرافق، رقود إضافي، فتح طبلة، أطفال، تزيين غرف، غرامات، بيانات ولادة، مواد، فندقة نواظير) مع عزل الغرف VIP/VVIP لنظام الغرف الداخلي.
+  * إنشاء جدول `surgery_extra_services` لربط الخدمات المضافة بالعملية الجراحية وسند القبض.
+  * إضافة علاقة `extraServices()` في نموذج `Surgery`.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+- **معالجة العمليات في الكنترولر والمسارات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار `cashier.surgeries.extra-services.add` لإضافة خدمة بسعر مخصص ديناميكي يحدده الكاشير بحرية تامة دون قيد الضمان.
+  * إضافة مسار `cashier.surgeries.extra-services.remove` لحذف الخدمة المعلقة قبل السداد.
+  * ترقية `processSurgeryPayment` لحساب الخدمات الإضافية بنسبة 100% نقداً وربطها بسند القبض المالي وتحويل حالتها إلى `paid`.
+- **ترقية واجهات الكاشير والوصولات ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * بطاقة ديناميكية لاقتراح وتعديل أسعار الخدمات الإضافية مع اقتراحات Datalist.
+  * إدراج بنود الخدمات الإضافية في جدول الدفع مع إمكانية حذفها قبل الدفع.
+  * ظهور بنود الخدمات الإضافية في سند القبض والشاشة التفاعلية والوصل الحراري المطبوع.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (3 passed, 14 assertions).
+
 ## Session log (2026-10-30 — المرحلة 133: دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية من 0% إلى 100% وحصرها التام خارج الضمان Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement)
 
 ### Done

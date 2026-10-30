@@ -308,6 +308,65 @@
             }
         }
 
+        // 4. العمليات الجراحية والخدمات الملحقة والإضافية
+        if ($payment->surgery || $payment->payment_type === 'surgery') {
+            $surgery = $payment->surgery;
+            if (!$surgery && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
+                $surgery = \App\Models\Surgery::with(['doctor.user', 'room', 'extraServices'])->find($matches[1]);
+            }
+            if ($surgery) {
+                $surgDoc = $surgery->doctor?->user?->name ? ('د. ' . $surgery->doctor->user->name) : ($surgery->surgeon_name ?: 'جراحة');
+                
+                // رسوم العملية
+                if (str_contains($payment->description ?? '', 'رسوم العملية')) {
+                    $surgFee = (float)$surgery->surgery_fee;
+                    $pat = $isInsured ? round($surgFee * ($copayPct / 100)) : $surgFee;
+                    $lineItems[] = [
+                        'name' => 'رسوم العملية الجراحية: ' . $surgery->surgery_type,
+                        'category' => 'عمليات',
+                        'doctor' => $surgDoc,
+                        'approved' => $surgFee,
+                        'patient' => $pat,
+                        'insurance' => max(0, $surgFee - $pat),
+                    ];
+                }
+
+                // رسوم الغرفة والإقامة
+                if (str_contains($payment->description ?? '', 'أجور الغرفة')) {
+                    $roomFee = (float)$surgery->room_fee;
+                    $pat = $isInsured ? round($roomFee * ($copayPct / 100)) : $roomFee;
+                    $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
+                    $lineItems[] = [
+                        'name' => 'أجور الإقامة والغرفة' . $roomInfo,
+                        'category' => 'إقامة وفندقة',
+                        'doctor' => $surgDoc,
+                        'approved' => $roomFee,
+                        'patient' => $pat,
+                        'insurance' => max(0, $roomFee - $pat),
+                    ];
+                }
+
+                // الخدمات الإضافية الملحقة المسددة بهذا الإيصال
+                $paidExtraServices = \App\Models\SurgeryExtraService::where('surgery_id', $surgery->id)
+                    ->where(function ($q) use ($payment) {
+                        $q->where('payment_id', $payment->id)
+                          ->orWhere('payment_status', 'paid');
+                    })
+                    ->get();
+                foreach ($paidExtraServices as $extraSvc) {
+                    $eTotal = (float)$extraSvc->total_amount;
+                    $lineItems[] = [
+                        'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                        'category' => 'خدمات إضافية وفندقية',
+                        'doctor' => $surgDoc,
+                        'approved' => $eTotal,
+                        'patient' => $eTotal,
+                        'insurance' => 0,
+                    ];
+                }
+            }
+        }
+
         // إذا لم توجد تفاصيل متعددة نستخدم السجل المباشر
         if (empty($lineItems)) {
             $approvedPrice = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);

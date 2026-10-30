@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\ConsultationRevenue;
 use App\Models\Emergency;
+use App\Models\HospitalExtraService;
 use App\Models\LabTest;
 use App\Models\Payment;
 use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
+use App\Models\SurgeryExtraService;
 use App\Models\Visit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -2314,6 +2316,7 @@ class CashierController extends Controller
             'visit',
             'additionalOperations.surgicalOperation',
             'medicalDevices',
+            'extraServices',
         ]);
 
         // حساب التكلفة الإجمالية
@@ -2329,10 +2332,91 @@ class CashierController extends Controller
         $radiologyTestsFee = $surgery->radiologyTests->sum(function ($test) {
             return $test->radiologyType->base_price ?? 0;
         });
+        $extraServicesFee = $surgery->extraServices->sum(function ($extra) {
+            return $extra->total_amount ?? 0;
+        });
 
-        $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee;
+        $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee + $extraServicesFee;
 
-        return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'additionalOpsFee', 'devicesFee', 'totalSurgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
+        $availableExtraServices = HospitalExtraService::active()->orderBy('name')->get();
+
+        return view('cashier.surgeries.payment-form', compact(
+            'surgery',
+            'surgeryFee',
+            'additionalOpsFee',
+            'devicesFee',
+            'totalSurgeryFee',
+            'labTestsFee',
+            'radiologyTestsFee',
+            'extraServicesFee',
+            'totalAmount',
+            'availableExtraServices'
+        ));
+    }
+
+    /**
+     * إضافة خدمة إضافية أو فندقية للعملية الجراحية من الكاشير
+     */
+    public function addSurgeryExtraService(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإضافة خدمات إضافية للعمليات');
+        }
+
+        $request->validate([
+            'service_name' => 'required|string|max:255',
+            'service_price' => 'required|numeric|min:0',
+            'service_quantity' => 'nullable|integer|min:1',
+            'service_notes' => 'nullable|string|max:500',
+            'service_id' => 'nullable|exists:hospital_extra_services,id',
+        ]);
+
+        $qty = max(1, (int) $request->input('service_quantity', 1));
+        $price = (float) $request->input('service_price', 0);
+        $name = trim($request->input('service_name'));
+
+        $surgery->extraServices()->create([
+            'service_id' => $request->input('service_id'),
+            'name' => $name,
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $price * $qty,
+            'notes' => $request->input('service_notes'),
+            'payment_status' => 'pending',
+            'created_by' => $user->id,
+        ]);
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تمت إضافة خدمة "'.$name.'" بنجاح بمبلغ '.number_format($price * $qty, 0).' د.ع');
+    }
+
+    /**
+     * حذف خدمة إضافية معلقة من العملية الجراحية
+     */
+    public function removeSurgeryExtraService(Surgery $surgery, SurgeryExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة خدمات العمليات');
+        }
+
+        if ($extraService->surgery_id !== $surgery->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه العملية');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً');
+        }
+
+        $serviceName = $extraService->name;
+        $extraService->delete();
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف خدمة "'.$serviceName.'" بنجاح');
     }
 
     /**
@@ -2364,6 +2448,7 @@ class CashierController extends Controller
             'room_custom_amount' => 'nullable|numeric|min:1',
             'pay_lab_tests' => 'nullable|array',
             'pay_radiology_tests' => 'nullable|array',
+            'pay_extra_services' => 'nullable|array',
         ]);
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
@@ -2381,6 +2466,7 @@ class CashierController extends Controller
         $payRoom = $request->has('pay_room');
         $payLabTests = $request->input('pay_lab_tests', []);
         $payRadiologyTests = $request->input('pay_radiology_tests', []);
+        $payExtraServices = $request->input('pay_extra_services', []);
 
         if ($isInclusive) {
             // inclusive covers other costs, so we mark them as paid, but they add 0 to the actual cash amount paid this time
@@ -2390,7 +2476,7 @@ class CashierController extends Controller
             $paySurgery = true;
         }
 
-        if (! $paySurgery && ! $payRoom && empty($payLabTests) && empty($payRadiologyTests)) {
+        if (! $paySurgery && ! $payRoom && empty($payLabTests) && empty($payRadiologyTests) && empty($payExtraServices)) {
             return redirect()->back()
                 ->with('error', 'يرجى تحديد عنصر واحد على الأقل للدفع')
                 ->withInput();
@@ -2486,9 +2572,23 @@ class CashierController extends Controller
                 }
             }
 
-            $totalApprovedPayable = $actualAmount;
-            $patientShare = $isInsurance ? round(($totalApprovedPayable * $copayPercentage) / 100, 2) : $totalApprovedPayable;
-            $insuranceShare = $isInsurance ? max(0, $totalApprovedPayable - $patientShare) : 0.00;
+            // 5. Extra Services (خدمات إضافية وفندقية - نقدية 100% دائماً وخارج الضمان)
+            $extraServicesAmount = 0;
+            if (! empty($payExtraServices)) {
+                $surgery->load('extraServices');
+                foreach ($surgery->extraServices as $extraService) {
+                    if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        $extraTotal = (float) $extraService->total_amount;
+                        $extraServicesAmount += $extraTotal;
+                        $paidItems[] = 'خدمة إضافية: '.$extraService->name.($extraService->quantity > 1 ? ' (×'.$extraService->quantity.')' : '').' - مدفوع: '.number_format($extraTotal, 0).' د.ع';
+                    }
+                }
+            }
+
+            $medicalPayable = $actualAmount; // surgery + room + lab + rad
+            $totalApprovedPayable = $medicalPayable + $extraServicesAmount;
+            $patientShare = $isInsurance ? (round(($medicalPayable * $copayPercentage) / 100, 2) + $extraServicesAmount) : $totalApprovedPayable;
+            $insuranceShare = $isInsurance ? max(0, $medicalPayable - round(($medicalPayable * $copayPercentage) / 100, 2)) : 0.00;
 
             $discountPercentage = 0.00;
             $discountAmount = 0.00;
@@ -2590,6 +2690,17 @@ class CashierController extends Controller
                 }
             }
 
+            // تحديث حالة الخدمات الإضافية المدفوعة
+            if (! empty($payExtraServices)) {
+                $surgery->extraServices()
+                    ->whereIn('id', $payExtraServices)
+                    ->where('payment_status', '!=', 'paid')
+                    ->update([
+                        'payment_status' => 'paid',
+                        'payment_id' => $payment->id,
+                    ]);
+            }
+
             // تحديد إذا تم دفع كل شيء أم لا
             $surgery->refresh();
             $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
@@ -2597,7 +2708,8 @@ class CashierController extends Controller
             $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
             $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
-            $allPaid = $allSurgeryFeePaid && $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
+            $allExtraServicesPaid = $surgery->extraServices()->where('payment_status', '!=', 'paid')->count() === 0;
+            $allPaid = $allSurgeryFeePaid && $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid && $allExtraServicesPaid;
 
             // تحديث حالة دفع العملية
             $surgery->update([

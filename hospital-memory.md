@@ -62,6 +62,25 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 134 (نظام الخدمات الإضافية والفندقية للعمليات الجراحية والرقود بتسعير ديناميكي للكاشير مع العزل الكامل عن الضمان Surgery Accommodation & Extra Services with Dynamic Cashier Pricing):**
+  * **قاعدة البيانات والترحيل (`database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php`)**:
+    - إنشاء جدول `hospital_extra_services` كدليل مرجعي للخدمات الإضافية والفندقية (تخطيط قلب، خدمة مرافق مريض مبيت، رقود إضافي، أجور فتح طبلة، طبيب أطفال، تزيين الغرف Decorating 50/100، غرامات التدخين وإدخال الأكل، بيان الولادة، مواد مصروفة، خدمات إدارية، خدمات فندقة نواظير) مع استبعاد تصنيفات الغرف (VIP/VVIP) لأنها مدعومة ومحسوبة تلقائياً في نظام الغرف `rooms`.
+    - إنشاء جدول `surgery_extra_services` لربط الخدمات الإضافية بالعملية الجراحية وسند القبض المالي (`surgery_id`, `name`, `price`, `quantity`, `total_amount`, `notes`, `payment_status`, `payment_id`, `created_by`).
+    - تطبيق المايجريشن محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+  * **النماذج والعلاقات (`app/Models/HospitalExtraService.php`, `app/Models/SurgeryExtraService.php`, `app/Models/Surgery.php`)**:
+    - بناء نموذجي `HospitalExtraService` و `SurgeryExtraService` مع حماية الحقول والـ Casts والعلاقات مع المستخدم وسند الدفع.
+    - إضافة علاقة `extraServices()` في نموذج `Surgery`.
+  * **معالجة العمليات في الكنترولر (`app/Http/Controllers/CashierController.php`)**:
+    - شمول الخدمات الإضافية في واجهة كاشير العمليات `showSurgeryPaymentForm` مع حساب المبالغ المعلقة والمسددة وتمرير القائمة الإرشادية.
+    - إضافة دالتي `addSurgeryExtraService` لإضافة خدمة إضافية بسعر ديناميكي حر يحدده أو يعدله الكاشير، و `removeSurgeryExtraService` لحذف أي خدمة معلقة قبل السداد.
+    - تحديث `processSurgeryPayment` لاحتساب مبالغ الخدمات الإضافية 100% نقداً كخدمات خارج تغطية الضمان وربطها بسند القبض المالي وتحديث حالتها إلى `paid` مع التحقق من سداد كامل مستحقات العملية.
+  * **الواجهات وسندات القبض المطبوعة والحرارية (`resources/views/cashier/surgeries/payment-form.blade.php`, `receipt.blade.php`, `receipt-print.blade.php`)**:
+    - بطاقة تفاعلية لإضافة الخدمات الإضافية مع اقتراحات قائمة الدليل وسعر افتراضي قابل للتعديل الفوري من الكاشير.
+    - إدراج بنود الخدمات المضافة في جدول الفاتورة مع أزرار الحذف الفوري للبنود المعلقة.
+    - إبراز بنود الخدمات الإضافية كسطور مستقلة في سند القبض التفاعلي والوصل الحراري المطبوع.
+  * **حزمة الاختبارات الآلية (`tests/Feature/SurgeryExtraServicesTest.php`)**:
+    - 3 اختبارات ميزة تغطي إضافة خدمة إضافية بسعر مخصص، حذف خدمة معلقة، وسداد عملية جراحية مع خدماتها الإضافية بنجاح 100% (14 assertions).
+
 - **المرحلة 133 (دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية من 0% إلى 100% وحصرها التام خارج الضمان وإخفاء عناصر الضمان للنقدي Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement):**
   * **قاعدة البيانات وموديل الدفعات (`database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php` & `app/Models/Payment.php`)**:
     - إضافة حقول الخصم الرسمية لجدول `payments`: `discount_percentage`, `discount_amount`, `discount_reason`, `discount_by`.

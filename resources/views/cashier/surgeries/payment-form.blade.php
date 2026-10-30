@@ -48,10 +48,16 @@
         return $test->radiologyType->base_price ?? 0;
     });
     
-    // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً)
-    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
-    $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
-    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee);
+    // خدمات إضافية وفندقية معلقة ومدفوعة
+    $pendingExtraServices = $isCancelled ? collect() : $surgery->extraServices->where('payment_status', '!=', 'paid');
+    $paidExtraServices = $surgery->extraServices->where('payment_status', 'paid');
+    $pendingExtraFee = $isCancelled ? 0 : $pendingExtraServices->sum('total_amount');
+    $paidExtraFee = $paidExtraServices->sum('total_amount');
+
+    // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً والخدمات الإضافية)
+    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
+    $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
+    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee);
 
     $patient = $surgery->patient;
     $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
@@ -368,6 +374,63 @@
                                     <button type="submit" class="btn {{ $isCancelled ? 'btn-danger' : 'btn-info text-white' }} btn-lg fw-bold px-5 shadow">
                                         <i class="fas fa-check-circle me-2"></i> تأكيد استرجاع {{ number_format($totalExcess, 0) }} د.ع للمريض
                                     </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if(!$isCancelled)
+                    <!-- صندوق إضافة الخدمات الإضافية والفندقية (مرافق، تزيين، تخطيط، طبلة، غرامات...) -->
+                    <div class="card border border-warning border-opacity-50 rounded-3 mb-4 shadow-2xs" style="background: linear-gradient(to bottom, #fffdf8, #fff);">
+                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fas fa-concierge-bell text-warning fs-5"></i>
+                                إضافة خدمات إضافية وفندقية للعملية الجراحية (تخطيط قلب، مرافق، تزيين، طبلة، غرامات...)
+                            </h6>
+                            <span class="badge bg-warning text-dark border border-warning small">
+                                <i class="fas fa-edit me-1"></i>الكاشير يحدد ويعدل السعر مباشرة
+                            </span>
+                        </div>
+                        <div class="card-body p-3">
+                            <form action="{{ route('cashier.surgeries.extra-services.add', $surgery) }}" method="POST" id="addExtraServiceForm">
+                                @csrf
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label small text-muted mb-1 fw-bold">اسم الخدمة الإضافية *</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-warning"><i class="fas fa-tags"></i></span>
+                                            <input type="text" class="form-control form-control-sm fw-bold" id="service_name_input" name="service_name" placeholder="اختر من المقترحات أو اكتب خدمة مخصصة..." list="extra_services_catalog_list" required autocomplete="off">
+                                            <datalist id="extra_services_catalog_list">
+                                                @foreach($availableExtraServices as $asrv)
+                                                    <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}">
+                                                        {{ $asrv->name }} (افتراضي: {{ number_format($asrv->default_price, 0) }} د.ع)
+                                                    </option>
+                                                @endforeach
+                                            </datalist>
+                                            <input type="hidden" name="service_id" id="service_id_hidden">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1 fw-bold">السعر المعتمد للوحدة (IQD) *</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-success fw-bold">IQD</span>
+                                            <input type="number" class="form-control form-control-sm fw-bold text-success" id="service_price_input" name="service_price" min="0" step="1000" placeholder="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted mb-1 fw-bold">الكمية</label>
+                                        <input type="number" class="form-control form-control-sm text-center fw-bold" id="service_qty_input" name="service_quantity" min="1" value="1">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted mb-1 fw-bold">ملاحظات (اختياري)</label>
+                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="ملاحظة أو تفصيل...">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs">
+                                            <i class="fas fa-plus me-1"></i> إضافة
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -850,6 +913,70 @@
                                                 <td class="text-end"><strong id="pending_radiology_fee_display">{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
                                             </tr>
                                         @endif
+
+                                        <!-- الخدمات الإضافية والفندقية المعلقة -->
+                                        @if($pendingExtraServices->count() > 0)
+                                            <tr class="table-warning">
+                                                <td class="text-center">
+                                                    <input type="checkbox" 
+                                                           class="form-check-input" 
+                                                           id="selectAllExtraServices" checked>
+                                                </td>
+                                                <td colspan="3">
+                                                    <strong>
+                                                        <i class="fas fa-concierge-bell me-2 text-warning"></i>
+                                                        الخدمات الإضافية والفندقية المعلقة ({{ $pendingExtraServices->count() }})
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                            @foreach($pendingExtraServices as $extraService)
+                                                <tr class="align-middle">
+                                                    <td class="text-center">
+                                                        <input type="checkbox" 
+                                                               class="form-check-input payment-item extra-service-item" 
+                                                               name="pay_extra_services[]" 
+                                                               value="{{ $extraService->id }}"
+                                                               data-base-price="{{ (float)$extraService->total_amount }}"
+                                                               data-moi-price="{{ (float)$extraService->total_amount }}"
+                                                               data-hi-price="{{ (float)$extraService->total_amount }}"
+                                                               data-is-extra="1"
+                                                               checked>
+                                                    </td>
+                                                    <td class="ps-4">
+                                                        <i class="fas fa-concierge-bell text-warning me-2"></i>
+                                                        <strong>خدمة إضافية</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                            <div>
+                                                                <span class="fw-bold text-dark fs-6">{{ $extraService->name }}</span>
+                                                                @if($extraService->quantity > 1)
+                                                                    <span class="badge bg-secondary ms-1">×{{ $extraService->quantity }}</span>
+                                                                    <small class="text-muted ms-1">({{ number_format($extraService->price, 0) }} د.ع للوحدة)</small>
+                                                                @endif
+                                                                @if($extraService->notes)
+                                                                    <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</small>
+                                                                @endif
+                                                            </div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill delete-extra-service-btn" 
+                                                                    data-url="{{ route('cashier.surgeries.extra-services.remove', [$surgery, $extraService]) }}"
+                                                                    data-name="{{ $extraService->name }}"
+                                                                    title="إلغاء وحذف الخدمة المعلقة">
+                                                                <i class="fas fa-trash-alt me-1"></i>حذف
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end item-price-display">
+                                                        <strong class="text-dark">{{ number_format($extraService->total_amount, 0) }}</strong>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            <tr class="table-light">
+                                                <td></td>
+                                                <td colspan="2" class="text-end"><strong>مجموع الخدمات الإضافية:</strong></td>
+                                                <td class="text-end"><strong id="pending_extra_services_fee_display">{{ number_format($pendingExtraFee, 0) }}</strong></td>
+                                            </tr>
+                                        @endif
                                     </tbody>
                                     <tfoot>
                                         <!-- إجمالي المعلق -->
@@ -1131,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
         let currentLabTotal = 0;
         let currentRadTotal = 0;
+        let currentExtraTotal = 0;
         document.querySelectorAll('.payment-item').forEach(function(item) {
             if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
                 const basePrice = parseFloat(item.dataset.basePrice) || 0;
@@ -1140,10 +1268,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isHiActive = item.dataset.isHiActive === '1';
 
                 let itemApproved = basePrice;
-                if (insType === 'moi' && isMoiActive) {
-                    itemApproved = moiPrice > 0 ? moiPrice : basePrice;
-                } else if (insType === 'hi' && isHiActive) {
-                    itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                if (!item.classList.contains('extra-service-item')) {
+                    if (insType === 'moi' && isMoiActive) {
+                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                    } else if (insType === 'hi' && isHiActive) {
+                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                    }
                 }
 
                 const priceCell = item.closest('tr')?.querySelector('.item-price-display');
@@ -1151,10 +1281,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     priceCell.textContent = numberFormat(itemApproved);
                 }
 
-                if (item.classList.contains('lab-test-item')) {
-                    currentLabTotal += itemApproved;
-                } else if (item.classList.contains('radiology-test-item')) {
-                    currentRadTotal += itemApproved;
+                if (item.checked) {
+                    if (item.classList.contains('lab-test-item')) {
+                        currentLabTotal += itemApproved;
+                    } else if (item.classList.contains('radiology-test-item')) {
+                        currentRadTotal += itemApproved;
+                    } else if (item.classList.contains('extra-service-item')) {
+                        currentExtraTotal += itemApproved;
+                    }
                 }
             }
         });
@@ -1163,6 +1297,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (labTotalDisplay) labTotalDisplay.textContent = numberFormat(currentLabTotal);
         const radTotalDisplay = document.getElementById('pending_radiology_fee_display');
         if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal);
+        const extraTotalDisplay = document.getElementById('pending_extra_services_fee_display');
+        if (extraTotalDisplay) extraTotalDisplay.textContent = numberFormat(currentExtraTotal);
 
         let deferredAmount = pendingAmount - selectedAmount;
         if (isIncl) {
@@ -1171,18 +1307,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (deferredAmount < 0) deferredAmount = 0;
 
-        // حساب حصة الضمان والمريض
+        // حساب حصة الضمان والمريض (الخدمات الطبية تخضع للضمان والخدمات الإضافية نقدية 100%)
         let copayPct = 100;
         if (insType !== 'none') {
             copayPct = parseFloat(copayInput ? copayInput.value : 15) || 0;
         }
 
+        let medicalSelected = selectedAmount - currentExtraTotal;
         let patientShare = selectedAmount;
         let insuranceShare = 0;
 
         if (insType !== 'none') {
-            patientShare = Math.round(selectedAmount * (copayPct / 100));
-            insuranceShare = Math.max(0, selectedAmount - patientShare);
+            const medicalPatientShare = Math.round(medicalSelected * (copayPct / 100));
+            patientShare = medicalPatientShare + currentExtraTotal;
+            insuranceShare = Math.max(0, medicalSelected - medicalPatientShare);
         }
 
         const discountInput = document.getElementById('discount_percentage');
@@ -1255,6 +1393,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
+        updateGroupCheckbox('extra-service-item', 'selectAllExtraServices');
     }
 
     function updateCopayUI() {
@@ -1385,8 +1524,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         const selectAllLab = document.getElementById('selectAllLab');
         const selectAllRadiology = document.getElementById('selectAllRadiology');
+        const selectAllExtra = document.getElementById('selectAllExtraServices');
         if (selectAllLab) selectAllLab.checked = true;
         if (selectAllRadiology) selectAllRadiology.checked = true;
+        if (selectAllExtra) selectAllExtra.checked = true;
         calculateSelectedAmount();
     }
 
@@ -1396,8 +1537,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         const selectAllLab = document.getElementById('selectAllLab');
         const selectAllRadiology = document.getElementById('selectAllRadiology');
+        const selectAllExtra = document.getElementById('selectAllExtraServices');
         if (selectAllLab) selectAllLab.checked = false;
         if (selectAllRadiology) selectAllRadiology.checked = false;
+        if (selectAllExtra) selectAllExtra.checked = false;
         calculateSelectedAmount();
     }
 
@@ -1417,6 +1560,14 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateSelectedAmount();
     }
 
+    function toggleExtraServices() {
+        const selectAllExtra = document.getElementById('selectAllExtraServices');
+        document.querySelectorAll('.extra-service-item').forEach(function(item) {
+            item.checked = selectAllExtra.checked;
+        });
+        calculateSelectedAmount();
+    }
+
     // إضافة مستمعي الأحداث
     document.getElementById('selectAllBtn').addEventListener('click', selectAll);
     document.getElementById('deselectAllBtn').addEventListener('click', deselectAll);
@@ -1424,6 +1575,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // مستمعي أحداث checkboxes المجموعات
     const selectAllLab = document.getElementById('selectAllLab');
     const selectAllRadiology = document.getElementById('selectAllRadiology');
+    const selectAllExtraServices = document.getElementById('selectAllExtraServices');
 
     if (selectAllLab) {
         selectAllLab.addEventListener('change', toggleLabTests);
@@ -1432,6 +1584,62 @@ document.addEventListener('DOMContentLoaded', function() {
     if (selectAllRadiology) {
         selectAllRadiology.addEventListener('change', toggleRadiologyTests);
     }
+
+    if (selectAllExtraServices) {
+        selectAllExtraServices.addEventListener('change', toggleExtraServices);
+    }
+
+    // التعبئة التلقائية لسعر الخدمة الإضافية من الكتالوج
+    const serviceNameInput = document.getElementById('service_name_input');
+    const servicePriceInput = document.getElementById('service_price_input');
+    const serviceIdHidden = document.getElementById('service_id_hidden');
+    const catalogOptions = document.querySelectorAll('#extra_services_catalog_list option');
+
+    if (serviceNameInput) {
+        const updatePriceFromCatalog = function() {
+            const val = serviceNameInput.value.trim().toLowerCase();
+            let matched = false;
+            catalogOptions.forEach(opt => {
+                if (opt.value.trim().toLowerCase() === val) {
+                    if (servicePriceInput) servicePriceInput.value = opt.getAttribute('data-price') || 0;
+                    if (serviceIdHidden) serviceIdHidden.value = opt.getAttribute('data-id') || '';
+                    matched = true;
+                }
+            });
+            if (!matched && serviceIdHidden) {
+                serviceIdHidden.value = '';
+            }
+        };
+
+        serviceNameInput.addEventListener('input', updatePriceFromCatalog);
+        serviceNameInput.addEventListener('change', updatePriceFromCatalog);
+    }
+
+    // تأكيد وحذف خدمة إضافية معلقة
+    document.querySelectorAll('.delete-extra-service-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = this.getAttribute('data-url');
+            const name = this.getAttribute('data-name');
+            if (confirm('هل أنت متأكد من حذف خدمة "' + name + '" من العملية؟')) {
+                const delForm = document.createElement('form');
+                delForm.method = 'POST';
+                delForm.action = url;
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_token';
+                csrf.value = '{{ csrf_token() }}';
+                const method = document.createElement('input');
+                method.type = 'hidden';
+                method.name = '_method';
+                method.value = 'DELETE';
+                delForm.appendChild(csrf);
+                delForm.appendChild(method);
+                document.body.appendChild(delForm);
+                delForm.submit();
+            }
+        });
+    });
 
     // مستمعي أحداث تغيير الراديو للعملية
     document.querySelectorAll('.surgery-payment-type').forEach(function(radio) {

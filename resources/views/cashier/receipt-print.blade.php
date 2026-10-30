@@ -426,6 +426,11 @@
                                     }
                                 }
                             }
+                        } elseif (str_contains($line, 'خدمة إضافية:')) {
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $em)) {
+                                $price = (float)str_replace(',', '', $em[1]);
+                            }
+                            $serviceName = preg_replace('/\s*-\s*مدفوع.*$/', '', $line);
                         }
                         $lineItems[] = ['name' => $serviceName, 'qty' => 1, 'price' => $price];
                     }
