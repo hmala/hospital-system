@@ -1228,6 +1228,23 @@ class CashierController extends Controller
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if ($insuranceType === 'none') {
+                $rawDiscountPerc = (float) $httpRequest->input('discount_percentage', 0);
+                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                    $discountPercentage = $rawDiscountPerc;
+                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                    $discountReason = trim($httpRequest->input('discount_reason') ?: 'خصم إدارة');
+                    $discountBy = $user->id;
+                }
+            }
+
             $paymentType = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray()) && ! in_array('lab', $actuallyPaidRequests->pluck('type')->toArray()) ? 'radiology' : 'lab';
             $paymentDescription = count($actuallyPaidRequests) > 1
                 ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
@@ -1250,6 +1267,10 @@ class CashierController extends Controller
                 'total_amount' => $totalApproved,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $cardNo,
                 'copay_percentage' => $hasCoveredItem ? $copayPercentage : 0,
@@ -2469,6 +2490,24 @@ class CashierController extends Controller
             $patientShare = $isInsurance ? round(($totalApprovedPayable * $copayPercentage) / 100, 2) : $totalApprovedPayable;
             $insuranceShare = $isInsurance ? max(0, $totalApprovedPayable - $patientShare) : 0.00;
 
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+            $patientPaidAmount = $patientShare;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if (! $isInsurance) {
+                $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
+                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                    $discountPercentage = $rawDiscountPerc;
+                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                    $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
+                    $discountBy = $user->id;
+                }
+            }
+
             if ($isInsurance) {
                 $paidItems[] = 'تغطية الضمان: '.($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' (نسبة التحمل: '.$copayPercentage.'%)';
                 $paidItems[] = 'حصة المريض: '.number_format($patientShare, 0).' د.ع | مطالبة الضمان: '.number_format($insuranceShare, 0).' د.ع';
@@ -2487,10 +2526,14 @@ class CashierController extends Controller
                 'cashier_id' => $user->id,
                 'surgery_id' => $surgery->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $patientShare,
+                'amount' => $patientPaidAmount,
                 'total_amount' => $totalApprovedPayable,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
                 'copay_percentage' => $isInsurance ? $copayPercentage : 0.00,
@@ -2790,10 +2833,27 @@ class CashierController extends Controller
                 $patientShare = $patientPaidAmount;
                 $insuranceShare = max(0, $totalApproved - $patientShare);
             } else {
-                $patientShare = $patientPaidAmount;
+                $patientShare = ($payment->patient_share && $payment->patient_share > 0) ? (float) $payment->patient_share : (($totalApproved > 0) ? $totalApproved : $patientPaidAmount);
                 $insuranceShare = 0;
             }
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if ($insuranceType === 'none') {
+                $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
+                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                    $discountPercentage = $rawDiscountPerc;
+                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                    $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
+                    $discountBy = $user->id;
+                }
+            }
 
             // تحديث الدفعة
             $payment->update([
@@ -2802,6 +2862,10 @@ class CashierController extends Controller
                 'total_amount' => $totalApproved,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $cardNo,
                 'copay_percentage' => ($insuranceType !== 'none') ? $copayPercentage : 0,

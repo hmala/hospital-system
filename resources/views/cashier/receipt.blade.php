@@ -484,6 +484,16 @@
                                     <div class="text-muted small mb-1">
                                         إجمالي التسعيرة: {{ number_format($totalApprovedSum) }} د.ع | تغطية الضمان: <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
                                     </div>
+                                @elseif($payment->discount_amount > 0)
+                                    <div class="text-muted small mb-1">
+                                        إجمالي الفاتورة: {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} د.ع |
+                                        <span class="text-danger fw-bold">
+                                            <i class="fas fa-tags me-1"></i> خصم خاص ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} د.ع
+                                        </span>
+                                        @if($payment->discount_reason)
+                                            <span class="text-muted small">({{ $payment->discount_reason }})</span>
+                                        @endif
+                                    </div>
                                 @endif
                                 <div class="d-inline-block bg-white p-2 px-4 rounded-3 border {{ $isRefund ? 'border-danger' : 'border-success' }} shadow-sm">
                                     <span class="text-muted small d-block">{{ $isRefund ? 'المبلغ المسترجع للمريض:' : 'المبلغ المقبوض نقداً من المريض:' }}</span>

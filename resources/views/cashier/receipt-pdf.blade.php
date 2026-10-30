@@ -234,10 +234,21 @@
                 <td>{{ $payment->description }}</td>
                 <td><span class="badge badge-info">{{ $payment->payment_type_name }}</span></td>
                 <td><span class="badge badge-primary">{{ $payment->payment_method_name }}</span></td>
-                <td><strong>{{ number_format($payment->amount, 2) }}</strong></td>
+                <td><strong>{{ number_format($payment->amount + $payment->discount_amount, 2) }}</strong></td>
             </tr>
+            @if($payment->discount_amount > 0)
+            <tr>
+                <td colspan="3" style="text-align: left; color: #dc3545;">
+                    خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                    @if($payment->discount_reason)
+                        <span style="font-size: 11px;"> - {{ $payment->discount_reason }}</span>
+                    @endif
+                </td>
+                <td style="color: #dc3545;">-{{ number_format($payment->discount_amount, 2) }}</td>
+            </tr>
+            @endif
             <tr class="total-row">
-                <td colspan="3" style="text-align: left;">الإجمالي:</td>
+                <td colspan="3" style="text-align: left;">الصافي المدفوع:</td>
                 <td class="total-amount">{{ number_format($payment->amount, 2) }} IQD</td>
             </tr>
         </tbody>

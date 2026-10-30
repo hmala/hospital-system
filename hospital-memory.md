@@ -1041,6 +1041,13 @@
   * **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LipidProfileAutoCalculationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LipidProfileAutoCalculationTest.php))**:
     - 4 اختبارات ميزة تغطي الحساب الدقيق للمعادلة، شرط الدهون الثلاثية 400، الحساب في الفحوصات المفردة والمركبة، وحفظ الإدخال اليدوي بنجاح تام (`4 passed, 25 assertions`).
 
+- **المرحلة 133: دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية (0% - 100%) وحصرها التام خارج الضمان (Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement)**:
+  * **قاعدة البيانات وموديل الدفعات**: إضافة حقول `discount_percentage`, `discount_amount`, `discount_reason`, و `discount_by` في جدول `payments`. وتطبيق المايجريشن محلياً وعلى هوستنجر (`remote_hostinger`).
+  * **كنترولر الكاشير**: شمول أقسام الفحوصات الطبية (`processRequestPayment`)، الطوارئ (`processEmergencyPayment`)، والعمليات الجراحية (`processSurgeryPayment`)، مع عزل صارم وتصفير تام للخصم في حال كان المريض مشمولاً بالضمان الصحي أو قوى الأمن الداخلي.
+  * **واجهات الكاشير والاحتساب المباشر**: إضافة صناديق تحكم تفاعلية بنسب خماسية من 0% حتى 100% مع أزرار سريعة وحقل سبب الخصم، وتحديث فوري لمبالغ القبض والإيصالات بجافاسكريبت.
+  * **الإيصالات والطباعة الحرارية وPDF**: توثيق سطر تفصيلي يوضح نسبة وقيمة وسبب الخصم قبل خانة الصافي المدفوع.
+  * **حزمة الاختبارات الآلية**: إنشاء `CashierDiscountTest.php` واجتياز 4 اختبارات ميزة بنجاح 100% (`4 passed, 37 assertions`).
+
 ### 🟡 In Progress (قيد المتابعة والتنفيذ):
 1. **نشر التحديثات البرمجية والمايجريشنات على سيرفر هوستنجر السحابي (`/deploy`)**:
    - تشغيل المايجريشن الجديد `2026_10_27_081000_add_void_fields_and_create_payment_void_logs_table.php` على قاعدة بيانات هوستنجر ومزامنة الصلاحيات `RolesAndPermissionsSeeder`.

@@ -53,6 +53,40 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-30 — المرحلة 133: دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية من 0% إلى 100% وحصرها التام خارج الضمان Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement)
+
+### Done
+- **قاعدة البيانات وموديل الدفعات ([database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php) & [app/Models/Payment.php](file:///c:/wamp64/www/hospital-system/app/Models/Payment.php))**:
+  * إضافة حقول الخصم الرسمية لجدول `payments`:
+    - `discount_percentage` (decimal 5,2 default 0.00).
+    - `discount_amount` (decimal 12,2 default 0.00).
+    - `discount_reason` (string 255 nullable).
+    - `discount_by` (unsignedBigInteger nullable fk users).
+  * تحديث `$fillable` و `$casts` وعلاقة `discountBy()` في نموذج `Payment`.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+- **معالجة الدفع المالي في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * شمول جميع أقسام الكاشير:
+    - الفحوصات الطبية والمختبر والأشعة (`processRequestPayment`).
+    - خدمات وفحوصات واستشارات الطوارئ (`processEmergencyPayment`).
+    - رسوم العمليات الجراحية والغرف والتحاليل الملحقة (`processSurgeryPayment`).
+  * **العزل الصارم لحماية الضمان**: تعطيل الخصم وتصفيره نهائياً إذا كانت فئة المريض ضمان صحي (`hi`) أو قوى أمن (`moi`) وحصره فقط في المرضى النقديين (`insurance_type === 'none'`).
+  * الحساب المالي الدقيق: احتساب الخصم من حصة المريض الإجمالية (`patient_share`)، وتخزين الصافي الفعلي في الصندوق بحقل `amount`، وتوثيق نسبة وقيمة وسبب الخصم وهوية الكاشير أو المشرف.
+- **تحديث واجهات الكاشير الحية بنسب خماسية ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إضافة صندوق خصم تفاعلي يظهر فقط عند الدفع النقدي (ويختفي تماماً ويقفل عند اختيار الضمان).
+  * قائمة نسب خماسية دقيقة (من 0% حتى 100% بخطوات 5%).
+  * أزرار سريعة للخصومات الشائعة (0%، 10%، 15%، 20%، 25%، 50%، إعفاء 100%).
+  * حقل نصي إلزامي/توضيحي لسبب الخصم (إداري، إعفاء طبيب، تخفيض إنساني).
+  * تحديث فوري مباشر بجافاسكريبت لحصة المريض والمبلغ المطلوب قبضه وزر التأكيد وشريط الملخص المالي.
+- **تحديث إيصالات القبض والطباعة الحرارية وPDF ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php), [resources/views/cashier/receipt-pdf.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-pdf.blade.php))**:
+  * إبراز سطر تفصيلي واضح لخصم الإدارة (النسبة %، القيمة بالدينار، وسبب الخصم) قبل خانة الصافي المدفوع، لضمان وضوح وشفافية السند المالي أمام المريض والمدققين.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * بناء 4 اختبارات ميزة تغطي كامل متطلبات الدورة المالية:
+    1. تطبيق خصم 20% على طلبات الفحوصات للمرضى النقديين والتأكد من الحسابات وهوية الكاشير وسبب الخصم.
+    2. الحماية الصارمة للمرضى المؤمنين ومنع أي خصم عليهم بقوة النظام (0%).
+    3. تطبيق خصم 15% على كاشير الطوارئ مع تحديث المبالغ وإصدار السند.
+    4. تطبيق خصم 25% على كاشير العمليات الجراحية بنجاح.
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (4 passed, 37 assertions).
+
 ## Session log (2026-10-30 — المرحلة 132: تمكين الكاشير الإداري casshieradmin والمخولين بالإبطال من استعراض كافة الوصولات وفلترة الكاشيرات Cashier Admin & Void Authorized Users Full Receipts Access & Departmental Cross-Drawer Filter Parity)
 
 ### Done

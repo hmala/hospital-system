@@ -666,6 +666,18 @@
                     </tr>
                 @endforeach
 
+                @if($payment->discount_amount > 0)
+                    <tr>
+                        <td colspan="2" class="col-service" style="color: #000; font-weight: 800;">
+                            خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                            @if($payment->discount_reason)
+                                <span style="font-size: 10px; font-weight: normal;"> - {{ $payment->discount_reason }}</span>
+                            @endif
+                        </td>
+                        <td class="col-price" style="color: #000; font-weight: 800;">-{{ number_format($payment->discount_amount, 0) }}</td>
+                    </tr>
+                @endif
+
                 <tr class="total-row">
                     <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? 'المبلغ المسترجع للمريض' : 'المبلغ المدفوع' }}</td>
                     <td class="total-val">{{ number_format(abs((float)$payment->amount), 0) }}</td>

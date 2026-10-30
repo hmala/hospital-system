@@ -435,6 +435,51 @@
                                     </div>
                                     <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
                                 </div>
+
+                                <!-- قسم الخصم المالي الحصري للمرضى خارج الضمان (نسب خماسية 0% - 100%) -->
+                                <div class="col-12" id="discount_section" style="{{ $defaultInsurance !== 'none' ? 'display: none;' : '' }}">
+                                    <div class="p-3 rounded-3 bg-white border border-danger border-opacity-25 shadow-2xs">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-tags text-danger"></i>
+                                                <label class="form-label fw-bold small text-dark mb-0">
+                                                    خصم خاص / إداري للمريض (خارج الضمان حصراً):
+                                                </label>
+                                                <span class="badge bg-danger fs-6 px-3 py-1" id="display_discount_badge">
+                                                    0%
+                                                </span>
+                                            </div>
+                                            <div class="btn-group btn-group-sm" role="group" aria-label="Quick Discounts">
+                                                <button type="button" class="btn btn-outline-secondary py-0 px-2 quick-discount-btn" data-pct="0">0%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="10">10%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="15">15%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="20">20%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="25">25%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="50">50%</button>
+                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="100">إعفاء 100%</button>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-4">
+                                                <select class="form-select form-select-sm fw-bold" id="discount_percentage" name="discount_percentage">
+                                                    <option value="0" selected>بدون خصم (0%)</option>
+                                                    @for($p = 5; $p <= 100; $p += 5)
+                                                        <option value="{{ $p }}">{{ $p }}% @if($p === 100) (إعفاء كامل) @endif</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control form-control-sm" id="discount_reason" name="discount_reason" 
+                                                       placeholder="سبب الخصم أو الجهة المخولة (إدارة / طبيب / إنساني)...">
+                                            </div>
+                                            <div class="col-md-3 text-end">
+                                                <span class="text-danger fw-bold small" id="display_discount_amount">
+                                                    قيمة الخصم: 0 د.ع
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- بطاقة معاينة الحسبة المالية المباشرة -->
@@ -449,6 +494,9 @@
                                     <div class="bg-white p-2 rounded border border-success">
                                         <small class="text-success d-block fw-bold">حصة المريض (المستلم نقداً)</small>
                                         <strong class="text-success fs-6" id="display_patient_share">{{ number_format($pendingAmount, 0) }} د.ع</strong>
+                                        <div id="summary_discount_note" class="text-danger small mt-1 fw-bold d-none">
+                                            <i class="fas fa-tag me-1"></i>خصم: <span id="summary_discount_val">0 د.ع</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-4">
@@ -1063,6 +1111,41 @@ document.addEventListener('DOMContentLoaded', function() {
             insuranceShare = Math.max(0, selectedAmount - patientShare);
         }
 
+        const discountSelect = document.getElementById('discount_percentage');
+        const discountSection = document.getElementById('discount_section');
+        const displayDiscountBadge = document.getElementById('display_discount_badge');
+        const displayDiscountAmount = document.getElementById('display_discount_amount');
+        const summaryDiscountNote = document.getElementById('summary_discount_note');
+        const summaryDiscountVal = document.getElementById('summary_discount_val');
+
+        let discountPct = 0;
+        if (insType === 'none') {
+            if (discountSection) discountSection.style.display = 'block';
+            discountPct = parseFloat(discountSelect ? discountSelect.value : 0) || 0;
+        } else {
+            if (discountSection) discountSection.style.display = 'none';
+            if (discountSelect) discountSelect.value = '0';
+            discountPct = 0;
+        }
+
+        let discountAmount = 0;
+        let netPatientShare = patientShare;
+        if (insType === 'none' && discountPct > 0) {
+            discountAmount = Math.round(patientShare * (discountPct / 100));
+            netPatientShare = Math.max(0, patientShare - discountAmount);
+        }
+
+        if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
+        if (displayDiscountAmount) displayDiscountAmount.textContent = 'قيمة الخصم: ' + numberFormat(discountAmount) + ' د.ع';
+        if (summaryDiscountNote) {
+            if (discountAmount > 0) {
+                summaryDiscountNote.classList.remove('d-none');
+                if (summaryDiscountVal) summaryDiscountVal.textContent = '-' + numberFormat(discountAmount) + ' د.ع';
+            } else {
+                summaryDiscountNote.classList.add('d-none');
+            }
+        }
+
         const dispApproved = document.getElementById('display_approved_price');
         const dispPatient = document.getElementById('display_patient_share');
         const dispInsurance = document.getElementById('display_insurance_share');
@@ -1075,12 +1158,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const deferredRow = document.getElementById('deferredRow');
 
         if (dispApproved) dispApproved.textContent = numberFormat(selectedAmount) + ' د.ع';
-        if (dispPatient) dispPatient.textContent = numberFormat(patientShare) + ' د.ع';
+        if (dispPatient) dispPatient.textContent = numberFormat(netPatientShare) + ' د.ع';
         if (dispInsurance) dispInsurance.textContent = numberFormat(insuranceShare) + ' د.ع';
         if (dispSelected) dispSelected.textContent = numberFormat(selectedAmount) + ' IQD';
         if (dispDeferred) dispDeferred.textContent = numberFormat(deferredAmount) + ' IQD';
-        if (inputAmount) inputAmount.value = patientShare;
-        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(patientShare) + ' IQD)';
+        if (inputAmount) inputAmount.value = netPatientShare;
+        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(netPatientShare) + ' IQD)';
         if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
 
         if (deferredRow) {
@@ -1097,10 +1180,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateCopayUI() {
         const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        const discountSection = document.getElementById('discount_section');
+        const discountSelect = document.getElementById('discount_percentage');
         if (insType === 'moi') {
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
             if (copaySection) copaySection.style.display = 'block';
             if (hiBadge) hiBadge.style.display = 'none';
+            if (discountSection) discountSection.style.display = 'none';
+            if (discountSelect) discountSelect.value = '0';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-primary';
                 copayBadge.textContent = 'ضمان الداخلية';
@@ -1109,6 +1196,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
             if (copaySection) copaySection.style.display = 'block';
             if (hiBadge) hiBadge.style.display = 'block';
+            if (discountSection) discountSection.style.display = 'none';
+            if (discountSelect) discountSelect.value = '0';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-info text-dark';
                 copayBadge.textContent = 'الضمان الصحي الوطني';
@@ -1117,6 +1206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insuranceCardCol) insuranceCardCol.style.display = 'none';
             if (copaySection) copaySection.style.display = 'none';
             if (hiBadge) hiBadge.style.display = 'none';
+            if (discountSection) discountSection.style.display = 'block';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-secondary';
                 copayBadge.textContent = 'دفع نقدي كامل (100%)';
@@ -1124,6 +1214,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         calculateSelectedAmount();
     }
+
+    const dSelect = document.getElementById('discount_percentage');
+    if (dSelect) {
+        dSelect.addEventListener('change', calculateSelectedAmount);
+    }
+
+    document.querySelectorAll('.quick-discount-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const pct = this.getAttribute('data-pct');
+            if (dSelect) {
+                dSelect.value = pct;
+                calculateSelectedAmount();
+            }
+        });
+    });
 
     if (insuranceTypeSelect) {
         insuranceTypeSelect.addEventListener('change', function() {
