@@ -259,30 +259,28 @@
                         @csrf
                         @method('POST')
 
-                        <!-- قسم الضمان الصحي ونسبة التحمل التلقائية المحمية (مطابقة تامة 100% لواجهة request-payment) -->
-                        <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
-                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                                <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
-                                    <i class="fas fa-shield-alt"></i>
-                                    تغطية الضمان ونسبة التحمل (Co-payment)
-                                </h6>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge {{ $isInsurance ? 'bg-success' : 'bg-secondary' }} px-3 py-1 rounded-pill" id="copayBadge">
-                                        {{ $isInsurance ? ($insuranceType === 'hi' ? 'مشمول بالضمان الصحي الوطني' : 'مشمول بضمان قوى الأمن') : 'دفع نقدي كامل (100%)' }}
-                                    </span>
-                                    @if($isInsurance)
+                        @if($isInsurance)
+                            <!-- قسم الضمان الصحي ونسبة التحمل التلقائية المحمية (خاص بالمرضى المؤمنين) -->
+                            <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i>
+                                        تغطية الضمان ونسبة التحمل (Co-payment)
+                                    </h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-success px-3 py-1 rounded-pill" id="copayBadge">
+                                            {{ $insuranceType === 'hi' ? 'مشمول بالضمان الصحي الوطني' : 'مشمول بضمان قوى الأمن' }}
+                                        </span>
                                         <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
                                             <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
                                         </span>
-                                    @endif
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="row g-3">
-                                <!-- جهة الضمان (مقفل ومحمي) -->
-                                <div class="col-md-6" id="insurance_type_wrapper">
-                                    <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين *</label>
-                                    @if($isInsurance)
+                                <div class="row g-3">
+                                    <!-- جهة الضمان (مقفل ومحمي) -->
+                                    <div class="col-md-6" id="insurance_type_wrapper">
+                                        <label class="form-label fw-bold small text-muted">جهة الضمان / التأمين</label>
                                         <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between">
                                             <span class="fw-bold text-dark">
                                                 <i class="fas fa-check-circle text-success me-1"></i>
@@ -290,130 +288,188 @@
                                             </span>
                                             <input type="hidden" name="insurance_type" id="insurance_type" value="{{ $insuranceType }}">
                                         </div>
-                                    @else
-                                        <div class="p-2 rounded bg-white border text-muted">
-                                            <i class="fas fa-money-bill me-1"></i> بدون ضمان (دفع نقدي كامل 100%)
-                                            <input type="hidden" name="insurance_type" id="insurance_type" value="none">
+                                    </div>
+
+                                    <!-- رقم بطاقة الضمان -->
+                                    <div class="col-md-6" id="insurance_card_col">
+                                        <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
+                                        <input type="text" class="form-control bg-light" id="insurance_card_no" name="insurance_card_no" 
+                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر" readonly>
+                                    </div>
+
+                                    @if($hiCategory)
+                                    <div class="col-12" id="patient_hi_category_badge">
+                                        <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <div>
+                                                <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                                <small class="text-muted">نسبة استقطاع خدمات الطوارئ: <strong class="text-primary fs-6">{{ (float)$emergencyCopay }}%</strong></small>
+                                            </div>
+                                            @if($hiCategory->requires_thermal_stamp)
+                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                            @else
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="fas fa-check me-1"></i> فئة معتمدة رسمياً
+                                                </span>
+                                            @endif
                                         </div>
+                                    </div>
                                     @endif
-                                </div>
 
-                                <!-- رقم بطاقة الضمان -->
-                                <div class="col-md-6" id="insurance_card_col" style="{{ !$isInsurance ? 'display: none;' : '' }}">
-                                    <label class="form-label fw-bold small text-muted">رقم بطاقة / دفتر الضمان</label>
-                                    <input type="text" class="form-control bg-light" id="insurance_card_no" name="insurance_card_no" 
-                                           value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية أو الدفتر" readonly>
-                                </div>
-
-                                @if($hiCategory)
-                                <div class="col-12" id="patient_hi_category_badge">
-                                    <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                        <div>
-                                            <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
-                                            <small class="text-muted">نسبة استقطاع خدمات الطوارئ: <strong class="text-primary fs-6">{{ (float)$emergencyCopay }}%</strong></small>
-                                        </div>
-                                        @if($hiCategory->requires_thermal_stamp)
-                                            <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
-                                        @else
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                <i class="fas fa-check me-1"></i> فئة معتمدة رسمياً
+                                    <!-- نسبة التحمل (تلقائية ومقفلة ومحمية تماماً) -->
+                                    <div class="col-12" id="copay_section">
+                                        <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-percentage text-primary"></i>
+                                                <label class="form-label fw-bold small text-muted mb-0">
+                                                    نسبة التحمل المعتمدة رسمياً على المريض للطوارئ (Co-payment):
+                                                </label>
+                                                <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
+                                                    {{ (float)$emergencyCopay }}%
+                                                </span>
+                                            </div>
+                                            <span class="text-muted small">
+                                                <i class="fas fa-shield-alt text-success me-1"></i>
+                                                مقفلة ومحددة آلياً وفق فئة المريض الرسمية المعتمدة
                                             </span>
-                                        @endif
+                                        </div>
+                                        <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$emergencyCopay }}">
                                     </div>
                                 </div>
-                                @endif
 
-                                <!-- نسبة التحمل (تلقائية ومقفلة ومحمية تماماً) -->
-                                <div class="col-12" id="copay_section" style="{{ !$isInsurance ? 'display: none;' : '' }}">
-                                    <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <!-- بطاقة معاينة الحسبة المالية المباشرة للضمان -->
+                                <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
+                                    <div class="col-4">
+                                        <div class="bg-white p-2 rounded border">
+                                            <small class="text-muted d-block">إجمالي السعر المعتمد</small>
+                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($totalInvoiceAmount) }} د.ع</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="bg-white p-2 rounded border border-success">
+                                            <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
+                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($dueAmount) }} د.ع</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="bg-white p-2 rounded border border-primary">
+                                            <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
+                                            <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($insuranceCoveredTotal) }} د.ع</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <!-- قسم الدفع النقدي والخصم الخاص (خارج الضمان 100%) -->
+                            <input type="hidden" name="insurance_type" id="insurance_type" value="none">
+                            <input type="hidden" id="copay_percentage" name="copay_percentage" value="100">
+
+                            <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc;">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                        <i class="fas fa-wallet text-success"></i>
+                                        حساب الدفع النقدي والخصم الخاص (طوارئ)
+                                    </h6>
+                                    <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 rounded-pill">
+                                        دفع نقدي كامل (خارج الضمان)
+                                    </span>
+                                </div>
+
+                                <!-- صندوق الخصم المالي بكتابة ومقترحات -->
+                                <div class="p-3 rounded-3 bg-white border border-danger border-opacity-25 shadow-2xs mb-3" id="discount_section">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="fas fa-percentage text-primary"></i>
-                                            <label class="form-label fw-bold small text-muted mb-0">
-                                                نسبة التحمل المعتمدة رسمياً على المريض للطوارئ (Co-payment):
+                                            <i class="fas fa-tags text-danger"></i>
+                                            <label class="form-label fw-bold small text-dark mb-0">
+                                                خصم خاص / إداري للمريض:
                                             </label>
-                                            <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
-                                                {{ (float)$emergencyCopay }}%
+                                            <span class="badge bg-danger fs-6 px-3 py-1" id="display_discount_badge">
+                                                0%
                                             </span>
                                         </div>
                                         <span class="text-muted small">
-                                            <i class="fas fa-shield-alt text-success me-1"></i>
-                                            مقفلة ومحددة آلياً وفق فئة المريض الرسمية المعتمدة
+                                            <i class="fas fa-keyboard text-secondary me-1"></i>
+                                            اكتب النسبة مباشرة أو اختر من المقترحات
                                         </span>
                                     </div>
-                                    <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$emergencyCopay }}">
-                                </div>
-
-                                <!-- قسم الخصم المالي الحصري للمرضى خارج الضمان (نسب خماسية 0% - 100%) -->
-                                <div class="col-12" id="discount_section" style="{{ $isInsurance ? 'display: none;' : '' }}">
-                                    <div class="p-3 rounded-3 bg-white border border-danger border-opacity-25 shadow-2xs">
-                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-tags text-danger"></i>
-                                                <label class="form-label fw-bold small text-dark mb-0">
-                                                    خصم خاص / إداري للمريض (خارج الضمان حصراً):
-                                                </label>
-                                                <span class="badge bg-danger fs-6 px-3 py-1" id="display_discount_badge">
-                                                    0%
-                                                </span>
-                                            </div>
-                                            <div class="btn-group btn-group-sm" role="group" aria-label="Quick Discounts">
-                                                <button type="button" class="btn btn-outline-secondary py-0 px-2 quick-discount-btn" data-pct="0">0%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="10">10%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="15">15%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="20">20%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="25">25%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="50">50%</button>
-                                                <button type="button" class="btn btn-outline-danger py-0 px-2 quick-discount-btn" data-pct="100">إعفاء 100%</button>
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-3">
+                                            <label class="form-label small text-muted mb-1 fw-bold">نسبة الخصم %</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light text-danger fw-bold">%</span>
+                                                <input type="number" 
+                                                       class="form-control form-control-sm fw-bold text-danger" 
+                                                       id="discount_percentage" 
+                                                       name="discount_percentage" 
+                                                       min="0" 
+                                                       max="100" 
+                                                       step="5" 
+                                                       value="0" 
+                                                       placeholder="0" 
+                                                       list="emergency_discount_percentage_suggestions">
+                                                <datalist id="emergency_discount_percentage_suggestions">
+                                                    <option value="0">0% (بدون خصم)</option>
+                                                    <option value="5">5%</option>
+                                                    <option value="10">10%</option>
+                                                    <option value="15">15%</option>
+                                                    <option value="20">20%</option>
+                                                    <option value="25">25%</option>
+                                                    <option value="30">30%</option>
+                                                    <option value="35">35%</option>
+                                                    <option value="40">40%</option>
+                                                    <option value="45">45%</option>
+                                                    <option value="50">50%</option>
+                                                    <option value="55">55%</option>
+                                                    <option value="60">60%</option>
+                                                    <option value="70">70%</option>
+                                                    <option value="75">75%</option>
+                                                    <option value="80">80%</option>
+                                                    <option value="90">90%</option>
+                                                    <option value="100">100% (إعفاء كامل)</option>
+                                                </datalist>
                                             </div>
                                         </div>
-                                        <div class="row g-2 align-items-center">
-                                            <div class="col-md-4">
-                                                <select class="form-select form-select-sm fw-bold" id="discount_percentage" name="discount_percentage">
-                                                    <option value="0" selected>بدون خصم (0%)</option>
-                                                    @for($p = 5; $p <= 100; $p += 5)
-                                                        <option value="{{ $p }}">{{ $p }}% @if($p === 100) (إعفاء كامل) @endif</option>
-                                                    @endfor
-                                                </select>
-                                            </div>
-                                            <div class="col-md-5">
-                                                <input type="text" class="form-control form-control-sm" id="discount_reason" name="discount_reason" 
-                                                       placeholder="سبب الخصم أو الجهة المخولة (إدارة / طبيب / إنساني)...">
-                                            </div>
-                                            <div class="col-md-3 text-end">
-                                                <span class="text-danger fw-bold small" id="display_discount_amount">
-                                                    قيمة الخصم: 0 د.ع
-                                                </span>
+                                        <div class="col-md-5">
+                                            <label class="form-label small text-muted mb-1 fw-bold">سبب الخصم أو التوجيه</label>
+                                            <input type="text" class="form-control form-control-sm" id="discount_reason" name="discount_reason" 
+                                                   placeholder="سبب الخصم أو الجهة المخولة (إدارة / طبيب / إنساني)..." 
+                                                   list="emergency_discount_reason_suggestions">
+                                            <datalist id="emergency_discount_reason_suggestions">
+                                                <option value="خصم إدارة"></option>
+                                                <option value="إعفاء بتوجيه الطبيب"></option>
+                                                <option value="تخفيض إنساني"></option>
+                                                <option value="حالة طوارئ خاصة"></option>
+                                                <option value="خصم موظف / ذوي موظف"></option>
+                                                <option value="موافقة المدير التنفيذي"></option>
+                                            </datalist>
+                                        </div>
+                                        <div class="col-md-4 text-md-end pt-md-3">
+                                            <span class="text-danger fw-bold small" id="display_discount_amount">
+                                                قيمة الخصم: 0 د.ع
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- بطاقة معاينة الحسبة المالية المباشرة للنقدي -->
+                                <div class="row g-2 pt-2 border-top text-center" id="live_pricing_summary">
+                                    <div class="col-6">
+                                        <div class="bg-white p-2 rounded border">
+                                            <small class="text-muted d-block">إجمالي خدمات الطوارئ</small>
+                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($totalInvoiceAmount) }} د.ع</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-white p-2 rounded border border-success">
+                                            <small class="text-success fw-bold d-block">الصافي المطلوب قبضه نقداً</small>
+                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($dueAmount) }} د.ع</strong>
+                                            <div id="summary_discount_note" class="text-danger small mt-1 fw-bold d-none">
+                                                <i class="fas fa-tag me-1"></i>خصم: <span id="summary_discount_val">0 د.ع</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- بطاقة معاينة الحسبة المالية المباشرة (مطابقة 100% لواجهة request-payment) -->
-                            <div class="row g-2 mt-3 pt-3 border-top text-center" id="live_pricing_summary">
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border">
-                                        <small class="text-muted d-block">إجمالي السعر المعتمد</small>
-                                        <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($totalInvoiceAmount) }} د.ع</strong>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border border-success">
-                                        <small class="text-success fw-bold d-block">تحمل المريض (نقداً)</small>
-                                        <strong class="text-success fs-6" id="display_patient_share">{{ number_format($dueAmount) }} د.ع</strong>
-                                        <div id="summary_discount_note" class="text-danger small mt-1 fw-bold d-none">
-                                            <i class="fas fa-tag me-1"></i>خصم: <span id="summary_discount_val">0 د.ع</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-white p-2 rounded border border-primary">
-                                        <small class="text-primary fw-bold d-block">حصة الضمان (ذمة)</small>
-                                        <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($insuranceCoveredTotal) }} د.ع</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        @endif
 
                         <!-- جدول تفاصيل الخدمات والأسعار المعتمدة -->
                         <div class="mb-4">
@@ -573,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isInsurance = @json($isInsurance);
     const baseDueAmount = @json((float)$dueAmount);
     const amountInput = document.getElementById('amount');
-    const discountSelect = document.getElementById('discount_percentage');
+    const discountInput = document.getElementById('discount_percentage');
     const displayDiscountBadge = document.getElementById('display_discount_badge');
     const displayDiscountAmount = document.getElementById('display_discount_amount');
     const displayPatientShare = document.getElementById('display_patient_share');
@@ -587,7 +643,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function recalculateEmergencyDiscount() {
         if (isInsurance) return;
-        const discountPct = parseFloat(discountSelect ? discountSelect.value : 0) || 0;
+        let discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
+        if (discountPct < 0) discountPct = 0;
+        if (discountPct > 100) discountPct = 100;
+        if (discountInput && discountInput.value !== '' && (parseFloat(discountInput.value) > 100 || parseFloat(discountInput.value) < 0)) {
+            discountInput.value = discountPct;
+        }
+
         let discountAmount = 0;
         let netAmount = baseDueAmount;
 
@@ -615,18 +677,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (discountSelect) {
-        discountSelect.addEventListener('change', recalculateEmergencyDiscount);
+    if (discountInput) {
+        discountInput.addEventListener('input', recalculateEmergencyDiscount);
+        discountInput.addEventListener('change', recalculateEmergencyDiscount);
     }
-
-    document.querySelectorAll('.quick-discount-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const pct = this.getAttribute('data-pct');
-            if (discountSelect) {
-                discountSelect.value = pct;
-                recalculateEmergencyDiscount();
-            }
-        });
-    });
 });
 </script>
