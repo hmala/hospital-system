@@ -62,6 +62,57 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 133 (دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية من 0% إلى 100% وحصرها التام خارج الضمان وإخفاء عناصر الضمان للنقدي Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement):**
+  * **قاعدة البيانات وموديل الدفعات (`database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php` & `app/Models/Payment.php`)**:
+    - إضافة حقول الخصم الرسمية لجدول `payments`: `discount_percentage`, `discount_amount`, `discount_reason`, `discount_by`.
+    - تحديث `$fillable` و `$casts` وعلاقة `discountBy()` في نموذج `Payment`.
+    - تطبيق المايجريشن محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+  * **معالجة الدفع المالي في الكنترولر (`app/Http/Controllers/CashierController.php`)**:
+    - شمول جميع أقسام الكاشير: الفحوصات الطبية والمختبر والأشعة (`processRequestPayment`)، خدمات وفحوصات واستشارات الطوارئ (`processEmergencyPayment`)، رسوم العمليات الجراحية والغرف والتحاليل الملحقة (`processSurgeryPayment`).
+    - **العزل الصارم لحماية الضمان**: تعطيل الخصم وتصفيره نهائياً إذا كانت فئة المريض ضمان صحي (`hi`) أو قوى أمن (`moi`) وحصره فقط في المرضى النقديين (`insurance_type === 'none'`).
+    - الحساب المالي الدقيق: احتساب الخصم من حصة المريض الإجمالية (`patient_share`)، وتخزين الصافي الفعلي في الصندوق بحقل `amount`، وتوثيق نسبة وقيمة وسبب الخصم وهوية الكاشير أو المشرف.
+  * **تحديث واجهات الكاشير الحية وتطهيرها (`resources/views/cashier/request-payment-form.blade.php`, `resources/views/cashier/emergency-payment-form.blade.php`, `resources/views/cashier/surgeries/payment-form.blade.php`)**:
+    - **إخفاء حقول وعناوين الضمان للمريض النقدي**: عند فتح وصل لمريض نقدي، يتم إخفاء ترويسة الضمان وشارة التحمل وقائمة اختيار جهة الضمان بالكامل، وتعيين حقل مخفي `insurance_type="none"`.
+    - إظهار صندوق مستقل: **"حساب الدفع النقدي والخصم الخاص"** يحتوي على حقل إدخال نسبة الخصم وصافي المبلغ المطلوب قبضه نقداً.
+    - **توحيد إدخال الخصم (كتابة + اقتراحات فقط)**: إزالة الأزرار السريعة، واعتماد حقل رقمي مباشر (`input type="number"`) مع قائمة اقتراحات `datalist` للنسب الخماسية من 0% إلى 100%، وقائمة لاقتراحات أسباب الخصم.
+    - تحديث فوري مباشر بجافاسكريبت لحصة المريض والمبلغ المطلوب قبضه وزر التأكيد وشريط الملخص المالي.
+  * **تحديث إيصالات القبض والطباعة الحرارية وPDF (`resources/views/cashier/receipt.blade.php`, `resources/views/cashier/receipt-print.blade.php`, `resources/views/cashier/receipt-pdf.blade.php`)**:
+    - إبراز سطر تفصيلي واضح لخصم الإدارة (النسبة %، القيمة بالدينار، وسبب الخصم) قبل خانة الصافي المدفوع، لضمان وضوح وشفافية السند المالي أمام المريض والمدققين.
+  * **حزم الاختبارات الآلية الشاملة (`tests/Feature/CashierDiscountTest.php`)**:
+    - بناء 4 اختبارات ميزة تغطي كامل متطلبات الدورة المالية (فحوصات، طوارئ، عمليات، ومنع الخصم للمؤمنين) واجتيازها بنجاح 100% (4 passed, 37 assertions).
+
+- **المرحلة 132 (تمكين الكاشير الإداري casshieradmin والمخولين بالإبطال من استعراض كافة الوصولات وفلترة الكاشيرات Cashier Admin & Void Authorized Users Full Receipts Access & Departmental Cross-Drawer Filter Parity):**
+  * **إزالة القيد الحصري عن الكاشير الإداري والمخولين بالإبطال (`app/Http/Controllers/CashierController.php`)**:
+    - توسيع صلاحية استعراض الوصولات في دالة `reports()` لتشمل دور الكاشير الإداري `casshieradmin` وصلاحية إبطال الوصولات `void payment receipt` بالإضافة إلى الأدوار الإدارية (`admin`, `accountant`, `hospital_admin`).
+    - إلغاء فرض شرط `where('cashier_id', $user->id)` التلقائي عليهم، مما يسمح لهم بمشاهدة والبحث في وصولات جميع الكاشيرات والصناديق بالمستشفى دفعة واحدة.
+    - تزويدهم بقائمة كاشيرات المستشفى للفلترة المخصصة حسب الكاشير أو عرض "جميع الكاشيرات".
+  * **تحديث واجهة تقرير الوصولات والمقبوضات (`resources/views/cashier/report.blade.php`)**:
+    - إظهار القائمة المنسدلة لفلترة الكاشير لمن يملك دور `casshieradmin` أو صلاحية `void payment receipt`.
+  * **حزم الاختبارات الآلية الشاملة (`tests/Feature/PaymentVoidAndReversalTest.php`)**:
+    - اختبار ميزة متكامل يؤكد عزل الكاشير العادي لوصولاته الخاصة وقدرة الكاشير الإداري على رؤية وصولات جميع الكاشيرات (11 passed, 73 assertions).
+
+- **المرحلة 131 (دمج وتوحيد فحوصات CBC في فحص نشط وحيد رقم 43 ونقل باقات الأطباء وتعطيل المكرر كأرشيف CBC Tests Consolidation into Single Active ID 43 & Legacy Archiving):**
+  * **الدمج الشامل وتوحيد سجلات فحص الدم (`database/migrations/2026_10_29_213000_consolidate_cbc_tests_to_single_active_test_43.php`)**:
+    - اعتماد السجل رقم #43 كفحص نشط ورسمي وحيد باسم `CBC (5-Part Diff)` وبسعر 20,000 د.ع مع كامل البارامترات الـ 27.
+    - تمييز السجل رقم #44 كأرشيف مدمج (`CBC (5-Part Diff) [أرشيف مدمج]`) وتعطيله نهائياً (`is_active = 0`).
+    - تمييز السجل رقم #1440 كمكرر ملغي وتعطيله نهائياً.
+    - ترحيل ونقل كافة الباقات المفضلة لجميع أطباء المستشفى (21 باقة) إلى 43 مباشرة وتطبيق المايجريشن محلياً وعلى هوستنجر.
+
+- **المرحلة 130 (ترقية وتوحيد طلب استشارة الطوارئ إلى اختيار استشاري فردي وربطها مالياً بخدمة استشارة اخصائي من العيادة الاستشارية بسعر 30,000 د.ع Emergency Single Consultant Selection & Automated 30,000 IQD Emergency Service Billing):**
+  * **ترقية واجهة نافذة طلب الاستشارة الطبية (`resources/views/emergency/show.blade.php`)**:
+    - استبدال صندوق الاختيار المتعدد بقائمة منسدلة حديثة وسلسة لاختيار الطبيب الاستشاري المطلوب بعينه من الأطباء المتاحين بالدوام.
+  * **الربط المالي الصارم بخدمات الطوارئ (`app/Http/Controllers/EmergencyController.php`)**:
+    - إلحاق خدمة الطوارئ الرسمية "استشارة اخصائي من العيادة الاستشارية" (#115) بسعرها الرسمي 30,000 د.ع تلقائياً إلى خدمات الحالة وتحديث الفاتورة والوصل.
+    - ضبط القيد المالي وتوزيع الحصص بنسبة 80% للطبيب (24,000 د.ع) و 20% للمستشفى (6,000 د.ع).
+  * **حزم الاختبارات الآلية**: اجتياز 11 اختباراً بنجاح تام (49 assertions).
+
+- **المرحلة 129 (توحيد فحص عد الدم الشامل الآلي باسمه الطبي المعتمد CBC (5-Part Diff) وفصل فحص فيلم الدم المجهري Blood Film وتحديث المطبوعات والاختبارات Automated CBC (5-Part Diff) Medical Standardization, Standalone Microscopic Blood Film & Complete Print Parity):**
+  * **توحيد المسمى الطبي في قاعدة البيانات (`database/migrations/2026_10_29_200000_standardize_cbc_test_name_to_cbc_5_part_diff.php`)**:
+    - توحيد واعتماد المسمى `CBC (5-Part Diff)` لفحص الجهاز الآلي (رقم 43 و 44) بسعر 20,000 د.ع.
+    - عزل وتثبيت فحص فيلم الدم المجهري اليدوي المستقل `Blood Film` (رقم 1243) بسعر 50,000 د.ع.
+  * **تحديث شاشات الطباعة والمحطة**: تحديث دالة التطبيع السريرية والمرفقات لتظهر باسم `CBC (5-Part Diff)`.
+  * **حزم الاختبارات الآلية**: اجتياز 21 اختباراً بنجاح تام 100% (133 assertions).
+
 - **المرحلة 128 (فك ارتباط وإلغاء كافة الطلبات الطبية عند إبطال الوصل Rebill و Refund ومنع ظهورها في طابور المختبر والأشعة وإظهارها كملغاة عند الطبيب Reopened & Refunded Payment Medical Requests Cascade Cancellation, Departmental Queue Purification & Clinical Doctor Alerts):**
   * **التحصين الشامل في كنترولر إبطال وإعادة فتح الوصولات (`app/Http/Controllers/PaymentVoidController.php`)**:
     - حصر وجمع كافة معرفات الطلبات الطبية المرتبطة بالوصل المالي المُراد إبطاله بأي شكل (`$payment->request_id`, `$payment->lab_request_ids`, `$payment->radiology_request_ids`, وكذلك أي طلب يشير معرف دفعه صراحة `where payment_id = payment->id`).
