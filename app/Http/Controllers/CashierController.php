@@ -1297,6 +1297,57 @@ class CashierController extends Controller
                         $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
                         $descParts[] = $cleanTitle.' #'.$reqItem->id;
                     }
+                } elseif ($reqItem->type === 'nursing') {
+                    $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                    $isPaid = true;
+                    foreach ($nursingActions as $actionVal) {
+                        if ($actionVal === 'cancel' || $actionVal === 'postponed' || $actionVal === 'postpone') {
+                            $isPaid = false;
+                            break;
+                        }
+                    }
+
+                    if ($isPaid) {
+                        $actuallyPaidRequests->push($reqItem);
+
+                        $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                        if (! empty($nursingServiceIds)) {
+                            foreach ($nursingServiceIds as $nsId) {
+                                $nSvc = \App\Models\EmergencyService::find($nsId);
+                                if ($nSvc) {
+                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
+                                }
+                            }
+                        } else {
+                            $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                            $matchedSvc = null;
+                            if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                                $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                    ?? \App\Models\EmergencyService::find(93)
+                                    ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                            }
+                            if ($matchedSvc) {
+                                $p = $matchedSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $computedTotal += $p['total_amount'];
+                                $computedPatientShare += $p['patient_share'];
+                                $computedInsuranceShare += $p['insurance_share'];
+                                if ($p['is_covered']) {
+                                    $hasCoveredItem = true;
+                                }
+                            } else {
+                                $computedTotal += 15000.00;
+                                $computedPatientShare += 15000.00;
+                            }
+                        }
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $descParts[] = $cleanTitle.' #'.$reqItem->id;
+                    }
                 }
             }
 
