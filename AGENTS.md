@@ -53,6 +53,26 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-31 — المرحلة 138: نظام الخصم الثنائي التبادلي للكاشير إجمالي ع الوصل أو تفصيلي لكل خدمة بنسب مئوية وعزل الضمان Cashier Dual-Mode Mutual Discount System Overall vs Per-Item Percentage with Strict Non-Insurance Enforcement)
+
+### Done
+- **التحكم التبادلي والواجهة التفاعلية ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * إضافة مبدل نطاق الخصم التبادلي (`discount_scope`): "خصم إجمالي ع الوصل" (`overall`) مقابل "خصم تفصيلي لكل خدمة" (`per_item`).
+  * إدراج عمود مخصص في جدول الخدمات والتحاليل والأشعة والتمريض (`col-item-discount`) لإدخال نسبة الخصم لكل خدمة بشكل منفصل (بخطوات خماسية 5% واقتراحات Datalist من 0% حتى 100%).
+  * احتساب فوري بالدينار العراقي لكل خدمة مع شطب السعر القديم وإبراز الصافي الجديد وشارة توضيحية لقيمة الخصم بالدينار.
+  * تجميع آلي فوري لكافة الخصومات الفردية في خانة الصافي ومجموع الإعفاء والنسبة الإجمالية التراكمية في صندوق الملخص المالي.
+  * منع التضارب: عند اختيار الخصم التفصيلي، يُقفل حقل الخصم الإجمالي للقراءة فقط ويتحول لعرض الإجمالي التراكمي، وعند العودة للخصم الإجمالي يُخفى عمود الجدول وتُصفر خصومات السطور تلقائياً.
+  * حماية الضمان: يختفي صندوق الخصم وعمود الخدمات كلياً ويقفل النظام أي خصومات للمرضى المشمولين بالضمان الصحي (`hi`) أو قوى الأمن (`moi`) وحصره بنسبة 100% في المرضى النقديين (`none`).
+- **معالجة العمليات في الكنترولر وقواعد البيانات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تطوير دالة `processRequestPayment` للتعامل مع وضعيتي الخصم (`overall` و `per_item`).
+  * في وضعية الخصم التفصيلي: احتساب خصم كل خدمة منفصلة وتوثيق مصفوفة الخصومات داخل `details['item_discounts']` لكل طلب طبي.
+  * توثيق تفاصيل الخصم وأسماء الخدمات ونسبها تلقائياً في حقل `discount_reason` لسند الدفع (`payments`)، وتخزين إجمالي الخصم والنسبة الفعلية وهوية الكاشير المنفذ.
+- **سندات القبض المطبوعة والحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php), [resources/views/cashier/receipt-pdf.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-pdf.blade.php))**:
+  * توافق تام مع سندات القبض والطباعة الحرارية وPDF لعرض المبالغ الصافية وتفاصيل أسباب ونسب الخصم التفصيلي تلقائياً أمام المريض والمدققين.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * إضافة اختبار ميزة متكامل (`test_cashier_can_apply_per_item_discount_on_non_insured_request_payment`) يؤكد تطبيق الخصم التفصيلي، وحساب الإجمالي الصافي بدقة، وتوثيق أسماء الخدمات ونسبها، وتخزينها في تفاصيل الطلب وسند الدفع.
+  * اجتياز كامل حزمة اختبارات الخصم بنجاح 100% (5 passed, 51 assertions).
+
 ## Session log (2026-10-31 — المرحلة 137: تزامن تلقائي لمخرجات بناء Vite بين public/build و dist لمنصات النشر والاستضافة التلقائية Vite Build Output Dual-Sync for Automated Deployment Pipelines)
 
 ### Done

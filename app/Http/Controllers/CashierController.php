@@ -1388,13 +1388,127 @@ class CashierController extends Controller
 
             // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
             if ($insuranceType === 'none') {
-                $rawDiscountPerc = (float) $httpRequest->input('discount_percentage', 0);
-                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
-                    $discountPercentage = $rawDiscountPerc;
-                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
-                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
-                    $discountReason = trim($httpRequest->input('discount_reason') ?: 'خصم إدارة');
-                    $discountBy = $user->id;
+                $discountScope = $httpRequest->input('discount_scope', 'overall');
+
+                if ($discountScope === 'per_item') {
+                    $itemDiscounts = (array) $httpRequest->input('item_discounts', []);
+                    $totalItemDiscounts = 0.0;
+                    $itemDiscountSummaries = [];
+
+                    foreach ($actuallyPaidRequests as $reqItem) {
+                        $reqDetails = is_string($reqItem->details) ? json_decode($reqItem->details, true) : ($reqItem->details ?? []);
+                        if (! is_array($reqDetails)) {
+                            $reqDetails = [];
+                        }
+
+                        $reqSavedDiscounts = [];
+
+                        if ($reqItem->type === 'lab') {
+                            $pkgId = $reqDetails['package_id'] ?? null;
+                            if ($pkgId) {
+                                $pkg = \App\Models\Package::find($pkgId);
+                                $discPct = (float) ($itemDiscounts[$reqItem->id]['package'][$pkgId] ?? ($itemDiscounts[$reqItem->id]['package']['pkg_'.$pkgId] ?? 0));
+                                if ($pkg && $discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $disVal = round((float) $pkg->price * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemDiscountSummaries[] = "باقة {$pkg->name} (خصم {$discPct}%)";
+                                    $reqSavedDiscounts['package'][$pkgId] = [
+                                        'name' => $pkg->name,
+                                        'percentage' => $discPct,
+                                        'discount_amount' => $disVal,
+                                        'original_price' => (float) $pkg->price,
+                                    ];
+                                }
+                            } else {
+                                $paidTestIds = (array) ($reqDetails['lab_test_ids'] ?? []);
+                                foreach ($paidTestIds as $tId) {
+                                    $discPct = (float) ($itemDiscounts[$reqItem->id]['lab'][$tId] ?? 0);
+                                    if ($discPct > 0) {
+                                        $discPct = min(100, max(0, $discPct));
+                                        $tModel = \App\Models\LabTest::find($tId);
+                                        if ($tModel) {
+                                            $disVal = round((float) $tModel->price * ($discPct / 100.0), 2);
+                                            $totalItemDiscounts += $disVal;
+                                            $itemDiscountSummaries[] = "{$tModel->name} (خصم {$discPct}%)";
+                                            $reqSavedDiscounts['lab'][$tId] = [
+                                                'name' => $tModel->name,
+                                                'percentage' => $discPct,
+                                                'discount_amount' => $disVal,
+                                                'original_price' => (float) $tModel->price,
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                        } elseif ($reqItem->type === 'radiology') {
+                            $paidRadIds = (array) ($reqDetails['radiology_type_ids'] ?? $reqDetails['radiology_types'] ?? []);
+                            foreach ($paidRadIds as $rId) {
+                                $discPct = (float) ($itemDiscounts[$reqItem->id]['radiology'][$rId] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $rModel = \App\Models\RadiologyType::find($rId);
+                                    if ($rModel) {
+                                        $disVal = round((float) $rModel->price * ($discPct / 100.0), 2);
+                                        $totalItemDiscounts += $disVal;
+                                        $itemDiscountSummaries[] = "{$rModel->name} (خصم {$discPct}%)";
+                                        $reqSavedDiscounts['radiology'][$rId] = [
+                                            'name' => $rModel->name,
+                                            'percentage' => $discPct,
+                                            'discount_amount' => $disVal,
+                                            'original_price' => (float) $rModel->price,
+                                        ];
+                                    }
+                                }
+                            }
+                        } elseif ($reqItem->type === 'nursing') {
+                            $nursingDiscounts = $itemDiscounts[$reqItem->id]['nursing'] ?? [];
+                            foreach ($nursingDiscounts as $nId => $discVal) {
+                                $discPct = (float) $discVal;
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $nSvc = \App\Models\EmergencyService::find($nId)
+                                        ?? \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first();
+                                    $basePrice = $nSvc ? (float) $nSvc->price : 15000.0;
+                                    $nName = $nSvc ? $nSvc->name : ($reqItem->description ?: 'خدمة تمريضية');
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemDiscountSummaries[] = "{$nName} (خصم {$discPct}%)";
+                                    $reqSavedDiscounts['nursing'][$nId] = [
+                                        'name' => $nName,
+                                        'percentage' => $discPct,
+                                        'discount_amount' => $disVal,
+                                        'original_price' => $basePrice,
+                                    ];
+                                }
+                            }
+                        }
+
+                        if (! empty($reqSavedDiscounts)) {
+                            $reqDetails['item_discounts'] = $reqSavedDiscounts;
+                            $reqItem->details = $reqDetails;
+                            $reqItem->save();
+                        }
+                    }
+
+                    if ($totalItemDiscounts > 0) {
+                        $discountAmount = min($patientShare, $totalItemDiscounts);
+                        $discountPercentage = ($patientShare > 0) ? round(($discountAmount / $patientShare) * 100.0, 2) : 0;
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $customReason = trim($httpRequest->input('discount_reason') ?: '');
+                        $detailedSummary = 'خصم تفصيلي: '.implode('، ', $itemDiscountSummaries);
+                        $discountReason = $customReason ? "{$customReason} [{$detailedSummary}]" : $detailedSummary;
+                        $discountBy = $user->id;
+                    }
+                } else {
+                    $rawDiscountPerc = (float) $httpRequest->input('discount_percentage', 0);
+                    if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                        $discountPercentage = $rawDiscountPerc;
+                        $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountReason = trim($httpRequest->input('discount_reason') ?: 'خصم إدارة');
+                        $discountBy = $user->id;
+                    }
                 }
             }
 

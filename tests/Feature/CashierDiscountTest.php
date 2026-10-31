@@ -22,6 +22,7 @@ class CashierDiscountTest extends TestCase
     use RefreshDatabase;
 
     protected User $cashier;
+
     protected Department $department;
 
     protected function setUp(): void
@@ -144,6 +145,114 @@ class CashierDiscountTest extends TestCase
         $this->assertEquals('خصم نقابة الأطباء', $payment->discount_reason);
         $this->assertEquals($this->cashier->id, $payment->discount_by);
         $this->assertEquals('none', $payment->insurance_type);
+    }
+
+    public function test_cashier_can_apply_per_item_discount_on_non_insured_request_payment()
+    {
+        $patientUser = User::factory()->create(['name' => 'مريض نقدي خصم تفصيلي']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'insurance_type' => 'none',
+            'gender' => 'male',
+            'date_of_birth' => '1992-03-10',
+        ]);
+
+        $doctorUser = User::factory()->create();
+        $doctor = Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $this->department->id,
+            'specialization' => 'General',
+            'qualification' => 'MBChB',
+            'license_number' => 'DOC-'.uniqid(),
+        ]);
+
+        $visit = Visit::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'department_id' => $this->department->id,
+            'visit_type' => 'consultation',
+            'chief_complaint' => 'فحوصات متنوعة',
+            'visit_date' => now(),
+            'visit_time' => '10:00:00',
+            'status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $labTestA = LabTest::create([
+            'name' => 'CBC Test',
+            'code' => 'CBC99',
+            'price' => 40000,
+            'is_active' => true,
+        ]);
+
+        $labTestB = LabTest::create([
+            'name' => 'Lipid Profile',
+            'code' => 'LIP99',
+            'price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $req = MedicalRequest::create([
+            'visit_id' => $visit->id,
+            'type' => 'lab',
+            'description' => 'طلب تحاليل مختبرية متعددة',
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+            'details' => [
+                'lab_test_ids' => [$labTestA->id, $labTestB->id],
+                'tests' => [$labTestA->name, $labTestB->name],
+            ],
+            'requested_by' => $doctorUser->id,
+        ]);
+
+        $postData = [
+            'payment_method' => 'cash',
+            'insurance_type' => 'none',
+            'discount_scope' => 'per_item',
+            'discount_reason' => 'موافقة الطبيب المعالج',
+            'item_discounts' => [
+                $req->id => [
+                    'lab' => [
+                        $labTestA->id => 50, // 50% discount on 40,000 = 20,000 IQD discount
+                        $labTestB->id => 0,  // 0% discount on 20,000
+                    ],
+                ],
+            ],
+            'amount' => 40000, // 60,000 - 20,000
+            'item_actions' => [
+                $req->id => [
+                    'lab' => [
+                        $labTestA->id => 'pay',
+                        $labTestB->id => 'pay',
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->post(route('cashier.request.payment.process', $req->id), $postData);
+
+        $response->assertRedirect();
+
+        $payment = Payment::where('patient_id', $patient->id)->latest('id')->first();
+        $this->assertNotNull($payment);
+        $this->assertEquals(60000.00, (float) $payment->total_amount);
+        $this->assertEquals(60000.00, (float) $payment->patient_share);
+        $this->assertEquals(20000.00, (float) $payment->discount_amount);
+        $this->assertEquals(33.33, round((float) $payment->discount_percentage, 2));
+        $this->assertEquals(40000.00, (float) $payment->amount);
+        $this->assertStringContainsString('موافقة الطبيب المعالج', $payment->discount_reason);
+        $this->assertStringContainsString('خصم تفصيلي', $payment->discount_reason);
+        $this->assertStringContainsString('CBC Test (خصم 50%)', $payment->discount_reason);
+        $this->assertEquals($this->cashier->id, $payment->discount_by);
+
+        // Check details stored in medical request
+        $reqFresh = $req->fresh();
+        $details = is_string($reqFresh->details) ? json_decode($reqFresh->details, true) : $reqFresh->details;
+        $this->assertArrayHasKey('item_discounts', $details);
+        $this->assertEquals(50, $details['item_discounts']['lab'][$labTestA->id]['percentage']);
+        $this->assertEquals(20000, $details['item_discounts']['lab'][$labTestA->id]['discount_amount']);
     }
 
     public function test_discount_is_strictly_prevented_for_insured_patients()

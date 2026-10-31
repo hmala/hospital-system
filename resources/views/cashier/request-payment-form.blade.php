@@ -587,7 +587,7 @@
                                     </span>
                                 </div>
 
-                                <!-- صندوق الخصم المالي بكتابة ومقترحات -->
+                                <!-- صندوق الخصم المالي بكتابة ومقترحات ونطاق تطبيقه -->
                                 <div class="p-3 rounded-3 bg-white border border-danger border-opacity-25 shadow-2xs mb-3" id="discount_section">
                                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                         <div class="d-flex align-items-center gap-2">
@@ -599,14 +599,24 @@
                                                 0%
                                             </span>
                                         </div>
-                                        <span class="text-muted small">
-                                            <i class="fas fa-keyboard text-secondary me-1"></i>
-                                            اكتب النسبة مباشرة أو اختر من المقترحات
-                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="small fw-bold text-muted">نوع الخصم:</span>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_overall" value="overall" checked autocomplete="off" onchange="toggleDiscountScope('overall')">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_overall" title="تطبيق نسبة خصم موحدة على كامل الفاتورة">
+                                                    <i class="fas fa-receipt me-1"></i>خصم إجمالي ع الوصل
+                                                </label>
+
+                                                <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_per_item" value="per_item" autocomplete="off" onchange="toggleDiscountScope('per_item')">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_per_item" title="تحديد نسبة خصم مخصصة لكل خدمة أو فحص بشكل منفصل">
+                                                    <i class="fas fa-list-check me-1"></i>خصم تفصيلي لكل خدمة
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="row g-2 align-items-center">
-                                        <div class="col-md-3">
-                                            <label class="form-label small text-muted mb-1 fw-bold">نسبة الخصم %</label>
+                                        <div class="col-md-3" id="discount_overall_input_col">
+                                            <label class="form-label small text-muted mb-1 fw-bold" id="discount_percentage_label">نسبة الخصم %</label>
                                             <div class="input-group input-group-sm">
                                                 <span class="input-group-text bg-light text-danger fw-bold">%</span>
                                                 <input type="number" 
@@ -640,6 +650,7 @@
                                                     <option value="100">100% (إعفاء كامل)</option>
                                                 </datalist>
                                             </div>
+                                            <small class="text-muted d-block mt-0.5" id="discount_scope_subhint" style="font-size: 0.68rem;">اكتب النسبة أو اختر من المقترحات</small>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label small text-muted mb-1 fw-bold">سبب الخصم / التخويل</label>
@@ -653,6 +664,7 @@
                                                 <option value="خصم نقابة الأطباء"></option>
                                                 <option value="خصم موظف / ذوي موظف"></option>
                                                 <option value="موافقة المدير التنفيذي"></option>
+                                                <option value="خصم خاص على خدمات محددة"></option>
                                             </datalist>
                                         </div>
                                         <div class="col-md-3 text-end pt-3">
@@ -701,6 +713,7 @@
                                                     <th width="85">الرمز</th>
                                                     <th width="115" class="text-end">السعر المعتمد</th>
                                                     <th width="115" class="text-end text-success">تحمل المريض</th>
+                                                    <th width="125" class="text-center col-item-discount text-danger" style="display: none;"><i class="fas fa-tag me-1"></i>خصم الخدمة %</th>
                                                     <th width="115" class="text-end text-primary">حصة الضمان</th>
                                                     <th width="250" class="text-center bg-light">الإجراء (قرار المريض)</th>
                                                 </tr>
@@ -759,6 +772,21 @@
                                                         <td><code>{{ $item['code'] }}</code></td>
                                                         <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
                                                         <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} د.ع</td>
+                                                        <td class="text-center col-item-discount" style="display: none;">
+                                                            <div class="input-group input-group-sm justify-content-center">
+                                                                <input type="number" 
+                                                                       class="form-control form-control-sm text-center fw-bold text-danger item-discount-input" 
+                                                                       style="max-width: 75px;"
+                                                                       name="item_discounts[{{ $item['request_id'] }}][{{ $item['type'] }}][{{ $item['id'] }}]" 
+                                                                       id="item_disc_{{ $item['request_id'] }}_{{ $item['type'] }}_{{ $item['id'] }}" 
+                                                                       min="0" max="100" step="5" value="0" placeholder="0"
+                                                                       list="request_discount_percentage_suggestions"
+                                                                       oninput="handleItemDiscountInput(this)"
+                                                                       onchange="handleItemDiscountInput(this)">
+                                                                <span class="input-group-text bg-light text-danger fw-bold px-1" style="font-size:0.75rem;">%</span>
+                                                            </div>
+                                                            <div class="item-discount-val-badge text-danger fw-bold mt-1 small" style="font-size: 0.7rem; display: none;"></div>
+                                                        </td>
                                                         <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} د.ع</td>
                                                         <td class="text-center p-1" style="min-width: 220px;">
                                                             <div class="segmented-control-pills item-action-group">
@@ -843,6 +871,7 @@
                                                             <td><code>EXTRA</code></td>
                                                             <td class="text-end fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
                                                             <td class="text-end text-success fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
+                                                            <td class="text-center col-item-discount text-muted small" style="display: none;">-</td>
                                                             <td class="text-end text-muted">-</td>
                                                             <td class="text-center">
                                                                 <button type="button" 
@@ -861,6 +890,7 @@
                                                     <th colspan="3" class="text-end fw-bold">المجموع الإجمالي (المسدد):</th>
                                                     <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} د.ع</th>
+                                                    <th class="text-center col-item-discount text-danger fw-bold fs-6" id="table_total_discount_items" style="display: none;">-0 د.ع</th>
                                                     <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} د.ع</th>
                                                     <th class="text-center p-1" id="table_actions_summary">
                                                         <span class="badge bg-success">كل الفحوصات مسددة</span>
@@ -1006,6 +1036,56 @@ window.handleReasonSelectChange = function(selectElem) {
         } else {
             customInput.classList.add('d-none');
         }
+    }
+};
+
+window.toggleDiscountScope = function(scope) {
+    const isPerItem = (scope === 'per_item');
+    const cols = document.querySelectorAll('.col-item-discount');
+    cols.forEach(col => {
+        col.style.display = isPerItem ? '' : 'none';
+    });
+
+    const overallInput = document.getElementById('discount_percentage');
+    const label = document.getElementById('discount_percentage_label');
+    const hint = document.getElementById('discount_scope_subhint');
+
+    if (isPerItem) {
+        if (overallInput) {
+            overallInput.readOnly = true;
+            overallInput.classList.add('bg-light');
+        }
+        if (label) label.textContent = 'إجمالي الخصم %';
+        if (hint) hint.textContent = 'محسوب تلقائياً من مجموع خصومات الخدمات في الجدول';
+    } else {
+        if (overallInput) {
+            overallInput.readOnly = false;
+            overallInput.classList.remove('bg-light');
+        }
+        if (label) label.textContent = 'نسبة الخصم %';
+        if (hint) hint.textContent = 'اكتب النسبة أو اختر من المقترحات';
+        document.querySelectorAll('.item-discount-input').forEach(inp => {
+            inp.value = 0;
+        });
+        document.querySelectorAll('.item-discount-val-badge').forEach(b => {
+            b.style.display = 'none';
+            b.textContent = '';
+        });
+    }
+
+    if (typeof window.recalculateServices === 'function') {
+        window.recalculateServices();
+    }
+};
+
+window.handleItemDiscountInput = function(inputElem) {
+    let val = parseFloat(inputElem.value);
+    if (isNaN(val) || val < 0) val = 0;
+    if (val > 100) val = 100;
+    inputElem.value = val;
+
+    if (typeof window.recalculateServices === 'function') {
+        window.recalculateServices();
     }
 };
 
@@ -1184,25 +1264,86 @@ document.addEventListener('DOMContentLoaded', function() {
         const displayDiscountAmount = document.getElementById('display_discount_amount');
         const summaryDiscountNote = document.getElementById('summary_discount_note');
         const summaryDiscountVal = document.getElementById('summary_discount_val');
+        const isPerItemScope = document.getElementById('discount_scope_per_item')?.checked;
 
         let discountPct = 0;
+        let discountAmount = 0;
+        let totalItemsDiscount = 0;
+
         if (insType === 'none') {
             if (discountSection) discountSection.style.display = 'block';
-            discountPct = parseFloat(discountSelect ? discountSelect.value : 0) || 0;
-            if (discountPct < 0) discountPct = 0;
-            if (discountPct > 100) discountPct = 100;
+
+            if (isPerItemScope) {
+                // حساب مجموع خصومات بنود الخدمات الفردية
+                document.querySelectorAll('tr.service-item-row').forEach(row => {
+                    const payRadio = row.querySelector('.item-action-radio[value="pay"]');
+                    const isRowPaid = payRadio ? payRadio.checked : true;
+                    const discInput = row.querySelector('.item-discount-input');
+                    const badge = row.querySelector('.item-discount-val-badge');
+                    const rowPatCell = row.querySelector('.row-patient-share');
+
+                    let basePat = parseFloat(row.dataset.basePrice) || 0;
+                    let itemDiscPct = isRowPaid ? (parseFloat(discInput ? discInput.value : 0) || 0) : 0;
+                    if (itemDiscPct < 0) itemDiscPct = 0;
+                    if (itemDiscPct > 100) itemDiscPct = 100;
+
+                    let itemDiscAmt = Math.round(basePat * (itemDiscPct / 100.0));
+                    if (isRowPaid) {
+                        totalItemsDiscount += itemDiscAmt;
+                    }
+
+                    if (badge) {
+                        if (itemDiscAmt > 0 && isRowPaid) {
+                            badge.style.display = 'block';
+                            badge.textContent = 'خصم: -' + formatNumber(itemDiscAmt);
+                        } else {
+                            badge.style.display = 'none';
+                            badge.textContent = '';
+                        }
+                    }
+                    if (rowPatCell) {
+                        if (itemDiscAmt > 0 && isRowPaid) {
+                            rowPatCell.innerHTML = '<span class="text-decoration-line-through text-muted small me-1">' + formatNumber(basePat) + '</span><span class="text-success fw-bold">' + formatNumber(basePat - itemDiscAmt) + ' د.ع</span>';
+                        } else {
+                            rowPatCell.textContent = formatNumber(basePat) + ' د.ع';
+                        }
+                    }
+                });
+
+                discountAmount = totalItemsDiscount;
+                discountPct = totalPatient > 0 ? Math.round((discountAmount / totalPatient) * 100.0) : 0;
+                if (discountSelect) discountSelect.value = discountPct;
+
+                const tableTotalDiscountItems = document.getElementById('table_total_discount_items');
+                if (tableTotalDiscountItems) {
+                    tableTotalDiscountItems.textContent = discountAmount > 0 ? ('-' + formatNumber(discountAmount)) : '0 د.ع';
+                }
+            } else {
+                discountPct = parseFloat(discountSelect ? discountSelect.value : 0) || 0;
+                if (discountPct < 0) discountPct = 0;
+                if (discountPct > 100) discountPct = 100;
+                discountAmount = Math.round(totalPatient * (discountPct / 100.0));
+
+                // إعادة ضبط عروض سطور الجدول للوضع العادي
+                document.querySelectorAll('tr.service-item-row').forEach(row => {
+                    const rowPatCell = row.querySelector('.row-patient-share');
+                    const badge = row.querySelector('.item-discount-val-badge');
+                    let basePat = parseFloat(row.dataset.basePrice) || 0;
+                    if (rowPatCell) rowPatCell.textContent = formatNumber(basePat) + ' د.ع';
+                    if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+                });
+            }
         } else {
             if (discountSection) discountSection.style.display = 'none';
             if (discountSelect) discountSelect.value = '0';
             discountPct = 0;
+            discountAmount = 0;
+            document.querySelectorAll('.col-item-discount').forEach(col => col.style.display = 'none');
+            const scopeOverallRadio = document.getElementById('discount_scope_overall');
+            if (scopeOverallRadio) scopeOverallRadio.checked = true;
         }
 
-        let discountAmount = 0;
-        let netPatient = totalPatient;
-        if (insType === 'none' && discountPct > 0) {
-            discountAmount = Math.round(totalPatient * (discountPct / 100));
-            netPatient = Math.max(0, totalPatient - discountAmount);
-        }
+        let netPatient = Math.max(0, totalPatient - discountAmount);
 
         if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
         if (displayDiscountAmount) displayDiscountAmount.textContent = 'قيمة الخصم: ' + formatNumber(discountAmount);
