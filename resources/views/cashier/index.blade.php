@@ -317,13 +317,34 @@
                                         <!-- تبويب الكل -->
                                         <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
                                             @if($combinedCount > 0)
+                                                <!-- شريط التصفية المالية السريعة (كاش / ضمان) -->
+                                                <div class="px-3 pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom bg-white">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="text-muted small fw-bold"><i class="fas fa-filter text-primary me-1"></i>تصفية مالية سريعة:</span>
+                                                        <div class="btn-group btn-group-sm" role="group" id="financialFilterGroup">
+                                                            <button type="button" class="btn btn-outline-secondary active py-1 px-3 fw-bold filter-finance-btn" data-filter="all">
+                                                                <i class="fas fa-list me-1"></i> الكل ({{ $combinedCount }})
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary py-1 px-3 fw-bold filter-finance-btn" data-filter="cash">
+                                                                <i class="fas fa-money-bill-wave text-success me-1"></i> نقدي / كاش
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary py-1 px-3 fw-bold filter-finance-btn" data-filter="insurance">
+                                                                <i class="fas fa-shield-alt text-primary me-1"></i> مشمول بالضمان
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="small text-muted" id="financialFilterCountText">
+                                                        عرض كافة المعاملات المعلقة
+                                                    </div>
+                                                </div>
+
                                                 <div class="table-responsive">
                                                     <table class="table table-hover align-middle mb-0">
                                                         <thead class="table-light">
                                                             <tr>
                                                                 <th>رقم</th>
                                                                 <th>النوع</th>
-                                                                <th>المريض</th>
+                                                                <th>المريض والتصنيف</th>
                                                                 <th>التفاصيل والعيادة</th>
                                                                 <th class="text-end">المبلغ</th>
                                                                 <th>التاريخ والوقت</th>
@@ -354,15 +375,17 @@
                                                                             $patientShare = $baseFee;
                                                                         }
                                                                     @endphp
-                                                                    <tr>
+                                                                    <tr class="pending-all-row" data-financial-type="{{ $isIns ? 'insurance' : 'cash' }}">
                                                                         <td><strong>#{{ $appointment->id }}</strong></td>
                                                                         <td><span class="badge bg-warning"><i class="fas fa-calendar-check me-1"></i> كشفية</span></td>
                                                                         <td>
                                                                             <div class="fw-semibold">{{ $patientName }}
                                                                                 @if($insType === 'moi')
-                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
                                                                                 @elseif($insType === 'hi')
-                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
                                                                                 @endif
                                                                             </div>
                                                                             <small class="text-muted">{{ $patientId }}</small>
@@ -516,7 +539,7 @@
                                                                         }
                                                                         $isIns = in_array($primaryInsType, ['hi', 'moi']);
                                                                     @endphp
-                                                                    <tr>
+                                                                    <tr class="pending-all-row" data-financial-type="{{ $isIns ? 'insurance' : 'cash' }}">
                                                                         <td>
                                                                             <strong>#{{ $siblingRequests->pluck('id')->implode(', #') }}</strong>
                                                                         </td>
@@ -539,9 +562,11 @@
                                                                         <td>
                                                                             <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
                                                                                 @if($primaryInsType === 'moi')
-                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
                                                                                 @elseif($primaryInsType === 'hi')
-                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
                                                                                 @endif
                                                                             </div>
                                                                             <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
@@ -580,12 +605,22 @@
                                                                         $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
                                                                         $emServicesCount = $em->services->count();
                                                                         $emServicesTotalQty = (int) $em->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
+                                                                        $emInsType = $payment->insurance_type ?? optional($em->patient)->insurance_type ?? 'none';
+                                                                        $isEmIns = in_array($emInsType, ['hi', 'moi']);
                                                                     @endphp
-                                                                    <tr>
+                                                                    <tr class="pending-all-row" data-financial-type="{{ $isEmIns ? 'insurance' : 'cash' }}">
                                                                         <td><strong>#{{ $payment->id }}</strong></td>
                                                                         <td><span class="badge bg-danger"><i class="fas fa-ambulance me-1"></i> طوارئ</span></td>
                                                                         <td>
-                                                                            <div class="fw-semibold">{{ $patientName }}</div>
+                                                                            <div class="fw-semibold">{{ $patientName }}
+                                                                                @if($emInsType === 'moi')
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
+                                                                                @elseif($emInsType === 'hi')
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
+                                                                                @endif
+                                                                            </div>
                                                                             <small class="text-muted">{{ $patientId }}</small>
                                                                         </td>
                                                                         <td>
@@ -683,9 +718,11 @@
                                                                     <td>
                                                                         <div class="fw-semibold">{{ $patientName }}
                                                                             @if($insType === 'moi')
-                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
                                                                             @elseif($insType === 'hi')
-                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
                                                                             @endif
                                                                         </div>
                                                                         <small class="text-muted">{{ $patientId }}</small>
@@ -873,9 +910,11 @@
                                                                     <td>
                                                                         <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
                                                                             @if($insType === 'moi')
-                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt"></i> داخليّة</span>
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
                                                                             @elseif($insType === 'hi')
-                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat"></i> ضمان صحي</span>
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
                                                                             @endif
                                                                         </div>
                                                                         <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
@@ -961,11 +1000,20 @@
                                                                      $em = $payment->emergency;
                                                                      $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
                                                                      $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
+                                                                     $emInsType = $payment->insurance_type ?? optional($em->patient)->insurance_type ?? 'none';
                                                                  @endphp
                                                                  <tr>
                                                                      <td><strong>#{{ $payment->id }}</strong></td>
                                                                      <td>
-                                                                         <div class="fw-semibold">{{ $patientName }}</div>
+                                                                         <div class="fw-semibold">{{ $patientName }}
+                                                                             @if($emInsType === 'moi')
+                                                                                 <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
+                                                                             @elseif($emInsType === 'hi')
+                                                                                 <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                             @else
+                                                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
+                                                                             @endif
+                                                                         </div>
                                                                          <small class="text-muted">{{ $patientId }}</small>
                                                                      </td>
                                                                      <td>
@@ -1032,6 +1080,7 @@
                                                                     $pName = optional(optional($request->visit)->patient)->user->name ?? 'غير محدد';
                                                                     $pPhone = optional(optional($request->visit)->patient)->user->phone ?? (optional(optional($request->visit)->patient)->national_id ?? '---');
                                                                     $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
+                                                                    $pReqInsType = $request->insurance_type ?? optional(optional($request->visit)->patient)->insurance_type ?? 'none';
                                                                     
                                                                     // استخراج أسماء الفحوصات
                                                                     $testsList = [];
@@ -1073,7 +1122,15 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="fw-bold text-dark">{{ $pName }}</div>
+                                                                        <div class="fw-bold text-dark">{{ $pName }}
+                                                                            @if($pReqInsType === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
+                                                                            @elseif($pReqInsType === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
+                                                                            @endif
+                                                                        </div>
                                                                         <small class="text-muted"><i class="fas fa-phone-alt fa-xs me-1"></i>{{ $pPhone }}</small>
                                                                     </td>
                                                                     <td>
@@ -1170,6 +1227,7 @@
                                                                     $cancelledAt = $details['cancelled_at'] ?? $req->updated_at->format('Y-m-d H:i');
                                                                     $cancelledBy = $details['cancelled_by_name'] ?? 'موظف القسم';
                                                                     $cancelReason = $details['cancel_reason'] ?? 'بطلب من المريض';
+                                                                    $rInsType = $req->insurance_type ?? optional($req->visit?->patient)->insurance_type ?? 'none';
                                                                 @endphp
                                                                 <tr>
                                                                     <td>
@@ -1187,7 +1245,15 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="fw-bold text-dark">{{ $pName }}</div>
+                                                                        <div class="fw-bold text-dark">{{ $pName }}
+                                                                            @if($rInsType === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
+                                                                            @elseif($rInsType === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
+                                                                            @endif
+                                                                        </div>
                                                                         <small class="text-muted">{{ $pPhone }}</small>
                                                                     </td>
                                                                     <td>
@@ -1229,6 +1295,7 @@
                                                                     $emgNetRefund = max(0, $emgPaidAmount - $emgAlreadyRefunded);
                                                                     $emgReceiptNo = optional($emg->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
                                                                     $emgCancelledAt = $emg->updated_at->format('Y-m-d H:i');
+                                                                    $emgInsType = optional($emg->payments()->latest()->first())->insurance_type ?? optional($emg->patient)->insurance_type ?? 'none';
                                                                 @endphp
                                                                 <tr>
                                                                     <td>
@@ -1242,7 +1309,15 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}</div>
+                                                                        <div class="fw-bold text-dark">{{ $emgPatientName }}
+                                                                            @if($emgInsType === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>داخليّة</span>
+                                                                            @elseif($emgInsType === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>ضمان صحي</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="دفع نقدي كامل (خارج الضمان)"><i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)</span>
+                                                                            @endif
+                                                                        </div>
                                                                         <small class="text-muted">{{ $emgPatientPhone }}</small>
                                                                     </td>
                                                                     <td>
@@ -1660,6 +1735,36 @@ $(document).on('shown.bs.tab', '#pendingTabs button', function(e) {
         history.replaceState(null, null, target);
     } else {
         window.location.hash = target;
+    }
+});
+
+// تصفية مالية سريعة لتبويب الكل (كاش / ضمان)
+$(document).on('click', '.filter-finance-btn', function() {
+    const filter = $(this).data('filter');
+    $('.filter-finance-btn').removeClass('active btn-primary text-white').addClass('btn-outline-secondary');
+    $(this).addClass('active btn-primary text-white').removeClass('btn-outline-secondary');
+
+    let visibleCount = 0;
+    const rows = $('#tab-all tbody tr.pending-all-row');
+    rows.each(function() {
+        const rowType = $(this).data('financial-type');
+        if (filter === 'all' || rowType === filter) {
+            $(this).show();
+            visibleCount++;
+        } else {
+            $(this).hide();
+        }
+    });
+
+    const countText = $('#financialFilterCountText');
+    if (countText.length) {
+        if (filter === 'all') {
+            countText.text('عرض كافة المعاملات المعلقة (' + visibleCount + ')');
+        } else if (filter === 'cash') {
+            countText.html('<span class="badge bg-secondary-subtle text-secondary border">عرض المعاملات النقدية فقط (' + visibleCount + ')</span>');
+        } else if (filter === 'insurance') {
+            countText.html('<span class="badge bg-info-subtle text-dark border">عرض معاملات الضمان الصحي وقوى الأمن (' + visibleCount + ')</span>');
+        }
     }
 });
 </script>
