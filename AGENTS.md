@@ -53,6 +53,21 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-31 — المرحلة 140: تعميم نظام الخصم الجزئي والتفصيلي لكل خدمة والخصم الإجمالي ع الوصل على كاشير الطوارئ Cashier Emergency Dual-Mode Discount System Overall vs Per-Item Percentage)
+
+### Done
+- **واجهة كاشير الطوارئ التفاعلية ([resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * إضافة مفتاح التبديل الثنائي لنطاق الخصم (`discount_scope`): "خصم إجمالي ع الوصل" (`overall`) مقابل "خصم تفصيلي لكل خدمة" (`per_item`).
+  * تزويد كل بند في فاتورة الطوارئ (خدمات الطوارئ، التحاليل، الأشعة، الاستشارات الطبية، ومتابعة الطبيب) بمفتاح فريد وعمود مخصص لإدخال نسبة الخصم لكل خدمة بشكل منفصل (`col-item-discount`).
+  * احتساب فوري لحظي بالدينار لكل خدمة مع شطب السعر الأصلي وإظهار الصافي وشارة قيمة الخصم بالدينار.
+  * قفل حقل الخصم الإجمالي وتحويله لعرض التراكمي عند تفعيل الخصم التفصيلي، وعكسه فورياً عند العودة للخصم الإجمالي.
+- **معالجة العمليات في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تطوير دالة `processEmergencyPayment` لدعم `discount_scope === 'per_item'` واحتساب الخصومات المفردة عبر كافة بنود الطوارئ (الخدمات، التحاليل، الأشعة، والاستشارات ومتابعة الطبيب).
+  * توثيق أسباب الخصم التفصيلي تلقائياً بأسماء الخدمات ونسبها داخل `discount_reason` في جدول المدفوعات وتثبيت الصافي الفعلي ونسبة الخصم الإجمالية وهوية الكاشير.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * إضافة اختبار ميزة متكامل (`test_cashier_can_apply_per_item_discount_on_emergency_payment`) لاختبار خصم الخدمات الفردية في الطوارئ والتحقق من حساب الصافي والنسبة والتوثيق المالي في قاعدة البيانات.
+  * اجتياز كامل حزمة اختبارات الخصم بنجاح 100% (6 passed, 61 assertions).
+
 ## Session log (2026-10-31 — المرحلة 139: إبراز شارات التصنيف المالي "نقدي كاش / ضمان صحي / قوى أمن" وشريط الفرز الفوري في محطة الكاشير Cashier Financial Badges & Live Category Filter Bar)
 
 ### Done

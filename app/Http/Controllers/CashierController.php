@@ -3291,6 +3291,13 @@ class CashierController extends Controller
         DB::beginTransaction();
 
         try {
+            $payment->loadMissing([
+                'emergency.services',
+                'emergency.labRequests.labTests',
+                'emergency.radiologyRequests.radiologyTypes',
+                'emergency.appointments',
+            ]);
+
             $patient = $payment->patient ?? optional($payment->emergency)->patient;
             $insuranceType = $request->input('insurance_type', $payment->insurance_type ?? $patient->insurance_type ?? 'none');
 
@@ -3320,13 +3327,126 @@ class CashierController extends Controller
 
             // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
             if ($insuranceType === 'none') {
-                $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
-                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
-                    $discountPercentage = $rawDiscountPerc;
-                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
-                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
-                    $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
-                    $discountBy = $user->id;
+                $discountScope = $request->input('discount_scope', 'overall');
+
+                if ($discountScope === 'per_item') {
+                    $itemDiscounts = (array) $request->input('item_discounts', []);
+                    $totalItemDiscounts = 0.0;
+                    $itemSummaries = [];
+
+                    // 1. خدمات الطوارئ
+                    $unpaidServiceIds = \DB::table('emergency_emergency_service')
+                        ->where('emergency_id', $payment->emergency_id)
+                        ->where(function ($q) use ($payment) {
+                            $q->whereNull('payment_id')->orWhere('payment_id', $payment->id);
+                        })
+                        ->pluck('emergency_service_id');
+
+                    if ($payment->emergency && $payment->emergency->services) {
+                        foreach ($payment->emergency->services->whereIn('id', $unpaidServiceIds) as $svc) {
+                            $key = 'service_'.$svc->id;
+                            $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                            if ($discPct > 0) {
+                                $discPct = min(100, max(0, $discPct));
+                                $qty = max(1, (int) ($svc->pivot->quantity ?? 1));
+                                $pricing = $svc->calculateInsurancePricing('none', 100);
+                                $basePrice = (float) $pricing['patient_share'] * $qty;
+                                $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                $totalItemDiscounts += $disVal;
+                                $itemSummaries[] = "{$svc->name} (خصم {$discPct}%)";
+                            }
+                        }
+                    }
+
+                    // 2. طلبات التحاليل
+                    if ($payment->emergency && $payment->emergency->labRequests) {
+                        $applicableLabRequests = $payment->emergency->labRequests->filter(function ($lr) use ($payment) {
+                            return is_null($lr->payment_id) || $lr->payment_id == $payment->id;
+                        });
+                        foreach ($applicableLabRequests as $lr) {
+                            foreach ($lr->labTests as $test) {
+                                $key = 'lab_'.$test->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $pricing = $test->calculateInsurancePricing('none', 100);
+                                    $basePrice = (float) $pricing['patient_share'];
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "{$test->name} (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. طلبات الأشعة
+                    if ($payment->emergency && $payment->emergency->radiologyRequests) {
+                        $applicableRadRequests = $payment->emergency->radiologyRequests->filter(function ($rr) use ($payment) {
+                            return is_null($rr->payment_id) || $rr->payment_id == $payment->id;
+                        });
+                        foreach ($applicableRadRequests as $rr) {
+                            foreach ($rr->radiologyTypes as $rad) {
+                                $key = 'radiology_'.$rad->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $pricing = $rad->calculateInsurancePricing('none', 100);
+                                    $basePrice = (float) $pricing['patient_share'];
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "{$rad->name} (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. استشارة الطبيب
+                    if ($payment->emergency && $payment->emergency->appointments) {
+                        foreach ($payment->emergency->appointments as $ap) {
+                            if ($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
+                                $key = 'appointment_'.$ap->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $apFee = (float) ($ap->consultation_fee > 0 ? $ap->consultation_fee : 50000);
+                                    $disVal = round($apFee * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "استشارة طبية (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 5. متابعة الطبيب
+                    if ($payment->emergency && $payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
+                        $key = 'follow_up_'.$payment->emergency->id;
+                        $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                        if ($discPct > 0) {
+                            $discPct = min(100, max(0, $discPct));
+                            $fFee = (float) $payment->emergency->doctor_follow_up_fee;
+                            $disVal = round($fFee * ($discPct / 100.0), 2);
+                            $totalItemDiscounts += $disVal;
+                            $itemSummaries[] = "متابعة طبيب (خصم {$discPct}%)";
+                        }
+                    }
+
+                    if ($totalItemDiscounts > 0) {
+                        $discountAmount = min($patientShare, round($totalItemDiscounts, 2));
+                        $discountPercentage = $patientShare > 0 ? round(($discountAmount / $patientShare) * 100, 2) : 0;
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $customReason = trim($request->input('discount_reason') ?: 'خصم تفصيلي للخدمات');
+                        $discountReason = ! empty($itemSummaries) ? "{$customReason} [".implode('، ', $itemSummaries).']' : $customReason;
+                        $discountBy = $user->id;
+                    }
+                } else {
+                    $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
+                    if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                        $discountPercentage = $rawDiscountPerc;
+                        $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
+                        $discountBy = $user->id;
+                    }
                 }
             }
 

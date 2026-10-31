@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Emergency;
+use App\Models\EmergencyService;
 use App\Models\Hospital;
 use App\Models\LabTest;
 use App\Models\Patient;
@@ -410,6 +411,89 @@ class CashierDiscountTest extends TestCase
         $this->assertEquals(12000.00, (float) $freshPayment->discount_amount);
         $this->assertEquals(68000.00, (float) $freshPayment->amount);
         $this->assertEquals('حالة طوارئ إنسانية خاصة', $freshPayment->discount_reason);
+        $this->assertEquals($this->cashier->id, $freshPayment->discount_by);
+        $this->assertNotNull($freshPayment->paid_at);
+    }
+
+    public function test_cashier_can_apply_per_item_discount_on_emergency_payment()
+    {
+        $patientUser = User::factory()->create(['name' => 'مريض طوارئ نقدي 2']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'insurance_type' => 'none',
+            'gender' => 'male',
+            'date_of_birth' => '1990-01-01',
+        ]);
+
+        $emergency = Emergency::create([
+            'patient_id' => $patient->id,
+            'emergency_type' => 'medical',
+            'symptoms' => 'ضيق تنفس',
+            'status' => 'active',
+            'priority' => 'urgent',
+            'insurance_type' => 'none',
+            'admission_time' => now(),
+            'arrival_time' => now(),
+        ]);
+
+        $serviceA = EmergencyService::create([
+            'name' => 'جلسة أوكسجين وتبيخير',
+            'code' => 'EMG-O2',
+            'price' => 30000,
+            'is_active' => true,
+        ]);
+
+        $serviceB = EmergencyService::create([
+            'name' => 'تخطيط قلب طوارئ',
+            'code' => 'EMG-ECG',
+            'price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $emergency->services()->attach([
+            $serviceA->id => ['quantity' => 1],
+            $serviceB->id => ['quantity' => 1],
+        ]);
+
+        $payment = Payment::create([
+            'emergency_id' => $emergency->id,
+            'patient_id' => $patient->id,
+            'total_amount' => 50000,
+            'patient_share' => 50000,
+            'insurance_share' => 0,
+            'amount' => 50000,
+            'payment_type' => 'emergency',
+            'payment_method' => 'cash',
+            'insurance_type' => 'none',
+            'receipt_number' => 'EMG-REC-002',
+        ]);
+
+        $postData = [
+            'payment_method' => 'cash',
+            'insurance_type' => 'none',
+            'discount_scope' => 'per_item',
+            'discount_reason' => 'إعفاء خاص من الإدارة',
+            'item_discounts' => [
+                'service_'.$serviceA->id => 50, // 50% of 30,000 = 15,000 IQD
+                'service_'.$serviceB->id => 0,  // 0%
+            ],
+            'amount' => 35000, // 50,000 - 15,000 = 35,000
+            'notes' => 'خصم جزئي على خدمة الأوكسجين فقط',
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->post(route('cashier.emergency.payment.process', $payment->id), $postData);
+
+        $response->assertRedirect();
+
+        $freshPayment = $payment->fresh();
+        $this->assertEquals(50000.00, (float) $freshPayment->total_amount);
+        $this->assertEquals(50000.00, (float) $freshPayment->patient_share);
+        $this->assertEquals(15000.00, (float) $freshPayment->discount_amount);
+        $this->assertEquals(30.00, (float) $freshPayment->discount_percentage);
+        $this->assertEquals(35000.00, (float) $freshPayment->amount);
+        $this->assertStringContainsString('إعفاء خاص من الإدارة', $freshPayment->discount_reason);
+        $this->assertStringContainsString('جلسة أوكسجين وتبيخير (خصم 50%)', $freshPayment->discount_reason);
         $this->assertEquals($this->cashier->id, $freshPayment->discount_by);
         $this->assertNotNull($freshPayment->paid_at);
     }

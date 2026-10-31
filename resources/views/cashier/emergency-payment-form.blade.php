@@ -91,6 +91,7 @@
                             $insuranceShare = (float) $pricing['insurance_share'];
 
                             $invoiceItems[] = [
+                                'key' => 'service_' . $service->id,
                                 'category' => 'خدمة طوارئ',
                                 'badge_class' => 'bg-info text-dark',
                                 'icon' => 'fa-medkit',
@@ -112,6 +113,7 @@
                             foreach($labReq->labTests as $test) {
                                 $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
                                 $invoiceItems[] = [
+                                    'key' => 'lab_' . $test->id,
                                     'category' => 'تحليل مختبر',
                                     'badge_class' => 'bg-primary text-white',
                                     'icon' => 'fa-vial',
@@ -134,6 +136,7 @@
                             foreach($radReq->radiologyTypes as $type) {
                                 $pricing = $type->calculateInsurancePricing($insuranceType, $radCopay);
                                 $invoiceItems[] = [
+                                    'key' => 'radiology_' . $type->id,
                                     'category' => 'فحص أشعة',
                                     'badge_class' => 'bg-info text-white',
                                     'icon' => 'fa-x-ray',
@@ -156,6 +159,7 @@
                                 $spec = $ap->doctor?->specialization ? ' (' . $ap->doctor->specialization . ')' : '';
                                 $dept = $ap->department?->name ? ' - ' . $ap->department->name : '';
                                 $invoiceItems[] = [
+                                    'key' => 'appointment_' . $ap->id,
                                     'category' => 'استشارة طبية',
                                     'badge_class' => 'bg-purple text-white',
                                     'icon' => 'fa-user-md',
@@ -176,6 +180,7 @@
                             $fPatient = $isInsurance ? round($fFee * ($emergencyCopay / 100.0), 2) : $fFee;
                             $fIns = round($fFee - $fPatient, 2);
                             $invoiceItems[] = [
+                                'key' => 'follow_up_' . $em->id,
                                 'category' => 'متابعة طبيب',
                                 'badge_class' => 'bg-warning text-dark',
                                 'icon' => 'fa-stethoscope',
@@ -374,7 +379,7 @@
                                     </span>
                                 </div>
 
-                                <!-- صندوق الخصم المالي بكتابة ومقترحات -->
+                                <!-- صندوق الخصم المالي بكتابة ومقترحات ونطاق تطبيقه -->
                                 <div class="p-3 rounded-3 bg-white border border-danger border-opacity-25 shadow-2xs mb-3" id="discount_section">
                                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                         <div class="d-flex align-items-center gap-2">
@@ -386,14 +391,24 @@
                                                 0%
                                             </span>
                                         </div>
-                                        <span class="text-muted small">
-                                            <i class="fas fa-keyboard text-secondary me-1"></i>
-                                            اكتب النسبة مباشرة أو اختر من المقترحات
-                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="small fw-bold text-muted">نوع الخصم:</span>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_overall" value="overall" checked autocomplete="off" onchange="toggleDiscountScope('overall')">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_overall" title="تطبيق نسبة خصم موحدة على كامل الفاتورة">
+                                                    <i class="fas fa-receipt me-1"></i>خصم إجمالي ع الوصل
+                                                </label>
+
+                                                <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_per_item" value="per_item" autocomplete="off" onchange="toggleDiscountScope('per_item')">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_per_item" title="تحديد نسبة خصم مخصصة لكل خدمة أو فحص بشكل منفصل">
+                                                    <i class="fas fa-list-check me-1"></i>خصم تفصيلي لكل خدمة
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="row g-2 align-items-center">
-                                        <div class="col-md-3">
-                                            <label class="form-label small text-muted mb-1 fw-bold">نسبة الخصم %</label>
+                                        <div class="col-md-3" id="discount_overall_input_col">
+                                            <label class="form-label small text-muted mb-1 fw-bold" id="discount_percentage_label">نسبة الخصم %</label>
                                             <div class="input-group input-group-sm">
                                                 <span class="input-group-text bg-light text-danger fw-bold">%</span>
                                                 <input type="number" 
@@ -427,6 +442,7 @@
                                                     <option value="100">100% (إعفاء كامل)</option>
                                                 </datalist>
                                             </div>
+                                            <small class="text-muted d-block mt-0.5" id="discount_scope_subhint" style="font-size: 0.68rem;">اكتب النسبة أو اختر من المقترحات</small>
                                         </div>
                                         <div class="col-md-5">
                                             <label class="form-label small text-muted mb-1 fw-bold">سبب الخصم أو التوجيه</label>
@@ -488,12 +504,13 @@
                                                 <th width="65" class="text-center">الكمية</th>
                                                 <th width="120" class="text-end">السعر المعتمد</th>
                                                 <th width="120" class="text-end text-success">تحمل المريض</th>
+                                                <th width="125" class="text-center col-item-discount text-danger" style="display: none;"><i class="fas fa-tag me-1"></i>خصم الخدمة %</th>
                                                 <th width="120" class="text-end text-primary">حصة الضمان</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @forelse($invoiceItems as $idx => $item)
-                                                <tr>
+                                                <tr class="emergency-item-row" data-base-patient="{{ (float)$item['patient_share'] }}" data-key="{{ $item['key'] ?? ('item_'.$idx) }}">
                                                     <td class="text-center text-muted font-monospace small">{{ $idx + 1 }}</td>
                                                     <td>
                                                         <span class="badge {{ $item['badge_class'] }} font-monospace" style="font-size: 0.72rem;">
@@ -510,12 +527,29 @@
                                                     </td>
                                                     <td class="text-center font-monospace">{{ $item['qty'] }}</td>
                                                     <td class="text-end font-monospace">{{ number_format($item['price'], 0) }} د.ع</td>
-                                                    <td class="text-end font-monospace fw-bold text-success">{{ number_format($item['patient_share'], 0) }} د.ع</td>
+                                                    <td class="text-end font-monospace fw-bold text-success row-patient-share">{{ number_format($item['patient_share'], 0) }} د.ع</td>
+                                                    <td class="text-center col-item-discount" style="display: none;">
+                                                        <div class="input-group input-group-sm justify-content-center">
+                                                            <input type="number" 
+                                                                   class="form-control form-control-sm text-center fw-bold text-danger item-discount-input" 
+                                                                   name="item_discounts[{{ $item['key'] ?? ('item_'.$idx) }}]" 
+                                                                   min="0" 
+                                                                   max="100" 
+                                                                   step="5" 
+                                                                   value="0" 
+                                                                   placeholder="0" 
+                                                                   style="max-width: 65px;"
+                                                                   oninput="handleItemDiscountInput(this)" 
+                                                                   onchange="handleItemDiscountInput(this)">
+                                                            <span class="input-group-text bg-light text-danger fw-bold px-1" style="font-size:0.75rem;">%</span>
+                                                        </div>
+                                                        <div class="item-discount-val-badge text-danger fw-bold mt-1 small" style="font-size: 0.7rem; display: none;"></div>
+                                                    </td>
                                                     <td class="text-end font-monospace fw-bold text-primary">{{ number_format($item['insurance_share'], 0) }} د.ع</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center py-4 text-muted">
+                                                    <td colspan="8" class="text-center py-4 text-muted">
                                                         لا توجد بنود أو خدمات معلقة لهذه الحالة
                                                     </td>
                                                 </tr>
@@ -525,7 +559,8 @@
                                             <tr>
                                                 <th colspan="4" class="text-end fw-bold">المجموع الإجمالي:</th>
                                                 <th class="text-end fw-bold font-monospace fs-6 text-dark">{{ number_format($totalInvoiceAmount, 0) }} د.ع</th>
-                                                <th class="text-end fw-bold font-monospace fs-6 text-success">{{ number_format($dueAmount, 0) }} د.ع</th>
+                                                <th class="text-end fw-bold font-monospace fs-6 text-success" id="table_total_patient">{{ number_format($dueAmount, 0) }} د.ع</th>
+                                                <th class="text-center col-item-discount text-danger fw-bold fs-6" id="table_total_discount_items" style="display: none;">-0 د.ع</th>
                                                 <th class="text-end fw-bold font-monospace fs-6 text-primary">{{ number_format($insuranceCoveredTotal, 0) }} د.ع</th>
                                             </tr>
                                         </tfoot>
@@ -625,6 +660,56 @@
 
 @section('scripts')
 <script>
+window.toggleDiscountScope = function(scope) {
+    const isPerItem = (scope === 'per_item');
+    const cols = document.querySelectorAll('.col-item-discount');
+    cols.forEach(col => {
+        col.style.display = isPerItem ? '' : 'none';
+    });
+
+    const overallInput = document.getElementById('discount_percentage');
+    const label = document.getElementById('discount_percentage_label');
+    const hint = document.getElementById('discount_scope_subhint');
+
+    if (isPerItem) {
+        if (overallInput) {
+            overallInput.readOnly = true;
+            overallInput.classList.add('bg-light');
+        }
+        if (label) label.textContent = 'إجمالي الخصم %';
+        if (hint) hint.textContent = 'محسوب تلقائياً من مجموع خصومات الخدمات في الجدول';
+    } else {
+        if (overallInput) {
+            overallInput.readOnly = false;
+            overallInput.classList.remove('bg-light');
+        }
+        if (label) label.textContent = 'نسبة الخصم %';
+        if (hint) hint.textContent = 'اكتب النسبة أو اختر من المقترحات';
+        document.querySelectorAll('.item-discount-input').forEach(inp => {
+            inp.value = 0;
+        });
+        document.querySelectorAll('.item-discount-val-badge').forEach(b => {
+            b.style.display = 'none';
+            b.textContent = '';
+        });
+    }
+
+    if (typeof window.recalculateEmergencyDiscount === 'function') {
+        window.recalculateEmergencyDiscount();
+    }
+};
+
+window.handleItemDiscountInput = function(inputElem) {
+    let val = parseFloat(inputElem.value);
+    if (isNaN(val) || val < 0) val = 0;
+    if (val > 100) val = 100;
+    inputElem.value = val;
+
+    if (typeof window.recalculateEmergencyDiscount === 'function') {
+        window.recalculateEmergencyDiscount();
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const isInsurance = @json($isInsurance);
     const baseDueAmount = @json((float)$dueAmount);
@@ -641,22 +726,79 @@ document.addEventListener('DOMContentLoaded', function() {
         return Math.round(num).toLocaleString('en-US') + ' د.ع';
     }
 
-    function recalculateEmergencyDiscount() {
+    window.recalculateEmergencyDiscount = function() {
         if (isInsurance) return;
-        let discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
-        if (discountPct < 0) discountPct = 0;
-        if (discountPct > 100) discountPct = 100;
-        if (discountInput && discountInput.value !== '' && (parseFloat(discountInput.value) > 100 || parseFloat(discountInput.value) < 0)) {
-            discountInput.value = discountPct;
-        }
 
+        const isPerItemScope = document.getElementById('discount_scope_per_item')?.checked;
+        let discountPct = 0;
         let discountAmount = 0;
-        let netAmount = baseDueAmount;
 
-        if (discountPct > 0) {
-            discountAmount = Math.round(baseDueAmount * (discountPct / 100));
-            netAmount = Math.max(0, baseDueAmount - discountAmount);
+        if (isPerItemScope) {
+            let totalItemsDiscount = 0;
+            const rows = document.querySelectorAll('.emergency-item-row');
+            rows.forEach(row => {
+                const discInput = row.querySelector('.item-discount-input');
+                const badge = row.querySelector('.item-discount-val-badge');
+                const rowPatCell = row.querySelector('.row-patient-share');
+                let basePat = parseFloat(row.dataset.basePatient) || 0;
+                let itemDiscPct = parseFloat(discInput ? discInput.value : 0) || 0;
+
+                if (itemDiscPct > 0) {
+                    let itemDiscVal = Math.round(basePat * (itemDiscPct / 100));
+                    let discountedPat = Math.max(0, basePat - itemDiscVal);
+                    totalItemsDiscount += itemDiscVal;
+
+                    if (badge) {
+                        badge.textContent = '-' + formatNumber(itemDiscVal);
+                        badge.style.display = 'block';
+                    }
+                    if (rowPatCell) {
+                        rowPatCell.innerHTML = '<span class="text-muted text-decoration-line-through small me-1">' + formatNumber(basePat) + '</span><span class="text-danger fw-bold">' + formatNumber(discountedPat) + '</span>';
+                    }
+                } else {
+                    if (badge) {
+                        badge.textContent = '';
+                        badge.style.display = 'none';
+                    }
+                    if (rowPatCell) {
+                        rowPatCell.innerHTML = formatNumber(basePat);
+                    }
+                }
+            });
+
+            discountAmount = totalItemsDiscount;
+            discountPct = baseDueAmount > 0 ? Math.round((discountAmount / baseDueAmount) * 1000) / 10 : 0;
+
+            if (discountInput) {
+                discountInput.value = discountPct;
+            }
+
+            const tableTotalDiscountItems = document.getElementById('table_total_discount_items');
+            if (tableTotalDiscountItems) {
+                tableTotalDiscountItems.textContent = '-' + formatNumber(discountAmount);
+            }
+        } else {
+            discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
+            if (discountPct < 0) discountPct = 0;
+            if (discountPct > 100) discountPct = 100;
+            if (discountInput && discountInput.value !== '' && (parseFloat(discountInput.value) > 100 || parseFloat(discountInput.value) < 0)) {
+                discountInput.value = discountPct;
+            }
+
+            if (discountPct > 0) {
+                discountAmount = Math.round(baseDueAmount * (discountPct / 100));
+            }
+
+            document.querySelectorAll('.emergency-item-row').forEach(row => {
+                const rowPatCell = row.querySelector('.row-patient-share');
+                let basePat = parseFloat(row.dataset.basePatient) || 0;
+                if (rowPatCell) {
+                    rowPatCell.innerHTML = formatNumber(basePat);
+                }
+            });
         }
+
+        let netAmount = Math.max(0, baseDueAmount - discountAmount);
 
         if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
         if (displayDiscountAmount) displayDiscountAmount.textContent = 'قيمة الخصم: ' + formatNumber(discountAmount);
@@ -675,11 +817,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد القبض وإصدار الوصل (' + formatNumber(netAmount) + ')';
         }
-    }
+    };
 
     if (discountInput) {
-        discountInput.addEventListener('input', recalculateEmergencyDiscount);
-        discountInput.addEventListener('change', recalculateEmergencyDiscount);
+        discountInput.addEventListener('input', window.recalculateEmergencyDiscount);
+        discountInput.addEventListener('change', window.recalculateEmergencyDiscount);
     }
 });
 </script>
