@@ -53,6 +53,14 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-10-31 — المرحلة 137: تزامن تلقائي لمخرجات بناء Vite بين public/build و dist لمنصات النشر والاستضافة التلقائية Vite Build Output Dual-Sync for Automated Deployment Pipelines)
+
+### Done
+- **إعدادات البناء والمزامنة ([vite.config.js](file:///c:/wamp64/www/hospital-system/vite.config.js), [package.json](file:///c:/wamp64/www/hospital-system/package.json), [.gitignore](file:///c:/wamp64/www/hospital-system/.gitignore))**:
+  * إضافة مكون إضافي مخصص `sync-build-to-dist` في `vite.config.js` لنسخ كافة أصول البناء من `public/build` إلى مجلد `dist` فور اكتمال التجميع مع توليد ملف `index.html` متوافق.
+  * تدعيم أمر `build` في `package.json` بنص تنفيذي لضمان وجود وتزامن مجلد `dist` حتى وإن تغير مسار أو وسيطة التشغيل في المنصة.
+  * إضافة `.gitkeep` داخل `dist` وتحديث `.gitignore` لضمان وجود المجلد مسبقاً وتجنب أخطاء الفحص التلقائي لمسار المخرجات أثناء النشر على هوستنجر أو أي منصة سحابية.
+
 ## Session log (2026-10-30 — المرحلة 136: دعم وتكامل طلبات تخطيط القلب والتمريض الصادرة من الاستشارية لدى الكاشير بتسعير الضمان الصحي الدقيق Doctor ECG & Nursing Requests Cashier Billing with Accurate Insurance Pricing)
 
 ### Done

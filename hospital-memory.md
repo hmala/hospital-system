@@ -62,6 +62,12 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 137 (تزامن تلقائي لمخرجات بناء Vite بين public/build و dist لمنصات النشر والاستضافة التلقائية Vite Build Output Dual-Sync for Automated Deployment Pipelines):**
+  * **إعدادات البناء والمزامنة (`vite.config.js`, `package.json`, `.gitignore`)**:
+    - ترقية `vite.config.js` بإضافة مكون إضافي ذكي (`sync-build-to-dist`) يقوم بنسخ كافة الأصول المولدة في `public/build` فور انتهاء عملية التجميع إلى مجلد `dist/` مع إنشاء ملف `index.html` متوافق مع الفحوصات الصارمة لمنصات النشر الثابت والاستضافات السحابية.
+    - ترقية أمر `build` في `package.json` بـ Node.js inline script كخط دفاع احتياطي يضمن وجود وتحديث ملفات `dist` تلقائياً بعد كل بناء دون الحاجة لأي تعديل يدوي في إعدادات المنصة.
+    - تثبيت مجلد `dist/` في Git عبر `.gitkeep` مع تجاهل محتوياته المجمعة في `.gitignore`.
+
 - **المرحلة 136 (دعم وتكامل طلبات تخطيط القلب والتمريض الصادرة من الاستشارية لدى الكاشير بتسعير الضمان الصحي الدقيق Doctor ECG & Nursing Requests Cashier Billing with Accurate Insurance Pricing):**
   * **معالجة طلبات التمريض وتخطيط القلب في الكاشير (`app/Http/Controllers/CashierController.php`, `resources/views/cashier/request-payment-form.blade.php`)**:
     - توسيع استيعاب واجهة كاشير الطلبات الطبية لتشمل طلبات التمريض (`type === 'nursing'`) بدلاً من قصرها سابقاً على المختبر والأشعة فقط.

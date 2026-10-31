@@ -16,6 +16,8 @@
 /public/build
 /public/hot
 /public/storage
+/dist/*
+!/dist/.gitkeep
 /storage/*.key
 /storage/pail
 /vendor
