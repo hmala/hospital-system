@@ -481,6 +481,11 @@
         }
 
         @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
+            /* ضبط الكثافة البصرية الذكية للتابلت لإنهاء الحاجة لتقليل الزوم يدوياً */
+            html {
+                font-size: 14px !important;
+            }
+
             .tablet-topbar {
                 display: flex !important;
             }
@@ -512,14 +517,46 @@
             .main-content {
                 margin-right: 0 !important;
                 width: 100% !important;
-                padding: 16px 14px !important;
-                padding-top: 76px !important; /* مساحة تعويضية للترويسة العلوية */
+                padding: 14px 12px !important;
+                padding-top: 74px !important; /* مساحة تعويضية للترويسة العلوية */
             }
+
+            /* بطاقات مدمجة وأنيقة لجميع شاشات الأقسام */
+            .main-content .card:not(.stat-card) {
+                border-radius: 14px !important;
+                margin-bottom: 14px !important;
+            }
+            .main-content .card-body {
+                padding: 0.85rem !important;
+            }
+            .main-content .card-header {
+                padding: 0.65rem 0.95rem !important;
+            }
+
+            /* ضغط أسطر وخلايا الجداول لتتسع للأعمدة دون اقتصاص */
+            .table > :not(caption) > * > * {
+                padding: 0.55rem 0.65rem !important;
+            }
+
+            /* انسيابية حركة الجداول باللمس */
             .table-responsive {
-                -webkit-overflow-scrolling: touch;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 12px;
+                overflow-x: auto !important;
             }
+
+            /* حماية ضد الاقتصاص أو التمرير الأفقي الشاذ لكامل الصفحة */
+            body {
+                overflow-x: hidden !important;
+                width: 100% !important;
+            }
+
             .btn {
-                min-height: 38px;
+                min-height: 36px;
+            }
+            .btn-sm {
+                padding: 0.25rem 0.55rem !important;
+                font-size: 0.8rem !important;
             }
         }
 
