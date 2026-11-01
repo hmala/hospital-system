@@ -476,8 +476,15 @@
             pointer-events: none;
         }
 
-        @media (max-width: 1024px) {
+        .sidebar-close-wrapper {
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
             .tablet-topbar {
+                display: flex !important;
+            }
+            .sidebar-close-wrapper {
                 display: flex !important;
             }
             .sidebar {
@@ -513,6 +520,27 @@
             }
             .btn {
                 min-height: 38px;
+            }
+        }
+
+        @media (min-width: 1201px) {
+            .tablet-topbar {
+                display: none !important;
+            }
+            .sidebar-backdrop {
+                display: none !important;
+            }
+            .sidebar-close-wrapper {
+                display: none !important;
+            }
+            .sidebar {
+                transform: none !important;
+                width: 250px !important;
+            }
+            .main-content {
+                margin-right: 250px !important;
+                width: calc(100% - 250px) !important;
+                padding-top: 24px !important;
             }
         }
 
@@ -709,13 +737,13 @@
     </div>
 
     <!-- شريط الترويسة العلوي للتابلت والموبايل -->
-    <header class="tablet-topbar d-lg-none" id="tabletTopbar">
+    <header class="tablet-topbar" id="tabletTopbar">
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" id="sidebarToggleBtn" style="width: 40px; height: 40px;" aria-label="تبديل القائمة">
+            <button type="button" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" id="sidebarToggleBtn" style="width: 42px; height: 42px;" aria-label="تبديل القائمة">
                 <i class="fas fa-bars fs-5"></i>
             </button>
             <div class="d-flex align-items-center gap-2">
-                <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" style="height: 34px; width: auto; border-radius: 6px;">
+                <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" style="height: 36px; width: auto; border-radius: 6px;">
                 <span class="fw-bold text-primary small">نظام المستشفى</span>
             </div>
         </div>
@@ -724,7 +752,7 @@
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
                     <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
                 </span>
-                <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
             @endif
@@ -737,12 +765,12 @@
     <div class="container-fluid">
         <div class="row">
             <!-- الشريط الجانبي -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar" id="appSidebar">
+            <nav class="sidebar" id="appSidebar">
                 <div class="position-sticky pt-0">
                     <!-- زر إغلاق القائمة للتابلت -->
-                    <div class="d-flex justify-content-between align-items-center d-lg-none px-3 pt-3 pb-2 border-bottom border-primary-subtle">
+                    <div class="sidebar-close-wrapper justify-content-between align-items-center px-3 pt-3 pb-2 border-bottom border-primary-subtle">
                         <span class="fw-bold text-primary small"><i class="fas fa-bars me-1"></i> القائمة الرئيسية</span>
-                        <button type="button" class="btn btn-sm btn-light rounded-circle shadow-xs d-flex align-items-center justify-content-center" id="sidebarCloseBtn" style="width: 32px; height: 32px;" aria-label="إغلاق القائمة">
+                        <button type="button" class="btn btn-sm btn-light rounded-circle shadow-xs d-flex align-items-center justify-content-center" id="sidebarCloseBtn" style="width: 34px; height: 34px;" aria-label="إغلاق القائمة">
                             <i class="fas fa-times text-secondary"></i>
                         </button>
                     </div>
@@ -1977,7 +2005,7 @@
         const navLinks = document.querySelectorAll('#appSidebar .nav-link:not([data-bs-toggle])');
         navLinks.forEach(function(link) {
             link.addEventListener('click', function() {
-                if (window.innerWidth <= 1024) {
+                if (window.innerWidth <= 1200) {
                     toggleSidebar(false);
                 }
             });
