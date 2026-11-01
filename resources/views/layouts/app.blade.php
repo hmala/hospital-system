@@ -480,7 +480,7 @@
             display: none;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
             .tablet-topbar {
                 display: flex !important;
             }
@@ -523,7 +523,7 @@
             }
         }
 
-        @media (min-width: 1201px) {
+        @media (min-width: 1401px) and (hover: hover) and (pointer: fine) {
             .tablet-topbar {
                 display: none !important;
             }
@@ -2005,7 +2005,7 @@
         const navLinks = document.querySelectorAll('#appSidebar .nav-link:not([data-bs-toggle])');
         navLinks.forEach(function(link) {
             link.addEventListener('click', function() {
-                if (window.innerWidth <= 1200) {
+                if (window.innerWidth <= 1400 || window.matchMedia('(pointer: coarse)').matches) {
                     toggleSidebar(false);
                 }
             });
