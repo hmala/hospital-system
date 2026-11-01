@@ -128,6 +128,7 @@
                                             'base_price' => (float)$pkg->price,
                                             'moi_price' => (float)$pkg->price,
                                             'hi_price' => (float)$pkg->price,
+                                            'item_copay' => 100.00,
                                             'is_moi_active' => false,
                                             'is_hi_active' => false,
                                         ];
@@ -150,6 +151,7 @@
                                                     'base_price' => (float)$test->getRegularPrice(),
                                                     'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
                                                     'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'item_copay' => ($defaultInsurance === 'hi' && $patient) ? $patient->getCopayPercentageFor('lab') : $defaultCopay,
                                                     'is_moi_active' => (bool)($test->is_moi_active ?? true),
                                                     'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                                 ];
@@ -174,6 +176,7 @@
                                                     'base_price' => (float)$test->getRegularPrice(),
                                                     'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
                                                     'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'item_copay' => ($defaultInsurance === 'hi' && $patient) ? $patient->getCopayPercentageFor('lab') : $defaultCopay,
                                                     'is_moi_active' => (bool)($test->is_moi_active ?? true),
                                                     'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                                 ];
@@ -195,6 +198,7 @@
                                                     'base_price' => (float)$test->getRegularPrice(),
                                                     'moi_price' => (float)($test->moi_price > 0 ? $test->moi_price : 0),
                                                     'hi_price' => (float)($test->hi_price > 0 ? $test->hi_price : 0),
+                                                    'item_copay' => ($defaultInsurance === 'hi' && $patient) ? $patient->getCopayPercentageFor('lab') : $defaultCopay,
                                                     'is_moi_active' => (bool)($test->is_moi_active ?? true),
                                                     'is_hi_active' => (bool)($test->is_hi_active ?? true),
                                                 ];
@@ -225,6 +229,7 @@
                                                 'base_price' => (float)$rad->getRegularPrice(),
                                                 'moi_price' => (float)($rad->moi_price > 0 ? $rad->moi_price : 0),
                                                 'hi_price' => (float)($rad->hi_price > 0 ? $rad->hi_price : 0),
+                                                'item_copay' => ($defaultInsurance === 'hi' && $patient) ? $patient->getCopayPercentageFor('radiology') : $defaultCopay,
                                                 'is_moi_active' => (bool)($rad->is_moi_active ?? true),
                                                 'is_hi_active' => (bool)($rad->is_hi_active ?? true),
                                             ];
@@ -232,6 +237,7 @@
                                     }
                                 }
                             } elseif ($reqItem->type === 'nursing') {
+                                $hasConsultationDoctor = !empty($reqItem->visit?->doctor_id) || !empty($appointment?->doctor_id) || ($reqItem->visit?->visit_type === 'consultation');
                                 $nursingServiceIds = (array)($rDetails['nursing_services'] ?? []);
                                 if (!empty($nursingServiceIds)) {
                                     foreach ($nursingServiceIds as $nsId) {
@@ -249,6 +255,7 @@
                                                 'base_price' => (float)$nSvc->price,
                                                 'moi_price' => (float)($nSvc->moi_price > 0 ? $nSvc->moi_price : $nSvc->price),
                                                 'hi_price' => (float)($nSvc->hi_price > 0 ? $nSvc->hi_price : $nSvc->price),
+                                                'item_copay' => ($defaultInsurance === 'hi' && $patient) ? $patient->getCopayPercentageFor('nursing') : $defaultCopay,
                                                 'is_moi_active' => (bool)($nSvc->moi_price > 0),
                                                 'is_hi_active' => (bool)($nSvc->hi_price > 0),
                                             ];
@@ -256,17 +263,25 @@
                                     }
                                 } else {
                                     $desc = trim($rDetails['description'] ?? $reqItem->description ?? 'خدمة تمريضية');
+                                    $descLower = mb_strtolower($desc);
+                                    $isEcg = str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo');
                                     $matchedSvc = null;
-                                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                                    if ($isEcg) {
                                         $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
                                             ?? \App\Models\EmergencyService::find(93)
                                             ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
                                     }
 
                                     $basePrice = $matchedSvc ? (float)$matchedSvc->price : 15000.00;
-                                    $hiPrice = $matchedSvc ? (float)$matchedSvc->hi_price : 10000.00;
+                                    // إذا كان تخطيط القلب صادر بإحالة من طبيب استشارية والمريض على الضمان الصحي يشمله الضمان بسعر 10,000 وتحمل 10%
+                                    // أما إذا كان مباشر بدون استشاري فلا يغطى بالضمان ويكون نقدي 100% (15,000 د.ع)
+                                    $isHiCovered = $isEcg && $hasConsultationDoctor;
+                                    $hiPrice = ($isHiCovered && $matchedSvc) ? (float)$matchedSvc->hi_price : ($isHiCovered ? 10000.00 : $basePrice);
                                     $moiPrice = $matchedSvc ? (float)$matchedSvc->moi_price : $basePrice;
-                                    $cleanName = (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط')) ? 'تخطيط قلب (ECG)' : $desc;
+                                    $cleanName = $isEcg ? 'تخطيط قلب (ECG)' : $desc;
+                                    $itemCopay = ($defaultInsurance === 'hi' && $patient && $isHiCovered)
+                                        ? $patient->getCopayPercentageFor('ecg')
+                                        : ($isHiCovered ? $defaultCopay : 100.00);
 
                                     $nKey = 'nursing_req_' . $reqItem->id;
                                     if (!isset($seenItemKeys[$nKey])) {
@@ -280,8 +295,9 @@
                                             'base_price' => $basePrice,
                                             'moi_price' => $moiPrice,
                                             'hi_price' => $hiPrice,
+                                            'item_copay' => $itemCopay,
                                             'is_moi_active' => (bool)($moiPrice > 0),
-                                            'is_hi_active' => (bool)($hiPrice > 0),
+                                            'is_hi_active' => (bool)$isHiCovered,
                                         ];
                                     }
                                 }
@@ -303,7 +319,8 @@
                                     $rowApp = $itm['hi_price'];
                                     $rowCov = true;
                                 }
-                                $rowPat = $rowCov ? round($rowApp * ($defaultCopay / 100)) : $rowApp;
+                                $rowCopayPct = $itm['item_copay'] ?? $defaultCopay;
+                                $rowPat = $rowCov ? round($rowApp * ($rowCopayPct / 100)) : $rowApp;
                                 $rowIns = $rowCov ? max(0, $rowApp - $rowPat) : 0;
 
                                 $initialApproved += $rowApp;
@@ -518,9 +535,14 @@
                                     @if($hiCategory)
                                     <div class="col-12" id="patient_hi_category_badge">
                                         <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                            <div>
-                                                <span class="badge bg-info text-dark me-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
-                                                <small class="text-muted">نسبة استقطاع هذه الخدمة ({{ $request->type }}): <strong class="text-primary fs-6">{{ (float)$hiCategory->getCopayForService($request->type) }}%</strong></small>
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="badge bg-info text-dark fs-6 px-2 py-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                                <span class="text-muted small">
+                                                    نسب التحمل المعتمدة للفئة: 
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">المختبر: {{ (float)$hiCategory->lab_copay }}%</span>
+                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle ms-1">الأشعة: {{ (float)$hiCategory->radiology_copay }}%</span>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">الاستشارية والتخطيط: {{ (float)$hiCategory->consultation_copay }}%</span>
+                                                </span>
                                             </div>
                                             @if($hiCategory->requires_thermal_stamp)
                                                 <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
@@ -534,11 +556,20 @@
                                             <div class="d-flex align-items-center gap-2">
                                                 <i class="fas fa-percentage text-primary"></i>
                                                 <label class="form-label fw-bold small text-muted mb-0">
-                                                    نسبة التحمل المعتمدة رسمياً على المريض (Co-payment):
+                                                    نسبة التحمل المعتمدة في هذا الوصل:
                                                 </label>
-                                                <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
-                                                    {{ (float)$defaultCopay }}%
-                                                </span>
+                                                @php
+                                                    $distinctCopays = array_unique(array_filter(array_map(function($i) { return isset($i['item_copay']) ? (float)$i['item_copay'] : null; }, $items)));
+                                                @endphp
+                                                @if(count($distinctCopays) > 1)
+                                                    <span class="badge bg-warning text-dark fs-6 px-3 py-1" id="display_copay_badge">
+                                                        مفصلة حسب الخدمة (المختبر {{ (float)$hiCategory?->lab_copay }}% / التخطيط {{ (float)$hiCategory?->consultation_copay }}%)
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
+                                                        {{ (float)($distinctCopays[0] ?? $defaultCopay) }}%
+                                                    </span>
+                                                @endif
                                             </div>
                                             <span class="text-muted small">
                                                 <i class="fas fa-shield-alt text-success me-1"></i>
@@ -730,7 +761,8 @@
                                                             $rowApp = $item['hi_price'] > 0 ? $item['hi_price'] : $item['base_price'];
                                                             $rowCov = true;
                                                         }
-                                                        $rowPat = $rowCov ? round($rowApp * ($defaultCopay / 100)) : $rowApp;
+                                                        $rowCopayPct = $item['item_copay'] ?? $defaultCopay;
+                                                        $rowPat = $rowCov ? round($rowApp * ($rowCopayPct / 100)) : $rowApp;
                                                         $rowIns = $rowCov ? max(0, $rowApp - $rowPat) : 0;
                                                     @endphp
                                                     <tr class="service-item-row" 
@@ -740,6 +772,7 @@
                                                         data-base-price="{{ $item['base_price'] }}"
                                                         data-moi-price="{{ $item['moi_price'] }}"
                                                         data-hi-price="{{ $item['hi_price'] }}"
+                                                        data-item-copay="{{ $rowCopayPct }}"
                                                         data-is-moi-active="{{ $item['is_moi_active'] ? '1' : '0' }}"
                                                         data-is-hi-active="{{ $item['is_hi_active'] ? '1' : '0' }}">
                                                         <td class="text-center text-muted">{{ $idx + 1 }}</td>
@@ -763,7 +796,7 @@
                                                             @endif
                                                             <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
                                                                 @if($rowCov)
-                                                                    <i class="fas fa-check-circle me-1"></i>مشمول بالضمان
+                                                                    <i class="fas fa-check-circle me-1"></i>مشمول بالضمان (تحمل {{ (float)$rowCopayPct }}%)
                                                                 @elseif($defaultInsurance !== 'none')
                                                                     <i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)
                                                                 @endif
@@ -1158,6 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const hiPrice = parseFloat(row.getAttribute('data-hi-price')) || 0;
             const isMoiActive = row.getAttribute('data-is-moi-active') === '1';
             const isHiActive = row.getAttribute('data-is-hi-active') === '1';
+            const itemCopay = parseFloat(row.getAttribute('data-item-copay')) || copayPct;
 
             let rowApproved = basePrice;
             let rowCovered = false;
@@ -1180,9 +1214,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let rowPatient = rowApproved;
             let rowInsurance = 0;
+            const effCopay = (insType === 'hi') ? itemCopay : copayPct;
 
             if (rowCovered) {
-                rowPatient = Math.round(rowApproved * (copayPct / 100));
+                rowPatient = Math.round(rowApproved * (effCopay / 100));
                 rowInsurance = Math.max(0, rowApproved - rowPatient);
             }
 
@@ -1226,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (rowCovered) {
                     covBadge.style.display = 'inline-block';
                     covBadge.className = 'row-coverage-badge badge bg-success-subtle text-success border border-success-subtle small ms-1';
-                    covBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>مشمول بالضمان';
+                    covBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i>مشمول بالضمان (تحمل ${effCopay}%)`;
                 } else {
                     covBadge.style.display = 'inline-block';
                     covBadge.className = 'row-coverage-badge badge bg-warning text-dark border border-warning small ms-1';

@@ -1110,7 +1110,11 @@ class CashierController extends Controller
                                     }
                                     $seenLabTestNames[] = $normTestName;
 
-                                    $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $labCopay = ($insuranceType === 'hi' && $patient)
+                                        ? (float) $patient->getCopayPercentageFor('lab')
+                                        : $copayPercentage;
+
+                                    $p = $test->calculateInsurancePricing($insuranceType, $labCopay);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
@@ -1235,7 +1239,11 @@ class CashierController extends Controller
                             $seenRadKeys[] = $radKey;
                             $type = RadiologyType::find($typeId);
                             if ($type) {
-                                $p = $type->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $radCopay = ($insuranceType === 'hi' && $patient)
+                                    ? (float) $patient->getCopayPercentageFor('radiology')
+                                    : $copayPercentage;
+
+                                $p = $type->calculateInsurancePricing($insuranceType, $radCopay);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
                                 $computedInsuranceShare += $p['insurance_share'];
@@ -1259,12 +1267,17 @@ class CashierController extends Controller
                     if ($isPaid) {
                         $actuallyPaidRequests->push($reqItem);
 
+                        $hasDoctorReferral = ! empty($reqItem->visit?->doctor_id) || ! empty($appointment?->doctor_id) || ($reqItem->visit?->visit_type === 'consultation');
                         $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
                         if (! empty($nursingServiceIds)) {
+                            $nursingCopay = ($insuranceType === 'hi' && $patient)
+                                ? (float) $patient->getCopayPercentageFor('nursing')
+                                : $copayPercentage;
+
                             foreach ($nursingServiceIds as $nsId) {
                                 $nSvc = \App\Models\EmergencyService::find($nsId);
                                 if ($nSvc) {
-                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $nursingCopay);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
@@ -1275,64 +1288,37 @@ class CashierController extends Controller
                             }
                         } else {
                             $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                            $descLower = mb_strtolower($desc);
+                            $isEcg = str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo');
+
                             $matchedSvc = null;
-                            if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                            if ($isEcg) {
                                 $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
                                     ?? \App\Models\EmergencyService::find(93)
                                     ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
                             }
-                            if ($matchedSvc) {
-                                $p = $matchedSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
-                                $computedTotal += $p['total_amount'];
-                                $computedPatientShare += $p['patient_share'];
-                                $computedInsuranceShare += $p['insurance_share'];
-                                if ($p['is_covered']) {
-                                    $hasCoveredItem = true;
-                                }
-                            } else {
-                                $computedTotal += 15000.00;
-                                $computedPatientShare += 15000.00;
-                            }
-                        }
-                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
-                        $descParts[] = $cleanTitle.' #'.$reqItem->id;
-                    }
-                } elseif ($reqItem->type === 'nursing') {
-                    $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
-                    $isPaid = true;
-                    foreach ($nursingActions as $actionVal) {
-                        if ($actionVal === 'cancel' || $actionVal === 'postponed' || $actionVal === 'postpone') {
-                            $isPaid = false;
-                            break;
-                        }
-                    }
 
-                    if ($isPaid) {
-                        $actuallyPaidRequests->push($reqItem);
+                            // إذا كان تخطيط القلب صادر بإحالة من طبيب استشارية والمريض على الضمان الصحي يشمله الضمان بسعر 10,000 وتحمل 10%
+                            // أما إذا كان مباشر بدون استشاري فلا يغطى بالضمان ويكون نقدي 100% (15,000 د.ع)
+                            if ($isEcg && $hasDoctorReferral && $insuranceType === 'hi') {
+                                $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $copayPercentage;
 
-                        $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
-                        if (! empty($nursingServiceIds)) {
-                            foreach ($nursingServiceIds as $nsId) {
-                                $nSvc = \App\Models\EmergencyService::find($nsId);
-                                if ($nSvc) {
-                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                if ($matchedSvc) {
+                                    $p = $matchedSvc->calculateInsurancePricing('hi', $ecgCopay);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
                                     if ($p['is_covered']) {
                                         $hasCoveredItem = true;
                                     }
+                                } else {
+                                    $computedTotal += 10000.00;
+                                    $patShare = round(10000.00 * ($ecgCopay / 100));
+                                    $computedPatientShare += $patShare;
+                                    $computedInsuranceShare += (10000.00 - $patShare);
+                                    $hasCoveredItem = true;
                                 }
-                            }
-                        } else {
-                            $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
-                            $matchedSvc = null;
-                            if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
-                                $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
-                                    ?? \App\Models\EmergencyService::find(93)
-                                    ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
-                            }
-                            if ($matchedSvc) {
+                            } elseif ($matchedSvc && $insuranceType !== 'none') {
                                 $p = $matchedSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
@@ -1341,11 +1327,12 @@ class CashierController extends Controller
                                     $hasCoveredItem = true;
                                 }
                             } else {
+                                // مباشر بدون استشاري أو نقدي: 100% كاش 15,000 د.ع
                                 $computedTotal += 15000.00;
                                 $computedPatientShare += 15000.00;
                             }
                         }
-                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط') || str_contains(mb_strtolower($reqItem->description ?? ''), 'echo')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
                         $descParts[] = $cleanTitle.' #'.$reqItem->id;
                     }
                 }

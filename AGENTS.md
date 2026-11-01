@@ -53,6 +53,26 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-01 — المرحلة 141: نظام نسب التحمل المفصلة لكل خدمة في فواتير الضمان الصحي الموحدة لدى الكاشير Per-Service Item Copay Enforcement on Combined Cashier Insurance Receipts)
+
+### Done
+- **نموذج الفئات التأمينية ([app/Models/HealthInsuranceCategory.php](file:///c:/wamp64/www/hospital-system/app/Models/HealthInsuranceCategory.php))**:
+  * إضافة حالتي `ecg` و `nursing` في دالة `getCopayForService` لترجع نسبة `consultation_copay` المعتمدة (10% للفئة H).
+- **واجهة دفع الطلبات الطبية الموحدة ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * إنهاء تعميم نسبة التحمل الفردية وتطبيق نسبة التحمل المعتمدة لكل خدمة على حدة: المختبر 25%، الأشعة 25%، تخطيط القلب بإحالة استشارية 10%، وتخطيط القلب المباشر كاش 100% بدون تغطية ضمان (0%).
+  * استبدال البطاقة المضللة ببطاقة الفئة الشاملة: `الفئة H — المختبر: 25% | الأشعة: 25% | الاستشارية والتخطيط: 10%`.
+  * تزويد حقل نسبة التحمل التراكمي بشارة `مفصلة حسب الخدمة (المختبر 25% / التخطيط 10%)`.
+  * تزويد أسطر الجدول بخاصية `data-item-copay` وشارات التغطية التفاعلية `مشمول بالضمان (تحمل X%)`.
+  * تحديث محرك الجافاسكريبت `recalculate()` لاحتساب كل خدمة بنسبتها المستقلة وتحديث المجاميع اللحظية.
+- **معالجة العمليات في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تمرير نسبة كل خدمة (`$labCopay`, `$radCopay`, `$ecgCopay`) بشكل منفصل داخل `processRequestPayment`.
+  * تثبيت احتساب التخطيط المباشر نقداً 100% كاش دون تحميل الضمان.
+  * حذف التكرار البرمجي لبلوك `nursing`.
+- **إيصالات القبض والطباعة الحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * تدعيم مطابقة فحص تخطيط القلب بكافة الصيغ والأنماط الشائعة (`hear echo`, `echo`, `ايكو`, `ecg`, `تخطيط`).
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/MultiServiceInsuranceCopayTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MultiServiceInsuranceCopayTest.php))**:
+  * تغطية شاملة لفتح الوصل واحتساب الصافي، تسديد الوصل المدمج، واحتساب التخطيط المباشر (3 passed, 12 assertions).
+
 ## Session log (2026-10-31 — المرحلة 140: تعميم نظام الخصم الجزئي والتفصيلي لكل خدمة والخصم الإجمالي ع الوصل على كاشير الطوارئ Cashier Emergency Dual-Mode Discount System Overall vs Per-Item Percentage)
 
 ### Done

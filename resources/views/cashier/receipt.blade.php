@@ -243,8 +243,9 @@
                     }
                 } else {
                     $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                    $descLower = mb_strtolower($desc);
                     $matchedSvc = null;
-                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains(mb_strtolower($desc), 'ecg')) {
+                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo')) {
                         $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
                             ?? \App\Models\EmergencyService::find(93)
                             ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
