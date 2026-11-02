@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Location;
+use App\Models\Room;
+use App\Models\StockBatch;
+use App\Models\StockMovement;
 use App\Models\Surgery;
 use App\Models\User;
 use App\Notifications\NursingUpdateNotification;
@@ -10,10 +14,57 @@ use Illuminate\Support\Facades\Auth;
 
 class NursingStationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
-        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation'])
+        $user = Auth::user();
+
+        // 1. جلب كافة المخازن الفرعية (مخازن الأجنحة والطوابق)
+        $floorLocations = Location::where('type', 'sub')->orderBy('name')->get();
+
+        // 2. تحديد المخزن/الطابق النشط
+        $selectedLocationId = $request->query('location_id');
+        if ($selectedLocationId) {
+            $currentLocation = $floorLocations->firstWhere('id', $selectedLocationId) ?? Location::find($selectedLocationId);
+        } elseif ($user && $user->location_id) {
+            $currentLocation = $floorLocations->firstWhere('id', $user->location_id) ?? Location::find($user->location_id);
+        } else {
+            $currentLocation = $floorLocations->first();
+        }
+
+        // 3. التحقق من صلاحية أمين عهدة الطابق (المخول برفع الطلبيات)
+        $isFloorCustodian = false;
+        if ($user) {
+            $isFloorCustodian = ($user->location_id && $currentLocation && $user->location_id == $currentLocation->id)
+                || $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+                || $user->can('create stock transfer requests')
+                || $user->can('manage inventory');
+        }
+
+        // 4. جلب رصيد الوجبات المتوفرة حالياً في عهدة مخزن هذا الطابق
+        $stockBatches = collect();
+        if ($currentLocation) {
+            $stockBatches = StockBatch::with('product')
+                ->where('location_id', $currentLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get();
+        }
+
+        // 5. جلب سجل سحوبات واستهلاك التمريض في هذا الطابق
+        $recentMovements = collect();
+        if ($currentLocation) {
+            $recentMovements = StockMovement::with(['batch.product', 'user'])
+                ->where('from_location_id', $currentLocation->id)
+                ->orderBy('created_at', 'desc')
+                ->take(30)
+                ->get();
+        }
+
+        // فلترة المرضى حسب الطابق إن طُلبت
+        $selectedFloor = $request->query('floor');
+
+        // 6. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
+        $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation', 'room'])
             ->where(function ($query) {
                 $query->where(function ($q) {
                     $q->where('status', 'scheduled')
@@ -25,13 +76,18 @@ class NursingStationController extends Controller
                         $sq->where('phase', 'pre_op')
                             ->where('status', '!=', 'completed');
                     });
-            })
-            ->orderBy('scheduled_date')
+            });
+
+        if ($selectedFloor) {
+            $preOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+        }
+
+        $preOpSurgeries = $preOpQuery->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
 
-        // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد الصالة)
-        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation'])
+        // 7. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد الصالة)
+        $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation', 'room'])
             ->whereHas('anesthesiaStation', function ($sq) {
                 $sq->where('status', 'completed');
             })
@@ -41,20 +97,44 @@ class NursingStationController extends Controller
                         $q->where('status', '!=', 'completed');
                     });
             })
-            ->whereIn('status', ['in_progress', 'completed', 'waiting'])
-            ->orderBy('scheduled_date')
+            ->whereIn('status', ['in_progress', 'completed', 'waiting']);
+
+        if ($selectedFloor) {
+            $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+        }
+
+        $postOpSurgeries = $postOpQuery->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
 
-        // 3. جلب العمليات التي أتمت مرحلة التمريض (الأرشيف)
-        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse'])
+        // 8. جلب العمليات التي أتمت مرحلة التمريض (الأرشيف)
+        $completedQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'room'])
             ->whereHas('nursingStation', function ($q) {
                 $q->where('status', 'completed');
-            })
-            ->orderBy('updated_at', 'desc')
+            });
+
+        if ($selectedFloor) {
+            $completedQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+        }
+
+        $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('surgery-stations.nursing.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries'));
+        // قائمة الطوابق المتوفرة لفرز المرضى
+        $availableFloors = Room::whereNotNull('floor')->distinct()->pluck('floor')->filter();
+
+        return view('surgery-stations.nursing.index', compact(
+            'preOpSurgeries',
+            'postOpSurgeries',
+            'completedSurgeries',
+            'floorLocations',
+            'currentLocation',
+            'isFloorCustodian',
+            'stockBatches',
+            'recentMovements',
+            'availableFloors',
+            'selectedFloor'
+        ));
     }
 
     public function show(Surgery $surgery, Request $request)
