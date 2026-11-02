@@ -53,6 +53,20 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 143: حصر سجل وتفاصيل طلبات تعزيز المخزون على عهدة الطابق وحماية الصلاحيات Scoped Floor Stock Requests & Approval Authorization Guard)
+
+### Done
+- **عزل وحصر سجل طلبات المخزون ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * تحديث دالة `indexRequests()` لقفل الاستعلام تلقائياً للكادر التمريضي ومسؤولي العهدة ليعرض حصراً طلبات مخزن عهدتهم المعتمد (`to_location_id = user->location_id`) والطلبات التي رفعوها، مع حجب طلبات بقية الأقسام والمستشفيات، وإبقاء العرض الشامل للإدارة وأمناء المستودع المركزي فقط.
+- **حوكمة واجهة سجل الطلبات ([resources/views/stock-transfers/requests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/index.blade.php))**:
+  * تخصيص ترويسة الصفحة لتعكس اسم عهدة الطابق (`طلبات تعزيز مخزن الطابق — ردهة الطابق الثالث`).
+  * إضافة زر رجوع ذكي يعيد الممرض لمحطة التمريض والرقود بنقرة واحدة، واستبدال النصوص الإنجليزية بشارات حالة معتمدة (قيد المراجعة / معتمد وتم الصرف / مرفوض).
+- **حماية تفاصيل واعتماد الطلبات ([resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php), [app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * منع الممرض من استعراض تفاصيل طلبات أي طابق آخر برمجياً (403 Forbidden).
+  * حظر أزرار وإجراءات الموافقة والرفض على الممرضين وقصرها برمجياً على أمين المخزن الرئيسي ومديري النظام.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * اجتياز كامل الحزمة بنجاح 100%: فحص قفل السجل على الطابق، ومنع الدخول والاعتماد غير المصرح، وقفل إنشاء الطلبات (5 passed, 19 assertions).
+
 ## Session log (2026-11-02 — المرحلة 142: حوكمة محطة التمريض وقفل طلبات تعزيز المخزن الفرعي على عهدة الطابق المعتمدة Nursing Station Clean Governance & Floor Sub-Store Request Auto-Locking)
 
 ### Done
