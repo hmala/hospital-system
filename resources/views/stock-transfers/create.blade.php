@@ -49,7 +49,7 @@
             <form method="POST" action="{{ route('stock-transfers.requests.store') }}" id="transferForm">
                 @csrf
 
-                <!-- Compact Transfer Route Strip -->
+                <!-- مسار التحويل المدمج -->
                 <div class="p-3 bg-light rounded-4 border mb-4">
                     <div class="row align-items-center g-3">
                         <!-- From: Main Warehouse -->
@@ -97,17 +97,8 @@
                     </div>
                 </div>
 
-                <!-- Products Datalist for Fast Instant Search -->
-                <datalist id="productsDatalist">
-                    @foreach($products as $product)
-                        <option value="{{ $product->name }}" data-id="{{ $product->id }}" data-unit="{{ $product->unit ?? 'وحدة' }}" data-code="{{ $product->code ?? '' }}">
-                            [{{ $product->code ?? 'عام' }}] ({{ $product->unit ?? 'وحدة' }})
-                        </option>
-                    @endforeach
-                </datalist>
-
-                <!-- Items Section -->
-                <div class="card border rounded-4 shadow-none mb-4">
+                <!-- جدول المواد المطلوبة -->
+                <div class="card border rounded-4 shadow-none mb-4" style="overflow: visible !important;">
                     <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fas fa-boxes text-success fs-5"></i>
@@ -119,20 +110,20 @@
                         </button>
                     </div>
 
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
+                    <div class="card-body p-0" style="overflow: visible !important;">
+                        <div class="table-responsive" style="overflow: visible !important;">
                             <table class="table table-hover align-middle mb-0" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-3" style="width: 55px;">#</th>
-                                        <th style="min-width: 320px;">اسم المادة أو الدواء (بحث فوري) <span class="text-danger">*</span></th>
-                                        <th style="width: 150px;" class="text-center">الوحدة</th>
+                                        <th class="ps-3" style="width: 50px;">#</th>
+                                        <th style="min-width: 380px;">اسم المادة أو الدواء (بحث ذكي مباشر) <span class="text-danger">*</span></th>
+                                        <th style="width: 140px;" class="text-center">الوحدة</th>
                                         <th style="width: 180px;" class="text-center">الكمية المطلوبة <span class="text-danger">*</span></th>
-                                        <th style="width: 80px;" class="text-center pe-3">إجراء</th>
+                                        <th style="width: 70px;" class="text-center pe-3">إجراء</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- الصفوف تضاف ديناميكياً بواسطة الجافاسكريبت --}}
+                                    {{-- تضاف الصفوف ديناميكياً --}}
                                 </tbody>
                             </table>
                         </div>
@@ -163,185 +154,414 @@
 @endsection
 
 @section('scripts')
+<style>
+/* تصميم القائمة الذكية للمواد على نسق التشخيص الدولي ICD-10 */
+.product-autocomplete-wrapper {
+    position: relative;
+    overflow: visible !important;
+}
+.product-autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    width: 100% !important;
+    min-width: 340px;
+    z-index: 999999 !important;
+    max-height: 360px;
+    overflow-y: auto;
+    background: #ffffff !important;
+    border: 2px solid #005a9c !important;
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 90, 156, 0.15) !important;
+}
+.product-dropdown-header {
+    background: linear-gradient(135deg, #f0f7ff, #e0f2fe);
+    border-bottom: 2px solid #bae6fd;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0369a1;
+}
+.product-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: right;
+    background: #ffffff;
+}
+.product-item:hover, .product-item.active {
+    background-color: #f0f7ff !important;
+    border-right: 4px solid #005a9c;
+}
+.product-item:last-child {
+    border-bottom: none;
+}
+.product-code-badge {
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 0.82rem;
+    background: linear-gradient(135deg, #005a9c, #0284c7);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+.product-unit-tag {
+    font-size: 0.78rem;
+    color: #0369a1;
+    background-color: #e0f2fe;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    border: 1px solid #bae6fd;
+}
+.product-title-text {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.product-empty-hint {
+    padding: 18px 14px;
+    text-align: center;
+    color: #64748b;
+    background: #ffffff;
+    font-size: 0.88rem;
+}
+</style>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        if (window.__stockTransferInit) return;
+    // حماية ضد التكرار
+    if (typeof window.__stockTransferInit === 'undefined') {
         window.__stockTransferInit = true;
 
-        const form = document.getElementById('transferForm');
-        const addItemRowBtn = document.getElementById('addItemRow');
-        const itemsTableBody = document.querySelector('#itemsTable tbody');
-        const itemsCountBadge = document.getElementById('itemsCountBadge');
-        const productsDatalist = document.getElementById('productsDatalist');
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('transferForm');
+            const addItemRowBtn = document.getElementById('addItemRow');
+            const itemsTableBody = document.querySelector('#itemsTable tbody');
+            const itemsCountBadge = document.getElementById('itemsCountBadge');
 
-        // خريطة لتخزين بيانات المواد لسرعة المطابقة اللحظية
-        const productsMap = {};
-        if (productsDatalist) {
-            Array.from(productsDatalist.options).forEach(opt => {
-                const name = opt.value.trim().toLowerCase();
-                productsMap[name] = {
-                    id: opt.getAttribute('data-id'),
-                    unit: opt.getAttribute('data-unit') || 'وحدة',
-                    code: opt.getAttribute('data-code') || ''
-                };
+            @php
+                $productsPayload = $products->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'code' => $p->code ?: 'PRD-'.$p->id,
+                        'unit' => $p->unit ?: 'وحدة',
+                    ];
+                })->values();
+            @endphp
+            const productsData = @json($productsPayload);
+
+            let itemIndex = 0;
+
+            function updateItemCounter() {
+                const count = itemsTableBody.querySelectorAll('tr').length;
+                itemsCountBadge.textContent = `${count} ${count === 1 ? 'مادة' : 'مواد'}`;
+                itemsTableBody.querySelectorAll('tr').forEach((tr, idx) => {
+                    const numEl = tr.querySelector('.row-num');
+                    if (numEl) numEl.textContent = idx + 1;
+                });
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function createItemRow(index) {
+                return `
+                    <tr id="row${index}" class="item-row">
+                        <td class="ps-3 fw-bold text-muted row-num">${itemsTableBody.children.length + 1}</td>
+                        <td>
+                            <div class="product-autocomplete-wrapper">
+                                <div class="input-group shadow-xs">
+                                    <span class="input-group-text bg-white border-end-0 text-primary">
+                                        <i class="fas fa-search product-search-icon"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control border-start-0 border-end-0 product-search-input" 
+                                           placeholder="ابحث بالاسم أو الكود (مثال: سلاين أو كانولا)..." 
+                                           autocomplete="off" 
+                                           required>
+                                    <button type="button" class="btn btn-outline-secondary border-start-0 btn-clear-product d-none" title="مسح المادة">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" 
+                                       name="items[${index}][product_id]" 
+                                       class="product-id-input" 
+                                       required>
+                                <div class="invalid-feedback small">يرجى اختيار مادة من القائمة الذكية.</div>
+                                <div class="product-autocomplete-dropdown shadow-lg d-none"></div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 product-unit-badge">
+                                -
+                            </span>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm justify-content-center">
+                                <button type="button" class="btn btn-outline-secondary px-2.5 btn-step-down rounded-start-pill">-</button>
+                                <input type="number" 
+                                       name="items[${index}][qty]" 
+                                       class="form-control text-center fw-bold item-qty-input" 
+                                       min="1" 
+                                       value="1" 
+                                       style="max-width: 80px;" 
+                                       required>
+                                <button type="button" class="btn btn-outline-secondary px-2.5 btn-step-up rounded-end-pill">+</button>
+                            </div>
+                        </td>
+                        <td class="text-center pe-3">
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle remove-item-row" title="حذف هذا السطر" style="width: 32px; height: 32px; padding: 0;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // التنقل بالأسهم واختيار المادة بالـ Enter مثل ICD-10
+            itemsTableBody.addEventListener('keydown', function (e) {
+                if (e.target.classList.contains('product-search-input')) {
+                    const input = e.target;
+                    const wrapper = input.closest('.product-autocomplete-wrapper');
+                    const dropdown = wrapper.querySelector('.product-autocomplete-dropdown');
+                    if (!dropdown || dropdown.classList.contains('d-none')) return;
+
+                    const items = dropdown.querySelectorAll('.product-item');
+                    if (items.length === 0) return;
+
+                    let activeIdx = -1;
+                    items.forEach((it, idx) => {
+                        if (it.classList.contains('active')) activeIdx = idx;
+                    });
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+                        items.forEach((it, idx) => it.classList.toggle('active', idx === activeIdx));
+                        if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        activeIdx = Math.max(activeIdx - 1, 0);
+                        items.forEach((it, idx) => it.classList.toggle('active', idx === activeIdx));
+                        if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'Enter') {
+                        if (activeIdx >= 0 && items[activeIdx]) {
+                            e.preventDefault();
+                            items[activeIdx].click();
+                        }
+                    } else if (e.key === 'Escape') {
+                        dropdown.classList.add('d-none');
+                    }
+                }
             });
-        }
 
-        let itemIndex = 0;
-
-        function updateItemCounter() {
-            const count = itemsTableBody.querySelectorAll('tr').length;
-            itemsCountBadge.textContent = `${count} ${count === 1 ? 'مادة' : 'مواد'}`;
-            // إعادة ترقيم السطور
-            itemsTableBody.querySelectorAll('tr').forEach((tr, idx) => {
-                const numEl = tr.querySelector('.row-num');
-                if (numEl) numEl.textContent = idx + 1;
+            // إغلاق أي قائمة مفتوحة عند النقر خارجها
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.product-autocomplete-wrapper')) {
+                    document.querySelectorAll('.product-autocomplete-dropdown').forEach(dd => {
+                        dd.classList.add('d-none');
+                        dd.innerHTML = '';
+                    });
+                }
             });
-        }
 
-        function createItemRow(index) {
-            return `
-                <tr id="row${index}" class="item-row">
-                    <td class="ps-3 fw-bold text-muted row-num">${itemsTableBody.children.length + 1}</td>
-                    <td>
-                        <div class="position-relative">
-                            <input type="text" 
-                                   list="productsDatalist" 
-                                   class="form-control rounded-pill product-search-input" 
-                                   placeholder="🔍 اكتب اسم المادة أو الدواء..." 
-                                   autocomplete="off" 
-                                   required>
-                            <input type="hidden" 
-                                   name="items[${index}][product_id]" 
-                                   class="product-id-input" 
-                                   required>
-                            <div class="invalid-feedback small">يرجى اختيار مادة صحيحة من القائمة.</div>
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 product-unit-badge">
-                            -
-                        </span>
-                    </td>
-                    <td>
-                        <div class="input-group input-group-sm justify-content-center">
-                            <button type="button" class="btn btn-outline-secondary px-2.5 btn-step-down rounded-start-pill">-</button>
-                            <input type="number" 
-                                   name="items[${index}][qty]" 
-                                   class="form-control text-center fw-bold item-qty-input" 
-                                   min="1" 
-                                   value="1" 
-                                   style="max-width: 80px;" 
-                                   required>
-                            <button type="button" class="btn btn-outline-secondary px-2.5 btn-step-up rounded-end-pill">+</button>
-                        </div>
-                    </td>
-                    <td class="text-center pe-3">
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-circle remove-item-row" title="حذف هذا السطر" style="width: 32px; height: 32px; padding: 0;">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
+            // إضافة سطر جديد
+            addItemRowBtn.addEventListener('click', function () {
+                itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
+                itemIndex++;
+                updateItemCounter();
+                const lastInput = itemsTableBody.querySelector('tr:last-child .product-search-input');
+                if (lastInput) lastInput.focus();
+            });
 
-        // إضافة سطر جديد
-        addItemRowBtn.addEventListener('click', function () {
-            itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
-            itemIndex++;
-            updateItemCounter();
-            // تركيز مباشر على حقل السطر الجديد
-            const lastInput = itemsTableBody.querySelector('tr:last-child .product-search-input');
-            if (lastInput) lastInput.focus();
-        });
+            // البحث اللحظي وعرض النتائج على نسق التشخيص الدولي ICD-10
+            itemsTableBody.addEventListener('input', function (e) {
+                if (e.target.classList.contains('product-search-input')) {
+                    const input = e.target;
+                    const wrapper = input.closest('.product-autocomplete-wrapper');
+                    const dropdown = wrapper.querySelector('.product-autocomplete-dropdown');
+                    const hiddenId = wrapper.querySelector('.product-id-input');
+                    const clearBtn = wrapper.querySelector('.btn-clear-product');
+                    const tr = input.closest('tr');
+                    const unitBadge = tr.querySelector('.product-unit-badge');
+                    const query = input.value.trim().toLowerCase();
 
-        // التعامل مع الأحداث التفاعلية داخل الجدول
-        itemsTableBody.addEventListener('input', function (e) {
-            if (e.target.classList.contains('product-search-input')) {
-                const tr = e.target.closest('tr');
-                const hiddenId = tr.querySelector('.product-id-input');
+                    // زر المسح
+                    if (query.length > 0) {
+                        clearBtn.classList.remove('d-none');
+                    } else {
+                        clearBtn.classList.add('d-none');
+                        hiddenId.value = '';
+                        unitBadge.textContent = '-';
+                        unitBadge.className = 'badge bg-light text-secondary border rounded-pill px-3 py-1.5 product-unit-badge';
+                        dropdown.classList.add('d-none');
+                        dropdown.innerHTML = '';
+                        return;
+                    }
+
+                    // تصفية المواد (بالاسم أو بالكود)
+                    const results = productsData.filter(p => {
+                        return p.name.toLowerCase().includes(query) || (p.code && p.code.toLowerCase().includes(query));
+                    }).slice(0, 15); // أول 15 نتيجة لتكون القائمة خفيفة
+
+                    renderProductDropdown(wrapper, query, results);
+                }
+            });
+
+            function renderProductDropdown(wrapper, query, results) {
+                const dropdown = wrapper.querySelector('.product-autocomplete-dropdown');
+                const input = wrapper.querySelector('.product-search-input');
+                const hiddenId = wrapper.querySelector('.product-id-input');
+                const tr = wrapper.closest('tr');
                 const unitBadge = tr.querySelector('.product-unit-badge');
-                const enteredVal = e.target.value.trim().toLowerCase();
+                const qtyInput = tr.querySelector('.item-qty-input');
 
-                if (productsMap[enteredVal]) {
-                    hiddenId.value = productsMap[enteredVal].id;
-                    unitBadge.textContent = productsMap[enteredVal].unit;
-                    unitBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 product-unit-badge fw-bold';
-                    e.target.classList.remove('is-invalid');
-                } else {
+                dropdown.innerHTML = '';
+
+                if (results.length === 0) {
+                    dropdown.innerHTML = `
+                        <div class="product-empty-hint">
+                            <i class="fas fa-box-open text-muted me-1"></i> لا توجد مادة مطابقة لـ "<strong>${escapeHtml(query)}</strong>"
+                        </div>
+                    `;
+                    dropdown.classList.remove('d-none');
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                // ترويسة القائمة
+                const header = document.createElement('div');
+                header.className = 'product-dropdown-header d-flex justify-content-between align-items-center';
+                header.innerHTML = `
+                    <span><i class="fas fa-boxes me-1 text-primary"></i> المواد المقترحة (${results.length})</span>
+                    <small class="text-muted">انقر للاختيار</small>
+                `;
+                fragment.appendChild(header);
+
+                // عناصر النتائج بستايل التشخيص الدولي
+                results.forEach(product => {
+                    const row = document.createElement('div');
+                    row.className = 'product-item';
+                    row.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-between mb-1 gap-2">
+                            <span class="product-code-badge">${escapeHtml(product.code)}</span>
+                            <span class="product-unit-tag"><i class="fas fa-tag me-1"></i>${escapeHtml(product.unit)}</span>
+                        </div>
+                        <div class="product-title-text">${escapeHtml(product.name)}</div>
+                    `;
+
+                    row.addEventListener('click', function () {
+                        input.value = product.name;
+                        hiddenId.value = product.id;
+                        unitBadge.textContent = product.unit;
+                        unitBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 product-unit-badge fw-bold';
+                        input.classList.remove('is-invalid');
+                        dropdown.classList.add('d-none');
+                        dropdown.innerHTML = '';
+                        if (qtyInput) qtyInput.focus();
+                    });
+
+                    fragment.appendChild(row);
+                });
+
+                dropdown.appendChild(fragment);
+                dropdown.classList.remove('d-none');
+            }
+
+            // التحكم في الأزرار (المسح، الزيادة، النقصان، الحذف)
+            itemsTableBody.addEventListener('click', function (e) {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+
+                if (btn.classList.contains('btn-clear-product')) {
+                    const wrapper = btn.closest('.product-autocomplete-wrapper');
+                    const input = wrapper.querySelector('.product-search-input');
+                    const hiddenId = wrapper.querySelector('.product-id-input');
+                    const dropdown = wrapper.querySelector('.product-autocomplete-dropdown');
+                    const tr = btn.closest('tr');
+                    const unitBadge = tr.querySelector('.product-unit-badge');
+
+                    input.value = '';
                     hiddenId.value = '';
+                    btn.classList.add('d-none');
                     unitBadge.textContent = '-';
                     unitBadge.className = 'badge bg-light text-secondary border rounded-pill px-3 py-1.5 product-unit-badge';
-                }
-            }
-        });
-
-        // التحكم في أزرار الزيادة والنقصان والحذف
-        itemsTableBody.addEventListener('click', function (e) {
-            const btn = e.target.closest('button');
-            if (!btn) return;
-
-            if (btn.classList.contains('remove-item-row')) {
-                const tr = btn.closest('tr');
-                if (itemsTableBody.querySelectorAll('tr').length > 1) {
-                    tr.remove();
-                    updateItemCounter();
-                } else {
-                    alert('يجب أن يحتوي الطلب على مادة واحدة على الأقل.');
-                }
-            } else if (btn.classList.contains('btn-step-up')) {
-                const tr = btn.closest('tr');
-                const qtyInput = tr.querySelector('.item-qty-input');
-                qtyInput.value = Math.max(1, parseInt(qtyInput.value || 0) + 1);
-            } else if (btn.classList.contains('btn-step-down')) {
-                const tr = btn.closest('tr');
-                const qtyInput = tr.querySelector('.item-qty-input');
-                qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
-            }
-        });
-
-        // إضافة أول سطر تلقائياً
-        if (itemsTableBody.children.length === 0) {
-            itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
-            itemIndex++;
-            updateItemCounter();
-        }
-
-        // التحقق قبل الإرسال لمنع إرسال مواد فارغة
-        form.addEventListener('submit', function (e) {
-            let hasError = false;
-            const rows = itemsTableBody.querySelectorAll('tr');
-
-            if (rows.length === 0) {
-                alert('يجب إضافة مادة واحدة على الأقل في الطلب.');
-                e.preventDefault();
-                return;
-            }
-
-            rows.forEach(tr => {
-                const hiddenId = tr.querySelector('.product-id-input');
-                const searchInput = tr.querySelector('.product-search-input');
-                const qtyInput = tr.querySelector('.item-qty-input');
-
-                if (!hiddenId.value) {
-                    searchInput.classList.add('is-invalid');
-                    searchInput.focus();
-                    hasError = true;
-                } else {
-                    searchInput.classList.remove('is-invalid');
-                }
-
-                if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
-                    qtyInput.classList.add('is-invalid');
-                    hasError = true;
+                    dropdown.classList.add('d-none');
+                    dropdown.innerHTML = '';
+                    input.focus();
+                } else if (btn.classList.contains('remove-item-row')) {
+                    const tr = btn.closest('tr');
+                    if (itemsTableBody.querySelectorAll('tr').length > 1) {
+                        tr.remove();
+                        updateItemCounter();
+                    } else {
+                        alert('يجب أن يحتوي الطلب على مادة واحدة على الأقل.');
+                    }
+                } else if (btn.classList.contains('btn-step-up')) {
+                    const tr = btn.closest('tr');
+                    const qtyInput = tr.querySelector('.item-qty-input');
+                    qtyInput.value = Math.max(1, parseInt(qtyInput.value || 0) + 1);
+                } else if (btn.classList.contains('btn-step-down')) {
+                    const tr = btn.closest('tr');
+                    const qtyInput = tr.querySelector('.item-qty-input');
+                    qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
                 }
             });
 
-            if (hasError) {
-                e.preventDefault();
-                alert('يرجى اختيار المادة بشكل صحيح من القائمة المنسدلة والتأكد من تحديد كمية صحيحة.');
+            // إضافة أول سطر تلقائياً
+            if (itemsTableBody.children.length === 0) {
+                itemsTableBody.insertAdjacentHTML('beforeend', createItemRow(itemIndex));
+                itemIndex++;
+                updateItemCounter();
             }
+
+            // التحقق قبل الإرسال
+            form.addEventListener('submit', function (e) {
+                let hasError = false;
+                const rows = itemsTableBody.querySelectorAll('tr');
+
+                if (rows.length === 0) {
+                    alert('يجب إضافة مادة واحدة على الأقل في الطلب.');
+                    e.preventDefault();
+                    return;
+                }
+
+                rows.forEach(tr => {
+                    const hiddenId = tr.querySelector('.product-id-input');
+                    const searchInput = tr.querySelector('.product-search-input');
+                    const qtyInput = tr.querySelector('.item-qty-input');
+
+                    if (!hiddenId.value) {
+                        searchInput.classList.add('is-invalid');
+                        searchInput.focus();
+                        hasError = true;
+                    } else {
+                        searchInput.classList.remove('is-invalid');
+                    }
+
+                    if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
+                        qtyInput.classList.add('is-invalid');
+                        hasError = true;
+                    }
+                });
+
+                if (hasError) {
+                    e.preventDefault();
+                    alert('يرجى اختيار المواد من القائمة الذكية والتأكد من تحديد كمية صحيحة لكل مادة.');
+                }
+            });
         });
-    });
+    }
 </script>
 @endsection
