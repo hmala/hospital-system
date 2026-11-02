@@ -5,14 +5,21 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-lg" style="border-radius: 20px;">
-                <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
                         <h2 class="mb-1 fw-bold"><i class="fas fa-eye me-3"></i>عرض طلب مخزون #{{ $stockTransferRequest->id }}</h2>
-                        <p class="mb-0 text-muted">مراجعة حالة الطلب ومحتويات المخزن الفرعي قبل اتخاذ القرار.</p>
+                        <p class="mb-0 text-muted">مراجعة تفاصيل طلب المواد وحالة الاعتماد من المخزن الرئيسي.</p>
                     </div>
-                    <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill">
-                        <i class="fas fa-arrow-left me-2"></i>قائمة الطلبات
-                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        @if(empty($isAdmin))
+                            <a href="{{ route('nursing-station.index') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
+                                <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
+                            </a>
+                        @endif
+                        <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
+                            <i class="fas fa-list me-1"></i> سجل الطلبات
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -38,24 +45,32 @@
                     <h5 class="mb-0">تفاصيل الطلب</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>من:</strong> {{ $stockTransferRequest->fromLocation->name }}</p>
-                    <p><strong>إلى:</strong> {{ $stockTransferRequest->toLocation->name }}</p>
+                    <p><strong>من:</strong> {{ $stockTransferRequest->fromLocation?->name ?? 'غير محدد' }}</p>
+                    <p><strong>إلى:</strong> {{ $stockTransferRequest->toLocation?->name ?? 'غير محدد' }}</p>
                     <p><strong>نوع الطلب:</strong>
                         @php
                             $typeLabel = 'نقل مخزون';
-                            if ($stockTransferRequest->fromLocation->type === 'main' && $stockTransferRequest->toLocation->type === 'sub') {
-                                $typeLabel = 'طلب من الرئيسي';
-                            } elseif ($stockTransferRequest->fromLocation->type === 'sub' && $stockTransferRequest->toLocation->type === 'main') {
+                            if ($stockTransferRequest->fromLocation?->type === 'main' && $stockTransferRequest->toLocation?->type === 'sub') {
+                                $typeLabel = 'طلب تعزيز من الرئيسي';
+                            } elseif ($stockTransferRequest->fromLocation?->type === 'sub' && $stockTransferRequest->toLocation?->type === 'main') {
                                 $typeLabel = 'إرجاع إلى الرئيسي';
                             }
                         @endphp
                         <span class="badge bg-info text-dark">{{ $typeLabel }}</span>
                     </p>
-                    <p><strong>الوضع:</strong> {{ ucfirst($stockTransferRequest->status) }}</p>
-                    <p><strong>مقدم الطلب:</strong> {{ $stockTransferRequest->requestedBy->name ?? 'غير معروف' }}</p>
-                    <p><strong>تاريخ الطلب:</strong> {{ $stockTransferRequest->created_at->format('Y-m-d H:i') }}</p>
+                    <p><strong>الوضع:</strong> 
+                        @if($stockTransferRequest->status === 'pending')
+                            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold">قيد المراجعة</span>
+                        @elseif($stockTransferRequest->status === 'approved')
+                            <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fw-bold">معتمد وتم الصرف</span>
+                        @else
+                            <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold">مرفوض</span>
+                        @endif
+                    </p>
+                    <p><strong>مقدم الطلب:</strong> {{ $stockTransferRequest->requestedBy?->name ?? 'غير معروف' }}</p>
+                    <p><strong>تاريخ الطلب:</strong> {{ $stockTransferRequest->created_at ? $stockTransferRequest->created_at->format('Y-m-d H:i') : '-' }}</p>
                     @if($stockTransferRequest->approved_by)
-                        <p><strong>تمت المعالجة بواسطة:</strong> {{ $stockTransferRequest->approvedBy->name ?? 'غير معروف' }}</p>
+                        <p><strong>تمت المعالجة بواسطة:</strong> {{ $stockTransferRequest->approvedBy?->name ?? 'غير معروف' }}</p>
                         <p><strong>تاريخ المعالجة:</strong> {{ $stockTransferRequest->approved_at?->format('Y-m-d H:i') }}</p>
                     @endif
                 </div>
@@ -65,7 +80,7 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-lg" style="border-radius: 15px;">
                 <div class="card-header bg-light border-0" style="border-radius: 15px 15px 0 0;">
-                    <h5 class="mb-0">مخزون الفرع الحالي</h5>
+                    <h5 class="mb-0">رصيد المواد الحالي في المخزن الفرعي</h5>
                 </div>
                 <div class="card-body">
                     @if($subLocationBatches->isEmpty())
@@ -83,7 +98,7 @@
                                 <tbody>
                                     @foreach($subLocationBatches as $batch)
                                         <tr>
-                                            <td>{{ $batch->product->name }}</td>
+                                            <td>{{ $batch->product?->name ?? 'مادة' }}</td>
                                             <td>{{ $batch->current_qty }}</td>
                                             <td>{{ optional($batch->original_received_at ?? $batch->received_at)->format('Y-m-d') }}</td>
                                         </tr>
@@ -101,7 +116,7 @@
         <div class="col-12">
             <div class="card border-0 shadow-lg" style="border-radius: 15px;">
                 <div class="card-header bg-light border-0" style="border-radius: 15px 15px 0 0;">
-                    <h5 class="mb-0">عناصر الطلب</h5>
+                    <h5 class="mb-0">المواد المطلوبة في هذه الشحنة</h5>
                 </div>
                 <div class="card-body p-3">
                     <div class="table-responsive">
@@ -116,7 +131,7 @@
                                 @foreach($stockTransferRequest->items as $item)
                                     <tr>
                                         <td>{{ $products[$item['product_id']]->name ?? 'غير معروف' }}</td>
-                                        <td>{{ $item['qty'] }}</td>
+                                        <td class="fw-bold">{{ $item['qty'] }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -128,18 +143,31 @@
     </div>
 
     @if($stockTransferRequest->status === 'pending')
-        <div class="row mt-4">
-            <div class="col-12 d-flex gap-2">
-                <form action="{{ route('stock-transfers.requests.approve', $stockTransferRequest) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-success rounded-pill px-4">الموافقة على الطلب</button>
-                </form>
-                <form action="{{ route('stock-transfers.requests.reject', $stockTransferRequest) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-danger rounded-pill px-4">رفض الطلب</button>
-                </form>
+        @if(!empty($isAdmin))
+            <div class="row mt-4">
+                <div class="col-12 d-flex gap-2">
+                    <form action="{{ route('stock-transfers.requests.approve', $stockTransferRequest) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                            <i class="fas fa-check-circle me-1"></i> الموافقة على الطلب وصرف المواد
+                        </button>
+                    </form>
+                    <form action="{{ route('stock-transfers.requests.reject', $stockTransferRequest) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                            <i class="fas fa-times-circle me-1"></i> رفض الطلب
+                        </button>
+                    </form>
+                </div>
             </div>
-        </div>
+        @else
+            <div class="alert alert-warning border-0 shadow-sm rounded-4 mt-4 d-flex align-items-center gap-2">
+                <i class="fas fa-hourglass-half fs-5 text-warning"></i>
+                <div>
+                    <strong>الطلب قيد المراجعة:</strong> تم استلام طلبك بنجاح وهو بانتظار مراجعة وموافقة أمين المخزن الرئيسي لصرف الشحنة.
+                </div>
+            </div>
+        @endif
     @endif
 </div>
 @endsection

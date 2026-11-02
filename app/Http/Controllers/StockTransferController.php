@@ -14,13 +14,34 @@ use Illuminate\Support\Facades\DB;
 
 class StockTransferController extends Controller
 {
-    public function indexRequests()
+    public function indexRequests(Request $request)
     {
-        $requests = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
 
-        return view('stock-transfers.requests.index', compact('requests'));
+        $query = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy']);
+
+        // إذا كان المستخدم كادر تمريضي أو عهدة قسم وليس مديراً عاماً، نحصر الطلبات بما يخص عهدته أو ما رفعه هو
+        $userLocation = null;
+        if (! $isAdmin) {
+            $userLocationId = $user?->location_id ?: $request->query('location_id');
+            if ($userLocationId) {
+                $userLocation = Location::find($userLocationId);
+            }
+
+            $query->where(function ($q) use ($user, $userLocationId) {
+                if ($userLocationId) {
+                    $q->where('to_location_id', $userLocationId)
+                        ->orWhere('from_location_id', $userLocationId);
+                }
+                $q->orWhere('requested_by', $user?->id);
+            });
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('stock-transfers.requests.index', compact('requests', 'isAdmin', 'userLocation'));
     }
 
     public function create(Request $request)
@@ -281,6 +302,18 @@ class StockTransferController extends Controller
 
     public function showRequest(StockTransferRequest $stockTransferRequest)
     {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+
+        if (! $isAdmin && $user?->location_id) {
+            if ($stockTransferRequest->to_location_id != $user->location_id
+                && $stockTransferRequest->from_location_id != $user->location_id
+                && $stockTransferRequest->requested_by != $user->id) {
+                abort(403, 'غير مصرح لك بالاطلاع على طلبات مخازن الطوابق الأخرى.');
+            }
+        }
+
         $request = $stockTransferRequest;
         $productIds = collect($request->items)->pluck('product_id')->unique();
         $subLocationBatches = StockBatch::where('location_id', $request->to_location_id)
@@ -290,11 +323,16 @@ class StockTransferController extends Controller
 
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
-        return view('stock-transfers.requests.show', compact('stockTransferRequest', 'subLocationBatches', 'products'));
+        return view('stock-transfers.requests.show', compact('stockTransferRequest', 'subLocationBatches', 'products', 'isAdmin'));
     }
 
     public function approveRequest(Request $request, StockTransferRequest $stockTransferRequest)
     {
+        $user = Auth::user();
+        if (! ($user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory')))) {
+            abort(403, 'غير مصرح لك بالموافقة على طلبات التحويل، الصلاحية مخصصة لأمين المخزن الرئيسي.');
+        }
+
         if ($stockTransferRequest->status !== 'pending') {
             return back()->withErrors(['status' => 'هذا الطلب ليس قيد الانتظار.']);
         }
@@ -393,6 +431,11 @@ class StockTransferController extends Controller
 
     public function rejectRequest(Request $request, StockTransferRequest $stockTransferRequest)
     {
+        $user = Auth::user();
+        if (! ($user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory')))) {
+            abort(403, 'غير مصرح لك برفض طلبات التحويل، الصلاحية مخصصة لأمين المخزن الرئيسي.');
+        }
+
         if ($stockTransferRequest->status !== 'pending') {
             return back()->withErrors(['status' => 'هذا الطلب ليس قيد الانتظار.']);
         }
