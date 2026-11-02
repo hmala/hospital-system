@@ -1540,7 +1540,7 @@ class StaffRequestController extends Controller
     }
 
     /**
-     * طباعة نتائج تحاليل العملية
+     * طباعة تقرير نتائج تحاليل العملية الجراحية
      */
     public function printSurgeryLabTest(\App\Models\SurgeryLabTest $test)
     {
@@ -1551,23 +1551,36 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بطباعة هذا الطلب');
         }
 
-        // التحقق من وجود تحاليل مكتملة للعملية
-        $completedTests = \App\Models\SurgeryLabTest::where('surgery_id', $test->surgery_id)
-            ->where('status', 'completed')
-            ->count();
+        $test->loadMissing([
+            'surgery.patient.user',
+            'surgery.doctor.user',
+            'surgery.room',
+            'surgery.department',
+            'labTest.references',
+            'labTest.subTests',
+        ]);
 
-        if ($completedTests === 0) {
-            abort(403, 'لا توجد تحاليل مكتملة لهذه العملية');
-        }
+        $surgery = $test->surgery;
 
-        // جلب جميع التحاليل المتعلقة بنفس العملية والمكتملة
-        $surgeryLabTests = \App\Models\SurgeryLabTest::with(['surgery.patient.user', 'surgery.doctor.user', 'labTest'])
+        // جلب جميع التحاليل المخصصة للعملية
+        $surgeryLabTests = \App\Models\SurgeryLabTest::with([
+            'surgery.patient.user',
+            'surgery.doctor.user',
+            'surgery.room',
+            'surgery.department',
+            'labTest.references',
+            'labTest.subTests',
+        ])
             ->where('surgery_id', $test->surgery_id)
-            ->where('status', 'completed')
-            ->orderBy('created_at')
+            ->whereNotNull('lab_test_id')
+            ->orderBy('id')
             ->get();
 
-        return view('staff.surgery-lab-tests.print', compact('surgeryLabTests', 'test'));
+        if ($surgeryLabTests->isEmpty()) {
+            $surgeryLabTests = collect([$test]);
+        }
+
+        return view('staff.surgery-lab-tests.print', compact('surgeryLabTests', 'test', 'surgery'));
     }
 
     /**

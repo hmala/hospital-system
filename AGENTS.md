@@ -53,6 +53,26 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-03 — المرحلة 149: ترقية وتحديث تصميم تقرير طباعة تحاليل العمليات الجراحية لمطابقة تقرير المختبر السريري الرسمي Surgery Lab Tests Official Clinical Print Report Modernization)
+
+### Done
+- **إعادة بناء قالب الطباعة بالكامل لمطابقة المختبر العام ([resources/views/staff/surgery-lab-tests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/print.blade.php))**:
+  * استبدال التصميم القديم (ذي الزخارف البنية وإطار 2025 والتنسيق البدائي) بالتصميم الطبي السريري المعتمد من المستشفى والمطابق لتقرير `staff/requests/print.blade.php`.
+  * ترويسة رسمية ثنائية اللغة للمستشفى وشعار مائي خفيف بالخلفية (`images/1.jpg`) مع شريط عنوان التقرير المتدرج: `تقرير الفحوصات المخبرية للعمليات الجراحية (SURGERY CLINICAL LABORATORY REPORT)`.
+  * بطاقة سريرية رمادية ثلاثية المناطق (3-Zone Clinical Card):
+    1. المنطقة اليسرى: اسم المريض بالعربية والإنجليزية (عبر `transliterateArabicName`)، العمر والجنس، ورقم الهاتف.
+    2. المنطقة الوسطى: اسم الجراح المعالج، نوع العملية الجراحية، الموقع السريري ورقم الغرفة والطابق `[ 🛏️ غرفة 302 (الطابق الثالث) ]`، وتاريخ ووقت الفحص.
+    3. المنطقة اليمنى: باركود ورمز استجابة سريعة مباشر QR Code للتحقق اللحظي من الفحص.
+  * جدول تحاليل موحد ومبوب بالأقسام الرئيسية (Categories)، يعرض: اسم الفحص والرمز، النتيجة، الوحدة، المدى المرجعي المحسوب آلياً حسب جنس وعمر المريض (`LabTestReference::forPatient`)، وتقييم الحالة السريرية التفاعلي بشارات ملونة (`Normal`, `High`, `Low`, `Abnormal`, `Pending`).
+  * دعم الفحوصات الفرعية (Sub-tests) وقسم التوصيات والملاحظات السريرية (`Clinical Notes & Recommendations`).
+  * كتلة التواقيع والاعتماد الرسمي المزدوج (أخصائي المختبر + الختم الدائري المعتمد لمستشفى الفرات الأهلي).
+  * شريط أدوات طباعة عائم متكامل: زر طباعة فوري، زر إرسال التقرير عبر واتساب، مبدل وضعية الطباعة (ورق أبيض كامل Full مقابل ورق مروس رسمي Letterhead مع تحكم بالمسافة العلوية)، وزر رجوع.
+- **تطوير دالة الكنترولر ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * ترقية دالة `printSurgeryLabTest` لتحميل كافة العلاقات السريرية (`surgery.patient.user`, `surgery.doctor.user`, `surgery.room`, `surgery.department`, `labTest.references`, `labTest.subTests`).
+  * إزالة قيود الحظر المسبق وتمكين طباعة الفحوصات سواء كانت مكتملة أو جارية أو كأمر عمل وتكليف مخبري (Requisition / Work Order).
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryLabTestUnifiedFlowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryLabTestUnifiedFlowTest.php))**:
+  * إضافة اختبار `test_print_page_renders_modern_clinical_report_with_patient_surgery_and_test_details` للتحقق من سلامة مسار الطباعة، وعرض بيانات المريض والجراح والغرفة والنتائج والملاحظات ومطابقة الهوية البصرية (8 passed, 49 assertions).
+
 ## Session log (2026-11-03 — المرحلة 148: إلغاء ازدواجية التبويبات وتوحيد شاشة تحاليل العمليات بجدول واحد ومطابقة واجهة إدخال النتائج للمختبر العام Surgery Lab Tests Single Unified Table & General Lab Twin Results Entry Flow)
 
 ### Done

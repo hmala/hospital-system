@@ -400,4 +400,84 @@ class SurgeryLabTestUnifiedFlowTest extends TestCase
         $response->assertSee('مريض الباقات');
         $response->assertSee('بيانات المريض والعملية الجراحية');
     }
+
+    public function test_print_page_renders_modern_clinical_report_with_patient_surgery_and_test_details(): void
+    {
+        $room = Room::create([
+            'room_number' => '302',
+            'room_type' => 'vip',
+            'floor' => 'الطابق الثالث',
+            'daily_fee' => 100000,
+            'status' => 'occupied',
+            'beds_count' => 1,
+            'has_bathroom' => true,
+            'has_tv' => true,
+            'has_ac' => true,
+            'is_active' => true,
+        ]);
+
+        $patientUser = User::factory()->create([
+            'name' => 'حسام عبد الستار حسين',
+            'gender' => 'male',
+            'phone' => '07712345678',
+        ]);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'national_id' => '12345678901245',
+            'age' => 38,
+        ]);
+
+        $doctorUser = User::factory()->create(['name' => 'د. احمد اسامة']);
+        $doctor = Doctor::create([
+            'user_id' => $doctorUser->id,
+            'specialization' => 'جراحة عامة',
+            'department_id' => $this->dept->id,
+            'qualification' => 'MBChB',
+            'license_number' => 'DOC-'.uniqid(),
+        ]);
+
+        $surgery = Surgery::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'department_id' => $this->dept->id,
+            'room_id' => $room->id,
+            'surgery_type' => 'عملية استئصال الزائدة الدودية',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => now(),
+            'status' => 'scheduled',
+        ]);
+
+        $t1 = LabTest::create([
+            'name' => 'Complete Blood Count CBC',
+            'code' => 'CBC01',
+            'main_category' => 'hematology',
+            'unit' => 'g/dL',
+            'reference_range' => '12.0 - 16.0',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $sTest = $surgery->labTests()->create([
+            'lab_test_id' => $t1->id,
+            'status' => 'completed',
+            'result' => '14.2',
+            'notes' => 'فحوصات ما قبل الصالة سليمة',
+            'payment_status' => 'paid',
+        ]);
+
+        $response = $this->actingAs($this->labStaff)
+            ->get(route('staff.surgery-lab-tests.print', $sTest));
+
+        $response->assertStatus(200);
+        $response->assertSee('SURGERY CLINICAL LABORATORY REPORT');
+        $response->assertSee('حسام عبد الستار حسين');
+        $response->assertSee('غرفة 302 (الطابق الثالث)');
+        $response->assertSee('عملية استئصال الزائدة الدودية');
+        $response->assertSee('Complete Blood Count CBC');
+        $response->assertSee('14.2');
+        $response->assertSee('فحوصات ما قبل الصالة سليمة');
+        $response->assertSee('مستشفى الفرات الأهلي');
+        $response->assertSee('طباعة التقرير');
+        $response->assertSee('ورق مروس (Letterhead)');
+    }
 }
