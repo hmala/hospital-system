@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('surgery_id')->constrained()->onDelete('cascade');
             $table->foreignId('lab_test_id')->constrained('lab_tests')->onDelete('cascade');
-            $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending');
             $table->text('result')->nullable();
             $table->string('result_file')->nullable(); // للنتائج المرفوعة
             $table->timestamp('completed_at')->nullable();

@@ -468,6 +468,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/surgery-lab-tests/{test}', [StaffRequestController::class, 'showSurgeryLabTest'])->name('surgery-lab-tests.show');
         Route::put('/surgery-lab-tests/{test}', [StaffRequestController::class, 'updateSurgeryLabTest'])->name('surgery-lab-tests.update');
         Route::put('/surgery-lab-tests/{test}/select-tests', [StaffRequestController::class, 'selectTestsForSurgeryLabTest'])->name('surgery-lab-tests.select-tests');
+        Route::post('/surgery/{surgery}/lab-tests/append', [StaffRequestController::class, 'appendSurgeryLabTests'])->name('surgery-lab-tests.append');
         Route::put('/surgery/{surgery}/lab-tests/update-all', [StaffRequestController::class, 'updateAllSurgeryLabTests'])->name('surgery-lab-tests.update-all');
         Route::get('/surgery-lab-tests/{test}/print', [StaffRequestController::class, 'printSurgeryLabTest'])->name('surgery-lab-tests.print');
 

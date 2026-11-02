@@ -1071,118 +1071,93 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 
-        // 1. استعلام العمليات الجراحية التي تحتاج تحديد واختيار تحاليل (New Surgeries awaiting test selection)
-        $pendingSelectionQuery = Surgery::with(['patient.user', 'doctor.user', 'room'])
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
-            ->whereDoesntHave('labTests', function ($q) {
-                $q->whereNotNull('lab_test_id');
-            });
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $pendingSelectionQuery->where(function ($q) use ($search) {
-                $q->whereHas('patient.user', function ($pq) use ($search) {
-                    $pq->where('name', 'like', '%'.$search.'%');
-                })->orWhere('surgery_type', 'like', '%'.$search.'%');
-            });
-        }
-
-        $pendingSelectionCount = (clone $pendingSelectionQuery)->count();
-        $pendingSelectionSurgeries = $pendingSelectionQuery->orderBy('scheduled_date', 'desc')
-            ->orderBy('scheduled_time', 'desc')
-            ->paginate(15, ['*'], 'selection_page')
-            ->appends($request->query());
-
-        // 2. استعلام العمليات التي تم تحديد تحاليلها بالفعل (Active & Completed Tests)
-        $query = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'labTests.labTest', 'room'])
-            ->whereHas('labTests')
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed']); // التأكد من وجود عملية صالحة
+        // الاستعلام الموحد لكافة العمليات الجراحية (جدول واحد موحد بدون تشتت)
+        $query = Surgery::with(['patient.user', 'doctor.user', 'room', 'labTests.labTest', 'department'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed']);
 
         // البحث
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
             $query->where(function ($q) use ($search) {
-                $q->whereHas('patient.user', function ($patientQuery) use ($search) {
-                    $patientQuery->where('name', 'like', '%'.$search.'%');
+                $q->whereHas('patient.user', function ($pq) use ($search) {
+                    $pq->where('name', 'like', '%'.$search.'%');
                 })
+                    ->orWhere('id', $search)
                     ->orWhere('surgery_type', 'like', '%'.$search.'%')
-                    ->orWhereHas('labTests.labTest', function ($labTestQuery) use ($search) {
-                        $labTestQuery->where('name', 'like', '%'.$search.'%')
-                            ->orWhere('category', 'like', '%'.$search.'%');
+                    ->orWhereHas('labTests.labTest', function ($ltq) use ($search) {
+                        $ltq->where('name', 'like', '%'.$search.'%');
                     });
             });
         }
 
-        // فلترة حسب الحالة لـ surgery_lab_tests
-        if ($request->filled('status')) {
-            $status = $request->status;
-            $query->whereHas('labTests', function ($q) use ($status) {
-                $q->where('status', $status);
+        // فلترة التاريخ
+        $dateFilter = $request->query('date', 'all');
+        if ($dateFilter === 'today') {
+            $query->where(function ($q) {
+                $q->whereDate('scheduled_date', now()->toDateString())
+                    ->orWhereHas('labTests', fn ($tq) => $tq->whereDate('created_at', now()->toDateString()));
             });
-        }
-
-        // فلترة حسب التاريخ لـ surgery_lab_tests
-        if ($request->filled('date_from')) {
-            $query->whereHas('labTests', function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
-            });
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereHas('labTests', function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
-            });
-        }
-
-        $surgeries = $query->orderBy('id', 'desc')->paginate(20)->appends($request->query());
-
-        // حساب إحصائيات الفحوصات المطابقة للتصفية
-        $statsQuery = \App\Models\SurgeryLabTest::whereHas('surgery', function ($q) use ($request) {
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $q->where(function ($sq) use ($search) {
-                    $sq->whereHas('patient.user', function ($pq) use ($search) {
-                        $pq->where('name', 'like', '%'.$search.'%');
-                    })
-                        ->orWhere('surgery_type', 'like', '%'.$search.'%');
+        } elseif ($request->filled('date_from') || $request->filled('date_to')) {
+            if ($request->filled('date_from')) {
+                $query->where(function ($q) use ($request) {
+                    $q->whereDate('scheduled_date', '>=', $request->date_from)
+                        ->orWhereHas('labTests', fn ($tq) => $tq->whereDate('created_at', '>=', $request->date_from));
                 });
             }
-        });
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $statsQuery->where(function ($q) use ($search) {
-                $q->whereHas('labTest', function ($ltq) use ($search) {
-                    $ltq->where('name', 'like', '%'.$search.'%');
+            if ($request->filled('date_to')) {
+                $query->where(function ($q) use ($request) {
+                    $q->whereDate('scheduled_date', '<=', $request->date_to)
+                        ->orWhereHas('labTests', fn ($tq) => $tq->whereDate('created_at', '<=', $request->date_to));
                 });
+            }
+        }
+
+        // إحصائيات الفلترة السريعة (مطابقة لشاشة المختبر العامة)
+        $baseCountQuery = clone $query;
+        $counts = [
+            'all' => (clone $baseCountQuery)->count(),
+            'pending_selection' => (clone $baseCountQuery)->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id');
+            })->count(),
+            'pending' => (clone $baseCountQuery)->whereHas('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'pending');
+            })->count(),
+            'completed' => (clone $baseCountQuery)->whereHas('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'completed');
+            })->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'pending');
+            })->count(),
+        ];
+
+        // فلترة الحالة
+        $statusFilter = $request->query('status', 'all');
+        if ($statusFilter === 'pending_selection') {
+            $query->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id');
+            });
+        } elseif ($statusFilter === 'pending') {
+            $query->whereHas('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'pending');
+            });
+        } elseif ($statusFilter === 'completed') {
+            $query->whereHas('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'completed');
+            })->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id')->where('status', 'pending');
             });
         }
 
-        if ($request->filled('date_from')) {
-            $statsQuery->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $statsQuery->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        $stats = [
-            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
-            'completed' => (clone $statsQuery)->where('status', 'completed')->count(),
-            'cancelled' => (clone $statsQuery)->where('status', 'cancelled')->count(),
-        ];
-
-        // تحديد التبويب النشط
-        $activeTab = $request->query('tab');
-        if (! $activeTab) {
-            $activeTab = ($pendingSelectionCount > 0 && $surgeries->total() === 0) ? 'pending_selection' : 'active_tests';
-        }
+        $surgeries = $query->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('staff.surgery-lab-tests.index', compact(
             'surgeries',
-            'pendingSelectionSurgeries',
-            'pendingSelectionCount',
-            'stats',
-            'activeTab'
+            'counts',
+            'statusFilter',
+            'dateFilter'
         ));
     }
 
@@ -1325,9 +1300,19 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض تحاليل العمليات الجراحية');
         }
 
-        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'labTest']);
+        $test->load([
+            'surgery.patient.user',
+            'surgery.doctor.user',
+            'surgery.room',
+            'surgery.department',
+            'surgery.labTests.labTest',
+            'labTest',
+        ]);
 
-        return view('staff.surgery-lab-tests.show', compact('test'));
+        $packages = \App\Models\Package::where('is_active', true)->with('labTests')->orderBy('name')->get();
+        $userGroups = \App\Models\UserLabTestGroup::where('user_id', $user->id)->with('labTests')->orderBy('name')->get();
+
+        return view('staff.surgery-lab-tests.show', compact('test', 'packages', 'userGroups'));
     }
 
     /**
@@ -1396,28 +1381,100 @@ class StaffRequestController extends Controller
             return redirect()->back()->with('error', 'هذا الطلب محدد مسبقاً ولا يمكن تغيير تحاليله');
         }
 
-        $validated = $request->validate([
-            'lab_test_ids' => 'required|array|min:1',
+        $request->validate([
+            'lab_test_ids' => 'nullable|array',
             'lab_test_ids.*' => 'exists:lab_tests,id',
+            'package_id' => 'nullable|exists:packages,id',
         ]);
 
-        $labTestIds = $validated['lab_test_ids'];
+        $labTestIds = array_map('intval', $request->lab_test_ids ?? []);
+        if ($request->filled('package_id')) {
+            $package = \App\Models\Package::find($request->package_id);
+            if ($package) {
+                $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                $labTestIds = array_values(array_unique(array_merge($labTestIds, $pkgTestIds)));
+            }
+        }
+
+        if (empty($labTestIds)) {
+            return redirect()->back()->with('error', 'يرجى اختيار تحليل واحد على الأقل أو باقة طبية.');
+        }
 
         // حذف الطلب العام
         $surgery = $test->surgery;
         $test->delete();
 
+        $firstTest = null;
         // إنشاء طلبات جديدة لكل تحليل
         foreach ($labTestIds as $labTestId) {
-            $surgery->labTests()->create([
+            $newTest = $surgery->labTests()->create([
                 'lab_test_id' => $labTestId,
                 'status' => 'pending',
                 'payment_status' => 'pending',
             ]);
+            if (! $firstTest) {
+                $firstTest = $newTest;
+            }
+        }
+
+        if ($firstTest) {
+            return redirect()->route('staff.surgery-lab-tests.show', $firstTest)
+                ->with('success', 'تم اختيار التحاليل بنجاح. يمكنك الآن إدخال النتائج.');
         }
 
         return redirect()->route('staff.surgery-lab-tests.index')
             ->with('success', 'تم اختيار التحاليل بنجاح. عدد التحاليل: '.count($labTestIds));
+    }
+
+    /**
+     * إلحاق تحاليل إضافية لعملية جراحية
+     */
+    public function appendSurgeryLabTests(HttpRequest $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        if (! $user->hasAnyRole(['admin', 'lab_staff', 'doctor'])) {
+            abort(403, 'غير مصرح لك بإضافة تحاليل');
+        }
+
+        $request->validate([
+            'extra_lab_test_ids' => 'nullable|array',
+            'extra_lab_test_ids.*' => 'integer|exists:lab_tests,id',
+            'package_id' => 'nullable|integer|exists:packages,id',
+        ]);
+
+        $extraTestIds = array_map('intval', $request->extra_lab_test_ids ?? []);
+        if ($request->filled('package_id')) {
+            $package = \App\Models\Package::find($request->package_id);
+            if ($package) {
+                $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                $extraTestIds = array_values(array_unique(array_merge($extraTestIds, $pkgTestIds)));
+            }
+        }
+
+        if (empty($extraTestIds)) {
+            return redirect()->back()->with('error', 'يرجى اختيار تحليل واحد على الأقل أو باقة طبية.');
+        }
+
+        $existingTestIds = $surgery->labTests()->whereNotNull('lab_test_id')->pluck('lab_test_id')->toArray();
+        $added = 0;
+        foreach ($extraTestIds as $testId) {
+            if (! in_array($testId, $existingTestIds)) {
+                $surgery->labTests()->create([
+                    'lab_test_id' => $testId,
+                    'status' => 'pending',
+                    'payment_status' => 'pending',
+                ]);
+                $added++;
+            }
+        }
+
+        $firstTest = $surgery->labTests()->whereNotNull('lab_test_id')->first();
+        if ($firstTest) {
+            return redirect()->route('staff.surgery-lab-tests.show', $firstTest)
+                ->with('success', "تمت إضافة {$added} تحليل جديد بنجاح إلى العملية.");
+        }
+
+        return redirect()->back()->with('success', "تمت إضافة {$added} تحليل جديد بنجاح إلى العملية.");
     }
 
     /**
@@ -1432,8 +1489,12 @@ class StaffRequestController extends Controller
             abort(403, 'غير مصرح لك بتحديث هذه التحاليل');
         }
 
+        $action = $request->input('action', 'complete');
+        $isDraft = ($action === 'draft') || ($request->input('status') === 'in_progress');
+
         $validated = $request->validate([
-            'status' => 'required|in:pending,in_progress,completed',
+            'status' => 'nullable|in:pending,in_progress,completed',
+            'action' => 'nullable|in:draft,complete',
             'test_results' => 'nullable|array',
             'test_results.*.value' => 'nullable|string',
             'test_results.*.unit' => 'nullable|string',
@@ -1442,29 +1503,40 @@ class StaffRequestController extends Controller
         ]);
 
         $testResults = $validated['test_results'] ?? [];
-        $status = $validated['status'];
         $completedCount = 0;
 
         // تحديث كل تحليل
         foreach ($testResults as $testId => $resultData) {
             $surgeryTest = \App\Models\SurgeryLabTest::find($resultData['test_id']);
             if ($surgeryTest && $surgeryTest->surgery_id === $surgery->id) {
+                $hasValue = ! empty($resultData['value']);
+                $testStatus = $isDraft
+                    ? ($hasValue ? 'in_progress' : 'pending')
+                    : ($hasValue ? 'completed' : 'pending');
+
                 $surgeryTest->update([
                     'result' => $resultData['value'] ?? null,
-                    'status' => ! empty($resultData['value']) ? 'completed' : 'pending',
-                    'completed_at' => ! empty($resultData['value']) ? now() : null,
+                    'status' => $testStatus,
+                    'completed_at' => (! $isDraft && $hasValue) ? now() : null,
+                    'notes' => $validated['notes'] ?? $surgeryTest->notes,
                 ]);
 
-                if (! empty($resultData['value'])) {
+                if (! $isDraft && $hasValue) {
                     $completedCount++;
                 }
             }
         }
 
-        // حفظ الملاحظات على مستوى العملية (إذا كان هناك حقل في جدول surgeries)
-        // يمكنك إضافة حقل lab_notes في جدول surgeries إذا أردت
+        $msg = $isDraft
+            ? 'تم حفظ نتائج التحاليل كمسودة مؤقتة بنجاح.'
+            : "تم اعتماد نتائج التحاليل نهائياً بنجاح. عدد التحاليل المكتملة: {$completedCount} من {$surgery->labTests()->whereNotNull('lab_test_id')->count()}";
 
-        return redirect()->back()->with('success', "تم حفظ النتائج بنجاح. عدد التحاليل المكتملة: {$completedCount} من {$surgery->labTests()->count()}");
+        $firstTest = $surgery->labTests()->whereNotNull('lab_test_id')->first() ?: $surgery->labTests()->first();
+        if ($firstTest) {
+            return redirect()->route('staff.surgery-lab-tests.show', $firstTest)->with('success', $msg);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     /**

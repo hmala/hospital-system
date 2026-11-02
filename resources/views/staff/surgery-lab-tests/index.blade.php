@@ -1,31 +1,36 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-3">
-    <!-- Header -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-primary text-white p-2.5 rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 48px; height: 48px;">
-                        <i class="fas fa-flask fs-4"></i>
-                    </div>
-                    <div>
-                        <h4 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
-                            تحاليل وفحوصات العمليات الجراحية
-                        </h4>
-                        <small class="text-muted">
-                            تحديد واختيار التحاليل المخبرية للمرضى المحجوزين للعمليات ومتابعة النتائج والاعتماد
-                        </small>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    <a href="{{ route('lab.index') }}" class="btn btn-outline-secondary btn-sm fw-semibold rounded-pill px-3">
-                        <i class="fas fa-arrow-left me-1"></i> العودة للمختبر العام
-                    </a>
-                </div>
+<div class="container-fluid py-3" id="surgery-lab-tests-content">
+    
+    <!-- 1. الهيدر العلوي وشريط الإحصاءات السريعة (مطابق لـ /lab) -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary text-white p-2 rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px;">
+                <i class="fas fa-flask fs-4"></i>
             </div>
+            <div>
+                <h4 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                    تحاليل وفحوصات العمليات الجراحية
+                    <span class="badge bg-success shadow-sm" style="font-size: 0.72rem;">
+                        <i class="fas fa-circle fa-xs me-1"></i> مباشر
+                    </span>
+                </h4>
+                <small class="text-muted">
+                    مرحباً <strong>{{ auth()->user()->name }}</strong> • قائمة موحدة لإدارة واختيار فحوصات مرضى العمليات واعتماد نتائجها
+                </small>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('lab.index') }}" class="btn btn-outline-secondary btn-sm fw-semibold rounded-pill px-3 shadow-xs">
+                <i class="fas fa-arrow-left me-1"></i> الانتقال للمختبر العام
+            </a>
+            @can('create lab tests')
+                <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-primary btn-sm fw-semibold rounded-pill px-3 shadow-xs">
+                    <i class="fas fa-vial me-1"></i> دليل وأسعار التحاليل
+                </a>
+            @endcan
         </div>
     </div>
 
@@ -43,396 +48,372 @@
         </div>
     @endif
 
-    <!-- Tabs Switcher Bar -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 p-2 bg-light rounded-4 border">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="{{ route('staff.surgery-lab-tests.index', array_merge(request()->except(['tab', 'selection_page', 'page']), ['tab' => 'pending_selection'])) }}" 
-               class="btn rounded-pill px-3 py-1.5 fw-bold {{ $activeTab === 'pending_selection' ? 'btn-warning text-dark shadow-sm' : 'btn-outline-secondary' }}">
-                <i class="fas fa-hourglass-half me-1"></i>
-                عمليات بانتظار تحديد التحاليل
-                <span class="badge {{ $activeTab === 'pending_selection' ? 'bg-dark text-white' : 'bg-warning text-dark' }} rounded-pill ms-1">
-                    {{ $pendingSelectionCount }}
-                </span>
-            </a>
-
-            <a href="{{ route('staff.surgery-lab-tests.index', array_merge(request()->except(['tab', 'selection_page', 'page']), ['tab' => 'active_tests'])) }}" 
-               class="btn rounded-pill px-3 py-1.5 fw-bold {{ $activeTab === 'active_tests' ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary' }}">
-                <i class="fas fa-check-circle me-1"></i>
-                طلبات الفحوصات والنتائج
-                <span class="badge {{ $activeTab === 'active_tests' ? 'bg-white text-primary' : 'bg-secondary text-white' }} rounded-pill ms-1">
-                    {{ $surgeries->total() }}
-                </span>
+    <!-- 2. بطاقات الإحصاءات السريعة الأربعة الموحدة -->
+    <div class="row g-2 mb-3">
+        <!-- أ. كافة العمليات -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'all', 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($statusFilter ?? 'all') == 'all' ? 'border-bottom border-primary border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">كافة عمليات اليوم والجدول</span>
+                        <h4 class="mb-0 fw-bold text-primary font-monospace">{{ $counts['all'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">إجمالي مرضى العمليات المسجلين</small>
+                    </div>
+                    <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-procedures fs-5"></i>
+                    </div>
+                </div>
             </a>
         </div>
 
-        @if($activeTab === 'active_tests')
-            <div class="stats-summary d-flex gap-2">
-                <span class="badge bg-info text-dark rounded-pill px-2.5 py-1.5 fw-bold">
-                    <i class="fas fa-clock me-1"></i> {{ $stats['pending'] }} في الانتظار
-                </span>
-                <span class="badge bg-success text-white rounded-pill px-2.5 py-1.5 fw-bold">
-                    <i class="fas fa-check-circle me-1"></i> {{ $stats['completed'] }} مكتمل
-                </span>
-                @if($stats['cancelled'] > 0)
-                <span class="badge bg-danger text-white rounded-pill px-2.5 py-1.5 fw-bold">
-                    <i class="fas fa-times-circle me-1"></i> {{ $stats['cancelled'] }} ملغي
-                </span>
-                @endif
-            </div>
-        @endif
+        <!-- ب. بانتظار تحديد الفحوصات -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'pending_selection', 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($statusFilter ?? '') == 'pending_selection' ? 'border-bottom border-warning border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">بانتظار تحديد التحاليل</span>
+                        <h4 class="mb-0 fw-bold text-warning font-monospace">{{ $counts['pending_selection'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">محجوزة بحاجة لاختيار الفحوصات</small>
+                    </div>
+                    <div class="bg-warning-subtle text-warning p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-hourglass-half fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- ج. بانتظار الفحص / معلق -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'pending', 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($statusFilter ?? '') == 'pending' ? 'border-bottom border-info border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">بانتظار الفحص / جارية</span>
+                        <h4 class="mb-0 fw-bold text-info font-monospace">{{ $counts['pending'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">تحاليل محددة قيد سحب العينات والعمل</small>
+                    </div>
+                    <div class="bg-info-subtle text-info p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-vial fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- د. المكتملة والمعتمدة -->
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'completed', 'date' => request('date', 'all')]) }}" 
+               class="card shadow-sm border-0 text-decoration-none h-100 {{ ($statusFilter ?? '') == 'completed' ? 'border-bottom border-success border-4 shadow' : '' }}" 
+               style="background: #ffffff; transition: all 0.2s ease;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small d-block mb-1 fw-semibold">المكتملة والمعتمدة</span>
+                        <h4 class="mb-0 fw-bold text-success font-monospace">{{ $counts['completed'] ?? 0 }}</h4>
+                        <small class="text-muted" style="font-size: 0.7rem;">جاهزة ومتاحة لصالة العمليات</small>
+                    </div>
+                    <div class="bg-success-subtle text-success p-2 rounded-circle text-center" style="width: 42px; height: 42px;">
+                        <i class="fas fa-check-circle fs-5"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
-    @if($activeTab === 'pending_selection')
-        <!-- ======================= تبويب 1: العمليات بانتظار تحديد التحاليل ======================= -->
-        <div class="card shadow-sm border-0 mb-3 rounded-4">
-            <div class="card-body p-3">
-                <form method="GET" action="{{ route('staff.surgery-lab-tests.index') }}" class="row g-2 align-items-center">
-                    <input type="hidden" name="tab" value="pending_selection">
-                    <div class="col-md-9">
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0" name="search" value="{{ request('search') }}" placeholder="ابحث باسم المريض أو نوع العملية المحجوزة...">
-                        </div>
+    <!-- 3. شريط الفلترة والبحث السريع الموحد (مطابق لـ /lab) -->
+    <div class="card shadow-sm border-0 bg-white mb-3 rounded-3">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center justify-content-between">
+                <!-- أزرار الفلترة السريعة لحالة الفحص -->
+                <div class="col-lg-7 col-12">
+                    <div class="d-flex flex-wrap align-items-center gap-1.5">
+                        <span class="text-muted small fw-bold me-1"><i class="fas fa-filter text-secondary me-1"></i> فلترة:</span>
+                        
+                        <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'all', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                           class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? 'all') == 'all' ? 'btn-secondary text-white fw-bold shadow-sm' : 'btn-outline-secondary' }}">
+                            الكل <span class="badge bg-white text-dark ms-1 rounded-pill font-monospace">{{ $counts['all'] ?? 0 }}</span>
+                        </a>
+
+                        <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'pending_selection', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                           class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? '') == 'pending_selection' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-outline-warning text-dark' }}">
+                            <i class="fas fa-hourglass-half me-1"></i> بانتظار تحديد الفحوصات 
+                            <span class="badge bg-dark text-white ms-1 rounded-pill font-monospace">{{ $counts['pending_selection'] ?? 0 }}</span>
+                        </a>
+
+                        <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'pending', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                           class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? '') == 'pending' ? 'btn-primary text-white fw-bold shadow-sm' : 'btn-outline-primary' }}">
+                            <i class="fas fa-vial me-1"></i> بانتظار الفحص / معلق 
+                            <span class="badge bg-white text-primary ms-1 rounded-pill font-monospace">{{ $counts['pending'] ?? 0 }}</span>
+                        </a>
+
+                        <a href="{{ route('staff.surgery-lab-tests.index', ['status' => 'completed', 'date' => request('date', 'all'), 'search' => request('search')]) }}" 
+                           class="btn btn-sm py-1 px-3 rounded-pill {{ ($statusFilter ?? '') == 'completed' ? 'btn-success text-white fw-bold shadow-sm' : 'btn-outline-success' }}">
+                            <i class="fas fa-check-circle me-1"></i> المكتملة والمعتمدة 
+                            <span class="badge bg-white text-success ms-1 rounded-pill font-monospace">{{ $counts['completed'] ?? 0 }}</span>
+                        </a>
                     </div>
-                    <div class="col-md-3 d-flex gap-2">
-                        <button type="submit" class="btn btn-warning text-dark fw-bold w-100 rounded-pill shadow-xs">
-                            <i class="fas fa-search me-1"></i> بحث
-                        </button>
-                        @if(request('search'))
-                            <a href="{{ route('staff.surgery-lab-tests.index', ['tab' => 'pending_selection']) }}" class="btn btn-outline-secondary rounded-pill">
-                                <i class="fas fa-undo"></i>
+                </div>
+
+                <!-- شريط البحث وفلترة التاريخ -->
+                <div class="col-lg-5 col-12">
+                    <form method="GET" action="{{ route('staff.surgery-lab-tests.index') }}" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+                        <input type="hidden" name="status" value="{{ request('status', 'all') }}">
+                        
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => request('status', 'all'), 'date' => 'today', 'search' => request('search')]) }}" 
+                               class="btn {{ ($dateFilter ?? '') == 'today' ? 'btn-primary fw-bold' : 'btn-outline-secondary' }}">
+                                اليوم
                             </a>
-                        @endif
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
-            <div class="card-header bg-warning bg-opacity-25 border-bottom p-3">
-                <h6 class="mb-0 fw-bold text-dark d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <span>
-                        <i class="fas fa-procedures text-warning me-2"></i> 
-                        العمليات الجراحية المحجوزة بانتظار تحديد باقة التحاليل ({{ $pendingSelectionCount }})
-                    </span>
-                    <small class="text-muted fw-normal">حدد الفحوصات المخبرية المطلوبة للمريض قبل دخوله صالة العمليات</small>
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                @if($pendingSelectionSurgeries->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-center" style="width: 50px;">#</th>
-                                    <th>المريض والموقع</th>
-                                    <th>العملية الجراحية</th>
-                                    <th>الطبيب / الجراح</th>
-                                    <th>موعد العملية</th>
-                                    <th class="text-center">حالة العملية</th>
-                                    <th class="text-center" style="width: 180px;">الإجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($pendingSelectionSurgeries as $surgery)
-                                <tr>
-                                    <td class="text-center fw-bold text-muted">{{ $loop->iteration }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
-                                                <i class="fas fa-user-injured fs-6"></i>
-                                            </div>
-                                            <div>
-                                                <span class="fw-bold text-dark d-block">{{ $surgery->patient?->user?->name ?? 'غير معروف' }}</span>
-                                                <div class="d-flex align-items-center gap-1 mt-0.5 flex-wrap">
-                                                    <small class="text-muted">ملف: #{{ $surgery->patient?->file_number ?? $surgery->patient_id }}</small>
-                                                    @if($surgery->room)
-                                                        <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">
-                                                            <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold text-dark">{{ $surgery->surgery_type }}</span>
-                                        @if($surgery->surgery_category)
-                                            <br><span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 0.72rem;">{{ $surgery->surgery_category }}</span>
-                                        @endif
-                                        @if($surgery->surgery_fee_paid !== 'paid')
-                                            <br><span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill mt-1" style="font-size: 0.7rem;">
-                                                <i class="fas fa-clock me-1"></i> الرسوم معلقة
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="text-dark fw-semibold">{{ $surgery->doctor?->user?->name ?? $surgery->referring_doctor_name ?? 'غير محدد' }}</span>
-                                    </td>
-                                    <td>
-                                        @if($surgery->scheduled_date)
-                                            <i class="fas fa-calendar-alt text-primary me-1"></i> {{ $surgery->scheduled_date->format('Y-m-d') }}
-                                            <br><small class="text-muted">{{ $surgery->scheduled_time ? date('h:i A', strtotime($surgery->scheduled_time)) : '-' }}</small>
-                                        @else
-                                            <span class="text-muted">غير محدد</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill px-2.5 py-1 fw-bold {{ $surgery->status === 'waiting' ? 'bg-warning text-dark' : ($surgery->status === 'in_progress' ? 'bg-info text-dark' : 'bg-primary') }}">
-                                            {{ $surgery->status === 'waiting' ? 'بانتظار الصالة' : ($surgery->status === 'in_progress' ? 'قيد التجهيز' : 'مجدولة') }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <form action="{{ route('staff.surgery-lab-tests.create-selection', $surgery) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 py-1.5 shadow-xs">
-                                                <i class="fas fa-vial me-1"></i> تحديد باقة التحاليل
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="p-3">
-                        {{ $pendingSelectionSurgeries->links() }}
-                    </div>
-                @else
-                    <div class="text-center py-5">
-                        <div class="bg-success-subtle text-success rounded-circle d-inline-flex p-3 mb-3">
-                            <i class="fas fa-check-circle fa-3x"></i>
+                            <a href="{{ route('staff.surgery-lab-tests.index', ['status' => request('status', 'all'), 'date' => 'all', 'search' => request('search')]) }}" 
+                               class="btn {{ ($dateFilter ?? 'all') == 'all' ? 'btn-primary fw-bold' : 'btn-outline-secondary' }}">
+                                كافة التواريخ
+                            </a>
                         </div>
-                        <h5 class="fw-bold text-dark">لا توجد عمليات بانتظار تحديد التحاليل</h5>
-                        <p class="text-muted small">جميع العمليات الجراحية المحجوزة تم تحديد واختيار باقات تحاليلها بنجاح.</p>
-                    </div>
-                @endif
-            </div>
-        </div>
 
-    @else
-        <!-- ======================= تبويب 2: طلبات الفحوصات والنتائج الجارية ======================= -->
-        <div class="card shadow-sm border-0 mb-4 rounded-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0 fw-bold">
-                    <i class="fas fa-search me-2 text-primary"></i>
-                    البحث وتصفية طلبات الفحوصات
-                </h6>
-            </div>
-            <div class="card-body">
-                <form method="GET" action="{{ route('staff.surgery-lab-tests.index') }}" class="row g-3">
-                    <input type="hidden" name="tab" value="active_tests">
-                    <div class="col-md-4">
-                        <label for="search" class="form-label small fw-bold text-muted">البحث</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="ابحث بالمريض أو نوع العملية أو التحليل...">
-                        </div>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="status_filter" class="form-label small fw-bold text-muted">الحالة</label>
-                        <select class="form-select" id="status_filter" name="status">
-                            <option value="">جميع الحالات</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                            <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتمل</option>
-                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغي</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="date_from" class="form-label small fw-bold text-muted">من تاريخ</label>
-                        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ request('date_from') }}">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="date_to" class="form-label small fw-bold text-muted">إلى تاريخ</label>
-                        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ request('date_to') }}">
-                    </div>
-
-                    <div class="col-md-2 d-flex align-items-end">
-                        <div class="d-grid gap-2 d-md-flex w-100">
-                            <button type="submit" class="btn btn-primary fw-bold rounded-pill shadow-xs w-100">
-                                <i class="fas fa-search me-1"></i> تصفية
+                        <div class="input-group input-group-sm" style="max-width: 250px;">
+                            <input type="text" name="search" id="surgery-search-input" class="form-control" 
+                                   placeholder="بحث باسم المريض، رقم، عملية..." 
+                                   value="{{ request('search') }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
                             </button>
-                            <a href="{{ route('staff.surgery-lab-tests.index', ['tab' => 'active_tests']) }}" class="btn btn-outline-secondary rounded-pill">
-                                <i class="fas fa-undo"></i>
-                            </a>
+                            @if(request('search'))
+                                <a href="{{ route('staff.surgery-lab-tests.index', ['status' => request('status', 'all'), 'date' => request('date', 'all')]) }}" class="btn btn-outline-secondary" title="إلغاء البحث">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            @endif
                         </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
-            <div class="card-header bg-primary text-white p-3">
-                <h6 class="mb-0 fw-bold d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <span>
-                        <i class="fas fa-list me-2"></i>
-                        سجل الفحوصات والنتائج المخبرية للعمليات الجراحية
-                    </span>
-                    @if(request('search') || request('status') || request('date_from') || request('date_to'))
-                        <small class="badge bg-light text-primary rounded-pill px-2.5 py-1">مُفلترة</small>
-                    @endif
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                @if($surgeries->count() > 0)
+    <!-- 4. جدول طلبات العمليات الموحد والوحيد في الشاشة (قائمة واحدة مطابقة للمختبر العام) -->
+    <div class="card shadow-sm border-0 bg-white rounded-3 overflow-hidden">
+        <div class="card-body p-0">
+            @if($surgeries->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0" id="unifiedSurgeriesTable">
+                        <thead class="table-light text-muted small">
                             <tr>
-                                <th class="text-center" style="width: 50px;">#</th>
-                                <th>المريض</th>
-                                <th>نوع العملية</th>
-                                <th>موعد العملية</th>
-                                <th>التحاليل المطلوبة</th>
-                                <th class="text-center">الحالة الإجمالية</th>
-                                <th>تاريخ الطلب</th>
-                                <th class="text-center" style="width: 150px;">الإجراءات</th>
+                                <th class="text-center" style="width: 80px;"># العملية</th>
+                                <th>بيانات المريض والموقع</th>
+                                <th>المصدر / الجراح</th>
+                                <th>العملية والتحاليل المطلوبة</th>
+                                <th style="width: 145px;">موعد وتاريخ العملية</th>
+                                <th style="width: 110px;" class="text-center">حالة الدفع</th>
+                                <th style="width: 155px;" class="text-center">حالة الفحص</th>
+                                <th style="width: 180px;" class="text-center">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($surgeries as $surgery)
-                            @php
-                                $firstTest = $surgery->labTests->first();
-                                $testCount = $surgery->labTests->count();
-                                $pendingCount = $surgery->labTests->where('status', 'pending')->count();
-                                $completedCount = $surgery->labTests->where('status', 'completed')->count();
-                                $cancelledCount = $surgery->labTests->where('status', 'cancelled')->count();
-                                
-                                if ($pendingCount > 0) {
-                                    $statusClass = 'table-warning';
-                                    $statusText = 'قيد الانتظار';
-                                    $badgeClass = 'bg-warning text-dark';
-                                } elseif ($completedCount > 0) {
-                                    $statusClass = 'table-success';
-                                    $statusText = 'مكتملة';
-                                    $badgeClass = 'bg-success text-white';
-                                } else {
-                                    $statusClass = 'table-danger';
-                                    $statusText = 'ملغاة';
-                                    $badgeClass = 'bg-danger text-white';
-                                }
-                            @endphp
-                            <tr class="test-row {{ $statusClass }}" data-surgery-id="{{ $surgery->id }}">
-                                <td class="text-center fw-bold text-muted">{{ $loop->iteration }}</td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-circle me-2" style="width: 34px; height: 34px; background: linear-gradient(135deg, #007bff, #6610f2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                            {{ optional($surgery->patient?->user)->name ? mb_substr($surgery->patient->user->name, 0, 1, 'utf-8') : '?' }}
+                                @php
+                                    $patient = $surgery->patient;
+                                    $patientUser = $patient?->user;
+                                    $patientName = $patientUser?->name ?? 'مريض غير معروف';
+                                    $doctorUser = $surgery->doctor?->user;
+                                    $doctorName = $doctorUser?->name ?? 'غير محدد';
+                                    $validTests = $surgery->labTests->whereNotNull('lab_test_id');
+                                    $hasTests = $validTests->count() > 0;
+                                    $firstTest = $validTests->first() ?: $surgery->labTests->first();
+                                    $completedTestsCount = $validTests->where('status', 'completed')->count();
+                                    $isAllCompleted = $hasTests && ($completedTestsCount === $validTests->count());
+                                    $isFeePaid = ($surgery->surgery_fee_paid === 'paid') || ($validTests->where('payment_status', 'paid')->count() > 0);
+
+                                    // تحديد لون الحافة وحالة السطر
+                                    if (!$hasTests) {
+                                        $rowBorderColor = '#f59e0b'; // أصفر برتقالي - بانتظار تحديد الفحوصات
+                                        $rowBg = '#ffffff';
+                                    } elseif ($isAllCompleted) {
+                                        $rowBorderColor = '#10b981'; // أخضر - مكتمل ومعتمد
+                                        $rowBg = '#f0fdf4';
+                                    } else {
+                                        $rowBorderColor = '#0284c7'; // أزرق - بانتظار الفحص والنتائج
+                                        $rowBg = '#ffffff';
+                                    }
+                                @endphp
+                                <tr style="border-right: 4px solid {{ $rowBorderColor }}; background-color: {{ $rowBg }};">
+                                    <!-- 1. رقم العملية / الطلب -->
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary-subtle text-dark font-monospace fw-bold px-2 py-1">
+                                            #{{ $surgery->id }}
+                                        </span>
+                                        <div class="text-muted" style="font-size: 0.65rem;">
+                                            {{ $surgery->created_at ? $surgery->created_at->format('Y-m-d') : '' }}
                                         </div>
-                                        <div>
-                                            <span class="fw-bold text-dark d-block">{{ optional($surgery->patient?->user)->name ?? 'غير معروف' }}</span>
-                                            <div class="d-flex align-items-center gap-1 mt-0.5 flex-wrap">
-                                                <small class="text-muted">ملف: #{{ $surgery->patient?->file_number ?? $surgery->patient_id }}</small>
-                                                @if($surgery->room)
-                                                    <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                        <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                    </td>
+
+                                    <!-- 2. بيانات المريض والموقع السريري (الغرفة والطابق) -->
+                                    <td>
+                                        <div class="fw-bold text-dark d-flex align-items-center gap-1">
+                                            <span>{{ $patientName }}</span>
+                                            @if($patientUser?->gender)
+                                                <span class="text-muted small" style="font-size: 0.72rem;">
+                                                    ({{ $patientUser->gender === 'male' ? 'ذكر' : 'أنثى' }})
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="mt-1 d-flex flex-wrap align-items-center gap-1">
+                                            @if($surgery->room)
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-0.5 px-2 font-monospace" style="font-size: 0.75rem;">
+                                                    <i class="fas fa-bed me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor ?? 'الطابق' }})
+                                                </span>
+                                            @else
+                                                <span class="badge bg-light text-muted border py-0.5 px-2" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-hospital me-1"></i> لم تسند غرفة
+                                                </span>
+                                            @endif
+
+                                            @if($patient?->national_id)
+                                                <small class="text-muted font-monospace" style="font-size: 0.7rem;">
+                                                    هوية: {{ $patient->national_id }}
+                                                </small>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    <!-- 3. المصدر / الجراح -->
+                                    <td>
+                                        <div class="fw-semibold text-dark small">
+                                            <i class="fas fa-user-md text-primary me-1"></i> د. {{ $doctorName }}
+                                        </div>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">
+                                            {{ $surgery->department?->name ?? 'قسم العمليات الجراحية' }}
+                                        </small>
+                                    </td>
+
+                                    <!-- 4. العملية والتحاليل المطلوبة -->
+                                    <td>
+                                        <div class="fw-bold text-dark small mb-1">
+                                            <i class="fas fa-scalpel text-secondary me-1"></i> {{ $surgery->surgery_type }}
+                                        </div>
+                                        @if($hasTests)
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach($validTests->take(4) as $sTest)
+                                                    <span class="badge {{ $sTest->status === 'completed' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-dark border' }} py-0.5 px-2" style="font-size: 0.72rem;">
+                                                        @if($sTest->status === 'completed')
+                                                            <i class="fas fa-check-circle me-1"></i>
+                                                        @else
+                                                            <i class="fas fa-vial me-1 text-primary"></i>
+                                                        @endif
+                                                        {{ $sTest->labTest->name ?? 'تحليل' }}
+                                                    </span>
+                                                @endforeach
+                                                @if($validTests->count() > 4)
+                                                    <span class="badge bg-secondary-subtle text-dark border py-0.5 px-1.5" style="font-size: 0.7rem;">
+                                                        +{{ $validTests->count() - 4 }} تحاليل أخرى
                                                     </span>
                                                 @endif
                                             </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info text-dark rounded-pill">{{ $surgery->surgery_type }}</span>
-                                    @if($surgery->surgery_fee_paid !== 'paid')
-                                    <br>
-                                    <span class="badge bg-danger rounded-pill mt-1" style="font-size: 0.7rem;" title="لا يمكن إجراء التحليل قبل دفع رسوم العملية">
-                                        <i class="fas fa-exclamation-triangle me-1"></i> رسوم معلقة
-                                    </span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($surgery->scheduled_date)
-                                    <i class="fas fa-calendar-alt text-primary me-1"></i>
-                                    {{ $surgery->scheduled_date->format('Y-m-d') }}
-                                    <br>
-                                    <small class="text-muted">{{ $surgery->scheduled_time ? date('h:i A', strtotime($surgery->scheduled_time)) : '-' }}</small>
-                                    @else
-                                    <span class="text-muted">غير محدد</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-wrap gap-1">
-                                        @foreach($surgery->labTests as $sTest)
-                                            <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size: 0.75rem;" title="{{ $sTest->status == 'completed' ? 'مكتمل' : ($sTest->status == 'cancelled' ? 'ملغي' : 'في الانتظار') }}">
-                                                {{ $sTest->labTest?->name ?? 'طلب عام' }}
-                                                @if($sTest->status == 'completed')
-                                                    <i class="fas fa-check-circle text-success ms-1"></i>
-                                                @elseif($sTest->status == 'cancelled')
-                                                    <i class="fas fa-times-circle text-danger ms-1"></i>
-                                                @else
-                                                    <i class="fas fa-clock text-warning ms-1"></i>
-                                                @endif
+                                        @else
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" style="font-size: 0.75rem;">
+                                                <i class="fas fa-exclamation-triangle text-warning me-1"></i> لم تحدد التحاليل بعد (طلب جديد)
                                             </span>
-                                        @endforeach
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge {{ $badgeClass }} rounded-pill px-2.5 py-1 fw-bold">
-                                        <i class="fas {{ $pendingCount > 0 ? 'fa-clock' : ($completedCount > 0 ? 'fa-check-circle' : 'fa-times-circle') }} me-1"></i>
-                                        {{ $statusText }}
-                                    </span>
-                                    <br>
-                                    <small class="text-muted" style="font-size: 0.75rem;">({{ $completedCount }} من {{ $testCount }} مكتمل)</small>
-                                </td>
-                                <td>
-                                    @if($surgery->labTests->max('created_at'))
-                                        {{ $surgery->labTests->max('created_at')->format('Y-m-d') }}
-                                        <br>
-                                        <small class="text-muted">{{ $surgery->labTests->max('created_at')->format('H:i') }}</small>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        @if($firstTest)
-                                        <a href="{{ route('staff.surgery-lab-tests.show', $firstTest) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5" title="عرض التفاصيل وإدخال النتائج">
-                                            <i class="fas fa-eye me-1"></i> عرض وإدخال
-                                        </a>
                                         @endif
-                                        @if($completedCount > 0 && $firstTest)
-                                        <a href="{{ route('staff.surgery-lab-tests.print', $firstTest) }}"
-                                           class="btn btn-sm btn-outline-success rounded-pill ms-1"
-                                           target="_blank"
-                                           title="طباعة نتائج العملية">
-                                            <i class="fas fa-print"></i>
-                                        </a>
+                                    </td>
+
+                                    <!-- 5. موعد وتاريخ العملية -->
+                                    <td>
+                                        <div class="small fw-semibold text-dark">
+                                            <i class="far fa-calendar-alt text-secondary me-1"></i>
+                                            {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : 'غير محدد' }}
+                                        </div>
+                                        <small class="text-muted d-block font-monospace" style="font-size: 0.72rem;">
+                                            <i class="far fa-clock me-1"></i>
+                                            {{ $surgery->scheduled_time ? date('h:i A', strtotime($surgery->scheduled_time)) : 'وقت غير محدد' }}
+                                        </small>
+                                    </td>
+
+                                    <!-- 6. حالة الدفع -->
+                                    <td class="text-center">
+                                        @if($isFeePaid)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 0.72rem;">
+                                                <i class="fas fa-check-circle me-1"></i> مدفوع
+                                            </span>
+                                        @else
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2" style="font-size: 0.72rem;">
+                                                <i class="fas fa-clock me-1"></i> غير مدفوع
+                                            </span>
                                         @endif
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+
+                                    <!-- 7. حالة الفحص -->
+                                    <td class="text-center">
+                                        @if(!$hasTests)
+                                            <span class="badge bg-warning text-dark py-1.5 px-2.5 rounded-pill shadow-xs" style="font-size: 0.72rem;">
+                                                <i class="fas fa-hourglass-half me-1"></i> بانتظار تحديد الفحوصات
+                                            </span>
+                                        @elseif($isAllCompleted)
+                                            <span class="badge bg-success text-white py-1.5 px-2.5 rounded-pill shadow-xs" style="font-size: 0.72rem;">
+                                                <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد ({{ $completedTestsCount }}/{{ $validTests->count() }})
+                                            </span>
+                                        @else
+                                            <span class="badge bg-primary text-white py-1.5 px-2.5 rounded-pill shadow-xs" style="font-size: 0.72rem;">
+                                                <i class="fas fa-vial me-1"></i> بانتظار الفحص / جاري ({{ $completedTestsCount }}/{{ $validTests->count() }})
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <!-- 8. الإجراءات -->
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            @if(!$hasTests)
+                                                <!-- زر تحديد الباقة للعمليات المحجوزة حديثاً -->
+                                                <form action="{{ route('staff.surgery-lab-tests.create-selection', $surgery) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-warning text-dark btn-sm fw-bold px-3 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1">
+                                                        <i class="fas fa-vial"></i>
+                                                        <span>تحديد باقة التحاليل</span>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <!-- زر إدخال / معاينة النتائج للعمليات التي لها تحاليل -->
+                                                <a href="{{ route('staff.surgery-lab-tests.show', $firstTest) }}" 
+                                                   class="btn {{ $isAllCompleted ? 'btn-outline-primary' : 'btn-primary' }} btn-sm fw-semibold rounded-pill px-3 shadow-xs d-inline-flex align-items-center gap-1">
+                                                    <i class="fas {{ $isAllCompleted ? 'fa-eye' : 'fa-microscope' }}"></i>
+                                                    <span>{{ $isAllCompleted ? 'معاينة النتائج' : 'إدخال النتائج' }}</span>
+                                                </a>
+
+                                                @if($completedTestsCount > 0)
+                                                    <a href="{{ route('staff.surgery-lab-tests.print', $firstTest) }}" target="_blank" 
+                                                       class="btn btn-outline-dark btn-sm rounded-circle p-1 shadow-xs" 
+                                                       title="طباعة تقرير التحاليل المعتمدة" 
+                                                       style="width: 31px; height: 31px; display: inline-flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <div class="text-muted small">
-                        عرض {{ $surgeries->firstItem() }} إلى {{ $surgeries->lastItem() }} من أصل {{ $surgeries->total() }} عملية
+                @if($surgeries->hasPages())
+                    <div class="p-3 border-top d-flex justify-content-center">
+                        {{ $surgeries->links() }}
                     </div>
-                    <div>
-                        {{ $surgeries->appends(request()->query())->links() }}
-                    </div>
-                </div>
-                @else
-                <div class="text-center py-5">
-                    <i class="fas fa-flask fa-3x text-muted mb-3 opacity-50"></i>
-                    <h5 class="fw-bold text-dark">لا توجد طلبات تحاليل جارية أو مكتملة</h5>
-                    <p class="text-muted small mb-0">
-                        @if(request('search') || request('status') || request('date_from') || request('date_to'))
-                            لا توجد نتائج تطابق معايير البحث المحددة.
-                        @else
-                            لم يتم إدخال نتائج تحاليل لأي عملية بعد، يمكنك الانتقال لتبويب العمليات بانتظار تحديد التحاليل للبدء.
-                        @endif
-                    </p>
-                </div>
                 @endif
-            </div>
+            @else
+                <div class="text-center py-5">
+                    <div class="text-muted mb-3">
+                        <i class="fas fa-procedures fa-3x" style="color: #cbd5e1;"></i>
+                    </div>
+                    <h5 class="text-dark fw-bold mb-1">لا توجد عمليات جراحية مطابقة لخيارات الفرز الحالية</h5>
+                    <p class="text-muted small mb-3">يمكنك تعديل البحث أو الضغط على خيار "الكل" لعرض كافة العمليات.</p>
+                    <a href="{{ route('staff.surgery-lab-tests.index') }}" class="btn btn-outline-primary btn-sm px-3 rounded-pill">
+                        <i class="fas fa-redo me-1"></i> إعادة ضبط الفلاتر
+                    </a>
+                </div>
+            @endif
         </div>
-    @endif
+    </div>
 </div>
 @endsection

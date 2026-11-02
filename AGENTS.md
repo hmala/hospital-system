@@ -53,6 +53,23 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-03 — المرحلة 148: إلغاء ازدواجية التبويبات وتوحيد شاشة تحاليل العمليات بجدول واحد ومطابقة واجهة إدخال النتائج للمختبر العام Surgery Lab Tests Single Unified Table & General Lab Twin Results Entry Flow)
+
+### Done
+- **توحيد شاشة تحاليل العمليات بجدول واحد موحد ([resources/views/staff/surgery-lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/index.blade.php), [app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * إلغاء نظام التبويبين المنفصلين ودمج كافة مرضى العمليات في جدول واحد موحد يطابق واجهة المختبر العام `/lab`.
+  * إضافة بطاقات الإحصائيات الأربعة وشريط الفلترة السريع بنمط Pills: `الكل`، `🟡 بانتظار تحديد الفحوصات`، `🟠 بانتظار الفحص / معلق`، و `🟢 المكتملة والمعتمدة`.
+  * إبراز بيانات المريض والموقع السريري بوضوح: `[ 🛏️ غرفة 302 (الطابق الثالث) ]` وحالة دفع الرسوم المالية.
+  * زر الإجراء الذكي: `[ 🧪 تحديد باقة التحاليل ]` للعمليات المحجوزة حديثاً، وزر `[ 👁️ إدخال النتائج / معاينة ]` مع زر الطباعة للعمليات التي حُددت فحوصاتها.
+- **مطابقة واجهة إدخال النتائج لشاشة المختبر العام ([resources/views/staff/surgery-lab-tests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/show.blade.php), [app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * تزويد الصفحة بشريط إجراءات علوي وسفلي متكامل: `[ 💾 حفظ مؤقت (مسودة) ]`، `[ 🚀 اعتماد نهائي وإرسال ]`، `[ ➕ إضافة تحاليل ]` (إلحاق فحوصات جديدة عبر نافذة منبثقة Modal)، `[ 🖨️ طباعة التقرير ]`، و `[ 📲 إرسال النتيجة عبر واتساب ]`.
+  * بطاقة مريض وسرير وعملية مدمجة ومطابقة لشاشة المختبر العام.
+  * جدول إدخال النتائج مع جلب المرجع الطبيعي المعتمد آلياً حسب جنس وعمر المريض عبر `LabTestReference::forPatient()`، والتقييم اللحظي التفاعلي بالألوان (طبيعي / مرتفع / منخفض / غير مكتمل)، وشريط إحصاءات النتائج المباشر.
+- **توسيع مايجريشن قاعدة البيانات ([database/migrations/2026_11_03_002201_add_notes_to_surgery_lab_tests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_03_002201_add_notes_to_surgery_lab_tests_table.php))**:
+  * إضافة عمود الملاحظات `notes` في جدول `surgery_lab_tests` وتوسيع حقل الحالة `status` ليشمل `in_progress`.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryLabTestUnifiedFlowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryLabTestUnifiedFlowTest.php))**:
+  * تغطية 100%: فحص ظهور المريض في الجدول الموحد، بدء التحديد، تأكيد التحاليل والتحويل لشاشة النتائج، حفظ المسودة والاعتماد النهائي، إلحاق تحاليل إضافية، وظهور تنبيه المختبر العام (6 passed, 32 assertions).
+
 ## Session log (2026-11-02 — المرحلة 147: توحيد وربط منظومة تحاليل العمليات الجراحية بالمختبر العام وحل فراغ شاشة تحاليل العمليات Surgery Lab Tests Unified Tabs & General Laboratory Direct Integration)
 
 ### Done

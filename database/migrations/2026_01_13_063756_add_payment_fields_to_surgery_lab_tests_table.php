@@ -18,6 +18,9 @@ return new class extends Migration
             if (! Schema::hasColumn('surgery_lab_tests', 'payment_id')) {
                 $table->foreignId('payment_id')->nullable()->after('payment_status');
             }
+            if (! Schema::hasColumn('surgery_lab_tests', 'notes')) {
+                $table->text('notes')->nullable()->after('completed_at');
+            }
         });
     }
 
@@ -27,6 +30,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('surgery_lab_tests', function (Blueprint $table) {
+            if (Schema::hasColumn('surgery_lab_tests', 'notes')) {
+                $table->dropColumn('notes');
+            }
             if (Schema::hasColumn('surgery_lab_tests', 'payment_id')) {
                 $table->dropColumn('payment_id');
             }
