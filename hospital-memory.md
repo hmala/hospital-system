@@ -79,6 +79,32 @@
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
 ### ✅ Completed (المكتمل والمُختبر):
+- **المرحلة 142 (إنشاء وتعميم تبويب الحسابات المتكامل لقسم الخدج والحاضنات NICU Accounting & Analytics Module ضمن الحسابات العامة والمالية):**
+  * **القائمة الجانبية الموحدة (`resources/views/layouts/app.blade.php`)**:
+    - إضافة قسم فرعي جديد `حسابات الخدج والحاضنات` (`#nicuAccountingSubSection`) باللون الأزرق السماوي (`#0dcaf0`) تحت القائمة الموحدة "الحسابات العامة والمالية".
+    - يحتوي على التبويبات المعيارية الأربعة: تحليلات إحصاءات الخدج، الحركات المالية للخدج، كشوفات الخدج، وحسابات أطباء الخدج.
+  * **تحليلات وإحصاءات الخدج (`app/Http/Controllers/AccountantController.php`, `resources/views/accountant/nicu/analytics.blade.php`)**:
+    - إضافة دالة `nicuAnalytics` لعرض كروت KPI الشاملة (حالات الدخول كاش وضمان، نسبة إشغال الحاضنات، إجمالي المقبوضات والأمانات، وصافي إيراد الخدج).
+    - مخطط أعمدة لأعلى خدمات الخدج استخداماً وإيرادها التقديري (CPAP، معالجة ضوئية، عناية فائقة).
+    - مخطط بياني مقارن لنشاط أطباء الأطفال والخدج وإحصائيات الحالات والاستشارات.
+  * **الحركات المالية للخدج (`app/Http/Controllers/CashierController.php`, `resources/views/cashier/nicu-movements.blade.php`)**:
+    - إضافة دالة `nicuFinancialMovements` لسجل حركات `nicu_payments` بفلاتر التاريخ، طريقة الدفع (كاش/بطاقة)، ونوع الحركة (أمانات وسلفة، دفعات تحت الحساب، تسوية نهائية، واسترجاع فائض).
+    - بطاقات الملخص المالي الثلاثية: المستلم، المسترجع، والصافي الفعلي المقبوض، مع أزرار الطباعة والمعاينة والوصل الحراري وكشف حساب الطفل.
+  * **كشوفات الخدج (`app/Http/Controllers/CashierController.php`, `resources/views/cashier/nicu-statements.blade.php`)**:
+    - إضافة دالة `nicuStatements` لعرض تقرير تفصيلي بإيرادات الحواضن، التحاليل المخبرية، الأشعة، والاستشارات والأدوية لكل طفل راقد.
+    - جدول تفصيلي بالأيام المحتسبة وفق قواعد السماحية 6 ساعات، إجمالي التكلفة، المسدد، والرصيد المتبقي (ذمة أو فائض أمانات).
+  * **حسابات أطباء الخدج والأطفال (`app/Http/Controllers/CashierController.php`, `resources/views/cashier/nicu-doctor-accounts.blade.php`, `resources/views/cashier/nicu-doctor-account.blade.php`)**:
+    - رصد مستحقات أطباء الأطفال من استشارات الخدج المنجزة والحالات المشرف عليها.
+    - نموذج تسجيل وصرف دفعات المستحقات (`nicuDoctorPayout`) وتوثيق سند صرف وسند قيد خزينة `FinancialTransaction`.
+  * **الربط مع الخزينة المركزية للمستشفى (`app/Http/Controllers/HospitalTreasuryController.php`, `app/Models/FinancialTransaction.php`)**:
+    - إضافة تصنيف `nicu` في `FinancialTransaction::CATEGORIES`.
+    - إدراج الخدج ورعاية حديثي الولادة (NICU) كقسم رئيسي ضمن بطاقات إيرادات الأقسام ومصفوفة الاستحقاق في لوحة الخزينة المركزية.
+    - التوثيق المالي التلقائي في `FinancialTransaction` عند تحصيل أو استرجاع أي دفعة خديج في `processNicuPayment`.
+  * **الصلاحيات والـ Seeder (`database/seeders/RolesAndPermissionsSeeder.php`)**:
+    - إضافة وتوليد الصلاحيات: `view nicu analytics`, `view nicu financial movements`, `view nicu statements`, `view nicu doctor accounts`.
+  * **حزمة الاختبارات الآلية الشاملة (`tests/Feature/NicuAccountingTest.php`)**:
+    - تغطية شاملة لجميع المسارات والصفحات الأربعة وعملية صرف مستحقات الطبيب (4 passed, 21 assertions بنجاح 100%).
+
 - **المرحلة 141 (نظام نسب التحمل المفصلة لكل خدمة في فواتير الضمان الصحي الموحدة لدى الكاشير Per-Service Item Copay Enforcement on Combined Cashier Insurance Receipts):**
   * **نموذج الفئات التأمينية (`app/Models/HealthInsuranceCategory.php`)**:
     - إضافة حالتي `ecg` و `nursing` في دالة `getCopayForService` لترجع نسبة `consultation_copay` المعتمدة (10% للفئة H).

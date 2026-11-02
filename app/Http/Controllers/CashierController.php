@@ -370,47 +370,49 @@ class CashierController extends Controller
         // جلب قيود وحسابات الخدج والحاضنات النشطة الموحدة (NICU Inpatient Live Dynamic Folios)
         $billingService = app(\App\Services\NicuBillingService::class);
         $nicuReservationsQuery = \App\Models\IncubatorReservation::with([
-                'patient.user',
-                'incubator',
-                'nicuService',
-                'doctor.user',
-                'payments'
-            ])
-            ->where(function($q) {
+            'patient.user',
+            'incubator',
+            'nicuService',
+            'doctor.user',
+            'payments',
+        ])
+            ->where(function ($q) {
                 $q->whereIn('status', ['admitted', 'pending'])
-                  ->orWhere('status', 'discharged');
+                    ->orWhere('status', 'discharged');
             });
 
         if ($search) {
-            $nicuReservationsQuery->where(function($q) use ($search) {
+            $nicuReservationsQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('baby_name', 'like', "%{$search}%")
-                  ->orWhereHas('patient.user', fn($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
-                  ->orWhereHas('patient', fn($qp) => $qp->where('medical_number', 'like', "%{$search}%"));
+                    ->orWhere('baby_name', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
+                    ->orWhereHas('patient', fn ($qp) => $qp->where('medical_number', 'like', "%{$search}%"));
             });
         }
 
         $activeNicuReservations = $nicuReservationsQuery->orderBy('admission_date', 'desc')->get();
 
-        $nicuAccounts = $activeNicuReservations->map(function($res) use ($billingService) {
+        $nicuAccounts = $activeNicuReservations->map(function ($res) use ($billingService) {
             $stayDetails = $billingService->calculateStayDetails($res);
+
             return [
                 'reservation' => $res,
                 'stay_details' => $stayDetails,
-                'gross_total' => (float)$stayDetails['patient_grand_total'],
-                'total_paid' => (float)$stayDetails['total_paid'],
-                'net_balance' => (float)$stayDetails['net_balance'],
-                'excess_deposit' => (float)$stayDetails['excess_deposit'],
+                'gross_total' => (float) $stayDetails['patient_grand_total'],
+                'total_paid' => (float) $stayDetails['total_paid'],
+                'net_balance' => (float) $stayDetails['net_balance'],
+                'excess_deposit' => (float) $stayDetails['excess_deposit'],
             ];
-        })->filter(function($item) {
+        })->filter(function ($item) {
             // الحالات المنومة أو المعلقة تظهر دائماً، أما الحالات التي خرجت فتظهر إذا كان بذمتها رصيد متبقي أو لها فائض أمانات مستحق للإرجاع
             if (in_array($item['reservation']->status, ['admitted', 'pending'])) {
                 return true;
             }
+
             return $item['net_balance'] > 0 || $item['excess_deposit'] > 0;
         })->values();
 
-        $nicuRefundAccounts = $nicuAccounts->filter(fn($item) => $item['excess_deposit'] > 0)->values();
+        $nicuRefundAccounts = $nicuAccounts->filter(fn ($item) => $item['excess_deposit'] > 0)->values();
         $pendingNicuRefundCount = $nicuRefundAccounts->count();
         $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount;
 
@@ -715,7 +717,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('process payments') && !$user->can('process refunds')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments') && ! $user->can('process refunds')))) {
             abort(403, 'غير مصرح لك باستلام الدفعات أو صرف الاسترجاعات');
         }
 
@@ -741,14 +743,14 @@ class CashierController extends Controller
             }
 
             if ($amount > $excessDeposit) {
-                return redirect()->back()->with('error', 'المبلغ المطلوب استرجاعه (' . number_format($amount) . ' د.ع) يتجاوز الحد الأقصى لفائض الأمانات المتوفر (' . number_format($excessDeposit) . ' د.ع).');
+                return redirect()->back()->with('error', 'المبلغ المطلوب استرجاعه ('.number_format($amount).' د.ع) يتجاوز الحد الأقصى لفائض الأمانات المتوفر ('.number_format($excessDeposit).' د.ع).');
             }
         }
 
         $receiptNumber = NicuPayment::generateReceiptNumber();
-        $babyTitle = $reservation->baby_name ?: ('طفل ' . ($reservation->patient?->name ?? ''));
+        $babyTitle = $reservation->baby_name ?: ('طفل '.($reservation->patient?->name ?? ''));
         $typeLabel = NicuPayment::PAYMENT_TYPES[$paymentType] ?? 'دفعة حاضنة';
-        
+
         $defaultDesc = ($paymentType === NicuPayment::TYPE_REFUND)
             ? "صرف استرجاع فائض أمانات لحاضنة الخدج #{$reservation->id} - {$babyTitle}"
             : "{$typeLabel} لحاضنة الخدج #{$reservation->id} - {$babyTitle}";
@@ -767,10 +769,27 @@ class CashierController extends Controller
             'paid_at' => now(),
         ]);
 
+        $isRefund = ($paymentType === NicuPayment::TYPE_REFUND);
+        \App\Models\FinancialTransaction::create([
+            'transaction_type' => $isRefund ? 'expense' : 'income',
+            'voucher_type' => $isRefund ? 'outflow' : 'inflow',
+            'category' => $isRefund ? 'refund' : 'nicu',
+            'voucher_number' => $receiptNumber,
+            'related_type' => NicuPayment::class,
+            'related_id' => $payment->id,
+            'amount' => $amount,
+            'currency' => 'IQD',
+            'payment_method' => $request->payment_method ?: 'cash',
+            'description' => $desc,
+            'notes' => $desc,
+            'performed_by_id' => Auth::id(),
+            'performed_at' => now(),
+        ]);
+
         $actionName = ($paymentType === NicuPayment::TYPE_REFUND) ? 'nicu_refund_processed' : 'nicu_payment_received';
         $logDesc = ($paymentType === NicuPayment::TYPE_REFUND)
-            ? "صرف واسترجاع فائض أمانات لحاضنة الخدج #{$reservation->id} بمبلغ " . number_format($amount) . " د.ع برقم سند {$receiptNumber}"
-            : "استلام {$typeLabel} لحاضنة الخدج #{$reservation->id} بمبلغ " . number_format($amount) . " د.ع برقم وصل {$receiptNumber}";
+            ? "صرف واسترجاع فائض أمانات لحاضنة الخدج #{$reservation->id} بمبلغ ".number_format($amount)." د.ع برقم سند {$receiptNumber}"
+            : "استلام {$typeLabel} لحاضنة الخدج #{$reservation->id} بمبلغ ".number_format($amount)." د.ع برقم وصل {$receiptNumber}";
 
         \App\Services\UserActivityLogger::log(
             action: $actionName,
@@ -781,8 +800,8 @@ class CashierController extends Controller
         );
 
         $successMsg = ($paymentType === NicuPayment::TYPE_REFUND)
-            ? "تم صرف واسترجاع مبلغ " . number_format($amount) . " د.ع بنجاح لوالد الطفل برقم سند استرجاع: {$receiptNumber}"
-            : "تم استلام مبلغ " . number_format($amount) . " د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}";
+            ? 'تم صرف واسترجاع مبلغ '.number_format($amount)." د.ع بنجاح لوالد الطفل برقم سند استرجاع: {$receiptNumber}"
+            : 'تم استلام مبلغ '.number_format($amount)." د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}";
 
         return redirect()->route('cashier.nicu.receipt', $payment->id)
             ->with('success', $successMsg);
@@ -795,7 +814,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('view payments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('view payments')))) {
             abort(403, 'غير مصرح لك بعرض سند القبض');
         }
 
@@ -803,7 +822,7 @@ class CashierController extends Controller
             'reservation.incubator',
             'reservation.doctor.user',
             'reservation.patient.user',
-            'cashier'
+            'cashier',
         ]);
 
         $stayDetails = app(\App\Services\NicuBillingService::class)->calculateStayDetails($nicuPayment->reservation);
@@ -818,7 +837,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('view payments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('view payments')))) {
             abort(403, 'غير مصرح لك بطباعة سند القبض');
         }
 
@@ -826,7 +845,7 @@ class CashierController extends Controller
             'reservation.incubator',
             'reservation.doctor.user',
             'reservation.patient.user',
-            'cashier'
+            'cashier',
         ]);
 
         $stayDetails = app(\App\Services\NicuBillingService::class)->calculateStayDetails($nicuPayment->reservation);
@@ -841,7 +860,7 @@ class CashierController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view cashier') && !$user->can('view payments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('view payments')))) {
             abort(403, 'غير مصرح لك بطباعة الكشف التفصيلي');
         }
 
@@ -851,7 +870,7 @@ class CashierController extends Controller
             'patient.user',
             'payments.cashier',
             'medicalOrders.labTest',
-            'medicalOrders.radiologyType'
+            'medicalOrders.radiologyType',
         ]);
 
         $stayDetails = app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
@@ -4545,6 +4564,329 @@ class CashierController extends Controller
             DB::commit();
 
             return redirect()->route('cashier.emergency.doctor-account', $doctor)->with('success', 'تم تسجيل دفعة الصرف للطبيب بنجاح.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء الصرف: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * الحركات المالية لقسم الخدج والحاضنات
+     */
+    public function nicuFinancialMovements(Request $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('view nicu financial movements'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى الحركات المالية للخدج');
+        }
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+        $paymentMethod = $request->query('payment_method');
+        $paymentType = $request->query('payment_type');
+
+        $query = NicuPayment::with(['reservation.incubator', 'reservation.patient.user', 'cashier'])
+            ->where('financial_status', 'paid');
+
+        if ($fromDate) {
+            $query->whereDate('paid_at', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('paid_at', '<=', $toDate);
+        }
+
+        if ($paymentMethod) {
+            $query->where('payment_method', $paymentMethod);
+        }
+
+        if ($paymentType) {
+            $query->where('payment_type', $paymentType);
+        }
+
+        $totalsQuery = clone $query;
+        $totalReceived = (clone $totalsQuery)->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount');
+        $totalRefunded = (clone $totalsQuery)->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
+        $netTotal = $totalReceived - $totalRefunded;
+
+        $payments = $query->orderBy('paid_at', 'desc')->paginate(25);
+
+        return view('cashier.nicu-movements', compact(
+            'payments',
+            'totalReceived',
+            'totalRefunded',
+            'netTotal',
+            'fromDate',
+            'toDate',
+            'paymentMethod',
+            'paymentType'
+        ));
+    }
+
+    /**
+     * كشوفات حسابات الخدج والحاضنات بالتفصيل
+     */
+    public function nicuStatements(Request $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('view nicu statements'))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كشوفات حسابات الخدج');
+        }
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
+        $query = IncubatorReservation::with([
+            'incubator',
+            'patient.user',
+            'doctor.user',
+            'serviceLogs.nicuService',
+            'nicuService',
+            'medicalOrders',
+            'consultations',
+            'payments' => fn ($q) => $q->where('financial_status', 'paid'),
+        ]);
+
+        if ($fromDate) {
+            $query->whereDate('admission_date', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('admission_date', '<=', $toDate);
+        }
+
+        $reservations = $query->orderBy('admission_date', 'desc')->paginate(20);
+
+        // حساب الإجماليات للفترة
+        $summaryQuery = IncubatorReservation::query();
+        if ($fromDate) {
+            $summaryQuery->whereDate('admission_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $summaryQuery->whereDate('admission_date', '<=', $toDate);
+        }
+        $summaryIds = $summaryQuery->pluck('id');
+
+        // إجمالي خدمات الحواضن
+        $totalServicesFee = (float) \DB::table('nicu_service_logs')
+            ->whereIn('reservation_id', $summaryIds)
+            ->sum('total_cost');
+
+        // إجمالي التحاليل
+        $totalLabs = (float) \App\Models\NicuMedicalOrder::whereIn('reservation_id', $summaryIds)
+            ->where('order_type', 'lab')
+            ->where('status', '!=', 'cancelled')
+            ->sum('price');
+
+        // إجمالي الأشعة
+        $totalRadiology = (float) \App\Models\NicuMedicalOrder::whereIn('reservation_id', $summaryIds)
+            ->where('order_type', 'radiology')
+            ->where('status', '!=', 'cancelled')
+            ->sum('price');
+
+        // إجمالي الأدوية
+        $totalMedications = (float) \App\Models\NicuMedicalOrder::whereIn('reservation_id', $summaryIds)
+            ->where('order_type', 'medication')
+            ->where('status', '!=', 'cancelled')
+            ->sum('price');
+
+        // إجمالي الاستشارات
+        $totalConsultations = (float) \App\Models\NicuConsultation::whereIn('reservation_id', $summaryIds)
+            ->where('status', '!=', 'cancelled')
+            ->sum('fee');
+
+        // إجمالي المدفوع والأمانات المسددة
+        $paymentsQuery = NicuPayment::whereIn('incubator_reservation_id', $summaryIds)
+            ->where('financial_status', 'paid');
+        $totalCollected = (float) (clone $paymentsQuery)->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
+            - (float) (clone $paymentsQuery)->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
+
+        $billingService = app(\App\Services\NicuBillingService::class);
+
+        return view('cashier.nicu-statements', compact(
+            'reservations',
+            'totalServicesFee',
+            'totalLabs',
+            'totalRadiology',
+            'totalMedications',
+            'totalConsultations',
+            'totalCollected',
+            'billingService',
+            'fromDate',
+            'toDate'
+        ));
+    }
+
+    /**
+     * حسابات أطباء الخدج والأطفال
+     */
+    public function nicuDoctorAccounts(Request $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view nicu doctor accounts') && ! $user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى حسابات أطباء الخدج');
+        }
+
+        $doctors = \App\Models\Doctor::with(['user', 'department'])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->orderBy('users.name')
+            ->select('doctors.*')
+            ->get();
+
+        $doctorAccounts = [];
+
+        foreach ($doctors as $doctor) {
+            $consultations = \App\Models\NicuConsultation::where('doctor_id', $doctor->id)
+                ->where('status', 'completed')
+                ->where('fee', '>', 0)
+                ->get();
+
+            $supervisedCasesCount = \App\Models\IncubatorReservation::where('doctor_id', $doctor->id)->count();
+
+            $totalEarned = (float) $consultations->sum('fee');
+
+            $totalPaid = (float) \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+                ->where('notes', 'like', '%خدج%')
+                ->sum('amount');
+
+            $balance = $totalEarned - $totalPaid;
+
+            if ($totalEarned > 0 || $totalPaid > 0 || $supervisedCasesCount > 0) {
+                $doctorAccounts[] = [
+                    'doctor' => $doctor,
+                    'consultations_count' => $consultations->count(),
+                    'supervised_cases_count' => $supervisedCasesCount,
+                    'total_earned' => $totalEarned,
+                    'total_paid' => $totalPaid,
+                    'balance' => $balance,
+                ];
+            }
+        }
+
+        return view('cashier.nicu-doctor-accounts', compact('doctorAccounts'));
+    }
+
+    /**
+     * كشف حساب طبيب خدج مفرد
+     */
+    public function nicuDoctorAccount(Request $request, \App\Models\Doctor $doctor)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view nicu doctor accounts') && ! $user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تفاصيل حساب طبيب الخدج');
+        }
+
+        $doctor->load(['user', 'department']);
+
+        $consultations = \App\Models\NicuConsultation::with(['reservation.patient.user', 'reservation.incubator'])
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->where('fee', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'consultations_page');
+
+        $supervisedCases = \App\Models\IncubatorReservation::with(['patient.user', 'incubator'])
+            ->where('doctor_id', $doctor->id)
+            ->orderBy('admission_date', 'desc')
+            ->paginate(15, ['*'], 'cases_page');
+
+        $totalEarned = (float) \App\Models\NicuConsultation::where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->where('fee', '>', 0)
+            ->sum('fee');
+
+        $payouts = \App\Models\DoctorDue::with('paidBy')
+            ->where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%خدج%')
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'payouts_page');
+
+        $totalPaid = (float) \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%خدج%')
+            ->sum('amount');
+
+        $balance = $totalEarned - $totalPaid;
+
+        return view('cashier.nicu-doctor-account', compact(
+            'doctor',
+            'consultations',
+            'supervisedCases',
+            'totalEarned',
+            'payouts',
+            'totalPaid',
+            'balance'
+        ));
+    }
+
+    /**
+     * صرف مستحقات طبيب خدج
+     */
+    public function nicuDoctorPayout(Request $request, \App\Models\Doctor $doctor)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view nicu doctor accounts') && ! $user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بصرف مستحقات طبيب الخدج');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $amount = (float) $request->amount;
+
+        $totalEarned = (float) \App\Models\NicuConsultation::where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->where('fee', '>', 0)
+            ->sum('fee');
+
+        $totalPaid = (float) \App\Models\DoctorDue::where('doctor_id', $doctor->id)
+            ->where('notes', 'like', '%خدج%')
+            ->sum('amount');
+
+        $balance = $totalEarned - $totalPaid;
+
+        if ($amount > $balance) {
+            return redirect()->back()->with('error', 'المبلغ المدخل أكبر من الرصيد المتاح للطبيب ('.number_format($balance, 0).' د.ع).');
+        }
+
+        DB::beginTransaction();
+        try {
+            \App\Models\DoctorDue::create([
+                'doctor_id' => $doctor->id,
+                'amount' => $amount,
+                'status' => 'paid',
+                'notes' => $request->notes ?: 'صرف مستحقات أطباء الخدج',
+                'paid_by_id' => $user->id,
+                'paid_at' => now(),
+            ]);
+
+            $voucherNumber = 'EXP-NICU-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
+            \App\Models\FinancialTransaction::create([
+                'transaction_type' => 'expense',
+                'voucher_type' => 'outflow',
+                'category' => 'doctor_payout',
+                'voucher_number' => $voucherNumber,
+                'related_type' => \App\Models\Doctor::class,
+                'related_id' => $doctor->id,
+                'amount' => $amount,
+                'currency' => 'IQD',
+                'payment_method' => 'cash',
+                'description' => 'صرف مستحقات خدج وحاضنات للطبيب '.optional($doctor->user)->name,
+                'notes' => 'سند صرف نقدي - خدج: '.($request->notes ?: 'صرف مستحقات أطباء الخدج'),
+                'performed_by_id' => $user->id,
+                'performed_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.nicu.doctor-account', $doctor)->with('success', 'تم تسجيل دفعة الصرف لطبيب الخدج بنجاح.');
         } catch (\Exception $e) {
             DB::rollBack();
 

@@ -1019,7 +1019,11 @@
                             'view emergency financial movements', 
                             'view emergency statements', 
                             'view emergency doctor accounts', 
-                            'view diagnostic analytics'
+                            'view diagnostic analytics',
+                            'view nicu analytics',
+                            'view nicu financial movements',
+                            'view nicu statements',
+                            'view nicu doctor accounts'
                         ])
                         @php
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
@@ -1034,8 +1038,13 @@
                                                  request()->routeIs('cashier.emergency.doctor-accounts') ||
                                                  request()->routeIs('cashier.emergency.doctor-account');
                             $isDiagnosticsAccountsActive = request()->routeIs('accountant.diagnostics.*');
+                            $isNicuAccountsActive = request()->routeIs('accountant.nicu.analytics') ||
+                                                 request()->routeIs('cashier.nicu.financial-movements') ||
+                                                 request()->routeIs('cashier.nicu.statements') ||
+                                                 request()->routeIs('cashier.nicu.doctor-accounts') ||
+                                                 request()->routeIs('cashier.nicu.doctor-account');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive;
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1171,6 +1180,44 @@
                             </li>
                         </div>
                         @endcan
+
+                        <!-- القسم الفرعي: الخدج والحاضنات -->
+                        @canany(['view nicu analytics', 'view nicu financial movements', 'view nicu statements', 'view nicu doctor accounts'])
+                        <div class="sidebar-section-title {{ $isNicuAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuAccountingSubSection" aria-expanded="{{ $isNicuAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(13, 202, 240, 0.05); color: #0dcaf0; border-radius: 4px; cursor: pointer;">
+                            <span><i class="fas fa-baby me-1"></i> حسابات الخدج والحاضنات</span>
+                            <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="collapse {{ $isNicuAccountsActive ? 'show' : '' }} ps-2" id="nicuAccountingSubSection">
+                            @can('view nicu analytics')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('accountant.nicu.analytics') ? 'active' : '' }}" href="{{ route('accountant.nicu.analytics') }}">
+                                    <i class="fas fa-chart-bar text-info"></i><span> تحليلات إحصاءات الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu financial movements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.nicu.financial-movements') }}">
+                                    <i class="fas fa-money-bill-wave text-info"></i><span> الحركات المالية للخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu statements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.statements') ? 'active' : '' }}" href="{{ route('cashier.nicu.statements') }}">
+                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> كشوفات الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu doctor accounts')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.doctor-accounts') || request()->routeIs('cashier.nicu.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.nicu.doctor-accounts') }}">
+                                    <i class="fas fa-wallet text-info"></i><span> حسابات أطباء الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                        </div>
+                        @endcanany
                         </div> <!-- end unifiedAccountingSection -->
                         @endcanany
 

@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\HospitalTreasuryExport;
+use App\Models\ConsultationRevenue;
 use App\Models\Doctor;
 use App\Models\DoctorDue;
 use App\Models\DoctorFinancialAccount;
 use App\Models\FinancialTransaction;
 use App\Models\Payment;
-use App\Models\Purchase;
 use App\Models\Supplier;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -15,8 +16,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\HospitalTreasuryExport;
-use App\Models\ConsultationRevenue;
 
 class HospitalTreasuryController extends Controller
 {
@@ -27,7 +26,7 @@ class HospitalTreasuryController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view treasury') && !$user->can('view account statements')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view treasury') && ! $user->can('view account statements')))) {
             abort(403, 'غير مصرح لك بالوصول إلى خزينة وحسابات المستشفى العامة');
         }
     }
@@ -68,7 +67,7 @@ class HospitalTreasuryController extends Controller
         if ($request->filled('category') && $request->category !== 'all') {
             if (str_starts_with($request->category, 'radiology_')) {
                 $sub = str_replace('radiology_', '', $request->category);
-                $subtypes = match($sub) {
+                $subtypes = match ($sub) {
                     'sonar' => ['ultrasound', 'sonar', 'سونار'],
                     'xray' => ['general', 'xray', 'x-ray', 'radiology', 'أشعة', 'اشعة'],
                     'mri' => ['mri', 'رنين'],
@@ -77,24 +76,24 @@ class HospitalTreasuryController extends Controller
                     default => [$sub]
                 };
                 $query->where('category', 'radiology')
-                      ->where(function($q) use ($subtypes, $sub) {
-                          $q->whereHasMorph('related', [Payment::class], function($pQ) use ($subtypes, $sub) {
-                              if ($sub === 'xray') {
-                                  $pQ->where(function($pxQ) use ($subtypes) {
-                                      $pxQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
-                                          ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
-                                          ->orWhere(function($noRQ) {
-                                              $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
-                                          });
-                                  });
-                              } else {
-                                  $pQ->where(function($pxQ) use ($subtypes) {
-                                      $pxQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subtypes))
-                                          ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subtypes));
-                                  });
-                              }
-                          });
-                      });
+                    ->where(function ($q) use ($subtypes, $sub) {
+                        $q->whereHasMorph('related', [Payment::class], function ($pQ) use ($subtypes, $sub) {
+                            if ($sub === 'xray') {
+                                $pQ->where(function ($pxQ) use ($subtypes) {
+                                    $pxQ->whereHas('request', fn ($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                        ->orWhereHas('requests', fn ($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                        ->orWhere(function ($noRQ) {
+                                            $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
+                                        });
+                                });
+                            } else {
+                                $pQ->where(function ($pxQ) use ($subtypes) {
+                                    $pxQ->whereHas('request', fn ($rQ) => $rQ->whereIn('subtype', $subtypes))
+                                        ->orWhereHas('requests', fn ($rQ) => $rQ->whereIn('subtype', $subtypes));
+                                });
+                            }
+                        });
+                    });
             } else {
                 $query->where('category', $request->category);
             }
@@ -110,8 +109,8 @@ class HospitalTreasuryController extends Controller
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
                 $q->where('voucher_number', 'like', "%{$term}%")
-                  ->orWhere('description', 'like', "%{$term}%")
-                  ->orWhere('notes', 'like', "%{$term}%");
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('notes', 'like', "%{$term}%");
             });
         }
 
@@ -130,8 +129,8 @@ class HospitalTreasuryController extends Controller
         // فصل المبالغ المسترجعة للمرضى عن باقي المصروفات التشغيلية ومستحقات الأطباء
         $refundQuery = (clone $basePeriodQuery)->outflow()->where(function ($q) {
             $q->where('category', 'refund')
-              ->orWhere('description', 'like', '%استرجاع%')
-              ->orWhere('notes', 'like', '%استرجاع%');
+                ->orWhere('description', 'like', '%استرجاع%')
+                ->orWhere('notes', 'like', '%استرجاع%');
         });
         $periodRefunds = (float) $refundQuery->sum('amount');
         $periodRefundsCount = (int) $refundQuery->count();
@@ -142,7 +141,7 @@ class HospitalTreasuryController extends Controller
         $periodDoctorPayouts = (float) (clone $basePeriodQuery)->where('category', 'doctor_payout')->sum('amount');
         $periodPurchases = (float) (clone $basePeriodQuery)->where('category', 'purchase')->sum('amount');
         $periodOperational = (float) (clone $basePeriodQuery)->whereIn('category', [
-            'operational', 'salary', 'maintenance', 'utilities', 'medical_supplies', 'other'
+            'operational', 'salary', 'maintenance', 'utilities', 'medical_supplies', 'other',
         ])->sum('amount');
 
         // مطالبات الضمان الصحي للفترة (ذمم مدينة مؤجلة قيد التحصيل)
@@ -261,6 +260,14 @@ class HospitalTreasuryController extends Controller
                 'text_class' => 'text-success',
                 'border_class' => 'border-success-subtle',
             ],
+            'nicu' => [
+                'name' => 'الخدج ورعاية حديثي الولادة (NICU)',
+                'icon' => 'fa-baby',
+                'color' => '#06b6d4', // Cyan
+                'bg_class' => 'bg-info-subtle',
+                'text_class' => 'text-info',
+                'border_class' => 'border-info-subtle',
+            ],
             'general_income' => [
                 'name' => 'إيرادات وتحصيلات عامة',
                 'icon' => 'fa-coins',
@@ -281,13 +288,13 @@ class HospitalTreasuryController extends Controller
         foreach ($departmentsConfig as $catKey => $config) {
             if ($catKey === 'radiology') {
                 $catQuery = (clone $basePeriodQuery)->where('category', 'radiology')->inflow()
-                    ->where(function($q) {
+                    ->where(function ($q) {
                         $q->whereNull('related_type')
-                          ->orWhere('related_type', '!=', Payment::class)
-                          ->orWhereDoesntHaveMorph('related', [Payment::class], function($pQ) {
-                              $pQ->whereHas('request', fn($rQ) => $rQ->whereNotNull('subtype'))
-                                 ->orWhereHas('requests', fn($rQ) => $rQ->whereNotNull('subtype'));
-                          });
+                            ->orWhere('related_type', '!=', Payment::class)
+                            ->orWhereDoesntHaveMorph('related', [Payment::class], function ($pQ) {
+                                $pQ->whereHas('request', fn ($rQ) => $rQ->whereNotNull('subtype'))
+                                    ->orWhereHas('requests', fn ($rQ) => $rQ->whereNotNull('subtype'));
+                            });
                     });
                 $count = (int) $catQuery->count();
                 $cashGross = (float) $catQuery->sum('amount');
@@ -305,17 +312,17 @@ class HospitalTreasuryController extends Controller
                     $radPayQ->whereDate('paid_at', '<=', $request->to_date);
                 }
                 if ($catKey === 'radiology_xray') {
-                    $radPayQ->where(function($subQ) use ($subs) {
-                        $subQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subs))
-                             ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subs))
-                             ->orWhere(function($noRQ) {
-                                 $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
-                             });
+                    $radPayQ->where(function ($subQ) use ($subs) {
+                        $subQ->whereHas('request', fn ($rQ) => $rQ->whereIn('subtype', $subs))
+                            ->orWhereHas('requests', fn ($rQ) => $rQ->whereIn('subtype', $subs))
+                            ->orWhere(function ($noRQ) {
+                                $noRQ->whereDoesntHave('request')->whereDoesntHave('requests');
+                            });
                     });
                 } else {
-                    $radPayQ->where(function($subQ) use ($subs) {
-                        $subQ->whereHas('request', fn($rQ) => $rQ->whereIn('subtype', $subs))
-                             ->orWhereHas('requests', fn($rQ) => $rQ->whereIn('subtype', $subs));
+                    $radPayQ->where(function ($subQ) use ($subs) {
+                        $subQ->whereHas('request', fn ($rQ) => $rQ->whereIn('subtype', $subs))
+                            ->orWhereHas('requests', fn ($rQ) => $rQ->whereIn('subtype', $subs));
                     });
                 }
                 $count = (int) $radPayQ->count();
@@ -352,12 +359,37 @@ class HospitalTreasuryController extends Controller
                 $accrualGross = $totalRev > 0 ? $totalRev : ($cashGross + $insuranceClaims);
                 $costs = $docShare;
                 $net = $hospShare > 0 ? $hospShare : max(0.0, $accrualGross - $costs);
+            } elseif ($catKey === 'nicu') {
+                $nicuPayQ = \App\Models\NicuPayment::where('financial_status', 'paid');
+                if ($request->filled('from_date')) {
+                    $nicuPayQ->whereDate('paid_at', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $nicuPayQ->whereDate('paid_at', '<=', $request->to_date);
+                }
+                $count = (int) $nicuPayQ->count();
+                $received = (float) (clone $nicuPayQ)->where('payment_type', '!=', \App\Models\NicuPayment::TYPE_REFUND)->sum('amount');
+                $refunded = (float) (clone $nicuPayQ)->where('payment_type', \App\Models\NicuPayment::TYPE_REFUND)->sum('amount');
+                $cashGross = max(0.0, $received - $refunded);
+
+                // مطالبات الضمان للخدج
+                $nicuResQ = \App\Models\IncubatorReservation::whereIn('insurance_type', ['hi', 'moi', 'health_insurance']);
+                if ($request->filled('from_date')) {
+                    $nicuResQ->whereDate('admission_date', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $nicuResQ->whereDate('admission_date', '<=', $request->to_date);
+                }
+                $insuranceClaims = (float) $nicuResQ->sum('insurance_share_amount');
+                $accrualGross = $cashGross + $insuranceClaims;
+                $costs = 0;
+                $net = $accrualGross;
             } else {
                 $catQuery = (clone $basePeriodQuery)->where('category', $catKey)->inflow();
                 $count = (int) $catQuery->count();
                 $cashGross = (float) $catQuery->sum('amount');
 
-                $deptPayType = match($catKey) {
+                $deptPayType = match ($catKey) {
                     'lab' => 'lab',
                     'surgery' => 'surgery',
                     'emergency' => 'emergency',
@@ -396,8 +428,8 @@ class HospitalTreasuryController extends Controller
 
         // حساب نسبة كل قسم من إجمالي الإيراد الاستحقاقي
         foreach ($departmentStats as $catKey => &$stats) {
-            $stats['percentage'] = $totalHospitalAccrual > 0 
-                ? round(($stats['accrual_gross'] / $totalHospitalAccrual) * 100, 1) 
+            $stats['percentage'] = $totalHospitalAccrual > 0
+                ? round(($stats['accrual_gross'] / $totalHospitalAccrual) * 100, 1)
                 : 0;
 
             if ($stats['accrual_gross'] > 0) {
@@ -409,11 +441,11 @@ class HospitalTreasuryController extends Controller
         unset($stats);
 
         // 5. بيانات المنحنى البياني الزمني (Daily Cash Flow Trend)
-        $trendStartDate = $request->filled('from_date') 
-            ? Carbon::parse($request->from_date)->startOfDay() 
+        $trendStartDate = $request->filled('from_date')
+            ? Carbon::parse($request->from_date)->startOfDay()
             : now()->subDays(6)->startOfDay();
-        $trendEndDate = $request->filled('to_date') 
-            ? Carbon::parse($request->to_date)->endOfDay() 
+        $trendEndDate = $request->filled('to_date')
+            ? Carbon::parse($request->to_date)->endOfDay()
             : now()->endOfDay();
 
         if ($trendStartDate->diffInDays($trendEndDate) > 30) {
@@ -453,7 +485,7 @@ class HospitalTreasuryController extends Controller
             ->leftJoin('payments', 'consultation_revenues.payment_id', '=', 'payments.id')
             ->where(function ($q) {
                 $q->whereNull('appointments.id')
-                  ->orWhere('appointments.status', '!=', 'cancelled');
+                    ->orWhere('appointments.status', '!=', 'cancelled');
             });
         if ($request->filled('from_date')) {
             $revQuery->whereDate('consultation_revenues.revenue_date', '>=', $request->from_date);
@@ -483,7 +515,7 @@ class HospitalTreasuryController extends Controller
             ->where('visits.status', '!=', 'cancelled')
             ->where(function ($q) {
                 $q->whereNull('appointments.id')
-                  ->orWhere('appointments.status', '!=', 'cancelled');
+                    ->orWhere('appointments.status', '!=', 'cancelled');
             });
         if ($request->filled('from_date')) {
             $referralReqQuery->whereDate('requests.created_at', '>=', $request->from_date);
@@ -601,6 +633,7 @@ class HospitalTreasuryController extends Controller
             if ($b['gross'] != $a['gross']) {
                 return $b['gross'] <=> $a['gross'];
             }
+
             return $b['total_appts'] <=> $a['total_appts'];
         });
 
@@ -675,21 +708,21 @@ class HospitalTreasuryController extends Controller
         $this->authorizeTreasuryAccess();
 
         $request->validate([
-            'category'       => 'required|string',
-            'amount'         => 'required|numeric|min:1',
-            'description'    => 'required|string|max:500',
+            'category' => 'required|string',
+            'amount' => 'required|numeric|min:1',
+            'description' => 'required|string|max:500',
             'payment_method' => 'nullable|string',
-            'performed_at'   => 'nullable|date',
-            'doctor_id'      => 'nullable|exists:doctors,id',
-            'supplier_id'    => 'nullable|exists:suppliers,id',
-            'notes'          => 'nullable|string|max:1000',
+            'performed_at' => 'nullable|date',
+            'doctor_id' => 'nullable|exists:doctors,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         DB::beginTransaction();
         try {
-            $amount = (float)$request->amount;
+            $amount = (float) $request->amount;
             $performedAt = $request->filled('performed_at') ? Carbon::parse($request->performed_at) : now();
-            $voucherNumber = 'EXP-' . now()->format('ymd') . '-' . rand(1000, 9999);
+            $voucherNumber = 'EXP-'.now()->format('ymd').'-'.rand(1000, 9999);
 
             $relatedType = null;
             $relatedId = null;
@@ -722,21 +755,21 @@ class HospitalTreasuryController extends Controller
                     if ($due->amount <= $remaining) {
                         $remaining = round($remaining - $due->amount, 2);
                         $due->update([
-                            'status'     => 'paid',
+                            'status' => 'paid',
                             'paid_by_id' => Auth::id(),
-                            'paid_at'    => $performedAt,
+                            'paid_at' => $performedAt,
                         ]);
                     } else {
                         $due->amount = round($due->amount - $remaining, 2);
                         $due->save();
 
                         DoctorDue::create([
-                            'doctor_id'  => $doctor->id,
-                            'amount'     => $remaining,
-                            'status'     => 'paid',
-                            'notes'      => 'صرف جزئي لمستحقات الطبيب - سند ' . $voucherNumber,
+                            'doctor_id' => $doctor->id,
+                            'amount' => $remaining,
+                            'status' => 'paid',
+                            'notes' => 'صرف جزئي لمستحقات الطبيب - سند '.$voucherNumber,
                             'paid_by_id' => Auth::id(),
-                            'paid_at'    => $performedAt,
+                            'paid_at' => $performedAt,
                         ]);
 
                         $remaining = 0;
@@ -745,12 +778,12 @@ class HospitalTreasuryController extends Controller
 
                 if ($remaining > 0) {
                     DoctorDue::create([
-                        'doctor_id'  => $doctor->id,
-                        'amount'     => $remaining,
-                        'status'     => 'paid',
-                        'notes'      => 'صرف للطبيب دون وجود مستحقات سابقة - سند ' . $voucherNumber,
+                        'doctor_id' => $doctor->id,
+                        'amount' => $remaining,
+                        'status' => 'paid',
+                        'notes' => 'صرف للطبيب دون وجود مستحقات سابقة - سند '.$voucherNumber,
                         'paid_by_id' => Auth::id(),
-                        'paid_at'    => $performedAt,
+                        'paid_at' => $performedAt,
                     ]);
                 }
             } elseif ($request->category === 'purchase' && $request->filled('supplier_id')) {
@@ -762,34 +795,36 @@ class HospitalTreasuryController extends Controller
             // إنشاء قيد الصرف بالخزينة
             $tx = FinancialTransaction::create([
                 'transaction_type' => 'expense',
-                'voucher_type'     => 'outflow',
-                'category'         => $request->category,
-                'voucher_number'   => $voucherNumber,
-                'related_type'     => $relatedType,
-                'related_id'       => $relatedId,
-                'amount'           => $amount,
-                'currency'         => 'IQD',
-                'payment_method'   => $request->payment_method ?: 'cash',
-                'description'      => $request->description,
-                'notes'            => $request->notes,
-                'performed_by_id'  => Auth::id(),
-                'performed_at'     => $performedAt,
+                'voucher_type' => 'outflow',
+                'category' => $request->category,
+                'voucher_number' => $voucherNumber,
+                'related_type' => $relatedType,
+                'related_id' => $relatedId,
+                'amount' => $amount,
+                'currency' => 'IQD',
+                'payment_method' => $request->payment_method ?: 'cash',
+                'description' => $request->description,
+                'notes' => $request->notes,
+                'performed_by_id' => Auth::id(),
+                'performed_at' => $performedAt,
             ]);
 
             \App\Services\UserActivityLogger::log(
                 action: 'treasury_expense',
                 category: 'treasury',
-                description: "إصدار سند صرف مصروفات بمبلغ " . number_format($amount) . " د.ع ({$request->description}) - سند #{$voucherNumber}",
+                description: 'إصدار سند صرف مصروفات بمبلغ '.number_format($amount)." د.ع ({$request->description}) - سند #{$voucherNumber}",
                 subject: $tx,
                 isSensitive: true,
                 properties: ['amount' => $amount, 'voucher' => $voucherNumber, 'category' => $request->category]
             );
 
             DB::commit();
-            return redirect()->route('treasury.index')->with('success', "تم تسجيل سند الصرف رقم {$voucherNumber} بمبلغ " . number_format($amount) . ' د.ع بنجاح.');
+
+            return redirect()->route('treasury.index')->with('success', "تم تسجيل سند الصرف رقم {$voucherNumber} بمبلغ ".number_format($amount).' د.ع بنجاح.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ سند الصرف: ' . $e->getMessage())->withInput();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ سند الصرف: '.$e->getMessage())->withInput();
         }
     }
 
@@ -801,45 +836,45 @@ class HospitalTreasuryController extends Controller
         $this->authorizeTreasuryAccess();
 
         $request->validate([
-            'category'       => 'required|string',
-            'amount'         => 'required|numeric|min:1',
-            'description'    => 'required|string|max:500',
+            'category' => 'required|string',
+            'amount' => 'required|numeric|min:1',
+            'description' => 'required|string|max:500',
             'payment_method' => 'nullable|string',
-            'performed_at'   => 'nullable|date',
-            'notes'          => 'nullable|string|max:1000',
+            'performed_at' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         try {
-            $amount = (float)$request->amount;
+            $amount = (float) $request->amount;
             $performedAt = $request->filled('performed_at') ? Carbon::parse($request->performed_at) : now();
-            $voucherNumber = 'REV-' . now()->format('ymd') . '-' . rand(1000, 9999);
+            $voucherNumber = 'REV-'.now()->format('ymd').'-'.rand(1000, 9999);
 
             $tx = FinancialTransaction::create([
                 'transaction_type' => 'hospital_revenue',
-                'voucher_type'     => 'inflow',
-                'category'         => $request->category,
-                'voucher_number'   => $voucherNumber,
-                'amount'           => $amount,
-                'currency'         => 'IQD',
-                'payment_method'   => $request->payment_method ?: 'cash',
-                'description'      => $request->description,
-                'notes'            => $request->notes,
-                'performed_by_id'  => Auth::id(),
-                'performed_at'     => $performedAt,
+                'voucher_type' => 'inflow',
+                'category' => $request->category,
+                'voucher_number' => $voucherNumber,
+                'amount' => $amount,
+                'currency' => 'IQD',
+                'payment_method' => $request->payment_method ?: 'cash',
+                'description' => $request->description,
+                'notes' => $request->notes,
+                'performed_by_id' => Auth::id(),
+                'performed_at' => $performedAt,
             ]);
 
             \App\Services\UserActivityLogger::log(
                 action: 'treasury_income',
                 category: 'treasury',
-                description: "إصدار سند قبض إيراد عام بمبلغ " . number_format($amount) . " د.ع ({$request->description}) - سند #{$voucherNumber}",
+                description: 'إصدار سند قبض إيراد عام بمبلغ '.number_format($amount)." د.ع ({$request->description}) - سند #{$voucherNumber}",
                 subject: $tx,
                 isSensitive: false,
                 properties: ['amount' => $amount, 'voucher' => $voucherNumber]
             );
 
-            return redirect()->route('treasury.index')->with('success', "تم تسجيل سند القبض رقم {$voucherNumber} بمبلغ " . number_format($amount) . ' د.ع بنجاح.');
+            return redirect()->route('treasury.index')->with('success', "تم تسجيل سند القبض رقم {$voucherNumber} بمبلغ ".number_format($amount).' د.ع بنجاح.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ سند القبض: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ سند القبض: '.$e->getMessage())->withInput();
         }
     }
 
@@ -854,7 +889,7 @@ class HospitalTreasuryController extends Controller
             return redirect()->back()->with('error', 'لا يمكن حذف الحركات المرتبطة مباشرة بإيصالات دفع المرضى من هذا القسم.');
         }
 
-        $voucherNo = $transaction->voucher_number ?: '#' . $transaction->id;
+        $voucherNo = $transaction->voucher_number ?: '#'.$transaction->id;
         $desc = $transaction->description;
         $amt = number_format($transaction->amount);
         $transaction->delete();
@@ -902,8 +937,8 @@ class HospitalTreasuryController extends Controller
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
                 $q->where('voucher_number', 'like', "%{$term}%")
-                  ->orWhere('description', 'like', "%{$term}%")
-                  ->orWhere('notes', 'like', "%{$term}%");
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('notes', 'like', "%{$term}%");
             });
         }
 
@@ -911,7 +946,7 @@ class HospitalTreasuryController extends Controller
 
         return Excel::download(
             new HospitalTreasuryExport($transactions),
-            'hospital_treasury_ledger_' . now()->format('Ymd_His') . '.xlsx'
+            'hospital_treasury_ledger_'.now()->format('Ymd_His').'.xlsx'
         );
     }
 }

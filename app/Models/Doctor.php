@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Doctor.php
 
 namespace App\Models;
@@ -8,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Doctor extends Model
 {
-    use HasFactory, \App\Traits\HasInsurancePricing;
+    use \App\Traits\HasInsurancePricing, HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -55,7 +56,7 @@ class Doctor extends Model
      */
     public function getSignatureDataUriAttribute(): ?string
     {
-        if (!$this->signature) {
+        if (! $this->signature) {
             return null;
         }
 
@@ -63,6 +64,7 @@ class Doctor extends Model
         if (file_exists($fullPath)) {
             $mime = @mime_content_type($fullPath) ?: 'image/png';
             $data = base64_encode(file_get_contents($fullPath));
+
             return "data:{$mime};base64,{$data}";
         }
 
@@ -92,6 +94,16 @@ class Doctor extends Model
         return $this->hasMany(Emergency::class);
     }
 
+    public function incubatorReservations()
+    {
+        return $this->hasMany(IncubatorReservation::class);
+    }
+
+    public function nicuConsultations()
+    {
+        return $this->hasMany(NicuConsultation::class, 'doctor_id');
+    }
+
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
@@ -110,8 +122,8 @@ class Doctor extends Model
 
         return $query->where(function ($q) use ($day) {
             $q->whereNull('working_days')
-              ->orWhereJsonContains('working_days', $day)
-              ->orWhere('working_days', 'like', '%' . $day . '%');
+                ->orWhereJsonContains('working_days', $day)
+                ->orWhere('working_days', 'like', '%'.$day.'%');
         });
     }
 
@@ -124,9 +136,10 @@ class Doctor extends Model
             return true;
         }
         $days = is_array($this->working_days) ? $this->working_days : json_decode($this->working_days, true);
-        if (!is_array($days)) {
-            return str_contains((string)$this->working_days, $day);
+        if (! is_array($days)) {
+            return str_contains((string) $this->working_days, $day);
         }
+
         return in_array($day, $days);
     }
 
@@ -190,7 +203,7 @@ class Doctor extends Model
     public function isAvailable($date)
     {
         // التحقق من أن الطبيب نشط
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -204,11 +217,11 @@ class Doctor extends Model
                 'tuesday' => 'الثلاثاء',
                 'wednesday' => 'الأربعاء',
                 'thursday' => 'الخميس',
-                'friday' => 'الجمعة'
+                'friday' => 'الجمعة',
             ];
-            
+
             $dayInArabic = $daysMap[$dayOfWeek] ?? null;
-            if (!in_array($dayInArabic, $this->working_days)) {
+            if (! in_array($dayInArabic, $this->working_days)) {
                 return false;
             }
         }

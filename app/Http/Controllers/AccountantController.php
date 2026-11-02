@@ -17,18 +17,23 @@ class AccountantController extends Controller
             $currentAction = $request->route() ? $request->route()->getActionMethod() : '';
 
             if ($currentAction === 'emergencyAnalytics') {
-                if (!$isAdmin && (!$user || !$user->can('view emergency analytics'))) {
+                if (! $isAdmin && (! $user || ! $user->can('view emergency analytics'))) {
                     abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات الطوارئ.');
                 }
             } elseif ($currentAction === 'diagnosticAnalytics') {
-                if (!$isAdmin && (!$user || !$user->can('view diagnostic analytics'))) {
+                if (! $isAdmin && (! $user || ! $user->can('view diagnostic analytics'))) {
                     abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات المختبر والأشعة.');
                 }
+            } elseif ($currentAction === 'nicuAnalytics') {
+                if (! $isAdmin && (! $user || ! $user->can('view nicu analytics'))) {
+                    abort(403, 'غير مصرح لك بالوصول إلى تحليلات وإحصاءات الخدج والحاضنات.');
+                }
             } else {
-                if (!$isAdmin && (!$user || !$user->can('review surgery prices'))) {
+                if (! $isAdmin && (! $user || ! $user->can('review surgery prices'))) {
                     abort(403, 'غير مصرح لك بالوصول إلى صفحات مراجعة الحسابات.');
                 }
             }
+
             return $next($request);
         });
     }
@@ -41,11 +46,11 @@ class AccountantController extends Controller
             'department',
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
-            'medicalDevices'
+            'medicalDevices',
         ])
-        ->where('billing_status', 'pending_review')
-        ->orderBy('updated_at', 'desc')
-        ->get();
+            ->where('billing_status', 'pending_review')
+            ->orderBy('updated_at', 'desc')
+            ->get();
 
         return view('accountant.surgeries.index', compact('surgeriesToReview'));
     }
@@ -62,7 +67,7 @@ class AccountantController extends Controller
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
             'surgeryTypeChanges.changedBy',
-            'medicalDevices'
+            'medicalDevices',
         ]);
 
         return view('accountant.surgeries.review-form', compact('surgery'));
@@ -88,12 +93,12 @@ class AccountantController extends Controller
         $surgery->save();
 
         // تحديث أسعار العمليات الإضافية
-        if (!empty($validated['additional_ops'])) {
+        if (! empty($validated['additional_ops'])) {
             foreach ($validated['additional_ops'] as $addOpId => $fee) {
                 $additionalOp = SurgeryAdditionalOperation::where('surgery_id', $surgery->id)
                     ->where('id', $addOpId)
                     ->first();
-                
+
                 if ($additionalOp) {
                     $additionalOp->fee = $fee;
                     $additionalOp->save();
@@ -102,7 +107,7 @@ class AccountantController extends Controller
         }
 
         // تحديث أسعار الأجهزة الطبية
-        if (!empty($validated['device_prices'])) {
+        if (! empty($validated['device_prices'])) {
             foreach ($validated['device_prices'] as $deviceId => $price) {
                 $surgery->medicalDevices()->updateExistingPivot($deviceId, ['price' => $price]);
             }
@@ -125,7 +130,7 @@ class AccountantController extends Controller
                 \DB::raw('COUNT(emergency_emergency_service.id) as usage_count'),
                 \DB::raw('SUM(emergency_services.price) as total_revenue')
             )
-            ->whereBetween('emergencies.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->whereBetween('emergencies.created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->groupBy('emergency_services.id', 'emergency_services.name')
             ->orderByDesc('usage_count')
             ->limit(10)
@@ -133,13 +138,13 @@ class AccountantController extends Controller
 
         // 2. تحليل نشاط أطباء الطوارئ والخدمات المقدمة بواسطتهم
         $doctorsActivity = \App\Models\Doctor::with('user')
-            ->whereHas('emergencies', function($q) use ($startDate, $endDate) {
-                $q->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            ->whereHas('emergencies', function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
             })
             ->get()
-            ->map(function($doctor) use ($startDate, $endDate) {
+            ->map(function ($doctor) use ($startDate, $endDate) {
                 $emergencies = \App\Models\Emergency::where('doctor_id', $doctor->id)
-                    ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                     ->withCount(['services', 'labRequests', 'radiologyRequests'])
                     ->get();
 
@@ -155,7 +160,7 @@ class AccountantController extends Controller
                     ->join('emergencies', 'emergencies.id', '=', 'emergency_emergency_service.emergency_id')
                     ->select('emergency_services.name', \DB::raw('COUNT(emergency_emergency_service.id) as count'))
                     ->where('emergencies.doctor_id', $doctor->id)
-                    ->whereBetween('emergencies.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->whereBetween('emergencies.created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                     ->groupBy('emergency_services.id', 'emergency_services.name')
                     ->orderByDesc('count')
                     ->limit(3)
@@ -175,10 +180,10 @@ class AccountantController extends Controller
             ->values();
 
         // 3. كروت الإحصاءات العامة
-        $totalEmergencyCases = \App\Models\Emergency::whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])->count();
+        $totalEmergencyCases = \App\Models\Emergency::whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])->count();
         $totalServicesProvided = \DB::table('emergency_emergency_service')
             ->join('emergencies', 'emergencies.id', '=', 'emergency_emergency_service.emergency_id')
-            ->whereBetween('emergencies.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->whereBetween('emergencies.created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->count();
 
         return view('accountant.emergency.analytics', compact(
@@ -197,19 +202,19 @@ class AccountantController extends Controller
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
         $categoryFilter = $request->input('category', 'all');
 
-        $startDateTime = $startDate . ' 00:00:00';
-        $endDateTime = $endDate . ' 23:59:59';
+        $startDateTime = $startDate.' 00:00:00';
+        $endDateTime = $endDate.' 23:59:59';
 
         // 1. حساب طلبات المختبر (عادية، استشارية، طوارئ)
         $consultantLabCount = \App\Models\Request::whereIn('type', ['lab', 'blood_bank'])
-            ->whereHas('visit', fn($q) => $q->where('visit_type', 'consultant'))
+            ->whereHas('visit', fn ($q) => $q->where('visit_type', 'consultant'))
             ->whereBetween('created_at', [$startDateTime, $endDateTime])
             ->count();
 
         $normalLabCount = \App\Models\Request::whereIn('type', ['lab', 'blood_bank'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereDoesntHave('visit')
-                  ->orWhereHas('visit', fn($vq) => $vq->where('visit_type', '!=', 'consultant'));
+                    ->orWhereHas('visit', fn ($vq) => $vq->where('visit_type', '!=', 'consultant'));
             })
             ->whereBetween('created_at', [$startDateTime, $endDateTime])
             ->count();
@@ -220,14 +225,14 @@ class AccountantController extends Controller
         $totalLabCount = $normalLabCount + $consultantLabCount + $emergencyLabCount;
 
         // 2. حساب طلبات الأشعة والتصوير (عادية، استشارية، طوارئ)
-        $consultantRadCount = \App\Models\RadiologyRequest::whereHas('visit', fn($q) => $q->where('visit_type', 'consultant'))
+        $consultantRadCount = \App\Models\RadiologyRequest::whereHas('visit', fn ($q) => $q->where('visit_type', 'consultant'))
             ->whereBetween('requested_date', [$startDateTime, $endDateTime])
             ->count();
 
-        $normalRadCount = \App\Models\RadiologyRequest::where(function($q) {
-                $q->whereDoesntHave('visit')
-                  ->orWhereHas('visit', fn($vq) => $vq->where('visit_type', '!=', 'consultant'));
-            })
+        $normalRadCount = \App\Models\RadiologyRequest::where(function ($q) {
+            $q->whereDoesntHave('visit')
+                ->orWhereHas('visit', fn ($vq) => $vq->where('visit_type', '!=', 'consultant'));
+        })
             ->whereBetween('requested_date', [$startDateTime, $endDateTime])
             ->count();
 
@@ -238,7 +243,7 @@ class AccountantController extends Controller
 
         // 3. أعلى تحاليل المختبر طلبات مقسمة ثلاثياً (طوارئ vs عادية vs استشارية)
         $allLabTests = \App\Models\LabTest::all();
-        $topLabTestsBreakdown = $allLabTests->map(function($test) use ($startDateTime, $endDateTime) {
+        $topLabTestsBreakdown = $allLabTests->map(function ($test) use ($startDateTime, $endDateTime) {
             $emergencyCount = \DB::table('emergency_lab_request_tests')
                 ->join('emergency_lab_requests', 'emergency_lab_requests.id', '=', 'emergency_lab_request_tests.emergency_lab_request_id')
                 ->where('emergency_lab_request_tests.lab_test_id', $test->id)
@@ -257,7 +262,7 @@ class AccountantController extends Controller
                 ->join('requests', 'requests.id', '=', 'lab_results.request_id')
                 ->leftJoin('visits', 'visits.id', '=', 'requests.visit_id')
                 ->where('lab_results.test_name', $test->name)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('visits.id')->orWhere('visits.visit_type', '!=', 'consultant');
                 })
                 ->whereBetween('requests.created_at', [$startDateTime, $endDateTime])
@@ -273,10 +278,10 @@ class AccountantController extends Controller
                 'total_count' => $totalCount,
             ];
         })
-        ->filter(fn($item) => $item['total_count'] > 0)
-        ->sortByDesc('total_count')
-        ->take(10)
-        ->values();
+            ->filter(fn ($item) => $item['total_count'] > 0)
+            ->sortByDesc('total_count')
+            ->take(10)
+            ->values();
 
         if ($topLabTestsBreakdown->isEmpty()) {
             $topLabTestsBreakdown = collect([
@@ -290,7 +295,7 @@ class AccountantController extends Controller
 
         // 4. أعلى فحوصات الأشعة مقسمة ثلاثياً (طوارئ vs عادية vs استشارية)
         $allRadTypes = \App\Models\RadiologyType::all();
-        $topRadTestsBreakdown = $allRadTypes->map(function($rad) use ($startDateTime, $endDateTime) {
+        $topRadTestsBreakdown = $allRadTypes->map(function ($rad) use ($startDateTime, $endDateTime) {
             $emergencyCount = \DB::table('emergency_radiology_request_types')
                 ->join('emergency_radiology_requests', 'emergency_radiology_requests.id', '=', 'emergency_radiology_request_types.emergency_radiology_request_id')
                 ->where('emergency_radiology_request_types.radiology_type_id', $rad->id)
@@ -307,7 +312,7 @@ class AccountantController extends Controller
             $normalCount = \DB::table('radiology_requests')
                 ->leftJoin('visits', 'visits.id', '=', 'radiology_requests.visit_id')
                 ->where('radiology_requests.radiology_type_id', $rad->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('visits.id')->orWhere('visits.visit_type', '!=', 'consultant');
                 })
                 ->whereBetween('radiology_requests.requested_date', [$startDateTime, $endDateTime])
@@ -324,10 +329,10 @@ class AccountantController extends Controller
                 'total_count' => $totalCount,
             ];
         })
-        ->filter(fn($item) => $item['total_count'] > 0)
-        ->sortByDesc('total_count')
-        ->take(10)
-        ->values();
+            ->filter(fn ($item) => $item['total_count'] > 0)
+            ->sortByDesc('total_count')
+            ->take(10)
+            ->values();
 
         if ($topRadTestsBreakdown->isEmpty()) {
             $topRadTestsBreakdown = collect([
@@ -340,42 +345,42 @@ class AccountantController extends Controller
 
         // 5. كشف توزيع الفحوصات المفصل (طوارئ، عادية، استشارية)
         $categoryBreakdown = collect([
-            (object)[
+            (object) [
                 'main_category' => 'مختبر - عادية',
                 'total_tests' => $normalLabCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
-            (object)[
+            (object) [
                 'main_category' => 'مختبر - استشارية',
                 'total_tests' => $consultantLabCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
-            (object)[
+            (object) [
                 'main_category' => 'مختبر - طوارئ',
                 'total_tests' => $emergencyLabCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
-            (object)[
+            (object) [
                 'main_category' => 'أشعة - عادية',
                 'total_tests' => $normalRadCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
-            (object)[
+            (object) [
                 'main_category' => 'أشعة - استشارية',
                 'total_tests' => $consultantRadCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
-            (object)[
+            (object) [
                 'main_category' => 'أشعة - طوارئ',
                 'total_tests' => $emergencyRadCount,
-                'total_amount' => 0
+                'total_amount' => 0,
             ],
         ]);
 
         // 6. أداء الأطباء
         $doctorsPerformance = \App\Models\Doctor::with('user')
             ->get()
-            ->map(function($doctor) use ($startDateTime, $endDateTime) {
+            ->map(function ($doctor) use ($startDateTime, $endDateTime) {
                 $radCount = \App\Models\RadiologyRequest::where('doctor_id', $doctor->id)
                     ->whereBetween('requested_date', [$startDateTime, $endDateTime])
                     ->count();
@@ -392,7 +397,7 @@ class AccountantController extends Controller
                     'total_value' => 0,
                 ];
             })
-            ->filter(fn($d) => $d['total_requests'] > 0)
+            ->filter(fn ($d) => $d['total_requests'] > 0)
             ->sortByDesc('total_requests')
             ->values();
 
@@ -412,6 +417,125 @@ class AccountantController extends Controller
             'startDate',
             'endDate',
             'categoryFilter'
+        ));
+    }
+
+    public function nicuAnalytics(Request $request)
+    {
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
+
+        $startDateTime = $startDate.' 00:00:00';
+        $endDateTime = $endDate.' 23:59:59';
+
+        // 1. أكثر خدمات الخدج استخداماً
+        $topServices = \DB::table('nicu_service_logs')
+            ->join('nicu_services', 'nicu_services.id', '=', 'nicu_service_logs.nicu_service_id')
+            ->join('incubator_reservations', 'incubator_reservations.id', '=', 'nicu_service_logs.reservation_id')
+            ->select(
+                'nicu_services.name',
+                'nicu_services.code',
+                \DB::raw('COUNT(nicu_service_logs.id) as usage_count'),
+                \DB::raw('SUM(nicu_service_logs.days_count) as total_days'),
+                \DB::raw('SUM(COALESCE(nicu_service_logs.total_cost, 0)) as total_revenue')
+            )
+            ->whereBetween('incubator_reservations.admission_date', [$startDate, $endDate])
+            ->groupBy('nicu_services.id', 'nicu_services.name', 'nicu_services.code')
+            ->orderByDesc('usage_count')
+            ->limit(10)
+            ->get();
+
+        // 2. تحليل نشاط أطباء الخدج
+        $doctorsActivity = \App\Models\Doctor::with('user')
+            ->where(function ($q) use ($startDate, $endDate, $startDateTime, $endDateTime) {
+                $q->whereHas('incubatorReservations', function ($rq) use ($startDate, $endDate) {
+                    $rq->whereBetween('admission_date', [$startDate, $endDate]);
+                })
+                    ->orWhereHas('nicuConsultations', function ($cq) use ($startDateTime, $endDateTime) {
+                        $cq->whereBetween('created_at', [$startDateTime, $endDateTime]);
+                    });
+            })
+            ->get()
+            ->map(function ($doctor) use ($startDate, $endDate, $startDateTime, $endDateTime) {
+                $reservations = \App\Models\IncubatorReservation::where('doctor_id', $doctor->id)
+                    ->whereBetween('admission_date', [$startDate, $endDate])
+                    ->withCount(['medicalOrders', 'consultations'])
+                    ->get();
+
+                $totalCases = $reservations->count();
+                $totalOrdersCount = $reservations->sum('medical_orders_count');
+                $consultationsCount = \App\Models\NicuConsultation::where('doctor_id', $doctor->id)
+                    ->whereBetween('created_at', [$startDateTime, $endDateTime])
+                    ->count();
+
+                $consultationFees = (float) \App\Models\NicuConsultation::where('doctor_id', $doctor->id)
+                    ->where('status', 'completed')
+                    ->whereBetween('created_at', [$startDateTime, $endDateTime])
+                    ->sum('fee');
+
+                $topDoctorServices = \DB::table('nicu_service_logs')
+                    ->join('nicu_services', 'nicu_services.id', '=', 'nicu_service_logs.nicu_service_id')
+                    ->join('incubator_reservations', 'incubator_reservations.id', '=', 'nicu_service_logs.reservation_id')
+                    ->select('nicu_services.name', \DB::raw('COUNT(nicu_service_logs.id) as count'))
+                    ->where('incubator_reservations.doctor_id', $doctor->id)
+                    ->whereBetween('incubator_reservations.admission_date', [$startDate, $endDate])
+                    ->groupBy('nicu_services.id', 'nicu_services.name')
+                    ->orderByDesc('count')
+                    ->limit(3)
+                    ->get();
+
+                return [
+                    'doctor_name' => $doctor->user->name ?? 'طبيب غير معروف',
+                    'specialization' => $doctor->specialization ?? 'أطفال وحديثي ولادة',
+                    'total_cases' => $totalCases,
+                    'orders_count' => $totalOrdersCount,
+                    'consultations_count' => $consultationsCount,
+                    'consultation_fees' => $consultationFees,
+                    'top_services' => $topDoctorServices,
+                ];
+            })
+            ->sortByDesc('total_cases')
+            ->values();
+
+        // 3. كروت الإحصاءات العامة
+        $totalNicuCases = \App\Models\IncubatorReservation::whereBetween('admission_date', [$startDate, $endDate])->count();
+        $activeIncubatorsCount = \App\Models\IncubatorReservation::whereIn('status', ['pending', 'admitted'])->count();
+        $totalIncubatorsCount = \App\Models\Incubator::count();
+        $occupancyRate = $totalIncubatorsCount > 0 ? round(($activeIncubatorsCount / $totalIncubatorsCount) * 100, 1) : 0;
+
+        // إجمالي المدفوعات والمسترجعات
+        $totalPaymentsReceived = (float) \App\Models\NicuPayment::where('financial_status', 'paid')
+            ->where('payment_type', '!=', \App\Models\NicuPayment::TYPE_REFUND)
+            ->whereBetween('paid_at', [$startDateTime, $endDateTime])
+            ->sum('amount');
+
+        $totalPaymentsRefunded = (float) \App\Models\NicuPayment::where('financial_status', 'paid')
+            ->where('payment_type', \App\Models\NicuPayment::TYPE_REFUND)
+            ->whereBetween('paid_at', [$startDateTime, $endDateTime])
+            ->sum('amount');
+
+        $netNicuRevenue = $totalPaymentsReceived - $totalPaymentsRefunded;
+
+        $insuredCasesCount = \App\Models\IncubatorReservation::whereBetween('admission_date', [$startDate, $endDate])
+            ->whereIn('insurance_type', ['hi', 'moi', 'health_insurance'])
+            ->count();
+
+        $cashCasesCount = max(0, $totalNicuCases - $insuredCasesCount);
+
+        return view('accountant.nicu.analytics', compact(
+            'topServices',
+            'doctorsActivity',
+            'totalNicuCases',
+            'activeIncubatorsCount',
+            'totalIncubatorsCount',
+            'occupancyRate',
+            'totalPaymentsReceived',
+            'totalPaymentsRefunded',
+            'netNicuRevenue',
+            'insuredCasesCount',
+            'cashCasesCount',
+            'startDate',
+            'endDate'
         ));
     }
 }

@@ -37,6 +37,7 @@ class FinancialTransaction extends Model
         'lab' => 'إيراد الفحوصات المختبرية',
         'radiology' => 'إيراد الأشعة والتصوير',
         'surgery' => 'إيراد العمليات الجراحية',
+        'nicu' => 'إيراد الخدج والحاضنات (NICU)',
         'general_income' => 'إيرادات وتحصيلات عامة',
 
         // المصروفات والمسترجعات (Outflows)
@@ -92,7 +93,7 @@ class FinancialTransaction extends Model
     {
         return $query->where(function ($q) {
             $q->where('voucher_type', 'inflow')
-              ->orWhereIn('transaction_type', ['hospital_revenue', 'receivable']);
+                ->orWhereIn('transaction_type', ['hospital_revenue', 'receivable']);
         });
     }
 
@@ -100,7 +101,7 @@ class FinancialTransaction extends Model
     {
         return $query->where(function ($q) {
             $q->where('voucher_type', 'outflow')
-              ->orWhereIn('transaction_type', ['expense', 'doctor_payment', 'payable']);
+                ->orWhereIn('transaction_type', ['expense', 'doctor_payment', 'payable']);
         });
     }
 
@@ -109,4 +110,3 @@ class FinancialTransaction extends Model
         return $query->where('category', $category);
     }
 }
-

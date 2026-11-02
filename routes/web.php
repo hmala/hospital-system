@@ -388,6 +388,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
         Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
         Route::get('/nicu/{reservation}/itemized-receipt/print', [\App\Http\Controllers\CashierController::class, 'printNicuItemizedReceipt'])->name('nicu.itemized-receipt.print');
+        Route::get('/nicu/financial-movements', [\App\Http\Controllers\CashierController::class, 'nicuFinancialMovements'])->name('nicu.financial-movements');
+        Route::get('/nicu/statements', [\App\Http\Controllers\CashierController::class, 'nicuStatements'])->name('nicu.statements');
+        Route::get('/nicu/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccounts'])->name('nicu.doctor-accounts');
+        Route::get('/nicu/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccount'])->name('nicu.doctor-account');
+        Route::post('/nicu/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'nicuDoctorPayout'])->name('nicu.doctor-payout');
     });
 
     // مسارات مراجعة أسعار العمليات للمحاسب
@@ -881,6 +886,7 @@ Route::middleware(['auth'])->group(function () {
     // تحليلات الطوارئ للمحاسب
     Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
     Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
+    Route::get('/accountant/nicu-analytics', [\App\Http\Controllers\AccountantController::class, 'nicuAnalytics'])->name('accountant.nicu.analytics');
 
     // إدارة الموارد البشرية (HR Management)
     Route::prefix('hr')->name('hr.')->middleware(['permission:view hr'])->group(function () {
@@ -911,7 +917,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('schedules/emergency-cover-search', [\App\Http\Controllers\HR\HrScheduleController::class, 'emergencyCoverSearch'])->name('schedules.emergency-cover-search');
         Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
-
 
         // المخصصات الثابتة
         Route::post('employees/{employee}/allowances', [\App\Http\Controllers\HR\HrAllowanceController::class, 'store'])->name('employees.allowances.store');
@@ -1074,4 +1079,3 @@ Route::get('/storage/{path}', function (string $path) {
         'Cache-Control' => 'public, max-age=86400',
     ]);
 })->where('path', '.*')->name('storage.file.serve');
-

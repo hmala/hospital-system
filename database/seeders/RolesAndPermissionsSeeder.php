@@ -72,6 +72,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view emergency statements',      // عرض كشوفات حسابات الطوارئ
             'view emergency doctor accounts', // عرض وصرف حسابات أطباء الطوارئ
             'view diagnostic analytics',      // عرض تحليلات وإحصاءات المختبر والأشعة والمفراس
+            'view nicu analytics',            // عرض تحليلات وإحصاءات الخدج
+            'view nicu financial movements',  // عرض الحركات والقيود المالية للخدج
+            'view nicu statements',           // عرض كشوفات حسابات الخدج
+            'view nicu doctor accounts',      // عرض وصرف حسابات أطباء الخدج
 
             // صلاحيات الزيارات
             'view visits',
@@ -358,6 +362,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view emergency statements',
             'view emergency doctor accounts',
             'view diagnostic analytics',
+            'view nicu analytics',
+            'view nicu financial movements',
+            'view nicu statements',
+            'view nicu doctor accounts',
             'manage doctor commissions',
             'view patients',
             'review surgery prices',
