@@ -165,6 +165,9 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        if (window.__stockTransferInit) return;
+        window.__stockTransferInit = true;
+
         const form = document.getElementById('transferForm');
         const addItemRowBtn = document.getElementById('addItemRow');
         const itemsTableBody = document.querySelector('#itemsTable tbody');
