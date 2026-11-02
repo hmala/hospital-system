@@ -53,6 +53,19 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 145: حظر تعديل وحذف طلبات المخازن الفرعية على أمين المخزن الرئيسي وقصر دوره على الاعتماد أو الرفض الرقابي Storekeeper Governance Guard & Strict Requester-Only Modification Lock)
+
+### Done
+- **حوكمة الرقابة المخزنية وفصل الصلاحيات ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * حجب أزرار `[ ✏️ تعديل ]` و `[ 🗑️ إلغاء ]` عن أمين المخزن الرئيسي في سجل وتفاصيل طلبات المخازن الفرعية.
+  * حظر مسارات وعمليات الـ `PUT` والـ `DELETE` برمجياً في `StockTransferController` على أمين المخزن وإرجاع `403 Forbidden`.
+  * حصر التعديل والإلغاء حصراً على مقدم الطلب أو مسؤول عهدة الطابق المستلم، أو الإدارة العليا التقنية (`super_admin`).
+  * الإبقاء على صلاحية أمين المخزن الرقابية فقط: `الموافقة وصرف المواد` أو `رفض الطلب` مع ذكر السبب لحفظ أثر التدقيق (Audit Trail) ومنع تضارب العهدة الجردية.
+- **حوكمة الواجهات ([resources/views/stock-transfers/requests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/index.blade.php), [resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php))**:
+  * لا تظهر أزرار التعديل والإلغاء لأمين المخزن بل يظهر زر `[ 👁️ عرض ]` فقط في السجل، وزري `[ الموافقة والصرف ]` و `[ الرفض ]` فقط في شاشة التفاصيل.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * إضافة اختبار `test_warehouse_manager_cannot_edit_or_delete_sub_store_requests`: التحقق من عدم ظهور الأزرار ورفض محاولات الـ PUT والـ DELETE بـ 403 Forbidden (11 passed, 52 assertions).
+
 ## Session log (2026-11-02 — المرحلة 144: تمكين وتأمين تعديل وإلغاء طلبات تعزيز المخزون المعلقة لكادر التمريض والعهدة Nursing Station Sub-Store Pending Request Edit & Cancel Workflow)
 
 ### Done

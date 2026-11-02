@@ -11,8 +11,9 @@
                         <p class="mb-0 text-muted">مراجعة تفاصيل طلب المواد وحالة الاعتماد من المخزن الرئيسي.</p>
                     </div>
                     @php
+                        $isSuperAdmin = auth()->user()?->hasRole(['admin', 'admin-hsop', 'super_admin']);
                         $canEditOrCancel = $stockTransferRequest->status === 'pending' && (
-                            !empty($isAdmin) ||
+                            $isSuperAdmin ||
                             $stockTransferRequest->requested_by == auth()->id() ||
                             (auth()->user()?->location_id && $stockTransferRequest->to_location_id == auth()->user()->location_id)
                         );

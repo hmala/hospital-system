@@ -406,4 +406,60 @@ class FloorCustodianStockTransferTest extends TestCase
         $deleteResponse = $this->actingAs($nurseMaryam)->delete(route('stock-transfers.requests.destroy', $otherReq));
         $deleteResponse->assertStatus(403);
     }
+
+    public function test_warehouse_manager_cannot_edit_or_delete_sub_store_requests(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $warehouseManager = User::factory()->create([
+            'name' => 'أمين المستودع الرئيسي',
+            'location_id' => $mainLocation->id,
+        ]);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage inventory', 'guard_name' => 'web']);
+        $warehouseManager->givePermissionTo('manage inventory');
+
+        $req = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [['product_id' => 1, 'qty' => 5]],
+            'status' => 'pending',
+        ]);
+
+        // Warehouse manager views requests list: sees 'عرض', but DOES NOT see 'تعديل' or 'إلغاء' buttons for floor 3
+        $indexResponse = $this->actingAs($warehouseManager)->get(route('stock-transfers.requests.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee(route('stock-transfers.requests.show', $req));
+        $indexResponse->assertDontSee(route('stock-transfers.requests.edit', $req));
+        $indexResponse->assertDontSee('title="إلغاء وحذف الطلبية"', false);
+
+        // Warehouse manager views show page: sees approve/reject buttons, but DOES NOT see edit or cancel
+        $showResponse = $this->actingAs($warehouseManager)->get(route('stock-transfers.requests.show', $req));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('الموافقة على الطلب وصرف المواد');
+        $showResponse->assertSee('رفض الطلب');
+        $showResponse->assertDontSee(route('stock-transfers.requests.edit', $req));
+        $showResponse->assertDontSee('إلغاء الطلبية');
+
+        // Warehouse manager attempting to visit edit URL is forbidden (403)
+        $editResponse = $this->actingAs($warehouseManager)->get(route('stock-transfers.requests.edit', $req));
+        $editResponse->assertStatus(403);
+
+        // Warehouse manager attempting to update is forbidden (403)
+        $updateResponse = $this->actingAs($warehouseManager)->put(route('stock-transfers.requests.update', $req), [
+            'items' => [['product_id' => 1, 'qty' => 20]],
+        ]);
+        $updateResponse->assertStatus(403);
+
+        // Warehouse manager attempting to delete is forbidden (403)
+        $deleteResponse = $this->actingAs($warehouseManager)->delete(route('stock-transfers.requests.destroy', $req));
+        $deleteResponse->assertStatus(403);
+    }
 }

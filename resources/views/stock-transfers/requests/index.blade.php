@@ -113,7 +113,14 @@
                                         <a href="{{ route('stock-transfers.requests.show', $req) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-medium" title="عرض التفاصيل">
                                             <i class="fas fa-eye me-1"></i> عرض
                                         </a>
-                                        @if($req->status === 'pending' && (!empty($isAdmin) || $req->requested_by == auth()->id() || (auth()->user()?->location_id && $req->to_location_id == auth()->user()->location_id)))
+                                        @php
+                                            $canEditOrCancelThis = $req->status === 'pending' && (
+                                                !empty($isSuperAdmin) ||
+                                                $req->requested_by == auth()->id() ||
+                                                (auth()->user()?->location_id && $req->to_location_id == auth()->user()->location_id)
+                                            );
+                                        @endphp
+                                        @if($canEditOrCancelThis)
                                             <a href="{{ route('stock-transfers.requests.edit', $req) }}" class="btn btn-sm btn-outline-warning rounded-pill px-2.5 py-1 text-dark fw-medium" title="تعديل الطلبية">
                                                 <i class="fas fa-edit me-1"></i> تعديل
                                             </a>

@@ -17,12 +17,13 @@ class StockTransferController extends Controller
     public function indexRequests(Request $request)
     {
         $user = Auth::user();
+        $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
         $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
 
         $query = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy']);
 
-        // إذا كان المستخدم كادر تمريضي أو عهدة قسم وليس مديراً عاماً، نحصر الطلبات بما يخص عهدته أو ما رفعه هو
+        // إذا كان المستخدم كادر تمريضي أو عهدة قسم وليس مديراً عاماً أو أمين مخزن، نحصر الطلبات بما يخص عهدته أو ما رفعه هو
         $userLocation = null;
         if (! $isAdmin) {
             $userLocationId = $user?->location_id ?: $request->query('location_id');
@@ -41,7 +42,7 @@ class StockTransferController extends Controller
 
         $requests = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        return view('stock-transfers.requests.index', compact('requests', 'isAdmin', 'userLocation'));
+        return view('stock-transfers.requests.index', compact('requests', 'isAdmin', 'isSuperAdmin', 'userLocation'));
     }
 
     public function create(Request $request)
@@ -141,10 +142,12 @@ class StockTransferController extends Controller
     public function editRequest(StockTransferRequest $stockTransferRequest)
     {
         $user = Auth::user();
-        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+        $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
+            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
 
-        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
-            abort(403, 'غير مصرح لك بتعديل هذا الطلب.');
+        if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب. التعديل متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
         }
 
         if ($stockTransferRequest->status !== 'pending') {
@@ -156,7 +159,7 @@ class StockTransferController extends Controller
         $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
         $products = Product::orderBy('name')->get();
         $lockedLocation = $stockTransferRequest->toLocation;
-        $isLockedToLocation = ! $isAdmin || (bool) $user?->location_id;
+        $isLockedToLocation = ! $isSuperAdmin || (bool) $user?->location_id;
 
         // تجهيز قائمة المواد الحالية في الطلب
         $rawItems = is_array($stockTransferRequest->items) ? $stockTransferRequest->items : json_decode($stockTransferRequest->items, true);
@@ -193,10 +196,12 @@ class StockTransferController extends Controller
     public function updateRequest(Request $request, StockTransferRequest $stockTransferRequest)
     {
         $user = Auth::user();
-        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+        $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
+            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
 
-        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
-            abort(403, 'غير مصرح لك بتعديل هذا الطلب.');
+        if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب. التعديل متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
         }
 
         if ($stockTransferRequest->status !== 'pending') {
@@ -250,10 +255,12 @@ class StockTransferController extends Controller
     public function destroyRequest(StockTransferRequest $stockTransferRequest)
     {
         $user = Auth::user();
-        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+        $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
+            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
 
-        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
-            abort(403, 'غير مصرح لك بإلغاء هذا الطلب.');
+        if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
+            abort(403, 'غير مصرح لك بإلغاء هذا الطلب. الإلغاء متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
         }
 
         if ($stockTransferRequest->status !== 'pending') {
