@@ -12,62 +12,24 @@
                         </div>
                         <div>
                             <h5 class="mb-0 fw-bold">محطة التمريض والرقود</h5>
-                            <small class="text-white-50 d-flex flex-wrap align-items-center gap-2 mt-0.5">
-                                <span><i class="fas fa-map-marker-alt text-warning me-1"></i> المخزن الحالي: <strong class="text-white">{{ $currentLocation?->name ?? 'مخزن الطابق' }}</strong></span>
-                                @if($isFloorCustodian)
-                                    <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1">
-                                        <i class="fas fa-key me-1"></i> مسؤولة عهدة المخزن
-                                    </span>
-                                @endif
-                            </small>
+                            <small class="text-white-50">متابعة المرضى، إعطاء العلاجات، وسحب مستلزمات عهدة الطابق</small>
                         </div>
                     </div>
 
-                    {{-- أزرار التبديل والفلترة --}}
+                    {{-- شارات الطابق والعهدة المعتمدة --}}
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        {{-- مبدل المخازن الفرعية --}}
-                        <div class="dropdown">
-                            <button class="btn btn-light btn-sm rounded-pill dropdown-toggle px-3 fw-bold shadow-xs text-primary" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-warehouse text-primary me-1"></i> {{ $currentLocation?->name ?? 'اختر المخزن' }}
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                                <li><h6 class="dropdown-header text-muted">مخازن الأجنحة والطوابق</h6></li>
-                                @foreach($floorLocations as $fl)
-                                    <li>
-                                        <a class="dropdown-item d-flex justify-content-between align-items-center {{ $currentLocation && $currentLocation->id == $fl->id ? 'active' : '' }}" 
-                                           href="{{ route('nursing-station.index', array_merge(request()->query(), ['location_id' => $fl->id])) }}">
-                                            <span>{{ $fl->name }}</span>
-                                            @if(auth()->user()->location_id == $fl->id)
-                                                <span class="badge bg-primary-subtle text-primary rounded-pill small ms-2">طابقي</span>
-                                            @endif
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-
-                        {{-- فلترة مرضى الطوابق --}}
-                        <div class="dropdown">
-                            <button class="btn btn-outline-light btn-sm rounded-pill dropdown-toggle px-3 shadow-xs" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-procedures me-1"></i> {{ $selectedFloor ? $selectedFloor : 'جميع الغرف والمرضى' }}
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                                <li>
-                                    <a class="dropdown-item {{ !$selectedFloor ? 'active' : '' }}" href="{{ route('nursing-station.index', array_merge(request()->except('floor'))) }}">
-                                        جميع الغرف والمرضى
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                @foreach($availableFloors as $floorName)
-                                    <li>
-                                        <a class="dropdown-item {{ $selectedFloor == $floorName ? 'active' : '' }}" 
-                                           href="{{ route('nursing-station.index', array_merge(request()->query(), ['floor' => $floorName])) }}">
-                                            {{ $floorName }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
+                        <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25 rounded-pill px-3 py-2 fs-6">
+                            <i class="fas fa-warehouse text-warning me-1"></i> {{ $currentLocation?->name ?? 'مخزن الطابق' }}
+                        </span>
+                        @if($isFloorCustodian)
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-xs">
+                                <i class="fas fa-key me-1"></i> مسؤولة عهدة المخزن
+                            </span>
+                        @else
+                            <span class="badge bg-info bg-opacity-25 text-white border border-info border-opacity-50 rounded-pill px-3 py-2 fw-medium">
+                                <i class="fas fa-user-check me-1"></i> سحب وصرف تمريضي
+                            </span>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body p-4">
