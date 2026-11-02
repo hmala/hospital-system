@@ -599,7 +599,9 @@
                                 <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
                                     <span class="text-muted small">طريقة الدفع:</span>
                                     <span class="badge bg-white text-dark border px-3 py-2 fs-7 fw-bold">
-                                        @if($payment->payment_method === 'card')
+                                        @if($payment->payment_method === 'split')
+                                            🔄 دفع مركب (نقداً: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} د.ع | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }} د.ع)
+                                        @elseif($payment->payment_method === 'card')
                                             💳 بطاقة دفع إلكتروني (POS / Card)
                                         @else
                                             💵 نقدي (Cash)

@@ -19,6 +19,8 @@ class Payment extends Model
         'cashier_id',
         'receipt_number',
         'amount',
+        'cash_amount',
+        'card_amount',
         'total_amount',
         'patient_share',
         'insurance_share',
@@ -47,6 +49,8 @@ class Payment extends Model
         'paid_at' => 'datetime',
         'voided_at' => 'datetime',
         'amount' => 'decimal:2',
+        'cash_amount' => 'decimal:2',
+        'card_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'patient_share' => 'decimal:2',
         'insurance_share' => 'decimal:2',
@@ -61,6 +65,7 @@ class Payment extends Model
         'pending' => 'معلق',
         'cash' => 'نقدي',
         'card' => 'بطاقة',
+        'split' => 'دفع مركب (كاش + بطاقة)',
         'insurance' => 'تأمين',
     ];
 

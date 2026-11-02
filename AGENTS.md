@@ -53,6 +53,22 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-03 — المرحلة 150: ترقية واجهة تسديد العمليات ودعم الدفع المركب كاش وبطاقة وشمول التحاليل الروتينية Surgery Cashier Split Payment & Included Pre-Op Routine Tests Flow)
+
+### Done
+- **شمول التحاليل الروتينية للعملية ضمن أتعاب الجراحة مجاناً ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * معاملة التحاليل المرافقة للعملية الجراحية كأول ليلة في الغرفة بحيث تكون مشمولة حكماً ضمن أتعاب الجراحة دون إضافة أي تكاليف جديدة على المريض (`0 د.ع`).
+  * إظهار شارة خضراء مميزة في جدول الكاشير: `[ 🧪 مشمول ضمن باقة العملية (0 د.ع) ]`، مع تأشيرها تلقائياً لتسديدها وربطها برقم الإيصال (`payment_id`) لتتحول إلى `paid` مباشرة في المختبر وتأكيد الدفع دون زيادة في حصة المريض.
+- **دعم الدفع المركب / المختلط (Split Payment: كاش + بطاقة ائتمان / POS)**:
+  * توسيع جدول المدفوعات `payments` بحقلي `cash_amount` و `card_amount` وتوسيع حقل `payment_method` في المايجريشن والموديل `Payment`.
+  * بناء صندوق تفاعلي ذكي فوري ومباشر بمجرد اختيار `🔄 دفع مركب / مختلط (مقسم كاش + بطاقة)` يتيح توزيع المبلغ بين النقد والبطاقة مع زر المناصفة (50/50) ومزامنة آلية وشارة تحقق وتطابق لحظية (`متطابق: X IQD`) وتحصين التقديم ضد عدم التطابق.
+  * إبراز تفاصيل الدفع المركب في الإيصالات وسندات القبض الحرارية وشاشات العرض ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php)).
+- **ترقية وتحديث واجهة السداد ومطابقتها لواجهة تسديد الطلبات ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * ترويسة متدرجة وبطاقة سريرية لمعلومات المريض ونوع العملية ونسبة التحمل للضمان الصحي الوطني وقوى الأمن (HI / MOI).
+  * دعم تسديد الرسوم جزئياً (دفعة مقدمة) أو كلياً مع الحساب اللحظي للمتبقي المؤجل.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php))**:
+  * 5 اختبارات ناجحة بنسبة 100% (27 assertions): فحص الواجهة وظهور شارة شمول التحاليل، تسديد الضمان ووسم التحاليل كمدفوعة، تسديد الدفع المركب بنجاح وظهوره في الوصل، رفض الدفع المركب عند عدم تطابق المجموع، والتسديد الجزئي مع بقاء المتبقي معلقاً.
+
 ## Session log (2026-11-03 — المرحلة 149: ترقية وتحديث تصميم تقرير طباعة تحاليل العمليات الجراحية لمطابقة تقرير المختبر السريري الرسمي Surgery Lab Tests Official Clinical Print Report Modernization)
 
 ### Done

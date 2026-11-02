@@ -13,7 +13,7 @@ class PaymentObserver
 {
     public function created(Payment $payment): void
     {
-        if ((float)$payment->amount < 0) {
+        if ((float) $payment->amount < 0) {
             $this->handleRefundFinancialTransaction($payment);
         } else {
             $this->handlePaymentRevenue($payment);
@@ -25,7 +25,7 @@ class PaymentObserver
     public function updated(Payment $payment): void
     {
         if ($payment->wasChanged('paid_at') && $payment->paid_at !== null) {
-            if ((float)$payment->amount < 0) {
+            if ((float) $payment->amount < 0) {
                 $this->handleRefundFinancialTransaction($payment);
             } else {
                 $this->handlePaymentRevenue($payment);
@@ -48,14 +48,14 @@ class PaymentObserver
 
     protected function logPaymentActivity(Payment $payment): void
     {
-        if (!$payment->paid_at) {
+        if (! $payment->paid_at) {
             return;
         }
 
         $patientName = $payment->patient?->name ?? ($payment->appointment?->patient?->name ?? 'مريض');
-        $amountFormatted = number_format(abs((float)$payment->amount), 0);
+        $amountFormatted = number_format(abs((float) $payment->amount), 0);
         $receipt = $payment->receipt_number ? " (وصل #{$payment->receipt_number})" : '';
-        $isRefund = (float)$payment->amount < 0;
+        $isRefund = (float) $payment->amount < 0;
 
         if ($isRefund) {
             \App\Services\UserActivityLogger::log(
@@ -80,11 +80,11 @@ class PaymentObserver
 
     protected function handlePaymentRevenue(Payment $payment): void
     {
-        if (!$payment->paid_at) {
+        if (! $payment->paid_at) {
             return;
         }
 
-        if (!$payment->appointment) {
+        if (! $payment->appointment) {
             return;
         }
 
@@ -94,13 +94,13 @@ class PaymentObserver
             return;
         }
 
-        if (!$appointment->doctor) {
+        if (! $appointment->doctor) {
             return;
         }
 
         $setting = $this->getCommissionSetting($appointment);
         // Use total_amount for revenue distribution (vital for insurance where amount is just copay)
-        $amount = (float)($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
+        $amount = (float) ($payment->total_amount > 0 ? $payment->total_amount : $payment->amount);
         $baseAmount = $this->getCommissionBaseAmount($payment, $appointment);
 
         $doctorShare = $this->calculateDoctorShare($amount, $baseAmount, $appointment, $setting, $payment);
@@ -155,7 +155,7 @@ class PaymentObserver
             [
                 'amount' => round($doctorShare, 2),
                 'status' => 'pending',
-                'notes' => 'مستحقات الطبيب من دفعة رقم ' . $receiptNumber,
+                'notes' => 'مستحقات الطبيب من دفعة رقم '.$receiptNumber,
             ]
         );
     }
@@ -194,15 +194,15 @@ class PaymentObserver
 
     protected function getCommissionBaseAmount(Payment $payment, $appointment): float
     {
-        if ($appointment->consultation_fee && (float)$appointment->consultation_fee > 0) {
-            return abs((float)$appointment->consultation_fee);
+        if ($appointment->consultation_fee && (float) $appointment->consultation_fee > 0) {
+            return abs((float) $appointment->consultation_fee);
         }
 
-        if ($appointment->doctor && $appointment->doctor->consultation_fee && (float)$appointment->doctor->consultation_fee > 0) {
-            return abs((float)$appointment->doctor->consultation_fee);
+        if ($appointment->doctor && $appointment->doctor->consultation_fee && (float) $appointment->doctor->consultation_fee > 0) {
+            return abs((float) $appointment->doctor->consultation_fee);
         }
 
-        return abs((float)$payment->amount);
+        return abs((float) $payment->amount);
     }
 
     protected function calculateDoctorShare(float $amount, float $baseAmount, $appointment, $setting, $payment = null): float
@@ -210,7 +210,7 @@ class PaymentObserver
         $absAmount = abs($amount);
         $absBaseAmount = abs($baseAmount);
         $isInsurance = $payment && (
-            (float)($payment->insurance_share ?? 0) > 0 ||
+            (float) ($payment->insurance_share ?? 0) > 0 ||
             in_array($payment->insurance_type ?? '', ['hi', 'moi', 'interior_ministry', 'health_insurance']) ||
             ($appointment && in_array($appointment->insurance_type ?? '', ['hi', 'moi']))
         );
@@ -232,7 +232,7 @@ class PaymentObserver
             } else {
                 // percentage (إذا كانت مسجلة تاريخياً كنسبة)
                 $perc = (float) ($setting->commission_value ?? 0);
-                if ($perc <= 0 && (float)($setting->fixed_amount ?? 0) > 0) {
+                if ($perc <= 0 && (float) ($setting->fixed_amount ?? 0) > 0) {
                     $doctorShare = (float) $setting->fixed_amount;
                 } elseif ($perc > 0) {
                     $doctorShare = round($absAmount * ($perc / 100), 2);
@@ -243,12 +243,14 @@ class PaymentObserver
 
             // صمام أمان صارم: حصة الطبيب لا يمكن أن تتجاوز إجمالي المبلغ المحصل للكشفية نهائياً لمنع أي حصة سالبة للمستشفى
             $doctorShare = min($absAmount, abs($doctorShare));
+
             return $amount < 0 ? -$doctorShare : $doctorShare;
         }
 
         // في حال عدم وجود إعداد عمولة مسجل للطبيب ولكنها كشفية ضمان صحي
         if ($isInsurance) {
             $defaultHiShare = min($absAmount, 15000.00);
+
             return $amount < 0 ? -$defaultHiShare : $defaultHiShare;
         }
 
@@ -296,11 +298,11 @@ class PaymentObserver
                 'voucher_type' => 'inflow',
                 'category' => 'consultation',
                 'voucher_number' => $payment->receipt_number,
-                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
+                'amount' => (float) $payment->amount > 0 ? (float) $payment->amount : (float) $payment->total_amount,
                 'currency' => 'IQD',
                 'payment_method' => $payment->payment_method ?: 'cash',
-                'description' => 'مقبوضات كشفية إيصال رقم ' . $payment->receipt_number,
-                'notes' => 'حصة الطبيب المستحقة: ' . number_format($doctorShare) . ' د.ع | حصة المستشفى: ' . number_format($hospitalShare) . ' د.ع',
+                'description' => 'مقبوضات كشفية إيصال رقم '.$payment->receipt_number,
+                'notes' => 'حصة الطبيب المستحقة: '.number_format($doctorShare).' د.ع | حصة المستشفى: '.number_format($hospitalShare).' د.ع',
                 'performed_by_id' => $payment->cashier_id,
                 'performed_at' => $payment->paid_at,
             ]
@@ -309,7 +311,7 @@ class PaymentObserver
 
     protected function syncNonAppointmentPayment(Payment $payment): void
     {
-        if (!$payment->paid_at || $payment->appointment_id) {
+        if (! $payment->paid_at || $payment->appointment_id) {
             return;
         }
 
@@ -323,11 +325,11 @@ class PaymentObserver
                 'voucher_type' => 'inflow',
                 'category' => $payment->payment_type ?: 'general_income',
                 'voucher_number' => $payment->receipt_number,
-                'amount' => (float)$payment->amount > 0 ? (float)$payment->amount : (float)$payment->total_amount,
+                'amount' => (float) $payment->amount > 0 ? (float) $payment->amount : (float) $payment->total_amount,
                 'currency' => 'IQD',
                 'payment_method' => $payment->payment_method ?: 'cash',
-                'description' => 'مقبوضات ' . (Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات') . ' إيصال رقم ' . $payment->receipt_number,
-                'notes' => $payment->description,
+                'description' => 'مقبوضات '.(Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات').' إيصال رقم '.$payment->receipt_number,
+                'notes' => ($payment->payment_method === 'split' ? ('دفع مركب: نقداً '.number_format((float) $payment->cash_amount, 0).' د.ع + بطاقة '.number_format((float) $payment->card_amount, 0).' د.ع | ') : '').$payment->description,
                 'performed_by_id' => $payment->cashier_id,
                 'performed_at' => $payment->paid_at,
             ]
@@ -336,7 +338,7 @@ class PaymentObserver
 
     protected function handleRefundFinancialTransaction(Payment $payment): void
     {
-        if (!$payment->paid_at) {
+        if (! $payment->paid_at) {
             return;
         }
 
@@ -357,10 +359,10 @@ class PaymentObserver
                 'transaction_type' => 'expense',
                 'category' => 'refund',
                 'voucher_number' => $payment->receipt_number,
-                'amount' => abs((float)$payment->amount),
+                'amount' => abs((float) $payment->amount),
                 'currency' => 'IQD',
                 'payment_method' => $payment->payment_method ?: 'cash',
-                'description' => 'استرجاع مقبوضات ' . (Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات') . ' إيصال رقم ' . $payment->receipt_number,
+                'description' => 'استرجاع مقبوضات '.(Payment::PAYMENT_TYPES[$payment->payment_type] ?? 'خدمات').' إيصال رقم '.$payment->receipt_number,
                 'notes' => $payment->description ?: 'سند صرف استرجاع نقدي',
                 'performed_by_id' => $payment->cashier_id ?: auth()->id(),
                 'performed_at' => $payment->paid_at,

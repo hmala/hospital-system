@@ -2676,9 +2676,8 @@ class CashierController extends Controller
         $devicesFee = $surgery->medicalDevices->sum('pivot.price');
         $totalSurgeryFee = $surgeryFee + $additionalOpsFee + $devicesFee;
 
-        $labTestsFee = $surgery->labTests->sum(function ($test) {
-            return $test->labTest->price ?? 0;
-        });
+        // التحاليل المرافقة للعملية مشمولة ضمن أتعاب العملية الجراحية (كالغرفة لليوم الأول)
+        $labTestsFee = 0;
         $radiologyTestsFee = $surgery->radiologyTests->sum(function ($test) {
             return $test->radiologyType->base_price ?? 0;
         });
@@ -2786,8 +2785,10 @@ class CashierController extends Controller
         }
 
         $request->validate([
-            'payment_method' => 'required|in:cash,card,insurance',
+            'payment_method' => 'required|in:cash,card,insurance,split',
             'amount' => 'required|numeric|min:0',
+            'cash_amount' => 'nullable|numeric|min:0',
+            'card_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:500',
             'inclusive' => 'nullable|boolean',
             'pay_surgery' => 'nullable',
@@ -2890,18 +2891,11 @@ class CashierController extends Controller
                 : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
-            // 3. Lab Tests
+            // 3. Lab Tests (التحاليل المرافقة للعملية مشمولة ضمن أتعاب العملية الجراحية كالغرفة لأول يوم)
             if (! empty($payLabTests)) {
                 foreach ($surgery->labTests as $labTest) {
                     if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
-                        if ($isInclusive) {
-                            $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' (مشمول)';
-                        } else {
-                            $pricing = $labTest->labTest ? $labTest->labTest->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
-                            $labTestPrice = $pricing ? (float) $pricing['approved_price'] : (float) ($labTest->labTest->price ?? 0);
-                            $actualAmount += $labTestPrice;
-                            $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' ('.number_format($labTestPrice, 0).' د.ع)';
-                        }
+                        $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' (مشمول ضمن باقة العملية)';
                     }
                 }
             }
@@ -2963,6 +2957,20 @@ class CashierController extends Controller
                 $paidItems[] = 'حصة المريض: '.number_format($patientShare, 0).' د.ع | مطالبة الضمان: '.number_format($insuranceShare, 0).' د.ع';
             }
 
+            // التحقق من الدفع المركب (كاش + بطاقة)
+            $paymentMethod = $request->input('payment_method', 'cash');
+            $cashAmount = (float) $request->input('cash_amount', 0);
+            $cardAmount = (float) $request->input('card_amount', 0);
+
+            if ($paymentMethod === 'split') {
+                $splitTotal = round($cashAmount + $cardAmount, 2);
+                $expectedAmount = round($patientPaidAmount, 2);
+                if (abs($splitTotal - $expectedAmount) > 1.0) {
+                    throw new \Exception('في الدفع المركب، يجب أن يساوي مجموع الكاش ('.number_format($cashAmount, 0).' د.ع) والبطاقة ('.number_format($cardAmount, 0).' د.ع) المبلغ المطلوب تسديده ('.number_format($expectedAmount, 0).' د.ع)');
+                }
+                $paidItems[] = 'طريقة السداد: دفع مركب (كاش: '.number_format($cashAmount, 0).' د.ع | بطاقة: '.number_format($cardAmount, 0).' د.ع)';
+            }
+
             // إنشاء وصف الدفع
             $description = 'دفع رسوم العملية الجراحية: '.$surgery->surgery_type.' (ID: #'.$surgery->id.')';
             if ($isInclusive) {
@@ -2977,6 +2985,8 @@ class CashierController extends Controller
                 'surgery_id' => $surgery->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
                 'amount' => $patientPaidAmount,
+                'cash_amount' => $paymentMethod === 'split' ? $cashAmount : ($paymentMethod === 'cash' ? $patientPaidAmount : 0),
+                'card_amount' => $paymentMethod === 'split' ? $cardAmount : ($paymentMethod === 'card' ? $patientPaidAmount : 0),
                 'total_amount' => $totalApprovedPayable,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
@@ -2988,7 +2998,7 @@ class CashierController extends Controller
                 'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
                 'copay_percentage' => $isInsurance ? $copayPercentage : 0.00,
                 'claim_status' => $isInsurance ? 'pending' : 'none',
-                'payment_method' => $request->payment_method,
+                'payment_method' => $paymentMethod,
                 'payment_type' => 'surgery',
                 'description' => $description,
                 'notes' => $request->notes,

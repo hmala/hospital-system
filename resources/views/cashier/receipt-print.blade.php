@@ -747,7 +747,15 @@
         <!-- Bottom Payment Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">{{ (float)$payment->amount < 0 ? 'طريقة الاسترجاع:' : 'طريقة الدفع:' }} {{ $payment->payment_method === 'card' ? 'دفع إلكتروني (POS)' : 'نقدي (Cash)' }}</td>
+                <td class="box-label">{{ (float)$payment->amount < 0 ? 'طريقة الاسترجاع:' : 'طريقة الدفع:' }} 
+                    @if($payment->payment_method === 'split')
+                        دفع مركب (كاش: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }})
+                    @elseif($payment->payment_method === 'card')
+                        دفع إلكتروني (POS)
+                    @else
+                        نقدي (Cash)
+                    @endif
+                </td>
                 <td class="box-val">{{ number_format(abs((float)$payment->amount), 0) }} IQD</td>
             </tr>
         </table>

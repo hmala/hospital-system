@@ -24,17 +24,13 @@
     $roomFeePaid = $isCancelled ? ($roomFeePaidAmount <= 0) : ($remainingRoomFee <= 0 && $excessRoomFee <= 0);
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
-    // تحاليل معلقة ومدفوعة
+    // تحاليل معلقة ومدفوعة (مشمولة ضمن أتعاب العملية كالغرفة لأول يوم)
     $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid');
     $paidLabTests = $surgery->labTests->filter(function($test) use ($isCancelled) {
         return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->labTest);
     });
-    $pendingLabFee = $isCancelled ? 0 : $pendingLabTests->sum(function($test) {
-        return $test->labTest->price ?? 0;
-    });
-    $paidLabFee = $paidLabTests->sum(function($test) {
-        return $test->labTest->price ?? 0;
-    });
+    $pendingLabFee = 0; // مشمولة ضمن أتعاب العملية (0 د.ع إضافي)
+    $paidLabFee = 0;
     
     // أشعة معلقة ومدفوعة
     $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid');
@@ -74,22 +70,27 @@
     <div class="row justify-content-center">
         <div class="col-md-11">
             <div class="card border-0 shadow-sm">
-                <div class="card-header {{ $isCancelled ? 'bg-danger text-white' : 'bg-primary text-white' }}">
-                    <h5 class="mb-0">
-                        @if($isCancelled)
-                            <i class="fas fa-undo me-2"></i>
-                            استرجاع رسوم العملية الجراحية (Refund)
-                            <span class="badge bg-white text-danger ms-2">عملية ملغاة</span>
-                        @else
-                            <i class="fas fa-money-bill-wave me-2"></i>
-                            دفع رسوم العملية الجراحية
-                            @if($surgery->payment_status === 'partial')
-                                <span class="badge bg-warning text-dark ms-2">دفع جزئي سابق</span>
+                <div class="card-header text-white" style="background: linear-gradient(135deg, {{ $isCancelled ? '#dc2626 0%, #b91c1c 100%' : '#0d6efd 0%, #0a58ca 100%' }});">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">
+                            @if($isCancelled)
+                                <i class="fas fa-undo me-2"></i>
+                                استرجاع رسوم العملية الجراحية (Refund)
+                                <span class="badge bg-white text-danger ms-2">عملية ملغاة</span>
+                            @else
+                                <i class="fas fa-file-invoice-dollar me-2"></i>
+                                تسوية ودفع رسوم العملية الجراحية
+                                @if($surgery->payment_status === 'partial')
+                                    <span class="badge bg-warning text-dark ms-2">دفع جزئي سابق</span>
+                                @endif
                             @endif
-                        @endif
-                    </h5>
+                        </h5>
+                        <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-sm btn-outline-light">
+                            <i class="fas fa-arrow-right me-1"></i>العودة لسجل العمليات
+                        </a>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     @if(session('error'))
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
@@ -123,49 +124,76 @@
                         </div>
                     @endif
 
-                    <!-- معلومات العملية -->
-                    <div class="row mb-4">
+                    <!-- بطاقة معلومات العملية والمريض الموحدة السريرية -->
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
-                                <h6 class="text-danger mb-3">
-                                    <i class="fas fa-procedures me-2"></i>
-                                    تفاصيل العملية
+                            <div class="border rounded-3 p-3 bg-light h-100 shadow-2xs">
+                                <h6 class="text-primary fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fas fa-procedures"></i>
+                                    تفاصيل العملية الجراحية
                                 </h6>
-                                <div class="mb-2">
-                                    <strong>رقم العملية:</strong> #{{ $surgery->id }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">رقم العملية:</span>
+                                    <span class="badge bg-dark font-monospace fs-7">#{{ $surgery->id }}</span>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>نوع العملية:</strong> {{ $surgery->surgery_type }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">نوع العملية:</span>
+                                    <strong class="text-dark">{{ $surgery->surgery_type }}</strong>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>التاريخ المحدد:</strong> {{ $surgery->scheduled_date->format('Y-m-d') }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">الموقع السريري:</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                        <i class="fas fa-bed me-1"></i>غرفة {{ $surgery->room?->room_number ?? 'غير محدد' }} ({{ $surgery->room?->floor ?? '—' }})
+                                    </span>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>الوقت:</strong> {{ $surgery->scheduled_time->format('H:i') }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">الجراح المعالج:</span>
+                                    <strong>د. {{ $surgery->doctor?->user?->name ?? 'غير محدد' }}</strong>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>القسم:</strong> {{ $surgery->department->name }}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">الموعد المحدد:</span>
+                                    <span class="font-monospace">{{ $surgery->scheduled_date->format('Y-m-d') }} ({{ $surgery->scheduled_time->format('H:i') }})</span>
                                 </div>
                             </div>
                         </div>
+
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
-                                <h6 class="text-success mb-3">
-                                    <i class="fas fa-user me-2"></i>
-                                    معلومات المريض
+                            <div class="border rounded-3 p-3 bg-light h-100 shadow-2xs">
+                                <h6 class="text-success fw-bold mb-3 d-flex align-items-center justify-content-between">
+                                    <span><i class="fas fa-user-circle me-2"></i>معلومات المريض والتغطية المالية</span>
+                                    <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-primary' }}">
+                                        {{ $defaultInsurance === 'hi' ? '🛡️ الضمان الصحي الوطني' : ($defaultInsurance === 'moi' ? '🛡️ ضمان الداخلية' : '💵 نقدي (كاش)') }}
+                                    </span>
                                 </h6>
-                                <div class="mb-2">
-                                    <strong>الاسم:</strong> {{ $surgery->patient && $surgery->patient->user ? $surgery->patient->user->name : 'غير محدد' }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">اسم المريض:</span>
+                                    <strong class="text-dark fs-6">{{ $surgery->patient?->user?->name ?? 'غير محدد' }}</strong>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>رقم الهوية:</strong> {{ $surgery->patient ? ($surgery->patient->national_id ?? 'غير محدد') : 'غير محدد' }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">رقم الهوية / الملف:</span>
+                                    <span class="font-monospace text-dark fw-bold">{{ $surgery->patient?->national_id ?? 'غير محدد' }}</span>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>رقم الهاتف:</strong> {{ $surgery->patient && $surgery->patient->user ? ($surgery->patient->user->phone ?? 'غير محدد') : 'غير محدد' }}
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">رقم الهاتف:</span>
+                                    <span class="font-monospace" dir="ltr">{{ $surgery->patient?->user?->phone ?? 'غير محدد' }}</span>
                                 </div>
-                                <div class="mb-2">
-                                    <strong>الطبيب المعالج:</strong> د. {{ $surgery->doctor && $surgery->doctor->user ? $surgery->doctor->user->name : 'غير محدد' }}
-                                </div>
+                                @if($defaultInsurance !== 'none')
+                                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">رقم بطاقة الضمان:</span>
+                                        <span class="font-monospace text-primary fw-bold">{{ $defaultCardNo ?: 'مسجل' }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">فئة المريض والتحمل:</span>
+                                        <span class="badge bg-info text-dark">
+                                            {{ $hiCategory?->name ?? 'الفئة المعرفة' }} (استقطاع العمليات: {{ (float)$defaultCopay }}%)
+                                        </span>
+                                    </div>
+                                @else
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">التصنيف المالي:</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border">دفع نقدي كامل (خارج التأمين)</span>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -828,11 +856,6 @@
                                             @foreach($pendingLabTests as $labTest)
                                                 @php
                                                     $lModel = $labTest->labTest;
-                                                    $lBase = (float)($lModel ? $lModel->getRegularPrice() : 0);
-                                                    $lMoi = (float)($lModel && $lModel->moi_price > 0 ? $lModel->moi_price : $lBase);
-                                                    $lHi = (float)($lModel && $lModel->hi_price > 0 ? $lModel->hi_price : $lBase);
-                                                    $lMoiActive = (bool)($lModel ? ($lModel->is_moi_active ?? true) : true);
-                                                    $lHiActive = (bool)($lModel ? ($lModel->is_hi_active ?? true) : true);
                                                 @endphp
                                                 <tr>
                                                     <td class="text-center">
@@ -840,25 +863,33 @@
                                                                class="form-check-input payment-item lab-test-item" 
                                                                name="pay_lab_tests[]" 
                                                                value="{{ $labTest->id }}"
-                                                               data-base-price="{{ $lBase }}"
-                                                               data-moi-price="{{ $lMoi }}"
-                                                               data-hi-price="{{ $lHi }}"
-                                                               data-is-moi-active="{{ $lMoiActive ? '1' : '0' }}"
-                                                               data-is-hi-active="{{ $lHiActive ? '1' : '0' }}"
+                                                               data-base-price="0"
+                                                               data-moi-price="0"
+                                                               data-hi-price="0"
+                                                               data-is-moi-active="1"
+                                                               data-is-hi-active="1"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-vial text-primary me-2"></i>
-                                                        تحليل
+                                                        تحليل روتيني للعملية
                                                     </td>
-                                                    <td>{{ $lModel->name ?? 'غير محدد' }} ({{ $lModel->code ?? '-' }})</td>
-                                                    <td class="text-end item-price-display">{{ number_format($lBase, 0) }}</td>
+                                                    <td>
+                                                        <span class="fw-semibold">{{ $lModel->name ?? 'غير محدد' }}</span> 
+                                                        <small class="text-muted">({{ $lModel->code ?? '-' }})</small>
+                                                        <span class="badge bg-success-subtle text-success border border-success ms-2 small">
+                                                            <i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end item-price-display text-success fw-bold">
+                                                        0 د.ع <small class="text-muted">(مشمول)</small>
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع التحاليل المعلقة:</strong></td>
-                                                <td class="text-end"><strong id="pending_lab_fee_display">{{ number_format($pendingLabFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_lab_fee_display" class="text-success">0 د.ع</strong> <small class="text-muted">(مشمولة بالعملية)</small></td>
                                             </tr>
                                         @endif
 
@@ -1030,24 +1061,71 @@
                                     <div class="payment-methods-group">
                                         <div class="form-check form-check-lg mb-2">
                                             <input class="form-check-input" type="radio" name="payment_method" id="surgery_payment_cash" 
-                                                   value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
-                                            <label class="form-check-label fw-semibold" for="surgery_payment_cash">
+                                                   value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} 
+                                                   onchange="if(typeof updateSplitUI === 'function') updateSplitUI();" required>
+                                            <label class="form-check-label fw-semibold" for="surgery_payment_cash" style="cursor: pointer;">
                                                 💵 نقدي (Cash)
                                             </label>
                                         </div>
                                         <div class="form-check form-check-lg mb-2">
                                             <input class="form-check-input" type="radio" name="payment_method" id="surgery_payment_card" 
-                                                   value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
-                                            <label class="form-check-label fw-semibold" for="surgery_payment_card">
+                                                   value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}
+                                                   onchange="if(typeof updateSplitUI === 'function') updateSplitUI();">
+                                            <label class="form-check-label fw-semibold" for="surgery_payment_card" style="cursor: pointer;">
                                                 💳 بطاقة ائتمان (Card)
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-lg mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="surgery_payment_split" 
+                                                   value="split" {{ old('payment_method') == 'split' ? 'checked' : '' }}
+                                                   onchange="if(typeof updateSplitUI === 'function') updateSplitUI();">
+                                            <label class="form-check-label fw-semibold text-primary" for="surgery_payment_split" style="cursor: pointer;">
+                                                🔄 دفع مركب / مختلط (مقسم كاش + بطاقة)
                                             </label>
                                         </div>
                                         <div class="form-check form-check-lg">
                                             <input class="form-check-input" type="radio" name="payment_method" id="surgery_payment_insurance" 
-                                                   value="insurance" {{ old('payment_method') == 'insurance' ? 'checked' : '' }}>
-                                            <label class="form-check-label fw-semibold" for="surgery_payment_insurance">
+                                                   value="insurance" {{ old('payment_method') == 'insurance' ? 'checked' : '' }}
+                                                   onchange="if(typeof updateSplitUI === 'function') updateSplitUI();">
+                                            <label class="form-check-label fw-semibold" for="surgery_payment_insurance" style="cursor: pointer;">
                                                 🏥 تأمين صحي (Insurance)
                                             </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- صندوق الدفع المركب (كاش + بطاقة) -->
+                                    <div id="split_payment_box" class="p-3 mt-3 rounded-3 border border-primary bg-primary-subtle" style="display: none;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="fw-bold text-primary">
+                                                <i class="fas fa-coins me-1"></i> تفصيل الدفع المركب:
+                                            </span>
+                                            <span id="split_status_badge" class="badge bg-secondary">0 / 0 IQD</span>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold mb-1">
+                                                    💵 المبلغ نقداً (Cash)
+                                                </label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" step="any" min="0" class="form-control fw-bold" id="cash_amount" name="cash_amount" value="{{ old('cash_amount', 0) }}" placeholder="0">
+                                                    <span class="input-group-text">IQD</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small fw-bold mb-1">
+                                                    💳 المبلغ بالبطاقة (Card)
+                                                </label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" step="any" min="0" class="form-control fw-bold" id="card_amount" name="card_amount" value="{{ old('card_amount', 0) }}" placeholder="0">
+                                                    <span class="input-group-text">IQD</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2 small">
+                                            <span id="split_helper_text" class="text-muted">أدخل جزءاً بالكاش وسيتم إكمال الباقي بالبطاقة آلياً.</span>
+                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" id="split_equal_btn" style="font-size: 0.75rem;">
+                                                مناصفة (50/50)
+                                            </button>
                                         </div>
                                     </div>
                                     @error('payment_method')
@@ -1134,6 +1212,86 @@ document.addEventListener('DOMContentLoaded', function() {
     const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
     const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
     const hiBadge = document.getElementById('patient_hi_category_badge');
+
+    function numberFormat(num) {
+        return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    // --- عناصر ومنطق الدفع المركب (كاش + بطاقة) ---
+    const splitPaymentBox = document.getElementById('split_payment_box');
+    const cashAmountInput = document.getElementById('cash_amount');
+    const cardAmountInput = document.getElementById('card_amount');
+    const splitStatusBadge = document.getElementById('split_status_badge');
+    const splitEqualBtn = document.getElementById('split_equal_btn');
+    const surgeryPaymentSplitRadio = document.getElementById('surgery_payment_split');
+    const paymentMethodRadios = document.querySelectorAll('input[name="payment_method"]');
+
+    function isSplitActive() {
+        return surgeryPaymentSplitRadio && surgeryPaymentSplitRadio.checked;
+    }
+
+    function updateSplitUI() {
+        if (!splitPaymentBox) return;
+
+        const inputAmount = document.getElementById('amountInput');
+        const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
+
+        if (isSplitActive()) {
+            splitPaymentBox.style.display = 'block';
+
+            let cashVal = parseFloat(cashAmountInput ? cashAmountInput.value : 0) || 0;
+            let cardVal = parseFloat(cardAmountInput ? cardAmountInput.value : 0) || 0;
+
+            if (cashVal === 0 && cardVal === 0 && currentTarget > 0) {
+                cashVal = currentTarget;
+                if (cashAmountInput) cashAmountInput.value = currentTarget;
+                if (cardAmountInput) cardAmountInput.value = 0;
+            }
+
+            const totalSplit = Math.round(cashVal + cardVal);
+            const targetRounded = Math.round(currentTarget);
+
+            if (splitStatusBadge) {
+                if (totalSplit === targetRounded && targetRounded > 0) {
+                    splitStatusBadge.className = 'badge bg-success';
+                    splitStatusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>متطابق: ' + numberFormat(totalSplit) + ' IQD';
+                } else {
+                    splitStatusBadge.className = 'badge bg-danger';
+                    splitStatusBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>المجموع: ' + numberFormat(totalSplit) + ' / المطلوب: ' + numberFormat(targetRounded) + ' IQD';
+                }
+            }
+        } else {
+            splitPaymentBox.style.display = 'none';
+        }
+    }
+
+    function syncSplitAmounts(source) {
+        const inputAmount = document.getElementById('amountInput');
+        const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
+        let cashVal = parseFloat(cashAmountInput ? cashAmountInput.value : 0) || 0;
+        let cardVal = parseFloat(cardAmountInput ? cardAmountInput.value : 0) || 0;
+
+        if (source === 'cash') {
+            if (cashVal > currentTarget) {
+                cashVal = currentTarget;
+                if (cashAmountInput) cashAmountInput.value = cashVal;
+            }
+            cardVal = Math.max(0, currentTarget - cashVal);
+            if (cardAmountInput) cardAmountInput.value = Math.round(cardVal);
+        } else if (source === 'card') {
+            if (cardVal > currentTarget) {
+                cardVal = currentTarget;
+                if (cardAmountInput) cardAmountInput.value = cardVal;
+            }
+            cashVal = Math.max(0, currentTarget - cardVal);
+            if (cashAmountInput) cashAmountInput.value = Math.round(cashVal);
+        }
+
+        updateSplitUI();
+    }
+
+    window.updateSplitUI = updateSplitUI;
+    window.syncSplitAmounts = syncSplitAmounts;
 
     function calculateSelectedAmount() {
         let selectedAmount = 0;
@@ -1394,6 +1552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
         updateGroupCheckbox('extra-service-item', 'selectAllExtraServices');
+        updateSplitUI();
     }
 
     function updateCopayUI() {
@@ -1663,6 +1822,51 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.payment-item').forEach(function(item) {
         item.addEventListener('change', calculateSelectedAmount);
     });
+
+    if (cashAmountInput) {
+        cashAmountInput.addEventListener('input', function() { syncSplitAmounts('cash'); });
+        cashAmountInput.addEventListener('change', function() { syncSplitAmounts('cash'); });
+    }
+    if (cardAmountInput) {
+        cardAmountInput.addEventListener('input', function() { syncSplitAmounts('card'); });
+        cardAmountInput.addEventListener('change', function() { syncSplitAmounts('card'); });
+    }
+    if (splitEqualBtn) {
+        splitEqualBtn.addEventListener('click', function() {
+            const inputAmount = document.getElementById('amountInput');
+            const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
+            const half = Math.floor(currentTarget / 2);
+            const remaining = currentTarget - half;
+            if (cashAmountInput) cashAmountInput.value = half;
+            if (cardAmountInput) cardAmountInput.value = remaining;
+            updateSplitUI();
+        });
+    }
+
+    paymentMethodRadios.forEach(radio => {
+        radio.addEventListener('change', updateSplitUI);
+        radio.addEventListener('click', updateSplitUI);
+    });
+
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', function(e) {
+            if (isSplitActive()) {
+                const inputAmount = document.getElementById('amountInput');
+                const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
+                const cashVal = parseFloat(cashAmountInput ? cashAmountInput.value : 0) || 0;
+                const cardVal = parseFloat(cardAmountInput ? cardAmountInput.value : 0) || 0;
+                const totalSplit = Math.round(cashVal + cardVal);
+                const targetRounded = Math.round(currentTarget);
+
+                if (totalSplit !== targetRounded) {
+                    e.preventDefault();
+                    alert('تنبيه: مجموع مبالغ الدفع المركب (كاش: ' + numberFormat(cashVal) + ' + بطاقة: ' + numberFormat(cardVal) + ' = ' + numberFormat(totalSplit) + ' د.ع) لا يتطابق مع المبلغ المطلوب قبضه (' + numberFormat(targetRounded) + ' د.ع). يرجى ضبط المبالغ قبل التأكيد.');
+                    return false;
+                }
+            }
+        });
+    }
 
     // حساب أولي
     calculateSelectedAmount();
