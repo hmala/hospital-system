@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\ConsultationRevenue;
 use App\Models\Emergency;
+use App\Models\HospitalExtraService;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
 use App\Models\NicuPayment;
@@ -12,7 +13,9 @@ use App\Models\Payment;
 use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
+use App\Models\SurgeryExtraService;
 use App\Models\Visit;
+use App\Models\VisitExtraService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -896,7 +899,16 @@ class CashierController extends Controller
             ->where('status', '!=', 'cancelled')
             ->get();
 
-        return view('cashier.request-payment-form', compact('request', 'otherPendingRequests'));
+        $availableExtraServices = HospitalExtraService::where('is_active', true)->orderBy('id', 'asc')->get();
+
+        $pendingExtraServices = VisitExtraService::where(function ($q) use ($request) {
+            $q->where('request_id', $request->id);
+            if ($request->visit_id) {
+                $q->orWhere('visit_id', $request->visit_id);
+            }
+        })->where('payment_status', 'pending')->get();
+
+        return view('cashier.request-payment-form', compact('request', 'otherPendingRequests', 'availableExtraServices', 'pendingExtraServices'));
     }
 
     /**
@@ -1047,6 +1059,21 @@ class CashierController extends Controller
                         $hasAnyPostpone = true;
                     }
                 }
+            } elseif ($reqItem->type === 'nursing') {
+                $nActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                if (! empty($nActions)) {
+                    foreach ($nActions as $act) {
+                        if ($act === 'pay') {
+                            $hasAnyPay = true;
+                        } elseif ($act === 'cancel') {
+                            $hasAnyCancel = true;
+                        } elseif ($act === 'postpone') {
+                            $hasAnyPostpone = true;
+                        }
+                    }
+                } else {
+                    $hasAnyPay = true;
+                }
             }
         }
 
@@ -1075,6 +1102,11 @@ class CashierController extends Controller
                         $radIds = (array) ($rDetails['radiology_type_ids'] ?? $rDetails['radiology_types'] ?? $rDetails['radiology_type_id'] ?? []);
                         foreach ($radIds as $rId) {
                             $itemActionsForReq[$rId] = $itemActions[$reqItem->id]['radiology'][$rId] ?? 'cancel';
+                        }
+                    } elseif ($reqItem->type === 'nursing') {
+                        $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                        foreach ($nursingActions as $nId => $actVal) {
+                            $itemActionsForReq[$nId] = $actVal;
                         }
                     }
 
@@ -1298,7 +1330,11 @@ class CashierController extends Controller
                                     }
                                     $seenLabTestNames[] = $normTestName;
 
-                                    $p = $test->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                    $labCopay = ($insuranceType === 'hi' && $patient)
+                                        ? (float) $patient->getCopayPercentageFor('lab')
+                                        : $copayPercentage;
+
+                                    $p = $test->calculateInsurancePricing($insuranceType, $labCopay);
                                     $computedTotal += $p['total_amount'];
                                     $computedPatientShare += $p['patient_share'];
                                     $computedInsuranceShare += $p['insurance_share'];
@@ -1423,7 +1459,11 @@ class CashierController extends Controller
                             $seenRadKeys[] = $radKey;
                             $type = RadiologyType::find($typeId);
                             if ($type) {
-                                $p = $type->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $radCopay = ($insuranceType === 'hi' && $patient)
+                                    ? (float) $patient->getCopayPercentageFor('radiology')
+                                    : $copayPercentage;
+
+                                $p = $type->calculateInsurancePricing($insuranceType, $radCopay);
                                 $computedTotal += $p['total_amount'];
                                 $computedPatientShare += $p['patient_share'];
                                 $computedInsuranceShare += $p['insurance_share'];
@@ -1434,12 +1474,112 @@ class CashierController extends Controller
                         }
                         $descParts[] = 'أشعة #'.$reqItem->id;
                     }
+                } elseif ($reqItem->type === 'nursing') {
+                    $nursingActions = $itemActions[$reqItem->id]['nursing'] ?? [];
+                    $isPaid = true;
+                    foreach ($nursingActions as $actionVal) {
+                        if ($actionVal === 'cancel' || $actionVal === 'postponed' || $actionVal === 'postpone') {
+                            $isPaid = false;
+                            break;
+                        }
+                    }
+
+                    if ($isPaid) {
+                        $actuallyPaidRequests->push($reqItem);
+
+                        $hasDoctorReferral = ! empty($reqItem->visit?->doctor_id) || ! empty($appointment?->doctor_id) || ($reqItem->visit?->visit_type === 'consultation');
+                        $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                        if (! empty($nursingServiceIds)) {
+                            $nursingCopay = ($insuranceType === 'hi' && $patient)
+                                ? (float) $patient->getCopayPercentageFor('nursing')
+                                : $copayPercentage;
+
+                            foreach ($nursingServiceIds as $nsId) {
+                                $nSvc = \App\Models\EmergencyService::find($nsId);
+                                if ($nSvc) {
+                                    $p = $nSvc->calculateInsurancePricing($insuranceType, $nursingCopay);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
+                                }
+                            }
+                        } else {
+                            $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                            $descLower = mb_strtolower($desc);
+                            $isEcg = str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo');
+
+                            $matchedSvc = null;
+                            if ($isEcg) {
+                                $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                    ?? \App\Models\EmergencyService::find(93)
+                                    ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                            }
+
+                            // إذا كان تخطيط القلب صادر بإحالة من طبيب استشارية والمريض على الضمان الصحي يشمله الضمان بسعر 10,000 وتحمل 10%
+                            // أما إذا كان مباشر بدون استشاري فلا يغطى بالضمان ويكون نقدي 100% (15,000 د.ع)
+                            if ($isEcg && $hasDoctorReferral && $insuranceType === 'hi') {
+                                $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $copayPercentage;
+
+                                if ($matchedSvc) {
+                                    $p = $matchedSvc->calculateInsurancePricing('hi', $ecgCopay);
+                                    $computedTotal += $p['total_amount'];
+                                    $computedPatientShare += $p['patient_share'];
+                                    $computedInsuranceShare += $p['insurance_share'];
+                                    if ($p['is_covered']) {
+                                        $hasCoveredItem = true;
+                                    }
+                                } else {
+                                    $computedTotal += 10000.00;
+                                    $patShare = round(10000.00 * ($ecgCopay / 100));
+                                    $computedPatientShare += $patShare;
+                                    $computedInsuranceShare += (10000.00 - $patShare);
+                                    $hasCoveredItem = true;
+                                }
+                            } elseif ($matchedSvc && $insuranceType !== 'none') {
+                                $p = $matchedSvc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                                $computedTotal += $p['total_amount'];
+                                $computedPatientShare += $p['patient_share'];
+                                $computedInsuranceShare += $p['insurance_share'];
+                                if ($p['is_covered']) {
+                                    $hasCoveredItem = true;
+                                }
+                            } else {
+                                // مباشر بدون استشاري أو نقدي: 100% كاش 15,000 د.ع
+                                $computedTotal += 15000.00;
+                                $computedPatientShare += 15000.00;
+                            }
+                        }
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط') || str_contains(mb_strtolower($reqItem->description ?? ''), 'echo')) ? 'تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $descParts[] = $cleanTitle.' #'.$reqItem->id;
+                    }
                 }
             }
 
-            if ($actuallyPaidRequests->isEmpty()) {
+            // جلب الخدمات الإضافية والفندقية المعلقة للطلب والزيارة
+            $pendingExtraServices = VisitExtraService::where(function ($q) use ($request) {
+                $q->where('request_id', $request->id);
+                if ($request->visit_id) {
+                    $q->orWhere('visit_id', $request->visit_id);
+                }
+            })->where('payment_status', 'pending')->get();
+
+            $extraServicesAmount = 0;
+            $extraServicesNames = [];
+            foreach ($pendingExtraServices as $pes) {
+                $extraServicesAmount += (float) $pes->total_amount;
+                $extraServicesNames[] = $pes->name.($pes->quantity > 1 ? " (×{$pes->quantity})" : '');
+            }
+
+            if ($actuallyPaidRequests->isEmpty() && $pendingExtraServices->isEmpty()) {
                 throw new \Exception('لم يتم العثور على أي خدمات مسددة لمعالجة الدفع.');
             }
+
+            // الخدمات الإضافية تحسب نقداً 100% خارج الضمان
+            $computedTotal += $extraServicesAmount;
+            $computedPatientShare += $extraServicesAmount;
 
             $totalApproved = $computedTotal > 0 ? $computedTotal : (float) $httpRequest->amount;
             // ضمان تطابق المبلغ المقبوض وحصة المريض مع المجموع الفعلي لأسطر الفحوصات والوصل المالي
@@ -1448,10 +1588,157 @@ class CashierController extends Controller
             $insuranceShare = $hasCoveredItem ? max(0, $totalApproved - $patientShare) : 0;
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
-            $paymentType = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray()) && ! in_array('lab', $actuallyPaidRequests->pluck('type')->toArray()) ? 'radiology' : 'lab';
-            $paymentDescription = count($actuallyPaidRequests) > 1
-                ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
-                : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if ($insuranceType === 'none') {
+                $discountScope = $httpRequest->input('discount_scope', 'overall');
+
+                if ($discountScope === 'per_item') {
+                    $itemDiscounts = (array) $httpRequest->input('item_discounts', []);
+                    $totalItemDiscounts = 0.0;
+                    $itemDiscountSummaries = [];
+
+                    foreach ($actuallyPaidRequests as $reqItem) {
+                        $reqDetails = is_string($reqItem->details) ? json_decode($reqItem->details, true) : ($reqItem->details ?? []);
+                        if (! is_array($reqDetails)) {
+                            $reqDetails = [];
+                        }
+
+                        $reqSavedDiscounts = [];
+
+                        if ($reqItem->type === 'lab') {
+                            $pkgId = $reqDetails['package_id'] ?? null;
+                            if ($pkgId) {
+                                $pkg = \App\Models\Package::find($pkgId);
+                                $discPct = (float) ($itemDiscounts[$reqItem->id]['package'][$pkgId] ?? ($itemDiscounts[$reqItem->id]['package']['pkg_'.$pkgId] ?? 0));
+                                if ($pkg && $discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $disVal = round((float) $pkg->price * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemDiscountSummaries[] = "باقة {$pkg->name} (خصم {$discPct}%)";
+                                    $reqSavedDiscounts['package'][$pkgId] = [
+                                        'name' => $pkg->name,
+                                        'percentage' => $discPct,
+                                        'discount_amount' => $disVal,
+                                        'original_price' => (float) $pkg->price,
+                                    ];
+                                }
+                            } else {
+                                $paidTestIds = (array) ($reqDetails['lab_test_ids'] ?? []);
+                                foreach ($paidTestIds as $tId) {
+                                    $discPct = (float) ($itemDiscounts[$reqItem->id]['lab'][$tId] ?? 0);
+                                    if ($discPct > 0) {
+                                        $discPct = min(100, max(0, $discPct));
+                                        $tModel = \App\Models\LabTest::find($tId);
+                                        if ($tModel) {
+                                            $disVal = round((float) $tModel->price * ($discPct / 100.0), 2);
+                                            $totalItemDiscounts += $disVal;
+                                            $itemDiscountSummaries[] = "{$tModel->name} (خصم {$discPct}%)";
+                                            $reqSavedDiscounts['lab'][$tId] = [
+                                                'name' => $tModel->name,
+                                                'percentage' => $discPct,
+                                                'discount_amount' => $disVal,
+                                                'original_price' => (float) $tModel->price,
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                        } elseif ($reqItem->type === 'radiology') {
+                            $paidRadIds = (array) ($reqDetails['radiology_type_ids'] ?? $reqDetails['radiology_types'] ?? []);
+                            foreach ($paidRadIds as $rId) {
+                                $discPct = (float) ($itemDiscounts[$reqItem->id]['radiology'][$rId] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $rModel = \App\Models\RadiologyType::find($rId);
+                                    if ($rModel) {
+                                        $disVal = round((float) $rModel->price * ($discPct / 100.0), 2);
+                                        $totalItemDiscounts += $disVal;
+                                        $itemDiscountSummaries[] = "{$rModel->name} (خصم {$discPct}%)";
+                                        $reqSavedDiscounts['radiology'][$rId] = [
+                                            'name' => $rModel->name,
+                                            'percentage' => $discPct,
+                                            'discount_amount' => $disVal,
+                                            'original_price' => (float) $rModel->price,
+                                        ];
+                                    }
+                                }
+                            }
+                        } elseif ($reqItem->type === 'nursing') {
+                            $nursingDiscounts = $itemDiscounts[$reqItem->id]['nursing'] ?? [];
+                            foreach ($nursingDiscounts as $nId => $discVal) {
+                                $discPct = (float) $discVal;
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $nSvc = \App\Models\EmergencyService::find($nId)
+                                        ?? \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first();
+                                    $basePrice = $nSvc ? (float) $nSvc->price : 15000.0;
+                                    $nName = $nSvc ? $nSvc->name : ($reqItem->description ?: 'خدمة تمريضية');
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemDiscountSummaries[] = "{$nName} (خصم {$discPct}%)";
+                                    $reqSavedDiscounts['nursing'][$nId] = [
+                                        'name' => $nName,
+                                        'percentage' => $discPct,
+                                        'discount_amount' => $disVal,
+                                        'original_price' => $basePrice,
+                                    ];
+                                }
+                            }
+                        }
+
+                        if (! empty($reqSavedDiscounts)) {
+                            $reqDetails['item_discounts'] = $reqSavedDiscounts;
+                            $reqItem->details = $reqDetails;
+                            $reqItem->save();
+                        }
+                    }
+
+                    if ($totalItemDiscounts > 0) {
+                        $discountAmount = min($patientShare, $totalItemDiscounts);
+                        $discountPercentage = ($patientShare > 0) ? round(($discountAmount / $patientShare) * 100.0, 2) : 0;
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $customReason = trim($httpRequest->input('discount_reason') ?: '');
+                        $detailedSummary = 'خصم تفصيلي: '.implode('، ', $itemDiscountSummaries);
+                        $discountReason = $customReason ? "{$customReason} [{$detailedSummary}]" : $detailedSummary;
+                        $discountBy = $user->id;
+                    }
+                } else {
+                    $rawDiscountPerc = (float) $httpRequest->input('discount_percentage', 0);
+                    if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                        $discountPercentage = $rawDiscountPerc;
+                        $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountReason = trim($httpRequest->input('discount_reason') ?: 'خصم إدارة');
+                        $discountBy = $user->id;
+                    }
+                }
+            }
+
+            $hasRadiology = in_array('radiology', $actuallyPaidRequests->pluck('type')->toArray());
+            $hasNursing = in_array('nursing', $actuallyPaidRequests->pluck('type')->toArray());
+            $hasLab = in_array('lab', $actuallyPaidRequests->pluck('type')->toArray());
+            $paymentType = $hasRadiology && ! $hasLab && ! $hasNursing ? 'radiology' : ($hasNursing && ! $hasLab && ! $hasRadiology ? 'nursing' : ($hasLab ? 'lab' : 'consultation'));
+
+            if (count($actuallyPaidRequests) === 1 && $actuallyPaidRequests->first()->type === 'nursing') {
+                $nDesc = $actuallyPaidRequests->first()->description ?: 'خدمة تمريضية';
+                if (str_contains($nDesc, 'تخطيط') || str_contains($nDesc, 'تحطيط')) {
+                    $nDesc = 'تخطيط قلب (ECG)';
+                }
+                $paymentDescription = 'دفع رسوم '.$nDesc.' - طلب #'.$actuallyPaidRequests->first()->id;
+            } else {
+                $paymentDescription = count($actuallyPaidRequests) > 1
+                    ? ('دفع رسوم موحدة للزيارة ('.implode(' + ', $descParts).')')
+                    : (! empty($package) ? ('دفع رسوم باقة: '.$package->name.' - طلب #'.$actuallyPaidRequests->first()->id) : ('دفع رسوم طلب '.$actuallyPaidRequests->first()->type.' #'.$actuallyPaidRequests->first()->id));
+            }
+
+            if (! empty($extraServicesNames)) {
+                $paymentDescription .= ' + خدمات إضافية: '.implode('، ', $extraServicesNames);
+            }
 
             $combinedNotes = $httpRequest->notes ?: '';
             if (! empty($excludedNotes)) {
@@ -1470,6 +1757,10 @@ class CashierController extends Controller
                 'total_amount' => $totalApproved,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $cardNo,
                 'copay_percentage' => $hasCoveredItem ? $copayPercentage : 0,
@@ -1479,9 +1770,19 @@ class CashierController extends Controller
                 'description' => $paymentDescription,
                 'notes' => $combinedNotes,
                 'paid_at' => Carbon::now(),
+                'lab_request_ids' => json_encode($actuallyPaidRequests->where('type', 'lab')->pluck('id')->values()->toArray()),
+                'radiology_request_ids' => json_encode($actuallyPaidRequests->where('type', 'radiology')->pluck('id')->values()->toArray()),
             ]);
 
             \Log::info('Payment created successfully: #'.$payment->id);
+
+            // تحديث حالة الخدمات الإضافية إلى مدفوعة وربطها بسند القبض
+            foreach ($pendingExtraServices as $pes) {
+                $pes->update([
+                    'payment_status' => 'paid',
+                    'payment_id' => $payment->id,
+                ]);
+            }
 
             // تحديث حالة الدفع لكافة الطلبات المشمولة بالدفع الفعلي
             foreach ($actuallyPaidRequests as $reqItem) {
@@ -1491,7 +1792,27 @@ class CashierController extends Controller
                 ]);
             }
 
-            \Log::info('All included requests ('.$allRequestsToPay->pluck('id')->join(',').') updated to paid');
+            // تحصين رقابي: أي طلب طبي كان مشمولاً بقائمة الدفع ولم يُسدد ولم يُؤجل يُعتبر ملغياً بطلب المريض
+            $unpaidExcludedRequests = $allRequestsToPay->whereNotIn('id', $actuallyPaidRequests->pluck('id'));
+            foreach ($unpaidExcludedRequests as $unpaidReq) {
+                if (! in_array($unpaidReq->status, ['cancelled', 'postponed'])) {
+                    $uDetails = is_string($unpaidReq->details) ? json_decode($unpaidReq->details, true) : ($unpaidReq->details ?? []);
+                    if (! is_array($uDetails)) {
+                        $uDetails = [];
+                    }
+                    $uDetails['cancellation_reason'] = $uDetails['cancellation_reason'] ?? 'استبعاد وإلغاء بطلب المريض عند إصدار الوصل لدى الكاشير';
+                    $uDetails['cancelled_by_cashier_id'] = $user->id;
+                    $uDetails['cancelled_at'] = Carbon::now()->toDateTimeString();
+                    $unpaidReq->update([
+                        'status' => 'cancelled',
+                        'payment_status' => 'cancelled',
+                        'payment_id' => null,
+                        'details' => $uDetails,
+                    ]);
+                }
+            }
+
+            \Log::info('All included requests ('.$allRequestsToPay->pluck('id')->join(',').') updated. Paid: '.$actuallyPaidRequests->pluck('id')->join(','));
 
             // تحديث حالة الزيارة من pending_payment إلى scheduled لتظهر في قائمة انتظار المختبر والأشعة (فقط للزيارات قيد انتظار الدفع)
             if ($request->visit) {
@@ -1687,6 +2008,80 @@ class CashierController extends Controller
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * إضافة خدمة إضافية أو فندقية للطلب الطبي / الزيارة بسعر ديناميكي حر
+     */
+    public function addRequestExtraService(Request $httpRequest, MedicalRequest $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canPay = $isAdmin
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments'))
+            || ($user && $user->can('process consultation payments'));
+
+        if (! $canPay) {
+            abort(403, 'غير مصرح لك بإضافة خدمات إضافية للطلب الطبي');
+        }
+
+        $validated = $httpRequest->validate([
+            'service_name' => 'required|string|max:255',
+            'service_price' => 'required|numeric|min:0',
+            'service_quantity' => 'nullable|integer|min:1',
+            'service_notes' => 'nullable|string|max:500',
+            'service_id' => 'nullable|exists:hospital_extra_services,id',
+        ]);
+
+        $qty = max(1, (int) ($validated['service_quantity'] ?? 1));
+        $price = (float) $validated['service_price'];
+        $total = $price * $qty;
+
+        VisitExtraService::create([
+            'visit_id' => $request->visit_id,
+            'request_id' => $request->id,
+            'service_id' => $validated['service_id'] ?? null,
+            'name' => trim($validated['service_name']),
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $total,
+            'notes' => $validated['service_notes'] ?? null,
+            'payment_status' => 'pending',
+            'created_by' => $user->id,
+        ]);
+
+        return redirect()->route('cashier.request.payment.form', $request)
+            ->with('success', 'تمت إضافة الخدمة الإضافية بنجاح إلى الطلب الطبي.');
+    }
+
+    /**
+     * حذف خدمة إضافية معلقة من الطلب الطبي
+     */
+    public function removeRequestExtraService(MedicalRequest $request, VisitExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canPay = $isAdmin
+            || ($user && $user->can('process medical requests payments'))
+            || ($user && $user->can('process medical request payments'))
+            || ($user && $user->can('process ultrasound payments'))
+            || ($user && $user->can('process consultation payments'));
+
+        if (! $canPay) {
+            abort(403, 'غير مصرح لك بحذف خدمات الطلب الطبي');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return redirect()->route('cashier.request.payment.form', $request)
+                ->with('error', 'لا يمكن حذف خدمة إضافية تم تسديدها مسبقاً.');
+        }
+
+        $extraService->delete();
+
+        return redirect()->route('cashier.request.payment.form', $request)
+            ->with('success', 'تم حذف الخدمة الإضافية بنجاح.');
     }
 
     /**
@@ -2041,8 +2436,11 @@ class CashierController extends Controller
             }
         }
 
-        // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً أو محاسباً)
-        if (! $user->hasRole(['admin', 'accountant', 'super_admin'])) {
+        $canViewAllCashiers = $user->hasRole(['admin', 'accountant', 'super_admin', 'casshieradmin', 'hospital_admin', 'admin-hsop'])
+            || $user->can('void payment receipt');
+
+        // كل مستخدم/كاشير يسحب سجله الخاص به تلقائياً (إلا إذا كان مديراً، محاسباً، كاشير إداري، أو يملك صلاحية الرقابة والإبطال)
+        if (! $canViewAllCashiers) {
             $query->where('cashier_id', $user->id);
         } elseif ($cashierId) {
             $query->where('cashier_id', $cashierId);
@@ -2086,7 +2484,7 @@ class CashierController extends Controller
             ];
         });
 
-        $cashiers = $user->hasRole(['admin', 'accountant', 'super_admin'])
+        $cashiers = $canViewAllCashiers
             ? \App\Models\User::whereIn('id', \App\Models\Payment::select('cashier_id')->distinct())->orderBy('name')->get()
             : collect();
 
@@ -2096,7 +2494,7 @@ class CashierController extends Controller
 
             return view('cashier.report-print', compact(
                 'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
+                'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers', 'canViewAllCashiers'
             ));
         }
 
@@ -2104,7 +2502,7 @@ class CashierController extends Controller
 
         return view('cashier.report', compact(
             'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
-            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers'
+            'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers', 'canViewAllCashiers'
         ));
     }
 
@@ -2488,6 +2886,7 @@ class CashierController extends Controller
             'visit',
             'additionalOperations.surgicalOperation',
             'medicalDevices',
+            'extraServices',
         ]);
 
         // حساب التكلفة الإجمالية
@@ -2503,10 +2902,91 @@ class CashierController extends Controller
         $radiologyTestsFee = $surgery->radiologyTests->sum(function ($test) {
             return $test->radiologyType->base_price ?? 0;
         });
+        $extraServicesFee = $surgery->extraServices->sum(function ($extra) {
+            return $extra->total_amount ?? 0;
+        });
 
-        $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee;
+        $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee + $extraServicesFee;
 
-        return view('cashier.surgeries.payment-form', compact('surgery', 'surgeryFee', 'additionalOpsFee', 'devicesFee', 'totalSurgeryFee', 'labTestsFee', 'radiologyTestsFee', 'totalAmount'));
+        $availableExtraServices = HospitalExtraService::active()->orderBy('name')->get();
+
+        return view('cashier.surgeries.payment-form', compact(
+            'surgery',
+            'surgeryFee',
+            'additionalOpsFee',
+            'devicesFee',
+            'totalSurgeryFee',
+            'labTestsFee',
+            'radiologyTestsFee',
+            'extraServicesFee',
+            'totalAmount',
+            'availableExtraServices'
+        ));
+    }
+
+    /**
+     * إضافة خدمة إضافية أو فندقية للعملية الجراحية من الكاشير
+     */
+    public function addSurgeryExtraService(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإضافة خدمات إضافية للعمليات');
+        }
+
+        $request->validate([
+            'service_name' => 'required|string|max:255',
+            'service_price' => 'required|numeric|min:0',
+            'service_quantity' => 'nullable|integer|min:1',
+            'service_notes' => 'nullable|string|max:500',
+            'service_id' => 'nullable|exists:hospital_extra_services,id',
+        ]);
+
+        $qty = max(1, (int) $request->input('service_quantity', 1));
+        $price = (float) $request->input('service_price', 0);
+        $name = trim($request->input('service_name'));
+
+        $surgery->extraServices()->create([
+            'service_id' => $request->input('service_id'),
+            'name' => $name,
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $price * $qty,
+            'notes' => $request->input('service_notes'),
+            'payment_status' => 'pending',
+            'created_by' => $user->id,
+        ]);
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تمت إضافة خدمة "'.$name.'" بنجاح بمبلغ '.number_format($price * $qty, 0).' د.ع');
+    }
+
+    /**
+     * حذف خدمة إضافية معلقة من العملية الجراحية
+     */
+    public function removeSurgeryExtraService(Surgery $surgery, SurgeryExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة خدمات العمليات');
+        }
+
+        if ($extraService->surgery_id !== $surgery->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه العملية');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً');
+        }
+
+        $serviceName = $extraService->name;
+        $extraService->delete();
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف خدمة "'.$serviceName.'" بنجاح');
     }
 
     /**
@@ -2538,6 +3018,7 @@ class CashierController extends Controller
             'room_custom_amount' => 'nullable|numeric|min:1',
             'pay_lab_tests' => 'nullable|array',
             'pay_radiology_tests' => 'nullable|array',
+            'pay_extra_services' => 'nullable|array',
         ]);
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
@@ -2555,6 +3036,7 @@ class CashierController extends Controller
         $payRoom = $request->has('pay_room');
         $payLabTests = $request->input('pay_lab_tests', []);
         $payRadiologyTests = $request->input('pay_radiology_tests', []);
+        $payExtraServices = $request->input('pay_extra_services', []);
 
         if ($isInclusive) {
             // inclusive covers other costs, so we mark them as paid, but they add 0 to the actual cash amount paid this time
@@ -2564,7 +3046,7 @@ class CashierController extends Controller
             $paySurgery = true;
         }
 
-        if (! $paySurgery && ! $payRoom && empty($payLabTests) && empty($payRadiologyTests)) {
+        if (! $paySurgery && ! $payRoom && empty($payLabTests) && empty($payRadiologyTests) && empty($payExtraServices)) {
             return redirect()->back()
                 ->with('error', 'يرجى تحديد عنصر واحد على الأقل للدفع')
                 ->withInput();
@@ -2660,9 +3142,41 @@ class CashierController extends Controller
                 }
             }
 
-            $totalApprovedPayable = $actualAmount;
-            $patientShare = $isInsurance ? round(($totalApprovedPayable * $copayPercentage) / 100, 2) : $totalApprovedPayable;
-            $insuranceShare = $isInsurance ? max(0, $totalApprovedPayable - $patientShare) : 0.00;
+            // 5. Extra Services (خدمات إضافية وفندقية - نقدية 100% دائماً وخارج الضمان)
+            $extraServicesAmount = 0;
+            if (! empty($payExtraServices)) {
+                $surgery->load('extraServices');
+                foreach ($surgery->extraServices as $extraService) {
+                    if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        $extraTotal = (float) $extraService->total_amount;
+                        $extraServicesAmount += $extraTotal;
+                        $paidItems[] = 'خدمة إضافية: '.$extraService->name.($extraService->quantity > 1 ? ' (×'.$extraService->quantity.')' : '').' - مدفوع: '.number_format($extraTotal, 0).' د.ع';
+                    }
+                }
+            }
+
+            $medicalPayable = $actualAmount; // surgery + room + lab + rad
+            $totalApprovedPayable = $medicalPayable + $extraServicesAmount;
+            $patientShare = $isInsurance ? (round(($medicalPayable * $copayPercentage) / 100, 2) + $extraServicesAmount) : $totalApprovedPayable;
+            $insuranceShare = $isInsurance ? max(0, $medicalPayable - round(($medicalPayable * $copayPercentage) / 100, 2)) : 0.00;
+
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+            $patientPaidAmount = $patientShare;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if (! $isInsurance) {
+                $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
+                if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                    $discountPercentage = $rawDiscountPerc;
+                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                    $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
+                    $discountBy = $user->id;
+                }
+            }
 
             if ($isInsurance) {
                 $paidItems[] = 'تغطية الضمان: '.($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' (نسبة التحمل: '.$copayPercentage.'%)';
@@ -2682,10 +3196,14 @@ class CashierController extends Controller
                 'cashier_id' => $user->id,
                 'surgery_id' => $surgery->id,
                 'receipt_number' => Payment::generateReceiptNumber(),
-                'amount' => $patientShare,
+                'amount' => $patientPaidAmount,
                 'total_amount' => $totalApprovedPayable,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
                 'copay_percentage' => $isInsurance ? $copayPercentage : 0.00,
@@ -2742,6 +3260,17 @@ class CashierController extends Controller
                 }
             }
 
+            // تحديث حالة الخدمات الإضافية المدفوعة
+            if (! empty($payExtraServices)) {
+                $surgery->extraServices()
+                    ->whereIn('id', $payExtraServices)
+                    ->where('payment_status', '!=', 'paid')
+                    ->update([
+                        'payment_status' => 'paid',
+                        'payment_id' => $payment->id,
+                    ]);
+            }
+
             // تحديد إذا تم دفع كل شيء أم لا
             $surgery->refresh();
             $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
@@ -2749,7 +3278,8 @@ class CashierController extends Controller
             $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
             $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
-            $allPaid = $allSurgeryFeePaid && $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
+            $allExtraServicesPaid = $surgery->extraServices()->where('payment_status', '!=', 'paid')->count() === 0;
+            $allPaid = $allSurgeryFeePaid && $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid && $allExtraServicesPaid;
 
             // تحديث حالة دفع العملية
             $surgery->update([
@@ -2968,6 +3498,13 @@ class CashierController extends Controller
         DB::beginTransaction();
 
         try {
+            $payment->loadMissing([
+                'emergency.services',
+                'emergency.labRequests.labTests',
+                'emergency.radiologyRequests.radiologyTypes',
+                'emergency.appointments',
+            ]);
+
             $patient = $payment->patient ?? optional($payment->emergency)->patient;
             $insuranceType = $request->input('insurance_type', $payment->insurance_type ?? $patient->insurance_type ?? 'none');
 
@@ -2985,10 +3522,140 @@ class CashierController extends Controller
                 $patientShare = $patientPaidAmount;
                 $insuranceShare = max(0, $totalApproved - $patientShare);
             } else {
-                $patientShare = $patientPaidAmount;
+                $patientShare = ($payment->patient_share && $payment->patient_share > 0) ? (float) $payment->patient_share : (($totalApproved > 0) ? $totalApproved : $patientPaidAmount);
                 $insuranceShare = 0;
             }
             $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
+
+            $discountPercentage = 0.00;
+            $discountAmount = 0.00;
+            $discountReason = null;
+            $discountBy = null;
+
+            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
+            if ($insuranceType === 'none') {
+                $discountScope = $request->input('discount_scope', 'overall');
+
+                if ($discountScope === 'per_item') {
+                    $itemDiscounts = (array) $request->input('item_discounts', []);
+                    $totalItemDiscounts = 0.0;
+                    $itemSummaries = [];
+
+                    // 1. خدمات الطوارئ
+                    $unpaidServiceIds = \DB::table('emergency_emergency_service')
+                        ->where('emergency_id', $payment->emergency_id)
+                        ->where(function ($q) use ($payment) {
+                            $q->whereNull('payment_id')->orWhere('payment_id', $payment->id);
+                        })
+                        ->pluck('emergency_service_id');
+
+                    if ($payment->emergency && $payment->emergency->services) {
+                        foreach ($payment->emergency->services->whereIn('id', $unpaidServiceIds) as $svc) {
+                            $key = 'service_'.$svc->id;
+                            $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                            if ($discPct > 0) {
+                                $discPct = min(100, max(0, $discPct));
+                                $qty = max(1, (int) ($svc->pivot->quantity ?? 1));
+                                $pricing = $svc->calculateInsurancePricing('none', 100);
+                                $basePrice = (float) $pricing['patient_share'] * $qty;
+                                $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                $totalItemDiscounts += $disVal;
+                                $itemSummaries[] = "{$svc->name} (خصم {$discPct}%)";
+                            }
+                        }
+                    }
+
+                    // 2. طلبات التحاليل
+                    if ($payment->emergency && $payment->emergency->labRequests) {
+                        $applicableLabRequests = $payment->emergency->labRequests->filter(function ($lr) use ($payment) {
+                            return is_null($lr->payment_id) || $lr->payment_id == $payment->id;
+                        });
+                        foreach ($applicableLabRequests as $lr) {
+                            foreach ($lr->labTests as $test) {
+                                $key = 'lab_'.$test->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $pricing = $test->calculateInsurancePricing('none', 100);
+                                    $basePrice = (float) $pricing['patient_share'];
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "{$test->name} (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. طلبات الأشعة
+                    if ($payment->emergency && $payment->emergency->radiologyRequests) {
+                        $applicableRadRequests = $payment->emergency->radiologyRequests->filter(function ($rr) use ($payment) {
+                            return is_null($rr->payment_id) || $rr->payment_id == $payment->id;
+                        });
+                        foreach ($applicableRadRequests as $rr) {
+                            foreach ($rr->radiologyTypes as $rad) {
+                                $key = 'radiology_'.$rad->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $pricing = $rad->calculateInsurancePricing('none', 100);
+                                    $basePrice = (float) $pricing['patient_share'];
+                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "{$rad->name} (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. استشارة الطبيب
+                    if ($payment->emergency && $payment->emergency->appointments) {
+                        foreach ($payment->emergency->appointments as $ap) {
+                            if ($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
+                                $key = 'appointment_'.$ap->id;
+                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                if ($discPct > 0) {
+                                    $discPct = min(100, max(0, $discPct));
+                                    $apFee = (float) ($ap->consultation_fee > 0 ? $ap->consultation_fee : 50000);
+                                    $disVal = round($apFee * ($discPct / 100.0), 2);
+                                    $totalItemDiscounts += $disVal;
+                                    $itemSummaries[] = "استشارة طبية (خصم {$discPct}%)";
+                                }
+                            }
+                        }
+                    }
+
+                    // 5. متابعة الطبيب
+                    if ($payment->emergency && $payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
+                        $key = 'follow_up_'.$payment->emergency->id;
+                        $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                        if ($discPct > 0) {
+                            $discPct = min(100, max(0, $discPct));
+                            $fFee = (float) $payment->emergency->doctor_follow_up_fee;
+                            $disVal = round($fFee * ($discPct / 100.0), 2);
+                            $totalItemDiscounts += $disVal;
+                            $itemSummaries[] = "متابعة طبيب (خصم {$discPct}%)";
+                        }
+                    }
+
+                    if ($totalItemDiscounts > 0) {
+                        $discountAmount = min($patientShare, round($totalItemDiscounts, 2));
+                        $discountPercentage = $patientShare > 0 ? round(($discountAmount / $patientShare) * 100, 2) : 0;
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $customReason = trim($request->input('discount_reason') ?: 'خصم تفصيلي للخدمات');
+                        $discountReason = ! empty($itemSummaries) ? "{$customReason} [".implode('، ', $itemSummaries).']' : $customReason;
+                        $discountBy = $user->id;
+                    }
+                } else {
+                    $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
+                    if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
+                        $discountPercentage = $rawDiscountPerc;
+                        $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
+                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
+                        $discountBy = $user->id;
+                    }
+                }
+            }
 
             // تحديث الدفعة
             $payment->update([
@@ -2997,6 +3664,10 @@ class CashierController extends Controller
                 'total_amount' => $totalApproved,
                 'patient_share' => $patientShare,
                 'insurance_share' => $insuranceShare,
+                'discount_percentage' => $discountPercentage,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $cardNo,
                 'copay_percentage' => ($insuranceType !== 'none') ? $copayPercentage : 0,
@@ -3077,9 +3748,9 @@ class CashierController extends Controller
                 ]);
 
                 if ($appointment->doctor_id) {
-                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 50000);
-                    // حصة استشارة الطوارئ: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى (نسبة 80% / 20%)
-                    $doctorShare = ($fee == 50000.0) ? 40000.0 : round($fee * 0.80, 2);
+                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 30000);
+                    // حصة استشارة الطوارئ: 24,000 د.ع للطبيب و 6,000 د.ع للمستشفى (نسبة 80% / 20%)
+                    $doctorShare = ($fee == 30000.0) ? 24000.0 : round($fee * 0.80, 2);
                     $hospitalShare = round($fee - $doctorShare, 2);
                     $percentage = round(($doctorShare / $fee) * 100, 2);
 

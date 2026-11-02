@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && node -e \"const fs=require('fs'); if(fs.existsSync('public/build')){fs.cpSync('public/build','dist',{recursive:true}); const idx='dist/index.html'; if(!fs.existsSync(idx)) fs.writeFileSync(idx,'<!DOCTYPE html><html><head><meta charset=\\\"utf-8\\\"></head><body></body></html>');}\"",
         "dev": "vite"
     },
     "devDependencies": {

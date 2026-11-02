@@ -434,6 +434,11 @@
                                     }
                                 }
                             }
+                        } elseif (str_contains($line, 'خدمة إضافية:')) {
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $em)) {
+                                $price = (float)str_replace(',', '', $em[1]);
+                            }
+                            $serviceName = preg_replace('/\s*-\s*مدفوع.*$/', '', $line);
                         }
                         $lineItems[] = ['name' => $serviceName, 'qty' => 1, 'price' => $price];
                     }
@@ -547,7 +552,61 @@
                             $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => 0];
                         }
                     }
+                } elseif ($reqItem->type === 'nursing') {
+                    $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                    if (!empty($nursingServiceIds)) {
+                        foreach ($nursingServiceIds as $nsId) {
+                            $nSvc = \App\Models\EmergencyService::find($nsId);
+                            if ($nSvc) {
+                                $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                    ? $nSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                    : null;
+                                $price = $pricing ? (float)$pricing['patient_share'] : ($nSvc->price ?? 0);
+                                $lineItems[] = ['name' => 'تمريض: ' . $nSvc->name, 'qty' => 1, 'price' => $price];
+                            }
+                        }
+                    } else {
+                        $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                        $descLower = mb_strtolower($desc);
+                        $matchedSvc = null;
+                        if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo')) {
+                            $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                                ?? \App\Models\EmergencyService::find(93)
+                                ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                        }
+                        if ($matchedSvc) {
+                            $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
+                                ? $matchedSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
+                                : null;
+                            $price = $pricing ? (float)$pricing['patient_share'] : ($matchedSvc->price ?? 0);
+                        } else {
+                            $price = 15000.00;
+                            if ($payment->insurance_type && $payment->insurance_type !== 'none') {
+                                $price = round($price * ((float)($payment->copay_percentage ?? 0) / 100));
+                            }
+                        }
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $lineItems[] = ['name' => $cleanTitle, 'qty' => 1, 'price' => $price];
+                    }
                 }
+            }
+
+            // 3.1 Extra Services for Requests / Visits
+            $paidVisitExtraServices = \App\Models\VisitExtraService::where('payment_id', $payment->id)->get();
+            if ($paidVisitExtraServices->isEmpty() && $payment->request_id) {
+                $paidVisitExtraServices = \App\Models\VisitExtraService::where(function($q) use ($payment) {
+                    $q->where('request_id', $payment->request_id);
+                    if ($payment->request?->visit_id) {
+                        $q->orWhere('visit_id', $payment->request->visit_id);
+                    }
+                })->where('payment_status', 'paid')->get();
+            }
+            foreach ($paidVisitExtraServices as $extraSvc) {
+                $lineItems[] = [
+                    'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
+                    'qty' => $extraSvc->quantity ?: 1,
+                    'price' => (float)$extraSvc->total_amount,
+                ];
             }
 
             // 4. Emergency
@@ -687,6 +746,18 @@
                         <td class="col-price">{{ number_format($rowPrice, 0) }}</td>
                     </tr>
                 @endforeach
+
+                @if($payment->discount_amount > 0)
+                    <tr>
+                        <td colspan="2" class="col-service" style="color: #000; font-weight: 800;">
+                            خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                            @if($payment->discount_reason)
+                                <span style="font-size: 10px; font-weight: normal;"> - {{ $payment->discount_reason }}</span>
+                            @endif
+                        </td>
+                        <td class="col-price" style="color: #000; font-weight: 800;">-{{ number_format($payment->discount_amount, 0) }}</td>
+                    </tr>
+                @endif
 
                 <tr class="total-row">
                     <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? 'المبلغ المسترجع للمريض' : 'المبلغ المدفوع' }}</td>

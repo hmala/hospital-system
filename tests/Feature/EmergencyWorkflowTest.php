@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Doctor;
 use App\Models\Emergency;
-use App\Models\EmergencyPatient;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\User;
@@ -18,9 +17,13 @@ class EmergencyWorkflowTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $doctorUser;
+
     protected $doctor;
+
     protected $emergency;
+
     protected $medicine;
 
     protected function setUp(): void
@@ -41,7 +44,7 @@ class EmergencyWorkflowTest extends TestCase
             'owner_name' => 'د. حسام',
             'phone' => '07700000000',
             'address' => 'بغداد',
-            'license_number' => 'HOSP-LIC-' . uniqid(),
+            'license_number' => 'HOSP-LIC-'.uniqid(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -64,14 +67,14 @@ class EmergencyWorkflowTest extends TestCase
             'specialization' => 'طب الطوارئ والحوادث',
             'qualification' => 'دكتوراه طب طوارئ',
             'consultation_fee' => 10000,
-            'license_number' => 'DOC-ER-' . rand(1000, 9999),
+            'license_number' => 'DOC-ER-'.rand(1000, 9999),
             'status' => 'active',
         ]);
 
         $patientUser = User::factory()->create(['name' => 'مريض طوارئ تجريبي']);
         $patient = Patient::create([
             'user_id' => $patientUser->id,
-            'medical_number' => 'MED-ER-' . rand(1000, 9999),
+            'medical_number' => 'MED-ER-'.rand(1000, 9999),
             'birth_date' => '1995-05-15',
             'gender' => 'male',
             'blood_group' => 'O+',
@@ -114,7 +117,7 @@ class EmergencyWorkflowTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee($this->doctorUser->name);
-        $response->assertSee('value="' . $this->doctor->id . '"', false);
+        $response->assertSee('value="'.$this->doctor->id.'"', false);
         $response->assertDontSee('<select class="form-select @error(\'doctor_id\')', false);
     }
 
@@ -163,7 +166,7 @@ class EmergencyWorkflowTest extends TestCase
                     'dosage_form' => 'Infusion/Vial',
                     'frequency' => 'عند اللزوم (PRN)',
                     'instructions' => 'يؤخذ وريدياً ببطء',
-                ]
+                ],
             ],
             'treatment_notes' => 'تم إعطاء الجرعة الإسعافية الأولى',
         ]);
@@ -250,5 +253,65 @@ class EmergencyWorkflowTest extends TestCase
         $dischargedView = $this->actingAs($this->admin)->get(route('emergency.index', ['filter' => 'discharged']));
         $dischargedView->assertSee('إعطاء سائل سول');
     }
-}
 
+    public function test_requesting_emergency_consultation_attaches_emergency_service_and_schedules_appointment()
+    {
+        // 1. إنشاء خدمة الاستشارة بسعر 30,000
+        $service = \App\Models\EmergencyService::firstOrCreate(
+            ['id' => 115],
+            [
+                'name' => 'استشارة اخصائي من العيادة الاستشارية',
+                'price' => 30000,
+                'category' => 'طوارئ عامة',
+                'is_active' => true,
+            ]
+        );
+
+        // 2. إنشاء طبيب استشاري
+        $consultantUser = User::factory()->create(['name' => 'د. أحمد الباطني']);
+        $consultantUser->assignRole('doctor');
+
+        $consultantDoctor = Doctor::create([
+            'user_id' => $consultantUser->id,
+            'department_id' => $this->doctor->department_id,
+            'specialization' => 'أمراض باطنية وقلبية',
+            'qualification' => 'بورد عربي باطنية',
+            'type' => 'consultant',
+            'consultation_fee' => 30000,
+            'license_number' => 'DOC-CON-'.rand(1000, 9999),
+            'status' => 'active',
+            'is_active' => true,
+            'is_available_today' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('emergency.create-consultation', $this->emergency), [
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => '12:00',
+            'doctor_id' => $consultantDoctor->id,
+            'notes' => 'المريض يعاني من ألم صدري حاد ومطلوب استشارة باطنية فورية',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // تحقق من إلحاق خدمة الاستشارة للطوارئ بكمية 1
+        $this->assertDatabaseHas('emergency_emergency_service', [
+            'emergency_id' => $this->emergency->id,
+            'emergency_service_id' => $service->id,
+            'quantity' => 1,
+        ]);
+
+        // تحقق من إنشاء الموعد للطبيب الاستشاري برسم 0 (محسوب عبر خدمة الطوارئ)
+        $this->assertDatabaseHas('appointments', [
+            'emergency_id' => $this->emergency->id,
+            'doctor_id' => $consultantDoctor->id,
+            'consultation_fee' => 0,
+            'status' => 'scheduled',
+        ]);
+
+        // تحقق من انعكاس الخدمة (30,000 د.ع) في فاتورة الطوارئ الموحدة
+        $this->emergency->refresh();
+        $this->assertNotNull($this->emergency->payment);
+        $this->assertEquals(30000, (float) $this->emergency->payment->amount);
+    }
+}

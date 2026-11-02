@@ -62,6 +62,8 @@ class HealthInsuranceCategory extends Model
             case 'checkup':
             case 'appointment':
             case 'doctor':
+            case 'ecg':
+            case 'nursing':
                 return (float)$this->consultation_copay;
 
             case 'surgery':

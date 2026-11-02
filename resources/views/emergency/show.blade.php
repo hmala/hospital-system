@@ -119,8 +119,11 @@
                         @endif
                     @endif
                     @if($emergency->appointments && $emergency->appointments->count() > 0)
-                        <span class="badge bg-info text-dark fw-bold py-1 px-2 border" title="تم إنشاء طلب استشارة للمريض">
-                            <i class="fas fa-calendar-check text-primary me-1"></i> تم طلب استشارة ({{ $emergency->appointments->count() }})
+                        @php
+                            $consultDocsNames = $emergency->appointments->map(fn($a) => 'د. ' . ($a->doctor->user->name ?? 'طبيب') . ' (' . ($a->department->name ?? 'استشاري') . ')')->implode('، ');
+                        @endphp
+                        <span class="badge bg-info text-dark fw-bold py-1 px-2 border" title="الاستشارات المطلوبة: {{ $consultDocsNames }}">
+                            <i class="fas fa-calendar-check text-primary me-1"></i> تم طلب استشارة: {{ $consultDocsNames }}
                         </span>
                     @endif
 
@@ -2068,19 +2071,21 @@
 <!-- Modal طلب استشارة طبية -->
 <div class="modal fade" id="consultationModal" tabindex="-1" aria-labelledby="consultationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
             <form action="{{ route('emergency.create-consultation', $emergency) }}" method="POST">
                 @csrf
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title" id="consultationModalLabel">
+                    <h5 class="modal-title fw-bold" id="consultationModalLabel">
                         <i class="fas fa-user-md me-2"></i>طلب استشارة طبية لحالة الطوارئ
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info py-2">
-                        <i class="fas fa-info-circle me-1"></i>
-                        يمكنك اختيار طبيب استشاري أو جراح أو أكثر لتحويل المريض للاستشارة مع تسجيل الرسوم تلقائياً في حساب الطوارئ.
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 d-flex align-items-center mb-3">
+                        <i class="fas fa-info-circle fs-5 me-2"></i>
+                        <div>
+                            اختر الطبيب الاستشاري المطلوب لتحويل الحالة إليه. سيتم إرسال الطلب لعيادته بأولوية طارئة، وإضافة خدمة <strong>"استشارة اخصائي من العيادة الاستشارية" (30,000 د.ع)</strong> تلقائياً إلى فاتورة الطوارئ.
+                        </div>
                     </div>
 
                     <div class="row g-3">
@@ -2096,14 +2101,15 @@
                                 <i class="fas fa-clock me-1 text-primary"></i>وقت الاستشارة <span class="text-danger">*</span>
                             </label>
                             <input type="time" class="form-control" id="consult_appointment_time" name="appointment_time" 
-                                   value="{{ date('H:i', strtotime('+1 hour')) }}" required>
+                                   value="{{ date('H:i') }}" required>
                         </div>
 
                         <div class="col-12">
-                            <label for="consult_doctor_ids" class="form-label fw-bold">
-                                <i class="fas fa-stethoscope me-1 text-success"></i>اختر الأطباء الاستشاريين المتاحين اليوم <span class="text-danger">*</span>
+                            <label for="consult_doctor_id" class="form-label fw-bold">
+                                <i class="fas fa-stethoscope me-1 text-success"></i>اختر الطبيب الاستشاري المتاح اليوم <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select" id="consult_doctor_ids" name="doctor_ids[]" multiple size="6" required>
+                            <select class="form-select form-select-lg" id="consult_doctor_id" name="doctor_id" required>
+                                <option value="" selected disabled>-- اضغط لاختيار الطبيب الاستشاري المطلوب --</option>
                                 @forelse($consultantDoctors ?? [] as $doc)
                                     <option value="{{ $doc->id }}">
                                         د. {{ $doc->user->name ?? 'طبيب' }} - {{ $doc->department->name ?? 'قسم عام' }} ({{ $doc->specialization ?? 'استشاري' }})
@@ -2112,23 +2118,25 @@
                                     <option disabled>لا يوجد أطباء استشاريين متوفرين اليوم في المستشفى</option>
                                 @endforelse
                             </select>
-                            <small class="text-muted">اضغط زر Ctrl (أو Cmd) لتحديد أكثر من طبيب استشاري من المتواجدين اليوم.</small>
+                            <div class="form-text text-muted mt-1">
+                                <i class="fas fa-check-circle text-success me-1"></i>تُضاف خدمة الاستشارة بقيمة 30,000 د.ع لحساب الطوارئ ويدخل المريض طابور الاستشاري فوراً.
+                            </div>
                         </div>
 
                         <div class="col-12">
                             <label for="consult_notes" class="form-label fw-bold">
                                 <i class="fas fa-notes-medical me-1 text-primary"></i>ملاحظات وتفاصيل الاستشارة المطلوبة
                             </label>
-                            <textarea class="form-control" id="consult_notes" name="notes" rows="4" 
-                                      placeholder="اكتب أسباب التحويل، الأعراض المقلقة، التوصيات أو أي أسئلة موجهة للاستشاري...">{{ old('notes') }}</textarea>
+                            <textarea class="form-control" id="consult_notes" name="notes" rows="3" 
+                                      placeholder="اكتب أسباب التحويل، الأعراض المقلقة، أو أي أسئلة موجهة للاستشاري...">{{ old('notes') }}</textarea>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>إلغاء
                     </button>
-                    <button type="submit" class="btn btn-info text-white fw-bold">
+                    <button type="submit" class="btn btn-info text-white fw-bold px-4">
                         <i class="fas fa-paper-plane me-1"></i>إرسال طلب الاستشارة
                     </button>
                 </div>

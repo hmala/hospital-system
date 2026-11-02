@@ -28,3 +28,8 @@ Avoid running broad file scans (`grep_search` or `list_dir`). Target these files
 3. **Doctor Visit Refund Isolation**: Cancelling a doctor visit refunds only the doctor's appointment fee (`payment_type = 'appointment'`). Never overwrite or auto-refund paid lab or radiology requests.
 4. **State Tracking**: Consult `hospital-memory.md` for current project state before starting tasks, and update its `Current Project State` section at the end of sessions.
 5. **Session Continuity Prompts**: Refer to `SESSION_PROMPTS.md` for standard session start and handoff instructions.
+6. **Pre-Execution Architecture & Code Review Rule (قاعدة الشرح والاتفاق المسبق قبل كتابة أي كود)**: NEVER write or edit any code for features, modifications, or bug fixes without first presenting a complete architectural explanation:
+   - Mechanism explanation (شرح الآلية وطريقة العمل).
+   - Exact file paths and code locations (تحديد أماكن الأكواد والملفات المعنية بدقة).
+   - Schema and logic flow (الجداول والبيانات المتأثرة).
+   - Discuss and wait for explicit user alignment before writing or executing code.

@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Visit.php
 
 namespace App\Models;
@@ -28,7 +29,7 @@ class Visit extends Model
         'follow_up_date',
         'follow_up_notes',
         'needs_surgery',
-        'surgery_notes'
+        'surgery_notes',
     ];
 
     protected $casts = [
@@ -36,7 +37,7 @@ class Visit extends Model
         'follow_up_date' => 'date',
         'visit_time' => 'datetime:H:i',
         'vital_signs' => 'array',
-        'diagnosis' => 'array'
+        'diagnosis' => 'array',
     ];
 
     public function patient()
@@ -93,7 +94,7 @@ class Visit extends Model
         return $this->prescribedMedications()->where('item_type', 'medication');
     }
 
-        // العلاقة مع العلاجات فقط
+    // العلاقة مع العلاجات فقط
     public function treatments()
     {
         return $this->prescribedMedications()->where('item_type', 'treatment');
@@ -117,6 +118,12 @@ class Visit extends Model
         return $this->hasOne(Surgery::class);
     }
 
+    // الخدمات الإضافية والفندقية الملحقة بالزيارة
+    public function extraServices()
+    {
+        return $this->hasMany(VisitExtraService::class);
+    }
+
     // الحصول على آخر نتائج التحاليل للزيارة
     public function getLatestLabResults()
     {
@@ -128,6 +135,7 @@ class Visit extends Model
                 return $group->first();
             });
     }
+
     public function getVisitTypeTextAttribute()
     {
         $types = [
@@ -137,7 +145,7 @@ class Visit extends Model
             'surgery' => 'عملية جراحية',
             'lab' => 'مختبر',
             'radiology' => 'أشعة',
-            'blood_bank' => 'مصرف الدم'
+            'blood_bank' => 'مصرف الدم',
         ];
 
         return $types[$this->visit_type] ?? $this->visit_type;
@@ -145,7 +153,7 @@ class Visit extends Model
 
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'in_progress' => 'قيد الفحص',
             'completed' => 'مكتمل',
             'cancelled' => 'ملغي',
@@ -155,7 +163,7 @@ class Visit extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'in_progress' => 'info',
             'completed' => 'success',
             'cancelled' => 'danger',

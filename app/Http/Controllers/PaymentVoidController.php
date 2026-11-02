@@ -6,9 +6,11 @@ use App\Http\Requests\VoidPaymentRequest;
 use App\Models\Appointment;
 use App\Models\Emergency;
 use App\Models\EmergencyLabRequest;
+use App\Models\EmergencyRadiologyRequest;
 use App\Models\Payment;
 use App\Models\PaymentVoidLog;
 use App\Models\Request as MedicalRequest;
+use App\Models\Visit;
 use App\Services\UserActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -162,6 +164,26 @@ class PaymentVoidController extends Controller
                 'void_reason' => $reason,
             ]);
 
+            // جمع كافة معرفات الطلبات الطبية المرتبطة بهذا الوصل المالي بأي شكل (request_id, lab_request_ids, radiology_request_ids, أو payment_id)
+            $associatedRequestIds = [];
+            if ($payment->request_id) {
+                $associatedRequestIds[] = (int) $payment->request_id;
+            }
+            if (! empty($payment->lab_request_ids)) {
+                $labIds = is_array($payment->lab_request_ids) ? $payment->lab_request_ids : json_decode($payment->lab_request_ids, true);
+                if (is_array($labIds)) {
+                    $associatedRequestIds = array_merge($associatedRequestIds, array_map('intval', $labIds));
+                }
+            }
+            if (! empty($payment->radiology_request_ids)) {
+                $radIds = is_array($payment->radiology_request_ids) ? $payment->radiology_request_ids : json_decode($payment->radiology_request_ids, true);
+                if (is_array($radIds)) {
+                    $associatedRequestIds = array_merge($associatedRequestIds, array_map('intval', $radIds));
+                }
+            }
+            $directPaymentReqIds = MedicalRequest::where('payment_id', $payment->id)->pluck('id')->toArray();
+            $associatedRequestIds = array_values(array_unique(array_filter(array_merge($associatedRequestIds, $directPaymentReqIds))));
+
             // 3. معالجة الإلغاء حسب النوع
             if ($voidType === 'rebill') {
                 // حالة إعادة الفتح للتسديد والتصحيح:
@@ -184,6 +206,9 @@ class PaymentVoidController extends Controller
                     EmergencyLabRequest::where('payment_id', $payment->id)
                         ->orWhere('emergency_id', $payment->emergency_id)
                         ->update(['payment_status' => 'pending', 'status' => 'pending', 'payment_id' => null]);
+                    EmergencyRadiologyRequest::where('payment_id', $payment->id)
+                        ->orWhere('emergency_id', $payment->emergency_id)
+                        ->update(['payment_status' => 'pending', 'status' => 'pending', 'payment_id' => null]);
                     DB::table('payments')->where('id', $payment->id)->update(['created_at' => now()]);
                 }
 
@@ -196,34 +221,20 @@ class PaymentVoidController extends Controller
                 }
 
                 // ج) الطلبات الطبية (مختبر / أشعة)
-                if ($payment->request_id) {
-                    DB::table('requests')->where('id', $payment->request_id)->update([
+                if (! empty($associatedRequestIds)) {
+                    MedicalRequest::whereIn('id', $associatedRequestIds)->update([
                         'status' => 'pending',
                         'payment_status' => 'pending',
                         'payment_id' => null,
                         'created_at' => now(),
                     ]);
-                }
-                if (! empty($payment->lab_request_ids)) {
-                    $labIds = is_array($payment->lab_request_ids) ? $payment->lab_request_ids : json_decode($payment->lab_request_ids, true);
-                    if (! empty($labIds)) {
-                        DB::table('requests')->whereIn('id', $labIds)->update([
-                            'status' => 'pending',
-                            'payment_status' => 'pending',
-                            'payment_id' => null,
-                            'created_at' => now(),
-                        ]);
-                    }
-                }
-                if (! empty($payment->radiology_request_ids)) {
-                    $radIds = is_array($payment->radiology_request_ids) ? $payment->radiology_request_ids : json_decode($payment->radiology_request_ids, true);
-                    if (! empty($radIds)) {
-                        DB::table('requests')->whereIn('id', $radIds)->update([
-                            'status' => 'pending',
-                            'payment_status' => 'pending',
-                            'payment_id' => null,
-                            'created_at' => now(),
-                        ]);
+
+                    // إعادة حالة الزيارات المرتبطة إلى pending_payment لتظهر في طابور الكاشير للتسديد
+                    $linkedVisitIds = MedicalRequest::whereIn('id', $associatedRequestIds)->whereNotNull('visit_id')->pluck('visit_id')->unique()->toArray();
+                    if (! empty($linkedVisitIds)) {
+                        Visit::whereIn('id', $linkedVisitIds)
+                            ->where('status', 'scheduled')
+                            ->update(['status' => 'pending_payment']);
                     }
                 }
             } else {
@@ -248,9 +259,27 @@ class PaymentVoidController extends Controller
                     EmergencyLabRequest::where('payment_id', $payment->id)
                         ->orWhere('emergency_id', $payment->emergency_id)
                         ->update(['status' => 'cancelled', 'payment_status' => 'cancelled']);
+                    EmergencyRadiologyRequest::where('payment_id', $payment->id)
+                        ->orWhere('emergency_id', $payment->emergency_id)
+                        ->update(['status' => 'cancelled', 'payment_status' => 'cancelled']);
                 }
-                if ($payment->request_id) {
-                    MedicalRequest::where('id', $payment->request_id)->update(['status' => 'cancelled']);
+                if (! empty($associatedRequestIds)) {
+                    $reqsToCancel = MedicalRequest::whereIn('id', $associatedRequestIds)->get();
+                    foreach ($reqsToCancel as $rItem) {
+                        $rDetails = is_string($rItem->details) ? json_decode($rItem->details, true) : ($rItem->details ?? []);
+                        if (! is_array($rDetails)) {
+                            $rDetails = [];
+                        }
+                        $rDetails['cancellation_reason'] = 'استرداد نقدي لدى الكاشير: '.$reason;
+                        $rDetails['cancelled_by_cashier_id'] = $userId;
+                        $rDetails['cancelled_at'] = now()->toDateTimeString();
+
+                        $rItem->update([
+                            'status' => 'cancelled',
+                            'payment_status' => 'cancelled',
+                            'details' => $rDetails,
+                        ]);
+                    }
                 }
             }
 

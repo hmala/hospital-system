@@ -71,7 +71,11 @@ class RadiologyStaffController extends Controller
                 'incubatorReservation.doctor.user'
             ])
             ->where('type', 'radiology')
-            ->whereNotIn('status', ['cancelled', 'postponed']);
+            ->whereNotIn('status', ['cancelled', 'postponed'])
+            ->where('payment_status', '!=', 'cancelled')
+            ->whereDoesntHave('payment', function ($pq) {
+                $pq->whereNotNull('voided_at');
+            });
 
         // تطبيق فلتر التاريخ الموحد
         if ($dateFilter === 'today') {
@@ -93,7 +97,7 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ultrasound') {
                 $baseQuery->where('subtype', 'ultrasound');
             } elseif ($selectedCategory === 'mri') {
-                $baseQuery->where('subtype', 'mri');
+                $baseQuery->whereIn('subtype', ['mri', 'ct']);
             } elseif ($selectedCategory === 'ct') {
                 $baseQuery->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
@@ -175,6 +179,9 @@ class RadiologyStaffController extends Controller
                 'payment',
             ])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->where('status', '!=', 'cancelled')
+                ->where('payment_status', '!=', 'cancelled')
+                ->whereDoesntHave('payment', fn ($pq) => $pq->whereNotNull('voided_at'))
                 ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'desc');
 
@@ -228,7 +235,7 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ultrasound') {
                 $priorPendingQuery->where('subtype', 'ultrasound');
             } elseif ($selectedCategory === 'mri') {
-                $priorPendingQuery->where('subtype', 'mri');
+                $priorPendingQuery->whereIn('subtype', ['mri', 'ct']);
             } elseif ($selectedCategory === 'ct') {
                 $priorPendingQuery->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
@@ -463,7 +470,7 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ultrasound') {
                 $baseQuery->where('subtype', 'ultrasound');
             } elseif ($selectedCategory === 'mri') {
-                $baseQuery->where('subtype', 'mri');
+                $baseQuery->whereIn('subtype', ['mri', 'ct']);
             } elseif ($selectedCategory === 'ct') {
                 $baseQuery->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
@@ -583,7 +590,7 @@ class RadiologyStaffController extends Controller
                     } elseif ($selectedCategory === 'ultrasound') {
                         $q->where('subtype', 'ultrasound');
                     } elseif ($selectedCategory === 'mri') {
-                        $q->where('subtype', 'mri');
+                        $q->whereIn('subtype', ['mri', 'ct']);
                     } elseif ($selectedCategory === 'ct') {
                         $q->where('subtype', 'ct');
                     } elseif ($selectedCategory === 'radiology') {
@@ -635,7 +642,7 @@ class RadiologyStaffController extends Controller
             } elseif ($selectedCategory === 'ultrasound') {
                 $query->where('subtype', 'ultrasound');
             } elseif ($selectedCategory === 'mri') {
-                $query->where('subtype', 'mri');
+                $query->whereIn('subtype', ['mri', 'ct']);
             } elseif ($selectedCategory === 'ct') {
                 $query->where('subtype', 'ct');
             } elseif ($selectedCategory === 'radiology') {
@@ -889,6 +896,11 @@ class RadiologyStaffController extends Controller
             $echoStaffId = $details['echo_staff_id'] ?? null;
             if ($echoStaffId && $echoStaffId != $user->id) {
                 abort(403, 'هذا الطلب مخصص لموظف آخر');
+            }
+        } elseif ($category === 'mri') {
+            // قسم الرنين والمفراس يغطي كلا النوعين mri و ct
+            if (! in_array($requestSubtype, ['mri', 'ct'], true)) {
+                abort(403, 'هذا الطلب خارج نطاق صلاحياتك');
             }
         } elseif ($requestSubtype !== $category) {
             abort(403, 'هذا الطلب خارج نطاق صلاحياتك');

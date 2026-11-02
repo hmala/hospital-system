@@ -33,6 +33,11 @@ class LabStaffController extends Controller
                             ->whereJsonContains('details->blood_bank', true);
                     });
             })
+            ->whereNotIn('status', ['cancelled', 'postponed'])
+            ->where('payment_status', '!=', 'cancelled')
+            ->whereDoesntHave('payment', function ($pq) {
+                $pq->whereNotNull('voided_at');
+            })
             ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
 
         if (request()->filled('search')) {
@@ -87,7 +92,13 @@ class LabStaffController extends Controller
                     $inner->where('type', 'lab')
                         ->whereJsonContains('details->blood_bank', true);
                 });
-        })->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
+        })
+            ->whereNotIn('status', ['cancelled', 'postponed'])
+            ->where('payment_status', '!=', 'cancelled')
+            ->whereDoesntHave('payment', function ($pq) {
+                $pq->whereNotNull('voided_at');
+            })
+            ->whereIn('status', ['pending_service_selection', 'pending', 'in_progress', 'completed']);
 
         $activeSourceQuery = clone $baseCountQuery;
         if ($sourceFilter === 'consultation') {
@@ -97,7 +108,12 @@ class LabStaffController extends Controller
         }
 
         // Emergency queries & counts
-        $emergencyBaseQuery = \App\Models\EmergencyLabRequest::whereIn('status', ['pending', 'in_progress', 'completed']);
+        $emergencyBaseQuery = \App\Models\EmergencyLabRequest::whereIn('status', ['pending', 'in_progress', 'completed'])
+            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', '!=', 'cancelled')
+            ->whereDoesntHave('payment', function ($pq) {
+                $pq->whereNotNull('voided_at');
+            });
         $emergencyCount = (clone $emergencyBaseQuery)->count();
         $emergencyPendingCount = (clone $emergencyBaseQuery)->whereIn('status', ['pending', 'in_progress'])->count();
         $emergencyCompletedCount = (clone $emergencyBaseQuery)->where('status', 'completed')->count();
@@ -126,7 +142,12 @@ class LabStaffController extends Controller
 
         if ($sourceFilter === 'emergency') {
             $emergencyQuery = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
-                ->whereIn('status', ['pending', 'in_progress', 'completed']);
+                ->whereIn('status', ['pending', 'in_progress', 'completed'])
+                ->where('status', '!=', 'cancelled')
+                ->where('payment_status', '!=', 'cancelled')
+                ->whereDoesntHave('payment', function ($pq) {
+                    $pq->whereNotNull('voided_at');
+                });
 
             if ($statusFilter === 'pending') {
                 $emergencyQuery->whereIn('status', ['pending', 'in_progress']);

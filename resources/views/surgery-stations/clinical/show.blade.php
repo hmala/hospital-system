@@ -26,6 +26,39 @@
             padding: 8px;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
             border: 1px solid #e2e8f0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .clin-tabs-wrapper::-webkit-scrollbar {
+            height: 5px;
+        }
+
+        .clin-tabs-wrapper::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 991px) {
+            .clin-header-card {
+                padding: 16px 18px;
+                border-radius: 14px;
+            }
+            .clin-nav-tab {
+                padding: 9px 14px;
+                font-size: 0.82rem;
+                min-height: 42px;
+            }
+            .pane-header {
+                padding: 14px 16px;
+            }
+            .vital-box {
+                padding: 10px;
+            }
+            .vital-box .vital-val {
+                font-size: 1.2rem;
+            }
         }
 
         .clin-nav-tab {

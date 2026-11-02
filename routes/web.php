@@ -355,6 +355,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payment/{appointment}', [\App\Http\Controllers\CashierController::class, 'processPayment'])->name('payment.process');
         Route::get('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'showRequestPaymentForm'])->name('request.payment.form');
         Route::post('/request-payment/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestPayment'])->name('request.payment.process');
+        Route::post('/request-payment/{request}/extra-services', [\App\Http\Controllers\CashierController::class, 'addRequestExtraService'])->name('request.extra-services.add');
+        Route::delete('/request-payment/{request}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeRequestExtraService'])->name('request.extra-services.remove');
         Route::post('/request-refund/{request}', [\App\Http\Controllers\CashierController::class, 'processRequestRefund'])->name('request.refund.process');
         Route::post('/emergency-refund/{emergency}', [\App\Http\Controllers\CashierController::class, 'processEmergencyRefund'])->name('emergency.refund.process');
         Route::post('/emergency-request-refund/{type}/{id}', [\App\Http\Controllers\CashierController::class, 'processEmergencyRequestRefund'])->name('emergency.request.refund.process');
@@ -366,6 +368,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
+        Route::post('/surgeries/{surgery}/extra-services', [\App\Http\Controllers\CashierController::class, 'addSurgeryExtraService'])->name('surgeries.extra-services.add');
+        Route::delete('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryExtraService'])->name('surgeries.extra-services.remove');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');

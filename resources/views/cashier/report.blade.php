@@ -134,8 +134,8 @@
                         </select>
                     </div>
 
-                    @if(auth()->user()->hasRole(['admin', 'accountant', 'super_admin']) && isset($cashiers) && $cashiers->count() > 0)
-                    <!-- الكاشير (للإدارة والمحاسبين) -->
+                    @if(($canViewAllCashiers ?? (auth()->user()->hasRole(['admin', 'accountant', 'super_admin', 'casshieradmin']) || auth()->user()->can('void payment receipt'))) && isset($cashiers) && $cashiers->count() > 0)
+                    <!-- الكاشير (للإدارة والمحاسبين والكاشير الإداري) -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user-tie me-1"></i>الكاشير</label>
                         <select name="cashier_id" class="form-select form-select-sm">

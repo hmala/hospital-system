@@ -24,6 +24,10 @@ class Payment extends Model
         'insurance_share',
         'insurance_type',
         'copay_percentage',
+        'discount_percentage',
+        'discount_amount',
+        'discount_reason',
+        'discount_by',
         'insurance_card_no',
         'claim_status',
         'payment_method',
@@ -47,6 +51,8 @@ class Payment extends Model
         'patient_share' => 'decimal:2',
         'insurance_share' => 'decimal:2',
         'copay_percentage' => 'decimal:2',
+        'discount_percentage' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'is_inclusive' => 'boolean',
     ];
 
@@ -119,11 +125,35 @@ class Payment extends Model
     }
 
     /**
+     * الخدمات الإضافية المسددة للزيارات والطلبات الطبية
+     */
+    public function visitExtraServices()
+    {
+        return $this->hasMany(VisitExtraService::class);
+    }
+
+    /**
+     * الخدمات الإضافية المسددة للعمليات الجراحية
+     */
+    public function surgeryExtraServices()
+    {
+        return $this->hasMany(SurgeryExtraService::class);
+    }
+
+    /**
      * العلاقة مع الكاشير (المستخدم)
      */
     public function cashier()
     {
         return $this->belongsTo(User::class, 'cashier_id');
+    }
+
+    /**
+     * المستخدم الذي اعتمد الخصم
+     */
+    public function discountBy()
+    {
+        return $this->belongsTo(User::class, 'discount_by');
     }
 
     /**

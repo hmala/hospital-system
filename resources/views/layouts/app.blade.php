@@ -442,11 +442,143 @@
         .stat-card.bg-doctor { background: linear-gradient(135deg, #0ea5e9, #0f766e); color: #ffffff; border-color: #0f766e; }
         .stat-card.bg-department { background: linear-gradient(135deg, #818cf8, #4338ca); color: #ffffff; border-color: #4338ca; }
         .stat-card.bg-appointment { background: linear-gradient(135deg, #fb923c, #f97316); color: #ffffff; border-color: #f97316; }
-        @media (max-width: 768px) {
-            .sidebar { width: 70px; }
-            .sidebar .nav-link span { display: none; }
-            .sidebar-section-title { display: none; }
-            .main-content { margin-right: 70px; }
+        /* ==========================================================================
+           نظام التجاوب الشامل للأجهزة اللوحية والمحمولة (Tablet & Mobile Responsive)
+           ========================================================================== */
+        .tablet-topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(219, 234, 254, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.22);
+            z-index: 1035;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.52);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .sidebar-close-wrapper {
+            display: none;
+        }
+
+        @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
+            /* ضبط الكثافة البصرية الذكية للتابلت لإنهاء الحاجة لتقليل الزوم يدوياً */
+            html {
+                font-size: 14px !important;
+            }
+
+            .tablet-topbar {
+                display: flex !important;
+            }
+            .sidebar-close-wrapper {
+                display: flex !important;
+            }
+            .sidebar {
+                top: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 290px !important;
+                z-index: 1050 !important;
+                transform: translateX(100%) !important;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                box-shadow: -8px 0 28px rgba(15, 23, 42, 0.22) !important;
+                background: #ebf3fe !important;
+            }
+            body.sidebar-open .sidebar {
+                transform: translateX(0) !important;
+            }
+            body.sidebar-open .sidebar-backdrop {
+                display: block !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+            body.sidebar-open {
+                overflow: hidden !important;
+            }
+            .main-content {
+                margin-right: 0 !important;
+                width: 100% !important;
+                padding: 14px 12px !important;
+                padding-top: 74px !important; /* مساحة تعويضية للترويسة العلوية */
+            }
+
+            /* بطاقات مدمجة وأنيقة لجميع شاشات الأقسام */
+            .main-content .card:not(.stat-card) {
+                border-radius: 14px !important;
+                margin-bottom: 14px !important;
+            }
+            .main-content .card-body {
+                padding: 0.85rem !important;
+            }
+            .main-content .card-header {
+                padding: 0.65rem 0.95rem !important;
+            }
+
+            /* ضغط أسطر وخلايا الجداول لتتسع للأعمدة دون اقتصاص */
+            .table > :not(caption) > * > * {
+                padding: 0.55rem 0.65rem !important;
+            }
+
+            /* انسيابية حركة الجداول باللمس */
+            .table-responsive {
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 12px;
+                overflow-x: auto !important;
+            }
+
+            /* حماية ضد الاقتصاص أو التمرير الأفقي الشاذ لكامل الصفحة */
+            body {
+                overflow-x: hidden !important;
+                width: 100% !important;
+            }
+
+            .btn {
+                min-height: 36px;
+            }
+            .btn-sm {
+                padding: 0.25rem 0.55rem !important;
+                font-size: 0.8rem !important;
+            }
+        }
+
+        @media (min-width: 1401px) and (hover: hover) and (pointer: fine) {
+            .tablet-topbar {
+                display: none !important;
+            }
+            .sidebar-backdrop {
+                display: none !important;
+            }
+            .sidebar-close-wrapper {
+                display: none !important;
+            }
+            .sidebar {
+                transform: none !important;
+                width: 250px !important;
+            }
+            .main-content {
+                margin-right: 250px !important;
+                width: calc(100% - 250px) !important;
+                padding-top: 24px !important;
+            }
         }
 
         /* حل جذري لمشكلة تجميد وحجب نوافذ المودل في Bootstrap بسبب backdrop-filter */
@@ -641,11 +773,44 @@
         </div>
     </div>
 
+    <!-- شريط الترويسة العلوي للتابلت والموبايل -->
+    <header class="tablet-topbar" id="tabletTopbar">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" id="sidebarToggleBtn" style="width: 42px; height: 42px;" aria-label="تبديل القائمة">
+                <i class="fas fa-bars fs-5"></i>
+            </button>
+            <div class="d-flex align-items-center gap-2">
+                <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" style="height: 36px; width: auto; border-radius: 6px;">
+                <span class="fw-bold text-primary small">نظام المستشفى</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            @if(Auth::check())
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
+                    <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
+                </span>
+                <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            @endif
+        </div>
+    </header>
+
+    <!-- تظليل الخلفية عند فتح القائمة على التابلت -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="container-fluid">
         <div class="row">
             <!-- الشريط الجانبي -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+            <nav class="sidebar" id="appSidebar">
                 <div class="position-sticky pt-0">
+                    <!-- زر إغلاق القائمة للتابلت -->
+                    <div class="sidebar-close-wrapper justify-content-between align-items-center px-3 pt-3 pb-2 border-bottom border-primary-subtle">
+                        <span class="fw-bold text-primary small"><i class="fas fa-bars me-1"></i> القائمة الرئيسية</span>
+                        <button type="button" class="btn btn-sm btn-light rounded-circle shadow-xs d-flex align-items-center justify-content-center" id="sidebarCloseBtn" style="width: 34px; height: 34px;" aria-label="إغلاق القائمة">
+                            <i class="fas fa-times text-secondary"></i>
+                        </button>
+                    </div>
                     <div class="sidebar-header text-center">
                         <div class="logo-badge">
                             <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
@@ -1974,6 +2139,61 @@
             hideLoader(true);
         });
     })();
+    </script>
+
+    <!-- تحكم القائمة الجانبية للشاشات اللوحية والمحمولة (Tablet Sidebar Toggle) -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('sidebarToggleBtn');
+        const closeBtn = document.getElementById('sidebarCloseBtn');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        function toggleSidebar(open) {
+            if (open === undefined) {
+                document.body.classList.toggle('sidebar-open');
+            } else if (open) {
+                document.body.classList.add('sidebar-open');
+            } else {
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleSidebar();
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                toggleSidebar(false);
+            });
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener('click', function() {
+                toggleSidebar(false);
+            });
+        }
+
+        // إغلاق القائمة عند الضغط على زر Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
+                toggleSidebar(false);
+            }
+        });
+
+        // إغلاق القائمة تلقائياً عند النقر على أي رابط داخلي في وضع التابلت
+        const navLinks = document.querySelectorAll('#appSidebar .nav-link:not([data-bs-toggle])');
+        navLinks.forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 1400 || window.matchMedia('(pointer: coarse)').matches) {
+                    toggleSidebar(false);
+                }
+            });
+        });
+    });
     </script>
 
     @stack('modals')

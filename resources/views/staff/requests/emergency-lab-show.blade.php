@@ -126,6 +126,8 @@ $testsList = array_values(array_unique(array_filter($testsList, fn($t) => !empty
 // خريطة أسماء بديلة واختصارات شائعة لربط التحاليل بدقة
 $codeAliases = [
     'CBC' => 'cbc_3DIFF',
+    'CBC (5-Part Diff)' => 'cbc_3DIFF',
+    'CBC_5DIFF' => 'cbc_3DIFF',
     'CBC & Blood Film' => 'cbc_3DIFF',
     'Complete blood count & Differential' => 'cbc_3DIFF',
     'Complete Blood Count' => 'cbc_3DIFF',
@@ -633,8 +635,16 @@ if (!empty($emergencyLab->notes)) {
                                             $hasSubTests = $labTestObj && $labTestObj->subTests->count() > 0;
                                             
                                             $rt = $labTestObj ? $requestTestsKeyed->get($labTestObj->id) : null;
-                                            $altTestName = ($test === 'CBC & Blood Film') ? 'Complete blood count & Differential' : (($test === 'Complete blood count & Differential') ? 'CBC & Blood Film' : null);
-                                            $hasSpecificAttachment = !empty($rt?->image_path) || !empty($testAttachments[$test]) || ($altTestName && !empty($testAttachments[$altTestName]));
+                                            $isCbcVariant = in_array($test, ['CBC (5-Part Diff)', 'CBC & Blood Film', 'Complete blood count & Differential', 'Complete Blood Count (CBC)'], true);
+                                            $hasSpecificAttachment = !empty($rt?->image_path) || !empty($testAttachments[$test]);
+                                            if (!$hasSpecificAttachment && $isCbcVariant) {
+                                                foreach (['CBC (5-Part Diff)', 'CBC & Blood Film', 'Complete blood count & Differential', 'Complete Blood Count (CBC)'] as $alias) {
+                                                    if (!empty($testAttachments[$alias])) {
+                                                        $hasSpecificAttachment = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                             
                                             // تحديد نمط إدخال النتائج
                                             $entryType = $labTestObj?->result_entry_type;

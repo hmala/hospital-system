@@ -55,6 +55,290 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-11-01 — المرحلة 141: نظام نسب التحمل المفصلة لكل خدمة في فواتير الضمان الصحي الموحدة لدى الكاشير Per-Service Item Copay Enforcement on Combined Cashier Insurance Receipts)
+
+### Done
+- **نموذج الفئات التأمينية ([app/Models/HealthInsuranceCategory.php](file:///c:/wamp64/www/hospital-system/app/Models/HealthInsuranceCategory.php))**:
+  * إضافة حالتي `ecg` و `nursing` في دالة `getCopayForService` لترجع نسبة `consultation_copay` المعتمدة (10% للفئة H).
+- **واجهة دفع الطلبات الطبية الموحدة ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * إنهاء تعميم نسبة التحمل الفردية وتطبيق نسبة التحمل المعتمدة لكل خدمة على حدة: المختبر 25%، الأشعة 25%، تخطيط القلب بإحالة استشارية 10%، وتخطيط القلب المباشر كاش 100% بدون تغطية ضمان (0%).
+  * استبدال البطاقة المضللة ببطاقة الفئة الشاملة: `الفئة H — المختبر: 25% | الأشعة: 25% | الاستشارية والتخطيط: 10%`.
+  * تزويد حقل نسبة التحمل التراكمي بشارة `مفصلة حسب الخدمة (المختبر 25% / التخطيط 10%)`.
+  * تزويد أسطر الجدول بخاصية `data-item-copay` وشارات التغطية التفاعلية `مشمول بالضمان (تحمل X%)`.
+  * تحديث محرك الجافاسكريبت `recalculate()` لاحتساب كل خدمة بنسبتها المستقلة وتحديث المجاميع اللحظية.
+- **معالجة العمليات في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تمرير نسبة كل خدمة (`$labCopay`, `$radCopay`, `$ecgCopay`) بشكل منفصل داخل `processRequestPayment`.
+  * تثبيت احتساب التخطيط المباشر نقداً 100% كاش دون تحميل الضمان.
+  * حذف التكرار البرمجي لبلوك `nursing`.
+- **إيصالات القبض والطباعة الحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * تدعيم مطابقة فحص تخطيط القلب بكافة الصيغ والأنماط الشائعة (`hear echo`, `echo`, `ايكو`, `ecg`, `تخطيط`).
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/MultiServiceInsuranceCopayTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MultiServiceInsuranceCopayTest.php))**:
+  * تغطية شاملة لفتح الوصل واحتساب الصافي، تسديد الوصل المدمج، واحتساب التخطيط المباشر (3 passed, 12 assertions).
+
+## Session log (2026-10-31 — المرحلة 140: تعميم نظام الخصم الجزئي والتفصيلي لكل خدمة والخصم الإجمالي ع الوصل على كاشير الطوارئ Cashier Emergency Dual-Mode Discount System Overall vs Per-Item Percentage)
+
+### Done
+- **واجهة كاشير الطوارئ التفاعلية ([resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * إضافة مفتاح التبديل الثنائي لنطاق الخصم (`discount_scope`): "خصم إجمالي ع الوصل" (`overall`) مقابل "خصم تفصيلي لكل خدمة" (`per_item`).
+  * تزويد كل بند في فاتورة الطوارئ (خدمات الطوارئ، التحاليل، الأشعة، الاستشارات الطبية، ومتابعة الطبيب) بمفتاح فريد وعمود مخصص لإدخال نسبة الخصم لكل خدمة بشكل منفصل (`col-item-discount`).
+  * احتساب فوري لحظي بالدينار لكل خدمة مع شطب السعر الأصلي وإظهار الصافي وشارة قيمة الخصم بالدينار.
+  * قفل حقل الخصم الإجمالي وتحويله لعرض التراكمي عند تفعيل الخصم التفصيلي، وعكسه فورياً عند العودة للخصم الإجمالي.
+- **معالجة العمليات في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تطوير دالة `processEmergencyPayment` لدعم `discount_scope === 'per_item'` واحتساب الخصومات المفردة عبر كافة بنود الطوارئ (الخدمات، التحاليل، الأشعة، والاستشارات ومتابعة الطبيب).
+  * توثيق أسباب الخصم التفصيلي تلقائياً بأسماء الخدمات ونسبها داخل `discount_reason` في جدول المدفوعات وتثبيت الصافي الفعلي ونسبة الخصم الإجمالية وهوية الكاشير.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * إضافة اختبار ميزة متكامل (`test_cashier_can_apply_per_item_discount_on_emergency_payment`) لاختبار خصم الخدمات الفردية في الطوارئ والتحقق من حساب الصافي والنسبة والتوثيق المالي في قاعدة البيانات.
+  * اجتياز كامل حزمة اختبارات الخصم بنجاح 100% (6 passed, 61 assertions).
+
+## Session log (2026-10-31 — المرحلة 139: إبراز شارات التصنيف المالي "نقدي كاش / ضمان صحي / قوى أمن" وشريط الفرز الفوري في محطة الكاشير Cashier Financial Badges & Live Category Filter Bar)
+
+### Done
+- **إبراز الشارات المالية في كافة جداول الكاشير ([resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * تعميم شارة صريحة وأنيقة `[💵 نقدي (كاش)]` لجميع المرضى غير المشمولين بالضمان عبر كافة التبويبات (الكل، كشفية الاستشارية، التحاليل والأشعة، الطوارئ، الفحوصات المؤجلة، ومستحقات الاسترجاع).
+  * تدعيم قسم الطوارئ بالتعرف الكامل على نوع التأمين وعرض شارة "داخليّة" أو "ضمان صحي" أو "نقدي (كاش)" بدقة.
+- **شريط التصفية المالية السريعة اللحظية (`#financialFilterGroup`)**:
+  * إضافة أزرار فرز تفاعلية فورية أعلى جدول تبويب الكل (`#tab-all`): `[الكل | 💵 نقدي / كاش | 🛡️ مشمول بالضمان]`.
+  * تصفية فورية بالـ JavaScript لصفوف الجدول دون الحاجة لإعادة تحميل الصفحة مع تحديث عداد المعاملات الظاهرة لحظياً.
+
+## Session log (2026-10-31 — المرحلة 138: نظام الخصم الثنائي التبادلي للكاشير إجمالي ع الوصل أو تفصيلي لكل خدمة بنسب مئوية وعزل الضمان Cashier Dual-Mode Mutual Discount System Overall vs Per-Item Percentage with Strict Non-Insurance Enforcement)
+
+### Done
+- **التحكم التبادلي والواجهة التفاعلية ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * إضافة مبدل نطاق الخصم التبادلي (`discount_scope`): "خصم إجمالي ع الوصل" (`overall`) مقابل "خصم تفصيلي لكل خدمة" (`per_item`).
+  * إدراج عمود مخصص في جدول الخدمات والتحاليل والأشعة والتمريض (`col-item-discount`) لإدخال نسبة الخصم لكل خدمة بشكل منفصل (بخطوات خماسية 5% واقتراحات Datalist من 0% حتى 100%).
+  * احتساب فوري بالدينار العراقي لكل خدمة مع شطب السعر القديم وإبراز الصافي الجديد وشارة توضيحية لقيمة الخصم بالدينار.
+  * تجميع آلي فوري لكافة الخصومات الفردية في خانة الصافي ومجموع الإعفاء والنسبة الإجمالية التراكمية في صندوق الملخص المالي.
+  * منع التضارب: عند اختيار الخصم التفصيلي، يُقفل حقل الخصم الإجمالي للقراءة فقط ويتحول لعرض الإجمالي التراكمي، وعند العودة للخصم الإجمالي يُخفى عمود الجدول وتُصفر خصومات السطور تلقائياً.
+  * حماية الضمان: يختفي صندوق الخصم وعمود الخدمات كلياً ويقفل النظام أي خصومات للمرضى المشمولين بالضمان الصحي (`hi`) أو قوى الأمن (`moi`) وحصره بنسبة 100% في المرضى النقديين (`none`).
+- **معالجة العمليات في الكنترولر وقواعد البيانات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تطوير دالة `processRequestPayment` للتعامل مع وضعيتي الخصم (`overall` و `per_item`).
+  * في وضعية الخصم التفصيلي: احتساب خصم كل خدمة منفصلة وتوثيق مصفوفة الخصومات داخل `details['item_discounts']` لكل طلب طبي.
+  * توثيق تفاصيل الخصم وأسماء الخدمات ونسبها تلقائياً في حقل `discount_reason` لسند الدفع (`payments`)، وتخزين إجمالي الخصم والنسبة الفعلية وهوية الكاشير المنفذ.
+- **سندات القبض المطبوعة والحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php), [resources/views/cashier/receipt-pdf.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-pdf.blade.php))**:
+  * توافق تام مع سندات القبض والطباعة الحرارية وPDF لعرض المبالغ الصافية وتفاصيل أسباب ونسب الخصم التفصيلي تلقائياً أمام المريض والمدققين.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * إضافة اختبار ميزة متكامل (`test_cashier_can_apply_per_item_discount_on_non_insured_request_payment`) يؤكد تطبيق الخصم التفصيلي، وحساب الإجمالي الصافي بدقة، وتوثيق أسماء الخدمات ونسبها، وتخزينها في تفاصيل الطلب وسند الدفع.
+  * اجتياز كامل حزمة اختبارات الخصم بنجاح 100% (5 passed, 51 assertions).
+
+## Session log (2026-10-31 — المرحلة 137: تزامن تلقائي لمخرجات بناء Vite بين public/build و dist لمنصات النشر والاستضافة التلقائية Vite Build Output Dual-Sync for Automated Deployment Pipelines)
+
+### Done
+- **إعدادات البناء والمزامنة ([vite.config.js](file:///c:/wamp64/www/hospital-system/vite.config.js), [package.json](file:///c:/wamp64/www/hospital-system/package.json), [.gitignore](file:///c:/wamp64/www/hospital-system/.gitignore))**:
+  * إضافة مكون إضافي مخصص `sync-build-to-dist` في `vite.config.js` لنسخ كافة أصول البناء من `public/build` إلى مجلد `dist` فور اكتمال التجميع مع توليد ملف `index.html` متوافق.
+  * تدعيم أمر `build` في `package.json` بنص تنفيذي لضمان وجود وتزامن مجلد `dist` حتى وإن تغير مسار أو وسيطة التشغيل في المنصة.
+  * إضافة `.gitkeep` داخل `dist` وتحديث `.gitignore` لضمان وجود المجلد مسبقاً وتجنب أخطاء الفحص التلقائي لمسار المخرجات أثناء النشر على هوستنجر أو أي منصة سحابية.
+
+## Session log (2026-10-30 — المرحلة 136: دعم وتكامل طلبات تخطيط القلب والتمريض الصادرة من الاستشارية لدى الكاشير بتسعير الضمان الصحي الدقيق Doctor ECG & Nursing Requests Cashier Billing with Accurate Insurance Pricing)
+
+### Done
+- **معالجة طلبات التمريض وتخطيط القلب في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
+  * دعم طلبات التمريض (`type === 'nursing'`) في واجهة كاشير الطلبات الطبية بعد أن كانت مقتصرة سابقاً على المختبر والأشعة فقط.
+  * تصحيح وتدقيق مطابقة خدمة "تخطيط قلب" لاستهداف خدمة الطوارئ المعتمدة رقم **#93** (`تخطيط قلب`) بسعر 15,000 د.ع كاش وسعر 10,000 د.ع للضمان الصحي (HI)، ومنع مطابقتها الخاطئة مع خدمة #68 ("مراقبة الفعاليات الحيوية مع او بدون تخطيط القلب" بسعر 25,000 د.ع).
+  * احتساب حصة المريض التأمينية بدقة بناءً على نسبة التحمل (10% = 1,000 د.ع، 15% = 1,500 د.ع) وتثبيت حصة الضمان الصحي (9,000 د.ع أو 8,500 د.ع).
+  * إضافة نوع `nursing` لفحص حالات الدفع (`$hasAnyPay`) لمنع تصنيف الطلب كملغي أو توجيهه خطأ إلى شاشة الكاشير الرئيسية.
+- **شاشة الطبيب وإحالات الطوارئ السريعة ([resources/views/doctors/visits/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * إضافة زر إحالة سريعة مخصص `+ تخطيط قلب (ECG)` في بطاقة إحالة الطوارئ بمحطة الطبيب لإرسال الطلب فورياً للكاشير.
+- **سندات القبض المطبوعة والحرارية ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إدراج بنود التمريض وتخطيط القلب (ECG) في جدول الإيصال المالي والوصل الحراري المطبوع مع تفصيل المبلغ المعتمد وحصة المريض وحصة الضمان.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/DoctorECGRequestPaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorECGRequestPaymentTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (2 passed, 11 assertions).
+
+## Session log (2026-10-30 — المرحلة 135: تعميم نظام الخدمات الإضافية والفندقية على واجهة كاشير الفحوصات والطلبات الطبية بتسعير ديناميكي حر خارج الضمان Medical Requests & Visits Dynamic Extra Services with Non-Insurance Direct Billing)
+
+### Done
+- **قاعدة البيانات والترحيل ([database/migrations/2026_10_30_202000_create_visit_extra_services_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_202000_create_visit_extra_services_table.php), [app/Models/VisitExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/VisitExtraService.php))**:
+  * إنشاء جدول `visit_extra_services` لربط الخدمات الإضافية بالطلب الطبي والزيارة وسند الدفع المالي.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+  * ربط العلاقات بنموذجي `Visit` و `Payment`.
+- **معالجة العمليات في الكنترولر والمسارات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * شمول واجهة كاشير الطلبات `showRequestPaymentForm` بقائمة الخدمات ودعم جلب الخدمات المعلقة للطلب والزيارة.
+  * إضافة مساري `cashier.request.extra-services.add` و `cashier.request.extra-services.remove`.
+  * ترقية `processRequestPayment` لحساب الخدمات الإضافية 100% نقداً وربطها بسند القبض المالي وتحويل حالتها إلى `paid`.
+- **ترقية واجهات الكاشير والوصولات ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إضافة بطاقة الخدمات الإضافية والفندقية لشاشة دفع الطلبات الطبية `http://127.0.0.1:8000/cashier/request-payment/{id}`.
+  * ظهور بنود الخدمات المضافة في جدول الفحوصات مع أزرار الحذف الفوري قبل السداد.
+  * ظهور الخدمات الإضافية في سند القبض والشاشة التفاعلية والوصل الحراري المطبوع.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/RequestExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RequestExtraServicesTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (3 passed, 13 assertions).
+
+## Session log (2026-10-30 — المرحلة 134: نظام الخدمات الإضافية والفندقية للعمليات الجراحية والرقود بتسعير ديناميكي للكاشير مع العزل الكامل عن الضمان Surgery Accommodation & Extra Services with Dynamic Cashier Pricing)
+
+### Done
+- **قاعدة البيانات وموديلات الخدمات الإضافية ([database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_183000_create_hospital_extra_services_tables.php), [app/Models/HospitalExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/HospitalExtraService.php), [app/Models/SurgeryExtraService.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryExtraService.php), [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php))**:
+  * إنشاء جدول الدليل المرجعي للخدمات الإضافية `hospital_extra_services` وتغذيته بـ 17 خدمة تم استخراجها من صور النظام القديم (تخطيط قلب، مبيت مرافق، رقود إضافي، فتح طبلة، أطفال، تزيين غرف، غرامات، بيانات ولادة، مواد، فندقة نواظير) مع عزل الغرف VIP/VVIP لنظام الغرف الداخلي.
+  * إنشاء جدول `surgery_extra_services` لربط الخدمات المضافة بالعملية الجراحية وسند القبض.
+  * إضافة علاقة `extraServices()` في نموذج `Surgery`.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+- **معالجة العمليات في الكنترولر والمسارات ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار `cashier.surgeries.extra-services.add` لإضافة خدمة بسعر مخصص ديناميكي يحدده الكاشير بحرية تامة دون قيد الضمان.
+  * إضافة مسار `cashier.surgeries.extra-services.remove` لحذف الخدمة المعلقة قبل السداد.
+  * ترقية `processSurgeryPayment` لحساب الخدمات الإضافية بنسبة 100% نقداً وربطها بسند القبض المالي وتحويل حالتها إلى `paid`.
+- **ترقية واجهات الكاشير والوصولات ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * بطاقة ديناميكية لاقتراح وتعديل أسعار الخدمات الإضافية مع اقتراحات Datalist.
+  * إدراج بنود الخدمات الإضافية في جدول الدفع مع إمكانية حذفها قبل الدفع.
+  * ظهور بنود الخدمات الإضافية في سند القبض والشاشة التفاعلية والوصل الحراري المطبوع.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (3 passed, 14 assertions).
+
+## Session log (2026-10-30 — المرحلة 133: دعم خصومات الكاشير الإدارية والخاصة بنسب خماسية من 0% إلى 100% وحصرها التام خارج الضمان Cashier Multi-Departmental 5% Step Discounts System & Strict Non-Insurance Enforcement)
+
+### Done
+- **قاعدة البيانات وموديل الدفعات ([database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_30_150000_add_discount_fields_to_payments_table.php) & [app/Models/Payment.php](file:///c:/wamp64/www/hospital-system/app/Models/Payment.php))**:
+  * إضافة حقول الخصم الرسمية لجدول `payments`:
+    - `discount_percentage` (decimal 5,2 default 0.00).
+    - `discount_amount` (decimal 12,2 default 0.00).
+    - `discount_reason` (string 255 nullable).
+    - `discount_by` (unsignedBigInteger nullable fk users).
+  * تحديث `$fillable` و `$casts` وعلاقة `discountBy()` في نموذج `Payment`.
+  * تطبيق المايجريشن بنجاح محلياً وعلى قاعدة بيانات هوستنجر الحية (`remote_hostinger`).
+- **معالجة الدفع المالي في الكنترولر ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * شمول جميع أقسام الكاشير:
+    - الفحوصات الطبية والمختبر والأشعة (`processRequestPayment`).
+    - خدمات وفحوصات واستشارات الطوارئ (`processEmergencyPayment`).
+    - رسوم العمليات الجراحية والغرف والتحاليل الملحقة (`processSurgeryPayment`).
+  * **العزل الصارم لحماية الضمان**: تعطيل الخصم وتصفيره نهائياً إذا كانت فئة المريض ضمان صحي (`hi`) أو قوى أمن (`moi`) وحصره فقط في المرضى النقديين (`insurance_type === 'none'`).
+  * الحساب المالي الدقيق: احتساب الخصم من حصة المريض الإجمالية (`patient_share`)، وتخزين الصافي الفعلي في الصندوق بحقل `amount`، وتوثيق نسبة وقيمة وسبب الخصم وهوية الكاشير أو المشرف.
+- **تحديث واجهات الكاشير الحية بنسب خماسية ([resources/views/cashier/request-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إضافة صندوق خصم تفاعلي يظهر فقط عند الدفع النقدي (ويختفي تماماً ويقفل عند اختيار الضمان).
+  * قائمة نسب خماسية دقيقة (من 0% حتى 100% بخطوات 5%).
+  * أزرار سريعة للخصومات الشائعة (0%، 10%، 15%، 20%، 25%، 50%، إعفاء 100%).
+  * حقل نصي إلزامي/توضيحي لسبب الخصم (إداري، إعفاء طبيب، تخفيض إنساني).
+  * تحديث فوري مباشر بجافاسكريبت لحصة المريض والمبلغ المطلوب قبضه وزر التأكيد وشريط الملخص المالي.
+- **تحديث إيصالات القبض والطباعة الحرارية وPDF ([resources/views/cashier/receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php), [resources/views/cashier/receipt-pdf.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-pdf.blade.php))**:
+  * إبراز سطر تفصيلي واضح لخصم الإدارة (النسبة %، القيمة بالدينار، وسبب الخصم) قبل خانة الصافي المدفوع، لضمان وضوح وشفافية السند المالي أمام المريض والمدققين.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierDiscountTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierDiscountTest.php))**:
+  * بناء 4 اختبارات ميزة تغطي كامل متطلبات الدورة المالية:
+    1. تطبيق خصم 20% على طلبات الفحوصات للمرضى النقديين والتأكد من الحسابات وهوية الكاشير وسبب الخصم.
+    2. الحماية الصارمة للمرضى المؤمنين ومنع أي خصم عليهم بقوة النظام (0%).
+    3. تطبيق خصم 15% على كاشير الطوارئ مع تحديث المبالغ وإصدار السند.
+    4. تطبيق خصم 25% على كاشير العمليات الجراحية بنجاح.
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (4 passed, 37 assertions).
+
+## Session log (2026-10-30 — المرحلة 132: تمكين الكاشير الإداري casshieradmin والمخولين بالإبطال من استعراض كافة الوصولات وفلترة الكاشيرات Cashier Admin & Void Authorized Users Full Receipts Access & Departmental Cross-Drawer Filter Parity)
+
+### Done
+- **إزالة القيد الحصري عن الكاشير الإداري والمخولين بالإبطال ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * توسيع صلاحية استعراض الوصولات في دالة `reports()` لتشمل دور الكاشير الإداري `casshieradmin` وصلاحية إبطال الوصولات `void payment receipt` بالإضافة إلى الأدوار الإدارية (`admin`, `accountant`, `hospital_admin`).
+  * إلغاء فرض شرط `where('cashier_id', $user->id)` التلقائي عليهم، مما يسمح لهم بمشاهدة والبحث في وصولات جميع الكاشيرات والصناديق بالمستشفى دفعة واحدة.
+  * تزويدهم بقائمة كاشيرات المستشفى للفلترة المخصصة حسب الكاشير أو عرض "جميع الكاشيرات".
+- **تحديث واجهة تقرير الوصولات والمقبوضات ([resources/views/cashier/report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report.blade.php))**:
+  * إظهار القائمة المنسدلة لفلترة الكاشير لمن يملك دور `casshieradmin` أو صلاحية `void payment receipt` ليتمكن المشرف من تدقيق وإبطال أو مراجعة أي وصل تم إصداره من أي نقطة كاشير أخرى.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/PaymentVoidAndReversalTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PaymentVoidAndReversalTest.php))**:
+  * إضافة اختبار ميزة متكامل `test_cashier_admin_or_void_authorized_user_can_view_all_cashiers_receipts_in_reports` يؤكد عزل الكاشير العادي لوصولاته الخاصة فقط، وقدرة الكاشير الإداري (`casshieradmin`) على رؤية جميع وصولات الكاشيرات دفعة واحدة.
+  * اجتياز كامل حزمة اختبارات إبطال الوصولات بنجاح 100% (11 passed, 73 assertions).
+
+## Session log (2026-10-29 — المرحلة 131: دمج وتوحيد فحوصات CBC في فحص نشط وحيد رقم 43 ونقل باقات الأطباء وتعطيل المكرر كأرشيف CBC Tests Consolidation into Single Active ID 43 & Legacy Archiving)
+
+### Done
+- **الدمج الشامل وتوحيد سجلات فحص الدم ([database/migrations/2026_10_29_213000_consolidate_cbc_tests_to_single_active_test_43.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_213000_consolidate_cbc_tests_to_single_active_test_43.php))**:
+  * اعتماد السجل رقم **#43** كفحص نشط ورسمي وحيد باسم **`CBC (5-Part Diff)`** وبسعر 20,000 د.ع مع كامل البارامترات الـ 27.
+  * تمييز السجل رقم **#44** كأرشيف مدمج (`CBC (5-Part Diff) [أرشيف مدمج]`) وتعطيله نهائياً (`is_active = 0`).
+  * تمييز السجل رقم **#1440** كمكرر ملغي (`CBC [مكرر ملغي]`) وتعطيله نهائياً (`is_active = 0`).
+  * ترحيل ونقل كافة الباقات المفضلة لجميع أطباء المستشفى في جدول `user_lab_test_group_lab_test` من 44 و 1440 إلى 43 مباشرة ليصبح إجمالي باقات الأطباء المرتبطة بـ #43 هو 21 باقة.
+  * تطبيق المايجريشن والدمج محلياً وعلى قاعدة بيانات هوستنجر الحية بدقة 100%.
+
+## Session log (2026-10-29 — المرحلة 130: ترقية وتوحيد طلب استشارة الطوارئ إلى اختيار استشاري فردي وربطها مالياً بخدمة استشارة اخصائي من العيادة الاستشارية بسعر 30,000 د.ع Emergency Single Consultant Selection & Automated 30,000 IQD Emergency Service Billing)
+
+### Done
+- **ترقية واجهة نافذة طلب الاستشارة الطبية ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php))**:
+  * استبدال صندوق الاختيار المتعدد القديم (`select multiple` المعتمد على زر `Ctrl`) بقائمة منسدلة حديثة وسلسة (`Dropdown single select`) لاختيار الطبيب الاستشاري المطلوب بعينه.
+  * حصر الأطباء المتاحين في الأطباء الاستشاريين (`consultant`) وأطباء السونار (`sonar`) المتاحين اليوم بالدوام فقط.
+  * ترقية وسم الاستشارة في شريط رأس محطة الطوارئ ليعرض صراحة اسم الطبيب الاستشاري وقسمه: `[ تم طلب استشارة: د. فلان (باطنية) ]`.
+- **الربط المالي الصارم بخدمات الطوارئ ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إلغاء الرقم المقطوع القديم (50,000 د.ع) وتصفير رسوم الموعد الإضافية (`consultation_fee = 0`) منعاً للازدواجية.
+  * إلحاق خدمة الطوارئ الرسمية **"استشارة اخصائي من العيادة الاستشارية"** (رقم #115) بسعرها الرسمي المعتمد **30,000 د.ع** تلقائياً إلى خدمات الحالة في جدول `emergency_emergency_service`.
+  * إذا قام الطبيب بطلب استشارة إضافية لاحقاً، يتم زيادة كمية الخدمة تلقائياً بمقدار 1 (لتصبح 2 × 30,000 = 60,000 د.ع).
+  * إدراج الخدمة رسمياً في فاتورة الطوارئ الموحدة ووصل الكاشير الإلكتروني والحراري وحسابات الضمان الصحي.
+- **تحديث كاشير الطوارئ ومستحقات الطبيب ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * ضبط القيد المالي الافتراضي لاستشارة الطوارئ ليصبح 30,000 د.ع (بدلاً من 50,000 د.ع) وتوزيع الحصص بنسبة 80% للطبيب (24,000 د.ع) و 20% للمستشفى (6,000 د.ع).
+- **حزم الاختبارات الآلية الشاملة**:
+  * إضافة اختبار ميزة متكامل `test_requesting_emergency_consultation_attaches_emergency_service_and_schedules_appointment` في [`tests/Feature/EmergencyWorkflowTest.php`](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php).
+  * اجتياز كامل حزمة اختبارات الطوارئ والـ CBC بنجاح 100% (11 passed, 49 assertions).
+
+## Session log (2026-10-29 — المرحلة 129: توحيد فحص عد الدم الشامل الآلي باسمه الطبي المعتمد CBC (5-Part Diff) وفصل فحص فيلم الدم المجهري Blood Film وتحديث المطبوعات والاختبارات Automated CBC (5-Part Diff) Medical Standardization, Standalone Microscopic Blood Film & Complete Print Parity)
+
+### Done
+- **توحيد المسمى الطبي لفحص الدم الشامل في قاعدة البيانات ([database/migrations/2026_10_29_200000_standardize_cbc_test_name_to_cbc_5_part_diff.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_200000_standardize_cbc_test_name_to_cbc_5_part_diff.php))**:
+  * توحيد واعتماد المسمى الطبي الدقيق `CBC (5-Part Diff)` لفحص الجهاز الآلي (رقم 43 و 44) بسعر 20,000 د.ع مع كافة البارامترات الـ 27 الفرعية.
+  * تعطيل السجل المكرر (رقم 1440) منعاً للازدواجية.
+  * عزل وتثبيت فحص فيلم الدم المجهري اليدوي المستقل `Blood Film` (رقم 1243) بسعر 50,000 د.ع كفحص سريري منفصل.
+  * تطبيق المايجريشن وتحديث السجلات محلياً وعلى قاعدة بيانات هوستنجر الحية بدقة 100%.
+- **تحديث وضبط شاشات طباعة تقارير المختبر ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php) & [resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * تحديث دالة التطبيع السريرية `$canonicalTestName` لترقية كافة المسميات القديمة والبديلة (`CBC & Blood Film`, `Complete blood count & Differential`, إلخ) إلى المسمى الرسمي المعتمد `CBC (5-Part Diff)`.
+  * تحديث مسميات أزرار المرفقات في الشريط العلوي التفاعلي لتظهر بنمط `[ 🔬 مرفق: CBC (5-Part Diff) (PDF) ]`.
+- **ترقية واجهة محطة تحاليل الطوارئ ومعالجة المرفقات ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php) & [app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * إضافة المسمى الجديد `CBC (5-Part Diff)` في قائمة الأكواد البديلة `$codeAliases` لربطه التلقائي مع `cbc_3DIFF`.
+  * دعم جلب المرفق الطبي للجهاز الآلي باسم `CBC (5-Part Diff)` أو الأسماء السابقة دون أي فقد للمرفقات السابقة.
+- **حزم الاختبارات الآلية الشاملة**:
+  * تحديث واجتياز اختبارات `CbcTestNameStandardizationTest.php`, `UnifiedEmergencyLabStationAndReportTest.php`, و `PaymentVoidAndReversalTest.php` بإجمالي 21 اختباراً ناجحاً بنسبة 100% (133 assertions).
+
+## Session log (2026-10-29 — المرحلة 128: فك ارتباط وإلغاء كافة الطلبات الطبية عند إبطال الوصل Rebill و Refund ومنع ظهورها في طابور المختبر والأشعة وإظهارها كملغاة عند الطبيب Reopened & Refunded Payment Medical Requests Cascade Cancellation, Departmental Queue Purification & Clinical Doctor Alerts)
+
+### Done
+- **التحصين الشامل في كنترولر إبطال وإعادة فتح الوصولات ([app/Http/Controllers/PaymentVoidController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/PaymentVoidController.php))**:
+  * حصر وجمع كافة معرفات الطلبات الطبية المرتبطة بالوصل المالي المُراد إبطاله بأي شكل (`$payment->request_id`, `$payment->lab_request_ids`, `$payment->radiology_request_ids`, وكذلك أي طلب يشير معرف دفعه صراحة `where payment_id = payment->id`).
+  * **عند إعادة الفتح للتسديد والتصحيح (`void_type === 'rebill'`)**: فك ارتباط وتصفير كافة الطلبات المدمجة دفعة واحدة (`payment_id = null`, `status = 'pending'`, `payment_status = 'pending'`) وإعادة حالة الزيارة إلى `pending_payment` لضمان ظهور كافة طلبات المريض في طابور الكاشير للتسديد دون نسيان أي فحص ملحق.
+  * **عند الاسترداد والإلغاء النهائي (`void_type === 'refund'`)**: إلغاء كافة الطلبات المرتبطة دفعة واحدة (`status = 'cancelled'`, `payment_status = 'cancelled'`) وتوثيق سبب الإلغاء وتاريخه ومعرف الكاشير في بيانات الطلب `details` لتظهر فوراً في شاشة الطبيب.
+  * شمول طوارئ الأشعة `EmergencyRadiologyRequest` في عمليتي إعادة الفتح والاسترداد بجانب طوارئ المختبر.
+- **تحديث وإحكام معالجة الدفع لدى الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تخزين مصفوفات معرفات الفحوصات المسددة فعلياً في حقلي `lab_request_ids` و `radiology_request_ids` بجدول `payments` لتوثيق الفحوصات المشمولة بالوصل بدقة ومنع ضياع أي فحص مدمج.
+  * إضافة صمام أمان رقابي: أي طلب طبي كان مشمولاً في فاتورة الزيارة ولم يتم تسديده ولم يؤجل، يُعتبر ملغياً بطلب المريض وتُحدث حالته إلى `cancelled` مع توثيق السبب ليختفي من طابور الفحص ويظهر للطبيب.
+- **تحصين وتطهير طوابير العمل في المختبر والأشعة ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php) & [app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * منع ظهور أي طلب طبي حالته `cancelled` أو حالة دفعه `payment_status = 'cancelled'`.
+  * استبعاد أي طلب طبي مرتبط بوصل مالي تم إبطاله أو استرداده (`whereDoesntHave('payment', fn ($pq) => $pq->whereNotNull('voided_at'))`).
+  * إضافة علاقة `payment()` من نوع `belongsTo` في نموذج [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php).
+- **تنظيف وتصحيح السجلات العالقة ([database/migrations/2026_10_29_192000_unbind_and_cleanup_voided_payments_requests.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_192000_unbind_and_cleanup_voided_payments_requests.php))**:
+  * معالجة وترقية كافة الطلبات السابقة المرتبطة بوصولات ملغاة، وتصحيح حالة الفحص 859 (Free thyroxin) العالق في الوصل 1677 على السيرفر الحي وتحويله لملغي.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/PaymentVoidAndReversalTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PaymentVoidAndReversalTest.php))**:
+  * بناء واجتياز اختبارين ميزة شاملين يغطيان دورة حياة إعادة الفتح الكاملة وتصفير كافة الطلبات المدمجة، وإلغاء الفحوصات غير المسددة واختفائها من طابور المختبر وظهورها في شاشة الطبيب كتنبيه سريري (`10 passed, 66 assertions`).
+
+## Session log (2026-10-29 — المرحلة 127: توحيد آلية فحص الدم CBC & Blood Film وفحص فيلم الدم المجهري Blood Film في طوارئ المختبر والاستشارية 100% ومنع تفريغ البارامترات الفارغة Emergency Lab CBC & Blood Film Parity, Dedicated Microscopic Blood Film & Clean Device Report Architecture)
+
+### Done
+- **عزل وضبط فحصي الدم CBC & Blood Film و Blood Film في تقارير طوارئ المختبر ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
+  * منع تفريغ الـ 27 بارامتراً فرعياً كصفوف فارغة أو معلقة (`Pending`) في جدول نتائج الفحوصات البيوكيميائية عند طلب فحص `CBC & Blood Film` المعتمد على مرفق الجهاز الآلي (`isAttachmentOnly`).
+  * مزامنة المرفقات الفردية لطلبات الطوارئ مع جدول `emergency_lab_request_tests` لضمان ظهور زر تقرير الجهاز الآلي في الشريط العلوي بنمط `[ 🔬 مرفق: CBC & Blood Film (PDF) ]` أياً كان مصدر حفظ المرفق.
+  * إزالة الصندوق المرفق من الورقة المطبوعة نهائياً لمطابقة الاستشارية 100%، والاكتفاء بالزر التفاعلي في شريط الأدوات العلوي بنمط `[ 🔬 مرفق: CBC & Blood Film (PDF) ]` لفتح وطباعة التقرير الأصلي الصادر من جهاز التحليل دون أي تشويه بصري للورقة.
+  * عزل فحص فيلم الدم المجهري اليدوي `Blood Film` (رقم 1243، بسعر 50,000 د.ع) كفحص سريري مستقل (`single_value`) يظهر في جدول النتائج المباشرة بقيمته وتفاصيله المجهرية دون أي تداخل مع فحص الجهاز الآلي.
+- **تحديث وتوحيد مسمى الفحص في طباعة الاستشارية ([resources/views/staff/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/print.blade.php))**:
+  * تعميم دالة التطبيع السريرية `$canonicalTestName` على شريط الأدوات العلوي وقوائم المرفقات في طباعة الاستشارية والطلبات المباشرة لمنع ظهور المسمى القديم `Complete blood count & Differential` واستبداله بالمسمى الرسمي المعتمد `CBC & Blood Film`.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
+  * إضافة وتوسيع اختبارات الميزة لتغطية عدم تفريغ البارامترات الـ 27 لـ CBC في التقرير، والتعامل السليم مع المرفقات، والتمييز التام بين فحص CBC الآلي وفيلم الدم المجهري اليدوي (`10 passed, 62 assertions`).
+
+## Session log (2026-10-29 — المرحلة 126: توحيد محطة ومطبوعات طوارئ الأشعة 100% مع محطة الأشعة والتقرير السريري الموحد Emergency Radiology Station & Print Report 100% Unification)
+
+### Done
+- **قاعدة البيانات وموديل الطلبات الطبية ([database/migrations/2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_29_131000_add_results_data_to_emergency_radiology_requests_table.php) & [app/Models/EmergencyRadiologyRequest.php](file:///c:/wamp64/www/hospital-system/app/Models/EmergencyRadiologyRequest.php))**:
+  * إضافة حقل `results_data` لتخزين المشاهدات (Findings)، الاستنتاج (Impression)، التوصيات (Recommendations)، مصفوفة المرفقات (Images)، وبيانات الاعتماد.
+  * تحديث `$fillable` و `$casts` في نموذج `EmergencyRadiologyRequest`.
+- **ترقية وتوحيد واجهة محطة إدخال طوارئ الأشعة ([resources/views/staff/requests/emergency-radiology-show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-show.blade.php))**:
+  * مطابقة تامة 1:1 مع التصميم السريري الهادئ (`Calm Clinical Design`) المعتمد في محطة الأشعة.
+  * إضافة قوالب التقارير السريعة بنقرة واحدة (`Quick Templates Chips`): فحص سليم طبيعي، أشعة صدر سليمة، سونار بطن وحوض سليم، أشعة عظام سليمة، نتائج طارئة غير طبيعية.
+  * حقول سريرية مفصلة: Findings و Impression و Recommendations مع منطقة سحب وإفلات ومعاينة فورية للصور وحذف المرفقات.
+  * شريط المريض المتكامل مع بطاقة تنبيه بالأعراض السريرية ودواعي الفحص المسجلة من طبيب الطوارئ.
+- **إعادة بناء وتوحيد تقرير طباعة طوارئ الأشعة ([resources/views/staff/requests/emergency-radiology-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-radiology-print.blade.php))**:
+  * مطابقة 100% مع الهوية الرسمية للأشعة والمستشفى (`#005a9c` أزرق داكن، `#0284c7` أزرق سماوي) وخط Cairo.
+  * شريط أدوات علوي تفاعلي: طباعة، حفظ PDF، رابط واتساب مباشر للمريض، ومبدل الورق المروس (`Letterhead Mode`) مع ضابط الهامش.
+  * شعار المستشفى المدمج Base64 للظهور الفوري، وبطاقة المريض، والتقسيم السريري الدقيق، ومربع التوقيع والختم المعتمد، ورمز التحقق QR Code المباشر.
+- **التحصين في الكنترولر ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * تصحيح مسار علاقات القسم `emergency.doctor.department`.
+  * دعم استخراج وعرض البيانات القديمة مثل نص `CXR` والمرفقات القديمة بدقة 100% دون أي فقدان.
+  * دعم حفظ وتحديث `results_data` مع مزامنة جدول `emergency_radiology_request_types` لضمان التوافق العكسي التام.
+- **حزم الاختبارات الآلية ([tests/Feature/UnifiedEmergencyRadiologyStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyRadiologyStationAndReportTest.php) & [tests/Feature/EmergencyRadiologyPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyRadiologyPrintTest.php))**:
+  * اجتياز 5 اختبارات ميزة تغطي المحطة السريرية الجديدة، واعتماد التقرير، والطباعة بوجود مرفقات أو بدونها (`5 passed, 37 assertions`).
+
+## Session log (2026-10-29 — المرحلة 125: دمج وتكامل قسم الرنين المغناطيسي والمفراس تحت محطة عمل واحدة MRI & CT Workstation Integration)
+
+### Done
+- **توحيد فلاتر وقنوات المفراس والرنين في الكنترولر ([app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php) & [app/Http/Controllers/RadiologyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyController.php))**:
+  * توسيع استعلام قسم الرنين `selectedCategory === 'mri'` ليشمل تلقائياً كلاً من فحوصات الرنين والمفراس معاً (`whereIn('subtype', ['mri', 'ct'])`) في كافة استعلامات القائمة الرئيسية، طلبات الانتظار، الرادار اللحظي، وطابور النداء.
+  * تحديث التحقق الأمني من صلاحيات الطلب (`authorizeRequestAccess`) للسماح لحسابات الرنين (`radiology_mri`) بفتح وفحص وكتابة وتعديل تقارير فحوصات المفراس (`ct`) دون أي خطأ 403.
+  * دعم تصنيف المفراس في استعلامات طوارئ الأشعة لحساب الرنين (`subcategory in ['الرنين', 'مفراس', 'رنين']`).
+- **تحسين واجهة محطة الأشعة والتصوير الطبي ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php))**:
+  * تحديث زر التبديل السريع ليظهر بالمسمى الرسمي الموحد `🧲 الرنين والمفراس`.
+- **حزمة الاختبارات الآلية ([tests/Feature/MriAndCtMergedStationAccessTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MriAndCtMergedStationAccessTest.php))**:
+  * بناء واجتياز اختبار ميزة يضمن قدرة فني الرنين على استعراض وفتح فحوصات الرنين والمفراس (CT & MRI) بسلاسة تامة (`1 passed, 5 assertions`).
+
 ## Session log (2026-10-29 — إخفاء أشرطة الباقات السريعة للتحاليل والأشعة في الخدج مع الحفاظ عليها، ودعم كتابة الأدوية غير المتوفرة بالصيدلية كعلاج مخصص)
 
 ### Done

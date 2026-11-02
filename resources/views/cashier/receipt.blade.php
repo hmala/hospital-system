@@ -224,7 +224,82 @@
                         ];
                     }
                 }
+            } elseif ($reqItem->type === 'nursing') {
+                $nursingServiceIds = (array) ($details['nursing_services'] ?? []);
+                if (!empty($nursingServiceIds)) {
+                    foreach ($nursingServiceIds as $nsId) {
+                        $nSvc = \App\Models\EmergencyService::find($nsId);
+                        if ($nSvc) {
+                            $pricing = $isInsured && method_exists($nSvc, 'calculateInsurancePricing')
+                                ? $nSvc->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                                : null;
+                            $base = $pricing ? (float)$pricing['total_amount'] : (float)$nSvc->price;
+                            $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                            $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                            $lineItems[] = [
+                                'name' => 'تمريض: ' . $nSvc->name,
+                                'category' => 'خدمات تمريضية وتخطيط قلب',
+                                'doctor' => $doctorName,
+                                'approved' => $base,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                    }
+                } else {
+                    $desc = trim($details['description'] ?? $reqItem->description ?? 'تخطيط قلب');
+                    $descLower = mb_strtolower($desc);
+                    $matchedSvc = null;
+                    if (str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo')) {
+                        $matchedSvc = \App\Models\EmergencyService::where('name', 'تخطيط قلب')->first()
+                            ?? \App\Models\EmergencyService::find(93)
+                            ?? \App\Models\EmergencyService::where('name', 'LIKE', '%تخطيط%')->orderBy('id', 'desc')->first();
+                    }
+                    if ($matchedSvc) {
+                        $pricing = $isInsured && method_exists($matchedSvc, 'calculateInsurancePricing')
+                            ? $matchedSvc->calculateInsurancePricing($payment->insurance_type, $copayPct)
+                            : null;
+                        $base = $pricing ? (float)$pricing['total_amount'] : (float)$matchedSvc->price;
+                        $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
+                        $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
+                    } else {
+                        $base = 15000.00;
+                        $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
+                        $ins = max(0, $base - $pat);
+                    }
+                    $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                    $lineItems[] = [
+                        'name' => $cleanTitle,
+                        'category' => 'خدمات تمريضية وتخطيط قلب',
+                        'doctor' => $doctorName,
+                        'approved' => $base,
+                        'patient' => $pat,
+                        'insurance' => $ins,
+                    ];
+                }
             }
+        }
+
+        // 2.1 خدمات إضافية وفندقية ملحقة بالطلب والزيارة
+        $paidVisitExtraServices = \App\Models\VisitExtraService::where('payment_id', $payment->id)->get();
+        if ($paidVisitExtraServices->isEmpty() && $payment->request_id) {
+            $paidVisitExtraServices = \App\Models\VisitExtraService::where(function($q) use ($payment) {
+                $q->where('request_id', $payment->request_id);
+                if ($payment->request?->visit_id) {
+                    $q->orWhere('visit_id', $payment->request->visit_id);
+                }
+            })->where('payment_status', 'paid')->get();
+        }
+        foreach ($paidVisitExtraServices as $extraSvc) {
+            $eTotal = (float)$extraSvc->total_amount;
+            $lineItems[] = [
+                'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                'category' => 'خدمات إضافية وفندقية',
+                'doctor' => 'الكاشير',
+                'approved' => $eTotal,
+                'patient' => $eTotal,
+                'insurance' => 0,
+            ];
         }
 
         // 3. خدمات واستشارات الطوارئ
@@ -313,7 +388,66 @@
             }
         }
 
-        // 4. دفعات وأمانات حاضنة الخدج
+        // 4. العمليات الجراحية والخدمات الملحقة والإضافية
+        if ($payment->surgery || $payment->payment_type === 'surgery') {
+            $surgery = $payment->surgery;
+            if (!$surgery && preg_match('/ID: #(\d+)/', $payment->description, $matches)) {
+                $surgery = \App\Models\Surgery::with(['doctor.user', 'room', 'extraServices'])->find($matches[1]);
+            }
+            if ($surgery) {
+                $surgDoc = $surgery->doctor?->user?->name ? ('د. ' . $surgery->doctor->user->name) : ($surgery->surgeon_name ?: 'جراحة');
+                
+                // رسوم العملية
+                if (str_contains($payment->description ?? '', 'رسوم العملية')) {
+                    $surgFee = (float)$surgery->surgery_fee;
+                    $pat = $isInsured ? round($surgFee * ($copayPct / 100)) : $surgFee;
+                    $lineItems[] = [
+                        'name' => 'رسوم العملية الجراحية: ' . $surgery->surgery_type,
+                        'category' => 'عمليات',
+                        'doctor' => $surgDoc,
+                        'approved' => $surgFee,
+                        'patient' => $pat,
+                        'insurance' => max(0, $surgFee - $pat),
+                    ];
+                }
+
+                // رسوم الغرفة والإقامة
+                if (str_contains($payment->description ?? '', 'أجور الغرفة')) {
+                    $roomFee = (float)$surgery->room_fee;
+                    $pat = $isInsured ? round($roomFee * ($copayPct / 100)) : $roomFee;
+                    $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
+                    $lineItems[] = [
+                        'name' => 'أجور الإقامة والغرفة' . $roomInfo,
+                        'category' => 'إقامة وفندقة',
+                        'doctor' => $surgDoc,
+                        'approved' => $roomFee,
+                        'patient' => $pat,
+                        'insurance' => max(0, $roomFee - $pat),
+                    ];
+                }
+
+                // الخدمات الإضافية الملحقة المسددة بهذا الإيصال
+                $paidExtraServices = \App\Models\SurgeryExtraService::where('surgery_id', $surgery->id)
+                    ->where(function ($q) use ($payment) {
+                        $q->where('payment_id', $payment->id)
+                          ->orWhere('payment_status', 'paid');
+                    })
+                    ->get();
+                foreach ($paidExtraServices as $extraSvc) {
+                    $eTotal = (float)$extraSvc->total_amount;
+                    $lineItems[] = [
+                        'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                        'category' => 'خدمات إضافية وفندقية',
+                        'doctor' => $surgDoc,
+                        'approved' => $eTotal,
+                        'patient' => $eTotal,
+                        'insurance' => 0,
+                    ];
+                }
+            }
+        }
+
+        // 5. دفعات وأمانات حاضنة الخدج
         if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
             $res = $payment->incubatorReservation;
             $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
@@ -503,6 +637,16 @@
                                 @if($isInsured)
                                     <div class="text-muted small mb-1">
                                         إجمالي التسعيرة: {{ number_format($totalApprovedSum) }} د.ع | تغطية الضمان: <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
+                                    </div>
+                                @elseif($payment->discount_amount > 0)
+                                    <div class="text-muted small mb-1">
+                                        إجمالي الفاتورة: {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} د.ع |
+                                        <span class="text-danger fw-bold">
+                                            <i class="fas fa-tags me-1"></i> خصم خاص ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} د.ع
+                                        </span>
+                                        @if($payment->discount_reason)
+                                            <span class="text-muted small">({{ $payment->discount_reason }})</span>
+                                        @endif
                                     </div>
                                 @endif
                                 <div class="d-inline-block bg-white p-2 px-4 rounded-3 border {{ $isRefund ? 'border-danger' : 'border-success' }} shadow-sm">
