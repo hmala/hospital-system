@@ -63,9 +63,11 @@ Consult these files before making changes or proposing fixes:
 - **معالجة طلبات تحويل وتعزيز المخزون ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
   * تحديث دالة `create(Request $request)` لقفل المخزن المستلم تلقائياً على مخزن عهدة الممرض (`lockedLocation`) إذا كان المستخدم ممرضاً/مسؤول عهدة وليس مديراً عاماً.
   * تحديث دالة `storeRequest(Request $request)` لفرض التحقق الأمني ومنع الممرض من التلاعب أو طلب مواد لأي مخزن طابق أو قسم خارج عهدته المعتمدة.
-- **واجهة طلب تحويل المخزون الفرعي ([resources/views/stock-transfers/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/create.blade.php))**:
-  * استبدال القائمة المنسدلة المفتوحة ببطاقة مقفلة أنيقة بشارة `[ 🔒 ردهة الطابق الثالث — مخزن عهدتك المعتمد ] [ محدد تلقائياً ]`.
-  * تمرير معرف المخزن عبر حقل مخفي آمن، وحصر القائمة المنسدلة لمديري النظام العامين فقط.
+- **واجهة طلب تحويل وتعزيز المخزون الفرعي ([resources/views/stock-transfers/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/create.blade.php))**:
+  * إعادة تصميم هندسي وبصري كامل للواجهة لتلائم معايير العمل السريري والمستشفيات: إزالة الرسوم التوضيحية والاهتزازات الزائدة والبطاقات المتفرقة.
+  * استبدال القائمة المنسدلة التقليدية بنظام بحث فوري ذكي وسريع (Instant Datalist Autocomplete) لاختيار الأدوية والمستلزمات فور كتابة أي حرف مع تحديد الوحدة (فيال/قطعة/باكت) تلقائياً.
+  * شريط ملخص مسار التحويل المدمج: `من: المخزن الرئيسي ⬅️ إلى: ردهة الطابق الثالث [ 🔒 محدد تلقائياً ]`.
+  * حقول كميات سهلة الاستخدام بأزرار زيادة ونقصان (+ / -)، وزر رجوع ذكي يعيد الممرض لمحطة التمريض والرقود مباشرة.
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
   * تغطية كاملة: ظهور المخزن مقفلاً للممرضة ومنع القائمة المنسدلة، رفض التلاعب وطلب مخزن آخر، ونجاح رفع طلب التعزيز للمخزن المعتمد (3 passed, 12 assertions).
 
