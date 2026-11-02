@@ -40,6 +40,31 @@
                         </div>
                     @endif
 
+                    <!-- Floor Filter Bar (شريط تصفية الطوابق السريع) -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> الطابق:</span>
+                            <a href="{{ route('nursing-station.index', ['floor' => 'all']) }}" 
+                               class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ empty($selectedFloor) ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
+                                كافة الطوابق
+                            </a>
+                            @foreach($availableFloors as $floorName)
+                                <a href="{{ route('nursing-station.index', ['floor' => $floorName]) }}" 
+                                   class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ $selectedFloor === $floorName ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
+                                    {{ $floorName }}
+                                    @if($currentLocation && (str_contains($currentLocation->name, $floorName) || str_contains($floorName, $currentLocation->name)))
+                                        <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size: 0.7rem;">طابقك</span>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                        @if($selectedFloor)
+                            <div class="text-muted small">
+                                <i class="fas fa-filter text-primary me-1"></i> يتم عرض مرضى <strong>{{ $selectedFloor }}</strong> حالياً
+                            </div>
+                        @endif
+                    </div>
+
                     <!-- Tabs Switcher -->
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm overflow-auto flex-nowrap" id="nursingTabs" role="tablist" style="width: fit-content; max-width: 100%;">
                         <li class="nav-item" role="presentation">
@@ -87,13 +112,22 @@
                                     <tbody>
                                         @forelse($preOpSurgeries as $surgery)
                                         <tr>
-                                            <td class="fw-bold text-primary">{{ $surgery->patient->file_number }}</td>
+                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
-                                                    <span class="fw-semibold">{{ $surgery->patient->user->full_name }}</span>
+                                                    <div>
+                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
+                                                        @if($surgery->room)
+                                                            <div class="mt-0.5">
+                                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                    <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
@@ -113,19 +147,21 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if(!$surgery->nursingStation)
-                                                    <span class="badge bg-secondary rounded-pill px-3 py-2">في الانتظار</span>
-                                                @elseif($surgery->nursingStation->status === 'pending')
-                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
-                                                        <i class="fas fa-hourglass-half me-1"></i> معلقة
+                                                @if($surgery->status === 'waiting')
+                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                        <i class="fas fa-clock me-1"></i> بانتظار الصالة (مسجل دخول)
                                                     </span>
-                                                @elseif($surgery->nursingStation->status === 'in_progress')
-                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-2">
-                                                        <i class="fas fa-spinner fa-spin me-1"></i> جارية
+                                                @elseif($surgery->status === 'in_progress')
+                                                    <span class="badge bg-primary text-white rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                        <i class="fas fa-spinner fa-spin me-1"></i> قيد التجهيز / الصالة
+                                                    </span>
+                                                @elseif($surgery->nursingStation?->status === 'in_progress')
+                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-bold">
+                                                        <i class="fas fa-spinner fa-spin me-1"></i> تهيئة جارية
                                                     </span>
                                                 @else
-                                                    <span class="badge bg-success rounded-pill px-3 py-2">
-                                                        <i class="fas fa-check-circle me-1"></i> مكتملة
+                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1.5 fw-medium">
+                                                        <i class="far fa-calendar-check me-1"></i> مجدولة
                                                     </span>
                                                 @endif
                                             </td>
@@ -166,13 +202,22 @@
                                     <tbody>
                                         @forelse($postOpSurgeries as $surgery)
                                         <tr>
-                                            <td class="fw-bold text-primary">{{ $surgery->patient->file_number }}</td>
+                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
-                                                    <span class="fw-semibold">{{ $surgery->patient->user->full_name }}</span>
+                                                    <div>
+                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
+                                                        @if($surgery->room)
+                                                            <div class="mt-0.5">
+                                                                <span class="badge bg-light text-info border border-info-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                    <i class="fas fa-bed text-info me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
@@ -192,19 +237,13 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if(!$surgery->nursingStation)
-                                                    <span class="badge bg-secondary rounded-pill px-3 py-2">في الانتظار</span>
-                                                @elseif($surgery->nursingStation->status === 'pending')
-                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
-                                                        <i class="fas fa-hourglass-half me-1"></i> معلقة
-                                                    </span>
-                                                @elseif($surgery->nursingStation->status === 'in_progress')
-                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-2">
-                                                        <i class="fas fa-spinner fa-spin me-1"></i> جارية
+                                                @if($surgery->nursingStation?->status === 'in_progress')
+                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                        <i class="fas fa-heartbeat me-1"></i> متابعة ورعاية جارية
                                                     </span>
                                                 @else
-                                                    <span class="badge bg-success rounded-pill px-3 py-2">
-                                                        <i class="fas fa-check-circle me-1"></i> مكتملة
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                        <i class="fas fa-check-circle me-1"></i> خرج من صالة العمليات
                                                     </span>
                                                 @endif
                                             </td>
@@ -245,13 +284,22 @@
                                     <tbody>
                                         @forelse($completedSurgeries as $surgery)
                                         <tr>
-                                            <td class="fw-bold text-primary">{{ $surgery->patient->file_number }}</td>
+                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
-                                                    <span class="fw-semibold">{{ $surgery->patient->user->full_name }}</span>
+                                                    <div>
+                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
+                                                        @if($surgery->room)
+                                                            <div class="mt-0.5">
+                                                                <span class="badge bg-light text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                    <i class="fas fa-bed text-success me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>

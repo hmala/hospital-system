@@ -60,22 +60,48 @@ class NursingStationController extends Controller
                 ->get();
         }
 
-        // فلترة المرضى حسب الطابق إن طُلبت
+        // قائمة الطوابق المتوفرة لفرز المرضى
+        $availableFloors = Room::whereNotNull('floor')->distinct()->pluck('floor')->filter()->values();
+
+        // فلترة المرضى حسب الطابق إن طُلبت أو استنتاج طابق عهدة الممرض تلقائياً
         $selectedFloor = $request->query('floor');
+        if ($selectedFloor === 'all') {
+            $selectedFloor = null;
+        } elseif (! $selectedFloor && $currentLocation) {
+            foreach ($availableFloors as $floorName) {
+                if (str_contains($currentLocation->name, $floorName) || str_contains($floorName, $currentLocation->name)) {
+                    $selectedFloor = $floorName;
+                    break;
+                }
+            }
+        }
 
         // 6. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
-        $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation', 'room'])
+        // تشمل: العمليات المجدولة، أو في قائمة الانتظار (دخول)، أو قيد التجهيز طالما لم تكتمل صالة العمليات بعد
+        $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation', 'room', 'operationTheaterStation'])
+            ->where('status', '!=', 'cancelled')
             ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->where('status', 'scheduled')
-                        ->whereDoesntHave('residentStations', function ($sq) {
-                            $sq->where('phase', 'pre_op');
-                        });
-                })
+                $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
+                    ->orWhere(function ($q) {
+                        $q->where('status', 'in_progress')
+                            ->whereDoesntHave('operationTheaterStation', function ($otq) {
+                                $otq->where('status', 'completed');
+                            });
+                    })
                     ->orWhereHas('residentStations', function ($sq) {
                         $sq->where('phase', 'pre_op')
                             ->where('status', '!=', 'completed');
                     });
+            })
+            ->where(function ($query) {
+                // استبعاد الحالات التي أتمت صالة العمليات أو أتمت التمريض
+                $query->whereDoesntHave('operationTheaterStation', function ($otq) {
+                    $otq->where('status', 'completed');
+                })->whereDoesntHave('anesthesiaStation', function ($asq) {
+                    $asq->where('status', 'completed');
+                })->whereDoesntHave('nursingStation', function ($nq) {
+                    $nq->where('status', 'completed');
+                });
             });
 
         if ($selectedFloor) {
@@ -87,30 +113,44 @@ class NursingStationController extends Controller
             ->get();
 
         // 7. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد الصالة)
-        $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation', 'room'])
-            ->whereHas('anesthesiaStation', function ($sq) {
-                $sq->where('status', 'completed');
+        // تشمل: العمليات التي اكتملت صالتها أو تخديرها أو حالتها مكتملة أو بعد الصالة، ولم تكتمل محطة تمريضها بعد
+        $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation', 'room', 'operationTheaterStation', 'anesthesiaStation'])
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->whereHas('operationTheaterStation', function ($sq) {
+                    $sq->where('status', 'completed');
+                })
+                    ->orWhereHas('anesthesiaStation', function ($sq) {
+                        $sq->where('status', 'completed');
+                    })
+                    ->orWhere('status', 'completed')
+                    ->orWhereHas('residentStations', function ($sq) {
+                        $sq->where('phase', 'post_op');
+                    });
             })
             ->where(function ($query) {
                 $query->whereDoesntHave('nursingStation')
                     ->orWhereHas('nursingStation', function ($q) {
                         $q->where('status', '!=', 'completed');
                     });
-            })
-            ->whereIn('status', ['in_progress', 'completed', 'waiting']);
+            });
 
         if ($selectedFloor) {
             $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
         }
 
-        $postOpSurgeries = $postOpQuery->orderBy('scheduled_date')
-            ->orderBy('scheduled_time')
+        $postOpSurgeries = $postOpQuery->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
             ->get();
 
         // 8. جلب العمليات التي أتمت مرحلة التمريض (الأرشيف)
         $completedQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'room'])
-            ->whereHas('nursingStation', function ($q) {
-                $q->where('status', 'completed');
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->whereHas('nursingStation', function ($q) {
+                    $q->where('status', 'completed');
+                })
+                    ->orWhereNotNull('discharged_at');
             });
 
         if ($selectedFloor) {
@@ -119,9 +159,6 @@ class NursingStationController extends Controller
 
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
-
-        // قائمة الطوابق المتوفرة لفرز المرضى
-        $availableFloors = Room::whereNotNull('floor')->distinct()->pluck('floor')->filter();
 
         return view('surgery-stations.nursing.index', compact(
             'preOpSurgeries',

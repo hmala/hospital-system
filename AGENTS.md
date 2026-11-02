@@ -53,6 +53,22 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 146: ربط دورة صالة العمليات وقائمة الانتظار بمحطة التمريض والرقود وإظهار غرف الطوابق تلقائياً Nursing Station Surgery Lifecycle Sync & Floor Ward Auto-Inference)
+
+### Done
+- **تحرير مسار الحالات في محطة التمريض ([app/Http/Controllers/NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php))**:
+  * حل مشكلة اختفاء المرضى المحجوزين عند تسجيل الدخول `checkIn` (حالة `waiting`) أو بدء العملية `start` (حالة `in_progress`)، حيث تم توسيع استعلام ما قبل الصالة (`preOpQuery`) ليشمل الحالات في قائمة الانتظار وقيد التجهيز طالما لم تنتهِ الصالة بعد.
+  * فك الارتباط الحصري بين متابعة ما بعد الصالة (`postOpQuery`) ومحطة التخدير فقط، ليشمل تلقائياً اكتمال محطة صالة العمليات (`operationTheaterStation->completed`) التي يتم التحكم بها مباشرة من قائمة انتظار العمليات (`surgeries/waiting`)، أو اكتمال التخدير، أو اكتمال العملية، لتمكين ممرض الطابق من تسجيل العلامات الحيوية وصرف علاجات ومستهلكات الرقود فور خروج المريض من الصالة.
+  * الاستنتاج الذكي لطابق الممرض تلقائياً من مخزن عهدته المعتمد (`ردهة الطابق الثالث` ⬅️ `الطابق الثالث`) لفتح مرضى وغرف طابقه مباشرة دون الحاجة للبحث اليدوي.
+- **حوكمة واجهة محطة التمريض ([resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * إبراز رقم الغرفة والطابق بشكل لافت وواضح تحت اسم المريض في كافة الجداول (ما قبل الصالة، ما بعد الصالة، والأرشيف) بشارة: `[ 🛏️ غرفة 302 (الطابق الثالث) ]`.
+  * إضافة شريط فرز سريع للطوابق (`[ كافة الطوابق | الطابق الثاني | الطابق الثالث (طابقك) ]`) مع شارة مميزة لطابق عهدة الممرض لسهولة التنقل السريع عند الحاجة.
+  * استبدال النصوص والشارات المبهمة بشارات حالة دقيقة (`بانتظار الصالة (مسجل دخول)`، `قيد التجهيز / الصالة`، `خرج من صالة العمليات`، و `متابعة ورعاية جارية`).
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/NursingStationSurgeriesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingStationSurgeriesTest.php))**:
+  * فحص ظهور المريض المحجوز في الغرفة 302 لممرضة الطابق الثالث مريم.
+  * فحص بقاء العملية في مرحلة ما قبل الصالة عند تسجيل الدخول وتحولها إلى `waiting`.
+  * فحص انتقال العملية تلقائياً إلى تبويب ما بعد الصالة (المتابعة) عند اكتمال صالة العمليات على `surgeries/waiting` (3 passed, 13 assertions).
+
 ## Session log (2026-11-02 — المرحلة 145: حظر تعديل وحذف طلبات المخازن الفرعية على أمين المخزن الرئيسي وقصر دوره على الاعتماد أو الرفض الرقابي Storekeeper Governance Guard & Strict Requester-Only Modification Lock)
 
 ### Done
