@@ -23,17 +23,47 @@ class StockTransferController extends Controller
         return view('stock-transfers.requests.index', compact('requests'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $user = Auth::user();
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
         $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
         $products = Product::orderBy('name')->get();
 
-        return view('stock-transfers.create', compact('mainLocations', 'subLocations', 'products'));
+        // تحديد ما إذا كان المستخدم مقيداً بمخزنه الفرعي
+        $targetLocationId = $request->query('to_location_id') ?: ($user?->location_id ?: null);
+        $lockedLocation = null;
+        $isLockedToLocation = false;
+
+        if ($targetLocationId) {
+            $lockedLocation = $subLocations->firstWhere('id', $targetLocationId) ?? Location::where('type', 'sub')->find($targetLocationId);
+        }
+
+        // إذا كان المستخدم ليس مديراً عاماً ولديه مخزن أو تم تمرير مخزن من محطة التمريض، يُقفل الاختيار
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if ($lockedLocation && (! $isAdmin || $request->has('to_location_id'))) {
+            $isLockedToLocation = true;
+        }
+
+        return view('stock-transfers.create', compact(
+            'mainLocations',
+            'subLocations',
+            'products',
+            'lockedLocation',
+            'isLockedToLocation'
+        ));
     }
 
     public function storeRequest(Request $request)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+
+        // إذا كان المستخدم كادر تمريضي ولديه مخزن فرعي محدد، نلزم الطلب بمخزنه لمنع التلاعب
+        if (! $isAdmin && $user?->location_id && $request->to_location_id != $user->location_id) {
+            return back()->withInput()->withErrors(['to_location_id' => 'غير مصرح لك بطلب مواد لغير مخزن عهدتك المعتمد.']);
+        }
+
         $request->validate([
             'to_location_id' => 'required|exists:locations,id',
             'items' => 'required|array|min:1',
@@ -181,6 +211,7 @@ class StockTransferController extends Controller
                 $availableQty = $batches->sum('current_qty');
                 if ($availableQty < $qtyNeeded) {
                     DB::rollBack();
+
                     return back()->withInput()->withErrors(['items' => 'الكمية المطلوبة لمادة واحدة أو أكثر تتجاوز المخزون المتاح.']);
                 }
 
@@ -243,7 +274,8 @@ class StockTransferController extends Controller
             return redirect()->route('stock-transfers.create')->with('success', 'تم تحويل المخزون بنجاح.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->withErrors(['transfer' => 'حدث خطأ أثناء التحويل: ' . $e->getMessage()]);
+
+            return back()->withInput()->withErrors(['transfer' => 'حدث خطأ أثناء التحويل: '.$e->getMessage()]);
         }
     }
 
@@ -286,6 +318,7 @@ class StockTransferController extends Controller
                 $availableQty = $batches->sum('current_qty');
                 if ($availableQty < $qtyNeeded) {
                     DB::rollBack();
+
                     return back()->withErrors(['approve' => 'الكمية المطلوبة لا تتوفر في المخزن الرئيسي.']);
                 }
 
@@ -353,7 +386,8 @@ class StockTransferController extends Controller
                 ->with('success', 'تمت الموافقة على طلب المخزون وتحويل المواد.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['approve' => 'حدث خطأ أثناء الموافقة: ' . $e->getMessage()]);
+
+            return back()->withErrors(['approve' => 'حدث خطأ أثناء الموافقة: '.$e->getMessage()]);
         }
     }
 

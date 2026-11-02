@@ -135,18 +135,31 @@
                                         </div>
                                     </div>
                                     <div class="card-body">
-                                        <div class="form-floating">
-                                            <select name="to_location_id" id="toLocationSelect" class="form-select" required>
-                                                <option value="">اختر المخزن الفرعي</option>
-                                                @foreach($subLocations as $location)
-                                                    <option value="{{ $location->id }}" {{ old('to_location_id') == $location->id ? 'selected' : '' }}>
-                                                        {{ $location->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <label for="toLocationSelect">المخزن الفرعي <span class="text-danger">*</span></label>
-                                            @error('to_location_id') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
-                                        </div>
+                                        @if(!empty($isLockedToLocation) && !empty($lockedLocation))
+                                            <input type="hidden" name="to_location_id" value="{{ $lockedLocation->id }}">
+                                            <div class="mb-2 text-muted">المخزن الفرعي المستلم (عهدتك المعتمدة):</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fs-6 fw-bold">
+                                                    <i class="fas fa-lock text-warning me-1"></i> {{ $lockedLocation->name }}
+                                                </span>
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                                                    محدد تلقائياً
+                                                </span>
+                                            </div>
+                                        @else
+                                            <div class="form-floating">
+                                                <select name="to_location_id" id="toLocationSelect" class="form-select" required>
+                                                    <option value="">اختر المخزن الفرعي</option>
+                                                    @foreach($subLocations as $location)
+                                                        <option value="{{ $location->id }}" {{ (old('to_location_id', $lockedLocation?->id) == $location->id) ? 'selected' : '' }}>
+                                                            {{ $location->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <label for="toLocationSelect">المخزن الفرعي <span class="text-danger">*</span></label>
+                                                @error('to_location_id') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

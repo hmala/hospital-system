@@ -313,7 +313,7 @@
                                     </div>
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         @if($isFloorCustodian)
-                                            <a href="{{ route('stock-transfers.create') }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm text-dark">
+                                            <a href="{{ route('stock-transfers.create', ['to_location_id' => $currentLocation?->id]) }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm text-dark">
                                                 <i class="fas fa-plus-circle me-1"></i> + طلب تعزيز مواد من المخزن الرئيسي
                                             </a>
                                         @else
@@ -395,7 +395,7 @@
                                                                     <i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i>
                                                                     <p class="mb-0 fw-semibold">لا يوجد رصيد مواد مسجل في مخزن هذا الطابق حالياً</p>
                                                                     @if($isFloorCustodian)
-                                                                        <a href="{{ route('stock-transfers.create') }}" class="btn btn-sm btn-warning rounded-pill mt-3 fw-bold">
+                                                                        <a href="{{ route('stock-transfers.create', ['to_location_id' => $currentLocation?->id]) }}" class="btn btn-sm btn-warning rounded-pill mt-3 fw-bold">
                                                                             <i class="fas fa-plus-circle me-1"></i> اطلب أول شحنة تعزيز من المخزن الرئيسي
                                                                         </a>
                                                                     @endif
