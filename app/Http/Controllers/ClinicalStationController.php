@@ -97,8 +97,8 @@ class ClinicalStationController extends Controller
             'residentStations.followUps',
             'nursingStation.nurse',
             'surgeryTreatments.administeredBy',
-            'labTests.test',
-            'radiologyTests.radiologyService',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
         ]);
 
         // Combined readings for vitals history and charts

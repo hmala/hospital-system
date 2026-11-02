@@ -566,7 +566,7 @@
                                                 @foreach($surgery->labTests as $lt)
                                                     <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
                                                         <div>
-                                                            <div class="fw-bold text-dark">{{ $lt->test?->name ?? 'فحص مخبري' }}</div>
+                                                            <div class="fw-bold text-dark">{{ $lt->labTest?->name ?? $lt->test?->name ?? 'فحص مخبري' }}</div>
                                                             <div class="text-muted small">النتيجة: <strong>{{ $lt->result ?: 'قيد الإجراء' }}</strong></div>
                                                         </div>
                                                         <div>
@@ -599,8 +599,8 @@
                                                 @foreach($surgery->radiologyTests as $rt)
                                                     <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
                                                         <div>
-                                                            <div class="fw-bold text-dark">{{ $rt->radiologyService?->name ?? 'فحص إشعاعي' }}</div>
-                                                            <div class="text-muted small">{{ $rt->findings ?: 'قيد الفحص والتقرير' }}</div>
+                                                            <div class="fw-bold text-dark">{{ $rt->radiologyType?->name ?? $rt->radiologyService?->name ?? 'فحص إشعاعي' }}</div>
+                                                            <div class="text-muted small">{{ $rt->result ?: ($rt->findings ?? 'قيد الفحص والتقرير') }}</div>
                                                         </div>
                                                         <div>
                                                             <span class="badge bg-info text-dark">{{ $rt->status }}</span>

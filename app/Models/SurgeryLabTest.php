@@ -18,11 +18,11 @@ class SurgeryLabTest extends Model
         'result_file',
         'completed_at',
         'notes',
-        'payment_id'
+        'payment_id',
     ];
 
     protected $casts = [
-        'completed_at' => 'datetime'
+        'completed_at' => 'datetime',
     ];
 
     public function surgery()
@@ -35,9 +35,14 @@ class SurgeryLabTest extends Model
         return $this->belongsTo(LabTest::class);
     }
 
+    public function test()
+    {
+        return $this->belongsTo(LabTest::class, 'lab_test_id');
+    }
+
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'في الانتظار',
             'completed' => 'مكتمل',
             'cancelled' => 'ملغي',
@@ -47,7 +52,7 @@ class SurgeryLabTest extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'warning',
             'completed' => 'success',
             'cancelled' => 'danger',

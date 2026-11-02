@@ -17,11 +17,11 @@ class SurgeryRadiologyTest extends Model
         'result',
         'result_file',
         'completed_at',
-        'payment_id'
+        'payment_id',
     ];
 
     protected $casts = [
-        'completed_at' => 'datetime'
+        'completed_at' => 'datetime',
     ];
 
     public function surgery()
@@ -34,9 +34,14 @@ class SurgeryRadiologyTest extends Model
         return $this->belongsTo(RadiologyType::class);
     }
 
+    public function radiologyService()
+    {
+        return $this->belongsTo(RadiologyType::class, 'radiology_type_id');
+    }
+
     public function getStatusTextAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'في الانتظار',
             'completed' => 'مكتمل',
             'cancelled' => 'ملغي',
@@ -46,7 +51,7 @@ class SurgeryRadiologyTest extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'warning',
             'completed' => 'success',
             'cancelled' => 'danger',
