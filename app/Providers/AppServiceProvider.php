@@ -141,9 +141,10 @@ class AppServiceProvider extends ServiceProvider
                 $pendingRadiology = MedicalRequest::where('type', 'radiology')
                     ->where('status', 'pending')
                     ->count();
-                $pendingSurgeryLabTests = MedicalRequest::where('type', 'surgery_lab')
-                    ->where('status', 'pending')
+                $pendingSurgerySelection = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+                    ->whereDoesntHave('labTests', fn ($q) => $q->whereNotNull('lab_test_id'))
                     ->count();
+                $pendingSurgeryLabTests = \App\Models\SurgeryLabTest::where('status', 'pending')->count() + $pendingSurgerySelection;
                 $pendingSurgeryRadiology = SurgeryRadiologyTest::where('status', 'pending')->count();
 
                 $view->with(compact(

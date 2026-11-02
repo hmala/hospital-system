@@ -53,6 +53,27 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 147: توحيد وربط منظومة تحاليل العمليات الجراحية بالمختبر العام وحل فراغ شاشة تحاليل العمليات Surgery Lab Tests Unified Tabs & General Laboratory Direct Integration)
+
+### Done
+- **توحيد شاشة تحاليل العمليات ([app/Http/Controllers/StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php), [resources/views/staff/surgery-lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/index.blade.php))**:
+  * حل مشكلة ظهور شاشة `staff/surgery-lab-tests` فارغة بعد حجز العمليات من الاستعلامات؛ حيث كانت تشترط وجود تحاليل محددة مسبقاً (`whereHas('labTests')`).
+  * بناء نظام تبويبين (Tabs) مدمجين ومتجاوبين:
+    1. **تبويب 1: عمليات بانتظار تحديد التحاليل (`tab=pending_selection`)**: يعرض العمليات المحجوزة حديثاً مع اسم المريض ورقم الغرفة والطابق (`غرفة 302 - الطابق الثالث`) والجراح وموعد العملية وحالة العملية، مع زر بارز ومباشر `[ 🧪 تحديد باقة التحاليل ]` ينقل موظف المختبر لشاشة اختيار الفحوصات بضغطة زر واحدة.
+    2. **تبويب 2: طلبات الفحوصات والنتائج (`tab=active_tests`)**: يعرض سجل التحاليل الجارية والمكتملة وإدخال النتائج والطباعة وإحصائيات الحالات.
+  * التحويل الذكي التلقائي: تفتح الصفحة افتراضياً على العمليات بانتظار التحديد إذا لم تكن هناك طلبات جارية منعاً لظهور صفحة فارغة مطلقاً.
+- **الربط مع شاشة المختبر الرئيسية اليومية ([app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php), [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+  * إضافة بطاقة تنبيه ذكية ملفتة في أعلى شاشة المختبر `/lab`: `[ تنبيه: يوجد X عمليات جراحية محجوزة بانتظار تحديد باقة التحاليل! ]` مع زر تحويل فوري للصفحة المخصصة.
+  * إضافة زر تحويل سريع في ترويسة الصفحة بجانب دليل التحاليل بشارة عدد العمليات المعلقة.
+- **تحديث شارات القائمة الجانبية ([app/Providers/AppServiceProvider.php](file:///c:/wamp64/www/hospital-system/app/Providers/AppServiceProvider.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تحديث عداد شارة `تحاليل العمليات` في القائمة الجانبية ليشمل مجموع الفحوصات المعلقة والعمليات المحجوزة بانتظار التحديد لضمان عدم إغفال أي مريض.
+- **إصلاح مايجريشن حقول الدفع ([database/migrations/2026_01_13_063756_add_payment_fields_to_surgery_lab_tests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_01_13_063756_add_payment_fields_to_surgery_lab_tests_table.php))**:
+  * إضافة أعمدة `payment_status` و `payment_id` في مايجريشن جدول `surgery_lab_tests`.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryLabTestUnifiedFlowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryLabTestUnifiedFlowTest.php))**:
+  * فحص ظهور المريض المحجوز حديثاً في تبويب تحديد التحاليل مع بيانات الغرفة والطابق.
+  * فحص نجاح بدء اختيار التحاليل والتحويل لصفحة الفحوصات.
+  * فحص ظهور بطاقة التنبيه والعداد في واجهة المختبر العامة (3 passed, 17 assertions).
+
 ## Session log (2026-11-02 — المرحلة 146: ربط دورة صالة العمليات وقائمة الانتظار بمحطة التمريض والرقود وإظهار غرف الطوابق تلقائياً Nursing Station Surgery Lifecycle Sync & Floor Ward Auto-Inference)
 
 ### Done

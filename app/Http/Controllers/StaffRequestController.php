@@ -1071,7 +1071,30 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى تحاليل العمليات الجراحية');
         }
 
-        $query = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'labTests.labTest'])
+        // 1. استعلام العمليات الجراحية التي تحتاج تحديد واختيار تحاليل (New Surgeries awaiting test selection)
+        $pendingSelectionQuery = Surgery::with(['patient.user', 'doctor.user', 'room'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id');
+            });
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $pendingSelectionQuery->where(function ($q) use ($search) {
+                $q->whereHas('patient.user', function ($pq) use ($search) {
+                    $pq->where('name', 'like', '%'.$search.'%');
+                })->orWhere('surgery_type', 'like', '%'.$search.'%');
+            });
+        }
+
+        $pendingSelectionCount = (clone $pendingSelectionQuery)->count();
+        $pendingSelectionSurgeries = $pendingSelectionQuery->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->paginate(15, ['*'], 'selection_page')
+            ->appends($request->query());
+
+        // 2. استعلام العمليات التي تم تحديد تحاليلها بالفعل (Active & Completed Tests)
+        $query = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'labTests.labTest', 'room'])
             ->whereHas('labTests')
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed']); // التأكد من وجود عملية صالحة
 
@@ -1148,7 +1171,19 @@ class StaffRequestController extends Controller
             'cancelled' => (clone $statsQuery)->where('status', 'cancelled')->count(),
         ];
 
-        return view('staff.surgery-lab-tests.index', compact('surgeries', 'stats'));
+        // تحديد التبويب النشط
+        $activeTab = $request->query('tab');
+        if (! $activeTab) {
+            $activeTab = ($pendingSelectionCount > 0 && $surgeries->total() === 0) ? 'pending_selection' : 'active_tests';
+        }
+
+        return view('staff.surgery-lab-tests.index', compact(
+            'surgeries',
+            'pendingSelectionSurgeries',
+            'pendingSelectionCount',
+            'stats',
+            'activeTab'
+        ));
     }
 
     /**

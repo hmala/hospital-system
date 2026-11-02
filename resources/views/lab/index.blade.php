@@ -24,6 +24,14 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
+            @can('manage surgery lab tests')
+                <a href="{{ route('staff.surgery-lab-tests.index', ['tab' => 'pending_selection']) }}" class="btn btn-outline-warning text-dark btn-sm fw-semibold position-relative shadow-xs">
+                    <i class="fas fa-procedures text-warning me-1"></i> تحاليل العمليات
+                    @if(isset($pendingSurgerySelectionCount) && $pendingSurgerySelectionCount > 0)
+                        <span class="badge bg-danger rounded-pill ms-1">{{ $pendingSurgerySelectionCount }}</span>
+                    @endif
+                </a>
+            @endcan
             @can('create lab tests')
                 <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-primary btn-sm fw-semibold">
                     <i class="fas fa-vial me-1"></i> دليل وأسعار التحاليل
@@ -36,6 +44,25 @@
         <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
             <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(isset($pendingSurgerySelectionCount) && $pendingSurgerySelectionCount > 0)
+        <div class="alert alert-warning border border-warning-subtle shadow-sm d-flex flex-wrap align-items-center justify-content-between p-3 mb-3 rounded-4" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-warning text-dark p-2.5 rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px;">
+                    <i class="fas fa-procedures fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold text-dark">
+                        تنبيه: يوجد {{ $pendingSurgerySelectionCount }} عمليات جراحية محجوزة بانتظار تحديد باقة التحاليل!
+                    </h6>
+                    <small class="text-secondary">تم حجز هذه العمليات من الاستعلامات وبحاجة لاختيار الفحوصات المخبرية قبل دخول الصالة.</small>
+                </div>
+            </div>
+            <a href="{{ route('staff.surgery-lab-tests.index', ['tab' => 'pending_selection']) }}" class="btn btn-warning text-dark border-dark-subtle fw-bold btn-sm px-3 py-1.5 rounded-pill shadow-xs">
+                <i class="fas fa-vial me-1"></i> اختيار وتحديد تحاليل العمليات الآن ({{ $pendingSurgerySelectionCount }})
+            </a>
         </div>
     @endif
 

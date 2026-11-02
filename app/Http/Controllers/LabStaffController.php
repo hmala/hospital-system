@@ -167,7 +167,13 @@ class LabStaffController extends Controller
             $emergencyLabRequests = collect();
         }
 
-        return view('lab.index', compact('requests', 'emergencyLabRequests', 'counts', 'statusFilter', 'dateFilter', 'sourceFilter'));
+        $pendingSurgerySelectionCount = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('labTests', function ($q) {
+                $q->whereNotNull('lab_test_id');
+            })
+            ->count();
+
+        return view('lab.index', compact('requests', 'emergencyLabRequests', 'counts', 'statusFilter', 'dateFilter', 'sourceFilter', 'pendingSurgerySelectionCount'));
     }
 
     public function show(MedicalRequest $request)

@@ -122,7 +122,10 @@
                 $pendingLab = \App\Models\LabResult::where('status', 'pending')->count();
             }
             if (Auth::user()->can('manage surgery lab tests')) {
-                $pendingSurgeryLabTests = \App\Models\SurgeryLabTest::where('status', 'pending')->count();
+                $pendingSurgerySelection = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+                    ->whereDoesntHave('labTests', fn ($q) => $q->whereNotNull('lab_test_id'))
+                    ->count();
+                $pendingSurgeryLabTests = \App\Models\SurgeryLabTest::where('status', 'pending')->count() + $pendingSurgerySelection;
             }
             if (Auth::user()->can('manage own visits')) {
                 $doctorIncompleteVisits = \App\Models\Visit::where('doctor_id', Auth::id())
