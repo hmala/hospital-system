@@ -53,6 +53,25 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 144: تمكين وتأمين تعديل وإلغاء طلبات تعزيز المخزون المعلقة لكادر التمريض والعهدة Nursing Station Sub-Store Pending Request Edit & Cancel Workflow)
+
+### Done
+- **مسارات التعديل والتحديث والإلغاء ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة المسارات `stock-transfers.requests.edit`, `stock-transfers.requests.update`, و `stock-transfers.requests.destroy`.
+- **التحكم والتحصين الأمني الصارم ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * بناء دوال `editRequest`, `updateRequest`, و `destroyRequest`.
+  * حصر إمكانية التعديل والإلغاء حصراً على الطلبات المعلقة (`status === 'pending'`)، ومنع أي تعديل بعد الاعتماد أو الرفض تلقائياً.
+  * قفل الإجراءات برمجياً على مقدم الطلب أو مسؤول عهدة الطابق المعتمد أو الإدارة العامة وحظر أي متطفل (403 Forbidden).
+  * فحص أرصدة المستودع الرئيسي قبل تحديث الطلبية وإرجاع تنبيهات دقيقة بالنواقص.
+- **واجهة تعديل الطلبية التفاعلية ([resources/views/stock-transfers/requests/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/edit.blade.php))**:
+  * تصميم متوافق مع معايير العمل السريري وبنمط الإكمال التلقائي الذكي لتشخيص الأمراض (ICD-10 Rich Autocomplete Style).
+  * استرجاع وتعبئة المواد والكميات السابقة تلقائياً مع خيارات الزيادة والنقصان السريعة (+ / -) ومسح المادة بنقرة واحدة وإضافة أسطر جديدة.
+  * عرض مسار التحويل المدمج والمقفل على عهدة الطابق المعتمدة.
+- **حوكمة واجهتي السجل والتفاصيل ([resources/views/stock-transfers/requests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/index.blade.php), [resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php))**:
+  * إضافة أزرار الإجراءات `[ ✏️ تعديل ]` و `[ 🗑️ إلغاء ]` في جدول سجل الطلبات وفي صفحة تفاصيل الطلب تظهر فقط للطلبات المعلقة ولأصحاب الصلاحية مع رسائل تأكيد الحذف.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * تغطية 100%: فحص فتح شاشة التعديل، نجاح التحديث، حظر تعديل الطلبات المعتمدة، نجاح إلغاء وحذف الطلب، ومنع التعديل أو الحذف من طوابق أخرى (10 passed, 40 assertions).
+
 ## Session log (2026-11-02 — المرحلة 143: حصر سجل وتفاصيل طلبات تعزيز المخزون على عهدة الطابق وحماية الصلاحيات Scoped Floor Stock Requests & Approval Authorization Guard)
 
 ### Done

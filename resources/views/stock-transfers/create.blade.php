@@ -254,7 +254,7 @@
                     ];
                 })->values();
             @endphp
-            const productsData = @json($productsPayload);
+            const productsData = @json($productsPayload, JSON_UNESCAPED_UNICODE);
 
             let itemIndex = 0;
 

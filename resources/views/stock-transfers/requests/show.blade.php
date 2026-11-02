@@ -10,7 +10,26 @@
                         <h2 class="mb-1 fw-bold"><i class="fas fa-eye me-3"></i>عرض طلب مخزون #{{ $stockTransferRequest->id }}</h2>
                         <p class="mb-0 text-muted">مراجعة تفاصيل طلب المواد وحالة الاعتماد من المخزن الرئيسي.</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    @php
+                        $canEditOrCancel = $stockTransferRequest->status === 'pending' && (
+                            !empty($isAdmin) ||
+                            $stockTransferRequest->requested_by == auth()->id() ||
+                            (auth()->user()?->location_id && $stockTransferRequest->to_location_id == auth()->user()->location_id)
+                        );
+                    @endphp
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        @if($canEditOrCancel)
+                            <a href="{{ route('stock-transfers.requests.edit', $stockTransferRequest) }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold text-dark shadow-xs">
+                                <i class="fas fa-edit me-1"></i> تعديل الطلبية
+                            </a>
+                            <form action="{{ route('stock-transfers.requests.destroy', $stockTransferRequest) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء وحذف هذه الطلبية نهائياً؟');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-outline-danger rounded-pill px-3 py-2 fw-bold">
+                                    <i class="fas fa-trash-alt me-1"></i> إلغاء الطلبية
+                                </button>
+                            </form>
+                        @endif
                         @if(empty($isAdmin))
                             <a href="{{ route('nursing-station.index') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
                                 <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
@@ -161,11 +180,27 @@
                 </div>
             </div>
         @else
-            <div class="alert alert-warning border-0 shadow-sm rounded-4 mt-4 d-flex align-items-center gap-2">
-                <i class="fas fa-hourglass-half fs-5 text-warning"></i>
-                <div>
-                    <strong>الطلب قيد المراجعة:</strong> تم استلام طلبك بنجاح وهو بانتظار مراجعة وموافقة أمين المخزن الرئيسي لصرف الشحنة.
+            <div class="alert alert-warning border-0 shadow-sm rounded-4 mt-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-hourglass-half fs-5 text-warning"></i>
+                    <div>
+                        <strong>الطلب قيد المراجعة:</strong> تم استلام طلبك بنجاح وهو بانتظار مراجعة وموافقة أمين المخزن الرئيسي لصرف الشحنة.
+                    </div>
                 </div>
+                @if($canEditOrCancel)
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ route('stock-transfers.requests.edit', $stockTransferRequest) }}" class="btn btn-sm btn-warning rounded-pill px-3 py-1.5 fw-bold text-dark">
+                            <i class="fas fa-edit me-1"></i> تعديل المواد والكميات
+                        </a>
+                        <form action="{{ route('stock-transfers.requests.destroy', $stockTransferRequest) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء وحذف هذه الطلبية نهائياً؟');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1.5 fw-bold">
+                                <i class="fas fa-trash-alt me-1"></i> إلغاء الطلبية
+                            </button>
+                        </form>
+                    </div>
+                @endif
             </div>
         @endif
     @endif

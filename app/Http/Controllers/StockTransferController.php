@@ -138,6 +138,134 @@ class StockTransferController extends Controller
             ->with('success', 'تم إنشاء طلب المخزون بنجاح. سيتم مراجعته من المخزن الرئيسي.');
     }
 
+    public function editRequest(StockTransferRequest $stockTransferRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+
+        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب.');
+        }
+
+        if ($stockTransferRequest->status !== 'pending') {
+            return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
+                ->withErrors(['status' => 'لا يمكن تعديل الطلب بعد اعتماده أو رفضه.']);
+        }
+
+        $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
+        $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
+        $products = Product::orderBy('name')->get();
+        $lockedLocation = $stockTransferRequest->toLocation;
+        $isLockedToLocation = ! $isAdmin || (bool) $user?->location_id;
+
+        // تجهيز قائمة المواد الحالية في الطلب
+        $rawItems = is_array($stockTransferRequest->items) ? $stockTransferRequest->items : json_decode($stockTransferRequest->items, true);
+        $currentItems = [];
+        if (! empty($rawItems)) {
+            $productIds = collect($rawItems)->pluck('product_id')->filter();
+            $fetchedProducts = Product::whereIn('id', $productIds)->get()->keyBy('id');
+            foreach ($rawItems as $it) {
+                $pid = $it['product_id'] ?? null;
+                $prod = $fetchedProducts->get($pid);
+                if ($prod) {
+                    $currentItems[] = [
+                        'product_id' => $prod->id,
+                        'name' => $prod->name,
+                        'code' => $prod->code ?: 'PRD-'.$prod->id,
+                        'unit' => $prod->unit ?: 'وحدة',
+                        'qty' => (int) ($it['qty'] ?? 1),
+                    ];
+                }
+            }
+        }
+
+        return view('stock-transfers.requests.edit', compact(
+            'stockTransferRequest',
+            'mainLocations',
+            'subLocations',
+            'products',
+            'lockedLocation',
+            'isLockedToLocation',
+            'currentItems'
+        ));
+    }
+
+    public function updateRequest(Request $request, StockTransferRequest $stockTransferRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+
+        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
+            abort(403, 'غير مصرح لك بتعديل هذا الطلب.');
+        }
+
+        if ($stockTransferRequest->status !== 'pending') {
+            return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
+                ->withErrors(['status' => 'لا يمكن تعديل الطلب بعد اعتماده أو رفضه.']);
+        }
+
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.qty' => 'required|integer|min:1',
+        ]);
+
+        $mainLocation = $stockTransferRequest->fromLocation ?: Location::where('type', 'main')->first();
+        if (! $mainLocation) {
+            return back()->withInput()->withErrors(['items' => 'لا يوجد مخزن رئيسي متاح للطلب.']);
+        }
+
+        $requestedQuantities = [];
+        foreach ($request->items as $item) {
+            $productId = $item['product_id'];
+            $qty = (int) $item['qty'];
+            $requestedQuantities[$productId] = ($requestedQuantities[$productId] ?? 0) + $qty;
+        }
+
+        $shortages = [];
+        foreach ($requestedQuantities as $productId => $qtyNeeded) {
+            $availableQty = StockBatch::where('product_id', $productId)
+                ->where('location_id', $mainLocation->id)
+                ->where('current_qty', '>', 0)
+                ->sum('current_qty');
+
+            if ($availableQty < $qtyNeeded) {
+                $productName = Product::find($productId)?->name ?? 'هذه المادة';
+                $shortages[] = "الكمية المطلوبة من {$productName} ({$qtyNeeded}) تتجاوز المتوفر بالمخزن الرئيسي ({$availableQty})";
+            }
+        }
+
+        if (! empty($shortages)) {
+            return back()->withInput()->withErrors(['items' => $shortages]);
+        }
+
+        $stockTransferRequest->update([
+            'items' => array_values($request->items),
+        ]);
+
+        return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
+            ->with('success', 'تم تحديث طلبية تعزيز المخزون بنجاح.');
+    }
+
+    public function destroyRequest(StockTransferRequest $stockTransferRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+
+        if (! $isAdmin && $stockTransferRequest->requested_by != $user?->id && $stockTransferRequest->to_location_id != $user?->location_id) {
+            abort(403, 'غير مصرح لك بإلغاء هذا الطلب.');
+        }
+
+        if ($stockTransferRequest->status !== 'pending') {
+            return back()->withErrors(['status' => 'لا يمكن إلغاء الطلب بعد اعتماده أو رفضه.']);
+        }
+
+        $stockTransferRequest->delete();
+
+        return redirect()->route('stock-transfers.requests.index')
+            ->with('success', 'تم إلغاء وحذف طلبية تعزيز المخزون بنجاح.');
+    }
+
     public function createReturn(Request $request)
     {
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();

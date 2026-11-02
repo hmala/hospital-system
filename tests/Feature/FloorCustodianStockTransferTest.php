@@ -202,4 +202,208 @@ class FloorCustodianStockTransferTest extends TestCase
         $approveResponse = $this->actingAs($nurseMaryam)->post(route('stock-transfers.requests.approve', $reqFloor2));
         $approveResponse->assertStatus(403);
     }
+
+    public function test_floor_nurse_can_view_edit_page_for_her_pending_stock_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $product = Product::create([
+            'name' => 'كانولا زرقاء',
+            'code' => 'CAN-001',
+            'unit' => 'قطعة',
+        ]);
+
+        $req = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [['product_id' => $product->id, 'qty' => 5]],
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($nurseMaryam)->get(route('stock-transfers.requests.edit', $req));
+
+        $response->assertStatus(200);
+        $response->assertSee('تعديل طلبية تعزيز المخزون #'.$req->id);
+        $response->assertSee('كانولا زرقاء');
+        $response->assertSee('حفظ تعديلات الطلبية');
+    }
+
+    public function test_floor_nurse_can_successfully_update_her_pending_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $product1 = Product::create([
+            'name' => 'كانولا زرقاء',
+            'code' => 'CAN-001',
+            'unit' => 'قطعة',
+        ]);
+        $product2 = Product::create([
+            'name' => 'سلاين نورمل',
+            'code' => 'SAL-001',
+            'unit' => 'فيال',
+        ]);
+
+        StockBatch::create([
+            'product_id' => $product1->id,
+            'location_id' => $mainLocation->id,
+            'internal_barcode' => 'BATCH-TEST-003',
+            'cost_price' => 500,
+            'initial_qty' => 50,
+            'current_qty' => 50,
+            'expiry_date' => now()->addYear(),
+            'received_at' => now(),
+        ]);
+        StockBatch::create([
+            'product_id' => $product2->id,
+            'location_id' => $mainLocation->id,
+            'internal_barcode' => 'BATCH-TEST-004',
+            'cost_price' => 1200,
+            'initial_qty' => 30,
+            'current_qty' => 30,
+            'expiry_date' => now()->addYear(),
+            'received_at' => now(),
+        ]);
+
+        $req = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [['product_id' => $product1->id, 'qty' => 5]],
+            'status' => 'pending',
+        ]);
+
+        $updateResponse = $this->actingAs($nurseMaryam)->put(route('stock-transfers.requests.update', $req), [
+            'items' => [
+                ['product_id' => $product1->id, 'qty' => 12],
+                ['product_id' => $product2->id, 'qty' => 6],
+            ],
+        ]);
+
+        $updateResponse->assertRedirect(route('stock-transfers.requests.show', $req));
+        $updateResponse->assertSessionHas('success');
+
+        $req->refresh();
+        $this->assertCount(2, $req->items);
+        $this->assertEquals(12, $req->items[0]['qty']);
+        $this->assertEquals(6, $req->items[1]['qty']);
+    }
+
+    public function test_floor_nurse_cannot_edit_approved_or_rejected_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $product = Product::create([
+            'name' => 'مادة اختبار',
+            'code' => 'TST-001',
+            'unit' => 'قطعة',
+        ]);
+
+        $req = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [['product_id' => $product->id, 'qty' => 5]],
+            'status' => 'approved',
+        ]);
+
+        // Attempt to access edit page
+        $response = $this->actingAs($nurseMaryam)->get(route('stock-transfers.requests.edit', $req));
+        $response->assertRedirect(route('stock-transfers.requests.show', $req));
+
+        // Attempt to submit update
+        $updateResponse = $this->actingAs($nurseMaryam)->put(route('stock-transfers.requests.update', $req), [
+            'items' => [['product_id' => $product->id, 'qty' => 20]],
+        ]);
+        $updateResponse->assertRedirect(route('stock-transfers.requests.show', $req));
+
+        $req->refresh();
+        $this->assertEquals(5, $req->items[0]['qty']);
+    }
+
+    public function test_floor_nurse_can_cancel_her_pending_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $req = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [['product_id' => 1, 'qty' => 5]],
+            'status' => 'pending',
+        ]);
+
+        $deleteResponse = $this->actingAs($nurseMaryam)->delete(route('stock-transfers.requests.destroy', $req));
+
+        $deleteResponse->assertRedirect(route('stock-transfers.requests.index'));
+        $this->assertDatabaseMissing('stock_transfer_requests', [
+            'id' => $req->id,
+        ]);
+    }
+
+    public function test_floor_nurse_cannot_edit_or_delete_other_floors_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+        $subFloor2 = Location::create(['name' => 'ردهة الطابق الثاني', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $otherUser = User::factory()->create(['name' => 'ممرض آخر', 'location_id' => $subFloor2->id]);
+        $otherUser->assignRole('nurse');
+
+        $otherReq = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor2->id,
+            'requested_by' => $otherUser->id,
+            'items' => [['product_id' => 1, 'qty' => 5]],
+            'status' => 'pending',
+        ]);
+
+        // Attempt edit
+        $editResponse = $this->actingAs($nurseMaryam)->get(route('stock-transfers.requests.edit', $otherReq));
+        $editResponse->assertStatus(403);
+
+        // Attempt update
+        $updateResponse = $this->actingAs($nurseMaryam)->put(route('stock-transfers.requests.update', $otherReq), [
+            'items' => [['product_id' => 1, 'qty' => 10]],
+        ]);
+        $updateResponse->assertStatus(403);
+
+        // Attempt delete
+        $deleteResponse = $this->actingAs($nurseMaryam)->delete(route('stock-transfers.requests.destroy', $otherReq));
+        $deleteResponse->assertStatus(403);
+    }
 }
