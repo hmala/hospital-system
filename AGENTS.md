@@ -53,6 +53,22 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-02 — المرحلة 142: حوكمة محطة التمريض وقفل طلبات تعزيز المخزن الفرعي على عهدة الطابق المعتمدة Nursing Station Clean Governance & Floor Sub-Store Request Auto-Locking)
+
+### Done
+- **حوكمة واجهة محطة التمريض والرقود ([resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * إزالة القائمتين المنسدلتين المربكتين (مبدل المخازن الفرعية وفلترة الطوابق) لإنهاء تشتت الكادر بين مخازن الأقسام الأخرى.
+  * استبدالهما بشارات ثابتة أنيقة تعكس موقع المخزن المسند للممرض (`المخزن: ردهة الطابق الثالث`) وشارة مسؤولية العهدة (`مسؤولة عهدة المخزن` أو `سحب وصرف تمريضي`).
+  * ربط أزرار طلب تعزيز المواد بتمرير معرف المخزن المسند تلقائياً `to_location_id`.
+- **معالجة طلبات تحويل وتعزيز المخزون ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * تحديث دالة `create(Request $request)` لقفل المخزن المستلم تلقائياً على مخزن عهدة الممرض (`lockedLocation`) إذا كان المستخدم ممرضاً/مسؤول عهدة وليس مديراً عاماً.
+  * تحديث دالة `storeRequest(Request $request)` لفرض التحقق الأمني ومنع الممرض من التلاعب أو طلب مواد لأي مخزن طابق أو قسم خارج عهدته المعتمدة.
+- **واجهة طلب تحويل المخزون الفرعي ([resources/views/stock-transfers/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/create.blade.php))**:
+  * استبدال القائمة المنسدلة المفتوحة ببطاقة مقفلة أنيقة بشارة `[ 🔒 ردهة الطابق الثالث — مخزن عهدتك المعتمد ] [ محدد تلقائياً ]`.
+  * تمرير معرف المخزن عبر حقل مخفي آمن، وحصر القائمة المنسدلة لمديري النظام العامين فقط.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * تغطية كاملة: ظهور المخزن مقفلاً للممرضة ومنع القائمة المنسدلة، رفض التلاعب وطلب مخزن آخر، ونجاح رفع طلب التعزيز للمخزن المعتمد (3 passed, 12 assertions).
+
 ## Session log (2026-11-01 — المرحلة 141: نظام نسب التحمل المفصلة لكل خدمة في فواتير الضمان الصحي الموحدة لدى الكاشير Per-Service Item Copay Enforcement on Combined Cashier Insurance Receipts)
 
 ### Done
