@@ -759,7 +759,7 @@ Route::middleware(['auth'])->group(function () {
 
     // إدارة حاضنات الخدج
     Route::resource('incubators', \App\Http\Controllers\IncubatorController::class);
-    Route::post('/incubators/{incubator}/toggle-maintenance', [\App\Http\Controllers\IncubatorController::class, 'toggleMaintenance'])
+    Route::match(['post', 'patch'], '/incubators/{incubator}/toggle-maintenance', [\App\Http\Controllers\IncubatorController::class, 'toggleMaintenance'])
         ->name('incubators.toggle-maintenance');
 
     // إدارة حجوزات الحاضنات

@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-03 — المرحلة 154: تصحيح وتوافقية توجيه صيانة الحاضنات ودعم PATCH و POST وتحصين واجهة الخدج Incubator Maintenance Route Method Alignment & NICU Shielding)
+
+### Done
+- **معالجة خطأ `MethodNotAllowedHttpException` في صيانة الحاضنات ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * تحديث مسار `incubators/{incubator}/toggle-maintenance` ليدعم كلاً من الطريقتين `POST` و `PATCH` عبر `Route::match(['post', 'patch'], ...)` لمنع ظهور خطأ 405 عند إرسال توجيه `@method('PATCH')` من واجهة الحاضنة ([resources/views/incubators/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/incubators/show.blade.php)).
+- **تحصين وتصحيح استدعاءات قاعدة البيانات في كنترولر الخدج ([app/Http/Controllers/NicuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuController.php))**:
+  * استيراد واجهة `Illuminate\Support\Facades\DB` المفقودة في `NicuController` لضمان عمل استعلامات مطابقة أدوية التمريض (MAR) بدون أي أخطاء `Class not found`.
+- **حزم الاختبارات الآلية الشاملة**:
+  * إنشاء ملف اختبار ميزة متكامل `tests/Feature/IncubatorMaintenanceTest.php`:
+    - اختبار تبديل الصيانة عبر طريقة `PATCH` للمدير بنجاح (وضع الصيانة).
+    - اختبار تبديل الصيانة عبر طريقة `POST` لموظف الخدج `nicu_staff` بنجاح (إنهاء الصيانة).
+    - حماية الإجراء ومنع المستخدمين غير المصرح لهم عبر `403 Forbidden`.
+    - اجتياز كامل الاختبارات بنسبة 100% (`3 passed, 9 assertions`).
+  * اجتياز اختبار إعطاء أدوية التمريض في قسم الخدج بنجاح: `tests/Feature/NicuWorkflowTest.php` (`1 passed, 8 assertions`).
+
 ## Session log (2026-11-03 — المرحلة 153: دمج منظومات الموارد البشرية والرواتب وقسم الخدج والحاضنات ومركز العيون مع فرع main وتحصين المحطات الأساسية Complete Secure Integration of HR, NICU & Eye Center into Main with Core Stations Shielding)
 
 ### Done
