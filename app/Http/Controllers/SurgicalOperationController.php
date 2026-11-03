@@ -72,7 +72,7 @@ class SurgicalOperationController extends Controller
             'category' => $category,
             'fee' => 0, // السعر دائمًا 0
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            'show_in_nicu_radar' => $request->boolean('show_in_nicu_radar'),
+            'show_in_nicu_radar' => $request->has('show_in_nicu_radar') ? $request->boolean('show_in_nicu_radar') : false,
         ]);
 
         return redirect()->route('surgical-operations.index')->with('success', 'تم إضافة العملية الجراحية بنجاح: '.$request->name);
@@ -117,12 +117,17 @@ class SurgicalOperationController extends Controller
             }
         }
 
-        $surgicalOperation->update([
+        $data = [
             'name' => $request->name,
             'category' => $category,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            'show_in_nicu_radar' => $request->boolean('show_in_nicu_radar'),
-        ]);
+        ];
+
+        if ($request->has('show_in_nicu_radar')) {
+            $data['show_in_nicu_radar'] = $request->boolean('show_in_nicu_radar');
+        }
+
+        $surgicalOperation->update($data);
 
         return redirect()->route('surgical-operations.index')->with('success', 'تم تحديث بيانات العملية بنجاح: '.$request->name);
     }

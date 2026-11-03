@@ -17,10 +17,6 @@
         </div>
         <div class="col-md-5 text-md-end mt-3 mt-md-0">
             @if($canEdit ?? false)
-            <a href="{{ route('nicu.delivery-radar.settings') }}" class="btn btn-outline-danger px-3 py-2 shadow-sm rounded-3 me-2">
-                <i class="fas fa-satellite-dish me-1"></i>
-                إعدادات رادار الخدج
-            </a>
             <a href="{{ route('surgical-operations.create') }}" class="btn btn-primary px-3 py-2 shadow-sm rounded-3 me-2">
                 <i class="fas fa-plus-circle me-1"></i>
                 إضافة عملية جديدة
@@ -218,11 +214,6 @@
                                     </div>
                                     <div>
                                         <span class="fw-bold text-dark op-name-text">{{ $operation->name }}</span>
-                                        @if($operation->show_in_nicu_radar)
-                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 ms-1 small" title="مشمولة برادار صالات العمليات للخدج">
-                                                <i class="fas fa-satellite-dish me-1"></i> رادار الخدج
-                                            </span>
-                                        @endif
                                     </div>
                                 </div>
                             </td>
