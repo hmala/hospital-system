@@ -17,6 +17,7 @@ class Incubator extends Model
         'status',
         'room_id',
         'daily_fee',
+        'camera_stream_url',
         'description',
         'notes',
         'is_active',
@@ -28,18 +29,32 @@ class Incubator extends Model
     ];
 
     /**
-     * أنواع الحاضنات
+     * أنواع الحاضنات والكبسولات المعتمدة
      */
     const TYPE_NORMAL = 'normal';
-    const TYPE_OXYGEN = 'oxygen';
-    const TYPE_PHOTOTHERAPY = 'phototherapy';
+
+    const TYPE_CAPSULE = 'capsule';
+
+    // ثوابت للتوافق القديم
+    const TYPE_OXYGEN = 'normal';
+
+    const TYPE_PHOTOTHERAPY = 'normal';
 
     /**
      * حالات الحاضنة
      */
     const STATUS_AVAILABLE = 'available';
+
     const STATUS_OCCUPIED = 'occupied';
+
     const STATUS_MAINTENANCE = 'maintenance';
+
+    const STATUS_STERILIZING = 'sterilizing';
+
+    public function getNameAttribute(): string
+    {
+        return $this->incubator_number ?? (string) $this->id;
+    }
 
     /**
      * العلاقة مع الغرفة
@@ -63,8 +78,8 @@ class Incubator extends Model
     public function activeReservation()
     {
         return $this->hasOne(IncubatorReservation::class)
-                    ->whereIn('status', ['pending', 'admitted'])
-                    ->latest();
+            ->whereIn('status', ['pending', 'admitted'])
+            ->latest();
     }
 
     /**
@@ -72,10 +87,9 @@ class Incubator extends Model
      */
     public function getTypeNameAttribute(): string
     {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'حاضنة + أكسجين',
-            self::TYPE_PHOTOTHERAPY => 'حاضنة + علاج ضوئي',
-            default => 'حاضنة عادية',
+        return match ($this->incubator_type) {
+            self::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
+            default => 'حاضنة',
         };
     }
 
@@ -84,10 +98,11 @@ class Incubator extends Model
      */
     public function getStatusNameAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_AVAILABLE => 'متاحة',
             self::STATUS_OCCUPIED => 'محجوزة',
             self::STATUS_MAINTENANCE => 'صيانة',
+            self::STATUS_STERILIZING => 'قيد التعقيم والتطهير',
             default => 'غير معروف',
         };
     }
@@ -97,10 +112,11 @@ class Incubator extends Model
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_AVAILABLE => 'success',
             self::STATUS_OCCUPIED => 'danger',
             self::STATUS_MAINTENANCE => 'warning',
+            self::STATUS_STERILIZING => 'info',
             default => 'secondary',
         };
     }
@@ -110,9 +126,8 @@ class Incubator extends Model
      */
     public function getTypeColorAttribute(): string
     {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'info',
-            self::TYPE_PHOTOTHERAPY => 'purple',
+        return match ($this->incubator_type) {
+            self::TYPE_CAPSULE => 'dark',
             default => 'primary',
         };
     }
@@ -122,9 +137,8 @@ class Incubator extends Model
      */
     public function getTypeIconAttribute(): string
     {
-        return match($this->incubator_type) {
-            self::TYPE_OXYGEN => 'fa-lungs',
-            self::TYPE_PHOTOTHERAPY => 'fa-sun',
+        return match ($this->incubator_type) {
+            self::TYPE_CAPSULE => 'fa-capsules',
             default => 'fa-baby',
         };
     }
@@ -143,7 +157,7 @@ class Incubator extends Model
     public function scopeAvailable($query)
     {
         return $query->where('status', self::STATUS_AVAILABLE)
-                     ->where('is_active', true);
+            ->where('is_active', true);
     }
 
     /**

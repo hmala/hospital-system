@@ -51,8 +51,28 @@
                 <div class="card-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <h6 class="text-muted">اسم الطفل</h6>
-                            <p class="fs-5 fw-bold">{{ $incubatorReservation->baby_name }}</p>
+                            <h6 class="text-muted">اسم الطفل الخديج</h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <p class="fs-5 fw-bold mb-0">{{ $incubatorReservation->baby_name }}</p>
+                                @if($incubatorReservation->is_independent_patient)
+                                    <span class="badge bg-success text-white">
+                                        <i class="fas fa-baby me-1"></i> ملف طفل مستقل
+                                    </span>
+                                @else
+                                    <span class="badge bg-primary text-white">
+                                        <i class="fas fa-female me-1"></i> مرتبط بالأم/الأب
+                                    </span>
+                                @endif
+                            </div>
+                            @if($incubatorReservation->birth_certificate_no)
+                                <div class="mt-1 small text-primary">
+                                    <i class="fas fa-certificate me-1 text-warning"></i>
+                                    <strong>بيان الولادة:</strong> {{ $incubatorReservation->birth_certificate_no }}
+                                    @if($incubatorReservation->birth_certificate_date)
+                                        ({{ $incubatorReservation->birth_certificate_date->format('Y-m-d') }})
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-muted">الحالة</h6>
@@ -168,23 +188,49 @@
                 </div>
             </div>
 
-            <!-- معلومات المريض (الأم) -->
+            <!-- معلومات المريض (الأم أو الطفل المستقل) -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-user-circle me-2"></i>
-                        معلومات المريض (الأم أو المسؤول)
+                        @if($incubatorReservation->is_independent_patient)
+                            معلومات المريض (ملف الطفل المستقل)
+                        @else
+                            معلومات المريض (الأم أو المسؤول)
+                        @endif
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <h6 class="text-muted">الاسم</h6>
-                            <p>{{ optional($incubatorReservation->patient->user)->name ?? 'غير معروف' }}</p>
+                            <h6 class="text-muted">
+                                @if($incubatorReservation->is_independent_patient)
+                                    اسم الطفل في سجل المرضى
+                                @else
+                                    اسم الأم / ولي الأمر
+                                @endif
+                            </h6>
+                            <p class="fw-bold mb-0">{{ optional($incubatorReservation->patient->user)->name ?? 'غير معروف' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">اسم الأم</h6>
+                            <p class="fw-bold mb-0">{{ $incubatorReservation->mother_display_name }}</p>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-muted">رقم الهاتف</h6>
-                            <p>{{ optional($incubatorReservation->patient->user)->phone ?? 'غير متوفر' }}</p>
+                            <p class="mb-0">{{ optional($incubatorReservation->patient->user)->phone ?? 'غير متوفر' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">رقم بطاقة الضمان الصحي للطفل</h6>
+                            <p class="mb-0">
+                                @if($incubatorReservation->insurance_card_no)
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="fas fa-shield-alt me-1"></i>{{ $incubatorReservation->insurance_card_no }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">كاش / غير محدد</span>
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>

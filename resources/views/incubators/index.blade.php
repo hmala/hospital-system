@@ -19,6 +19,10 @@
                         إضافة حاضنة جديدة
                     </a>
                     @endcan
+                    <a href="{{ route('nicu.services.index') }}" class="btn btn-warning">
+                        <i class="fas fa-tags me-1"></i>
+                        تسعير وباقات خدمات الخدج
+                    </a>
                     <a href="{{ route('incubator-reservations.occupied') }}" class="btn btn-info">
                         <i class="fas fa-list me-1"></i>
                         الحاضنات المشغولة
@@ -97,21 +101,14 @@
                             <button class="nav-link" id="normal-tab" data-bs-toggle="pill" 
                                     data-bs-target="#normal" type="button" role="tab">
                                 <i class="fas fa-baby me-1"></i>
-                                عادية ({{ $stats['normal'] }})
+                                حاضنة ({{ $stats['normal'] }})
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="oxygen-tab" data-bs-toggle="pill" 
-                                    data-bs-target="#oxygen" type="button" role="tab">
-                                <i class="fas fa-lungs me-1"></i>
-                                أكسجين ({{ $stats['oxygen'] }})
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="phototherapy-tab" data-bs-toggle="pill" 
-                                    data-bs-target="#phototherapy" type="button" role="tab">
-                                <i class="fas fa-sun me-1"></i>
-                                علاج ضوئي ({{ $stats['phototherapy'] }})
+                            <button class="nav-link" id="capsule-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#capsule" type="button" role="tab">
+                                <i class="fas fa-capsules me-1"></i>
+                                كبسولة علاج ضوئي ({{ $stats['capsule'] ?? 0 }})
                             </button>
                         </li>
                     </ul>
@@ -128,14 +125,9 @@
                         'incubators' => $incubators->where('incubator_type', 'normal')
                     ])
                 </div>
-                <div class="tab-pane fade" id="oxygen" role="tabpanel">
+                <div class="tab-pane fade" id="capsule" role="tabpanel">
                     @include('incubators.partials.incubator-grid', [
-                        'incubators' => $incubators->where('incubator_type', 'oxygen')
-                    ])
-                </div>
-                <div class="tab-pane fade" id="phototherapy" role="tabpanel">
-                    @include('incubators.partials.incubator-grid', [
-                        'incubators' => $incubators->where('incubator_type', 'phototherapy')
+                        'incubators' => $incubators->where('incubator_type', 'capsule')
                     ])
                 </div>
             </div>
@@ -178,6 +170,7 @@
     box-shadow: 0 0 0 3px rgba(13,110,253,0.25) !important;
 }
 </style>
+@endsection
 
 @section('scripts')
 <script>

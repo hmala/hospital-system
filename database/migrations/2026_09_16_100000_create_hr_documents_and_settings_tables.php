@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         // 1. جدول مستمسكات ووثائق الموظف
-        Schema::create('employee_documents', function (Blueprint $table) {
+        Schema::create('hr_employee_documents', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained('hr_employees')->cascadeOnDelete();
             $table->string('employee_code', 30)->index()->comment('الرمز الوظيفي للموظف');
             $table->string('document_type', 100)->comment('نوع المستمسك (بطاقة موحدة، سكن، عقد...)');
             $table->string('file_name')->comment('اسم الملف المورث للرمز الوظيفي والنوع');
@@ -56,6 +56,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('hr_field_requirements');
         Schema::dropIfExists('hr_lookup_options');
-        Schema::dropIfExists('employee_documents');
+        Schema::dropIfExists('hr_employee_documents');
     }
 };

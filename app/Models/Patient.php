@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Patient.php
 
 namespace App\Models;
@@ -16,7 +17,7 @@ class Patient extends Model
         'insurance_type', 'health_insurance_category_id', 'insurance_card_no', 'copay_percentage',
         'national_id', 'first_visit_date', 'notes', 'mother_name', 'country_id',
         'governorate', 'district', 'neighborhood', 'marital_status', 'covered_by_insurance', 'insurance_booklet_number',
-        'telegram_chat_id', 'telegram_username'
+        'telegram_chat_id', 'telegram_username',
     ];
 
     protected $casts = [
@@ -37,7 +38,7 @@ class Patient extends Model
 
         static::created(function ($patient) {
             if (class_exists(\App\Services\UserActivityLogger::class) && auth()->check()) {
-                $patientName = $patient->user?->name ?? 'مريض #' . $patient->id;
+                $patientName = $patient->user?->name ?? 'مريض #'.$patient->id;
                 \App\Services\UserActivityLogger::log(
                     action: 'create',
                     category: 'reception',
@@ -77,7 +78,7 @@ class Patient extends Model
             return $this->healthInsuranceCategory->getCopayForService($serviceType);
         }
 
-        return (float)($this->copay_percentage ?? 15.00);
+        return (float) ($this->copay_percentage ?? 15.00);
     }
 
     public function appointments()
@@ -126,11 +127,6 @@ class Patient extends Model
         return $this->hasMany(\App\Models\RadiologyRequest::class);
     }
 
-    public function getNameAttribute()
-    {
-        return $this->user ? $this->user->name : null;
-    }
-
     public function getFileNumberAttribute()
     {
         return $this->national_id ?? $this->id;
@@ -143,7 +139,7 @@ class Patient extends Model
 
     public function getAgeAttribute()
     {
-        return $this->user && $this->user->date_of_birth ? 
+        return $this->user && $this->user->date_of_birth ?
             \Carbon\Carbon::parse($this->user->date_of_birth)->age : null;
     }
 
@@ -161,6 +157,7 @@ class Patient extends Model
         if (in_array($g, ['female', 'f', 'أنثى', 'انثى'], true)) {
             return 'أنثى';
         }
+
         return 'غير محدد';
     }
 
@@ -186,6 +183,7 @@ class Patient extends Model
         if (empty($this->user?->date_of_birth)) {
             $missing['date_of_birth'] = 'تاريخ الميلاد';
         }
+
         return $missing;
     }
 
@@ -207,6 +205,7 @@ class Patient extends Model
     public function getLastVisitDate()
     {
         $lastVisit = $this->getLastVisit();
+
         return $lastVisit ? $lastVisit->visit_date : null;
     }
 
@@ -229,5 +228,30 @@ class Patient extends Model
             ->whereYear('visit_date', now()->year)
             ->whereMonth('visit_date', now()->month)
             ->count();
+    }
+
+    public function getNameAttribute()
+    {
+        return $this->user->name ?? '';
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->user->phone ?? '';
+    }
+
+    public function getMedicalRecordNumberAttribute()
+    {
+        return $this->national_id ?? ($this->medical_number ?? ('MRN-'.str_pad($this->id, 5, '0', STR_PAD_LEFT)));
+    }
+
+    public function incubatorReservations()
+    {
+        return $this->hasMany(IncubatorReservation::class, 'patient_id');
+    }
+
+    public function nicuAttachments()
+    {
+        return $this->hasMany(NicuAttachment::class, 'patient_id')->latest();
     }
 }

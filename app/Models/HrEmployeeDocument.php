@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
-class EmployeeDocument extends Model
+class HrEmployeeDocument extends Model
 {
     use HasFactory;
 
@@ -24,7 +24,7 @@ class EmployeeDocument extends Model
 
     public function employee()
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(HrEmployee::class, 'employee_id');
     }
 
     public function uploader()
@@ -39,10 +39,17 @@ class EmployeeDocument extends Model
 
     public function getFormattedFileSizeAttribute(): string
     {
-        if (!$this->file_size) return '—';
-        if ($this->file_size < 1024) return $this->file_size . ' B';
-        if ($this->file_size < 1048576) return round($this->file_size / 1024, 1) . ' KB';
-        return round($this->file_size / 1048576, 2) . ' MB';
+        if (! $this->file_size) {
+            return '—';
+        }
+        if ($this->file_size < 1024) {
+            return $this->file_size.' B';
+        }
+        if ($this->file_size < 1048576) {
+            return round($this->file_size / 1024, 1).' KB';
+        }
+
+        return round($this->file_size / 1048576, 2).' MB';
     }
 
     public function isPdf(): bool

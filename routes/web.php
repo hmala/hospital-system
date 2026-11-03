@@ -63,6 +63,10 @@ require __DIR__.'/auth.php';
 Route::get('/departments', [DepartmentController::class, 'publicIndex'])
     ->name('departments.public');
 
+// شاشة بث كاميرا الحاضنة للأب والأم (متاحة بالتوكن المؤقت)
+Route::get('/baby-cam/{token}', [\App\Http\Controllers\NicuController::class, 'babyCamView'])
+    ->name('nicu.baby-cam');
+
 // التحقق العام من صحة التقرير الطبي لحالات الطوارئ عبر الـ QR Code
 Route::get('/emergency/{emergency}/verify-report', [\App\Http\Controllers\EmergencyController::class, 'verifyReport'])
     ->name('emergency.verify-report');
@@ -383,6 +387,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/emergency/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorPayout'])->name('emergency.doctor-payout');
         Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
+        Route::post('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'processNicuPayment'])->name('nicu.payment');
+        Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
+        Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
+        Route::get('/nicu/{reservation}/itemized-receipt/print', [\App\Http\Controllers\CashierController::class, 'printNicuItemizedReceipt'])->name('nicu.itemized-receipt.print');
+        Route::get('/nicu/financial-movements', [\App\Http\Controllers\CashierController::class, 'nicuFinancialMovements'])->name('nicu.financial-movements');
+        Route::get('/nicu/statements', [\App\Http\Controllers\CashierController::class, 'nicuStatements'])->name('nicu.statements');
+        Route::get('/nicu/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccounts'])->name('nicu.doctor-accounts');
+        Route::get('/nicu/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccount'])->name('nicu.doctor-account');
+        Route::post('/nicu/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'nicuDoctorPayout'])->name('nicu.doctor-payout');
     });
 
     // مسارات مراجعة أسعار العمليات للمحاسب
@@ -503,6 +516,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/requests/{request}', [\App\Http\Controllers\LabStaffController::class, 'update'])->name('update');
         Route::get('/requests/{request}/print', [\App\Http\Controllers\LabStaffController::class, 'print'])->name('print');
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\LabStaffController::class, 'cancel'])->name('cancel');
+        Route::post('/nicu-orders/{order}/start', [\App\Http\Controllers\LabStaffController::class, 'startNicuOrder'])->name('nicu-orders.start');
+        Route::match(['POST', 'PUT'], '/nicu-orders/{order}/complete', [\App\Http\Controllers\LabStaffController::class, 'completeNicuOrder'])->name('nicu-orders.complete');
+        Route::get('/nicu-orders/{order}/print', [\App\Http\Controllers\LabStaffController::class, 'printNicuOrder'])->name('nicu-orders.print');
     });
 
     // ======= مسارات قسم الأشعة والتصوير الطبي =======
@@ -520,6 +536,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/requests/{request}/cancel', [\App\Http\Controllers\RadiologyStaffController::class, 'cancel'])->name('cancel');
         Route::post('/requests/{request}/append-types', [\App\Http\Controllers\StaffRequestController::class, 'appendRadiologyTypes'])->name('append-types');
         Route::delete('/requests/{request}/types/{radiologyType}', [\App\Http\Controllers\StaffRequestController::class, 'removeRadiologyType'])->name('remove-type');
+        Route::post('/nicu-orders/{order}/start', [\App\Http\Controllers\RadiologyStaffController::class, 'startNicuOrder'])->name('nicu-orders.start');
+        Route::match(['POST', 'PUT'], '/nicu-orders/{order}/complete', [\App\Http\Controllers\RadiologyStaffController::class, 'completeNicuOrder'])->name('nicu-orders.complete');
+        Route::get('/nicu-orders/{order}/print', [\App\Http\Controllers\RadiologyStaffController::class, 'printNicuOrder'])->name('nicu-orders.print');
     });
 
     // إدارة رموز ICD10
@@ -747,6 +766,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('incubator-reservations')->name('incubator-reservations.')->group(function () {
         Route::get('/', [\App\Http\Controllers\IncubatorReservationController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\IncubatorReservationController::class, 'create'])->name('create');
+        Route::get('/search-patients', [\App\Http\Controllers\IncubatorReservationController::class, 'searchPatients'])->name('search-patients');
         Route::post('/', [\App\Http\Controllers\IncubatorReservationController::class, 'store'])->name('store');
         Route::get('/occupied', [\App\Http\Controllers\IncubatorReservationController::class, 'occupied'])->name('occupied');
         Route::get('/{incubatorReservation}', [\App\Http\Controllers\IncubatorReservationController::class, 'show'])->name('show');
@@ -754,6 +774,61 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{incubatorReservation}/discharge', [\App\Http\Controllers\IncubatorReservationController::class, 'discharge'])->name('discharge');
         Route::patch('/{incubatorReservation}/cancel', [\App\Http\Controllers\IncubatorReservationController::class, 'cancel'])->name('cancel');
         Route::post('/{incubatorReservation}/transfer', [\App\Http\Controllers\IncubatorReservationController::class, 'transfer'])->name('transfer');
+    });
+
+    // قسم الخدج والحاضنات المتقدم (NICU Module)
+    Route::prefix('nicu')->name('nicu.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NicuController::class, 'index'])->name('index');
+        Route::get('/reservations', [\App\Http\Controllers\NicuController::class, 'reservationsIndex'])->name('reservations.index');
+        Route::get('/reservations/{reservation}', [\App\Http\Controllers\NicuController::class, 'show'])->name('show');
+        Route::post('/reservations/{reservation}/switch-service', [\App\Http\Controllers\NicuController::class, 'switchService'])->name('switch-service');
+        Route::put('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'updateServiceLog'])->name('service-logs.update');
+        Route::delete('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'destroyServiceLog'])->name('service-logs.destroy');
+        Route::post('/reservations/{reservation}/vitals', [\App\Http\Controllers\NicuController::class, 'storeVitals'])->name('vitals.store');
+        Route::post('/reservations/{reservation}/consultations', [\App\Http\Controllers\NicuController::class, 'storeConsultation'])->name('consultations.store');
+        Route::patch('/consultations/{consultation}/complete', [\App\Http\Controllers\NicuController::class, 'completeConsultation'])->name('consultations.complete');
+        Route::post('/reservations/{reservation}/orders', [\App\Http\Controllers\NicuController::class, 'storeMedicalOrder'])->name('orders.store');
+        Route::post('/reservations/{reservation}/lab-orders', [\App\Http\Controllers\NicuController::class, 'storeLabOrder'])->name('lab-orders.store');
+        Route::post('/reservations/{reservation}/radiology-orders', [\App\Http\Controllers\NicuController::class, 'storeRadiologyOrder'])->name('radiology-orders.store');
+        Route::post('/reservations/{reservation}/prescriptions', [\App\Http\Controllers\NicuController::class, 'storePrescription'])->name('prescriptions.store');
+        Route::post('/reservations/{reservation}/medications-admin', [\App\Http\Controllers\NicuController::class, 'storeMedicationAdministration'])->name('medications-admin.store');
+        Route::get('/reservations/{reservation}/print-prescription', [\App\Http\Controllers\NicuController::class, 'printPrescription'])->name('print.prescription');
+        Route::patch('/orders/{order}/complete', [\App\Http\Controllers\NicuController::class, 'completeMedicalOrder'])->name('orders.complete');
+
+        // جداول الرعاية والتوصيات السريرية (رضاعة / علاج)
+        Route::post('/reservations/{reservation}/care-schedules', [\App\Http\Controllers\NicuController::class, 'storeCareSchedule'])->name('care-schedules.store');
+        Route::post('/reservations/{reservation}/care-schedules/batch', [\App\Http\Controllers\NicuController::class, 'storeCareSchedulesBatch'])->name('care-schedules.batch');
+        Route::post('/care-schedules/{schedule}/toggle', [\App\Http\Controllers\NicuController::class, 'toggleCareSchedule'])->name('care-schedules.toggle');
+        Route::delete('/care-schedules/{schedule}', [\App\Http\Controllers\NicuController::class, 'destroyCareSchedule'])->name('care-schedules.destroy');
+        Route::post('/care-schedules/{schedule}/administer-quick', [\App\Http\Controllers\NicuController::class, 'administerCareScheduleQuick'])->name('care-schedules.administer-quick');
+
+        // ملاحظات وتوجيهات الطبيب الاختصاص السريرية
+        Route::post('/reservations/{reservation}/doctor-notes', [\App\Http\Controllers\NicuController::class, 'storeDoctorNote'])->name('doctor-notes.store');
+        Route::post('/doctor-notes/{note}/toggle-pin', [\App\Http\Controllers\NicuController::class, 'togglePinDoctorNote'])->name('doctor-notes.toggle-pin');
+        Route::delete('/doctor-notes/{note}', [\App\Http\Controllers\NicuController::class, 'destroyDoctorNote'])->name('doctor-notes.destroy');
+
+        // مرفقات وأرشيف الطفل الخديج
+        Route::post('/reservations/{reservation}/attachments', [\App\Http\Controllers\NicuController::class, 'storeAttachment'])->name('attachments.store');
+        Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\NicuController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::delete('/attachments/{attachment}', [\App\Http\Controllers\NicuController::class, 'destroyAttachment'])->name('attachments.destroy');
+
+        Route::post('/reservations/{reservation}/discharge', [\App\Http\Controllers\NicuController::class, 'discharge'])->name('discharge');
+        Route::post('/incubators/{incubator}/sterilized', [\App\Http\Controllers\NicuController::class, 'markSterilized'])->name('incubators.sterilized');
+        Route::post('/reservations/{reservation}/cam-token', [\App\Http\Controllers\NicuController::class, 'generateBabyCamToken'])->name('cam-token');
+        Route::get('/reservations/{reservation}/statement', [\App\Http\Controllers\NicuController::class, 'statement'])->name('statement');
+        Route::get('/reservations/{reservation}/print-wristband', [\App\Http\Controllers\NicuController::class, 'wristbandPrint'])->name('print.wristband');
+        Route::get('/reservations/{reservation}/print-crib-card', [\App\Http\Controllers\NicuController::class, 'cribCardPrint'])->name('print.crib-card');
+
+        // إدارة وتسعير خدمات وباقات الخدج
+        Route::get('/services', [\App\Http\Controllers\NicuServiceController::class, 'index'])->name('services.index');
+        Route::post('/services', [\App\Http\Controllers\NicuServiceController::class, 'store'])->name('services.store');
+        Route::put('/services/{service}', [\App\Http\Controllers\NicuServiceController::class, 'update'])->name('services.update');
+        Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
+
+        // رادار صالات العمليات والولادة لحضانة الخدج (NICU Delivery & C-Section Operations Radar)
+        Route::get('/delivery-radar', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'index'])->name('delivery-radar.index');
+        Route::get('/delivery-radar/settings', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'settings'])->name('delivery-radar.settings');
+        Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
     });
 
     // إدارة أجور العمليات الجراحية
@@ -820,16 +895,54 @@ Route::middleware(['auth'])->group(function () {
     // تحليلات الطوارئ للمحاسب
     Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
     Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
+    Route::get('/accountant/nicu-analytics', [\App\Http\Controllers\AccountantController::class, 'nicuAnalytics'])->name('accountant.nicu.analytics');
 
     // إدارة الموارد البشرية (HR Management)
     Route::prefix('hr')->name('hr.')->middleware(['permission:view hr'])->group(function () {
         // إدارة المستمسكات
-        Route::post('employees/{employee}/documents', [\App\Http\Controllers\HR\EmployeeController::class, 'uploadDocument'])->name('employees.documents.upload');
-        Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\EmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
-        Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\EmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
+        Route::post('employees/{employee}/documents', [\App\Http\Controllers\HR\HrEmployeeController::class, 'uploadDocument'])->name('employees.documents.upload');
+        Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\HrEmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
+        Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
+
+        // ???????? ????????? ??????
+        Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
+        Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
 
         // إدارة الموظفين
-        Route::resource('employees', \App\Http\Controllers\HR\EmployeeController::class);
+        Route::get('employees/{employee}/roster', [\App\Http\Controllers\HR\HrEmployeeController::class, 'roster'])->name('employees.roster');
+        Route::resource('employees', \App\Http\Controllers\HR\HrEmployeeController::class);
+
+        // إعدادات العقوبات والمكافآت
+        Route::resource('action_settings', \App\Http\Controllers\HR\HrActionSettingController::class)->except(['create', 'show', 'edit']);
+
+        // نظام الرواتب
+        Route::resource('payrolls', \App\Http\Controllers\HR\HrPayrollController::class)->except(['edit', 'update']);
+        Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
+        Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');
+
+        // الدوام والخفارات
+        Route::resource('shifts', \App\Http\Controllers\HR\HrShiftController::class)->except(['show']);
+        Route::post('schedules/swap', [\App\Http\Controllers\HR\HrScheduleController::class, 'swap'])->name('schedules.swap');
+        Route::get('schedules/emergency-cover-search', [\App\Http\Controllers\HR\HrScheduleController::class, 'emergencyCoverSearch'])->name('schedules.emergency-cover-search');
+        Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
+        Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
+
+        // المخصصات الثابتة
+        Route::post('employees/{employee}/allowances', [\App\Http\Controllers\HR\HrAllowanceController::class, 'store'])->name('employees.allowances.store');
+        Route::put('employees/allowances/{allowance}', [\App\Http\Controllers\HR\HrAllowanceController::class, 'update'])->name('employees.allowances.update');
+        Route::delete('employees/allowances/{allowance}', [\App\Http\Controllers\HR\HrAllowanceController::class, 'destroy'])->name('employees.allowances.destroy');
+
+        // السلف
+        Route::post('employees/{employee}/loans', [\App\Http\Controllers\HR\HrLoanController::class, 'store'])->name('employees.loans.store');
+        Route::post('employees/loans/{loan}/cancel', [\App\Http\Controllers\HR\HrLoanController::class, 'cancel'])->name('employees.loans.cancel');
+
+        // الغيابات
+        Route::post('employees/{employee}/absences', [\App\Http\Controllers\HR\HrAbsenceController::class, 'store'])->name('employees.absences.store');
+        Route::delete('employees/absences/{absence}', [\App\Http\Controllers\HR\HrAbsenceController::class, 'destroy'])->name('employees.absences.destroy');
+
+        // العمل الإضافي
+        Route::post('employees/{employee}/overtimes', [\App\Http\Controllers\HR\HrOvertimeController::class, 'store'])->name('employees.overtimes.store');
+        Route::delete('employees/overtimes/{overtime}', [\App\Http\Controllers\HR\HrOvertimeController::class, 'destroy'])->name('employees.overtimes.destroy');
 
         // إعدادات وقوائم الموارد البشرية والحقول
         Route::prefix('settings')->name('settings.')->group(function () {
@@ -911,6 +1024,8 @@ Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/track/{appointment}', [\App\Http\Controllers\DoctorQueueController::class, 'patientLiveTracker'])->name('patient.track');
 });
 
+// تضمين مسارات مركز العيون
+require base_path('routes/eye.php');
 // مسار بوت التيليجرام لاستقبال التحديثات
 Route::match(['get', 'post'], '/api/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook'])->name('telegram.webhook');
 Route::match(['get', 'post'], '/telegram/webhook', [\App\Http\Controllers\TelegramBotController::class, 'handleWebhook']);

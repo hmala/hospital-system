@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Department.php
 
 namespace App\Models;
@@ -8,11 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    use HasFactory, \App\Traits\HasInsurancePricing;
+    use \App\Traits\HasInsurancePricing, HasFactory;
 
     protected $fillable = [
         'hospital_id',
-        'name', 
+        'name',
         'type',
         'room_number',
         'consultation_fee',
@@ -23,7 +24,7 @@ class Department extends Model
         'working_hours_start',
         'working_hours_end',
         'max_patients_per_day',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
@@ -49,7 +50,7 @@ class Department extends Model
 
     public function employees()
     {
-        return $this->hasMany(Employee::class);
+        return $this->hasMany(HrEmployee::class);
     }
 
     public function appointments()
@@ -78,7 +79,7 @@ class Department extends Model
             'dentistry' => 'أسنان',
             'dermatology' => 'جلدية',
             'emergency' => 'طوارئ',
-            'other' => 'أخرى'
+            'other' => 'أخرى',
         ];
 
         return $types[$this->type] ?? $this->type;

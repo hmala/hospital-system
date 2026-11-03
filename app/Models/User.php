@@ -11,7 +11,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -76,7 +76,7 @@ class User extends Authenticatable
 
     public function employee()
     {
-        return $this->hasOne(\App\Models\Employee::class);
+        return $this->hasOne(\App\Models\HrEmployee::class);
     }
 
     public function visits()
@@ -88,10 +88,12 @@ class User extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Location::class);
     }
+
     public function getFullNameAttribute()
     {
         return $this->name;
     }
+
     // مساعدات الأدوار - متوافقة مع Spatie Permission
     public function isAdmin()
     {
@@ -100,7 +102,7 @@ class User extends Authenticatable
 
     public function isDoctor()
     {
-        return $this->hasRole('doctor') || $this->hasRole('الجراح') || !is_null($this->doctor);
+        return $this->hasRole('doctor') || $this->hasRole('الجراح') || ! is_null($this->doctor);
     }
 
     public function isPatient()

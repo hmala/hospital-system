@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             DoctorSeeder::class,
             SidebarLinkSeeder::class,
             OfficialMedicinesSeeder::class,
+            HrEmployeeSeeder::class,
         ]);
 
         // إنشاء أطباء للمستخدمين ذوي الدور 'doctor' بدون سجل طبيب
@@ -34,7 +35,7 @@ class DatabaseSeeder extends Seeder
                 'phone' => $user->phone ?? '01234567890',
                 'specialization' => $user->specialization ?? 'طب عام',
                 'qualification' => 'بكالوريوس الطب والجراحة',
-                'license_number' => 'DOC' . $user->id,
+                'license_number' => 'DOC'.$user->id,
                 'experience_years' => 5,
                 'bio' => 'طبيب في النظام',
                 'consultation_fee' => 150.00,

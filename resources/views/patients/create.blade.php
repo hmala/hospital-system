@@ -316,7 +316,7 @@
                                                         data-code="{{ $cat->code }}"
                                                         data-stamp="{{ $cat->requires_thermal_stamp ? 1 : 0 }}"
                                                         {{ old('health_insurance_category_id') == $cat->id ? 'selected' : '' }}>
-                                                    {{ $cat->name }} ({{ $cat->code }})
+                                                    {{ $cat->name }} ({{ $cat->code }}){{ !empty($cat->description) ? ' - ' . $cat->description : '' }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -405,6 +405,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (age !== null && age <= 130) {
                 calculatedAgeBadge.textContent = 'العمر: ' + age + ' سنة';
                 calculatedAgeBadge.style.display = 'inline-block';
+                if (age < 5) {
+                    const hiCategorySelect = document.getElementById('health_insurance_category_id');
+                    if (hiCategorySelect && !hiCategorySelect.value) {
+                        const optE = Array.from(hiCategorySelect.options).find(opt => opt.getAttribute('data-code') === 'E');
+                        if (optE) {
+                            hiCategorySelect.value = optE.value;
+                        }
+                    }
+                }
             } else {
                 calculatedAgeBadge.style.display = 'none';
             }

@@ -455,6 +455,13 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'active bg-primary text-white' : 'text-primary' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="nicu-tab" data-bs-toggle="tab" data-bs-target="#nicu-pane" type="button" role="tab">
+                                <i class="fas fa-baby"></i>
+                                <span>الخدج والحاضنات</span>
+                                <span class="badge {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'bg-white text-primary' : (($stats['nicu'] ?? 0) > 0 ? 'bg-danger text-white' : 'bg-primary text-white') }} rounded-pill font-monospace" id="badge-tab-nicu-count">{{ $stats['nicu'] ?? 0 }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab">
                                 <i class="fas fa-list"></i>
                                 <span>كافة الطلبات</span>
@@ -538,10 +545,12 @@
                         @php $turnNum = 1; @endphp
                         @forelse($consultationRequests as $req)
                             @php
-                                $isPaid = $req->payment_status === 'paid';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $isPaid = $isNicu || $req->payment_status === 'paid';
                                 $isCalling = $req->status === 'calling';
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
                                 $qNum = $req->visit?->appointment?->queue_number ?? ($turnNum++);
                             @endphp
                             <tr class="{{ $isCalling ? 'calling-row fw-bold' : ($req->status === 'in_progress' ? 'inprogress-row' : ($req->status === 'completed' ? 'completed-row' : '')) }}" id="request-row-{{ $req->id }}">
@@ -553,15 +562,24 @@
                                 <td class="font-monospace text-muted">#{{ $req->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle">
-                                            {{ mb_substr($pName, 0, 1) }}
+                                        <div class="avatar-circle {{ $isNicu ? 'bg-primary-subtle text-primary' : '' }}">
+                                            @if($isNicu)
+                                                <i class="fas fa-baby"></i>
+                                            @else
+                                                {{ mb_substr($pName, 0, 1) }}
+                                            @endif
                                         </div>
                                         <div class="ms-2">
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
-                                                @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                                @if($isNicu)
+                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle me-1">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }}</span>
+                                                    <span>ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</span>
+                                                @else
+                                                    @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
+                                                    @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                    @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
+                                                @endif
                                             </small>
                                         </div>
                                     </div>
@@ -580,8 +598,15 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
-                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @if($isNicu)
+                                        <div class="small fw-semibold text-dark">د. {{ $nicuRes?->doctor?->user?->name ?? 'طبيب الخدج' }}</div>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
+                                            <i class="fas fa-baby me-1"></i> قسم الخدج
+                                        </span>
+                                    @else
+                                        <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    @endif
                                     @if(!empty($req->doctor_notes))
                                         <div class="mt-1">
                                             <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
@@ -592,7 +617,9 @@
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
                                 <td class="text-center">
-                                    @if($isPaid)
+                                    @if($isNicu)
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold" title="يُسدد ضمن حساب الحاضنة الموحد لدى الكاشير"><i class="fas fa-file-invoice-dollar me-1"></i> حساب الحاضنة</span>
+                                    @elseif($isPaid)
                                         <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
                                     @else
                                         <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
@@ -797,15 +824,28 @@
                     <tbody id="radiology-tab-inprogress-tbody">
                         @forelse($inProgressRequests as $req)
                             @php
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="inprogress-row">
                                 <td><span class="badge bg-info text-white font-monospace fs-6">#{{ $qNum }}</span></td>
-                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>
+                                    <strong class="text-dark">{{ $pName }}</strong>
+                                    @if($isNicu)
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                    @endif
+                                </td>
                                 <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
-                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td>
+                                    <span>د. {{ $docName }}</span>
+                                    @if($isNicu)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                    @endif
+                                </td>
                                 <td class="text-center font-monospace small">{{ $req->details['started_at'] ?? $req->updated_at->format('H:i') }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs">
@@ -849,15 +889,28 @@
                     <tbody id="radiology-tab-completed-tbody">
                         @forelse($completedRequests as $req)
                             @php
-                                $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $isNicu = !empty($req->incubator_reservation_id);
+                                $nicuRes = $isNicu ? $req->incubatorReservation : null;
+                                $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="completed-row">
                                 <td><span class="badge bg-success text-white font-monospace fs-6">#{{ $qNum }}</span></td>
-                                <td><strong class="text-dark">{{ $pName }}</strong></td>
+                                <td>
+                                    <strong class="text-dark">{{ $pName }}</strong>
+                                    @if($isNicu)
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                    @endif
+                                </td>
                                 <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
-                                <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                                <td>
+                                    <span>د. {{ $docName }}</span>
+                                    @if($isNicu)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                    @endif
+                                </td>
                                 <td class="text-center font-monospace small">{{ $req->updated_at ? $req->updated_at->format('H:i') : '—' }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة">
@@ -1200,6 +1253,187 @@
             </div>
         </div>
         @endif
+
+        <!-- 4.2 NICU / INCUBATORS TAB -->
+        <div class="tab-pane fade" id="nicu-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-dark fw-bold">
+                    <i class="fas fa-baby me-2 text-primary"></i>
+                    طلبات أشعة وسونار وإيكو الأطفال الخدج والحاضنات
+                </h5>
+                <span class="badge bg-primary text-white">{{ $nicuRadiologyRequests->count() }} طلب فحص</span>
+            </div>
+
+            @if($nicuRadiologyRequests->count() > 0)
+                <div class="table-responsive">
+                    <table class="table unified-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 75px;"><i class="fas fa-hashtag me-1"></i>#الطلب</th>
+                                <th><i class="fas fa-baby me-2"></i>الطفل / الحاضنة</th>
+                                <th><i class="fas fa-x-ray me-2"></i>الفحص والتصوير المطلوب</th>
+                                <th style="width: 100px;" class="text-center"><i class="fas fa-bolt me-1"></i>الأولوية</th>
+                                <th><i class="fas fa-user-md me-2"></i>الطبيب المشرف</th>
+                                <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>الوقت</th>
+                                <th style="width: 140px;" class="text-center"><i class="fas fa-file-invoice-dollar me-1"></i>الحساب المالي</th>
+                                <th style="width: 130px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
+                                <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($nicuRadiologyRequests as $nicuRad)
+                                @php
+                                    $isMedRequest = $nicuRad instanceof \App\Models\Request;
+                                    $isCompleted = $nicuRad->status === 'completed';
+                                    $isInProgress = $nicuRad->status === 'in_progress';
+                                    
+                                    if ($isMedRequest) {
+                                        $res = $nicuRad->incubatorReservation;
+                                        $babyName = $res?->baby_name ?: ($res?->baby_title ?: ('طفل ' . ($res?->patient?->name ?? 'غير محدد')));
+                                        $incubatorName = '#' . ($res?->incubator?->name ?? $res?->incubator_id);
+                                        $docName = $res?->doctor?->user?->name ?? 'طبيب الخدج المشرف';
+                                        $reqDetails = is_string($nicuRad->details) ? json_decode($nicuRad->details, true) : ($nicuRad->details ?? []);
+                                        $radNames = $nicuRad->radiology_names ?: [$nicuRad->description ?: 'فحص تصوير'];
+                                        $priority = $reqDetails['priority'] ?? 'normal';
+                                        $notes = $reqDetails['doctor_notes'] ?? null;
+                                        $orderedAt = $nicuRad->created_at;
+                                        $fileNo = $res?->patient?->national_id ?: ($res?->patient_id ?? '-');
+                                    } else {
+                                        $babyName = $nicuRad->reservation?->baby_name ?: 'طفل ' . ($nicuRad->reservation?->patient?->name ?? 'غير محدد');
+                                        $incubatorName = $nicuRad->reservation?->incubator?->name ?? ('حاضنة #' . $nicuRad->reservation?->incubator_id);
+                                        $docName = $nicuRad->reservation?->doctor?->user?->name ?? 'طبيب الخدج';
+                                        $radNames = [$nicuRad->item_name];
+                                        $priority = $nicuRad->priority;
+                                        $notes = $nicuRad->notes;
+                                        $orderedAt = $nicuRad->ordered_at ?? $nicuRad->created_at;
+                                        $fileNo = $nicuRad->reservation?->patient?->national_id ?: ($nicuRad->reservation?->patient_id ?? '-');
+                                    }
+
+                                    $isStat = in_array(strtolower($priority), ['stat', 'critical', 'emergency']);
+                                    $prioColor = match(strtolower($priority)) {
+                                        'stat', 'critical', 'emergency' => 'danger',
+                                        'urgent' => 'warning text-dark',
+                                        default => 'secondary'
+                                    };
+                                    $prioText = match(strtolower($priority)) {
+                                        'stat', 'critical', 'emergency' => '🚨 طارئ جداً (STAT)',
+                                        'urgent' => '⚡ عاجل (Urgent)',
+                                        default => 'عادي (Normal)'
+                                    };
+                                @endphp
+                                <tr style="{{ $isCompleted ? 'border-right: 4px solid #16a34a; background-color: #fafdfb;' : ($isInProgress ? 'border-right: 4px solid #0284c7; background-color: #f0f9ff;' : ($isStat ? 'border-right: 4px solid #dc2626; background-color: #fef2f2;' : 'border-right: 4px solid #f59e0b; background-color: #ffffff;')) }}">
+                                    <td class="font-monospace text-muted">#{{ $nicuRad->id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle" style="background: #e0f2fe; color: #0284c7; border-color: #bae6fd;">
+                                                <i class="fas fa-baby"></i>
+                                            </div>
+                                            <div class="ms-2">
+                                                <strong class="text-dark d-block">
+                                                    {{ $babyName }}
+                                                </strong>
+                                                <small class="text-muted" style="font-size: 0.75rem;">
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-1">
+                                                        {{ $incubatorName }}
+                                                    </span>
+                                                    • ملف: #{{ $fileNo }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach($radNames as $rn)
+                                                <span class="badge bg-info-subtle text-dark border border-info-subtle font-monospace px-2 py-1">
+                                                    <i class="fas fa-x-ray text-info me-1"></i> {{ $rn }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                        @if($notes)
+                                            <small class="text-muted d-block text-truncate mt-1" style="max-width: 250px;" title="{{ $notes }}">
+                                                <i class="fas fa-info-circle text-info me-1"></i> {{ $notes }}
+                                            </small>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ $prioColor }} fw-bold">
+                                            {{ $prioText }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="small fw-semibold text-dark">د. {{ $docName }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">قسم العناية المركزة لحديثي الولادة</small>
+                                    </td>
+                                    <td class="text-center font-monospace small">
+                                        {{ $orderedAt ? $orderedAt->format('H:i') : '—' }}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                            <i class="fas fa-file-invoice-dollar me-1"></i> حساب الإقامة (الخدج)
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if($isCompleted)
+                                            <span class="badge bg-success py-1.5 px-2.5 shadow-xs fw-semibold">
+                                                <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                            </span>
+                                        @elseif($isInProgress)
+                                            <span class="badge bg-info text-white py-1.5 px-2.5 shadow-xs fw-semibold">
+                                                <i class="fas fa-spinner fa-spin me-1"></i> قيد الفحص
+                                            </span>
+                                        @else
+                                            <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-xs fw-bold">
+                                                <i class="fas fa-clock me-1"></i> بانتظار الفحص
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex gap-1 justify-content-end align-items-center">
+                                            @if($isMedRequest)
+                                                <a href="{{ route('radiology-staff.show', $nicuRad->id) }}" class="btn btn-sm btn-info text-dark fw-bold shadow-xs px-2.5 py-1">
+                                                    <i class="fas fa-edit me-1"></i> {{ $isCompleted ? 'مراجعة التقرير' : 'بدء الفحص والتقرير' }}
+                                                </a>
+                                                @if($isCompleted)
+                                                    <a href="{{ route('radiology-staff.print', $nicuRad->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة التقرير">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                @endif
+                                            @else
+                                                @if($nicuRad->status === 'pending')
+                                                    <form action="{{ route('radiology-staff.nicu-orders.start', $nicuRad) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-primary fw-bold shadow-xs px-2 py-1">
+                                                            <i class="fas fa-play me-1"></i> بدء الفحص
+                                                        </button>
+                                                    </form>
+                                                @elseif($nicuRad->status === 'in_progress')
+                                                    <button type="button" class="btn btn-sm btn-success fw-bold shadow-xs px-2 py-1" data-bs-toggle="modal" data-bs-target="#completeNicuRadModal{{ $nicuRad->id }}">
+                                                        <i class="fas fa-edit me-1"></i> إدخال التقرير
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1" data-bs-toggle="modal" data-bs-target="#completeNicuRadModal{{ $nicuRad->id }}" title="تعديل التقرير">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <a href="{{ route('radiology-staff.nicu-orders.print', $nicuRad) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة">
+                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    </a>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-5 bg-light rounded-3">
+                    <i class="fas fa-baby fa-3x text-muted opacity-50 mb-3"></i>
+                    <h6 class="text-dark fw-bold">لا توجد طلبات أشعة أو سونار مسجلة للخدج حالياً</h6>
+                    <p class="text-muted small mb-0">ستظهر الفحوصات هنا فور طلبها من محطة طبيب الخدج والحاضنات.</p>
+                </div>
+            @endif
+        </div>
 
         <!-- 5. ALL / ARCHIVE TAB -->
         <div class="tab-pane fade {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'show active' : '' }}" id="all-pane" role="tabpanel">
@@ -1761,6 +1995,73 @@ syncRadiologyQueue();
         </div>
     </div>
 </div>
+@if(isset($nicuRadiologyRequests) && $nicuRadiologyRequests->count() > 0)
+    @foreach($nicuRadiologyRequests as $nicuRad)
+        <div class="modal fade" id="completeNicuRadModal{{ $nicuRad->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="fas fa-x-ray me-2"></i> توثيق تقرير الأشعة / السونار للطفل الخديج
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ route('radiology-staff.nicu-orders.complete', $nicuRad) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="modal-body p-4 text-end">
+                            <div class="bg-light p-3 rounded-3 mb-3 border">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <span class="text-muted small d-block">الطفل / المريض:</span>
+                                        <strong class="text-dark">{{ $nicuRad->reservation?->baby_name ?: 'طفل ' . ($nicuRad->reservation?->patient?->name ?? 'غير محدد') }}</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="text-muted small d-block">الحاضنة:</span>
+                                        <span class="badge bg-primary">#{{ $nicuRad->reservation?->incubator?->name ?? $nicuRad->reservation?->incubator_id }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="text-muted small d-block">نوع الفحص:</span>
+                                        <strong class="text-primary">{{ $nicuRad->item_name }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold text-dark small">التقرير الشعاعي / النتائج والمشاهدات التشخيصية (Findings & Impression) <span class="text-danger">*</span></label>
+                                    <textarea name="result" class="form-control" rows="5" placeholder="اكتب تقرير الفحص الطبي بالتفصيل والمشاهدات السريرية..." required>{{ $nicuRad->result }}</textarea>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold text-dark small">توصيات أخصائي الأشعة / ملاحظات فنية إضافية</label>
+                                    <textarea name="technician_notes" class="form-control" rows="2" placeholder="اكتب أي توصيات للمتابعة أو إعادة الفحص...">{{ $nicuRad->technician_notes }}</textarea>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold text-dark small">إرفاق صورة الأشعة / السونار أو ملف DICOM/PDF (اختياري)</label>
+                                    <input type="file" name="attachment" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.dcm">
+                                    @if($nicuRad->attachment_path)
+                                        <div class="mt-2 small">
+                                            <i class="fas fa-paperclip text-primary me-1"></i> مرفق حالي: 
+                                            <a href="{{ asset('storage/' . $nicuRad->attachment_path) }}" target="_blank" class="fw-semibold text-primary">
+                                                {{ $nicuRad->attachment_name ?: 'عرض المرفق' }}
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light justify-content-between">
+                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm">
+                                <i class="fas fa-check-circle me-1"></i> حفظ واعتماد تقرير الفحص
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endif
+
 <!-- مودال المعاينة السريعة لبيانات فحص الأشعة -->
 <div class="modal fade" id="quickViewRadiologyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1832,6 +2133,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tabName === 'station') sourceInput.value = 'consultation';
                 else if (tabName === 'direct') sourceInput.value = 'direct';
                 else if (tabName === 'emergency') sourceInput.value = 'emergency';
+                else if (tabName === 'nicu') sourceInput.value = 'nicu';
                 else if (tabName === 'all') sourceInput.value = 'all';
                 else sourceInput.value = tabName;
             }

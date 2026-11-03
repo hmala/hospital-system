@@ -57,7 +57,12 @@
     @php
         // استخراج بيانات المريض
         $p = $payment->patient;
-        if(!$p && $payment->emergency) {
+        if ($payment->incubatorReservation) {
+            $res = $payment->incubatorReservation;
+            $pname = $res->baby_name ?: ('طفل ' . ($res->patient?->name ?? 'غير محدد'));
+            $pphone = $res->patient?->phone ?? ($res->patient?->user?->phone ?? '—');
+            $pid = 'حاضنة #' . ($res->incubator?->id ?? $res->id);
+        } elseif(!$p && $payment->emergency) {
             $ep = $payment->emergency->emergencyPatient;
             $pname = $ep ? $ep->name : 'غير محدد';
             $pphone = $ep ? ($ep->phone ?? 'غير محدد') : 'غير محدد';
@@ -440,6 +445,21 @@
                     ];
                 }
             }
+        }
+
+        // 5. دفعات وأمانات حاضنة الخدج
+        if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
+            $res = $payment->incubatorReservation;
+            $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
+            $docName = $res?->doctor?->user?->name ? ('د. ' . $res->doctor->user->name) : 'طبيب الخدج';
+            $lineItems[] = [
+                'name' => $payment->description ?: ("دفعة / أمانات حاضنة الخدج - " . ($res?->incubator?->name ?? '') . " ({$babyTitle})"),
+                'category' => 'الخدج والحاضنات (NICU)',
+                'doctor' => $docName,
+                'approved' => (float)$payment->amount,
+                'patient' => (float)$payment->amount,
+                'insurance' => 0,
+            ];
         }
 
         // إذا لم توجد تفاصيل متعددة نستخدم السجل المباشر

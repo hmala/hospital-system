@@ -5,9 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Carbon\Carbon;
 
-class Employee extends Model
+class HrEmployee extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -38,6 +37,11 @@ class Employee extends Model
         'qualification',
         'profile_photo',
         'notes',
+        // حقول الرواتب الجديدة
+        'payment_method', 'bank_name', 'bank_account_number',
+        'overtime_hourly_rate',
+        'subject_to_social_security', 'social_security_percentage',
+        'subject_to_tax', 'tax_percentage',
     ];
 
     protected $casts = [
@@ -46,6 +50,11 @@ class Employee extends Model
         'contract_end_date' => 'date',
         'license_expiry_date' => 'date',
         'basic_salary' => 'decimal:2',
+        'overtime_hourly_rate' => 'decimal:2',
+        'social_security_percentage' => 'decimal:2',
+        'tax_percentage' => 'decimal:2',
+        'subject_to_social_security' => 'boolean',
+        'subject_to_tax' => 'boolean',
     ];
 
     // العلاقات
@@ -61,7 +70,37 @@ class Employee extends Model
 
     public function documents()
     {
-        return $this->hasMany(EmployeeDocument::class);
+        return $this->hasMany(HrEmployeeDocument::class, 'employee_id');
+    }
+
+    public function allowances()
+    {
+        return $this->hasMany(HrEmployeeAllowance::class, 'hr_employee_id');
+    }
+
+    public function activeAllowances()
+    {
+        return $this->hasMany(HrEmployeeAllowance::class, 'hr_employee_id')->where('is_active', true);
+    }
+
+    public function loans()
+    {
+        return $this->hasMany(HrLoan::class, 'hr_employee_id');
+    }
+
+    public function activeLoans()
+    {
+        return $this->hasMany(HrLoan::class, 'hr_employee_id')->where('status', 'active');
+    }
+
+    public function absences()
+    {
+        return $this->hasMany(HrAbsence::class, 'hr_employee_id');
+    }
+
+    public function overtimes()
+    {
+        return $this->hasMany(HrOvertime::class, 'hr_employee_id');
     }
 
     // التحقق من طبيعة الكادر
@@ -73,7 +112,7 @@ class Employee extends Model
     // فحص قرب انتهاء إجازة ممارسة المهنة
     public function isLicenseExpiringSoon(int $days = 30): bool
     {
-        if (!$this->license_expiry_date) {
+        if (! $this->license_expiry_date) {
             return false;
         }
 
@@ -83,7 +122,7 @@ class Employee extends Model
     // فحص انتهاء الرخصة
     public function isLicenseExpired(): bool
     {
-        if (!$this->license_expiry_date) {
+        if (! $this->license_expiry_date) {
             return false;
         }
 
@@ -140,5 +179,10 @@ class Employee extends Model
     public function scopeByDepartment($query, $departmentId)
     {
         return $query->where('department_id', $departmentId);
+    }
+
+    public function actions()
+    {
+        return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
     }
 }

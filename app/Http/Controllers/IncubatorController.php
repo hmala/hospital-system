@@ -14,26 +14,26 @@ class IncubatorController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
+
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $incubators = Incubator::with(['room', 'activeReservation.patient.user'])
-                               ->orderBy('incubator_number')
-                               ->get();
+            ->orderBy('incubator_number')
+            ->get();
 
         // Rooms for incubators (to show counters/indicators per room)
         $rooms = Room::where('is_active', true)
-                     ->where('room_purpose', 'incubators')
-                     ->withCount([
-                         'incubators',
-                         'incubators as occupied_incubators_count' => function ($query) {
-                             $query->where('status', Incubator::STATUS_OCCUPIED);
-                         }
-                     ])
-                     ->orderBy('room_number')
-                     ->get();
+            ->where('room_purpose', 'incubators')
+            ->withCount([
+                'incubators',
+                'incubators as occupied_incubators_count' => function ($query) {
+                    $query->where('status', Incubator::STATUS_OCCUPIED);
+                },
+            ])
+            ->orderBy('room_number')
+            ->get();
 
         // إحصائيات
         $stats = [
@@ -42,8 +42,7 @@ class IncubatorController extends Controller
             'occupied' => $incubators->where('status', Incubator::STATUS_OCCUPIED)->count(),
             'maintenance' => $incubators->where('status', Incubator::STATUS_MAINTENANCE)->count(),
             'normal' => $incubators->where('incubator_type', Incubator::TYPE_NORMAL)->count(),
-            'oxygen' => $incubators->where('incubator_type', Incubator::TYPE_OXYGEN)->count(),
-            'phototherapy' => $incubators->where('incubator_type', Incubator::TYPE_PHOTOTHERAPY)->count(),
+            'capsule' => $incubators->where('incubator_type', Incubator::TYPE_CAPSULE)->count(),
         ];
 
         return view('incubators.index', compact('incubators', 'stats', 'rooms'));
@@ -55,8 +54,8 @@ class IncubatorController extends Controller
     public function create()
     {
         $user = auth()->user();
-        
-        if (!$user->hasRole('admin')) {
+
+        if (! $user->hasRole('admin')) {
             abort(403, 'غير مصرح لك بإنشاء حاضنات');
         }
 
@@ -71,16 +70,17 @@ class IncubatorController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        
-        if (!$user->hasRole('admin')) {
+
+        if (! $user->hasRole('admin')) {
             abort(403);
         }
 
         $validated = $request->validate([
             'incubator_number' => 'required|string|unique:incubators,incubator_number',
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy',
+            'incubator_type' => 'required|in:normal,capsule',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',
+            'camera_stream_url' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
@@ -88,7 +88,7 @@ class IncubatorController extends Controller
         $incubator = Incubator::create($validated);
 
         return redirect()->route('incubators.index')
-                        ->with('success', 'تم إنشاء الحاضنة بنجاح');
+            ->with('success', 'تم إنشاء الحاضنة بنجاح');
     }
 
     /**
@@ -97,8 +97,8 @@ class IncubatorController extends Controller
     public function show(Incubator $incubator)
     {
         $user = auth()->user();
-        
-        if (!$user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
+
+        if (! $user->hasAnyRole(['admin', 'receptionist', 'doctor', 'nicu_staff'])) {
             abort(403);
         }
 
@@ -113,8 +113,8 @@ class IncubatorController extends Controller
     public function edit(Incubator $incubator)
     {
         $user = auth()->user();
-        
-        if (!$user->hasRole('admin')) {
+
+        if (! $user->hasRole('admin')) {
             abort(403);
         }
 
@@ -129,17 +129,18 @@ class IncubatorController extends Controller
     public function update(Request $request, Incubator $incubator)
     {
         $user = auth()->user();
-        
-        if (!$user->hasRole('admin')) {
+
+        if (! $user->hasRole('admin')) {
             abort(403);
         }
 
         $validated = $request->validate([
-            'incubator_number' => 'required|string|unique:incubators,incubator_number,' . $incubator->id,
-            'incubator_type' => 'required|in:normal,oxygen,phototherapy',
-            'status' => 'required|in:available,occupied,maintenance',
+            'incubator_number' => 'required|string|unique:incubators,incubator_number,'.$incubator->id,
+            'incubator_type' => 'required|in:normal,capsule',
+            'status' => 'required|in:available,occupied,maintenance,sterilizing',
             'room_id' => 'nullable|exists:rooms,id',
             'daily_fee' => 'required|numeric|min:0',
+            'camera_stream_url' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
@@ -148,7 +149,7 @@ class IncubatorController extends Controller
         $incubator->update($validated);
 
         return redirect()->route('incubators.index')
-                        ->with('success', 'تم تحديث الحاضنة بنجاح');
+            ->with('success', 'تم تحديث الحاضنة بنجاح');
     }
 
     /**
@@ -157,21 +158,21 @@ class IncubatorController extends Controller
     public function destroy(Incubator $incubator)
     {
         $user = auth()->user();
-        
-        if (!$user->hasRole('admin')) {
+
+        if (! $user->hasRole('admin')) {
             abort(403);
         }
 
         // التحقق من عدم وجود حجوزات نشطة
         if ($incubator->activeReservation()->exists()) {
             return redirect()->back()
-                           ->with('error', 'لا يمكن حذف حاضنة لديها حجز نشط');
+                ->with('error', 'لا يمكن حذف حاضنة لديها حجز نشط');
         }
 
         $incubator->delete();
 
         return redirect()->route('incubators.index')
-                        ->with('success', 'تم حذف الحاضنة بنجاح');
+            ->with('success', 'تم حذف الحاضنة بنجاح');
     }
 
     /**
@@ -180,8 +181,8 @@ class IncubatorController extends Controller
     public function toggleMaintenance(Incubator $incubator)
     {
         $user = auth()->user();
-        
-        if (!$user->hasAnyRole(['admin', 'nicu_staff'])) {
+
+        if (! $user->hasAnyRole(['admin', 'nicu_staff'])) {
             abort(403);
         }
 

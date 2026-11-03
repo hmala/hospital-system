@@ -72,6 +72,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view emergency statements',      // عرض كشوفات حسابات الطوارئ
             'view emergency doctor accounts', // عرض وصرف حسابات أطباء الطوارئ
             'view diagnostic analytics',      // عرض تحليلات وإحصاءات المختبر والأشعة والمفراس
+            'view nicu analytics',            // عرض تحليلات وإحصاءات الخدج
+            'view nicu financial movements',  // عرض الحركات والقيود المالية للخدج
+            'view nicu statements',           // عرض كشوفات حسابات الخدج
+            'view nicu doctor accounts',      // عرض وصرف حسابات أطباء الخدج
 
             // صلاحيات الزيارات
             'view visits',
@@ -95,6 +99,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
+            'view nicu delivery radar',
+            'manage nicu delivery radar settings',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -290,6 +302,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
+            'view nicu delivery radar',
+            'manage nicu delivery radar settings',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -346,6 +366,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view emergency statements',
             'view emergency doctor accounts',
             'view diagnostic analytics',
+            'view nicu analytics',
+            'view nicu financial movements',
+            'view nicu statements',
+            'view nicu doctor accounts',
             'manage doctor commissions',
             'view patients',
             'review surgery prices',
@@ -574,6 +598,37 @@ class RolesAndPermissionsSeeder extends Seeder
             'view lab tests',
             // السماح للطاقم بعرض الباقات
             'view packages',
+        ]);
+
+        // دور طبيب الخدج (NICU Doctor)
+        $nicuDoctorRole = Role::firstOrCreate(['name' => 'nicu_doctor']);
+        $nicuDoctorRole->givePermissionTo([
+            'view incubator reservations',
+            'create incubator reservations',
+            'manage incubator reservations',
+            'manage nicu clinical',
+            'manage nicu care plans',
+            'manage nicu doctor notes',
+            'manage nicu attachments',
+            'discharge incubator reservations',
+            'view nicu delivery radar',
+            'manage nicu delivery radar settings',
+            'view patients',
+            'view lab test groups',
+            'create lab test groups',
+            'edit lab test groups',
+            'delete lab test groups',
+        ]);
+
+        // دور تمريض الخدج (NICU Nurse)
+        $nicuNurseRole = Role::firstOrCreate(['name' => 'nicu_nurse']);
+        $nicuNurseRole->givePermissionTo([
+            'view incubator reservations',
+            'manage nicu nursing',
+            'manage nicu care plans',
+            'manage nicu attachments',
+            'view nicu delivery radar',
+            'view patients',
         ]);
 
         // دور مدير الموارد البشرية (HR Manager)

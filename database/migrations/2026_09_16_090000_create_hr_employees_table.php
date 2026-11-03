@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('employees', function (Blueprint $table) {
+        Schema::create('hr_employees', function (Blueprint $table) {
             $table->id();
             $table->string('employee_code', 30)->unique()->comment('الرقم الوظيفي أو كود الباجة');
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->comment('ربط اختياري بحساب الدخول للنظام');
             $table->foreignId('department_id')->nullable()->constrained('departments')->nullOnDelete()->comment('القسم التابع له الموظف');
-            
+
             // البيانات الشخصية
             $table->string('full_name')->comment('الاسم الكامل للموظف');
             $table->string('national_id', 50)->nullable()->comment('رقم الهوية / البطاقة الموحدة');
@@ -34,17 +34,17 @@ return new class extends Migration
                 'nursing',         // كادر تمريضي
                 'technical',       // كادر فني (مختبر، أشعة، صيدلة)
                 'administrative',  // كادر إداري ومالي
-                'service'          // خدمات وصيانة وحراسة
+                'service',          // خدمات وصيانة وحراسة
             ])->default('administrative')->comment('نوع وتصنيف الكادر');
-            
+
             $table->string('job_title')->comment('المسمى الوظيفي');
             $table->enum('employment_type', [
                 'full_time',   // دوام كامل
                 'part_time',   // دوام جزئي
                 'contract',    // عقد محدد المدة
-                'daily_shift'  // أجر يومي / خفارات
+                'daily_shift',  // أجر يومي / خفارات
             ])->default('full_time')->comment('نوع التعيين / التعاقد');
-            
+
             $table->date('hire_date')->comment('تاريخ المباشرة بالعمل');
             $table->date('contract_end_date')->nullable()->comment('تاريخ انتهاء العقد إن وُجد');
             $table->decimal('basic_salary', 12, 2)->default(0)->comment('الراتب الأساسي');
@@ -53,7 +53,7 @@ return new class extends Migration
                 'on_leave',    // في إجازة
                 'suspended',   // موقوف مؤقتاً
                 'resigned',    // مستقيل
-                'terminated'   // منهي خدماته
+                'terminated',   // منهي خدماته
             ])->default('active')->comment('الحالة الوظيفية');
 
             // بيانات خاصة بالكادر الطبي والفني (تظهر مشروطة)
@@ -77,6 +77,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('employees');
+        Schema::dropIfExists('hr_employees');
     }
 };

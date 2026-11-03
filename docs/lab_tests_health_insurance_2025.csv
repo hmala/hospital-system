@@ -1,0 +1,382 @@
+﻿اسم الفحص (Test Name),كود الفحص (Test Code),نوع العينة (Sample Type),التصنيف الرئيسي (Group),القسم / التصنيف الفرعي (Subcategory),سعر الضمان الصحي (HI Price),مشمول بالضمان (Covered: 1 or 0)
+Thyroid stimulating hormone,TSH,Serum,Hormone,Thyroid Function test,8000,1
+Total triiodothyronine hormone,T3,Serum,Hormone,Thyroid Function test,8000,1
+Total thyroxin hormone,T4,Serum,Hormone,Thyroid Function test,8000,1
+Free triiodothyronine,FT3,Serum,Hormone,Thyroid Function test,8000,1
+Free thyroxin,FT4,Serum,Hormone,Thyroid Function test,8000,1
+Thyroglobulin,TG,Serum,Hormone,Thyroid Function test,12000,1
+Thyroglobulin autoantibody,TGA,Serum,Hormone,Thyroid Function test,12000,1
+Anti- thyroid peroxoidase,ATPO,Serum,Hormone,Thyroid Function test,12000,1
+Thyroid microsomal autoantibobdy,TMA,Serum,Hormone,Thyroid Function test,20000,1
+Reverse triiodothyronine,Rev T3,Serum,Hormone,Thyroid Function test,16000,1
+TSH receptor Auto- antibody,TRAb,Serum,Hormone,Thyroid Function test,24000,1
+T3 Up Take,T3 ut,Serum,Hormone,Thyroid Function test,16000,1
+Thyroxine Binding Globulin,TBG,Serum,Hormone,Thyroid Function test,24000,1
+Feer Thyroxine Index,FTI,Serum,Hormone,Thyroid Function test,20000,1
+Luteinizing hormone,LH,Serum,Hormone,Fertility,8000,1
+Follicular-stimulating hormone,FSH,Serum,Hormone,Fertility,8000,1
+Prolactin,PRL,Serum,Hormone,Fertility,8000,1
+Estradiol,E2,Serum,Hormone,Fertility,8000,1
+Free Estradiol,FE2,Serum,Hormone,Fertility,10000,1
+Progesterone,PRG,Serum,Hormone,Fertility,8000,1
+Testosterone,TEST,Serum,Hormone,Fertility,8000,1
+Free testosterone,FTEST,Serum,Hormone,Fertility,10000,1
+Beta Human chorionic Gonadotropin,β-HCG,Serum,Hormone,Fertility,8000,1
+Anti mullerian hormone,AMH,Serum,Hormone,Fertility,24000,1
+Androgen,Androg,Serum,Hormone,Fertility,32000,1
+Gastrin,GA,Serum,Hormone,Fertility,24000,1
+Dehydroepiandrosteron e sulfate,DHEA s,Serum,Hormone,Fertility,20000,1
+Renin,Renin,Plasma EDTA,Hormone,Fertility,24000,1
+17-Hydroxy Progesterone,17-OHPROG,Serum,Hormone,Fertility,20000,1
+Adrenocorticotropic hormone,ACTH,Serum,Hormone,Adrenal Gland,8500,1
+cortisol,Coritisol,Serum,Hormone,Adrenal Gland,8500,1
+cortisol in urine,coritisol in urine,Urine,Hormone,Adrenal Gland,16000,1
+Parathyroid hormone,PTH,Serum,Hormone,Bone Metabolism,20000,1
+Calcitonin,CT,Serum,Hormone,Bone Metabolism,20000,1
+Osteocalcin,BGP,Serum,Hormone,Bone Metabolism,20000,1
+25-OH Vitamin,VitD3,Serum,Hormone,Bone Metabolism,12000,1
+Growth hormone,GH,Serum,Hormone,Bone Metabolism,8500,1
+C-peptide,C-P,Serum,Hormone,Glyco metabolsim,20000,1
+Insulin,INS,Serum,Hormone,Glyco metabolsim,16000,1
+Pro-insulin,Pro-insulin,Serum,Hormone,Glyco metabolsim,24000,1
+Human insulin Auto antibodies,IAA,Serum,Hormone,Glyco metabolsim,24000,1
+Glutamic acid decarboxylase,GAD65,Serum,Hormone,Glyco metabolsim,24000,1
+Insulin-like Growth Factor 1,IGF-I,Serum,Hormone,Glyco metabolsim,24000,1
+Folic acid,FA,Serum,Hormone,Anemia,20000,1
+Vitamin B12,VB12,Serum,Hormone,Anemia,12000,1
+Ferritin,Fert,Serum,Hormone,Anemia,8500,1
+Myoglobin,MB,Serum,Hormone,Cardiac markers,16000,1
+Troponin I Titter,Trop I,Serum,Hormone,Cardiac markers,20000,1
+Troponin I screen,Trop I,Serum,Hormone,Cardiac markers,12000,1
+Creatine Kinase-MB,ck-mb,Serum,Hormone,Cardiac markers,7000,1
+D-Dimer,DD,plasma Sodium citrate,Hormone,Cardiac markers,16000,1
+Toxoplasmosis-IgG,Toxo IgG,Serum,Infectious disease,Torch,8500,1
+Toxoplasmosis-IgM,Toxo IgM,Serum,Infectious disease,Torch,8500,1
+Cytomegalovirus- IgG,CMV IgG,Serum,Infectious disease,Torch,8500,1
+Cytomegalovirus- IgM,CMV IgM,Serum,Infectious disease,Torch,8500,1
+Rubella virus-IgG,Rubella IgG,Serum,Infectious disease,Torch,8500,1
+Rubella virus-IgM,Rubella IgM,Serum,Infectious disease,Torch,8500,1
+Herpes simplex virus 1/2-IgG,HSV 1/2 IgG,Serum,Infectious disease,Torch,8500,1
+Herpes simplex virus 1/2-IgM,HSV 1/2 IgM IgM,Serum,Infectious disease,Torch,8500,1
+HBsAg titer,HBs Ag titer,Serum,Infectious disease,Blood Viruses,8000,1
+HBsAg screen,HBs Ag screen,Serum,Infectious disease,Blood Viruses,6000,1
+HBs Ab IgG,HBs Ab IgG,Serum,Infectious disease,Blood Viruses,11000,1
+HBe Ag,Hbe Ag,Serum,Infectious disease,Blood Viruses,8000,1
+Hbe Ab IgG,Hbe Ab IgG,Serum,Infectious disease,Blood Viruses,8000,1
+HBc Ab IgG,HBc Ab IgG,Serum,Infectious disease,Blood Viruses,8000,1
+HBV screen,(HBS Ag-Hbs Ab- Hbe Ag - Hbe Ab -Hbc Ab ),Serum,Infectious disease,Blood Viruses,8500,1
+HCV IgG titer,HCV IgG titer,Serum,Infectious disease,Blood Viruses,8500,1
+HCV screen,HCV screen,Serum,Infectious disease,Blood Viruses,6000,1
+HAV Titer,HAV Titer,Serum,Infectious disease,Blood Viruses,8000,1
+HAV screen,HAV screen,Serum,Infectious disease,Blood Viruses,6000,1
+HEV screen,HEV screen,Serum,Infectious disease,Blood Viruses,6000,1
+HIV titer,HIV titer,Serum,Infectious disease,Blood Viruses,8000,1
+HIV screen,HIV screen,Serum,Infectious disease,Blood Viruses,6000,1
+Complete blood count & Differential,CBC,Whole blood EDTA,Hematology,Hematology,8500,1
+Erythrocyte sedimentation rate,ESR,Whole blood,Hematology,Hematology,4500,1
+Blood Film,,Whole blood EDTA,Hematology,Hematology,12000,1
+CBC & Blood Film,,Whole blood EDTA,Hematology,Hematology,20000,1
+Reticulocyte counting,Retic,Whole blood EDTA,Hematology,Hematology,4500,1
+Sickling test,Sickling test,Whole blood EDTA,Hematology,Hematology,8500,1
+Malaria Test,Malaria test,Whole blood EDTA,Hematology,Hematology,8500,1
+Prothrombin time,PT &INR,Plasma Sodium citrate,Hematology,Hematology,8000,1
+Partial thromboplastin time,PTT,Plasma Sodium citrate,Hematology,Hematology,8000,1
+Plasma Fibrinogen,,Plasma Sodium citrate,Hematology,Hematology,8000,1
+Blood group&Rh,,Whole blood EDTA,Hematology,Hematology,4500,1
+Cross match,,Whole blood EDTA,Hematology,Hematology,25000,1
+Whole blood,خدمات الدم و مشتقاته بدون متبرع,Whole blood,Hematology,Hematology,25000,1
+Packed RBC,خدمات الدم و مشتقاته بدون متبرع,Packed RBC,Hematology,Hematology,25000,1
+Plasma,خدمات الدم و مشتقاته بدون متبرع (الطريقة التقليدية),Plasma,Hematology,Hematology,5000,1
+Cryoprecipitate,خدمات الدم و مشتقاته بدون متبرع,Cryoprecipitat e,Hematology,Hematology,5000,1
+Platelets,خدمات الدم و مشتقاته بدون متبرع (الطريقة التقليدية),Platelets,Hematology,Hematology,5000,1
+Platelets,هتاقتشم و مدلا تامدخ ةقيرطلا( عربتم نودب ) ةيللآا,Platelets,Hematology,Hematology,25000,1
+Glucose-6-phosphate dehydrogenase Titer,G6PD Titer,Whole blood EDTA,Hematology,Hematology,16000,1
+Glucose-6-phosphate dehydrogenase Screen,G6PD Screen,Whole blood EDTA,Hematology,Hematology,13000,1
+Direct coomb test,direct coomb test,W hole blood E D T A,Hematology,Hematology,10000,1
+Indirect coomb test,in direct coomb test,Serum,Hematology,Hematology,10000,1
+Rh Ab titer,Rh Ab titer,Serum,Hematology,Hematology,24000,1
+Anti-thrombin III,AT3,Plasma Sodium citrate,Hematology,Hematology,32000,1
+Protein C,PROT-C,Plasma Sodium citrate,Hematology,Hematology,30000,1
+Protein S,PROT-S,Plasma Sodium citrate,Hematology,Hematology,30000,1
+Lupus erythematosus preparation,LE cell preparation,Whole blood EDTA,Hematology,Hematology,30000,1
+Hemoglobin H preparation,Hemoglobin H preparation,Whole blood EDTA,Hematology,Hematology,20000,1
+Hb Electrophoresis HPLC,Hb Electrophoresis HPLC,Whole blood EDTA,Electrophoresis,Electrophoresis,32000,1
+HbA1C by HPLC,HbA1 by HPLC,Whole blood EDTA,Electrophoresis,Electrophoresis,15000,1
+Serum protein Electrophoresis,SPE,Serum,Electrophoresis,Electrophoresis,32000,1
+Urine protein Electrophoresis,UPE,Urine,Electrophoresis,Electrophoresis,32000,1
+Urine Bence Jones protein Electrophoresis,Urine Bence Jones Protein Electrophoresis,Urine,Electrophoresis,Electrophoresis,24000,1
+Serum immune fixation,serum immune fixation,Serum,Electrophoresis,Electrophoresis,64000,1
+Hb capillary's Electrophoresis,Hb capillary's Electrophoresis,Whole blood EDTA,Electrophoresis,Electrophoresis,32000,1
+HbA1C by Capillary's Electrophoresis,HbA1c bycapillary's Electrophoresis,Whole blood EDTA,Electrophoresis,Electrophoresis,15000,1
+Venereal disease research laboratory,VDRL,Serum,Serology,Serology,4500,1
+Treponema pallidum Hemagglutination Assay,TPHA,Serum,Serology,Serology,6000,1
+Anti streptolysin O test (titer),ASOT titer,Serum,Serology,Serology,4500,1
+Pregnancy test,Pt,Serum,Serology,Serology,4000,1
+C-Reactive protein titer,Crp titer,Serum,Serology,Serology,4500,1
+Latex (Rheumatoid Factor),RF,Serum,Serology,Serology,4500,1
+Rose Bengal test,Rose bengal test,Serum,Serology,Serology,4500,1
+Tuberculosis,TP,Serum,Serology,Serology,8500,1
+Mononucleosis,Mo,Serum,Serology,Serology,8500,1
+"Typhoid IgM , IgG","Typhoid IgM , IgG",Serum,Serology,Serology,8000,1
+H. Pylori Ab,H.Pylori Ab,Serum,Serology,Serology,4500,1
+H. Pylori Ag,H.pylori Ag,Serum,Serology,Serology,4500,1
+Anti Cardiolipin IgG,ACL IgG,Serum,Immunity,Immunity,7000,1
+Anti Cardiolipin IgM,ACL IgM,Serum,Immunity,Immunity,7000,1
+Anti-Phospholipid IgG,APL IgG,Serum,Immunity,Immunity,7000,1
+Anti-Phospholipid IgM,APL IgM,Serum,Immunity,Immunity,7000,1
+Anti tissue transglutaminase IgG,Ttg IgG,Serum,Immunity,Immunity,7000,1
+Anti tissue transglutaminase IgA,Ttg IgA,Serum,Immunity,Immunity,7000,1
+Anti Gliadin IgG,AGA IgG,Serum,Immunity,Immunity,7000,1
+Anti Gliadin IgA,AGA IgA,Serum,Immunity,Immunity,7000,1
+Human immunoglobulin E,IgE ( ELISA ),Serum,Immunity,Immunity,15000,1
+Human immunoglobulin E,IgE (COBAS E4),Serum,Immunity,Immunity,20000,1
+Human immunoglobulin M,IgM,Serum,Immunity,Immunity,8500,1
+Human immunoglobulin G,IgG,Serum,Immunity,Immunity,8500,1
+Human immunoglobulin A,IgA,Serum,Immunity,Immunity,8500,1
+Tuberculosis Ab,TB,Serum,Immunity,Immunity,4500,1
+Alpha-fetoprotein,AFP,Serum,Immunity,Immunity,16000,1
+Carcino embryonic antigen,CEA,Serum,Immunity,Immunity,16000,1
+Cancer Antigen 125,CA 125,Serum,Immunity,Immunity,16000,1
+Cancer Antigen 15-3,CA 15-3,Serum,Immunity,Immunity,16000,1
+Cancer Antigen 19-9,CA 19-9,Serum,Immunity,Immunity,16000,1
+Prostate Specific Antigen,PSA,Serum,Immunity,Immunity,8500,1
+Free prostate Specific Antigen,f-PSA,Serum,Immunity,Immunity,20000,1
+Transferrin,Transferrin,Serum,Immunity,Immunity,20000,1
+Anti-beta-2 glycoprotein IgM,Beta 2GP IgM,Serum,Immunity,Immunity,13000,1
+Anti-beta-2 glycoprotein IgG,Beta 2GP IgG,Serum,Immunity,Immunity,13000,1
+Anti-reticulin G ( ELISA ),Anti-reticulum G,Serum,Immunity,Immunity,13000,1
+Anti-reticulin G (COBAS E4),Anti-reticulum G,Serum,Immunity,Immunity,21000,1
+Anti-reticulin A ( ELISA ),Anti- reticulum A,Serum,Immunity,Immunity,13000,1
+Anti-reticulin A (COBAS E4),Anti- reticulum A,Serum,Immunity,Immunity,21000,1
+Anti Endomysial IgG,EMA IgG,Serum,Immunity,Immunity,7000,1
+Anti Endomysial IgA,EMA IgA,Serum,Immunity,Immunity,7000,1
+Anti-liver kidney Ab,ALK,Serum,Immunity,Immunity,17000,1
+Anti-soluble liver antigen,Anti-SLA,Serum,Immunity,Immunity,17000,1
+Epstein Barr virus IgG,EBV IgG,Serum,Immunity,Immunity,7000,1
+Epstein Barr virus IgM,EBV IgM,Serum,Immunity,Immunity,7000,1
+Alpha-1-anti trypsin,A1AT,Serum,Immunity,Immunity,8500,1
+Lipoprotein A,LPA,Serum,Immunity,Immunity,32000,1
+Apolipoprotein A1,APO A1,Serum,Immunity,Immunity,32000,1
+Apolipoprotein B,APO B,Serum,Immunity,Immunity,32000,1
+Prostatic Acid Phosphatase,PAP,Serum,Immunity,Immunity,7000,1
+Pro calcitonin,PCT,Serum,Immunity,Immunity,21000,1
+Calprotectin,Calprotectin,Stool,Immunity,Immunity,17000,1
+Lactoferrin,Lactoferrin,Stool,Immunity,Immunity,20000,1
+Anti-cyclic citrullinated peptide antibody,Anti-CCP,Serum,Immunity,Immunity,18000,1
+Total Bilirubin,TSB,Serum,Biochemistry,Biochemistry,4000,1
+Direct Bilirubin,DB,Serum,Biochemistry,Biochemistry,4000,1
+Alanine transaminase,ALT/GPT,Serum,Biochemistry,Biochemistry,4000,1
+Aspartate transaminase,AST/GOT,Serum,Biochemistry,Biochemistry,4000,1
+Cholesterol,CHOL,Serum,Biochemistry,LIPID PROFILE,4000,1
+Triglyceride,Trig,Serum,Biochemistry,LIPID PROFILE,4000,1
+High Density Lipoprotein,HDL,Serum,Biochemistry,LIPID PROFILE,4000,1
+Low Density Lipoprotein,LDL,Serum,Biochemistry,LIPID PROFILE,4000,1
+B.Urea,Urea,Serum,Biochemistry,Renal,4000,1
+creatinine,CRE,Serum,Biochemistry,Renal,4000,1
+Uric Acid,UA,Serum,Biochemistry,Renal,4000,1
+Electrolyte (Na- K- Cl ),Electrolyte(Na-k- cl),Serum,Biochemistry,Renal,13000,1
+Electrolyte (Na- K- Ca ),Electrolyte(Na-k- ca),Serum,Biochemistry,Renal,13000,1
+Total calcium,Ca,Serum,Biochemistry,Renal,4500,1
+Potassium,K,Serum,Biochemistry,Renal,4500,1
+Alkaline phosphatase,Alp,Serum,Biochemistry,Renal,4500,1
+Copper,CU,Serum,Biochemistry,Renal,12000,1
+Creatine phosphokinase-MB,CPK-MB,Serum,Biochemistry,Renal,8500,1
+Creatine phosphokinase-Total,CPK,Serum,Biochemistry,Renal,8500,1
+Gamma Glutamyl transferase,GGT,Serum,Biochemistry,Renal,4500,1
+Glucose,Fbs/Rbs,Serum,Biochemistry,Renal,4000,1
+Glycated hemoglobin,HbA1c,Whole blood EDTA,Biochemistry,Renal,9500,1
+Lactic Acid,LA,Plasma EDTA,Biochemistry,Renal,4500,1
+Lactate Dehydrogenase,LDH,Serum,Biochemistry,Renal,4500,1
+Magnesium,MG,Serum,Biochemistry,Renal,8000,1
+Micro albumin,u-albumin,Urine,Biochemistry,Renal,10000,1
+Phosphorus,PO4,Serum,Biochemistry,Renal,4500,1
+Acid phosphatase,ACP,Serum,Biochemistry,Renal,4500,1
+Iron,Fe,Serum,Biochemistry,Renal,4500,1
+Total iron Binding Capacity,TIBC,Serum,Biochemistry,Renal,4500,1
+Zinc,Zn,Serum,Biochemistry,Renal,12000,1
+Albumin,Alb,Serum,Biochemistry,Renal,4000,1
+Globulin,nan,Serum,Biochemistry,Renal,4000,1
+Total protein,TP,Serum,Biochemistry,Renal,4000,1
+Total Amylase,AMY total,Serum,Biochemistry,Renal,4500,1
+Lipase,nan,Serum,Biochemistry,Renal,4500,1
+Total carbon dioxide,TCO2,Serum,Biochemistry,Renal,24000,1
+Arterial blood gases,ABG,Whole blood,Biochemistry,Renal,20000,1
+Albumin creatinine ratio,Albumin creatinine ratio,Urine,Biochemistry,Renal,8500,1
+24 Hr. Urine for protein,24 Hr. Urine for protein,Urine (24 Hr.),Biochemistry,Renal,8500,1
+24 Hr. Urine for cortisol,24 Hr. Urine for cortisol,Urine (24 Hr.),Biochemistry,Renal,17000,1
+24 Hr. Urine for copper,24 Hr. Urine for copper,Urine (24 Hr.),Biochemistry,Renal,17000,1
+24 Hr. Urine for creatinine,24 Hr. Urine for creatinine,Urine (24 Hr.),Biochemistry,Renal,8500,1
+24 Hr. Urine for Amylase,24 Hr. Urine for Amylase,Urine (24 Hr.),Biochemistry,Renal,16000,1
+24 Hr. Urine for calcium,24 Hr. Urine for calcium,Urine (24 Hr.),Biochemistry,Renal,12000,1
+24 Hr. Urine for chloride,24 Hr. Urine for chloride,Urine (24 Hr.),Biochemistry,Renal,13000,1
+24 Hr. Urine for magnesium,24 Hr. Urine for magnesium,Urine (24 Hr.),Biochemistry,Renal,16000,1
+24 Hr. Urine for phousphorus,24 Hr. Urine for phousphorus,Urine (24 Hr.),Biochemistry,Renal,16000,1
+24 Hr. Urine for potassium,24 Hr. Urine for potassium,Urine (24 Hr.),Biochemistry,Renal,16000,1
+24 Hr. Urine for sodium,24 Hr. Urine for sodium,Urine (24 Hr.),Biochemistry,Renal,16000,1
+24 Hr. Urine for uric acid,24 Hr. Urine for uric acid,Urine (24 Hr.),Biochemistry,Renal,12000,1
+24 Hr. Urine for oxalic acid,24 Hr. Urine for oxalic acid,Urine (24 Hr.),Biochemistry,Renal,17000,1
+24 Hr. Urine for Citrate,24 Hr. Urine for Citrate,Urine (24 Hr.),Biochemistry,Renal,13000,1
+micro albuminuria,micro albuminuria,Urine (24 Hr.),Biochemistry,Renal,17000,1
+Vanillylmandelic acid,VMA,Urine (24 Hr.),Biochemistry,Renal,30000,1
+Stone analysis,Stone analysis,Stone,Biochemistry,Renal,20000,1
+Fructose for seminal fluid,Fructose for seminal fluid,seminal fluid,Biochemistry,Renal,17000,1
+Abscess for C/S,Abscess for C/S (manual),Abscess,Microbiology,Abscess,20000,1
+Abscess for C/S,Abscess for C/S (automated),Abscess,Microbiology,Abscess,24000,1
+Gram stain,Gram stain,Abscess,Microbiology,Abscess,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Abscess,Microbiology,Abscess,12000,1
+Total cells counting,Total cells counting,Abscess,Microbiology,Abscess,8500,1
+Differential WBC Counting,Differential WBC Counting,Abscess,Microbiology,Abscess,8500,1
+Urine for c/s,Urine for c/s,Urine,Microbiology,URINE,13000,1
+urine for c/s,Urine for c/s (automated),Urine,Microbiology,(manual),36000,1
+Direct Examination,Direct Examination(GUE ),Urine,Microbiology,(manual),4000,1
+Gram stain,Gram stain,Urine,Microbiology,(manual),8000,1
+Acid Fast Bacilli stain for T.B ( urine),Acid Fast Bacilli stain for T.B (T.B in urine ),Urine,Microbiology,(manual),12000,1
+stool for c/s,Stool for c/s (manual),Stool,Microbiology,STOOL,13000,1
+stool for c/s,Stool for c/s (automated),Stool,Microbiology,STOOL,36000,1
+Direct Examination,Direct Examination (GSE),Stool,Microbiology,STOOL,4500,1
+Fecal occult blood,FOB,Stool,Microbiology,STOOL,4500,1
+S.S. agar cultivation,cultivation for Salmonella and Shigella,Stool,Microbiology,STOOL,13000,1
+TCBS agar cultivation Vibrio cholerae,TCBS agar cultivation for Vibrio cholerae,Stool,Microbiology,STOOL,13000,1
+Blood for C/S,Blood for C/S (manual),Blood,Microbiology,BLOOD,20000,1
+Blood for C/S,Blood for C/S (automated),Blood,Microbiology,BLOOD,36000,1
+Sputum for C/S,Sputum for C/S (manual),Sputum,Microbiology,SPUTUM,13000,1
+Sputum for C/S,sputum for C/S (automated),Sputum,Microbiology,SPUTUM,36000,1
+Gram stain,Gram stain,Sputum,Microbiology,SPUTUM,8000,1
+Acid Fast Bacilli stain for T.B,Acid Fast Bacilli stain for T.B,Sputum,Microbiology,SPUTUM,12000,1
+Mycological Cultivation,Fungal identification& anti-fungal Sensitivity,Sputum,Microbiology,SPUTUM,13000,1
+Wound Swab,Wound Swab C/S or Ear Swab (manual),Wound,Microbiology,WOUND,13000,1
+Wound Swab,wound swab C/S or Ear Swab (automated),Wound,Microbiology,WOUND,24000,1
+Mycological Cultivation,Fungal identification& anti-fungal,Ear,Microbiology,WOUND,13000,1
+Eye Swab,Gram stain,eye,Microbiology,Sensitivity,12000,1
+Nasal Swab,Nasal Swab c/s,Nasal,Microbiology,Nasal,4500,1
+Throat Swab,Throat Swab c/s,Throat,Microbiology,Throat,12000,1
+Gram stain,Gram stain,Throat,Microbiology,Throat,8000,1
+High Vaginal Swab,direct exam and Gram stain,High Vaginal,Microbiology,High Vaginal,13000,1
+Wet preparation Trichomonas vaginales,Wet preparation for Trichomonas vaginales,High Vaginal,Microbiology,High Vaginal,8500,1
+Gram stain,Gram stain,High Vaginal,Microbiology,High Vaginal,8000,1
+Mycological Cultivation,Fungal identification& anti-fungal Sensitivity,High Vaginal,Microbiology,High Vaginal,13000,1
+Urethral Swab,direct exam and Gram stain,Ureteral,Microbiology,Urethral,13000,1
+Urethral Swab or Urethral Discharge,for Gonococcal staining gram stain,Ureteral,Microbiology,Urethral,12000,1
+Skin lesions Swab,Skin lesions Swab c/s,,Microbiology,Urethral,13000,1
+Cervical Swab,Cervical Swab c/s,,Microbiology,Urethral,13000,1
+Oral swab,Oral swab c/s,,Microbiology,Urethral,13000,1
+Infected burns Swab,Infected burns Swab c/s,,Microbiology,Urethral,13000,1
+Pleural Fluid for C/S,Pleural Fluid for C/S (manual),Pleural Fluid,Microbiology,Pleural Fluid,13000,1
+Pleural Fluid for C/S,Pleural fluid for C/S (automated),Pleural Fluid,Microbiology,Pleural Fluid,36000,1
+Pleural Fluid for Sugar,Pleural Fluid for Sugar,Pleural Fluid,Microbiology,Pleural Fluid,8500,1
+Pleural Fluid for Protein,Pleural Fluid for Protein,Pleural Fluid,Microbiology,Pleural Fluid,8500,1
+Gram stain,Gram stain,Pleural Fluid,Microbiology,Pleural Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Pleural Fluid,Microbiology,Pleural Fluid,8500,1
+Total cells counting,Total cells counting,Pleural Fluid,Microbiology,Pleural Fluid,8500,1
+Differential WBC Counting,Differential WBC Counting,Pleural Fluid,Microbiology,Pleural Fluid,8500,1
+Ascitic Fluid for C/S,Ascitic Fluid C/S (manual),Ascitic Fluid,Microbiology,Ascitic Fluid,13000,1
+Ascitic Fluid for C/S,Ascitic Fluid C/S (automated),Ascitic Fluid,Microbiology,Ascitic Fluid,36000,1
+Gram stain,Gram stain,Ascitic Fluid,Microbiology,Ascitic Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Ascitic Fluid,Microbiology,Ascitic Fluid,12000,1
+Total cells counting,Total cells counting,Ascitic Fluid,Microbiology,Ascitic Fluid,8500,1
+Differential WBC Counting,Differential WBC Counting,Ascitic Fluid,Microbiology,Ascitic Fluid,8500,1
+Synovial Fluid for C/S,Synovial Fluid C/S (manual),Synovial Fluid,Microbiology,Synovial Fluid,13000,1
+Synovial Fluid for C/S,Synovial Fluid C/S (automated),Synovial Fluid,Microbiology,Synovial Fluid,36000,1
+Synovial Fluid for Sugar,Synovial Fluid for Sugar,Synovial Fluid,Microbiology,Synovial Fluid,8500,1
+Synovial Fluid for Protein,Synovial Fluid for Protein,Synovial Fluid,Microbiology,Synovial Fluid,8500,1
+Gram stain,Gram stain,Synovial Fluid,Microbiology,Synovial Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Synovial Fluid,Microbiology,Synovial Fluid,12000,1
+Total cells counting,Total cells counting,Synovial Fluid,Microbiology,Synovial Fluid,8500,1
+Differential WBC Counting,Differential WBC Counting,Synovial Fluid,Microbiology,Synovial Fluid,8000,1
+CSF for C/S,CSF for C/S (manual),Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,24000,1
+CSF for C/S,CSF for C/S (automated),Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,36000,1
+CSF for Protein,CSF for Protein,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,8500,1
+CSF for Sugar,CSF for Sugar,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,8500,1
+Gram stain,Gram stain,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,12000,1
+Differential WBC Counting,Differential WBC Counting,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,8000,1
+CSF for Brucellosis,CSF for Brucellosis,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,12000,1
+CSF for Syphilis,CSF for Syphilis,Cerebro- Spinal Fluid,Microbiology,Cerebro-Spinal Fluid,8000,1
+Seminal Fluid for C/S,Seminal Fluid for C/S,seminal fluid,Microbiology,Seminal Fluid,13000,1
+Direct Examination,Direct Examination (SFA),seminal fluid,Microbiology,Seminal Fluid,8000,1
+Gram stain (GC),Gram stain (GC),seminal fluid,Microbiology,Seminal Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,seminal fluid,Microbiology,Seminal Fluid,12000,1
+Peritoneal Fluid for C/S,Peritoneal Fluid C/S (manual),Peritoneal Fluid,Microbiology,Peritoneal Fluid,24000,1
+Peritoneal Fluid for C/S,Peritoneal Fluid C/S (automated,Peritoneal Fluid,Microbiology,Peritoneal Fluid,36000,1
+Direct Examination,Direct Examination,Peritoneal Fluid,Microbiology,Peritoneal Fluid,4500,1
+Gram stain,Gram stain,Peritoneal Fluid,Microbiology,Peritoneal Fluid,8000,1
+Acid Fast Bacilli stain,Acid Fast Bacilli stain,Peritoneal Fluid,Microbiology,Peritoneal Fluid,12000,1
+Total cells counting,Total cells counting,Peritoneal Fluid,Microbiology,Peritoneal Fluid,8000,1
+Differential WBC Counting,Differential WBC Counting,Peritoneal Fluid,Microbiology,Peritoneal Fluid,8000,1
+PCR For HCV Viral Load,PCR For HCV Viral Load,serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),80000,1
+PCR For HBV Viral Load,PCR For HBV Viral Load,serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),80000,1
+PCR for HIV viral load,PCR for HIV viral load,serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),80000,1
+PCR For TB,PCR For TB,blood EDTA- Serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),80000,1
+PCR For Human papilloma virus,PCR For Human papilloma virus,Cervical Swab -Seminal,Polymerase chain reaction,Polymerasease Chain reaction (PCR),80000,1
+PCR For Geno Type HCV,PCR For Geno Type HCV,serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),96000,1
+PCR For HCV Viral Load By genexpert,PCR For HCV Viral Load,serum,Polymerase chain reaction,Polymerasease Chain reaction (PCR),100000,1
+PCR For HBV Viral Load By genexpert,PCR For HBV Viral Load By genexpert,serum,Polymerase chain reaction,By genexpert,100000,1
+PCR For TB By genexpert,PCR For TB By genexpert,sputum-Fluid- Urine,Polymerase chain reaction,By genexpert,100000,1
+Thyroid gland,,,Histopathology,Histopathology,80000,1
+Lung branch scope,,,Histopathology,Histopathology,80000,1
+Brain,,,Histopathology,Histopathology,80000,1
+Breast mass,,,Histopathology,Histopathology,80000,1
+Mastectomy,,,Histopathology,Histopathology,80000,1
+Salivary gland,,,Histopathology,Histopathology,80000,1
+Skin,,,Histopathology,Histopathology,80000,1
+Bone,,,Histopathology,Histopathology,80000,1
+Spleen,,,Histopathology,Histopathology,80000,1
+Appendix,,,Histopathology,Histopathology,80000,1
+Testis,,,Histopathology,Histopathology,80000,1
+Colon,,,Histopathology,Histopathology,80000,1
+Colonoscopy,,,Histopathology,Histopathology,80000,1
+Lymph-node,,,Histopathology,Histopathology,80000,1
+Discectomy- Iaminectomy,,,Histopathology,Histopathology,80000,1
+Duodenal,,,Histopathology,Histopathology,80000,1
+Prostatectomy,,,Histopathology,Histopathology,80000,1
+Prostatic chips,,,Histopathology,Histopathology,80000,1
+Cyst-ovary,,,Histopathology,Histopathology,80000,1
+Uterus,,,Histopathology,Histopathology,80000,1
+Uterus with ovary,,,Histopathology,Histopathology,80000,1
+Product of gestation,,,Histopathology,Histopathology,80000,1
+D& C,,,Histopathology,Histopathology,80000,1
+Polyp,,,Histopathology,Histopathology,80000,1
+Pap Smear,,,Histopathology,Histopathology,24000,1
+C.S.F Cytology,,,Histopathology,Histopathology,24000,1
+Kidney,,,Histopathology,Histopathology,80000,1
+Gall bladder,,,Histopathology,Histopathology,80000,1
+Corpectomy,,,Histopathology,Histopathology,80000,1
+Soft tissue,,,Histopathology,Histopathology,80000,1
+Tissue Tumer marker,,,Histopathology,Histopathology,80000,1
+Muscles(bx),,,Histopathology,Histopathology,80000,1
+Sinus,,,Histopathology,Histopathology,80000,1
+core biopsy (liver),,,Histopathology,Histopathology,80000,1
+Ovary with tube,,,Histopathology,Histopathology,80000,1
+F.N.A.C,,,Histopathology,Histopathology,32000,1
+Endoscopic (bx),,,Histopathology,Histopathology,80000,1
+Gynecomastia,,,Histopathology,Histopathology,80000,1
+Slide review,,,Histopathology,Histopathology,80000,1
+Fibroid,,,Histopathology,Histopathology,80000,1
+Hemicolectomy,,,Histopathology,Histopathology,80000,1
+Femur,,,Histopathology,Histopathology,80000,1
+Ulcerity mass,,,Histopathology,Histopathology,80000,1
+Ectopic pregnancy,,,Histopathology,Histopathology,80000,1
+Abortion,,,Histopathology,Histopathology,80000,1
+Urinary bladder,,,Histopathology,Histopathology,80000,1
+Cell block,,,Histopathology,Histopathology,80000,1
+Mass,,,Histopathology,Histopathology,80000,1
+Neak mass,,,Histopathology,Histopathology,80000,1
+Endometriosis,,,Histopathology,Histopathology,80000,1
+Tissue &bone,,,Histopathology,Histopathology,80000,1
+Hernia,,,Histopathology,Histopathology,80000,1
+Nasal papilloma,,,Histopathology,Histopathology,80000,1
+Endometrial biopsy,,,Histopathology,Histopathology,80000,1
+Insulin Resistance,IR HOMA,Serum,Hormone,Histopathology,20000,1
+Oral Glucose Tolerance Test,OGTT,Serum,Hormone,Histopathology,10000,1
+Creatinine Clearance,CrCL,"Serum , URINE",Biochemistry,Histopathology,5000,1
+Bleeding Time,BT,Whole Blood,Hematology,Histopathology,4000,1
+Clotting Time,CT,Whole Blood,Hematology,Histopathology,4000,1
+Extractable nuclear antigen,ENA,Serum,Immunity,Histopathology,18000,1
+Anti nuclear antibody,ANA,Serum,Immunity,Histopathology,10000,1
+Anti chlamydia (igG),(igG),Serum,Immunity,Histopathology,16000,1
+Anti chlamydia (igM),(igM),Serum,Immunity,Histopathology,16000,1
+Complement 3,C3,Serum,Immunity,Histopathology,10000,1
+Complement 4,C4,Serum,Immunity,Histopathology,10000,1
+Immuno histochemical Stains,IHS,,Immunity,Histopathology,75000,1
+Special Stains,,Histopathology,Histopathology,Histopathology,15000,1
+By genexpert PCR for HIV Viral Load,,Serum,PCR,Histopathology,100000,1

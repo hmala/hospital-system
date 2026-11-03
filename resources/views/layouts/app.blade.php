@@ -1022,7 +1022,11 @@
                             'view emergency financial movements', 
                             'view emergency statements', 
                             'view emergency doctor accounts', 
-                            'view diagnostic analytics'
+                            'view diagnostic analytics',
+                            'view nicu analytics',
+                            'view nicu financial movements',
+                            'view nicu statements',
+                            'view nicu doctor accounts'
                         ])
                         @php
                             $isSurgeryReviewActive = request()->routeIs('accountant.surgeries.*');
@@ -1037,8 +1041,13 @@
                                                  request()->routeIs('cashier.emergency.doctor-accounts') ||
                                                  request()->routeIs('cashier.emergency.doctor-account');
                             $isDiagnosticsAccountsActive = request()->routeIs('accountant.diagnostics.*');
+                            $isNicuAccountsActive = request()->routeIs('accountant.nicu.analytics') ||
+                                                 request()->routeIs('cashier.nicu.financial-movements') ||
+                                                 request()->routeIs('cashier.nicu.statements') ||
+                                                 request()->routeIs('cashier.nicu.doctor-accounts') ||
+                                                 request()->routeIs('cashier.nicu.doctor-account');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive;
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1174,6 +1183,44 @@
                             </li>
                         </div>
                         @endcan
+
+                        <!-- القسم الفرعي: الخدج والحاضنات -->
+                        @canany(['view nicu analytics', 'view nicu financial movements', 'view nicu statements', 'view nicu doctor accounts'])
+                        <div class="sidebar-section-title {{ $isNicuAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuAccountingSubSection" aria-expanded="{{ $isNicuAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(13, 202, 240, 0.05); color: #0dcaf0; border-radius: 4px; cursor: pointer;">
+                            <span><i class="fas fa-baby me-1"></i> حسابات الخدج والحاضنات</span>
+                            <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="collapse {{ $isNicuAccountsActive ? 'show' : '' }} ps-2" id="nicuAccountingSubSection">
+                            @can('view nicu analytics')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('accountant.nicu.analytics') ? 'active' : '' }}" href="{{ route('accountant.nicu.analytics') }}">
+                                    <i class="fas fa-chart-bar text-info"></i><span> تحليلات إحصاءات الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu financial movements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.nicu.financial-movements') }}">
+                                    <i class="fas fa-money-bill-wave text-info"></i><span> الحركات المالية للخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu statements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.statements') ? 'active' : '' }}" href="{{ route('cashier.nicu.statements') }}">
+                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> كشوفات الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view nicu doctor accounts')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.nicu.doctor-accounts') || request()->routeIs('cashier.nicu.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.nicu.doctor-accounts') }}">
+                                    <i class="fas fa-wallet text-info"></i><span> حسابات أطباء الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                        </div>
+                        @endcanany
                         </div> <!-- end unifiedAccountingSection -->
                         @endcanany
 
@@ -1407,6 +1454,125 @@
                         </div>
                         @endcanany
 
+                        <!-- قسم الخدج والحاضنات (NICU) -->
+                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar'])
+                        @php
+                            $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*');
+                            $occupiedNicuCount = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('incubators')) {
+                                $occupiedNicuCount = \App\Models\Incubator::where('status', 'occupied')->count();
+                            }
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isNicuActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#nicuSection" aria-expanded="{{ $isNicuActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-baby text-info"></i> الخدج والحاضنات</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isNicuActive ? 'show' : '' }}" id="nicuSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.index') ? 'active' : '' }}" href="{{ route('nicu.index') }}">
+                                    <i class="fas fa-th-large text-primary"></i><span> لوحة الحاضنات اللحظية</span>
+                                    @if($occupiedNicuCount > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $occupiedNicuCount }} مشغولة</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.delivery-radar.*') ? 'active' : '' }}" href="{{ route('nicu.delivery-radar.index') }}">
+                                    <i class="fas fa-satellite-dish text-danger"></i><span> رادار صالات العمليات والولادة</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('incubator-reservations.create') ? 'active' : '' }}" href="{{ route('incubator-reservations.create') }}">
+                                    <i class="fas fa-plus-circle text-success"></i><span> حجز ودخول خديج جديد</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index') ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
+                                    <i class="fas fa-clipboard-list text-info"></i><span> سجل وإضبارات الخدج</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('incubators.index') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
+                                    <i class="fas fa-cogs text-warning"></i><span> إدارة الحاضنات والكبسولات</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
+                                    <i class="fas fa-tags text-warning"></i><span> تسعير وباقات خدمات الخدج</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
+
+                        <!-- قسم مركز وجراحة العيون (Eye Center) -->
+                        @canany(['view eye center', 'manage eye appointments', 'manage eye examinations', 'manage eye cashier', 'manage eye store', 'manage eye surgeries', 'manage eye investigations'])
+                        @php
+                            $isEyeActive = request()->routeIs('eye.*');
+                            $todayEyeAppts = 0;
+                            $todayEyeSurgeries = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('eye_appointments')) {
+                                $todayEyeAppts = \App\Models\Eye\EyeAppointment::whereDate('created_at', today())->whereIn('status', ['waiting', 'dilated'])->count();
+                            }
+                            if (\Illuminate\Support\Facades\Schema::hasTable('eye_surgeries')) {
+                                $todayEyeSurgeries = \App\Models\Eye\EyeSurgery::whereDate('surgery_date', today())->where('status', 'scheduled')->count();
+                            }
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isEyeActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#eyeCenterSection" aria-expanded="{{ $isEyeActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-eye text-primary"></i> مركز وجراحة العيون</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isEyeActive ? 'show' : '' }}" id="eyeCenterSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.availability.*') ? 'active' : '' }}" href="{{ route('eye.availability.index') }}">
+                                    <i class="fas fa-calendar-check text-success"></i><span> توفر أطباء العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.reception.*') ? 'active' : '' }}" href="{{ route('eye.reception.index') }}">
+                                    <i class="fas fa-id-card text-primary"></i><span> استعلامات وطابور العيون</span>
+                                    @if($todayEyeAppts > 0)
+                                        <span class="badge bg-primary ms-auto">{{ $todayEyeAppts }}</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.cashier.*') ? 'active' : '' }}" href="{{ route('eye.cashier.index') }}">
+                                    <i class="fas fa-cash-register text-success"></i><span> كاشير وفواتير العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.examinations.*') ? 'active' : '' }}" href="{{ route('eye.examinations.index') }}">
+                                    <i class="fas fa-stethoscope text-info"></i><span> محطة الكشف السريري OD/OS</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.investigations.*') ? 'active' : '' }}" href="{{ route('eye.investigations.index') }}">
+                                    <i class="fas fa-x-ray text-warning"></i><span> الفحوصات والأجهزة (OCT/ميدان)</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.surgeries.*') ? 'active' : '' }}" href="{{ route('eye.surgeries.index') }}">
+                                    <i class="fas fa-procedures text-danger"></i><span> جراحة العيون وحقن الفاكو</span>
+                                    @if($todayEyeSurgeries > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $todayEyeSurgeries }}</span>
+                                    @endif
+                                </a>
+                            </li>
+                                                        <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.store.*') ? 'active' : '' }}" href="{{ route('eye.store.index') }}">
+                                    <i class="fas fa-boxes text-secondary"></i><span> مخزن مستلزمات وعدسات العيون</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('eye.permissions.*') ? 'active' : '' }}" href="{{ route('eye.permissions.index') }}">
+                                    <i class="fas fa-user-shield text-dark"></i><span> صلاحيات ومستخدمي العيون</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
+
                         <!-- قسم الأشعة والسونار -->
                         @canany(['view radiology', 'manage radiology types'])
                         @php
@@ -1604,6 +1770,38 @@
                                     <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">
+                                    <i class="fas fa-balance-scale"></i><span> لائحة العقوبات والمكافآت</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.payrolls.*') ? 'active' : '' }}" href="{{ route('hr.payrolls.index') }}">
+                                    <i class="fas fa-money-check-alt"></i><span> مسير الرواتب والأجور</span>
+                                </a>
+                            </li>
+
+                            <!-- Submenu: الدوام والخفارات -->
+                            @php
+                                $isAttendanceActive = request()->routeIs('hr.shifts.*') || request()->routeIs('hr.schedules.*');
+                            @endphp
+                            <div class="sidebar-section-title {{ $isAttendanceActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#attendanceSubSection" aria-expanded="{{ $isAttendanceActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
+                                <span><i class="fas fa-clock me-1"></i> الدوام والخفارات</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isAttendanceActive ? 'show' : '' }} ps-2" id="attendanceSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('hr.shifts.*') ? 'active' : '' }}" href="{{ route('hr.shifts.index') }}">
+                                        <i class="fas fa-calendar-day"></i><span> إعدادات الشفتات</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('hr.schedules.*') ? 'active' : '' }}" href="{{ route('hr.schedules.index') }}">
+                                        <i class="fas fa-calendar-alt"></i><span> جدول الدوام الأسبوعي</span>
+                                    </a>
+                                </li>
+                            </div>
+
                         </div>
                         @endcanany
 
@@ -2056,3 +2254,6 @@
     @stack('scripts')
 </body>
 </html>
+
+
+

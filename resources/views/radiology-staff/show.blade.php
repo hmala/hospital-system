@@ -127,9 +127,11 @@
 <div class="container-fluid px-3 px-md-4 py-3" style="max-width: 1400px; margin: 0 auto;">
     
     @php
-        $p = $request->visit?->patient;
-        $pName = $p?->name ?? $p?->user?->name ?? 'غير محدد';
-        $docName = $request->visit?->doctor?->user?->name ?? 'الاستشارية';
+        $nicuRes = $request->incubatorReservation;
+        $p = $request->visit?->patient ?? $nicuRes?->patient;
+        $pName = $nicuRes ? $nicuRes->baby_title : ($p?->name ?? $p?->user?->name ?? 'غير محدد');
+        $docName = $nicuRes ? ($nicuRes->doctor?->user?->name ?? 'طبيب الخدج المشرف') : ($request->visit?->doctor?->user?->name ?? 'الاستشارية');
+        $deptName = $nicuRes ? 'قسم الخدج والحاضنات (NICU)' : ($request->visit?->department?->name ?? 'العيادات الاستشارية');
         $radNames = $request->radiology_names ?: [$request->description ?: 'فحص تصوير'];
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         $images = $resultData['images'] ?? [];
@@ -200,9 +202,14 @@
                     <div>
                         <div class="fw-bold text-dark fs-6">{{ $pName }}</div>
                         <div class="text-muted small">
-                            {{ $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : '') }}
-                            @if($p?->age) <span>• {{ $p->age }} سنة</span> @endif
-                            @if($p?->medical_number) <span class="font-monospace text-secondary ms-1">#{{ $p->medical_number }}</span> @endif
+                            @if($nicuRes)
+                                <span class="badge bg-secondary-subtle text-dark border">{{ $nicuRes->incubator?->name ?? ('حاضنة #' . $nicuRes->incubator_id) }}</span>
+                                <span>• {{ $nicuRes->days_count }} يوم بالحاضنة</span>
+                            @else
+                                {{ $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : '') }}
+                                @if($p?->age) <span>• {{ $p->age }} سنة</span> @endif
+                                @if($p?->medical_number) <span class="font-monospace text-secondary ms-1">#{{ $p->medical_number }}</span> @endif
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -211,12 +218,16 @@
             <div class="col-lg-3 col-md-6">
                 <div class="text-muted small mb-1"><i class="fas fa-user-md text-secondary me-1"></i> الطبيب المحول</div>
                 <div class="fw-semibold text-dark">د. {{ $docName }}</div>
-                <div class="text-muted" style="font-size: 0.75rem;">{{ $request->visit?->department?->name ?? 'العيادات الاستشارية' }}</div>
+                <div class="text-muted" style="font-size: 0.75rem;">{{ $deptName }}</div>
             </div>
 
             <div class="col-lg-2 col-sm-6">
                 <div class="text-muted small mb-1"><i class="fas fa-money-bill-wave text-secondary me-1"></i> الرسوم المالية</div>
-                @if($request->payment_status === 'paid')
+                @if($nicuRes)
+                    <span class="badge bg-info-subtle text-primary border border-info-subtle px-2 py-1">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> حساب الإقامة (الخدج)
+                    </span>
+                @elseif($request->payment_status === 'paid')
                     <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
                         <i class="fas fa-check-circle me-1"></i> مسدد
                     </span>
