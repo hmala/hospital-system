@@ -1452,7 +1452,7 @@
                         @endcanany
 
                         <!-- قسم الخدج والحاضنات (NICU) -->
-                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations'])
+                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar'])
                         @php
                             $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*');
                             $occupiedNicuCount = 0;
@@ -1472,6 +1472,11 @@
                                     @if($occupiedNicuCount > 0)
                                         <span class="badge bg-danger ms-auto">{{ $occupiedNicuCount }} مشغولة</span>
                                     @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.delivery-radar.*') ? 'active' : '' }}" href="{{ route('nicu.delivery-radar.index') }}">
+                                    <i class="fas fa-satellite-dish text-danger"></i><span> رادار صالات العمليات والولادة</span>
                                 </a>
                             </li>
                             <li class="nav-item">

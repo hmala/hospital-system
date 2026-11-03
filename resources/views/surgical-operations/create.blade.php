@@ -100,6 +100,16 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show_in_nicu_radar" name="show_in_nicu_radar" value="1" {{ old('show_in_nicu_radar') ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold text-info" for="show_in_nicu_radar">
+                                    <i class="fas fa-satellite-dish me-1"></i> إظهار في رادار الخدج والولادات المتوقعة (NICU Radar)
+                                </label>
+                                <div class="form-text text-muted">عند التفعيل، ستظهر هذه العملية تلقائياً في شاشة مراقبة واستعداد قسم الخدج عند جدولتها في صالات العمليات.</div>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-end gap-2">
                             <a href="{{ route('surgical-operations.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times me-1"></i>

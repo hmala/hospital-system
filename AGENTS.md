@@ -55,6 +55,27 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-11-03 — المرحلة 143: إنشاء وتعميم رادار صالات العمليات والولادة المتوقعة لقسم الخدج NICU Delivery & C-Section Operations Radar مع التحكم الديناميكي بأنواع العمليات وإبراز الصالات)
+
+### Done
+- **قاعدة البيانات ونموذج العمليات ([database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php), [app/Models/SurgicalOperation.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/SurgicalOperation.php))**:
+  * إضافة حقل `show_in_nicu_radar` بجدول `surgical_operations` لتمكين التحكم الديناميكي الكامل بالعمليات المشمولة برادار الخدج.
+  * تفعيل العمليات القيصرية والولادية الافتراضية تلقائياً في قاعدة البيانات.
+  * تحديث `$fillable` و `$casts` وإضافة نطاق `scopeNicuRadar`.
+- **شاشة رادار صالات العمليات والولادة ([app/Http/Controllers/NicuDeliveryRadarController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuDeliveryRadarController.php), [resources/views/nicu/delivery-radar.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/delivery-radar.blade.php))**:
+  * واجهة مراقبة سريرية وإنذار مبكر لحظي لكادر الخدج لمتابعة العمليات المتوقعة والجارية في الصالات والاستعداد المسبق دون أي أزرار حجز تجنباً للتضارب مع الاستعلامات.
+  * **إبراز صالة العمليات (`Operation Theater`)**: شارة بارزة ومميزة `[ 🚪 صالة العمليات: اسم الصالة ]`، مع شارة تحذيرية صفراء `[ ⚠️ بانتظار تحديد الصالة ]` في حال عدم التعيين.
+  * شريط أيام أسبوعي تفاعلي للتنقل المباشر، وتحديث لحظي لعدد الحالات المجدولة، بالانتظار، الجارية الآن بالصالات (مع نبض أحمر تحذيري)، والمنتهية.
+  * محرك بحث وفلترة لحظي بالجافاسكريبت بالاسم أو الصالة أو الطبيب أو نوع العملية.
+- **واجهة التحكم الديناميكية بأنواع العمليات ([resources/views/nicu/delivery-radar-settings.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/delivery-radar-settings.blade.php), [app/Http/Controllers/SurgicalOperationController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/SurgicalOperationController.php), [resources/views/surgical-operations/create.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/surgical-operations/create.blade.php), [resources/views/surgical-operations/edit.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/surgical-operations/edit.blade.php), [resources/views/surgical-operations/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/surgical-operations/index.blade.php))**:
+  * واجهة إعدادات مخصصة للأدمن والمشرفين لإدارة وتفعيل/استبعاد أي عملية جراحية بالرادار بنقرة واحدة عبر AJAX Switch مع إشعار فوري (Toast).
+  * شمول خيار الرادار في شاشات إضافة وتعديل ودليل العمليات الجراحية (`create`, `edit`, `index`).
+- **الصلاحيات والقوائم ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [resources/views/layouts/app.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/layouts/app.blade.php), [resources/views/nicu/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/index.blade.php))**:
+  * إضافة الصلاحيات: `view nicu delivery radar` (للأدمن وطبيب وتمريض الخدج)، و `manage nicu delivery radar settings` (للأدمن والمشرفين).
+  * إدراج رابط الرادار في القائمة الجانبية لقسم الخدج، وزر وصول مباشر في لوحة الخدج الرئيسية.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuDeliveryRadarTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuDeliveryRadarTest.php))**:
+  * تغطية شاملة لمنع غير المصرح لهم، عرض العمليات المشمولة بصالاتها وعزل غير المشمولة، فتح الإعدادات، وتبديل الحالة بالـ AJAX (5 passed, 22 assertions بنجاح 100%).
+
 ## Session log (2026-11-02 — المرحلة 142: إنشاء وتعميم تبويب الحسابات المتكامل لقسم الخدج والحاضنات NICU Accounting & Analytics Module ضمن الحسابات العامة والمالية)
 
 ### Done

@@ -820,6 +820,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/services', [\App\Http\Controllers\NicuServiceController::class, 'store'])->name('services.store');
         Route::put('/services/{service}', [\App\Http\Controllers\NicuServiceController::class, 'update'])->name('services.update');
         Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
+
+        // رادار صالات العمليات والولادة لحضانة الخدج (NICU Delivery & C-Section Operations Radar)
+        Route::get('/delivery-radar', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'index'])->name('delivery-radar.index');
+        Route::get('/delivery-radar/settings', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'settings'])->name('delivery-radar.settings');
+        Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
     });
 
     // إدارة أجور العمليات الجراحية

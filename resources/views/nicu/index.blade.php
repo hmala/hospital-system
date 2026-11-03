@@ -16,6 +16,9 @@
                     <p class="text-muted mb-0">المتابعة السريرية والإشغال اللحظي لحاضنات وكبسولات حديثي الولادة - الطابق 6</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ route('nicu.delivery-radar.index') }}" class="btn btn-outline-danger shadow-sm">
+                        <i class="fas fa-satellite-dish me-1"></i> رادار صالات العمليات والولادة
+                    </a>
                     <a href="{{ route('incubator-reservations.create') }}" class="btn btn-success shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> حجز ودخول خديج جديد
                     </a>

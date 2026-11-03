@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\SurgicalOperation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class SurgicalOperationController extends Controller
 {
@@ -34,7 +33,7 @@ class SurgicalOperationController extends Controller
      */
     public function create()
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -48,7 +47,7 @@ class SurgicalOperationController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -56,7 +55,8 @@ class SurgicalOperationController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'new_category' => 'nullable|string|max:255',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'show_in_nicu_radar' => 'nullable|boolean',
         ]);
 
         $category = $request->category;
@@ -71,10 +71,11 @@ class SurgicalOperationController extends Controller
             'name' => $request->name,
             'category' => $category,
             'fee' => 0, // السعر دائمًا 0
-            'is_active' => $request->has('is_active') ? $request->is_active : true
+            'is_active' => $request->has('is_active') ? $request->is_active : true,
+            'show_in_nicu_radar' => $request->boolean('show_in_nicu_radar'),
         ]);
 
-        return redirect()->route('surgical-operations.index')->with('success', 'تم إضافة العملية الجراحية بنجاح: ' . $request->name);
+        return redirect()->route('surgical-operations.index')->with('success', 'تم إضافة العملية الجراحية بنجاح: '.$request->name);
     }
 
     /**
@@ -82,7 +83,7 @@ class SurgicalOperationController extends Controller
      */
     public function edit(SurgicalOperation $surgicalOperation)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -96,7 +97,7 @@ class SurgicalOperationController extends Controller
      */
     public function update(Request $request, SurgicalOperation $surgicalOperation)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -104,7 +105,8 @@ class SurgicalOperationController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'new_category' => 'nullable|string|max:255',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'show_in_nicu_radar' => 'nullable|boolean',
         ]);
 
         $category = $request->category;
@@ -118,10 +120,11 @@ class SurgicalOperationController extends Controller
         $surgicalOperation->update([
             'name' => $request->name,
             'category' => $category,
-            'is_active' => $request->has('is_active') ? $request->is_active : true
+            'is_active' => $request->has('is_active') ? $request->is_active : true,
+            'show_in_nicu_radar' => $request->boolean('show_in_nicu_radar'),
         ]);
 
-        return redirect()->route('surgical-operations.index')->with('success', 'تم تحديث بيانات العملية بنجاح: ' . $request->name);
+        return redirect()->route('surgical-operations.index')->with('success', 'تم تحديث بيانات العملية بنجاح: '.$request->name);
     }
 
     /**
@@ -129,7 +132,7 @@ class SurgicalOperationController extends Controller
      */
     public function renameCategory(Request $request)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -155,7 +158,7 @@ class SurgicalOperationController extends Controller
      */
     public function destroy(SurgicalOperation $surgicalOperation)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -167,7 +170,7 @@ class SurgicalOperationController extends Controller
         $name = $surgicalOperation->name;
         $surgicalOperation->delete(); // Soft delete
 
-        return redirect()->back()->with('success', 'تم حذف العملية الجراحية بنجاح: ' . $name);
+        return redirect()->back()->with('success', 'تم حذف العملية الجراحية بنجاح: '.$name);
     }
 
     /**
@@ -175,7 +178,7 @@ class SurgicalOperationController extends Controller
      */
     public function trashed()
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -192,13 +195,13 @@ class SurgicalOperationController extends Controller
      */
     public function restore($id)
     {
-        if (!auth()->user()->can('manage surgical operations')) {
+        if (! auth()->user()->can('manage surgical operations')) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $surgicalOperation = SurgicalOperation::withTrashed()->findOrFail($id);
         $surgicalOperation->restore();
 
-        return redirect()->back()->with('success', 'تم استعادة العملية الجراحية بنجاح: ' . $surgicalOperation->name);
+        return redirect()->back()->with('success', 'تم استعادة العملية الجراحية بنجاح: '.$surgicalOperation->name);
     }
 }

@@ -79,6 +79,24 @@
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
 ### ✅ Completed (المكتمل والمُختبر):
+- **المرحلة 143 (إنشاء رادار صالات العمليات والولادة المتوقعة لقسم الخدج NICU Delivery & C-Section Operations Radar مع التحكم الديناميكي بأنواع العمليات وإبراز الصالات):**
+  * **قاعدة البيانات والترحيل (`database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php` & `app/Models/SurgicalOperation.php`)**:
+    - إضافة حقل `show_in_nicu_radar` بجدول `surgical_operations` وتفعيل العمليات القيصرية والولادية الافتراضية تلقائياً.
+    - تحديث `$fillable` و `$casts` ونطاق `scopeNicuRadar`.
+  * **شاشة رادار العمليات والولادات (`app/Http/Controllers/NicuDeliveryRadarController.php`, `resources/views/nicu/delivery-radar.blade.php`)**:
+    - شاشة رادار لحظية متقدمة للمتابعة السريرية والاستعداد المسبق لكادر الخدج بدون أي أزرار حجز تجنباً للتضارب مع الاستعلامات.
+    - إبراز صالة العمليات (`Operation Theater`) بشكل جلي وشارة مخصصة (`[ 🚪 صالة العمليات: اسم الصالة ]` أو `[ ⚠️ بانتظار تحديد الصالة ]`).
+    - شريط الأيام الأسبوعية للتنقل بين الأيام، وإحصائيات سريعة للعمليات (المجدولة، بالانتظار، الجارية الآن بالصالات مع نبض وتنبيه أحمر، والمكتملة).
+    - فلترة وبحث فوري لحظي بالجافاسكريبت بالاسم أو الصالة أو الطبيب أو نوع العملية.
+  * **واجهة التحكم الديناميكية بالعمليات (`resources/views/nicu/delivery-radar-settings.blade.php`)**:
+    - واجهة إعدادات مخصصة للأدمن والمشرفين لإدارة وتفعيل/استبعاد أي عملية جراحية بالرادار بنقرة واحدة عبر AJAX Switch مع إشعار فوري (Toast).
+    - تكامل كامل مع شاشات دليل العمليات الجراحية (`create`, `edit`, `index`).
+  * **الصلاحيات والقوائم (`database/seeders/RolesAndPermissionsSeeder.php`, `resources/views/layouts/app.blade.php`, `resources/views/nicu/index.blade.php`)**:
+    - إضافة الصلاحيات: `view nicu delivery radar` (للأدمن وطبيب وتمريض الخدج)، و `manage nicu delivery radar settings` (للأدمن والمشرفين).
+    - إدراج رابط الرادار في القائمة الجانبية لقسم الخدج، وزر سريع في لوحة الخدج الرئيسية.
+  * **حزمة الاختبارات الآلية الشاملة (`tests/Feature/NicuDeliveryRadarTest.php`)**:
+    - تغطية شاملة لمنع غير المصرح لهم، عرض العمليات المشمولة بصالاتها وعزل غير المشمولة، فتح الإعدادات، وتبديل الحالة بالـ AJAX (5 passed, 22 assertions بنجاح 100%).
+
 - **المرحلة 142 (إنشاء وتعميم تبويب الحسابات المتكامل لقسم الخدج والحاضنات NICU Accounting & Analytics Module ضمن الحسابات العامة والمالية):**
   * **القائمة الجانبية الموحدة (`resources/views/layouts/app.blade.php`)**:
     - إضافة قسم فرعي جديد `حسابات الخدج والحاضنات` (`#nicuAccountingSubSection`) باللون الأزرق السماوي (`#0dcaf0`) تحت القائمة الموحدة "الحسابات العامة والمالية".
