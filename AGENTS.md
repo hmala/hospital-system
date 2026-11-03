@@ -54,6 +54,30 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-03 — المرحلة 153: دمج منظومات الموارد البشرية والرواتب وقسم الخدج والحاضنات ومركز العيون مع فرع main وتحصين المحطات الأساسية Complete Secure Integration of HR, NICU & Eye Center into Main with Core Stations Shielding)
+
+### Done
+- **الدمج الآمن لكافة منظومات فرع `hr` في `main` مع إبقاء فرع `hr` كاملاً**:
+  * دمج نظام الموارد البشرية والرواتب (HR & Payroll): الموظفين، الرواتب الشهرية والمسيرات، السلف، الإجازات، الغيابات، الإضافي، الجزاءات والمكافآت، وتوزيع الشفتات والجدولة.
+  * دمج قسم الخدج والحاضنات بالكامل (NICU & Incubators): رادار العمليات والولادات السريري المتقدم، قيود الإشغال الحية، مخططات النمو، الأوامر الطبية، جداول الرعاية والرضاعة، وإدارة حسابات وإيرادات الخدج المستقلة.
+  * دمج مركز وجراحة العيون (Eye Center): استقبال العيون، الفحص العيادي والبصري (OD/OS)، فحص النظارات، العمليات الجراحية، كاشير العيون ومخزن العيون.
+  * الحفاظ التام على فرع `hr` محلياً وعلى GitHub (`origin/hr`) دون حذفه كمرجع دائم.
+- **تحصين وتصحيح المحطات الأساسية للنظام ومنع الأخطاء**:
+  * فحص واجهة كاشير الإيصالات العامة وسندات القبض الحرارية (`showReceipt` / `printReceipt`) وإزالة الاستدعاءات غير المعرفة لتجنب أخطاء 500 في إيصالات العمليات والتحاليل.
+  * تصحيح نوع حركة الخزينة المركزية للخدج إلى `hospital_revenue` لمنع كسر قيود قاعدة البيانات.
+  * تصحيح استعلام مطابقة أدوية التمريض (MAR) ليكون متوافقاً ديناميكياً مع كافة قواعد البيانات.
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز كامل الاختبارات الآلية بنسبة 100% لكافة المحطات الأساسية:
+    - محطة العمليات الجراحية: `tests/Feature/SurgeryTest.php` (4/4 passed).
+    - محطة كاشير العمليات والدفع المركب: `tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php` (7/7 passed).
+    - محطة عهدة التمريض ومخازن الطوابق: `tests/Feature/FloorCustodianStockTransferTest.php` (11/11 passed).
+    - محطة تحاليل العمليات وطباعتها السريرية: `tests/Feature/SurgeryLabTestUnifiedFlowTest.php` (8/8 passed).
+    - محطة الموارد البشرية والرواتب: `tests/Feature/HREmployeeTest.php` (5/5 passed).
+    - محطة حسابات الخدج: `tests/Feature/NicuAccountingTest.php` (4/4 passed).
+    - محطة مركز وجراحة العيون: `tests/Feature/EyeCenterWorkflowTest.php` (15/15 passed).
+    - محطة رعاية الخدج السريرية: `tests/Feature/NicuWorkflowTest.php` (39/39 passed).
+  * رفع التحديثات إلى `origin/main` على GitHub بنجاح.
+
 ## Session log (2026-11-03 — المرحلة 152: تحديد وتعديل نوع حجز العملية ضمان أم كاش 100% في الحجز والتعديل وإبراز شارات التغطية وربطها التلقائي بالكاشير Surgery Reservation Insurance vs Cash Coverage Mode & Direct Cashier Alignment Flow)
 
 ### Done
