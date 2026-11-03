@@ -54,6 +54,29 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-03 — المرحلة 155: تطبيق مواصفات Spec-Kit وترسانة ECC ورادار وبحث عهدة الطابق ودورة إرجاع المواد الفائضة للمخزن الرئيسي Floor Sub-Store Stock Radar & Excess Item Return Workflow)
+
+### Done
+- **تطبيق منهجية Spec-Driven Development (SDD) بالمستندات الرسمية**:
+  * صياغة وثيقة المواصفات الكاملة ([specs/001-floor-store-and-returns/spec.md](file:///c:/wamp64/www/hospital-system/specs/001-floor-store-and-returns/spec.md)).
+  * صياغة الخطة المعمارية والتقنية ([specs/001-floor-store-and-returns/plan.md](file:///c:/wamp64/www/hospital-system/specs/001-floor-store-and-returns/plan.md)).
+  * صياغة ومتابعة قائمة المهام الذرية ([specs/001-floor-store-and-returns/tasks.md](file:///c:/wamp64/www/hospital-system/specs/001-floor-store-and-returns/tasks.md)).
+- **رادار وبحث عهدة الطابق اللحظي وتصنيفاتها السريعة ([resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * شريط بحث تفاعلي فائق السرعة بدون ريلود بالاسم والباركود والوجبة داخل تبويب عهدة الطابق (`#floor-store`).
+  * شارات تصفية سريعة (`Pill Filters`): `[الكل]`، `[💊 أدوية]`، `[🩹 مستلزمات]`، `[⚠️ نفاد]`، `[⏳ قريبة الانتهاء]`.
+  * زر إجرائي مباشر أمام كل وجبة: `[ ↩️ إرجاع ]` لفتح شاشة الإرجاع محملة بالوجبة تلقائياً.
+  * زر رئيسي بترويسة التبويب لطلب إرجاع عهدة للمخزن الرئيسي.
+- **منظومة إرجاع المخزون الذكية والمحصنة ([resources/views/stock-transfers/return.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/return.blade.php), [app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * قفل المخزن المصدر على طابق الممرض الحالي ومنع التلاعب به.
+  * حصر المواد على وجبات ورصيد المخزن الفرعي المتوفرة فعلياً (`current_qty > 0`).
+  * دعم إضافة أسطر مواد متعددة وتوثيق الأسباب المعتمدة (`فائض`, `إلغاء عملية`, `قرب انتهاء`, `تالف`).
+  * تصحيح خطأ صياغة Blade `@json` عبر تجهيز `$batchesData` مسبقاً في الكنترولر وتصحيح التوجيهات إلى `nursing-station.index`.
+  * تحصين الكميات ومنع تجاوز الرصيد المتاح في المتصفح والخادم.
+  * إبراز شارة `[ ↩️ إرجاع عهدة ]` وتوثيق أسباب الإرجاع في سجل الطلبات وسجل المعاينة.
+- **حزم الاختبارات الآلية الشاملة**:
+  * إنشاء واجتياز اختبار الميزة `tests/Feature/FloorStockReturnWorkflowTest.php` بنسبة 100% (5 passed, 29 assertions).
+  * استمرار اجتياز كافة اختبارات عهدة التمريض السابقة `tests/Feature/FloorCustodianStockTransferTest.php` (11 passed, 52 assertions).
+
 ## Session log (2026-11-03 — المرحلة 154: تصحيح وتوافقية توجيه صيانة الحاضنات ودعم PATCH و POST وتحصين واجهة الخدج Incubator Maintenance Route Method Alignment & NICU Shielding)
 
 ### Done

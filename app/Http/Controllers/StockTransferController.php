@@ -275,31 +275,101 @@ class StockTransferController extends Controller
 
     public function createReturn(Request $request)
     {
+        $user = Auth::user();
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
         $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
-        $purchase = null;
 
+        // 1. تحديد المخزن الفرعي (مخزن الطابق المصدر)
+        $selectedFromLocationId = $request->query('from_location_id');
+        if (! $selectedFromLocationId && $user && $user->location_id) {
+            $selectedFromLocationId = $user->location_id;
+        }
+
+        // قفل المخزن إذا كان المستخدم ممرضاً/أمين عهدة وليس مديراً عاماً
+        $isLockedToLocation = false;
+        if ($user && $user->location_id && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
+            $selectedFromLocationId = $user->location_id;
+            $isLockedToLocation = true;
+        }
+
+        $selectedFromLocation = $selectedFromLocationId ? Location::find($selectedFromLocationId) : $subLocations->first();
+
+        // 2. جلب وجبات المخزن الفرعي المتوفرة فعلياً فقط (current_qty > 0)
+        $floorBatches = collect();
+        if ($selectedFromLocation) {
+            $floorBatches = StockBatch::with('product')
+                ->where('location_id', $selectedFromLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get();
+        }
+
+        // 3. التحقق من وجود وجبة محددة مسبقاً (عبر النقر المباشر من جدول عهدة الطابق)
+        $preselectedBatch = null;
+        if ($request->filled('batch_id')) {
+            $preselectedBatch = $floorBatches->firstWhere('id', $request->query('batch_id'))
+                ?? StockBatch::with('product')->find($request->query('batch_id'));
+        }
+
+        // 4. أسباب الإرجاع القياسية
+        $standardReasons = [
+            'surplus' => 'فائض عن حاجة المريض / خروج المريض',
+            'cancelled_surgery' => 'إلغاء حجز العملية الجراحية',
+            'near_expiry' => 'قرب انتهاء الصلاحية للاستبدال',
+            'damaged' => 'مادة تالفة أو عبوة غير صالحة',
+            'other' => 'أخرى (يرجى التوضيح في الملاحظات)',
+        ];
+
+        // 5. تجهيز بيانات الوجبات كـ array للواجهة الأمامية
+        $batchesData = $floorBatches->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'product_id' => $b->product_id,
+                'name' => $b->product?->name ?? 'مادة غير معروفة',
+                'lot' => $b->internal_barcode ?: ($b->manufacturer_lot_number ?: '#'.$b->id),
+                'exp' => $b->expiry_date ? $b->expiry_date->format('Y-m-d') : 'غير محدد',
+                'qty' => $b->current_qty,
+                'unit' => $b->product?->unit ?? 'وحدة',
+            ];
+        })->values();
+
+        $purchase = null;
         if ($request->filled('purchase_id')) {
             $purchase = Purchase::with('items.product')->find($request->purchase_id);
         }
 
-        return view('stock-transfers.return', compact('mainLocations', 'subLocations', 'products', 'purchase'));
+        return view('stock-transfers.return', compact(
+            'mainLocations',
+            'subLocations',
+            'selectedFromLocation',
+            'isLockedToLocation',
+            'floorBatches',
+            'batchesData',
+            'preselectedBatch',
+            'standardReasons',
+            'purchase'
+        ));
     }
 
     public function storeReturn(Request $request)
     {
+        $user = Auth::user();
+
+        // 1. التحقق من صحة المدخلات الأساسية
         $request->validate([
             'from_location_id' => 'required|exists:locations,id',
             'to_location_id' => 'required|exists:locations,id|different:from_location_id',
-            'product_id' => 'required|exists:products,id',
-            'qty' => 'required|integer|min:1',
         ]);
 
         $fromLocationId = $request->from_location_id;
         $toLocationId = $request->to_location_id;
-        $productId = $request->product_id;
-        $qtyNeeded = $request->qty;
+
+        // التحقق الأمني: إذا كان المستخدم مرتبطاً بموقع معين وليس مديراً
+        if ($user && $user->location_id && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
+            if ($fromLocationId != $user->location_id) {
+                abort(403, 'غير مصرح لك بتقديم طلب إرجاع نيابة عن مخزن طابق آخر.');
+            }
+        }
 
         $fromLocation = Location::find($fromLocationId);
         $toLocation = Location::find($toLocationId);
@@ -308,32 +378,85 @@ class StockTransferController extends Controller
             return back()->withInput()->withErrors(['return' => 'يجب أن يكون الإرجاع من مخزن فرعي إلى مخزن رئيسي فقط.']);
         }
 
-        $batches = StockBatch::where('product_id', $productId)
-            ->where('location_id', $fromLocationId)
-            ->where('current_qty', '>', 0)
-            ->fefo()
-            ->get();
-
-        $availableQty = $batches->sum('current_qty');
-        if ($availableQty < $qtyNeeded) {
-            return back()->withInput()->withErrors(['qty' => 'الكمية المطلوبة تتجاوز المخزون المتاح في المخزن المحدد.']);
+        // 2. تجميع المواد (سواء أُرسلت كـ items مصفوفة متعددة أو حقول مفردة)
+        $rawItems = [];
+        if ($request->has('items') && is_array($request->items)) {
+            $rawItems = $request->items;
+        } elseif ($request->filled('product_id')) {
+            $rawItems = [
+                [
+                    'product_id' => $request->product_id,
+                    'batch_id' => $request->batch_id,
+                    'qty' => $request->qty,
+                    'reason' => $request->reason,
+                    'notes' => $request->notes,
+                ],
+            ];
         }
 
-        StockTransferRequest::create([
+        if (empty($rawItems)) {
+            return back()->withInput()->withErrors(['items' => 'يرجى تحديد مادة واحدة على الأقل للإرجاع.']);
+        }
+
+        $itemsPayload = [];
+
+        foreach ($rawItems as $index => $item) {
+            $productId = $item['product_id'] ?? null;
+            $batchId = $item['batch_id'] ?? null;
+            $qtyNeeded = (int) ($item['qty'] ?? 0);
+            $reason = $item['reason'] ?? ($request->input('reason') ?? 'فائض عن حاجة الطابق');
+            $notes = $item['notes'] ?? ($request->input('notes') ?? null);
+
+            if (! $productId || $qtyNeeded < 1) {
+                return back()->withInput()->withErrors(['qty' => 'يرجى تحديد المادة والكمية المطلوبة بدقة (الكمية يجب أن تكون 1 على الأقل).']);
+            }
+
+            // فحص الرصيد المتاح للوجبة أو للمادة في المخزن الفرعي
+            if ($batchId) {
+                $batch = StockBatch::where('id', $batchId)
+                    ->where('location_id', $fromLocationId)
+                    ->first();
+
+                if (! $batch || $batch->current_qty < $qtyNeeded) {
+                    $available = $batch ? $batch->current_qty : 0;
+
+                    return back()->withInput()->withErrors(['qty' => "الكمية المطلوبة ({$qtyNeeded}) تتجاوز الرصيد المتاح في الوجبة المحددة ({$available})."]);
+                }
+            } else {
+                $availableQty = StockBatch::where('product_id', $productId)
+                    ->where('location_id', $fromLocationId)
+                    ->where('current_qty', '>', 0)
+                    ->sum('current_qty');
+
+                if ($availableQty < $qtyNeeded) {
+                    return back()->withInput()->withErrors(['qty' => "الكمية المطلوبة ({$qtyNeeded}) تتجاوز المخزون المتاح في مخزن هذا الطابق ({$availableQty})."]);
+                }
+            }
+
+            $itemsPayload[] = [
+                'product_id' => (int) $productId,
+                'batch_id' => $batchId ? (int) $batchId : null,
+                'qty' => $qtyNeeded,
+                'reason' => $reason,
+                'notes' => $notes,
+            ];
+        }
+
+        $stockTransferRequest = StockTransferRequest::create([
             'from_location_id' => $fromLocationId,
             'to_location_id' => $toLocationId,
             'requested_by' => Auth::id(),
-            'items' => [
-                [
-                    'product_id' => $productId,
-                    'qty' => $qtyNeeded,
-                ],
-            ],
+            'items' => $itemsPayload,
             'status' => 'pending',
         ]);
 
+        if ($request->filled('from_nursing')) {
+            return redirect()->route('nursing-station.index', ['location_id' => $fromLocationId])
+                ->with('success', 'تم إنشاء طلب إرجاع المواد للمخزن الرئيسي بنجاح (طلب رقم #'.$stockTransferRequest->id.'). بانتظار اعتماد أمين المخزن.');
+        }
+
         return redirect()->route('stock-transfers.requests.index')
-            ->with('success', 'تم إنشاء طلب إرجاع المخزون. لا يتم تنفيذ الإرجاع إلا بعد موافقة المخزن الرئيسي.');
+            ->with('success', 'تم إنشاء طلب إرجاع المخزون بنجاح (طلب رقم #'.$stockTransferRequest->id.'). لا يتم تنفيذ الإرجاع إلا بعد موافقة المخزن الرئيسي.');
     }
 
     public function store(Request $request)
@@ -481,18 +604,23 @@ class StockTransferController extends Controller
             foreach ($stockTransferRequest->items as $item) {
                 $productId = $item['product_id'];
                 $qtyNeeded = $item['qty'];
+                $specifiedBatchId = $item['batch_id'] ?? null;
 
-                $batches = StockBatch::where('product_id', $productId)
+                $batchQuery = StockBatch::where('product_id', $productId)
                     ->where('location_id', $fromLocationId)
-                    ->where('current_qty', '>', 0)
-                    ->fefo()
-                    ->get();
+                    ->where('current_qty', '>', 0);
+
+                if ($specifiedBatchId) {
+                    $batchQuery->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [(int) $specifiedBatchId]);
+                }
+
+                $batches = $batchQuery->fefo()->get();
 
                 $availableQty = $batches->sum('current_qty');
                 if ($availableQty < $qtyNeeded) {
                     DB::rollBack();
 
-                    return back()->withErrors(['approve' => 'الكمية المطلوبة لا تتوفر في المخزن الرئيسي.']);
+                    return back()->withErrors(['approve' => 'الكمية المطلوبة لا تتوفر في المخزن المصدر.']);
                 }
 
                 foreach ($batches as $batch) {

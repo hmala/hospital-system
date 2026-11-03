@@ -150,8 +150,20 @@
                             <tbody>
                                 @foreach($stockTransferRequest->items as $item)
                                     <tr>
-                                        <td>{{ $products[$item['product_id']]->name ?? 'غير معروف' }}</td>
-                                        <td class="fw-bold">{{ $item['qty'] }}</td>
+                                        <td>
+                                            <div class="fw-bold">{{ $products[$item['product_id']]->name ?? 'غير معروف' }}</div>
+                                            @if(!empty($item['reason']))
+                                                <div class="mt-1">
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5 small">
+                                                        <i class="fas fa-undo me-1"></i> سبب الإرجاع: {{ $item['reason'] }}
+                                                    </span>
+                                                </div>
+                                            @endif
+                                            @if(!empty($item['notes']))
+                                                <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i> {{ $item['notes'] }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="fw-bold text-primary fs-6">{{ $item['qty'] }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

@@ -64,10 +64,16 @@
                         @forelse($requests as $req)
                             @php
                                 $itemsCount = is_array($req->items) ? count($req->items) : (json_decode($req->items, true) ? count(json_decode($req->items, true)) : 0);
+                                $isReturn = $req->fromLocation?->type === 'sub' && $req->toLocation?->type === 'main';
                             @endphp
                             <tr>
                                 <td class="ps-3">
                                     <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">#{{ $req->id }}</span>
+                                    @if($isReturn)
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5 ms-1 small">
+                                            <i class="fas fa-undo-alt me-0.5"></i> إرجاع عهدة
+                                        </span>
+                                    @endif
                                 </td>
                                 <td>
                                     <span class="fw-semibold text-dark"><i class="fas fa-warehouse text-primary me-1"></i> {{ $req->fromLocation?->name ?? 'غير محدد' }}</span>

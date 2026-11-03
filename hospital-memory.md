@@ -78,6 +78,29 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 155 (2026-11-03) — رادار وبحث عهدة الطابق ودورة إرجاع المواد الفائضة للمخزن الرئيسي وفق معمارية Spec-Kit وترسانة ECC (Floor Sub-Store Stock Radar & Excess Item Return Workflow):**
+  * **تطبيق منهجية Spec-Driven Development (SDD)**:
+    - صياغة وثيقة المواصفات الرسمية `specs/001-floor-store-and-returns/spec.md`.
+    - صياغة الخطة التقنية والمعمارية `specs/001-floor-store-and-returns/plan.md`.
+    - صياغة قائمة المهام الذرية وتتبع إنجازها `specs/001-floor-store-and-returns/tasks.md`.
+  * **رادار عهدة الطابق اللحظي التفاعلي بمحطة التمريض (`resources/views/surgery-stations/nursing/index.blade.php`)**:
+    - بناء شريط بحث فوري فائق السرعة بدون ريلود بالاسم والباركود والوجبة داخل تبويب عهدة الطابق (`#floor-store`).
+    - توفير شارات تصفية سريعة (`Pill Filters`): `[الكل]`، `[💊 أدوية]`، `[🩹 مستلزمات]`، `[⚠️ نفاد]`، `[⏳ قريبة الانتهاء]`.
+    - إضافة زر إجرائي مباشر أمام كل وجبة: `[ ↩️ إرجاع ]` لتعبئة نموذج الإرجاع تلقائياً بالوجبة والمخزن.
+    - إضافة زر رئيسي في ترويسة التبويب لطلب إرجاع عهدة مواد للمخزن الرئيسي.
+  * **منظومة إرجاع المخزون الذكية والمحصنة (`resources/views/stock-transfers/return.blade.php`, `app/Http/Controllers/StockTransferController.php`)**:
+    - قفل المخزن المصدر على عهدة طابق الممرض تلقائياً ومنع التلاعب به.
+    - حصر قائمة المواد المنسدلة على وجبات ورصيد المخزن الفرعي المتوفرة فعلياً (`current_qty > 0`).
+    - دعم إضافة أسطر مواد متعددة ديناميكياً وتوثيق الأسباب المعتمدة (`فائض`, `إلغاء عملية`, `قرب انتهاء`, `تالف`).
+    - حماية الكميات والتحقق الصارم في المتصفح والخادم لمنع طلب كميات تتجاوز رصيد الطابق.
+    - تصحيح وتأكيد توجيهات العودة إلى `nursing-station.index`.
+  * **دورة الاعتماد بالمخزن الرئيسي**:
+    - إبراز شارة `[ ↩️ إرجاع عهدة ]` في سجل الطلبات وسجل المعاينة مع توثيق الأسباب والملاحظات.
+    - خصم الكميات من الطابق بدقة وإضافتها للمستودع المركزي وتوثيق حركة `StockMovement` بنوع `transfer`.
+  * **حزم الاختبارات الآلية الشاملة**:
+    - إنشاء واجتياز اختبار الميزة المتكامل `tests/Feature/FloorStockReturnWorkflowTest.php` بنسبة 100% (5 passed, 29 assertions).
+    - استمرار اجتياز كافة اختبارات عهدة التمريض السابقة `tests/Feature/FloorCustodianStockTransferTest.php` (11 passed, 52 assertions).
+
 - **المرحلة 154 (2026-11-03) — تصحيح توافقية مسار صيانة الحاضنات ودعم PATCH و POST وتحصين قسم الخدج (Incubator Maintenance Route Method Alignment & NICU Shielding):**
   * **معالجة خطأ 405 MethodNotAllowedHttpException في صيانة الحاضنات**:
     - ترقية مسار `incubators/{incubator}/toggle-maintenance` في `routes/web.php` ليدعم كلتا الطريقتين `POST` و `PATCH` عبر `Route::match(['post', 'patch'], ...)` لتتوافق مباشرة مع نموذج الصيانة المرسل بـ `@method('PATCH')` في `resources/views/incubators/show.blade.php`.

@@ -362,7 +362,10 @@
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         @if($isFloorCustodian)
                                             <a href="{{ route('stock-transfers.create', ['to_location_id' => $currentLocation?->id]) }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm text-dark">
-                                                <i class="fas fa-plus-circle me-1"></i> + طلب تعزيز مواد من المخزن الرئيسي
+                                                <i class="fas fa-plus-circle me-1"></i> + طلب تعزيز مواد
+                                            </a>
+                                            <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $currentLocation?->id, 'from_nursing' => 1]) }}" class="btn btn-outline-danger rounded-pill px-3 py-2 fw-bold shadow-xs">
+                                                <i class="fas fa-undo-alt me-1"></i> إرجاع عهدة للمخزن الرئيسي
                                             </a>
                                         @else
                                             <button class="btn btn-light rounded-pill px-3 py-2 text-muted border shadow-xs" disabled title="خاص بمسؤول عهدة الطابق فقط">
@@ -380,15 +383,42 @@
                                 {{-- 1. جدول رصيد المواد في عهدة الطابق --}}
                                 <div class="col-lg-8">
                                     <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
-                                        <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
-                                            <h6 class="mb-0 fw-bold text-dark">
-                                                <i class="fas fa-pills text-primary me-2"></i> المواد المتوفرة حالياً في عهدة الطابق
-                                            </h6>
-                                            <span class="badge bg-primary text-white rounded-pill px-3 py-1.5">{{ $stockBatches->count() }} مادة</span>
+                                        <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-pills text-primary fs-5"></i>
+                                                <h6 class="mb-0 fw-bold text-dark">المواد والوجبات المتوفرة في عهدة الطابق</h6>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-primary text-white rounded-pill px-3 py-1.5" id="stockItemsCountBadge">{{ $stockBatches->count() }} مادة</span>
+                                            </div>
                                         </div>
+
+                                        {{-- شريط البحث اللحظي وشارات التصفية --}}
+                                        <div class="p-3 bg-light border-bottom">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-6">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                                                        <input type="text" id="floorStockSearchInput" class="form-control bg-white border-start-0 ps-0" placeholder="بحث باسم المادة، الباركود، أو رقم الوجبة...">
+                                                        <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" id="clearFloorStockSearch" style="display:none;">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 d-flex align-items-center gap-1.5 flex-wrap justify-content-md-end">
+                                                    <span class="text-muted small me-1">تصفية:</span>
+                                                    <button type="button" class="btn btn-xs btn-dark rounded-pill px-2.5 py-1 stock-filter-btn active" data-filter="all">الكل</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="medicine">💊 أدوية</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="supplies">🩹 مستلزمات</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="low">⚠️ نفاد</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="expiring">⏳ قريبة</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="card-body p-0">
                                             <div class="table-responsive">
-                                                <table class="table table-hover align-middle mb-0">
+                                                <table class="table table-hover align-middle mb-0" id="floorStockTable">
                                                     <thead class="table-light">
                                                         <tr>
                                                             <th class="py-2.5 px-3">المادة / الدواء</th>
@@ -396,17 +426,28 @@
                                                             <th class="py-2.5 text-center">تاريخ الصلاحية</th>
                                                             <th class="py-2.5 text-center">رقم الوجبة</th>
                                                             <th class="py-2.5 text-center">الحالة</th>
+                                                            <th class="py-2.5 text-center" style="width: 100px;">إجراء</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody>
+                                                    <tbody id="floorStockTableBody">
                                                         @forelse($stockBatches as $batch)
                                                             @php
                                                                 $isExpiringSoon = $batch->expiry_date && $batch->expiry_date->diffInDays(now()) <= 60;
                                                                 $isLowStock = $batch->current_qty <= ($batch->product?->alert_quantity ?? 5);
+                                                                $categoryRaw = mb_strtolower($batch->product?->category ?? '');
+                                                                $isMedicine = str_contains($categoryRaw, 'أدوية') || str_contains($categoryRaw, 'دواء') || str_contains($categoryRaw, 'pharma') || str_contains($categoryRaw, 'med');
+                                                                $isSupply = str_contains($categoryRaw, 'مستلزم') || str_contains($categoryRaw, 'supply') || str_contains($categoryRaw, 'جراح');
                                                             @endphp
-                                                            <tr>
+                                                            <tr class="stock-row"
+                                                                data-name="{{ mb_strtolower($batch->product?->name ?? '') }}"
+                                                                data-barcode="{{ mb_strtolower($batch->internal_barcode ?: ($batch->manufacturer_lot_number ?: '#'.$batch->id)) }}"
+                                                                data-category="{{ $categoryRaw }}"
+                                                                data-is-medicine="{{ $isMedicine ? '1' : '0' }}"
+                                                                data-is-supply="{{ $isSupply ? '1' : '0' }}"
+                                                                data-is-low="{{ $isLowStock ? '1' : '0' }}"
+                                                                data-is-expiring="{{ $isExpiringSoon ? '1' : '0' }}">
                                                                 <td class="px-3">
-                                                                    <div class="fw-bold text-dark">{{ $batch->product?->name ?? 'مادة غير معروفة' }}</div>
+                                                                    <div class="fw-bold text-dark item-name">{{ $batch->product?->name ?? 'مادة غير معروفة' }}</div>
                                                                     <small class="text-muted">{{ $batch->product?->category ?? 'عام' }} • وحدة: {{ $batch->product?->unit ?? 'قطعة' }}</small>
                                                                 </td>
                                                                 <td class="text-center">
@@ -436,10 +477,21 @@
                                                                         <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">متوفر</span>
                                                                     @endif
                                                                 </td>
+                                                                <td class="text-center">
+                                                                    @if($isFloorCustodian)
+                                                                        <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $currentLocation?->id, 'batch_id' => $batch->id, 'from_nursing' => 1]) }}"
+                                                                           class="btn btn-sm btn-outline-warning rounded-pill px-2.5 py-1 fw-bold text-nowrap shadow-xs"
+                                                                           title="إرجاع هذه الوجبة للمخزن الرئيسي">
+                                                                            <i class="fas fa-undo-alt me-1"></i> إرجاع
+                                                                        </a>
+                                                                    @else
+                                                                        <span class="text-muted small">-</span>
+                                                                    @endif
+                                                                </td>
                                                             </tr>
                                                         @empty
                                                             <tr>
-                                                                <td colspan="5" class="text-center py-5 text-muted">
+                                                                <td colspan="6" class="text-center py-5 text-muted">
                                                                     <i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i>
                                                                     <p class="mb-0 fw-semibold">لا يوجد رصيد مواد مسجل في مخزن هذا الطابق حالياً</p>
                                                                     @if($isFloorCustodian)
@@ -450,6 +502,12 @@
                                                                 </td>
                                                             </tr>
                                                         @endforelse
+                                                        <tr id="noMatchingStockRow" style="display: none;">
+                                                            <td colspan="6" class="text-center py-4 text-muted">
+                                                                <i class="fas fa-search fa-2x mb-2 text-secondary opacity-50"></i>
+                                                                <p class="mb-0 fw-semibold">لا توجد مواد تطابق معايير البحث والتصفية المحددة.</p>
+                                                            </td>
+                                                        </tr>
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -506,3 +564,105 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('floorStockSearchInput');
+        const clearBtn = document.getElementById('clearFloorStockSearch');
+        const filterBtns = document.querySelectorAll('.stock-filter-btn');
+        const rows = document.querySelectorAll('#floorStockTableBody .stock-row');
+        const noMatchRow = document.getElementById('noMatchingStockRow');
+        const countBadge = document.getElementById('stockItemsCountBadge');
+
+        let currentFilter = 'all';
+
+        function filterStockTable() {
+            const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+            let visibleCount = 0;
+
+            if (clearBtn) {
+                clearBtn.style.display = query.length > 0 ? 'inline-block' : 'none';
+            }
+
+            rows.forEach(row => {
+                const name = row.getAttribute('data-name') || '';
+                const barcode = row.getAttribute('data-barcode') || '';
+                const isMedicine = row.getAttribute('data-is-medicine') === '1';
+                const isSupply = row.getAttribute('data-is-supply') === '1';
+                const isLow = row.getAttribute('data-is-low') === '1';
+                const isExpiring = row.getAttribute('data-is-expiring') === '1';
+
+                const matchesText = !query || name.includes(query) || barcode.includes(query);
+
+                let matchesCategory = true;
+                if (currentFilter === 'medicine') {
+                    matchesCategory = isMedicine;
+                } else if (currentFilter === 'supplies') {
+                    matchesCategory = isSupply;
+                } else if (currentFilter === 'low') {
+                    matchesCategory = isLow;
+                } else if (currentFilter === 'expiring') {
+                    matchesCategory = isExpiring;
+                }
+
+                if (matchesText && matchesCategory) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noMatchRow) {
+                noMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+
+            if (countBadge) {
+                countBadge.textContent = visibleCount + ' مادة';
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterStockTable);
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                filterStockTable();
+                searchInput.focus();
+            });
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                filterBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-dark', 'btn-warning', 'btn-danger');
+                    if (b.getAttribute('data-filter') === 'low') {
+                        b.classList.add('btn-outline-warning');
+                    } else if (b.getAttribute('data-filter') === 'expiring') {
+                        b.classList.add('btn-outline-danger');
+                    } else {
+                        b.classList.add('btn-outline-secondary');
+                    }
+                });
+
+                this.classList.add('active');
+                this.classList.remove('btn-outline-secondary', 'btn-outline-warning', 'btn-outline-danger');
+                const filter = this.getAttribute('data-filter');
+                if (filter === 'low') {
+                    this.classList.add('btn-warning');
+                } else if (filter === 'expiring') {
+                    this.classList.add('btn-danger');
+                } else {
+                    this.classList.add('btn-dark');
+                }
+
+                currentFilter = filter;
+                filterStockTable();
+            });
+        });
+    });
+</script>
+@endpush
