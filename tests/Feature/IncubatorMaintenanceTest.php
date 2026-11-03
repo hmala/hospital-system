@@ -80,3 +80,4 @@ class IncubatorMaintenanceTest extends TestCase
         $response->assertStatus(403);
     }
 }
+
