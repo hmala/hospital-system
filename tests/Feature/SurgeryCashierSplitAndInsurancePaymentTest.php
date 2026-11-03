@@ -4,11 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Models\HealthInsuranceCategory;
 use App\Models\Hospital;
+use App\Models\HospitalExtraService;
 use App\Models\LabTest;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\Surgery;
+use App\Models\SurgeryExtraService;
 use App\Models\SurgeryLabTest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -288,5 +291,214 @@ class SurgeryCashierSplitAndInsurancePaymentTest extends TestCase
         $this->assertEquals(400000, (float) $surgery->surgery_fee_paid_amount);
         $this->assertEquals('partial', $surgery->surgery_fee_paid);
         $this->assertEquals('partial', $surgery->payment_status);
+    }
+
+    public function test_cash_surgery_with_per_item_bundle_and_unbundled_services(): void
+    {
+        $cashPatientUser = User::factory()->create(['name' => 'مريض كاش']);
+        $cashPatient = Patient::create([
+            'user_id' => $cashPatientUser->id,
+            'insurance_type' => 'none',
+        ]);
+
+        $surgery = Surgery::create([
+            'patient_id' => $cashPatient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'جراحة عامة',
+            'surgery_fee' => 1000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $test = LabTest::create([
+            'name' => 'CBC test',
+            'code' => 'CBC',
+            'price' => 20000,
+            'status' => 'active',
+            'main_category' => 'Hematology',
+        ]);
+
+        $surgLabTest = SurgeryLabTest::create([
+            'surgery_id' => $surgery->id,
+            'lab_test_id' => $test->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        $ecgService = HospitalExtraService::create([
+            'name' => 'تخطيط قلب',
+            'code' => 'ECG01',
+            'category' => 'medical',
+            'default_price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $surgExtra = SurgeryExtraService::create([
+            'surgery_id' => $surgery->id,
+            'service_id' => $ecgService->id,
+            'name' => 'تخطيط قلب',
+            'price' => 15000,
+            'quantity' => 1,
+            'total_amount' => 15000,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        // Scenario: CBC is unbundled (not in package_included), ECG is bundled (package_included.extra => 1)
+        $postData = [
+            'pay_surgery' => '1',
+            'surgery_payment_type' => 'full',
+            'pay_lab_tests' => [$surgLabTest->id],
+            'pay_extra_services' => [$surgExtra->id],
+            'package_included' => [
+                'extra' => [$surgExtra->id => '1'],
+                // lab is unbundled (omitted from package_included.lab)
+            ],
+            'payment_method' => 'cash',
+            'amount' => 1020000, // 1,000,000 surgery + 20,000 unbundled lab + 0 bundled ECG
+            'insurance_type' => 'none',
+        ];
+
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery->id), $postData);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+
+        $payment = Payment::latest()->first();
+        $this->assertEquals(1020000, (float) $payment->amount);
+        $this->assertEquals(1020000, (float) $payment->total_amount);
+        $this->assertEquals(1020000, (float) $payment->patient_share);
+        $this->assertEquals(0, (float) $payment->insurance_share);
+
+        // CBC was unbundled and paid
+        $surgLabTest->refresh();
+        $this->assertEquals('paid', $surgLabTest->payment_status);
+        $this->assertEquals($payment->id, $surgLabTest->payment_id);
+        $this->assertStringNotContainsString('(مشمول ضمن باقة العملية)', (string) $surgLabTest->notes);
+
+        // ECG was bundled and paid with package note
+        $surgExtra->refresh();
+        $this->assertEquals('paid', $surgExtra->payment_status);
+        $this->assertEquals($payment->id, $surgExtra->payment_id);
+        $this->assertStringContainsString('(مشمول ضمن باقة العملية)', (string) $surgExtra->notes);
+    }
+
+    public function test_insured_surgery_with_unbundled_lab_test_and_unbundled_ecg_calculates_granular_copays(): void
+    {
+        $categoryH = HealthInsuranceCategory::create([
+            'name' => 'الفئة H',
+            'code' => 'H',
+            'surgery_copay' => 25.0,
+            'lab_copay' => 25.0,
+            'radiology_copay' => 25.0,
+            'consultation_copay' => 10.0,
+            'is_active' => true,
+        ]);
+
+        $insuredUser = User::factory()->create(['name' => 'مريض ضمان فئة H']);
+        $insuredPatient = Patient::create([
+            'user_id' => $insuredUser->id,
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'HI-CAT-H-001',
+            'health_insurance_category_id' => $categoryH->id,
+            'copay_percentage' => 25.0,
+        ]);
+
+        $surgery = Surgery::create([
+            'patient_id' => $insuredPatient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'جيوب انفية',
+            'surgery_fee' => 1000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'hi',
+        ]);
+
+        $hivTest = LabTest::create([
+            'name' => 'HIV titer',
+            'code' => 'HIV',
+            'price' => 10000,
+            'hi_price' => 8000,
+            'status' => 'active',
+            'main_category' => 'Virology',
+        ]);
+
+        $surgLabTest = SurgeryLabTest::create([
+            'surgery_id' => $surgery->id,
+            'lab_test_id' => $hivTest->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        $ecgService = HospitalExtraService::create([
+            'name' => 'تخطيط قلب',
+            'code' => 'ECG',
+            'category' => 'medical',
+            'default_price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $surgExtra = SurgeryExtraService::create([
+            'surgery_id' => $surgery->id,
+            'service_id' => $ecgService->id,
+            'name' => 'تخطيط قلب',
+            'price' => 15000,
+            'quantity' => 1,
+            'total_amount' => 15000,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        // Both HIV and ECG are unbundled (package_included is empty array)
+        // Calculations:
+        // Surgery: 1,000,000 * 25% = 250,000 patient share, 750,000 insurance share
+        // Lab (HIV): HI price 8,000 * 25% = 2,000 patient share, 6,000 insurance share
+        // Extra (ECG medical): 15,000 * 10% (consultation/ecg copay) = 1,500 patient share, 13,500 insurance share
+        // Total approved: 1,000,000 + 8,000 + 15,000 = 1,023,000 IQD
+        // Total patient: 250,000 + 2,000 + 1,500 = 253,500 IQD
+        // Total insurance: 750,000 + 6,000 + 13,500 = 769,500 IQD
+
+        $postData = [
+            'pay_surgery' => '1',
+            'surgery_payment_type' => 'full',
+            'pay_lab_tests' => [$surgLabTest->id],
+            'pay_extra_services' => [$surgExtra->id],
+            'package_included' => [
+                'lab' => [],
+                'extra' => [],
+            ],
+            'payment_method' => 'insurance',
+            'amount' => 253500,
+            'insurance_type' => 'hi',
+            'copay_percentage' => 25,
+        ];
+
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery->id), $postData);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+
+        $payment = Payment::latest()->first();
+        $this->assertEquals(253500, (float) $payment->amount);
+        $this->assertEquals(1023000, (float) $payment->total_amount);
+        $this->assertEquals(253500, (float) $payment->patient_share);
+        $this->assertEquals(769500, (float) $payment->insurance_share);
+        $this->assertEquals('insurance', $payment->payment_method);
+        $this->assertEquals('hi', $payment->insurance_type);
+
+        $surgLabTest->refresh();
+        $this->assertEquals('paid', $surgLabTest->payment_status);
+        $this->assertEquals($payment->id, $surgLabTest->payment_id);
+
+        $surgExtra->refresh();
+        $this->assertEquals('paid', $surgExtra->payment_status);
+        $this->assertEquals($payment->id, $surgExtra->payment_id);
     }
 }

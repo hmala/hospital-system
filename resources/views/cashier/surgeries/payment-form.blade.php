@@ -673,28 +673,39 @@
                             </div>
                         @endif
 
-                        <!-- خيار الشمولية -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="inclusive" name="inclusive" {{ old('inclusive') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="inclusive">
-                                ✅ <strong>شاملة</strong> – التكلفة تشمل جميع المصاريف المسبقة (التحاليل، الغرفة، الأشعة، ...)
-                            </label>
+                        <!-- خيار الشمولية العام أو الفردي للعمليات -->
+                        <div class="card border-primary border-opacity-25 rounded-3 mb-4 bg-primary-subtle bg-opacity-10 shadow-2xs">
+                            <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="form-check form-switch m-0 fs-5">
+                                        <input class="form-check-input" type="checkbox" id="inclusive" name="inclusive" {{ old('inclusive') ? 'checked' : '' }} style="cursor: pointer;">
+                                    </div>
+                                    <div>
+                                        <label class="form-check-label fw-bold text-dark mb-0 d-block" for="inclusive" style="cursor: pointer;">
+                                            ✨ باقة شاملة بالكامل (All-Inclusive Surgery Package)
+                                        </label>
+                                        <small class="text-muted">
+                                            تفعيل هذا الخيار يشمل كافة التحاليل، الفحوصات، وتخطيط القلب مجاناً ضمن أجور الجراحة (0 د.ع إضافي). كما يمكنك التحكم بكل خدمة على انفراد أدناه.
+                                        </small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2 py-1">
+                                    <i class="fas fa-sliders-h me-1"></i>تحكم فردي متوفر لكل بند في الجدول
+                                </span>
+                            </div>
                         </div>
-                        <small class="text-muted">عند تفعيل هذا الخيار ستُحتسب فقط رسوم العملية وسيتم اعتباره كغطاء كامل للتكاليف الأخرى.</small>
-                    </div>
 
-                    <!-- العناصر المعلقة للدفع -->
+                        <!-- العناصر المعلقة للدفع -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="text-warning mb-0">
                                     <i class="fas fa-clock me-2"></i>
-                                    العناصر المعلقة - اختر ما تريد دفعه الآن
+                                    العناصر المعلقة - اختر ما تريد دفعه الآن مع ضبط الشمولية بالباقة
                                 </h6>
                                 <div>
                                     <button type="button" class="btn btn-sm btn-outline-success me-2" id="selectAllBtn">
                                         <i class="fas fa-check-double me-1"></i>
-                                        تحديد الكل
+                                        تحديد الكل للدفع
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
                                         <i class="fas fa-times me-1"></i>
@@ -704,15 +715,15 @@
                             </div>
 
                             <div class="table-responsive">
-                                <table class="table table-bordered">
+                                <table class="table table-bordered align-middle" id="surgeryItemsTable">
                                     <thead class="table-warning">
                                         <tr>
                                             <th style="width: 50px;" class="text-center">
                                                 <i class="fas fa-check-square"></i>
                                             </th>
-                                            <th>البند</th>
-                                            <th>التفاصيل</th>
-                                            <th class="text-end">التكلفة (IQD)</th>
+                                            <th style="width: 220px;">البند والخدمة</th>
+                                            <th>التفاصيل ومحدد الشمولية ضمن باقة الجراحة</th>
+                                            <th class="text-end" style="width: 170px;">التكلفة / حصة المريض</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -847,49 +858,71 @@
                                                            id="selectAllLab">
                                                 </td>
                                                 <td colspan="3">
-                                                    <strong>
-                                                        <i class="fas fa-flask me-2"></i>
-                                                        التحاليل المعلقة ({{ $pendingLabTests->count() }})
-                                                    </strong>
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <strong>
+                                                            <i class="fas fa-flask me-2"></i>
+                                                            التحاليل المعلقة ({{ $pendingLabTests->count() }})
+                                                        </strong>
+                                                        <span class="badge bg-white text-info border small">
+                                                            <i class="fas fa-info-circle me-1"></i>يمكن جعلها مشمولة بالعملية أو تسديدها كخدمة منفصلة
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             @foreach($pendingLabTests as $labTest)
                                                 @php
                                                     $lModel = $labTest->labTest;
+                                                    $lBase = (float)($lModel->price ?? 0);
+                                                    $lHi = (float)(($lModel && $lModel->hi_price > 0) ? $lModel->hi_price : $lBase);
+                                                    $lMoi = (float)(($lModel && $lModel->moi_price > 0) ? $lModel->moi_price : $lBase);
                                                 @endphp
-                                                <tr>
+                                                <tr class="align-middle item-row" data-item-group="lab" data-item-id="{{ $labTest->id }}">
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item lab-test-item" 
                                                                name="pay_lab_tests[]" 
                                                                value="{{ $labTest->id }}"
-                                                               data-base-price="0"
-                                                               data-moi-price="0"
-                                                               data-hi-price="0"
-                                                               data-is-moi-active="1"
-                                                               data-is-hi-active="1"
+                                                               data-base-price="{{ $lBase }}"
+                                                               data-moi-price="{{ $lMoi }}"
+                                                               data-hi-price="{{ $lHi }}"
+                                                               data-is-moi-active="{{ ($lModel?->is_moi_active ?? true) ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ ($lModel?->is_hi_active ?? true) ? '1' : '0' }}"
+                                                               data-item-type="lab"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-vial text-primary me-2"></i>
-                                                        تحليل روتيني للعملية
+                                                        <span class="fw-semibold">تحليل روتيني للعملية</span>
                                                     </td>
                                                     <td>
-                                                        <span class="fw-semibold">{{ $lModel->name ?? 'غير محدد' }}</span> 
-                                                        <small class="text-muted">({{ $lModel->code ?? '-' }})</small>
-                                                        <span class="badge bg-success-subtle text-success border border-success ms-2 small">
-                                                            <i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)
-                                                        </span>
+                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                            <div>
+                                                                <strong class="text-dark">{{ $lModel->name ?? 'غير محدد' }}</strong> 
+                                                                <small class="text-muted">({{ $lModel->code ?? '-' }})</small>
+                                                            </div>
+                                                            <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
+                                                                <input class="form-check-input package-inclusion-switch" type="checkbox" 
+                                                                       name="package_included[lab][{{ $labTest->id }}]" 
+                                                                       id="pkg_incl_lab_{{ $labTest->id }}" 
+                                                                       value="1" 
+                                                                       checked>
+                                                                <label class="form-check-label small fw-bold mb-0" for="pkg_incl_lab_{{ $labTest->id }}" style="cursor: pointer;">
+                                                                    <span class="package-status-badge badge bg-success-subtle text-success border border-success">
+                                                                        <i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                    <td class="text-end item-price-display text-success fw-bold">
-                                                        0 د.ع <small class="text-muted">(مشمول)</small>
+                                                    <td class="text-end item-price-display fw-bold">
+                                                        0 د.ع
                                                     </td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع التحاليل المعلقة:</strong></td>
-                                                <td class="text-end"><strong id="pending_lab_fee_display" class="text-success">0 د.ع</strong> <small class="text-muted">(مشمولة بالعملية)</small></td>
+                                                <td class="text-end"><strong id="pending_lab_fee_display" class="text-success">0 د.ع</strong></td>
                                             </tr>
                                         @endif
 
@@ -902,10 +935,15 @@
                                                            id="selectAllRadiology">
                                                 </td>
                                                 <td colspan="3">
-                                                    <strong>
-                                                        <i class="fas fa-x-ray me-2"></i>
-                                                        الفحوصات الإشعاعية المعلقة ({{ $pendingRadiologyTests->count() }})
-                                                    </strong>
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <strong>
+                                                            <i class="fas fa-x-ray me-2"></i>
+                                                            الفحوصات الإشعاعية المعلقة ({{ $pendingRadiologyTests->count() }})
+                                                        </strong>
+                                                        <span class="badge bg-white text-secondary border small">
+                                                            <i class="fas fa-info-circle me-1"></i>يمكن جعلها مشمولة بالعملية أو منفصلة
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             @foreach($pendingRadiologyTests as $radiologyTest)
@@ -917,7 +955,7 @@
                                                     $rMoiActive = (bool)($rModel ? ($rModel->is_moi_active ?? true) : true);
                                                     $rHiActive = (bool)($rModel ? ($rModel->is_hi_active ?? true) : true);
                                                 @endphp
-                                                <tr>
+                                                <tr class="align-middle item-row" data-item-group="radiology" data-item-id="{{ $radiologyTest->id }}">
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item radiology-test-item" 
@@ -928,14 +966,34 @@
                                                                data-hi-price="{{ $rHi }}"
                                                                data-is-moi-active="{{ $rMoiActive ? '1' : '0' }}"
                                                                data-is-hi-active="{{ $rHiActive ? '1' : '0' }}"
+                                                               data-item-type="radiology"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
                                                         <i class="fas fa-radiation text-info me-2"></i>
-                                                        أشعة
+                                                        <span class="fw-semibold">فحص إشعاعي</span>
                                                     </td>
-                                                    <td>{{ $rModel->name ?? 'غير محدد' }}</td>
-                                                    <td class="text-end item-price-display">{{ number_format($rBase, 0) }}</td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                            <div>
+                                                                <strong class="text-dark">{{ $rModel->name ?? 'غير محدد' }}</strong>
+                                                            </div>
+                                                            <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
+                                                                <input class="form-check-input package-inclusion-switch" type="checkbox" 
+                                                                       name="package_included[radiology][{{ $radiologyTest->id }}]" 
+                                                                       id="pkg_incl_rad_{{ $radiologyTest->id }}" 
+                                                                       value="1">
+                                                                <label class="form-check-label small fw-bold mb-0" for="pkg_incl_rad_{{ $radiologyTest->id }}" style="cursor: pointer;">
+                                                                    <span class="package-status-badge badge bg-secondary-subtle text-secondary border">
+                                                                        <i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end item-price-display fw-bold">
+                                                        {{ number_format($rBase, 0) }} د.ع
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                             <tr class="table-light">
@@ -954,28 +1012,40 @@
                                                            id="selectAllExtraServices" checked>
                                                 </td>
                                                 <td colspan="3">
-                                                    <strong>
-                                                        <i class="fas fa-concierge-bell me-2 text-warning"></i>
-                                                        الخدمات الإضافية والفندقية المعلقة ({{ $pendingExtraServices->count() }})
-                                                    </strong>
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <strong>
+                                                            <i class="fas fa-concierge-bell me-2 text-warning"></i>
+                                                            الخدمات الإضافية والفندقية المعلقة ({{ $pendingExtraServices->count() }})
+                                                        </strong>
+                                                        <span class="badge bg-white text-dark border small">
+                                                            <i class="fas fa-heartbeat text-danger me-1"></i>تخطيط القلب قابل للشمول بالاتفاق مع الطبيب
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             @foreach($pendingExtraServices as $extraService)
-                                                <tr class="align-middle">
+                                                @php
+                                                    $eTotal = (float)$extraService->total_amount;
+                                                    $isEcgOrMedical = ($extraService->service?->category === 'medical')
+                                                        || str_contains($extraService->name, 'تخطيط')
+                                                        || str_contains(strtolower($extraService->name), 'ecg');
+                                                @endphp
+                                                <tr class="align-middle item-row" data-item-group="extra" data-item-id="{{ $extraService->id }}">
                                                     <td class="text-center">
                                                         <input type="checkbox" 
                                                                class="form-check-input payment-item extra-service-item" 
                                                                name="pay_extra_services[]" 
                                                                value="{{ $extraService->id }}"
-                                                               data-base-price="{{ (float)$extraService->total_amount }}"
-                                                               data-moi-price="{{ (float)$extraService->total_amount }}"
-                                                               data-hi-price="{{ (float)$extraService->total_amount }}"
-                                                               data-is-extra="1"
+                                                               data-base-price="{{ $eTotal }}"
+                                                               data-moi-price="{{ $eTotal }}"
+                                                               data-hi-price="{{ $eTotal }}"
+                                                               data-is-medical="{{ $isEcgOrMedical ? '1' : '0' }}"
+                                                               data-item-type="extra"
                                                                checked>
                                                     </td>
                                                     <td class="ps-4">
-                                                        <i class="fas fa-concierge-bell text-warning me-2"></i>
-                                                        <strong>خدمة إضافية</strong>
+                                                        <i class="fas {{ $isEcgOrMedical ? 'fa-heartbeat text-danger' : 'fa-concierge-bell text-warning' }} me-2"></i>
+                                                        <strong>{{ $isEcgOrMedical ? 'فحص سريري / تخطيط' : 'خدمة إضافية' }}</strong>
                                                     </td>
                                                     <td>
                                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -989,16 +1059,34 @@
                                                                     <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</small>
                                                                 @endif
                                                             </div>
-                                                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill delete-extra-service-btn" 
-                                                                    data-url="{{ route('cashier.surgeries.extra-services.remove', [$surgery, $extraService]) }}"
-                                                                    data-name="{{ $extraService->name }}"
-                                                                    title="إلغاء وحذف الخدمة المعلقة">
-                                                                <i class="fas fa-trash-alt me-1"></i>حذف
-                                                            </button>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
+                                                                    <input class="form-check-input package-inclusion-switch" type="checkbox" 
+                                                                           name="package_included[extra][{{ $extraService->id }}]" 
+                                                                           id="pkg_incl_extra_{{ $extraService->id }}" 
+                                                                           value="1" 
+                                                                           {{ $isEcgOrMedical ? 'checked' : '' }}>
+                                                                    <label class="form-check-label small fw-bold mb-0" for="pkg_incl_extra_{{ $extraService->id }}" style="cursor: pointer;">
+                                                                        <span class="package-status-badge badge {{ $isEcgOrMedical ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary border' }}">
+                                                                            @if($isEcgOrMedical)
+                                                                                <i class="fas fa-check-circle me-1"></i>مشمول بالعملية (0 د.ع)
+                                                                            @else
+                                                                                <i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)
+                                                                            @endif
+                                                                        </span>
+                                                                    </label>
+                                                                </div>
+                                                                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill delete-extra-service-btn" 
+                                                                        data-url="{{ route('cashier.surgeries.extra-services.remove', [$surgery, $extraService]) }}"
+                                                                        data-name="{{ $extraService->name }}"
+                                                                        title="إلغاء وحذف الخدمة المعلقة">
+                                                                    <i class="fas fa-trash-alt me-1"></i>حذف
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end item-price-display">
-                                                        <strong class="text-dark">{{ number_format($extraService->total_amount, 0) }}</strong>
+                                                    <td class="text-end item-price-display fw-bold">
+                                                        {{ number_format($eTotal, 0) }} د.ع
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -1209,7 +1297,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentInsuranceRadio = document.getElementById('surgery_payment_insurance');
     const paymentCashRadio = document.getElementById('surgery_payment_cash');
 
-    const hiCategoryCopay = @json($patient ? $patient->getCopayPercentageFor('surgery') : 15.0);
+    const hiCategoryCopay = @json($patient ? (float)$patient->getCopayPercentageFor('surgery') : 15.0);
+    const hiCopays = {
+        surgery: @json($patient ? (float)$patient->getCopayPercentageFor('surgery') : 15.0),
+        lab: @json($patient ? (float)$patient->getCopayPercentageFor('lab') : 15.0),
+        radiology: @json($patient ? (float)$patient->getCopayPercentageFor('radiology') : 15.0),
+        ecg: @json($patient ? (float)$patient->getCopayPercentageFor('ecg') : 10.0),
+    };
     const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
     const hiBadge = document.getElementById('patient_hi_category_badge');
 
@@ -1294,193 +1388,251 @@ document.addEventListener('DOMContentLoaded', function() {
     window.syncSplitAmounts = syncSplitAmounts;
 
     function calculateSelectedAmount() {
-        let selectedAmount = 0;
+        let totalApprovedPayable = 0;
+        let totalPatientShare = 0;
+        let totalInsuranceShare = 0;
         let selectedCount = 0;
 
-        const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;
+        const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        const isIns = (currentInsType === 'hi' || currentInsType === 'moi');
 
-        if (isIncl) {
-            // 1. Surgery Fee portion
-            const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
-            if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
-                if (payFull) {
-                    selectedAmount += remainingSurgeryFee;
-                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
-                    const custInput = document.getElementById('surgery_custom_amount');
-                    const feeDisp = document.getElementById('surgery_fee_display');
-                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                    if (custWrapper) custWrapper.style.display = 'none';
-                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
-                } else {
-                    const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
-                    const custInput = document.getElementById('surgery_custom_amount');
-                    const feeDisp = document.getElementById('surgery_fee_display');
-                    if (custWrapper) custWrapper.style.display = 'block';
-                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                    if (customVal > remainingSurgeryFee) {
-                        customVal = remainingSurgeryFee;
-                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                    }
-                    selectedAmount += customVal;
-                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
-                }
-                selectedCount++;
-            }
-        } else {
-            // Standard non-inclusive mode:
-            // 1. Surgery Fee
-            const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
-            if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-                const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
-                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
-                const custInput = document.getElementById('surgery_custom_amount');
-                const feeDisp = document.getElementById('surgery_fee_display');
-                if (payFull) {
-                    selectedAmount += remainingSurgeryFee;
-                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                    if (custWrapper) custWrapper.style.display = 'none';
-                    if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
-                } else {
-                    if (custWrapper) custWrapper.style.display = 'block';
-                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                    if (customVal > remainingSurgeryFee) {
-                        customVal = remainingSurgeryFee;
-                        if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                    }
-                    selectedAmount += customVal;
-                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
-                }
-                selectedCount++;
-            } else if (paySurgeryCheckbox) {
-                const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
-                const feeDisp = document.getElementById('surgery_fee_display');
-                if (custWrapper) custWrapper.style.display = 'none';
-                if (feeDisp) feeDisp.textContent = '0';
-            }
+        // Dynamic copays:
+        let surgeryCopayPct = 100;
+        let labCopayPct = 100;
+        let radCopayPct = 100;
+        let ecgCopayPct = 100;
 
-            // 2. Room Fee
-            const payRoomCheckbox = document.getElementById('pay_room_checkbox');
-            if (payRoomCheckbox && payRoomCheckbox.checked) {
-                const payFull = document.getElementById('room_pay_full') ? document.getElementById('room_pay_full').checked : true;
-                const custWrapper = document.getElementById('room_custom_amount_wrapper');
-                const custInput = document.getElementById('room_custom_amount');
-                const feeDisp = document.getElementById('room_fee_display');
-                if (payFull) {
-                    selectedAmount += remainingRoomFee;
-                    if (custInput) custInput.value = Math.round(remainingRoomFee);
-                    if (custWrapper) custWrapper.style.display = 'none';
-                    if (feeDisp) feeDisp.textContent = numberFormat(remainingRoomFee);
-                } else {
-                    if (custWrapper) custWrapper.style.display = 'block';
-                    let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                    if (customVal > remainingRoomFee) {
-                        customVal = remainingRoomFee;
-                        if (custInput) custInput.value = Math.round(remainingRoomFee);
-                    }
-                    selectedAmount += customVal;
-                    if (feeDisp) feeDisp.textContent = numberFormat(customVal);
-                }
-                selectedCount++;
-            } else if (payRoomCheckbox) {
-                const custWrapper = document.getElementById('room_custom_amount_wrapper');
-                const feeDisp = document.getElementById('room_fee_display');
-                if (custWrapper) custWrapper.style.display = 'none';
-                if (feeDisp) feeDisp.textContent = '0';
-            }
-
-            // 3. Lab and Radiology tests
-            const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
-            document.querySelectorAll('.payment-item:checked').forEach(function(item) {
-                if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
-                    const basePrice = parseFloat(item.dataset.basePrice) || 0;
-                    const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
-                    const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
-                    const isMoiActive = item.dataset.isMoiActive === '1';
-                    const isHiActive = item.dataset.isHiActive === '1';
-
-                    let itemApproved = basePrice;
-                    if (currentInsType === 'moi' && isMoiActive) {
-                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
-                    } else if (currentInsType === 'hi' && isHiActive) {
-                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
-                    }
-
-                    selectedAmount += itemApproved;
-                    selectedCount++;
-                }
-            });
+        if (currentInsType === 'hi') {
+            surgeryCopayPct = hiCopays.surgery;
+            labCopayPct = hiCopays.lab;
+            radCopayPct = hiCopays.radiology;
+            ecgCopayPct = hiCopays.ecg;
+        } else if (currentInsType === 'moi') {
+            surgeryCopayPct = moiCopay;
+            labCopayPct = moiCopay;
+            radCopayPct = moiCopay;
+            ecgCopayPct = moiCopay;
         }
 
-        // Update row price displays for all items
-        const insType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
+        // 1. Surgery Fee portion
+        const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
+        let surgeryPaidThisTime = 0;
+        if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
+            const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
+            const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+            const custInput = document.getElementById('surgery_custom_amount');
+            const feeDisp = document.getElementById('surgery_fee_display');
+
+            if (payFull) {
+                surgeryPaidThisTime = remainingSurgeryFee;
+                if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
+            } else {
+                if (custWrapper) custWrapper.style.display = 'block';
+                let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
+                if (customVal > remainingSurgeryFee) {
+                    customVal = remainingSurgeryFee;
+                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
+                }
+                surgeryPaidThisTime = customVal;
+                if (feeDisp) feeDisp.textContent = numberFormat(customVal);
+            }
+
+            if (surgeryPaidThisTime > 0) {
+                totalApprovedPayable += surgeryPaidThisTime;
+                if (isIns) {
+                    const pShare = Math.round(surgeryPaidThisTime * (surgeryCopayPct / 100));
+                    totalPatientShare += pShare;
+                    totalInsuranceShare += Math.max(0, surgeryPaidThisTime - pShare);
+                } else {
+                    totalPatientShare += surgeryPaidThisTime;
+                }
+                selectedCount++;
+            }
+        } else if (paySurgeryCheckbox) {
+            const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
+            const feeDisp = document.getElementById('surgery_fee_display');
+            if (custWrapper) custWrapper.style.display = 'none';
+            if (feeDisp) feeDisp.textContent = '0';
+        }
+
+        // 2. Room Fee portion
+        const payRoomCheckbox = document.getElementById('pay_room_checkbox');
+        let roomPaidThisTime = 0;
+        if (payRoomCheckbox && payRoomCheckbox.checked) {
+            const payFull = document.getElementById('room_pay_full') ? document.getElementById('room_pay_full').checked : true;
+            const custWrapper = document.getElementById('room_custom_amount_wrapper');
+            const custInput = document.getElementById('room_custom_amount');
+            const feeDisp = document.getElementById('room_fee_display');
+
+            if (payFull) {
+                roomPaidThisTime = remainingRoomFee;
+                if (custInput) custInput.value = Math.round(remainingRoomFee);
+                if (custWrapper) custWrapper.style.display = 'none';
+                if (feeDisp) feeDisp.textContent = numberFormat(remainingRoomFee);
+            } else {
+                if (custWrapper) custWrapper.style.display = 'block';
+                let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
+                if (customVal > remainingRoomFee) {
+                    customVal = remainingRoomFee;
+                    if (custInput) custInput.value = Math.round(remainingRoomFee);
+                }
+                roomPaidThisTime = customVal;
+                if (feeDisp) feeDisp.textContent = numberFormat(customVal);
+            }
+
+            if (roomPaidThisTime > 0) {
+                totalApprovedPayable += roomPaidThisTime;
+                if (isIns) {
+                    const pShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
+                    totalPatientShare += pShare;
+                    totalInsuranceShare += Math.max(0, roomPaidThisTime - pShare);
+                } else {
+                    totalPatientShare += roomPaidThisTime;
+                }
+                selectedCount++;
+            }
+        } else if (payRoomCheckbox) {
+            const custWrapper = document.getElementById('room_custom_amount_wrapper');
+            const feeDisp = document.getElementById('room_fee_display');
+            if (custWrapper) custWrapper.style.display = 'none';
+            if (feeDisp) feeDisp.textContent = '0';
+        }
+
+        // 3. Other items: Lab Tests, Radiology, Extra Services
         let currentLabTotal = 0;
         let currentRadTotal = 0;
         let currentExtraTotal = 0;
-        document.querySelectorAll('.payment-item').forEach(function(item) {
-            if (item.id !== 'pay_surgery_checkbox' && item.id !== 'pay_room_checkbox') {
-                const basePrice = parseFloat(item.dataset.basePrice) || 0;
-                const moiPrice = parseFloat(item.dataset.moiPrice) || basePrice;
-                const hiPrice = parseFloat(item.dataset.hiPrice) || basePrice;
-                const isMoiActive = item.dataset.isMoiActive === '1';
-                const isHiActive = item.dataset.isHiActive === '1';
 
-                let itemApproved = basePrice;
-                if (!item.classList.contains('extra-service-item')) {
-                    if (insType === 'moi' && isMoiActive) {
-                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
-                    } else if (insType === 'hi' && isHiActive) {
-                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
-                    }
+        document.querySelectorAll('.item-row').forEach(function(row) {
+            const itemCheckbox = row.querySelector('.payment-item');
+            const pkgSwitch = row.querySelector('.package-inclusion-switch');
+            const statusBadge = row.querySelector('.package-status-badge');
+            const priceCell = row.querySelector('.item-price-display');
+
+            if (!itemCheckbox) return;
+
+            const isCheckedForPay = itemCheckbox.checked;
+            const isPkgIncluded = pkgSwitch ? pkgSwitch.checked : false;
+            const itemType = itemCheckbox.dataset.itemType; // 'lab', 'radiology', 'extra'
+            const basePrice = parseFloat(itemCheckbox.dataset.basePrice) || 0;
+            const moiPrice = parseFloat(itemCheckbox.dataset.moiPrice) || basePrice;
+            const hiPrice = parseFloat(itemCheckbox.dataset.hiPrice) || basePrice;
+            const isMedical = itemCheckbox.dataset.isMedical === '1';
+
+            // Update badge UI
+            if (statusBadge) {
+                if (isPkgIncluded) {
+                    statusBadge.className = 'package-status-badge badge bg-success-subtle text-success border border-success';
+                    statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)';
+                } else {
+                    statusBadge.className = 'package-status-badge badge bg-secondary-subtle text-secondary border';
+                    statusBadge.innerHTML = '<i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)';
                 }
+            }
 
-                const priceCell = item.closest('tr')?.querySelector('.item-price-display');
+            // Calculate item financial figures
+            let itemApproved = 0;
+            let itemPatientShare = 0;
+            let itemInsuranceShare = 0;
+
+            if (isPkgIncluded) {
+                // Included in surgery package -> 0 IQD impact to patient & insurance
+                itemApproved = 0;
+                itemPatientShare = 0;
+                itemInsuranceShare = 0;
+
                 if (priceCell) {
-                    priceCell.textContent = numberFormat(itemApproved);
+                    priceCell.innerHTML = '<span class="text-success fw-bold">0 د.ع</span> <small class="text-muted">(مشمول)</small>';
                 }
+            } else {
+                // Unbundled item:
+                if (itemType === 'lab') {
+                    if (currentInsType === 'hi') {
+                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                        itemPatientShare = Math.round(itemApproved * (labCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else if (currentInsType === 'moi') {
+                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                        itemPatientShare = Math.round(itemApproved * (labCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else {
+                        itemApproved = basePrice;
+                        itemPatientShare = basePrice;
+                        itemInsuranceShare = 0;
+                    }
 
-                if (item.checked) {
-                    if (item.classList.contains('lab-test-item')) {
-                        currentLabTotal += itemApproved;
-                    } else if (item.classList.contains('radiology-test-item')) {
-                        currentRadTotal += itemApproved;
-                    } else if (item.classList.contains('extra-service-item')) {
-                        currentExtraTotal += itemApproved;
+                    if (priceCell) {
+                        if (isIns) {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong><br><small class="text-muted">(مطالبة: ' + numberFormat(itemInsuranceShare) + ')</small>';
+                        } else {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong>';
+                        }
+                    }
+                } else if (itemType === 'radiology') {
+                    if (currentInsType === 'hi') {
+                        itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                        itemPatientShare = Math.round(itemApproved * (radCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else if (currentInsType === 'moi') {
+                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
+                        itemPatientShare = Math.round(itemApproved * (radCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else {
+                        itemApproved = basePrice;
+                        itemPatientShare = basePrice;
+                        itemInsuranceShare = 0;
+                    }
+
+                    if (priceCell) {
+                        if (isIns) {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong><br><small class="text-muted">(مطالبة: ' + numberFormat(itemInsuranceShare) + ')</small>';
+                        } else {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong>';
+                        }
+                    }
+                } else if (itemType === 'extra') {
+                    if (isIns && isMedical) {
+                        itemApproved = basePrice;
+                        itemPatientShare = Math.round(itemApproved * (ecgCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else {
+                        itemApproved = basePrice;
+                        itemPatientShare = basePrice;
+                        itemInsuranceShare = 0;
+                    }
+
+                    if (priceCell) {
+                        if (isIns && isMedical) {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong><br><small class="text-muted">(تحمل ' + ecgCopayPct + '%)</small>';
+                        } else {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong>';
+                        }
                     }
                 }
+            }
+
+            if (isCheckedForPay) {
+                totalApprovedPayable += itemApproved;
+                totalPatientShare += itemPatientShare;
+                totalInsuranceShare += itemInsuranceShare;
+                selectedCount++;
+
+                if (itemType === 'lab') currentLabTotal += itemPatientShare;
+                if (itemType === 'radiology') currentRadTotal += itemPatientShare;
+                if (itemType === 'extra') currentExtraTotal += itemPatientShare;
             }
         });
 
         const labTotalDisplay = document.getElementById('pending_lab_fee_display');
-        if (labTotalDisplay) labTotalDisplay.textContent = numberFormat(currentLabTotal);
+        if (labTotalDisplay) labTotalDisplay.textContent = numberFormat(currentLabTotal) + ' د.ع';
         const radTotalDisplay = document.getElementById('pending_radiology_fee_display');
-        if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal);
+        if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal) + ' د.ع';
         const extraTotalDisplay = document.getElementById('pending_extra_services_fee_display');
-        if (extraTotalDisplay) extraTotalDisplay.textContent = numberFormat(currentExtraTotal);
+        if (extraTotalDisplay) extraTotalDisplay.textContent = numberFormat(currentExtraTotal) + ' د.ع';
 
-        let deferredAmount = pendingAmount - selectedAmount;
-        if (isIncl) {
-            deferredAmount = 0; // inclusive covers everything else
-        }
-
-        if (deferredAmount < 0) deferredAmount = 0;
-
-        // حساب حصة الضمان والمريض (الخدمات الطبية تخضع للضمان والخدمات الإضافية نقدية 100%)
-        let copayPct = 100;
-        if (insType !== 'none') {
-            copayPct = parseFloat(copayInput ? copayInput.value : 15) || 0;
-        }
-
-        let medicalSelected = selectedAmount - currentExtraTotal;
-        let patientShare = selectedAmount;
-        let insuranceShare = 0;
-
-        if (insType !== 'none') {
-            const medicalPatientShare = Math.round(medicalSelected * (copayPct / 100));
-            patientShare = medicalPatientShare + currentExtraTotal;
-            insuranceShare = Math.max(0, medicalSelected - medicalPatientShare);
-        }
-
+        // Discounts for cash
         const discountInput = document.getElementById('discount_percentage');
         const discountSection = document.getElementById('discount_section');
         const displayDiscountBadge = document.getElementById('display_discount_badge');
@@ -1489,14 +1641,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const summaryDiscountVal = document.getElementById('summary_discount_val');
 
         let discountPct = 0;
-        if (insType === 'none') {
+        if (!isIns) {
             if (discountSection) discountSection.style.display = 'block';
             discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
             if (discountPct < 0) discountPct = 0;
             if (discountPct > 100) discountPct = 100;
-            if (discountInput && discountInput.value !== '' && (parseFloat(discountInput.value) > 100 || parseFloat(discountInput.value) < 0)) {
-                discountInput.value = discountPct;
-            }
         } else {
             if (discountSection) discountSection.style.display = 'none';
             if (discountInput) discountInput.value = '0';
@@ -1504,10 +1653,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         let discountAmount = 0;
-        let netPatientShare = patientShare;
-        if (insType === 'none' && discountPct > 0) {
-            discountAmount = Math.round(patientShare * (discountPct / 100));
-            netPatientShare = Math.max(0, patientShare - discountAmount);
+        let netPatientShare = totalPatientShare;
+        if (!isIns && discountPct > 0) {
+            discountAmount = Math.round(totalPatientShare * (discountPct / 100));
+            netPatientShare = Math.max(0, totalPatientShare - discountAmount);
         }
 
         if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
@@ -1521,6 +1670,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Update displays
         const dispApproved = document.getElementById('display_approved_price');
         const dispPatient = document.getElementById('display_patient_share');
         const dispInsurance = document.getElementById('display_insurance_share');
@@ -1532,10 +1682,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitBtn = document.getElementById('submitBtn');
         const deferredRow = document.getElementById('deferredRow');
 
-        if (dispApproved) dispApproved.textContent = numberFormat(selectedAmount) + ' د.ع';
+        let deferredAmount = Math.max(0, pendingAmount - totalApprovedPayable);
+        if (inclusiveCheckbox && inclusiveCheckbox.checked) {
+            deferredAmount = 0;
+        }
+
+        if (dispApproved) dispApproved.textContent = numberFormat(totalApprovedPayable) + ' د.ع';
         if (dispPatient) dispPatient.textContent = numberFormat(netPatientShare) + ' د.ع';
-        if (dispInsurance) dispInsurance.textContent = numberFormat(insuranceShare) + ' د.ع';
-        if (dispSelected) dispSelected.textContent = numberFormat(selectedAmount) + ' IQD';
+        if (dispInsurance) dispInsurance.textContent = numberFormat(totalInsuranceShare) + ' د.ع';
+        if (dispSelected) dispSelected.textContent = numberFormat(netPatientShare) + ' IQD';
         if (dispDeferred) dispDeferred.textContent = numberFormat(deferredAmount) + ' IQD';
         if (inputAmount) inputAmount.value = netPatientShare;
         if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(netPatientShare) + ' IQD)';
@@ -1631,27 +1786,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    updateCopayUI();
-
     function toggleInclusive() {
         const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;
-        document.querySelectorAll('tbody tr').forEach(function(row) {
-            const item = row.querySelector('.payment-item');
-            if (item) {
-                if (item.id !== 'pay_surgery_checkbox') {
-                    row.style.display = isIncl ? 'none' : '';
-                } else {
-                    row.style.display = '';
-                }
-            }
+        document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
+            sw.checked = isIncl;
         });
         calculateSelectedAmount();
     }
 
-    inclusiveCheckbox && inclusiveCheckbox.addEventListener('change', toggleInclusive);
-    if (inclusiveCheckbox && inclusiveCheckbox.checked) {
-        toggleInclusive();
+    if (inclusiveCheckbox) {
+        inclusiveCheckbox.addEventListener('change', toggleInclusive);
     }
+
+    document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
+        sw.addEventListener('change', function() {
+            if (!this.checked && inclusiveCheckbox && inclusiveCheckbox.checked) {
+                inclusiveCheckbox.checked = false;
+            }
+            calculateSelectedAmount();
+        });
+    });
 
     function updateGroupCheckbox(itemClass, groupCheckboxId) {
         const items = document.querySelectorAll('.' + itemClass);

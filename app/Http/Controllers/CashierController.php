@@ -2791,6 +2791,10 @@ class CashierController extends Controller
             'card_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:500',
             'inclusive' => 'nullable|boolean',
+            'package_included' => 'nullable|array',
+            'package_included.lab' => 'nullable|array',
+            'package_included.extra' => 'nullable|array',
+            'package_included.radiology' => 'nullable|array',
             'pay_surgery' => 'nullable',
             'surgery_payment_type' => 'nullable|in:full,partial',
             'surgery_custom_amount' => 'nullable|numeric|min:1',
@@ -2886,75 +2890,203 @@ class CashierController extends Controller
 
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
-            $copayPercentage = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('surgery')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
-            // 3. Lab Tests (التحاليل المرافقة للعملية مشمولة ضمن أتعاب العملية الجراحية كالغرفة لأول يوم)
-            if (! empty($payLabTests)) {
-                foreach ($surgery->labTests as $labTest) {
-                    if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
-                        $paidItems[] = 'تحليل: '.($labTest->labTest->name ?? 'غير محدد').' (مشمول ضمن باقة العملية)';
-                    }
+            $surgeryCopay = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('surgery')
+                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $labCopay = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('lab')
+                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $radCopay = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('radiology')
+                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $ecgCopay = ($insuranceType === 'hi' && $patient)
+                ? (float) $patient->getCopayPercentageFor('ecg')
+                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+
+            $surgeryApproved = 0.0;
+            $surgeryPatientShare = 0.0;
+            $surgeryInsuranceShare = 0.0;
+            if ($paySurgery && $surgeryFeePaidThisTime > 0) {
+                $surgeryApproved = (float) $surgeryFeePaidThisTime;
+                if ($isInsurance) {
+                    $surgeryPatientShare = round($surgeryApproved * ($surgeryCopay / 100.0), 2);
+                    $surgeryInsuranceShare = max(0.0, $surgeryApproved - $surgeryPatientShare);
+                } else {
+                    $surgeryPatientShare = $surgeryApproved;
+                    $surgeryInsuranceShare = 0.0;
                 }
             }
 
-            // 4. Radiology Tests
-            if (! empty($payRadiologyTests)) {
-                foreach ($surgery->radiologyTests as $radiologyTest) {
-                    if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
-                        if ($isInclusive) {
-                            $paidItems[] = 'أشعة: '.($radiologyTest->radiologyType->name ?? 'غير محدد').' (مشمولة)';
+            $roomApproved = 0.0;
+            $roomPatientShare = 0.0;
+            $roomInsuranceShare = 0.0;
+            if ($payRoom && $roomFeePaidThisTime > 0) {
+                $roomApproved = (float) $roomFeePaidThisTime;
+                if ($isInsurance) {
+                    $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
+                    $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                } else {
+                    $roomPatientShare = $roomApproved;
+                    $roomInsuranceShare = 0.0;
+                }
+            }
+
+            // 3. Lab Tests (التحاليل المخبرية المرافقة للعملية - إما مشمولة بالباقة أو منفصلة نقدية/ضمان)
+            $hasPkgInput = $request->has('package_included');
+            $pkgIncludedLabs = (array) $request->input('package_included.lab', []);
+            $labApproved = 0.0;
+            $labPatientShare = 0.0;
+            $labInsuranceShare = 0.0;
+
+            if (! empty($payLabTests)) {
+                foreach ($surgery->labTests as $labTest) {
+                    if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
+                        $lModel = $labTest->labTest;
+                        $isIncluded = $hasPkgInput
+                            ? (! empty($pkgIncludedLabs[$labTest->id]) || $isInclusive)
+                            : true; // افتراض الشمول للتحاليل الروتينية إذا لم يُرسل مصفوفة التخصيص
+
+                        if ($isIncluded) {
+                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (مشمول ضمن باقة العملية - 0 د.ع)';
                         } else {
-                            $pricing = $radiologyTest->radiologyType ? $radiologyTest->radiologyType->calculateInsurancePricing($insuranceType, $copayPercentage) : null;
-                            $radiologyPrice = $pricing ? (float) $pricing['approved_price'] : (float) ($radiologyTest->radiologyType->base_price ?? 0);
-                            $actualAmount += $radiologyPrice;
-                            $paidItems[] = 'أشعة: '.($radiologyTest->radiologyType->name ?? 'غير محدد').' ('.number_format($radiologyPrice, 0).' د.ع)';
+                            $lBase = (float) ($lModel->price ?? 0);
+                            $lHi = (float) (($lModel && $lModel->hi_price > 0) ? $lModel->hi_price : $lBase);
+                            $lMoi = (float) (($lModel && $lModel->moi_price > 0) ? $lModel->moi_price : $lBase);
+
+                            if ($insuranceType === 'hi') {
+                                $appr = $lHi;
+                                $pShare = round($appr * ($labCopay / 100.0), 2);
+                                $iShare = max(0.0, $appr - $pShare);
+                            } elseif ($insuranceType === 'moi') {
+                                $appr = $lMoi;
+                                $pShare = round($appr * ($labCopay / 100.0), 2);
+                                $iShare = max(0.0, $appr - $pShare);
+                            } else {
+                                $appr = $lBase;
+                                $pShare = $lBase;
+                                $iShare = 0.0;
+                            }
+
+                            $labApproved += $appr;
+                            $labPatientShare += $pShare;
+                            $labInsuranceShare += $iShare;
+
+                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (غير مشمول بالعملية - '.number_format($pShare, 0).' د.ع)';
                         }
                     }
                 }
             }
 
-            // 5. Extra Services (خدمات إضافية وفندقية - نقدية 100% دائماً وخارج الضمان)
-            $extraServicesAmount = 0;
-            if (! empty($payExtraServices)) {
-                $surgery->load('extraServices');
-                foreach ($surgery->extraServices as $extraService) {
-                    if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
-                        $extraTotal = (float) $extraService->total_amount;
-                        $extraServicesAmount += $extraTotal;
-                        $paidItems[] = 'خدمة إضافية: '.$extraService->name.($extraService->quantity > 1 ? ' (×'.$extraService->quantity.')' : '').' - مدفوع: '.number_format($extraTotal, 0).' د.ع';
+            // 4. Radiology Tests (الأشعة المرافقة)
+            $pkgIncludedRad = (array) $request->input('package_included.radiology', []);
+            $radApproved = 0.0;
+            $radPatientShare = 0.0;
+            $radInsuranceShare = 0.0;
+
+            if (! empty($payRadiologyTests)) {
+                foreach ($surgery->radiologyTests as $radiologyTest) {
+                    if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
+                        $rModel = $radiologyTest->radiologyType;
+                        $isIncluded = ! empty($pkgIncludedRad[$radiologyTest->id]) || $isInclusive;
+
+                        if ($isIncluded) {
+                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (مشمولة ضمن باقة العملية - 0 د.ع)';
+                        } else {
+                            $rBase = (float) ($rModel ? $rModel->getRegularPrice() : 0);
+                            $rHi = (float) (($rModel && $rModel->hi_price > 0) ? $rModel->hi_price : $rBase);
+                            $rMoi = (float) (($rModel && $rModel->moi_price > 0) ? $rModel->moi_price : $rBase);
+
+                            if ($insuranceType === 'hi') {
+                                $appr = $rHi;
+                                $pShare = round($appr * ($radCopay / 100.0), 2);
+                                $iShare = max(0.0, $appr - $pShare);
+                            } elseif ($insuranceType === 'moi') {
+                                $appr = $rMoi;
+                                $pShare = round($appr * ($radCopay / 100.0), 2);
+                                $iShare = max(0.0, $appr - $pShare);
+                            } else {
+                                $appr = $rBase;
+                                $pShare = $rBase;
+                                $iShare = 0.0;
+                            }
+
+                            $radApproved += $appr;
+                            $radPatientShare += $pShare;
+                            $radInsuranceShare += $iShare;
+
+                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (غير مشمولة - '.number_format($pShare, 0).' د.ع)';
+                        }
                     }
                 }
             }
 
-            $medicalPayable = $actualAmount; // surgery + room + lab + rad
-            $totalApprovedPayable = $medicalPayable + $extraServicesAmount;
-            $patientShare = $isInsurance ? (round(($medicalPayable * $copayPercentage) / 100, 2) + $extraServicesAmount) : $totalApprovedPayable;
-            $insuranceShare = $isInsurance ? max(0, $medicalPayable - round(($medicalPayable * $copayPercentage) / 100, 2)) : 0.00;
+            // 5. Extra Services (تخطيط قلب، خدمات فندقية، غرامات...)
+            $pkgIncludedExtra = (array) $request->input('package_included.extra', []);
+            $extraApproved = 0.0;
+            $extraPatientShare = 0.0;
+            $extraInsuranceShare = 0.0;
+
+            if (! empty($payExtraServices)) {
+                $surgery->load('extraServices.service');
+                foreach ($surgery->extraServices as $extraService) {
+                    if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        $isIncluded = ! empty($pkgIncludedExtra[$extraService->id]) || $isInclusive;
+                        $eTotal = (float) $extraService->total_amount;
+
+                        if ($isIncluded) {
+                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.' (مشمولة ضمن باقة العملية - 0 د.ع)';
+                        } else {
+                            $isMedical = ($extraService->service?->category === 'medical')
+                                || str_contains($extraService->name, 'تخطيط')
+                                || str_contains(strtolower($extraService->name), 'ecg');
+
+                            if ($isInsurance && $isMedical) {
+                                $appr = $eTotal;
+                                $pShare = round($appr * ($ecgCopay / 100.0), 2);
+                                $iShare = max(0.0, $appr - $pShare);
+                            } else {
+                                $appr = $eTotal;
+                                $pShare = $eTotal;
+                                $iShare = 0.0;
+                            }
+
+                            $extraApproved += $appr;
+                            $extraPatientShare += $pShare;
+                            $extraInsuranceShare += $iShare;
+
+                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.($extraService->quantity > 1 ? ' (×'.$extraService->quantity.')' : '').' - مدفوع: '.number_format($pShare, 0).' د.ع';
+                        }
+                    }
+                }
+            }
+
+            $totalApprovedPayable = $surgeryApproved + $roomApproved + $labApproved + $radApproved + $extraApproved;
+            $totalPatientShare = $surgeryPatientShare + $roomPatientShare + $labPatientShare + $radPatientShare + $extraPatientShare;
+            $totalInsuranceShare = $surgeryInsuranceShare + $roomInsuranceShare + $labInsuranceShare + $radInsuranceShare + $extraInsuranceShare;
 
             $discountPercentage = 0.00;
             $discountAmount = 0.00;
             $discountReason = null;
             $discountBy = null;
-            $patientPaidAmount = $patientShare;
+            $patientPaidAmount = $totalPatientShare;
 
             // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
             if (! $isInsurance) {
                 $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
                 if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
                     $discountPercentage = $rawDiscountPerc;
-                    $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
-                    $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                    $discountAmount = round($totalPatientShare * ($discountPercentage / 100.0), 2);
+                    $patientPaidAmount = max(0.0, $totalPatientShare - $discountAmount);
                     $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
                     $discountBy = $user->id;
                 }
             }
 
             if ($isInsurance) {
-                $paidItems[] = 'تغطية الضمان: '.($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' (نسبة التحمل: '.$copayPercentage.'%)';
-                $paidItems[] = 'حصة المريض: '.number_format($patientShare, 0).' د.ع | مطالبة الضمان: '.number_format($insuranceShare, 0).' د.ع';
+                $paidItems[] = 'تغطية الضمان: '.($insuranceType === 'moi' ? 'قوى الأمن الداخلي' : 'الضمان الصحي').' (نسبة العمليات: '.$surgeryCopay.'%)';
+                $paidItems[] = 'حصة المريض: '.number_format($patientPaidAmount, 0).' د.ع | مطالبة الضمان: '.number_format($totalInsuranceShare, 0).' د.ع';
             }
 
             // التحقق من الدفع المركب (كاش + بطاقة)
@@ -2988,15 +3120,15 @@ class CashierController extends Controller
                 'cash_amount' => $paymentMethod === 'split' ? $cashAmount : ($paymentMethod === 'cash' ? $patientPaidAmount : 0),
                 'card_amount' => $paymentMethod === 'split' ? $cardAmount : ($paymentMethod === 'card' ? $patientPaidAmount : 0),
                 'total_amount' => $totalApprovedPayable,
-                'patient_share' => $patientShare,
-                'insurance_share' => $insuranceShare,
+                'patient_share' => $totalPatientShare,
+                'insurance_share' => $totalInsuranceShare,
                 'discount_percentage' => $discountPercentage,
                 'discount_amount' => $discountAmount,
                 'discount_reason' => $discountReason,
                 'discount_by' => $discountBy,
                 'insurance_type' => $insuranceType,
                 'insurance_card_no' => $request->insurance_card_no ?? $surgery->patient->insurance_card_no ?? null,
-                'copay_percentage' => $isInsurance ? $copayPercentage : 0.00,
+                'copay_percentage' => $isInsurance ? $surgeryCopay : 0.00,
                 'claim_status' => $isInsurance ? 'pending' : 'none',
                 'payment_method' => $paymentMethod,
                 'payment_type' => 'surgery',
@@ -3030,9 +3162,14 @@ class CashierController extends Controller
             if (! empty($payLabTests)) {
                 foreach ($surgery->labTests as $labTest) {
                     if (in_array($labTest->id, $payLabTests) && $labTest->payment_status !== 'paid') {
+                        $isIncluded = $hasPkgInput
+                            ? (! empty($pkgIncludedLabs[$labTest->id]) || $isInclusive)
+                            : true;
+                        $labNote = $isIncluded ? trim(($labTest->notes ?? '').' (مشمول ضمن باقة العملية)') : $labTest->notes;
                         $labTest->update([
                             'payment_status' => 'paid',
                             'payment_id' => $payment->id,
+                            'notes' => $labNote,
                         ]);
                     }
                 }
@@ -3052,13 +3189,17 @@ class CashierController extends Controller
 
             // تحديث حالة الخدمات الإضافية المدفوعة
             if (! empty($payExtraServices)) {
-                $surgery->extraServices()
-                    ->whereIn('id', $payExtraServices)
-                    ->where('payment_status', '!=', 'paid')
-                    ->update([
-                        'payment_status' => 'paid',
-                        'payment_id' => $payment->id,
-                    ]);
+                foreach ($surgery->extraServices as $extraService) {
+                    if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        $isIncluded = ! empty($pkgIncludedExtra[$extraService->id]) || $isInclusive;
+                        $extraNote = $isIncluded ? trim(($extraService->notes ?? '').' (مشمول ضمن باقة العملية)') : $extraService->notes;
+                        $extraService->update([
+                            'payment_status' => 'paid',
+                            'payment_id' => $payment->id,
+                            'notes' => $extraNote,
+                        ]);
+                    }
+                }
             }
 
             // تحديد إذا تم دفع كل شيء أم لا

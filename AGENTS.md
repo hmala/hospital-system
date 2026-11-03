@@ -53,6 +53,27 @@ Consult these files before making changes or proposing fixes:
 - Do not modify `vendor/`.
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
+## Session log (2026-11-03 — المرحلة 151: تحكم شمولية الخدمات والتحاليل الروتينية وتخطيط القلب لكل بند على انفراد في كاشير العمليات واحتساب نسب التحمل للضمان والنقدي Surgery Cashier Per-Item Package Inclusion & Multi-Service Copay Architecture)
+
+### Done
+- **محدد الشمولية لكل خدمة على انفراد (Per-Item Package Inclusion Toggle Switches) ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * استبدال آلية الإخفاء التام القديمة بزر تحكم عام تبادلي ذكي `✨ باقة شاملة بالكامل (All-Inclusive Surgery Package)` يُفعل أو يُلغي الشمول لجميع البنود دفعة واحدة دون إخفاء أي صف من الجدول.
+  * إضافة مفتاح شمولية مستقل لكل خدمة على انفراد (`package_included[lab][id]`, `package_included[radiology][id]`, `package_included[extra][id]`):
+    - التحاليل الروتينية والفيروسية (CBC, Viral, PT): مفعلة افتراضياً بشارة خضراء مميزة `[ 🟢 مشمول ضمن باقة العملية (0 د.ع) ]` وتظهر التكلفة `0 د.ع (مشمول)`.
+    - تخطيط القلب السريري (ECG): قابل للتضمين بالاتفاق مع الجراح أو الاحتساب كخدمة منفصلة.
+    - الخدمات الفندقية والإدارية والغرامات (مرافق، تزيين، طبلة): غير مشمولة افتراضياً وتحسب نقدية 100%.
+- **تطبيق نسب التحمل التفصيلية متعددة الخدمات للضمان والنقدي ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * دعم كامل لمعالجة مصفوفة `package_included`:
+    - البنود المشمولة (`package_included = 1`): تُحسب بصفر دينار على المريض وتتحول إلى `paid` برقم سند القبض مع تثبيت ملاحظة `(مشمول ضمن باقة العملية)` لفك التعليق عنها في المختبر والمحطات السريرية فوراً.
+    - البنود غير المشمولة (`package_included = 0`):
+      1. في العمليات النقدية (`none`): تُحتسب بالسعر النقدي الكامل المعتمد للخدمة.
+      2. في عمليات الضمان الصحي (`hi` / `moi`): تُحتسب وفق نسب التحمل الدقيقة للفئة التأمينية عبر `getCopayPercentageFor` (استقطاع العمليات والغرف: 25%، استقطاع المختبر: 25%، استقطاع الأشعة: 25%، واستقطاع التخطيط والتمريض: 10% للفئة H)، مع تحويل الفارق لمطالبة الضمان الصحي.
+  * الحفاظ على التوافق الرجعي 100% (Backward Compatibility) مع المتصلين القدامى والاختبارات السابقة.
+- **تحديث محرك الجافاسكريبت اللحظي (`calculateSelectedAmount`)**:
+  * حساب لحظي دقيق ومباشر لحصة المريض الصافية، إجمالي المطالبات التأمينية، الخصم النقدي الإداري، والمزامنة الفورية مع صندوق الدفع المركب (كاش + بطاقة).
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php))**:
+  * 7 اختبارات ميزة ناجحة بنسبة 100% (51 assertions): تغطية عرض الواجهة بشارة الشمول، دفع الضمان مع شمول التحاليل، الدفع المركب، الحماية من عدم التطابق، الدفع الجزئي، العمليات النقدية مع التضمين/الاستبعاد الجزئي، واحتساب نسب التحمل التأمينية الدقيقة لكافة الخدمات.
+
 ## Session log (2026-11-03 — المرحلة 150: ترقية واجهة تسديد العمليات ودعم الدفع المركب كاش وبطاقة وشمول التحاليل الروتينية Surgery Cashier Split Payment & Included Pre-Op Routine Tests Flow)
 
 ### Done
