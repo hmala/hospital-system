@@ -78,6 +78,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 154 (2026-11-03) — تصحيح توافقية مسار صيانة الحاضنات ودعم PATCH و POST وتحصين قسم الخدج (Incubator Maintenance Route Method Alignment & NICU Shielding):**
+  * **معالجة خطأ 405 MethodNotAllowedHttpException في صيانة الحاضنات**:
+    - ترقية مسار `incubators/{incubator}/toggle-maintenance` في `routes/web.php` ليدعم كلتا الطريقتين `POST` و `PATCH` عبر `Route::match(['post', 'patch'], ...)` لتتوافق مباشرة مع نموذج الصيانة المرسل بـ `@method('PATCH')` في `resources/views/incubators/show.blade.php`.
+  * **تحصين كنترولر الخدج (`app/Http/Controllers/NicuController.php`)**:
+    - استيراد واجهة `Illuminate\Support\Facades\DB` المفقودة لضمان عمل استعلامات مطابقة أدوية التمريض (MAR) بدون أي أخطاء.
+  * **حزم الاختبارات الآلية**:
+    - إنشاء واجتياز اختبار الميزة `tests/Feature/IncubatorMaintenanceTest.php` بنجاح 100% (3/3 passed, 9 assertions).
+    - اجتياز اختبار إعطاء أدوية التمريض بالخدج بنجاح 100% في `tests/Feature/NicuWorkflowTest.php`.
+
 - **المرحلة 153 (2026-11-03) — دمج منظومات الموارد البشرية والرواتب (HR) وقسم الخدج والحاضنات (NICU) ومركز وجراحة العيون (Eye Center) مع فرع main مع تحصين المحطات الأساسية (Complete Secure Integration of HR, NICU & Eye Center into Main with Core Stations Shielding):**
   * **الدمج الآمن لمنظومات فرع `hr` مع الحفاظ على الفرع الأصلي كاملاً**:
     - دمج كامل ميزات الموارد البشرية والرواتب (HR & Payroll: عقود، سلف، إجازات، غيابات، إضافي، وجدولة الشفتات).
