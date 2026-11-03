@@ -78,6 +78,13 @@ class SurgeryTabPermission extends Model
             'color' => 'purple',
             'description' => 'ملاحظات كادر التمريض وخطة التخريج والتعليمات التمريضية للمريض',
         ],
+        'inpatient_survey' => [
+            'key' => 'inpatient_survey',
+            'label' => 'استبيان تقييم الرقود',
+            'icon' => 'fas fa-star',
+            'color' => 'warning',
+            'description' => 'استبيان تقييم غرفة الرقود وجودة الخدمة والرعاية برمز QR وهاتف المريض',
+        ],
     ];
 
     /**
@@ -95,6 +102,7 @@ class SurgeryTabPermission extends Model
                 'follow_up' => self::ACCESS_WRITE,
                 'fluids' => self::ACCESS_WRITE,
                 'nursing_care' => self::ACCESS_WRITE,
+                'inpatient_survey' => self::ACCESS_WRITE,
             ],
             'doctor' => [
                 'history' => self::ACCESS_WRITE,
@@ -105,6 +113,7 @@ class SurgeryTabPermission extends Model
                 'follow_up' => self::ACCESS_WRITE,
                 'fluids' => self::ACCESS_READ,
                 'nursing_care' => self::ACCESS_READ,
+                'inpatient_survey' => self::ACCESS_READ,
             ],
             'resident' => [
                 'history' => self::ACCESS_WRITE,
@@ -115,6 +124,7 @@ class SurgeryTabPermission extends Model
                 'follow_up' => self::ACCESS_WRITE,
                 'fluids' => self::ACCESS_READ,
                 'nursing_care' => self::ACCESS_READ,
+                'inpatient_survey' => self::ACCESS_READ,
             ],
             'nurse' => [
                 'history' => self::ACCESS_READ,
@@ -125,6 +135,7 @@ class SurgeryTabPermission extends Model
                 'follow_up' => self::ACCESS_WRITE,
                 'fluids' => self::ACCESS_WRITE,
                 'nursing_care' => self::ACCESS_WRITE,
+                'inpatient_survey' => self::ACCESS_WRITE,
             ],
             'surgery_coordinator' => [
                 'history' => self::ACCESS_READ,
@@ -135,6 +146,7 @@ class SurgeryTabPermission extends Model
                 'follow_up' => self::ACCESS_READ,
                 'fluids' => self::ACCESS_READ,
                 'nursing_care' => self::ACCESS_READ,
+                'inpatient_survey' => self::ACCESS_WRITE,
             ],
         ];
     }

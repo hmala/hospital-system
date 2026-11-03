@@ -102,6 +102,11 @@ class Surgery extends Model
         return $this->belongsTo(Room::class);
     }
 
+    public function inpatientSurvey()
+    {
+        return $this->hasOne(InpatientRoomSurvey::class);
+    }
+
     public function operationTheater()
     {
         return $this->belongsTo(OperationTheater::class);

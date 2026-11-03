@@ -744,6 +744,10 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
 
+        // استبيان تقييم غرفة الرقود (Inpatient Room Quality Survey)
+        Route::post('/clinical/{surgery}/inpatient-survey', [\App\Http\Controllers\InpatientSurveyController::class, 'storeManual'])->name('inpatient-surveys.manual.store');
+        Route::get('/clinical/{surgery}/inpatient-survey/print-qr', [\App\Http\Controllers\InpatientSurveyController::class, 'printQr'])->name('inpatient-surveys.print-qr');
+
         // إعطاء العلاج (مشترك للمقيم والتمريض)
         Route::post('/treatments/{treatment}/administer', [\App\Http\Controllers\ResidentStationController::class, 'administerTreatment'])->name('surgery-treatments.administer');
     });
@@ -1067,6 +1071,11 @@ Route::get('/api/telegram/test-call', function () {
         ] : null,
     ]);
 });
+
+// استبيان تقييم غرفة الرقود العام لهاتف المريض (Public Inpatient Room Survey by UUID)
+Route::get('/rate/{uuid}', [\App\Http\Controllers\InpatientSurveyController::class, 'showByUuid'])->name('inpatient-surveys.public.show');
+Route::post('/rate/{uuid}', [\App\Http\Controllers\InpatientSurveyController::class, 'submitByUuid'])->name('inpatient-surveys.public.submit');
+Route::get('/rate/{uuid}/thank-you', [\App\Http\Controllers\InpatientSurveyController::class, 'thankYou'])->name('inpatient-surveys.public.thank-you');
 
 // خدمة وتقديم ملفات التخزين العام (Fallback Storage File Server)
 // يضمن فتح صور ومرفقات الأشعة والمختبر والتقارير دون أخطاء 403 في السيرفرات المشتركة

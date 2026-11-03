@@ -292,6 +292,14 @@
                                             <i class="fas fa-tint me-2"></i> مخطط السوائل (Intake & Output)
                                         </button>
                                     </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link rounded-pill py-2.5 d-flex align-items-center justify-content-center" id="inpatient-survey-tab" data-bs-toggle="tab" data-bs-target="#inpatient-survey-content" type="button" role="tab" aria-selected="false">
+                                            <i class="fas fa-star text-warning me-2"></i> استبيان تقييم الرقود
+                                            @if($surgery->inpatientSurvey && $surgery->inpatientSurvey->status === 'completed')
+                                                <span class="badge bg-success text-white rounded-pill ms-1.5 px-2 py-0.5 small">{{ $surgery->inpatientSurvey->overall_score }}%</span>
+                                            @endif
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
                             <div class="card-body p-4">

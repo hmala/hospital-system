@@ -54,6 +54,29 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-04 — المرحلة 156: منظومة استبيان وتقييم غرف الرقود والأطباء وتكامل طبلة المريض ورمز الـ QR الحراري Inpatient Room & Doctor Evaluation Survey with Patient QR & Unified Clinical Chart Integration)
+
+### Done
+- **تطبيق مواصفات Spec-Kit وترسانة ECC**:
+  * صياغة وثيقة المواصفات الكاملة ([specs/002-inpatient-room-survey/spec.md](file:///c:/wamp64/www/hospital-system/specs/002-inpatient-room-survey/spec.md)).
+  * صياغة الخطة المعمارية والتقنية ([specs/002-inpatient-room-survey/plan.md](file:///c:/wamp64/www/hospital-system/specs/002-inpatient-room-survey/plan.md)).
+  * صياغة وتتبع قائمة المهام الذرية ([specs/002-inpatient-room-survey/tasks.md](file:///c:/wamp64/www/hospital-system/specs/002-inpatient-room-survey/tasks.md)).
+- **قاعدة البيانات ونموذج الاستبيان ([database/migrations/2026_11_04_000001_create_inpatient_room_surveys_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_04_000001_create_inpatient_room_surveys_table.php), [app/Models/InpatientRoomSurvey.php](file:///c:/wamp64/www/hospital-system/app/Models/InpatientRoomSurvey.php))**:
+  * إنشاء جدول `inpatient_room_surveys` برمز فريد `uuid`، وعلاقات مع العملية والمريض والغرفة والطبيب والمستخدم المدخل.
+  * تقييم 10 معايير فندقية وخدمية خماسية (النظافة العامة، نظافة الحمام، التكييف/التدفئة، الإضاءة، الهدوء والخصوصية، راحة السرير، لوحة التحكم، مساحة التخزين، سلامة الأثاث، والترفيه والإنترنت).
+  * تقييم زيارة وتواصل الطبيب المعالج خماسياً، والأسئلة المفتوحة (أهم 3 أولويات تحسين، مقترحات إضافية)، ومقياس التوصية بالمستشفى (NPS 1-10).
+  * احتساب النسبة المئوية العامة تلقائياً `calculateOverallScore()` مع قفل الاستبيان بعد الإرسال لمنع التكرار.
+- **المسارات والكنترولر المتكامل ([app/Http/Controllers/InpatientSurveyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InpatientSurveyController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * مسارات عامة للمريض/المرافق عبر الموبايل بدون تسجيل دخول: `/rate/{uuid}`، `/rate/{uuid}` (POST)، و `/rate/{uuid}/thank-you`.
+  * مسارات خاصة بالكادر السريري ومحطة التمريض: `/clinical/{surgery}/inpatient-survey` (إدخال يدوي مباشر) و `/clinical/{surgery}/inpatient-survey/print-qr` (طباعة إيصال حراري 80mm).
+- **الواجهات التفاعلية وتكامل طبلة المريض ومحطة التمريض**:
+  * واجهة موبايل عربية خفيفة وأنيقة لمسح الـ QR والتعبئة بلمسة واحدة ([resources/views/surveys/inpatient-public.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surveys/inpatient-public.blade.php)).
+  * شاشة الشكر والامتنان التفاعلية ([resources/views/surveys/thank-you.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surveys/thank-you.blade.php)).
+  * قالب طباعة إيصال الـ QR الحراري 80mm مع ترويسة المستشفى وباركود الاستبيان السريع ([resources/views/surveys/print-qr.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surveys/print-qr.blade.php)).
+  * دمج تبويب `[ ⭐ استبيان تقييم الرقود ]` في طبلة المريض السريرية ومحطة التمريض عبر `SurgeryTabPermission` مع بطاقة رمز الـ QR، وزر التكبير بملء الشاشة للمسح من بعد، ونموذج الإدخال اليدوي، وعرض النتائج المعتمدة ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php)).
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/InpatientRoomSurveyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InpatientRoomSurveyTest.php))**:
+  * 5 اختبارات ميزة تغطي دورة الاستبيان كاملة بنجاح 100% (26 assertions): فتح الرابط بالـ UUID، إرسال تقييم الموبايل واحتساب النتيجة، قفل الاستبيان المكتمل وعرض شاشة الشكر، الإدخال اليدوي للتمريض، وطباعة كرت الـ QR الحراري.
+
 ## Session log (2026-11-03 — المرحلة 155: تطبيق مواصفات Spec-Kit وترسانة ECC ورادار وبحث عهدة الطابق ودورة إرجاع المواد الفائضة للمخزن الرئيسي Floor Sub-Store Stock Radar & Excess Item Return Workflow)
 
 ### Done
