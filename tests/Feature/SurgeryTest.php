@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Surgery;
-use App\Models\Patient;
-use App\Models\Doctor;
 use App\Models\Department;
-use App\Models\Visit;
+use App\Models\Doctor;
+use App\Models\Patient;
 use App\Models\Room;
+use App\Models\Surgery;
 use App\Models\SurgicalOperation;
+use App\Models\User;
+use App\Models\Visit;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -37,7 +37,7 @@ class SurgeryTest extends TestCase
         ]);
         $doctorUser->assignRole('doctor');
 
-        $doctor = new Doctor();
+        $doctor = new Doctor;
         $doctor->user_id = $doctorUser->id;
         $doctor->department_id = $department->id;
         $doctor->phone = '12345678';
@@ -123,7 +123,7 @@ class SurgeryTest extends TestCase
         ]);
         $doctorUser->assignRole('doctor');
 
-        $doctor = new Doctor();
+        $doctor = new Doctor;
         $doctor->user_id = $doctorUser->id;
         $doctor->department_id = $department->id;
         $doctor->phone = '12345678';
@@ -197,15 +197,15 @@ class SurgeryTest extends TestCase
                             'dosage' => '500mg',
                             'timing' => 'Every 6 hours',
                             'duration_value' => 3,
-                            'duration_unit' => 'days'
-                        ]
-                    ]
-                ]
-            ]
+                            'duration_unit' => 'days',
+                        ],
+                    ],
+                ],
+            ],
         ]);
 
         $response->assertRedirect(route('surgeries.show', $surgery));
-        
+
         $surgery->refresh();
         $this->assertEquals('Acute Appendicitis', $surgery->diagnosis);
         $this->assertEquals('general', $surgery->anesthesia_type);
@@ -237,7 +237,7 @@ class SurgeryTest extends TestCase
         ]);
         $doctorUser->assignRole('doctor');
 
-        $doctor = new Doctor();
+        $doctor = new Doctor;
         $doctor->user_id = $doctorUser->id;
         $doctor->department_id = $department->id;
         $doctor->phone = '12345678';
@@ -308,8 +308,8 @@ class SurgeryTest extends TestCase
                     'surgical_operation_id' => $secondaryOp->id,
                     'fee' => '250,000',
                     'notes' => 'تداخل جراحي تكميلي في نفس الجلسة',
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $response->assertRedirect(route('surgeries.index'));
@@ -359,8 +359,8 @@ class SurgeryTest extends TestCase
                     'surgical_operation_id' => $thirdOp->id,
                     'fee' => '180,000',
                     'notes' => 'تم استبدال العملية التكميلية',
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $updateResponse->assertRedirect(route('surgeries.index'));
@@ -372,5 +372,117 @@ class SurgeryTest extends TestCase
         $this->assertEquals(180000, $surgery->additionalOperations->first()->fee);
         $this->assertEquals('تم استبدال العملية التكميلية', $surgery->additionalOperations->first()->notes);
     }
-}
 
+    public function test_surgery_insurance_vs_cash_reservation_mode_on_create_and_update(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(\Database\Seeders\HospitalSeeder::class);
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $department = Department::where('type', 'surgery')->first();
+
+        $doctorUser = User::create([
+            'name' => 'Dr. Surgeon',
+            'email' => 'surgeon@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'doctor',
+        ]);
+        $doctor = Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $department->id,
+            'phone' => '12345678',
+            'specialization' => 'General Surgery',
+            'qualification' => 'MBBS',
+            'license_number' => 'LIC999',
+            'experience_years' => 10,
+            'consultation_fee' => 50000,
+            'max_patients_per_day' => 10,
+            'is_active' => true,
+        ]);
+
+        $patientUser = User::create([
+            'name' => 'Insured Patient',
+            'email' => 'insured@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'patient',
+        ]);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'age' => 45,
+            'gender' => 'male',
+            'blood_group' => 'B+',
+            'insurance_type' => 'hi',
+            'insurance_card_no' => 'HI-12345',
+            'copay_percentage' => 25.0,
+        ]);
+
+        $admin = User::create([
+            'name' => 'Admin User 2',
+            'email' => 'admin2@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+        ]);
+        $admin->assignRole('admin');
+
+        $room = Room::create([
+            'room_number' => '305',
+            'room_type' => 'regular',
+            'status' => 'available',
+        ]);
+
+        $operation = SurgicalOperation::create([
+            'name' => 'Cholecystectomy',
+            'category' => 'General Surgery',
+            'fee' => 1000000,
+            'is_active' => true,
+        ]);
+
+        // 1. Create surgery as CASH mode (apply_insurance = 0) even though patient has HI
+        $createRes = $this->actingAs($admin)->post(route('surgeries.store'), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'room_id' => $room->id,
+            'expected_stay_days' => 1,
+            'surgery_category' => 'General Surgery',
+            'surgical_operation_id' => $operation->id,
+            'custom_surgery_fee' => '1,000,000',
+            'scheduled_date' => now()->addDay()->toDateString(),
+            'scheduled_time' => '09:00',
+            'referring_doctor_name' => 'د. خالد',
+            'apply_insurance' => '0', // Cash reservation
+        ]);
+        $createRes->assertRedirect(route('surgeries.index'));
+
+        $surgery = Surgery::latest()->first();
+        $this->assertEquals('none', $surgery->insurance_type);
+
+        // 2. Index should show Cash badge
+        $indexRes = $this->actingAs($admin)->get(route('surgeries.index'));
+        $indexRes->assertStatus(200);
+        $indexRes->assertSee('نقدي (كاش)');
+
+        // 3. Edit view should render patient insurance card with cash radio selected
+        $editRes = $this->actingAs($admin)->get(route('surgeries.edit', $surgery));
+        $editRes->assertStatus(200);
+        $editRes->assertSee('تحديد مسار حجز هذه العملية:');
+        $editRes->assertSee('حجز نقدي خاص (كاش كامل خارج الضمان)');
+
+        // 4. Update surgery to Insurance mode (apply_insurance = 1)
+        $updateRes = $this->actingAs($admin)->put(route('surgeries.update', $surgery), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'room_id' => $room->id,
+            'expected_stay_days' => 1,
+            'surgery_category' => 'General Surgery',
+            'surgical_operation_id' => $operation->id,
+            'custom_surgery_fee' => '1,000,000',
+            'scheduled_date' => now()->addDay()->toDateString(),
+            'scheduled_time' => '09:00',
+            'referring_doctor_name' => 'د. خالد',
+            'apply_insurance' => '1', // Toggle to Insurance
+        ]);
+        $updateRes->assertRedirect(route('surgeries.index'));
+
+        $surgery->refresh();
+        $this->assertEquals('hi', $surgery->insurance_type);
+    }
+}

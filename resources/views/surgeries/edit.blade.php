@@ -332,6 +332,58 @@ body {
                         </div>
                     </div>
 
+                    <!-- قسم تحديد نوع تغطية العملية (ضمان أم كاش) -->
+                    @php
+                        $editPatient = $surgery->patient;
+                        $hasInsurance = $editPatient && $editPatient->insurance_type && $editPatient->insurance_type !== 'none';
+                        $currentSurgeryIsInsurance = $surgery->insurance_type && $surgery->insurance_type !== 'none';
+                    @endphp
+                    <div id="patientInsuranceSection" style="{{ $hasInsurance ? '' : 'display: none;' }}" class="mb-3">
+                        <div class="p-3 border rounded-3 bg-light border-primary shadow-2xs">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-success px-2 py-1">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        <span id="patientInsuranceBadgeLabel">المريض مسجل بالضمان: {{ $hasInsurance ? ($editPatient->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن') : '' }}</span>
+                                    </span>
+                                </div>
+                                <span class="text-muted small" id="patientInsuranceCardSpan" style="{{ $hasInsurance && ($editPatient->insurance_card_no ?: $editPatient->insurance_booklet_number) ? '' : 'display: none;' }}">
+                                    <i class="fas fa-id-card me-1 text-primary"></i> رقم الهوية/الدفتر: <b id="patientInsuranceCardNo">{{ $editPatient ? ($editPatient->insurance_card_no ?: $editPatient->insurance_booklet_number ?: '-') : '-' }}</b>
+                                </span>
+                            </div>
+                            
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-4">
+                                    <span class="fw-bold text-dark small d-block">
+                                        <i class="fas fa-sliders-h text-primary me-1"></i>
+                                        تحديد مسار حجز هذه العملية:
+                                    </span>
+                                    <small class="text-muted">اختر هل العملية تتبع الضمان أم تسدد نقدياً</small>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="d-flex flex-wrap gap-3 p-2 bg-white rounded border">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_yes" value="1" 
+                                                   {{ old('apply_insurance', $currentSurgeryIsInsurance ? '1' : '0') == '1' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                🛡️ حجز تحت مظلة الضمان الصحي
+                                            </label>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_no" value="0" 
+                                                   {{ old('apply_insurance', $currentSurgeryIsInsurance ? '1' : '0') == '0' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-bold text-secondary cursor-pointer" for="surgery_apply_insurance_no">
+                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                💵 حجز نقدي خاص (كاش كامل خارج الضمان)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- السطر 1: البيانات الأساسية (المريض، الجراح، المرسل) -->
                     <div class="row g-2 mb-2">
                         <!-- المريض -->
@@ -995,6 +1047,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#patientGender').text(patientData.gender || '-');
                 $('#patientPhone').text(patientData.phone || '-');
                 $('#selectedPatientInfo').slideDown(150);
+
+                if (patientData.insurance_type && patientData.insurance_type !== 'none') {
+                    $('#patientInsuranceBadgeLabel').text('المريض مسجل بالضمان: ' + patientData.insurance_label);
+                    if (patientData.insurance_card_no) {
+                        $('#patientInsuranceCardNo').text(patientData.insurance_card_no);
+                        $('#patientInsuranceCardSpan').show();
+                    } else {
+                        $('#patientInsuranceCardSpan').hide();
+                    }
+                    $('#patientInsuranceSection').slideDown(150);
+                } else {
+                    $('#patientInsuranceSection').slideUp(100);
+                }
+            } else {
+                $('#selectedPatientInfo').slideUp(100);
+                $('#patientInsuranceSection').slideUp(100);
             }
         });
 

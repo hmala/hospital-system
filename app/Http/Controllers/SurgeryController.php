@@ -511,6 +511,16 @@ class SurgeryController extends Controller
             }
         }
 
+        // تحديث نوع تغطية العملية (ضمان أم كاش)
+        $patient = Patient::find($request->patient_id);
+        if ($request->has('apply_insurance')) {
+            $applyInsurance = $request->input('apply_insurance') == '1';
+            $bookingInsuranceType = ($applyInsurance && $patient && $patient->insurance_type !== 'none') ? $patient->insurance_type : 'none';
+            $surgeryData['insurance_type'] = $bookingInsuranceType;
+        } elseif ($request->filled('insurance_type')) {
+            $surgeryData['insurance_type'] = $request->insurance_type;
+        }
+
         // معالجة تغيير الغرفة وإعادة احتساب الأجرة الفندقية
         if ($surgery->room_id != $request->room_id) {
             if ($surgery->room_id) {

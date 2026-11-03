@@ -320,35 +320,47 @@ body {
                         </div>
                     </div>
 
-                    <!-- قسم تغطية الضمان للعملية الجراحية -->
-                    <div id="patientInsuranceSection" style="display: none;" class="mb-2">
-                        <div class="p-2 border rounded bg-light border-primary" style="font-size:0.83rem;">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                                <span class="badge bg-success">
+                    <!-- قسم تحديد نوع تغطية العملية (ضمان أم كاش) -->
+                    <div id="patientInsuranceSection" style="display: none;" class="mb-3">
+                        <div class="p-3 border rounded-3 bg-light border-primary shadow-2xs">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
+                                <span class="badge bg-success px-2 py-1">
                                     <i class="fas fa-shield-alt me-1"></i>
-                                    <span id="patientInsuranceBadgeLabel">مشمول بالضمان</span>
+                                    <span id="patientInsuranceBadgeLabel">المريض مسجل بالضمان</span>
                                 </span>
                                 <span class="text-muted small" id="patientInsuranceCardSpan">
-                                    <i class="fas fa-id-card me-1"></i> رقم البطاقة/الدفتر: <b id="patientInsuranceCardNo">-</b>
+                                    <i class="fas fa-id-card me-1 text-primary"></i> رقم الهوية/الدفتر: <b id="patientInsuranceCardNo">-</b>
                                 </span>
                             </div>
-                            <div class="d-flex flex-wrap gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
-                                    <label class="form-check-label fw-bold text-success" for="surgery_apply_insurance_yes">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        حجز تحت مظلة الضمان
-                                    </label>
+                            
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-4">
+                                    <span class="fw-bold text-dark small d-block">
+                                        <i class="fas fa-sliders-h text-primary me-1"></i>
+                                        تحديد مسار حجز هذه العملية:
+                                    </span>
+                                    <small class="text-muted">اختر هل العملية تتبع الضمان أم تسدد نقدياً</small>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
-                                    <label class="form-check-label fw-bold text-secondary" for="surgery_apply_insurance_no">
-                                        <i class="fas fa-money-bill-wave me-1"></i>
-                                        حجز نقدي خاص (دون استهلاك رصيد الضمان للمريض)
-                                    </label>
+                                <div class="col-md-8">
+                                    <div class="d-flex flex-wrap gap-3 p-2 bg-white rounded border">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                🛡️ حجز تحت مظلة الضمان الصحي
+                                            </label>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_no" value="0" {{ old('apply_insurance') === '0' ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-bold text-secondary cursor-pointer" for="surgery_apply_insurance_no">
+                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                💵 حجز نقدي خاص (كاش كامل خارج الضمان)
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i>سيتم إرسال هذا الاختيار للكاشير كاختيار افتراضي عند محاسبة رسوم العملية.</small>
+                            <small class="text-muted d-block mt-2"><i class="fas fa-info-circle me-1"></i>سيتم اعتماد هذا الاختيار لدى الكاشير مباشرة عند تسديد تكاليف العملية.</small>
                         </div>
                     </div>
 

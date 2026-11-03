@@ -131,6 +131,16 @@
                 @else
                     <span class="badge bg-danger fs-6 px-3 py-2"><i class="fas fa-times-circle me-1"></i>ملغاة</span>
                 @endif
+
+                @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 px-3 py-2">
+                        <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'حجز ضمان صحي' : 'حجز ضمان قوى الأمن' }}
+                    </span>
+                @else
+                    <span class="badge bg-secondary-subtle text-secondary border fs-6 px-3 py-2">
+                        <i class="fas fa-money-bill-wave me-1"></i>حجز نقدي (كاش)
+                    </span>
+                @endif
             </h2>
             <p class="text-muted mb-0">
                 المريض: <strong>{{ optional(optional($surgery->patient)->user)->name ?? 'غير محدد' }}</strong> | 

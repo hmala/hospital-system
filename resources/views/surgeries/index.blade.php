@@ -335,9 +335,20 @@ input[type="radio"]:checked + .frequency-btn {
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
-                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
-                                                    <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
-                                                @endif
+                                                <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                    @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                        <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
+                                                    @endif
+                                                    @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-1">
@@ -784,9 +795,20 @@ input[type="radio"]:checked + .frequency-btn {
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
-                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
-                                                    <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
-                                                @endif
+                                                <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                    @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                        <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
+                                                    @endif
+                                                    @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-1">
