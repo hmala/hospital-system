@@ -164,16 +164,20 @@
     @endif
 
     <!-- تبويبات المركز السريري -->
+    @php
+        $currentActiveTab = session('active_tab', request()->query('tab', request()->get('_active_tab', 'servicePane')));
+        $currentActivePill = session('active_pill', request()->query('pill', request()->get('_active_pill', 'pill-feeding')));
+    @endphp
     <div class="card border-0 shadow-sm" style="border-radius: 14px;">
         <div class="card-header bg-white border-0 pt-3 px-4">
             <ul class="nav nav-tabs card-header-tabs" id="nicuTabs" role="tablist">
                 <li class="nav-item">
-                    <button class="nav-link active fw-bold text-dark" id="service-tab" data-bs-toggle="tab" data-bs-target="#servicePane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'servicePane' ? 'active' : '' }}" id="service-tab" data-bs-toggle="tab" data-bs-target="#servicePane" type="button">
                         <i class="fas fa-cogs text-primary me-1"></i> باقة الخدمة والتبديل (12:00 ظهراً)
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitalsPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'vitalsPane' ? 'active' : '' }}" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitalsPane" type="button">
                         <i class="fas fa-heartbeat text-danger me-1"></i> محطة التمريض وإعطاء العلاج (MAR)
                         @if($reservation->medicationAdministrations->count() > 0)
                             <span class="badge bg-danger rounded-pill ms-1">{{ $reservation->medicationAdministrations->count() }}</span>
@@ -181,12 +185,12 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="growth-tab" data-bs-toggle="tab" data-bs-target="#growthPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'growthPane' ? 'active' : '' }}" id="growth-tab" data-bs-toggle="tab" data-bs-target="#growthPane" type="button">
                         <i class="fas fa-chart-line text-success me-1"></i> 📈 معدلات النمو والوزن
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="care-schedules-tab" data-bs-toggle="tab" data-bs-target="#careSchedulesPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'careSchedulesPane' ? 'active' : '' }}" id="care-schedules-tab" data-bs-toggle="tab" data-bs-target="#careSchedulesPane" type="button">
                         <i class="fas fa-clipboard-list text-warning me-1"></i> 📋 التوصيات وخطة الرعاية
                         @php $activeSchedulesCount = $reservation->careSchedules->where('is_active', true)->count(); @endphp
                         @if($activeSchedulesCount > 0)
@@ -195,7 +199,7 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultationsPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'consultationsPane' ? 'active' : '' }}" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultationsPane" type="button">
                         <i class="fas fa-user-md text-info me-1"></i> استشارات الأطباء (داخلي / خارجي)
                         @if($reservation->consultations->count() > 0)
                             <span class="badge bg-info rounded-pill ms-1">{{ $reservation->consultations->count() }}</span>
@@ -203,7 +207,7 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="lab-tab" data-bs-toggle="tab" data-bs-target="#labPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'labPane' ? 'active' : '' }}" id="lab-tab" data-bs-toggle="tab" data-bs-target="#labPane" type="button">
                         <i class="fas fa-microscope text-primary me-1"></i> 🧪 تحاليل المختبر
                         @php $labCount = $reservation->medicalOrders->where('order_type', 'lab')->count(); @endphp
                         @if($labCount > 0)
@@ -212,7 +216,7 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="radiology-tab" data-bs-toggle="tab" data-bs-target="#radiologyPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'radiologyPane' ? 'active' : '' }}" id="radiology-tab" data-bs-toggle="tab" data-bs-target="#radiologyPane" type="button">
                         <i class="fas fa-x-ray text-info me-1"></i> 🩻 الأشعة والتصوير
                         @php $radCount = $reservation->medicalOrders->where('order_type', 'radiology')->count(); @endphp
                         @if($radCount > 0)
@@ -221,7 +225,7 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="prescriptions-tab" data-bs-toggle="tab" data-bs-target="#prescriptionsPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'prescriptionsPane' ? 'active' : '' }}" id="prescriptions-tab" data-bs-toggle="tab" data-bs-target="#prescriptionsPane" type="button">
                         <i class="fas fa-pills text-success me-1"></i> 💊 الوصفة والعلاج
                         @php $medCount = $reservation->medicalOrders->where('order_type', 'medication')->count(); @endphp
                         @if($medCount > 0)
@@ -230,7 +234,7 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-dark" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachmentsPane" type="button">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'attachmentsPane' ? 'active' : '' }}" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachmentsPane" type="button">
                         <i class="fas fa-folder-open text-primary me-1"></i> 📁 الأرشيف والمرفقات
                         @if($reservation->attachments->count() > 0)
                             <span class="badge bg-primary text-white rounded-pill ms-1">{{ $reservation->attachments->count() }}</span>
@@ -244,7 +248,7 @@
             <div class="tab-content" id="nicuTabsContent">
                 
                 <!-- تبويب 1: باقة الخدمة والتبديل اليومي -->
-                <div class="tab-pane fade show active" id="servicePane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'servicePane' ? 'show active' : '' }}" id="servicePane">
                     <div class="row g-4">
                         <div class="col-lg-5">
                             <div class="card border-0 bg-light p-4 rounded-3 h-100">
@@ -440,7 +444,7 @@
                 </div>
 
                 <!-- تبويب 2: محطة التمريض (العلامات والوزن والرضاعة) -->
-                <div class="tab-pane fade" id="vitalsPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'vitalsPane' ? 'show active' : '' }}" id="vitalsPane">
                     <div class="row g-4">
                         <!-- نموذج إضافة قراءة جديدة -->
                         <div class="col-lg-4">
@@ -748,7 +752,7 @@
                 </div>
 
                 <!-- تبويب مستقل: معدلات النمو ومنحنى الوزن (Growth & Weight Curve) -->
-                <div class="tab-pane fade" id="growthPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'growthPane' ? 'show active' : '' }}" id="growthPane">
                     @php
                         $weightVitals = $reservation->vitals->whereNotNull('weight')->sortBy('recorded_at');
                         $initialWeight = ($reservation->birth_weight && is_numeric($reservation->birth_weight)) 
@@ -948,7 +952,7 @@
                 </div>
 
                 <!-- تبويب 3: استشارات الأطباء (داخلي / خارجي) -->
-                <div class="tab-pane fade" id="consultationsPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'consultationsPane' ? 'show active' : '' }}" id="consultationsPane">
                     <div class="row g-4">
                         <div class="col-lg-4">
                             <div class="card border-0 bg-light p-3 rounded-3">
@@ -1134,7 +1138,7 @@
                 </div>
 
                 <!-- تبويب 4: التحاليل والفحوصات المخبرية (Lab Workstation) -->
-                <div class="tab-pane fade" id="labPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'labPane' ? 'show active' : '' }}" id="labPane">
                     <div class="row g-4">
                         <!-- عمود تقديم طلب التحاليل المخبرية بنمط الطبيب الاستشاري -->
                         <div class="col-xl-6 col-lg-12">
@@ -1730,7 +1734,7 @@
                 </div>
 
                 <!-- تبويب 5: الفحوصات الشعاعية والتصوير والسونار (Radiology Workstation) -->
-                <div class="tab-pane fade" id="radiologyPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'radiologyPane' ? 'show active' : '' }}" id="radiologyPane">
                     <div class="row g-4">
                         <!-- عمود تقديم طلب الأشعة والسونار بنمط الطبيب الاستشاري -->
                         <div class="col-xl-6 col-lg-12">
@@ -2349,7 +2353,7 @@
                 </div>
 
                 <!-- تبويب 6: الوصفة والعلاج الدوائي (E-Prescriptions & Clinical RX) -->
-                <div class="tab-pane fade" id="prescriptionsPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'prescriptionsPane' ? 'show active' : '' }}" id="prescriptionsPane">
                     <div class="row g-4">
                         <!-- عمود إنشاء وصياغة الوصفة الطبية -->
                         <div class="col-lg-5">
@@ -2512,7 +2516,7 @@
                 </div>
 
                 <!-- تبويب 7: التوصيات وخطة الرعاية وجداول المواعيد (Care Plan & Schedules) -->
-                <div class="tab-pane fade" id="careSchedulesPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'careSchedulesPane' ? 'show active' : '' }}" id="careSchedulesPane">
                     <div class="row g-4">
                         <!-- نموذج إضافة التوصيات -->
                         <div class="col-lg-5">
@@ -2538,17 +2542,17 @@
                                 <!-- أزرار الاختيار السريع للنوع -->
                                 <ul class="nav nav-pills nav-fill mb-3" id="scheduleTypePill" role="tablist">
                                     <li class="nav-item">
-                                        <button class="nav-link active btn-sm fw-bold py-1" id="pill-feeding-tab" data-bs-toggle="pill" data-bs-target="#pill-feeding" type="button">
+                                        <button class="nav-link {{ $currentActivePill === 'pill-feeding' ? 'active' : '' }} btn-sm fw-bold py-1" id="pill-feeding-tab" data-bs-toggle="pill" data-bs-target="#pill-feeding" type="button">
                                             <i class="fas fa-baby-bottle me-1"></i> جدول رضاعة
                                         </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link btn-sm fw-bold py-1" id="pill-medication-tab" data-bs-toggle="pill" data-bs-target="#pill-medication" type="button">
+                                        <button class="nav-link {{ $currentActivePill === 'pill-medication' ? 'active' : '' }} btn-sm fw-bold py-1" id="pill-medication-tab" data-bs-toggle="pill" data-bs-target="#pill-medication" type="button">
                                             <i class="fas fa-pills me-1"></i> جدول علاج دوائي
                                         </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link btn-sm fw-bold py-1" id="pill-doctor-note-tab" data-bs-toggle="pill" data-bs-target="#pill-doctor-note" type="button">
+                                        <button class="nav-link {{ $currentActivePill === 'pill-doctor-note' ? 'active' : '' }} btn-sm fw-bold py-1" id="pill-doctor-note-tab" data-bs-toggle="pill" data-bs-target="#pill-doctor-note" type="button">
                                             <i class="fas fa-user-md me-1 text-danger"></i> ملاحظة الاختصاص
                                         </button>
                                     </li>
@@ -2556,7 +2560,7 @@
 
                                 <div class="tab-content" id="scheduleTypeContent">
                                     <!-- نموذج الرضاعة -->
-                                    <div class="tab-pane fade show active" id="pill-feeding">
+                                    <div class="tab-pane fade {{ $currentActivePill === 'pill-feeding' ? 'show active' : '' }}" id="pill-feeding">
                                         <form action="{{ route('nicu.care-schedules.store', $reservation) }}" method="POST">
                                             @csrf
                                             <input type="hidden" name="type" value="feeding">
@@ -2618,7 +2622,7 @@
                                     </div>
 
                                     <!-- نموذج العلاج الدوائي -->
-                                    <div class="tab-pane fade" id="pill-medication">
+                                    <div class="tab-pane fade {{ $currentActivePill === 'pill-medication' ? 'show active' : '' }}" id="pill-medication">
                                         <form action="{{ route('nicu.care-schedules.store', $reservation) }}" method="POST">
                                             @csrf
                                             <input type="hidden" name="type" value="medication">
@@ -2686,7 +2690,7 @@
                                     </div>
 
                                     <!-- نموذج ملاحظة وتوجيهات الطبيب الاختصاص -->
-                                    <div class="tab-pane fade" id="pill-doctor-note">
+                                    <div class="tab-pane fade {{ $currentActivePill === 'pill-doctor-note' ? 'show active' : '' }}" id="pill-doctor-note">
                                         <form action="{{ route('nicu.doctor-notes.store', $reservation) }}" method="POST">
                                             @csrf
                                             <div class="alert alert-danger py-2 px-3 small mb-3 border-0 bg-danger bg-opacity-10 text-danger" style="font-size: 11px;">
@@ -2890,7 +2894,7 @@
                 </div>
 
                 <!-- تبويب الأرشيف والمرفقات الطبية للطفل (NICU Patient Attachments) -->
-                <div class="tab-pane fade" id="attachmentsPane">
+                <div class="tab-pane fade {{ $currentActiveTab === 'attachmentsPane' ? 'show active' : '' }}" id="attachmentsPane">
                     <div class="row g-4">
                         <!-- نموذج رفع مستند جديد -->
                         <div class="col-lg-4">
@@ -3272,6 +3276,132 @@ function toggleDoctorField(val) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ==================== الحفاظ التام على التبويب النشط وموضع التمرير ====================
+    const resId = @json($reservation->id);
+    const scrollKey = 'nicu_scroll_' + resId;
+    const tabKey = 'nicu_tab_' + resId;
+    const pillKey = 'nicu_pill_' + resId;
+
+    // استعادة موضع التمرير إن وُجد
+    try {
+        const savedScroll = sessionStorage.getItem(scrollKey);
+        if (savedScroll !== null) {
+            sessionStorage.removeItem(scrollKey);
+            const targetY = parseInt(savedScroll, 10);
+            if (!isNaN(targetY) && targetY > 0) {
+                window.scrollTo({ top: targetY, behavior: 'instant' });
+                requestAnimationFrame(function() {
+                    window.scrollTo({ top: targetY, behavior: 'instant' });
+                });
+                setTimeout(function() {
+                    window.scrollTo({ top: targetY, behavior: 'instant' });
+                }, 100);
+            }
+        }
+    } catch (e) {}
+
+    // استخراج التبويب الرئيسي النشط حالياً
+    function getCurrentActiveTab() {
+        const activeTabBtn = document.querySelector('#nicuTabs button.nav-link.active, #nicuTabs a.nav-link.active');
+        if (activeTabBtn) {
+            const target = activeTabBtn.getAttribute('data-bs-target') || activeTabBtn.getAttribute('href');
+            if (target) return target.replace('#', '');
+        }
+        return '{{ $currentActiveTab }}' || 'servicePane';
+    }
+
+    // استخراج التبويب الفرعي النشط حالياً (في خطة الرعاية)
+    function getCurrentActivePill() {
+        const activePillBtn = document.querySelector('#scheduleTypePill button.nav-link.active, #scheduleTypePill a.nav-link.active');
+        if (activePillBtn) {
+            const target = activePillBtn.getAttribute('data-bs-target') || activePillBtn.getAttribute('href');
+            if (target) return target.replace('#', '');
+        }
+        return '{{ $currentActivePill }}' || 'pill-feeding';
+    }
+
+    // حفظ التبويب عند النقر والتنقل وتحديث Hash
+    document.querySelectorAll('#nicuTabs [data-bs-toggle="tab"]').forEach(function(tabBtn) {
+        tabBtn.addEventListener('shown.bs.tab', function(e) {
+            const target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
+            if (target) {
+                const tabId = target.replace('#', '');
+                try {
+                    localStorage.setItem(tabKey, tabId);
+                    sessionStorage.setItem(tabKey, tabId);
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, null, '#' + tabId);
+                    }
+                } catch (err) {}
+            }
+        });
+    });
+
+    // حفظ التبويب الفرعي عند النقر
+    document.querySelectorAll('#scheduleTypePill [data-bs-toggle="pill"]').forEach(function(pillBtn) {
+        pillBtn.addEventListener('shown.bs.tab', function(e) {
+            const target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
+            if (target) {
+                const pillId = target.replace('#', '');
+                try {
+                    localStorage.setItem(pillKey, pillId);
+                    sessionStorage.setItem(pillKey, pillId);
+                } catch (err) {}
+            }
+        });
+    });
+
+    // اعتراض أي نقرة على أزرار الحفظ والإرسال لتسجيل موضع التمرير فوراً
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[type="submit"], input[type="submit"], .btn-submit-action');
+        if (btn) {
+            try {
+                sessionStorage.setItem(scrollKey, window.scrollY || window.pageYOffset || 0);
+            } catch (err) {}
+        }
+    }, true);
+
+    // اعتراض إرسال أي فورم في الصفحة لتمرير _active_tab و _active_pill وتثبيت موضع التمرير
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (!form || form.tagName !== 'FORM') return;
+
+        try {
+            sessionStorage.setItem(scrollKey, window.scrollY || window.pageYOffset || 0);
+        } catch (err) {}
+
+        const activeTab = getCurrentActiveTab();
+        const activePill = getCurrentActivePill();
+
+        let tabInput = form.querySelector('input[name="_active_tab"]');
+        if (!tabInput) {
+            tabInput = document.createElement('input');
+            tabInput.type = 'hidden';
+            tabInput.name = '_active_tab';
+            form.appendChild(tabInput);
+        }
+        tabInput.value = activeTab;
+
+        let pillInput = form.querySelector('input[name="_active_pill"]');
+        if (!pillInput) {
+            pillInput = document.createElement('input');
+            pillInput.type = 'hidden';
+            pillInput.name = '_active_pill';
+            form.appendChild(pillInput);
+        }
+        pillInput.value = activePill;
+    }, true);
+
+    // تفعيل التبويب من الـ Hash إن وجد ولم يكن مفعل مسبقاً
+    if (window.location.hash) {
+        const hashTarget = window.location.hash.replace('#', '');
+        const targetBtn = document.querySelector(`#nicuTabs [data-bs-target="#${hashTarget}"], #nicuTabs [href="#${hashTarget}"]`);
+        if (targetBtn && !targetBtn.classList.contains('active')) {
+            const bsTab = bootstrap.Tab.getOrCreateInstance(targetBtn);
+            if (bsTab) bsTab.show();
+        }
+    }
+
     const searchInput = document.getElementById('internalDoctorSearchInput');
     const resultsDiv = document.getElementById('doctorSearchResults');
     const toggleBtn = document.getElementById('toggleAllDoctorsBtn');

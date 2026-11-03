@@ -2,24 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
+use App\Models\LabTest;
+use App\Models\Medicine;
+use App\Models\NicuAttachment;
+use App\Models\NicuCareSchedule;
+use App\Models\NicuConsultation;
+use App\Models\NicuDoctorNote;
+use App\Models\NicuMedicalOrder;
+use App\Models\NicuMedicationAdministration;
 use App\Models\NicuService;
 use App\Models\NicuServiceLog;
 use App\Models\NicuVital;
-use App\Models\NicuConsultation;
-use App\Models\NicuMedicalOrder;
-use App\Models\NicuMedicationAdministration;
-use App\Models\NicuCareSchedule;
-use App\Models\NicuAttachment;
-use App\Models\NicuDoctorNote;
-use App\Models\LabTest;
 use App\Models\RadiologyType;
-use App\Models\Medicine;
-use App\Models\Doctor;
-use App\Models\Room;
 use App\Models\Request as MedicalRequest;
-use App\Models\LabResult;
+use App\Models\Room;
 use App\Models\UserLabTestGroup;
 use App\Services\NicuBillingService;
 use Carbon\Carbon;
@@ -45,7 +44,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لقسم الخدج والحاضنات');
         }
 
@@ -59,7 +58,7 @@ class NicuController extends Controller
             },
             'activeReservation.careSchedules' => function ($q) {
                 $q->where('is_active', true);
-            }
+            },
         ]);
 
         if ($request->filled('type')) {
@@ -87,10 +86,10 @@ class NicuController extends Controller
 
         // غرف ردهة الأطفال المرتبطة
         $pediatricRooms = Room::where('is_active', true)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('room_purpose', 'incubators')
-                  ->orWhere('room_type', 'incubator')
-                  ->orWhere('room_type', 'capsule');
+                    ->orWhere('room_type', 'incubator')
+                    ->orWhere('room_type', 'capsule');
             })->get();
 
         return view('nicu.index', compact('incubators', 'stats', 'nicuServices', 'pediatricRooms'));
@@ -104,7 +103,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('view incubator reservations') && !$user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لسجل وإضبارات الخدج');
         }
 
@@ -116,7 +115,7 @@ class NicuController extends Controller
             'department',
             'vitals' => function ($q) {
                 $q->latest('recorded_at')->limit(1);
-            }
+            },
         ]);
 
         // البحث (Search)
@@ -124,17 +123,17 @@ class NicuController extends Controller
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
                 $q->where('baby_name', 'like', "%{$search}%")
-                  ->orWhere('id', $search)
-                  ->orWhereHas('patient.user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('incubator', function ($iq) use ($search) {
-                      $iq->where('incubator_number', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('doctor.user', function ($dq) use ($search) {
-                      $dq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('id', $search)
+                    ->orWhereHas('patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('incubator', function ($iq) use ($search) {
+                        $iq->where('incubator_number', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('doctor.user', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -165,10 +164,10 @@ class NicuController extends Controller
 
         // الترتيب: النشطون أولاً ثم الانتظار ثم المخرجين ثم الملغي، ثم الأحدث
         $reservations = $query->orderByRaw("CASE status WHEN 'admitted' THEN 1 WHEN 'pending' THEN 2 WHEN 'transferred' THEN 3 WHEN 'discharged' THEN 4 ELSE 5 END")
-                              ->latest('admission_date')
-                              ->latest('id')
-                              ->paginate(15)
-                              ->withQueryString();
+            ->latest('admission_date')
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
 
         // إحصائيات سريعة للرأس
         $kpis = [
@@ -241,7 +240,7 @@ class NicuController extends Controller
                 ->where('department', 'nicu')
                 ->where(function ($q) use ($user, $doctorUserId) {
                     $q->where('is_public', true)
-                      ->orWhere('user_id', $user->id);
+                        ->orWhere('user_id', $user->id);
                     if ($doctorUserId && $doctorUserId !== $user->id) {
                         $q->orWhere('user_id', $doctorUserId);
                     }
@@ -259,15 +258,36 @@ class NicuController extends Controller
         }
 
         return view('nicu.show', compact(
-            'reservation', 
-            'stayDetails', 
-            'nicuServices', 
+            'reservation',
+            'stayDetails',
+            'nicuServices',
             'doctors',
             'labTests',
             'labTestGroups',
             'radiologyTypes',
             'medicines'
         ));
+    }
+
+    /**
+     * إعادة التوجيه مع الحفاظ على التبويب والتبويب الفرعي النشط
+     */
+    protected function redirectBackWithActiveState(?Request $request = null, ?string $defaultTab = null, ?string $defaultPill = null)
+    {
+        $req = $request ?: request();
+        $tab = $req->input('_active_tab', $defaultTab);
+        $pill = $req->input('_active_pill', $defaultPill);
+
+        $redirect = redirect()->back();
+
+        if ($tab) {
+            $redirect->with('active_tab', $tab);
+        }
+        if ($pill) {
+            $redirect->with('active_pill', $pill);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -283,7 +303,7 @@ class NicuController extends Controller
         $newService = NicuService::findOrFail($request->nicu_service_id);
         $this->billingService->switchService($reservation, $newService, $request->reason, Auth::id());
 
-        return redirect()->back()->with('success', 'تم تبديل الخدمة السريرية إلى: ' . $newService->name . ' بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'servicePane')->with('success', 'تم تبديل الخدمة السريرية إلى: '.$newService->name.' بنجاح.');
     }
 
     /**
@@ -305,7 +325,7 @@ class NicuController extends Controller
         $serviceLog->update([
             'nicu_service_id' => $newService->id,
             'daily_fee' => $newService->daily_fee,
-            'total_cost' => ($serviceLog->days_count ?: 1) * (float)$newService->daily_fee,
+            'total_cost' => ($serviceLog->days_count ?: 1) * (float) $newService->daily_fee,
             'reason_for_switch' => $request->reason ?: $serviceLog->reason_for_switch,
             'switched_by' => Auth::id(),
             'notes' => 'تم تعديل السجل يدوياً من محطة الرعاية.',
@@ -315,7 +335,7 @@ class NicuController extends Controller
             $reservation->update(['nicu_service_id' => $newService->id]);
         }
 
-        return redirect()->back()->with('success', 'تم تعديل باقة الخدمة السريرية بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'servicePane')->with('success', 'تم تعديل باقة الخدمة السريرية بنجاح.');
     }
 
     /**
@@ -344,7 +364,7 @@ class NicuController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم التراجع عن التبديل وحذف السجل بنجاح.');
+        return $this->redirectBackWithActiveState(null, 'servicePane')->with('success', 'تم التراجع عن التبديل وحذف السجل بنجاح.');
     }
 
     /**
@@ -371,12 +391,12 @@ class NicuController extends Controller
 
         NicuVital::create($validated);
 
-        if (!empty($validated['weight'])) {
+        if (! empty($validated['weight'])) {
             $reservation->update(['current_weight' => $validated['weight']]);
         }
 
         // تحديث جدول الرضاعة النشط وموعد الوجبة القادمة تلقائياً إن وُجدت رضعة
-        if ($request->filled('feeding_amount_ml') && (float)$request->feeding_amount_ml > 0) {
+        if ($request->filled('feeding_amount_ml') && (float) $request->feeding_amount_ml > 0) {
             $activeFeeding = $reservation->careSchedules()
                 ->where('type', 'feeding')
                 ->where('is_active', true)
@@ -390,7 +410,7 @@ class NicuController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'تم توثيق العلامات الحيوية والوزن بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'vitalsPane')->with('success', 'تم توثيق العلامات الحيوية والوزن بنجاح.');
     }
 
     /**
@@ -408,7 +428,7 @@ class NicuController extends Controller
         ]);
 
         // في الاستشارة الداخلية يتم اعتماد التخصص الدقيق للطبيب تلقائياً من بياناته المسجلة
-        if ($validated['consultation_type'] === 'internal' && !empty($validated['doctor_id'])) {
+        if ($validated['consultation_type'] === 'internal' && ! empty($validated['doctor_id'])) {
             if (empty($validated['specialty'])) {
                 $doc = Doctor::find($validated['doctor_id']);
                 $validated['specialty'] = $doc?->specialization ?? 'أخصائي استشاري';
@@ -421,7 +441,7 @@ class NicuController extends Controller
 
         NicuConsultation::create($validated);
 
-        return redirect()->back()->with('success', 'تم إرسال طلب الاستشارة الطبية بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'consultationsPane')->with('success', 'تم إرسال طلب الاستشارة الطبية بنجاح.');
     }
 
     /**
@@ -441,7 +461,7 @@ class NicuController extends Controller
             'completed_at' => now(),
         ]);
 
-        return redirect()->back()->with('success', 'تم توثيق فحص وتوصيات الاستشارة الطبية بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'consultationsPane')->with('success', 'تم توثيق فحص وتوصيات الاستشارة الطبية بنجاح.');
     }
 
     /**
@@ -465,7 +485,14 @@ class NicuController extends Controller
 
         NicuMedicalOrder::create($validated);
 
-        return redirect()->back()->with('success', 'تم إرسال الطلب الطبي لقسم المعني بنجاح.');
+        $defaultTab = match ($validated['order_type']) {
+            'lab' => 'labPane',
+            'radiology' => 'radiologyPane',
+            'medication' => 'prescriptionsPane',
+            default => 'vitalsPane',
+        };
+
+        return $this->redirectBackWithActiveState($request, $defaultTab)->with('success', 'تم إرسال الطلب الطبي لقسم المعني بنجاح.');
     }
 
     /**
@@ -494,7 +521,14 @@ class NicuController extends Controller
             'completed_at' => now(),
         ]);
 
-        return redirect()->back()->with('success', 'تم توثيق نتيجة الطلب الطبي بنجاح.');
+        $defaultTab = match ($order->order_type) {
+            'lab' => 'labPane',
+            'radiology' => 'radiologyPane',
+            'medication' => 'prescriptionsPane',
+            default => 'vitalsPane',
+        };
+
+        return $this->redirectBackWithActiveState($request, $defaultTab)->with('success', 'تم توثيق نتيجة الطلب الطبي بنجاح.');
     }
 
     /**
@@ -525,7 +559,7 @@ class NicuController extends Controller
         }
 
         if ($testsToCreate->isEmpty()) {
-            return redirect()->back()->with('error', 'يرجى اختيار أو كتابة فحص مخبري واحد على الأقل.');
+            return $this->redirectBackWithActiveState($request, 'labPane')->with('error', 'يرجى اختيار أو كتابة فحص مخبري واحد على الأقل.');
         }
 
         // جلب أسعار ومطابقة التحاليل تلقائياً إن وجدت
@@ -534,7 +568,7 @@ class NicuController extends Controller
             ->orWhereIn('id', $testsToCreate->all())
             ->with('references')
             ->get()
-            ->keyBy(fn($item) => strtolower($item->name));
+            ->keyBy(fn ($item) => strtolower($item->name));
 
         $testNames = [];
         $testIds = [];
@@ -549,13 +583,13 @@ class NicuController extends Controller
 
             if ($matchedTest) {
                 if ($reservation->is_insured && $matchedTest->is_hi_active && $matchedTest->hi_price > 0) {
-                    $price = (float)$matchedTest->hi_price;
+                    $price = (float) $matchedTest->hi_price;
                 } else {
-                    $price = (float)$matchedTest->price;
+                    $price = (float) $matchedTest->price;
                 }
                 $unit = $matchedTest->unit;
                 $refObj = $matchedTest->references->first();
-                $refRange = $refObj ? ($refObj->range_display ?: ($refObj->ref_min . ' - ' . $refObj->ref_max)) : null;
+                $refRange = $refObj ? ($refObj->range_display ?: ($refObj->ref_min.' - '.$refObj->ref_max)) : null;
                 $testIds[] = $matchedTest->id;
                 $testNames[] = $matchedTest->name;
             } else {
@@ -579,7 +613,7 @@ class NicuController extends Controller
             'visit_id' => null,
             'type' => 'lab',
             'subtype' => null,
-            'description' => 'تحاليل خديج: ' . implode(', ', $testNames),
+            'description' => 'تحاليل خديج: '.implode(', ', $testNames),
             'details' => [
                 'tests' => $testNames,
                 'lab_test_ids' => $testIds,
@@ -595,7 +629,7 @@ class NicuController extends Controller
         ]);
 
         // 2. إنشاء السجلات التوافقية في nicu_medical_orders
-        $groupId = 'REQ-' . $medReq->id;
+        $groupId = 'REQ-'.$medReq->id;
         foreach ($orderItemsData as $item) {
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
@@ -614,7 +648,7 @@ class NicuController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', "تم إرسال طلب الفحوصات المخبرية (" . count($testNames) . " فحص) لقسم التحاليل المركزي بنجاح (طلب #{$medReq->id}).");
+        return $this->redirectBackWithActiveState($request, 'labPane')->with('success', 'تم إرسال طلب الفحوصات المخبرية ('.count($testNames)." فحص) لقسم التحاليل المركزي بنجاح (طلب #{$medReq->id}).");
     }
 
     /**
@@ -645,13 +679,13 @@ class NicuController extends Controller
         }
 
         if ($examsToCreate->isEmpty()) {
-            return redirect()->back()->with('error', 'يرجى اختيار أو كتابة فحص شعاعي واحد على الأقل.');
+            return $this->redirectBackWithActiveState($request, 'radiologyPane')->with('error', 'يرجى اختيار أو كتابة فحص شعاعي واحد على الأقل.');
         }
 
         $existingRad = RadiologyType::whereIn('name', $examsToCreate->all())
             ->orWhereIn('id', $examsToCreate->all())
             ->get()
-            ->keyBy(fn($item) => strtolower($item->name));
+            ->keyBy(fn ($item) => strtolower($item->name));
 
         $radNames = [];
         $radTypeIds = [];
@@ -660,17 +694,17 @@ class NicuController extends Controller
         $detectedSubtype = 'general';
 
         foreach ($examsToCreate as $examIdentifier) {
-            $matchedRad = is_numeric($examIdentifier) 
-                ? RadiologyType::find($examIdentifier) 
+            $matchedRad = is_numeric($examIdentifier)
+                ? RadiologyType::find($examIdentifier)
                 : $existingRad->get(strtolower($examIdentifier));
 
             $examName = $matchedRad ? $matchedRad->name : $examIdentifier;
             $price = 0;
             if ($matchedRad) {
                 if ($reservation->is_insured && $matchedRad->is_hi_active && $matchedRad->hi_price > 0) {
-                    $price = (float)$matchedRad->hi_price;
+                    $price = (float) $matchedRad->hi_price;
                 } else {
-                    $price = (float)$matchedRad->price;
+                    $price = (float) $matchedRad->price;
                 }
                 $radTypeIds[] = $matchedRad->id;
                 $radNames[] = $matchedRad->name;
@@ -707,7 +741,7 @@ class NicuController extends Controller
             'visit_id' => null,
             'type' => 'radiology',
             'subtype' => $detectedSubtype,
-            'description' => 'طلب أشعة وسونار خديج: ' . implode(', ', $radNames),
+            'description' => 'طلب أشعة وسونار خديج: '.implode(', ', $radNames),
             'details' => [
                 'radiology_types' => $radTypeIds,
                 'radiology_type_ids' => $radTypeIds,
@@ -724,7 +758,7 @@ class NicuController extends Controller
         ]);
 
         // 2. إنشاء السجلات التوافقية في nicu_medical_orders
-        $groupId = 'REQ-' . $medReq->id;
+        $groupId = 'REQ-'.$medReq->id;
         foreach ($orderItemsData as $item) {
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
@@ -741,7 +775,7 @@ class NicuController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', "تم إرسال طلب الفحص الشعاعي (" . count($radNames) . " فحص) لقسم الأشعة والتصوير الطبي بنجاح (طلب #{$medReq->id}).");
+        return $this->redirectBackWithActiveState($request, 'radiologyPane')->with('success', 'تم إرسال طلب الفحص الشعاعي ('.count($radNames)." فحص) لقسم الأشعة والتصوير الطبي بنجاح (طلب #{$medReq->id}).");
     }
 
     /**
@@ -770,7 +804,7 @@ class NicuController extends Controller
         $medsList = collect();
         if ($request->filled('medications') && is_array($request->medications)) {
             foreach ($request->medications as $m) {
-                if (!empty($m['name'])) {
+                if (! empty($m['name'])) {
                     $medsList->push($m);
                 }
             }
@@ -787,23 +821,33 @@ class NicuController extends Controller
         }
 
         if ($medsList->isEmpty()) {
-            return redirect()->back()->with('error', 'يرجى إدخال اسم الدواء أو العلاج المطلوب.');
+            return $this->redirectBackWithActiveState($request, 'prescriptionsPane')->with('error', 'يرجى إدخال اسم الدواء أو العلاج المطلوب.');
         }
 
         $count = 0;
         foreach ($medsList as $med) {
             $instructionsFormatted = [];
-            if (!empty($med['dose'])) $instructionsFormatted[] = "الجرعة: " . $med['dose'];
-            if (!empty($med['route'])) $instructionsFormatted[] = "طريقة الإعطاء: " . $med['route'];
-            if (!empty($med['frequency'])) $instructionsFormatted[] = "التكرار: " . $med['frequency'];
-            if (!empty($med['duration'])) $instructionsFormatted[] = "المدة: " . $med['duration'];
-            if (!empty($med['instructions'])) $instructionsFormatted[] = "ملاحظات: " . $med['instructions'];
+            if (! empty($med['dose'])) {
+                $instructionsFormatted[] = 'الجرعة: '.$med['dose'];
+            }
+            if (! empty($med['route'])) {
+                $instructionsFormatted[] = 'طريقة الإعطاء: '.$med['route'];
+            }
+            if (! empty($med['frequency'])) {
+                $instructionsFormatted[] = 'التكرار: '.$med['frequency'];
+            }
+            if (! empty($med['duration'])) {
+                $instructionsFormatted[] = 'المدة: '.$med['duration'];
+            }
+            if (! empty($med['instructions'])) {
+                $instructionsFormatted[] = 'ملاحظات: '.$med['instructions'];
+            }
 
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
                 'order_type' => NicuMedicalOrder::TYPE_MEDICATION,
                 'item_name' => $med['name'],
-                'price' => isset($med['price']) ? (float)$med['price'] : 0,
+                'price' => isset($med['price']) ? (float) $med['price'] : 0,
                 'priority' => 'urgent',
                 'instructions' => implode(' | ', $instructionsFormatted),
                 'status' => NicuMedicalOrder::STATUS_PENDING,
@@ -813,7 +857,7 @@ class NicuController extends Controller
             $count++;
         }
 
-        return redirect()->back()->with('success', "تم اعتماد {$count} علاج دوائي في الوصفة الطبية للطفل بنجاح.");
+        return $this->redirectBackWithActiveState($request, 'prescriptionsPane')->with('success', "تم اعتماد {$count} علاج دوائي في الوصفة الطبية للطفل بنجاح.");
     }
 
     /**
@@ -831,8 +875,8 @@ class NicuController extends Controller
 
         $validated['reservation_id'] = $reservation->id;
         $validated['nurse_id'] = Auth::id();
-        $validated['given_at'] = $request->filled('given_at') 
-            ? Carbon::parse($request->given_at) 
+        $validated['given_at'] = $request->filled('given_at')
+            ? Carbon::parse($request->given_at)
             : now();
 
         NicuMedicationAdministration::create($validated);
@@ -842,9 +886,9 @@ class NicuController extends Controller
         $matchedSchedule = $reservation->careSchedules()
             ->where('type', 'medication')
             ->where('is_active', true)
-            ->where(function($q) use ($medName) {
+            ->where(function ($q) use ($medName) {
                 $q->where('title', 'like', "%{$medName}%")
-                  ->orWhereRaw("? LIKE CONCAT('%', title, '%')", [$medName]);
+                    ->orWhereRaw("? LIKE CONCAT('%', title, '%')", [$medName]);
             })
             ->first();
 
@@ -855,7 +899,7 @@ class NicuController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'تم توثيق إعطاء وتطبيق الجرعة العلاجية في سجل التمريض بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'vitalsPane')->with('success', 'تم توثيق إعطاء وتطبيق الجرعة العلاجية في سجل التمريض بنجاح.');
     }
 
     /**
@@ -869,8 +913,8 @@ class NicuController extends Controller
             'incubator.room',
             'medicalOrders' => function ($q) {
                 $q->where('order_type', NicuMedicalOrder::TYPE_MEDICATION)
-                  ->where('status', '!=', NicuMedicalOrder::STATUS_CANCELLED);
-            }
+                    ->where('status', '!=', NicuMedicalOrder::STATUS_CANCELLED);
+            },
         ]);
 
         return view('nicu.print.prescription', compact('reservation'));
@@ -914,7 +958,9 @@ class NicuController extends Controller
         ]);
 
         $typeName = $validated['type'] === 'feeding' ? 'جدول الرضاعة' : 'جدول إعطاء العلاج';
-        return redirect()->back()->with('success', "تم اعتماد {$typeName} بنجاح وتفعيل التنبيهات على لوحة الحاضنات.");
+        $defaultPill = $validated['type'] === 'feeding' ? 'pill-feeding' : 'pill-medication';
+
+        return $this->redirectBackWithActiveState($request, 'careSchedulesPane', $defaultPill)->with('success', "تم اعتماد {$typeName} بنجاح وتفعيل التنبيهات على لوحة الحاضنات.");
     }
 
     /**
@@ -958,7 +1004,7 @@ class NicuController extends Controller
             $createdCount++;
         }
 
-        return redirect()->back()->with('success', "تم اعتماد وإدراج {$createdCount} من التوصيات وجداول الرعاية بنجاح.");
+        return $this->redirectBackWithActiveState($request, 'careSchedulesPane')->with('success', "تم اعتماد وإدراج {$createdCount} من التوصيات وجداول الرعاية بنجاح.");
     }
 
     /**
@@ -967,11 +1013,12 @@ class NicuController extends Controller
     public function toggleCareSchedule(NicuCareSchedule $schedule)
     {
         $schedule->update([
-            'is_active' => !$schedule->is_active,
+            'is_active' => ! $schedule->is_active,
         ]);
 
         $statusText = $schedule->is_active ? 'تفعيل' : 'إيقاف';
-        return redirect()->back()->with('success', "تم {$statusText} التوصية بنجاح.");
+
+        return $this->redirectBackWithActiveState(null, 'careSchedulesPane')->with('success', "تم {$statusText} التوصية بنجاح.");
     }
 
     /**
@@ -980,7 +1027,8 @@ class NicuController extends Controller
     public function destroyCareSchedule(NicuCareSchedule $schedule)
     {
         $schedule->delete();
-        return redirect()->back()->with('success', 'تم حذف التوصية من الخطة العلاجية بنجاح.');
+
+        return $this->redirectBackWithActiveState(null, 'careSchedulesPane')->with('success', 'تم حذف التوصية من الخطة العلاجية بنجاح.');
     }
 
     /**
@@ -1003,7 +1051,7 @@ class NicuController extends Controller
         } elseif ($schedule->type === 'feeding') {
             $amountMl = null;
             if (preg_match('/(\d+(\.\d+)?)/', $schedule->dose_or_amount ?? '', $matches)) {
-                $amountMl = (float)$matches[1];
+                $amountMl = (float) $matches[1];
             }
             NicuVital::create([
                 'reservation_id' => $schedule->reservation_id,
@@ -1021,7 +1069,7 @@ class NicuController extends Controller
             'next_due_at' => $nextDue,
         ]);
 
-        return redirect()->back()->with('success', "تم توثيق الإعطاء بنجاح. الموعد القادم: الساعة " . $nextDue->format('H:i') . ".");
+        return $this->redirectBackWithActiveState($request, 'careSchedulesPane')->with('success', 'تم توثيق الإعطاء بنجاح. الموعد القادم: الساعة '.$nextDue->format('H:i').'.');
     }
 
     /**
@@ -1039,7 +1087,7 @@ class NicuController extends Controller
         // صمام الأمان المالي: منع الخروج في حال وجود رصيد متبقي بذمة الحاضنة
         if (($stayDetails['net_balance'] ?? 0) > 0) {
             return redirect()->back()
-                             ->with('error', '⛔ لا يمكن إتمام الخروج الطبي للطفل لوجود رصيد مالي متبقي بذمة الحاضنة بمبلغ (' . number_format($stayDetails['net_balance']) . ' د.ع). يرجى التوجيه لكاشير الخدج لتسوية الحساب كاملاً أولاً.');
+                ->with('error', '⛔ لا يمكن إتمام الخروج الطبي للطفل لوجود رصيد مالي متبقي بذمة الحاضنة بمبلغ ('.number_format($stayDetails['net_balance']).' د.ع). يرجى التوجيه لكاشير الخدج لتسوية الحساب كاملاً أولاً.');
         }
 
         $now = now();
@@ -1053,7 +1101,7 @@ class NicuController extends Controller
         ]);
 
         return redirect()->route('nicu.statement', $reservation)
-                         ->with('success', 'تم تسجيل الخروج الطبي للطفل بنجاح والحاضنة الآن في مرحلة التعقيم.');
+            ->with('success', 'تم تسجيل الخروج الطبي للطفل بنجاح والحاضنة الآن في مرحلة التعقيم.');
     }
 
     /**
@@ -1063,7 +1111,7 @@ class NicuController extends Controller
     {
         $incubator->update(['status' => Incubator::STATUS_AVAILABLE]);
 
-        return redirect()->back()->with('success', 'تم تأكيد تعقيم وتطهير الحاضنة رقم ' . $incubator->incubator_number . ' وهي الآن جاهزة للاستقبال 🟢');
+        return redirect()->back()->with('success', 'تم تأكيد تعقيم وتطهير الحاضنة رقم '.$incubator->incubator_number.' وهي الآن جاهزة للاستقبال 🟢');
     }
 
     /**
@@ -1127,6 +1175,7 @@ class NicuController extends Controller
     public function wristbandPrint(IncubatorReservation $reservation)
     {
         $reservation->load(['patient.user', 'incubator', 'doctor.user']);
+
         return view('nicu.print.wristband', compact('reservation'));
     }
 
@@ -1136,6 +1185,7 @@ class NicuController extends Controller
     public function cribCardPrint(IncubatorReservation $reservation)
     {
         $reservation->load(['patient.user', 'incubator.room', 'nicuService', 'doctor.user']);
+
         return view('nicu.print.crib_card', compact('reservation'));
     }
 
@@ -1147,7 +1197,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('manage nicu attachments') && !$user->can('manage incubator reservations') && !$user->hasRole(['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك برفع مرفقات بالخدج');
         }
 
@@ -1167,8 +1217,8 @@ class NicuController extends Controller
         $mimeType = $file->getClientMimeType();
         $fileSize = $file->getSize();
 
-        $storageName = time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('nicu_attachments/' . $reservation->id, $storageName, 'public');
+        $storageName = time().'_'.Str::random(8).'.'.$file->getClientOriginalExtension();
+        $path = $file->storeAs('nicu_attachments/'.$reservation->id, $storageName, 'public');
 
         NicuAttachment::create([
             'incubator_reservation_id' => $reservation->id,
@@ -1182,7 +1232,7 @@ class NicuController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return redirect()->back()->with('success', 'تم حفظ وأرشفة المستند بنجاح في السجل الطبي للطفل');
+        return $this->redirectBackWithActiveState($request, 'attachmentsPane')->with('success', 'تم حفظ وأرشفة المستند بنجاح في السجل الطبي للطفل');
     }
 
     /**
@@ -1190,7 +1240,7 @@ class NicuController extends Controller
      */
     public function downloadAttachment(NicuAttachment $attachment)
     {
-        if (!Storage::disk('public')->exists($attachment->file_path)) {
+        if (! Storage::disk('public')->exists($attachment->file_path)) {
             abort(404, 'الملف غير موجود في الخادم');
         }
 
@@ -1205,7 +1255,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('manage nicu attachments') && !$user->can('manage incubator reservations') && !$user->hasRole(['nicu_doctor', 'doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['nicu_doctor', 'doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بحذف مرفقات الخدج');
         }
 
@@ -1215,7 +1265,7 @@ class NicuController extends Controller
 
         $attachment->delete();
 
-        return redirect()->back()->with('success', 'تم حذف المستند بنجاح من الأرشيف');
+        return $this->redirectBackWithActiveState(null, 'attachmentsPane')->with('success', 'تم حذف المستند بنجاح من الأرشيف');
     }
 
     /**
@@ -1226,7 +1276,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بتدوين ملاحظات الطبيب الاختصاص');
         }
 
@@ -1247,7 +1297,7 @@ class NicuController extends Controller
             'is_pinned' => $request->boolean('is_pinned'),
         ]);
 
-        return redirect()->back()->with('success', 'تم تدوين وحفظ توجيه وملاحظة الطبيب الاختصاص بنجاح');
+        return $this->redirectBackWithActiveState($request, 'careSchedulesPane', 'pill-doctor-note')->with('success', 'تم تدوين وحفظ توجيه وملاحظة الطبيب الاختصاص بنجاح');
     }
 
     /**
@@ -1258,13 +1308,13 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بتعديل حالة الملاحظة');
         }
 
-        $note->update(['is_pinned' => !$note->is_pinned]);
+        $note->update(['is_pinned' => ! $note->is_pinned]);
 
-        return redirect()->back()->with('success', $note->is_pinned ? 'تم تثبيت التوجيه كإشعار رئيسي بنجاح' : 'تم إلغاء التثبيت');
+        return $this->redirectBackWithActiveState(null, 'careSchedulesPane', 'pill-doctor-note')->with('success', $note->is_pinned ? 'تم تثبيت التوجيه كإشعار رئيسي بنجاح' : 'تم إلغاء التثبيت');
     }
 
     /**
@@ -1275,12 +1325,12 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (!$isAdmin && (!$user || (!$user->can('manage nicu doctor notes') && !$user->can('manage incubator reservations') && !$user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بحذف ملاحظة الطبيب');
         }
 
         $note->delete();
 
-        return redirect()->back()->with('success', 'تم حذف ملاحظة الطبيب بنجاح');
+        return $this->redirectBackWithActiveState(null, 'careSchedulesPane', 'pill-doctor-note')->with('success', 'تم حذف ملاحظة الطبيب بنجاح');
     }
 }

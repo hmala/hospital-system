@@ -545,6 +545,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // استعادة وحفظ موضع التمرير
+    try {
+        const savedScroll = sessionStorage.getItem('nicu_services_scroll');
+        if (savedScroll !== null) {
+            sessionStorage.removeItem('nicu_services_scroll');
+            const targetY = parseInt(savedScroll, 10);
+            if (!isNaN(targetY) && targetY > 0) {
+                window.scrollTo({ top: targetY, behavior: 'instant' });
+                setTimeout(function() {
+                    window.scrollTo({ top: targetY, behavior: 'instant' });
+                }, 50);
+            }
+        }
+    } catch (e) {}
+
+    document.addEventListener('submit', function(e) {
+        try {
+            sessionStorage.setItem('nicu_services_scroll', window.scrollY || window.pageYOffset || 0);
+        } catch (err) {}
+    }, true);
+
     // التبديل اللحظي لحالة التفعيل عبر AJAX
     document.querySelectorAll('.service-toggle-switch').forEach(toggle => {
         toggle.addEventListener('change', function () {

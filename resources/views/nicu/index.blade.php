@@ -395,6 +395,29 @@ function copyCamLink() {
     document.execCommand('copy');
     alert('تم نسخ رابط الكاميرا بنجاح!');
 }
+
+// استعادة وحفظ موضع التمرير في لوحة الحاضنات
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const savedScroll = sessionStorage.getItem('nicu_index_scroll');
+        if (savedScroll !== null) {
+            sessionStorage.removeItem('nicu_index_scroll');
+            const targetY = parseInt(savedScroll, 10);
+            if (!isNaN(targetY) && targetY > 0) {
+                window.scrollTo({ top: targetY, behavior: 'instant' });
+                setTimeout(function() {
+                    window.scrollTo({ top: targetY, behavior: 'instant' });
+                }, 50);
+            }
+        }
+    } catch (e) {}
+
+    document.addEventListener('submit', function(e) {
+        try {
+            sessionStorage.setItem('nicu_index_scroll', window.scrollY || window.pageYOffset || 0);
+        } catch (err) {}
+    }, true);
+});
 </script>
 @endpush
 @endsection

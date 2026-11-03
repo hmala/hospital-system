@@ -1446,6 +1446,18 @@
   * **معالجة العمليات في الكنترولر (`processEmergencyPayment`)**: احتساب خصومات بنود الطوارئ الفردية وحفظ أسماء الخدمات ونسبها وتفاصيلها المعتمدة في السند المالي.
   * **الاختبارات الآلية**: إضافة `test_cashier_can_apply_per_item_discount_on_emergency_payment` واجتياز كامل الحزمة (6 passed, 61 assertions).
 
+- **المرحلة 144 (2026-11-03) — نظام ثبات واستمرارية التبويبات والتبويبات الفرعية وموضع التمرير في قسم الخدج (NICU Full Tab, Pill & Scroll Persistence Across All Operations)**:
+  * **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php))**:
+    - ربط كافة التبويبات السريرية الـ 9 (`servicePane`, `vitalsPane`, `growthPane`, `careSchedulesPane`, `consultationsPane`, `labPane`, `radiologyPane`, `prescriptionsPane`, `attachmentsPane`) والتبويبات الفرعية الـ 3 (`pill-feeding`, `pill-medication`, `pill-doctor-note`) ديناميكياً بمتغيرات الجلسة والطلب `$currentActiveTab` و `$currentActivePill`.
+    - حقن تلقائي لحظي لمدخلات `_active_tab` و `_active_pill` داخل أي نموذج أو زر يتم النقر عليه أو إرساله في الصفحة.
+  * **تثبيت موضع التمرير ومنع القفز لأعلى الصفحة (Scroll Position Restoration)**:
+    - حفظ موضع التمرير اللحظي في `sessionStorage` عند إرسال أي فورم أو النقر على أي زر حفظ، واستعادته بدقة وتوقيت مرحلي عند اكتمال تحميل الصفحة ليبقى المستخدم في ذات الموضع بدقة تامة.
+    - تعميم آلية حفظ التمرير أيضاً على لوحة إشغال الحاضنات (`nicu/index.blade.php`) وشاشة تسعير وباقات الخدمات (`nicu/services/index.blade.php`).
+  * **كنترولر الخدج ([app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php))**:
+    - إضافة دالة المساعدة المركزية `redirectBackWithActiveState` وتعميمها عبر كافة دوال الخدج (توثيق العلامات الحيوية، جداول الرعاية، الملاحظات الطبية، الاستشارات، طلبات المختبر والأشعة، الوصفات، إدارة العلاج MAR، المرفقات، وتبديل الباقات)، لتمرير التبويب والتبويب الفرعي تلقائياً في الجلسة `session(['active_tab' => ..., 'active_pill' => ...])`.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
+    - 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
+
 ### 🟡 In Progress (قيد المتابعة والتنفيذ):
 1. **نشر التحديثات البرمجية والمايجريشنات على سيرفر هوستنجر السحابي (`/deploy`)**:
    - تشغيل المايجريشن الجديد `2026_10_27_081000_add_void_fields_and_create_payment_void_logs_table.php` على قاعدة بيانات هوستنجر ومزامنة الصلاحيات `RolesAndPermissionsSeeder`.

@@ -55,6 +55,21 @@ Consult these files before making changes or proposing fixes:
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 - **CRITICAL GIT RULE (قاعدة Git المعتمدة الصارمة)**: ممنوع منعاً باتاً الرفع (`git push`) أو التعديل المباشر على فرع `main`. كل العمل والرفع يتم حصراً على فرع **`hr`** (`git push origin hr`). الفرع `main` للقراءة والسحب فقط (`git fetch`) لمزامنة التحديثات العامة إن لزم الأمر دون أي مساس به.
 
+## Session log (2026-11-03 — المرحلة 144: نظام ثبات واستمرارية التبويبات والتبويبات الفرعية وموضع التمرير في شاشات ونماذج قسم الخدج NICU Complete Tab, Sub-Pill & Scroll Position State Persistence Across All Clinical Forms)
+
+### Done
+- **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php))**:
+  * ربط كافة التبويبات السريرية الـ 9 (`servicePane`, `vitalsPane`, `growthPane`, `careSchedulesPane`, `consultationsPane`, `labPane`, `radiologyPane`, `prescriptionsPane`, `attachmentsPane`) والتبويبات الفرعية الـ 3 (`pill-feeding`, `pill-medication`, `pill-doctor-note`) ديناميكياً بمتغيرات الجلسة والطلب `$currentActiveTab` و `$currentActivePill`.
+  * حقن تلقائي لحظي لمدخلات `_active_tab` و `_active_pill` داخل أي نموذج أو زر يتم النقر عليه أو إرساله في الصفحة.
+  * مزامنة التبويب النشط مع الـ URL Hash والـ LocalStorage/SessionStorage.
+- **تثبيت موضع التمرير ومنع القفز لأعلى الصفحة (Scroll Position Restoration)**:
+  * حفظ موضع التمرير اللحظي في `sessionStorage` عند إرسال أي فورم أو النقر على أي زر حفظ، واستعادته بدقة وتوقيت مرحلي عند اكتمال تحميل الصفحة ليبقى المستخدم في ذات الموضع بدقة تامة.
+  * تعميم آلية حفظ التمرير أيضاً على لوحة إشغال الحاضنات (`nicu/index.blade.php`) وشاشة تسعير وباقات الخدمات (`nicu/services/index.blade.php`).
+- **كنترولر الخدج ([app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php))**:
+  * إضافة دالة المساعدة المركزية `redirectBackWithActiveState` وتعميمها عبر كافة دوال الخدج (توثيق العلامات الحيوية، جداول الرعاية، الملاحظات الطبية، الاستشارات، طلبات المختبر والأشعة، الوصفات، إدارة العلاج MAR، المرفقات، وتبديل الباقات)، لتمرير التبويب والتبويب الفرعي تلقائياً في الجلسة `session(['active_tab' => ..., 'active_pill' => ...])`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
+  * 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
+
 ## Session log (2026-11-03 — المرحلة 143: إنشاء وتعميم رادار صالات العمليات والولادة المتوقعة لقسم الخدج NICU Delivery & C-Section Operations Radar مع التحكم الديناميكي بأنواع العمليات وإبراز الصالات)
 
 ### Done
