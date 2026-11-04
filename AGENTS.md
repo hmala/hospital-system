@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-04 — المرحلة 158: ترويسة سريرية بيضاء ناصعة وتبويبات تابلت رشيقة وتحصين زر إعادة فتح الاستبيان للأدمن على هوستنجر Clean White Header, Tablet Auto-Fit Tabs & Resilient Hostinger Admin Survey Reset)
+
+### Done
+- **ترويسة طبية بيضاء عالية التباين والوضوح (Clean Medical White Header)**:
+  * إلغاء السواد بالكامل واستبدال الترويسة ببطاقة بيضاء ناصعة (`#ffffff`) مريحة للعين مع خط كحلي داكن عريض وواضح لاسم المريض (`#0f172a`).
+  * تنظيم بيانات الجراح والعملية والصالة والموعد داخل رقائق معلومات طبية (`.clin-info-chip`) واضحة بنسبة 100% بأيقونات ملونة.
+  * تحويل أزرار تحديد المرحلة (Pre-Op / Post-Op) وشارات الحالة إلى وضعية طبية ناعمة وفاتحة.
+- **تبويبات تابلت أفقية رشيقة بدون سكرول (Responsive Tablet Grid Tabs)**:
+  * اختصار مسميات التبويبات الـ 9 إلى كلمات سريرية ذكية (السيرة، العلامات، الخطة، المتابعة، الأدوية، السوائل، التمريض، الاستبيان ⭐، الفحوصات) مع تلميح كامل (Tooltip).
+  * توزيع شبكي مرن (`flex: 1 1 0px`) يتسع بالكامل على شاشات التابلت واللابتوب بعرض 100% دون أن يختفي أي تبويب ودون الحاجة لأي سكرول أفقي.
+- **تحصين زر إعادة فتح الاستبيان للأدمن على هوستنجر**:
+  * توسيع فحص صلاحية الأدمن الشامل `$canResetSurvey` في الكنترولر وواجهة العرض ليدعم: أدوار Spatie (`admin`, `super_admin`, `super-admin`, `hospital_admin`, `مدير النظام`)، وحقل جدول المستخدمين المباشر `role === 'admin'`، وصلاحيات الإدارة (`manage settings`, `manage surgery waiting list`).
+  * إبراز الزر في مكانين: في شريط الاستبيان العلوي بجوار أزرار الطباعة، وداخل بطاقة نتائج التقييم المكتملة.
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات المحطة السريرية بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (8 passed, 48 assertions).
+
 ## Session log (2026-11-04 — المرحلة 157: استعادة التصميم الأصلي للمحطة السريرية بالتبويبات الأفقية الكاملة Clinical Station Original Full-Width Horizontal Tabs Restoration)
 
 ### Done
