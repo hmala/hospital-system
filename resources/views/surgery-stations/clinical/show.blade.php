@@ -11,37 +11,175 @@
             --clin-card-bg: #6866ceff;
         }
 
-        /* Clean Medical White Header Card */
-        .clin-header-card {
+        /* Ultra-Modern Clinical Executive Header */
+        .clin-header-modern {
             background: #ffffff !important;
-            border-radius: 14px;
-            color: #0f172a !important;
-            padding: 14px 20px;
-            box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05);
+            border-radius: 16px;
+            padding: 12px 20px;
             border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+        .clin-header-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb 0%, #06b6d4 50%, #3b82f6 100%);
+        }
+
+        .avatar-modern-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
         }
 
         .clin-patient-name {
             color: #0f172a !important;
-            font-size: 1.25rem;
+            font-size: 1.22rem;
             font-weight: 800;
+            letter-spacing: -0.2px;
         }
 
-        .clin-info-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.82rem;
-            color: #475569;
+        .badge-modern-code {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+            font-family: monospace, system-ui;
+        }
+
+        .badge-modern-sub {
             background: #f8fafc;
-            padding: 3px 9px;
+            color: #475569;
+            font-size: 0.73rem;
+            font-weight: 600;
+            padding: 2px 7px;
             border-radius: 6px;
             border: 1px solid #e2e8f0;
         }
 
-        .clin-info-chip strong {
-            color: #0f172a;
+        .clin-v-divider {
+            width: 1px;
+            height: 40px;
+            background: #e2e8f0;
+            margin: 0 4px;
+        }
+
+        .clin-meta-label {
+            font-size: 0.68rem;
             font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .badge-doctor-chip {
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-room-chip {
+            background: #fffbeb;
+            color: #92400e;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-time-chip {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Segmented Control iOS / iPadOS Style */
+        .clin-segmented-control {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .clin-segment-item {
+            padding: 5px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 999px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+        }
+        .clin-segment-item:hover {
+            color: #0f172a;
+        }
+        .clin-segment-item.active {
+            background: #ffffff;
+            color: #2563eb !important;
+            font-weight: 800;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+
+        /* Modern Status Badge with Colored Pulse Indicator */
+        .badge-status-modern {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .status-pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .badge-status-completed {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        .badge-status-progress {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .badge-status-waiting {
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
         }
 
         /* Responsive Tablet-Ready Horizontal Tabs Bar (Zero Scroll / Auto-Fit) */
@@ -226,73 +364,109 @@
         </div>
     @endif
 
-    {{-- Header Patient & Surgery Banner --}}
-    {{-- Clean Medical White Patient & Surgery Executive Card --}}
-    <div class="clin-header-card mb-3">
-        <div class="row align-items-center gy-3">
-            <div class="col-lg-7">
+    {{-- Ultra-Modern Clinical Executive Header --}}
+    <div class="clin-header-modern mb-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            
+            {{-- Left Side: 3 Visual Pillars --}}
+            <div class="d-flex flex-wrap align-items-center gap-3 gap-xl-4">
+                
+                {{-- Pillar 1: Patient Identity --}}
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-box rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 52px; height: 52px; font-size: 1.4rem;">
-                        <i class="fas fa-user-injured text-primary"></i>
+                    <div class="avatar-modern-box flex-shrink-0">
+                        <i class="fas fa-user-injured"></i>
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-bold">
-                                ملف: {{ $surgery->patient?->patient_id ?? 'N/A' }}
-                            </span>
-                            <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill small">
-                                {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : '' }} | {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
+                            <span class="badge-modern-code">
+                                #{{ $surgery->patient?->patient_id ?? 'N/A' }}
                             </span>
                         </div>
-                        <div class="mt-2 d-flex flex-wrap align-items-center gap-2 small">
-                            <span class="clin-info-chip">
-                                <i class="fas fa-procedures text-primary"></i>
-                                العملية: <strong>{{ $surgery->surgery_name }}</strong>
+                        <div class="d-flex align-items-center gap-2 text-muted small mt-1">
+                            <span class="badge-modern-sub">
+                                <i class="fas fa-birthday-cake me-1 text-primary"></i> {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : 'العمر غير مسجل' }}
                             </span>
-                            <span class="clin-info-chip">
-                                <i class="fas fa-user-md text-success"></i>
-                                الجراح: <strong>{{ $surgery->doctor?->name ?? 'غير محدد' }}</strong>
-                            </span>
-                            <span class="clin-info-chip">
-                                <i class="fas fa-door-open text-warning"></i>
-                                الصالة/الغرفة: <strong>{{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}</strong>
-                            </span>
-                            <span class="clin-info-chip">
-                                <i class="far fa-clock text-secondary"></i>
-                                الموعد: <strong>{{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : 'غير محدد' }}</strong>
+                            <span class="badge-modern-sub">
+                                <i class="fas fa-venus-mars me-1 text-info"></i> {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
                             </span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-lg-5 text-lg-end">
-                <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
-                    {{-- Phase Selector (Light Medical Pill) --}}
-                    <div class="btn-group bg-light p-1 rounded-pill border" role="group">
-                        <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'pre_op' ? 'btn-primary text-white fw-bold shadow-xs' : 'text-secondary bg-transparent' }}">
-                            <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية (Pre-Op)
-                        </a>
-                        <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'post_op' ? 'btn-primary text-white fw-bold shadow-xs' : 'text-secondary bg-transparent' }}">
-                            <i class="fas fa-check-circle me-1"></i> ما بعد العملية (Post-Op)
-                        </a>
+                {{-- Vertical Divider 1 --}}
+                <div class="clin-v-divider d-none d-md-block"></div>
+
+                {{-- Pillar 2: Procedure & Doctor --}}
+                <div>
+                    <div class="clin-meta-label">
+                        <i class="fas fa-procedures text-primary me-1"></i> العملية الجراحية
                     </div>
-
-                    {{-- Phase Status Badge --}}
-                    <div>
-                        @if($station && $station->status === 'completed')
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-double me-1"></i> مكتملة</span>
-                        @elseif($station && $station->status === 'in_progress')
-                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill fw-bold"><i class="fas fa-spinner fa-spin me-1"></i> قيد المتابعة</span>
-                        @else
-                            <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 rounded-pill fw-bold"><i class="fas fa-hourglass-start me-1"></i> بالانتظار</span>
-                        @endif
+                    <div class="fw-bold text-dark fs-6 text-truncate" style="max-width: 260px;" title="{{ $surgery->surgery_name }}">
+                        {{ $surgery->surgery_name }}
+                    </div>
+                    <div class="text-secondary small mt-0.5 d-flex align-items-center gap-1.5">
+                        <span class="badge-doctor-chip">
+                            <i class="fas fa-user-md text-success me-1"></i> د. {{ $surgery->doctor?->name ?? 'غير محدد' }}
+                        </span>
                     </div>
                 </div>
+
+                {{-- Vertical Divider 2 --}}
+                <div class="clin-v-divider d-none d-lg-block"></div>
+
+                {{-- Pillar 3: Location & Time --}}
+                <div>
+                    <div class="clin-meta-label">
+                        <i class="fas fa-map-marker-alt text-warning me-1"></i> الموقع والجدولة
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-0.5">
+                        <span class="badge-room-chip">
+                            <i class="fas fa-door-open me-1 text-amber"></i> {{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}
+                        </span>
+                        <span class="badge-time-chip">
+                            <i class="far fa-clock me-1 text-secondary"></i> {{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : '--:--' }}
+                        </span>
+                    </div>
+                </div>
+
             </div>
+
+            {{-- Right Side: Phase Segmented Switcher & Clinical Status --}}
+            <div class="d-flex flex-wrap align-items-center gap-2.5 ms-auto ms-lg-0">
+                {{-- Apple / iPadOS Style Segmented Control --}}
+                <div class="clin-segmented-control" role="group">
+                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
+                       class="clin-segment-item {{ $currentPhase === 'pre_op' ? 'active' : '' }}">
+                        <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية
+                    </a>
+                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
+                       class="clin-segment-item {{ $currentPhase === 'post_op' ? 'active' : '' }}">
+                        <i class="fas fa-check-circle me-1"></i> ما بعد العملية
+                    </a>
+                </div>
+
+                {{-- Phase Status Modern Pill with Glowing Pulse Indicator --}}
+                <div>
+                    @if($station && $station->status === 'completed')
+                        <span class="badge-status-modern badge-status-completed">
+                            <span class="status-pulse-dot bg-success"></span>
+                            مكتملة
+                        </span>
+                    @elseif($station && $station->status === 'in_progress')
+                        <span class="badge-status-modern badge-status-progress">
+                            <span class="status-pulse-dot bg-warning"></span>
+                            قيد المتابعة
+                        </span>
+                    @else
+                        <span class="badge-status-modern badge-status-waiting">
+                            <span class="status-pulse-dot bg-secondary"></span>
+                            بالانتظار
+                        </span>
+                    @endif
+                </div>
+            </div>
+
         </div>
     </div>
 
