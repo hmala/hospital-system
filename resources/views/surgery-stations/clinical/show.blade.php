@@ -5,31 +5,43 @@
     {{-- CSS Styles --}}
     <style>
         :root {
-            --clin-navy: #0f172a;
-            --clin-teal: #1e3a5f;
+            --clin-navy: #476abdff;
+            --clin-teal: #1c6dd8ff;
             --clin-blue: #2563eb;
-            --clin-card-bg: #ffffff;
+            --clin-card-bg: #6866ceff;
         }
 
+        /* Clean Medical White Header Card */
         .clin-header-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: #ffffff !important;
             border-radius: 14px;
-            color: #ffffff;
-            padding: 12px 18px;
-            box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.12);
-            border: 1px solid #334155;
+            color: #0f172a !important;
+            padding: 14px 20px;
+            box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05);
+            border: 1px solid #e2e8f0;
         }
 
-        /* Protect header text from global text-white color overrides */
-        #clinicalStationApp .clin-header-card *,
-        #clinicalStationApp .clin-header-card h4,
-        #clinicalStationApp .clin-header-card h5,
-        #clinicalStationApp .clin-header-card strong,
-        #clinicalStationApp .clin-header-card span.text-white {
-            color: #ffffff !important;
+        .clin-patient-name {
+            color: #0f172a !important;
+            font-size: 1.25rem;
+            font-weight: 800;
         }
-        #clinicalStationApp .clin-header-card .text-white-50 {
-            color: rgba(255, 255, 255, 0.7) !important;
+
+        .clin-info-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.82rem;
+            color: #475569;
+            background: #f8fafc;
+            padding: 3px 9px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .clin-info-chip strong {
+            color: #0f172a;
+            font-weight: 700;
         }
 
         /* Responsive Tablet-Ready Horizontal Tabs Bar (Zero Scroll / Auto-Fit) */
