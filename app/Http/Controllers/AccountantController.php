@@ -522,6 +522,41 @@ class AccountantController extends Controller
 
         $cashCasesCount = max(0, $totalNicuCases - $insuredCasesCount);
 
+        // إجمالي مبالغ مطالبات الضمان للخدج في الفترة المحددة (المبالغ التي تطلبها المستشفى من هيئة الضمان)
+        $totalInsuranceClaims = (float) \App\Models\IncubatorReservation::whereBetween('admission_date', [$startDate, $endDate])
+            ->whereIn('insurance_type', ['hi', 'moi', 'health_insurance'])
+            ->sum('insurance_share_amount');
+
+        // توزيع تصفيات ومطالبات الضمان حسب مصفوفة عمر الحمل الوزارية
+        $gestationalMatrixStats = \App\Models\IncubatorReservation::whereBetween('admission_date', [$startDate, $endDate])
+            ->whereIn('insurance_type', ['hi', 'moi', 'health_insurance'])
+            ->get()
+            ->groupBy(function ($res) {
+                $w = $res->gestational_weeks;
+                if ($w === null || $w <= 0) {
+                    return 'غير محدد';
+                }
+                if ($w >= 34) {
+                    return '≥ 34 أسبوعاً (حد أقصى 10 أيام)';
+                }
+                if ($w >= 32) {
+                    return '32 إلى <34 أسبوعاً (حد أقصى 15 يوماً)';
+                }
+                if ($w >= 28) {
+                    return '28 إلى <32 أسبوعاً (حد أقصى 20 يوماً)';
+                }
+
+                return '< 28 أسبوعاً (خداجة شديدة - تغطية مستمرة)';
+            })
+            ->map(function ($items, $key) {
+                return [
+                    'label' => $key,
+                    'count' => $items->count(),
+                    'claims_sum' => (float) $items->sum('insurance_share_amount'),
+                    'patient_sum' => (float) $items->sum('patient_share_amount'),
+                ];
+            });
+
         return view('accountant.nicu.analytics', compact(
             'topServices',
             'doctorsActivity',
@@ -534,6 +569,8 @@ class AccountantController extends Controller
             'netNicuRevenue',
             'insuredCasesCount',
             'cashCasesCount',
+            'totalInsuranceClaims',
+            'gestationalMatrixStats',
             'startDate',
             'endDate'
         ));

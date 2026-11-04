@@ -20,15 +20,23 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('cashier.nicu.statements') }}" class="row g-3 align-items-end">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="from_date" class="form-label">من تاريخ الدخول</label>
                             <input type="date" id="from_date" name="from_date" class="form-control" value="{{ old('from_date', $fromDate) }}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="to_date" class="form-label">إلى تاريخ الدخول</label>
                             <input type="date" id="to_date" name="to_date" class="form-control" value="{{ old('to_date', $toDate) }}">
                         </div>
-                        <div class="col-md-4 d-flex gap-2">
+                        <div class="col-md-3">
+                            <label for="insurance_type" class="form-label">نوع التغطية المالية</label>
+                            <select id="insurance_type" name="insurance_type" class="form-select">
+                                <option value="" {{ empty($insuranceFilter) ? 'selected' : '' }}>جميع الحالات (كاش وضمان)</option>
+                                <option value="insured" {{ $insuranceFilter === 'insured' ? 'selected' : '' }}>🛡️ حالات الضمان الصحي فقط</option>
+                                <option value="cash" {{ $insuranceFilter === 'cash' ? 'selected' : '' }}>💵 حالات الدفع النقدي (كاش) فقط</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
                             <button type="submit" class="btn btn-info text-white w-100">
                                 <i class="fas fa-filter me-2"></i>تصفية
                             </button>
@@ -42,10 +50,10 @@
         </div>
     </div>
 
-    {{-- بطاقات الملخص المالي للبند --}}
+    {{-- بطاقات الملخص المالي للبند ومطالبات الضمان --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-white bg-primary">
+            <div class="card border-0 shadow-sm text-white bg-primary h-100">
                 <div class="card-body py-3">
                     <h6 class="mb-1 opacity-75">إجمالي خدمات الحواضن</h6>
                     <h3 class="fw-bold mb-0">{{ number_format($totalServicesFee, 0) }} د.ع</h3>
@@ -53,37 +61,27 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-white bg-success">
+            <div class="card border-0 shadow-sm text-white bg-info h-100">
                 <div class="card-body py-3">
-                    <h6 class="mb-1 opacity-75">إجمالي تحاليل الخدج</h6>
-                    <h3 class="fw-bold mb-0">{{ number_format($totalLabs, 0) }} د.ع</h3>
+                    <h6 class="mb-1 opacity-75">الفحوصات والأشعة والأدوية</h6>
+                    <h3 class="fw-bold mb-0">{{ number_format($totalLabs + $totalRadiology + $totalMedications + $totalConsultations, 0) }} د.ع</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-white bg-info">
+            <div class="card border-0 shadow-sm text-white bg-success h-100">
                 <div class="card-body py-3">
-                    <h6 class="mb-1 opacity-75">إجمالي الأشعة والسونار</h6>
-                    <h3 class="fw-bold mb-0">{{ number_format($totalRadiology, 0) }} د.ع</h3>
+                    <h6 class="mb-1 opacity-75">🛡️ مطالبات الضمان للخدج (تطلبها المستشفى)</h6>
+                    <h3 class="fw-bold mb-0">+ {{ number_format($totalInsuranceClaims, 0) }} د.ع</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm text-white bg-warning">
+            <div class="card border-0 shadow-sm text-dark bg-warning bg-opacity-75 h-100">
                 <div class="card-body py-3">
-                    <h6 class="mb-1 opacity-75 text-dark">الأدوية والاستشارات</h6>
-                    <h3 class="fw-bold mb-0 text-dark">{{ number_format($totalMedications + $totalConsultations, 0) }} د.ع</h3>
+                    <h6 class="mb-1 text-muted">💵 الصافي المقبوض نقداً بالصندوق</h6>
+                    <h3 class="fw-bold mb-0 text-dark">{{ number_format($totalCollected, 0) }} د.ع</h3>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- إجمالي المقبوضات الكلي --}}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm bg-light text-center py-3">
-                <h6 class="text-muted mb-1">الصافي الكلي الفعلي المقبوض في الصندوق للخدج</h6>
-                <h2 class="fw-bold text-info">{{ number_format($totalCollected, 0) }} د.ع</h2>
             </div>
         </div>
     </div>
@@ -101,12 +99,13 @@
                                         <th>#</th>
                                         <th>المولود والأم</th>
                                         <th>الحاضنة والحالة</th>
-                                        <th>تاريخ الدخول</th>
-                                        <th>المدة المحتسبة</th>
-                                        <th>تفصيل البنود (خدمات / تحاليل / أشعة / علاج)</th>
-                                        <th>إجمالي التكلفة</th>
-                                        <th>المدفوع / الأمانات</th>
-                                        <th>الرصيد المتبقي</th>
+                                        <th>الدخول والمدة</th>
+                                        <th>تفصيل البنود</th>
+                                        <th>إجمالي الفاتورة</th>
+                                        <th class="table-success text-success">مطالبة الضمان (تطلبها المستشفى)</th>
+                                        <th>حصة المريض</th>
+                                        <th>المسدد نقداً</th>
+                                        <th>موقف المريض</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
@@ -115,20 +114,31 @@
                                         @php
                                             $stay = $billingService->calculateStayDetails($res);
                                             $paid = $res->total_paid_amount;
-                                            $grandTotal = $stay['patient_grand_total'];
-                                            $due = max(0, $grandTotal - $paid);
-                                            $excess = max(0, $paid - $grandTotal);
+                                            $grossTotal = $stay['grand_total'];
+                                            $patientGrandTotal = $stay['patient_grand_total'];
+                                            $insuranceShare = $stay['insurance_grand_total'];
+                                            $due = max(0, $patientGrandTotal - $paid);
+                                            $excess = max(0, $paid - $patientGrandTotal);
                                         @endphp
                                         <tr>
                                             <td>{{ $reservations->firstItem() + $loop->index }}</td>
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $res->baby_title }}</div>
-                                                <small class="text-muted">الأم: {{ optional($res->patient?->user)->name ?? 'غير معروف' }}</small>
-                                                @if($res->is_insured)
-                                                    <br><span class="badge bg-success bg-opacity-10 text-success border border-success">ضمان فئة {{ $res->policy_category ?? 'E' }}</span>
-                                                @else
-                                                    <br><span class="badge bg-secondary bg-opacity-10 text-secondary border">نقدي (كاش)</span>
-                                                @endif
+                                                <small class="text-muted d-block">الأم: {{ optional($res->patient?->user)->name ?? 'غير معروف' }}</small>
+                                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                                    @if($res->is_insured)
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                                            <i class="fas fa-shield-alt me-1"></i>ضمان فئة {{ $res->policy_category ?? 'E' }}
+                                                        </span>
+                                                        @if($res->gestational_age)
+                                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                                                                <i class="fas fa-baby me-1"></i>{{ $res->gestational_age }}
+                                                            </span>
+                                                        @endif
+                                                    @else
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border">نقدي (كاش)</span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td>
                                                 <span class="badge bg-light text-dark border">
@@ -140,14 +150,13 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <span class="small">{{ $res->admission_date->format('Y-m-d') }}</span>
+                                                <span class="small fw-bold">{{ $res->admission_date->format('Y-m-d') }}</span>
                                                 @if($res->discharge_date)
                                                     <br><small class="text-muted">خروج: {{ $res->discharge_date->format('Y-m-d') }}</small>
                                                 @endif
-                                            </td>
-                                            <td>
+                                                <br>
                                                 <span class="badge bg-info bg-opacity-10 text-info fw-bold">{{ $stay['calculated_days'] }} يوم</span>
-                                                <br><small class="text-muted">{{ $stay['total_hours'] }} ساعة</small>
+                                                <small class="text-muted">({{ $stay['total_hours'] }}س)</small>
                                             </td>
                                             <td>
                                                 <ul class="list-unstyled mb-0 small">
@@ -164,12 +173,33 @@
                                                 </ul>
                                             </td>
                                             <td class="fw-bold text-dark">
-                                                {{ number_format($grandTotal, 0) }} د.ع
+                                                {{ number_format($grossTotal, 0) }} د.ع
+                                            </td>
+                                            <td class="table-success text-center">
+                                                @if($res->is_insured && $insuranceShare > 0)
+                                                    <span class="badge bg-success fs-6 fw-bold px-2 py-1 shadow-2xs">
+                                                        + {{ number_format($insuranceShare, 0) }} د.ع
+                                                    </span>
+                                                    <small class="text-success d-block fw-semibold mt-1">تطلبها المستشفى</small>
+                                                @else
+                                                    <span class="text-muted small">0 (كاش كامل)</span>
+                                                @endif
+                                            </td>
+                                            <td class="fw-bold text-primary">
+                                                {{ number_format($patientGrandTotal, 0) }} د.ع
                                             </td>
                                             <td class="fw-bold text-success">
                                                 {{ number_format($paid, 0) }} د.ع
                                             </td>
                                             <td>
+                                                @if($due > 0)
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger">مطلوب: {{ number_format($due, 0) }} د.ع</span>
+                                                @elseif($excess > 0)
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning">فائض: {{ number_format($excess, 0) }} د.ع</span>
+                                                @else
+                                                    <span class="badge bg-success-subtle text-success border border-success">خالص تماماً</span>
+                                                @endif
+                                            </td>
                                                 @if($due > 0)
                                                     <span class="text-danger fw-bold">مطلوب: {{ number_format($due, 0) }} د.ع</span>
                                                 @elseif($excess > 0)

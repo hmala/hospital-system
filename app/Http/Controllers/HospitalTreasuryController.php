@@ -144,7 +144,7 @@ class HospitalTreasuryController extends Controller
             'operational', 'salary', 'maintenance', 'utilities', 'medical_supplies', 'other',
         ])->sum('amount');
 
-        // مطالبات الضمان الصحي للفترة (ذمم مدينة مؤجلة قيد التحصيل)
+        // مطالبات الضمان الصحي للفترة (ذمم مدينة مؤجلة قيد التحصيل تشمل العيادات والأقسام وحواضن الخدج)
         $insClaimsQuery = Payment::whereNotNull('paid_at')->where('insurance_share', '>', 0);
         if ($request->filled('from_date')) {
             $insClaimsQuery->whereDate('paid_at', '>=', $request->from_date);
@@ -152,8 +152,22 @@ class HospitalTreasuryController extends Controller
         if ($request->filled('to_date')) {
             $insClaimsQuery->whereDate('paid_at', '<=', $request->to_date);
         }
-        $periodInsuranceClaims = (float) $insClaimsQuery->sum('insurance_share');
-        $periodInsuranceClaimsCount = (int) $insClaimsQuery->count();
+        $paymentClaimsAmount = (float) $insClaimsQuery->sum('insurance_share');
+        $paymentClaimsCount = (int) $insClaimsQuery->count();
+
+        // مطالبات وتصفيات الخدج والحاضنات المشمولة بالضمان
+        $nicuClaimsQuery = \App\Models\IncubatorReservation::whereIn('insurance_type', ['hi', 'moi', 'health_insurance']);
+        if ($request->filled('from_date')) {
+            $nicuClaimsQuery->whereDate('admission_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $nicuClaimsQuery->whereDate('admission_date', '<=', $request->to_date);
+        }
+        $nicuClaimsAmount = (float) $nicuClaimsQuery->sum('insurance_share_amount');
+        $nicuClaimsCount = (int) (clone $nicuClaimsQuery)->where('insurance_share_amount', '>', 0)->count();
+
+        $periodInsuranceClaims = $paymentClaimsAmount + $nicuClaimsAmount;
+        $periodInsuranceClaimsCount = $paymentClaimsCount + $nicuClaimsCount;
 
         // مستحقات الأطباء المعلقة (التزامات غير مدفوعة حتى الآن)
         $pendingDuesQuery = DoctorDue::where('status', 'pending');

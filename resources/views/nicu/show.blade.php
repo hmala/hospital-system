@@ -53,8 +53,14 @@
                         <span class="small opacity-75 d-block">الأيام الفندقية</span>
                         <h5 class="mb-0 fw-bold">{{ $stayDetails['calculated_days'] }} يوم</h5>
                     </div>
+                    @if($stayDetails['is_insured'])
+                        <div class="p-2 bg-success bg-opacity-20 rounded text-center border border-success" style="min-width: 110px;" title="المبلغ الذي تطلبه المستشفى من هيئة الضمان الصحي">
+                            <span class="small opacity-90 d-block text-white"><i class="fas fa-shield-alt me-1"></i>مطالبة الضمان</span>
+                            <h5 class="mb-0 fw-bold" style="color: #6ee7b7;">{{ number_format($stayDetails['insurance_grand_total'] ?? 0) }} د.ع</h5>
+                        </div>
+                    @endif
                     <div class="p-2 bg-white bg-opacity-10 rounded text-center" style="min-width: 110px;">
-                        <span class="small opacity-75 d-block">الحساب التراكمي</span>
+                        <span class="small opacity-75 d-block">{{ $stayDetails['is_insured'] ? 'حصة المريض' : 'الحساب التراكمي' }}</span>
                         <h5 class="mb-0 fw-bold">{{ number_format($stayDetails['patient_grand_total'] ?? $stayDetails['grand_total']) }} د.ع</h5>
                     </div>
                     <div class="p-2 bg-white bg-opacity-10 rounded text-center" style="min-width: 100px;">

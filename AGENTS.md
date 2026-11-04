@@ -54,6 +54,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-04 — المرحلة 158: الربط التلقائي لتصفيات الضمان الصحي للخدج واحتساب فرق مطالبة المستشفى ومصفوفة عمر الحمل بالخزينة والحسابات NICU Insurance Automatic Settlement, Hospital Claim Margin & Gestational Matrix Treasury Integration)
+
+### Done
+- **محرك الفوترة الحية والاحتساب التلقائي ([app/Services/NicuBillingService.php](file:///c:/wamp64/www/hospital-system/app/Services/NicuBillingService.php))**:
+  * ترقية عداد الأيام التراكمية في السجل المفتوح (`activeOpenDays`) ليتم احتسابه حياً وتلقائياً بحسب تاريخ الدخول والتوقيت الفندقي وتحديث قاعدة البيانات دون الحاجة لتدخل يدوي.
+  * احتساب مصفوفة عمر الحمل الوزارية بدقة ($\ge 34$, 32-34, 28-32, $<28$ أسبوعاً) مع تحديد حصة المريض وحصة الضمان لكل يوم إقامة.
+  * تحديث وحفظ `patient_share_amount` و `insurance_share_amount` تلقائياً على نموذج `IncubatorReservation` ليمثل الفرق الصافي الذي تطلبه المستشفى من هيئة الضمان.
+- **خزينة المستشفى المركزية ([app/Http/Controllers/HospitalTreasuryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HospitalTreasuryController.php))**:
+  * إدراج وتوحيد مطالبات وتصفيات الخدج والحاضنات (`insurance_share_amount`) مباشرة داخل كارت "مطالبات الضمان الصحي للفترة" التراكمي في واجهة الخزينة كذمم مدينة للمستشفى.
+- **كشوفات حسابات الخدج لدى الكاشير ([resources/views/cashier/nicu-statements.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-statements.blade.php), [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * إضافة فلتر نوع التغطية المالية (الكل / ضمان فقط / نقدي فقط).
+  * إضافة كارت إحصائي بارز: `[ 🛡️ مطالبات الضمان للخدج (تطلبها المستشفى) ]`.
+  * ترقية جدول الكشوفات لإبراز: عمر الحمل بالأسابيع، إجمالي الفاتورة الكاملة، مطالبة الضمان، حصة المريض، المسدد نقداً، وموقف المريض المالي.
+- **لوحة تحليلات محاسب الخدج ([app/Http/Controllers/AccountantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AccountantController.php), [resources/views/accountant/nicu/analytics.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/accountant/nicu/analytics.blade.php))**:
+  * إضافة كارت إحصائي لمطالبات الضمان للخدج خلال الفترة المحددة.
+  * إضافة جدول تحليلي وتفصيلي لمطالبات الضمان مصنفة وفق مصفوفة عمر الحمل الوزارية.
+- **طبلة الخديج السريرية ([resources/views/nicu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/show.blade.php))**:
+  * إبراز مربع مالي علوي لمطالبة الضمان في ترويسة الطفل بجانب عداد الساعات والأيام وحصة المريض.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/NicuInsuranceSettlementAndClaimsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuInsuranceSettlementAndClaimsTest.php))**:
+  * إنشاء واجتياز اختبار الميزة بنسبة 100% (4 passed, 18 assertions).
+  * استمرار اجتياز كافة اختبارات حسابات وتدفقات الخدج السابقة: `tests/Feature/NicuAccountingTest.php` (4 passed, 21 assertions)، `tests/Feature/NicuLabRadiologyCashierWorkflowTest.php` (4 passed, 82 assertions)، و `tests/Feature/NicuWorkflowTest.php` (39 passed, 341 assertions).
+
 ## Session log (2026-11-04 — المرحلة 157: استعادة التصميم الأصلي للمحطة السريرية بالتبويبات الأفقية الكاملة Clinical Station Original Full-Width Horizontal Tabs Restoration)
 
 ### Done

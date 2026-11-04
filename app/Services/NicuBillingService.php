@@ -56,11 +56,24 @@ class NicuBillingService
         $cumulativeDayCounter = 1;
 
         if ($serviceLogs->isNotEmpty()) {
+            $totalCalculatedDays = $billableDays['days'];
+            $closedLogsDays = (int) $serviceLogs->whereNotNull('end_time')->sum('days_count');
+            $activeOpenDays = max(1, $totalCalculatedDays - $closedLogsDays);
+
             foreach ($serviceLogs as $log) {
-                $days = (int) $log->days_count;
+                // إذا كان السجل مفتوحاً (قيد الرقود)، يُحتسب عدد الأيام الحية تلقائياً حتى اليوم الفندقي الحالي
+                $days = $log->end_time === null ? $activeOpenDays : max(1, (int) $log->days_count);
                 $fee = (float) $log->daily_fee;
-                $cost = (float) ($log->total_cost ?? ($days * $fee));
+                $cost = (float) ($days * $fee);
                 $totalServiceCost += $cost;
+
+                // تحديث السجل المفتوح في قاعدة البيانات بالمدة المحتسبة الحية
+                if ($log->end_time === null && ($log->days_count != $days || $log->total_cost != $cost)) {
+                    $log->updateQuietly([
+                        'days_count' => $days,
+                        'total_cost' => $cost,
+                    ]);
+                }
 
                 $logPatientShare = 0.0;
                 $logInsuranceShare = 0.0;
@@ -210,6 +223,11 @@ class NicuBillingService
                     'insurance_share' => $totalInsuranceServiceShare,
                     'daily_details' => $dailyCoverageDetails,
                 ],
+            ]);
+        } else {
+            $reservation->updateQuietly([
+                'patient_share_amount' => $grandTotal,
+                'insurance_share_amount' => 0.0,
             ]);
         }
 

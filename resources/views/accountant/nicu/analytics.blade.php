@@ -58,8 +58,8 @@
 
     <!-- Summary KPI Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card analytics-card shadow-sm bg-white p-3">
+        <div class="col-xl col-md-4 col-sm-6">
+            <div class="card analytics-card shadow-sm bg-white p-3 h-100">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold">حالات دخول الخدج</span>
@@ -75,8 +75,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card analytics-card shadow-sm bg-white p-3">
+        <div class="col-xl col-md-4 col-sm-6">
+            <div class="card analytics-card shadow-sm bg-white p-3 h-100">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold">نسبة إشغال الحاضنات</span>
@@ -89,8 +89,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card analytics-card shadow-sm bg-white p-3">
+        <div class="col-xl col-md-4 col-sm-6">
+            <div class="card analytics-card shadow-sm bg-white p-3 h-100">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold">المقبوضات والأمانات</span>
@@ -103,11 +103,25 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card analytics-card shadow-sm bg-white p-3">
+        <div class="col-xl col-md-6 col-sm-6">
+            <div class="card analytics-card shadow-sm bg-white p-3 h-100 border-start border-4 border-success">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-bold">صافي إيراد الخدج</span>
+                        <span class="text-muted small fw-bold">🛡️ مطالبات الضمان للخدج</span>
+                        <h3 class="fw-bold text-success mt-1 mb-0">+ {{ number_format($totalInsuranceClaims) }} <span class="fs-6">د.ع</span></h3>
+                        <small class="text-success fw-semibold"><i class="fas fa-shield-alt me-1"></i>المبالغ التي تطلبها المستشفى</small>
+                    </div>
+                    <div class="stat-icon-wrapper bg-success bg-opacity-10 text-success">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl col-md-6 col-sm-12">
+            <div class="card analytics-card shadow-sm bg-white p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-bold">صافي إيراد الصندوق</span>
                         <h3 class="fw-bold text-info mt-1 mb-0">{{ number_format($netNicuRevenue) }} <span class="fs-6">د.ع</span></h3>
                         <small class="text-muted">الصافي الفعلي المحصل بالصندوق</small>
                     </div>
@@ -115,6 +129,84 @@
                         <i class="fas fa-vault"></i>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة تحليل وتصفيات الضمان الصحي وفق مصفوفة عمر الحمل الوزارية -->
+    <div class="card analytics-card shadow-sm bg-white mb-4 border-start border-4 border-success">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-1 fs-6">
+                    <i class="fas fa-shield-alt text-success me-2"></i>
+                    تصفيات ومطالبات الضمان الصحي للخدج وفق مصفوفة عمر الحمل الوزارية
+                </h5>
+                <p class="text-muted small mb-0">المبالغ التي تطلبها المستشفى من هيئة الضمان بناءً على أسابيع الحمل والأيام الفندقية المعتمدة</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ route('cashier.nicu.statements', ['insurance_type' => 'insured']) }}" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> كشف مطالبات الضمان التفصيلي
+                </a>
+                <a href="{{ url('/nicu/services') }}" target="_blank" class="btn btn-sm btn-light border text-muted">
+                    <i class="fas fa-table me-1"></i> جدول اللائحة الوزارية
+                </a>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 border rounded-3">
+                    <thead class="table-light">
+                        <tr class="small text-muted">
+                            <th>شريحة العمر الحملي والحد الأقصى للتغطية</th>
+                            <th class="text-center">عدد الحالات</th>
+                            <th class="text-end text-success">إجمالي مطالبة الضمان (تطلبها المستشفى)</th>
+                            <th class="text-end text-primary">حصة المريض المقررة (كاش)</th>
+                            <th class="text-end">الإجمالي الكلي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($gestationalMatrixStats as $tier)
+                            <tr>
+                                <td class="fw-bold text-dark">
+                                    <i class="fas fa-layer-group text-primary me-2"></i>
+                                    {{ $tier['label'] }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary fs-7 px-3 py-1.5">
+                                        {{ $tier['count'] }} طفل
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold text-success fs-6">
+                                    + {{ number_format($tier['claims_sum']) }} د.ع
+                                </td>
+                                <td class="text-end fw-bold text-primary fs-6">
+                                    {{ number_format($tier['patient_sum']) }} د.ع
+                                </td>
+                                <td class="text-end fw-bold text-dark fs-6">
+                                    {{ number_format($tier['claims_sum'] + $tier['patient_sum']) }} د.ع
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-shield-alt fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                    لا توجد حالات ضمان مسجلة خلال هذه الفترة
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if($gestationalMatrixStats->isNotEmpty())
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td>المجموع التراكمي لمطالبات الضمان:</td>
+                                <td class="text-center">{{ $gestationalMatrixStats->sum('count') }} حالة</td>
+                                <td class="text-end text-success fs-6">+ {{ number_format($gestationalMatrixStats->sum('claims_sum')) }} د.ع</td>
+                                <td class="text-end text-primary fs-6">{{ number_format($gestationalMatrixStats->sum('patient_sum')) }} د.ع</td>
+                                <td class="text-end text-dark fs-6">{{ number_format($gestationalMatrixStats->sum('claims_sum') + $gestationalMatrixStats->sum('patient_sum')) }} د.ع</td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
             </div>
         </div>
     </div>

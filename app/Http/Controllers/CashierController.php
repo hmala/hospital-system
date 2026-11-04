@@ -767,7 +767,7 @@ class CashierController extends Controller
 
         $isRefund = ($paymentType === NicuPayment::TYPE_REFUND);
         \App\Models\FinancialTransaction::create([
-            'transaction_type' => $isRefund ? 'expense' : 'income',
+            'transaction_type' => $isRefund ? 'expense' : 'hospital_revenue',
             'voucher_type' => $isRefund ? 'outflow' : 'inflow',
             'category' => $isRefund ? 'refund' : 'nicu',
             'voucher_number' => $receiptNumber,
@@ -4785,6 +4785,7 @@ class CashierController extends Controller
 
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
+        $insuranceFilter = $request->query('insurance_type'); // 'insured', 'cash'
 
         $query = IncubatorReservation::with([
             'incubator',
@@ -4805,6 +4806,16 @@ class CashierController extends Controller
             $query->whereDate('admission_date', '<=', $toDate);
         }
 
+        if ($insuranceFilter === 'insured') {
+            $query->whereIn('insurance_type', ['hi', 'moi', 'health_insurance']);
+        } elseif ($insuranceFilter === 'cash') {
+            $query->where(function ($q) {
+                $q->whereNull('insurance_type')
+                    ->orWhere('insurance_type', 'none')
+                    ->orWhere('insurance_type', '');
+            });
+        }
+
         $reservations = $query->orderBy('admission_date', 'desc')->paginate(20);
 
         // حساب الإجماليات للفترة
@@ -4814,6 +4825,15 @@ class CashierController extends Controller
         }
         if ($toDate) {
             $summaryQuery->whereDate('admission_date', '<=', $toDate);
+        }
+        if ($insuranceFilter === 'insured') {
+            $summaryQuery->whereIn('insurance_type', ['hi', 'moi', 'health_insurance']);
+        } elseif ($insuranceFilter === 'cash') {
+            $summaryQuery->where(function ($q) {
+                $q->whereNull('insurance_type')
+                    ->orWhere('insurance_type', 'none')
+                    ->orWhere('insurance_type', '');
+            });
         }
         $summaryIds = $summaryQuery->pluck('id');
 
@@ -4851,6 +4871,11 @@ class CashierController extends Controller
         $totalCollected = (float) (clone $paymentsQuery)->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
             - (float) (clone $paymentsQuery)->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
 
+        // إجمالي مطالبات الضمان للخدج في الفترة (المبالغ التي تطلبها المستشفى من هيئة الضمان)
+        $totalInsuranceClaims = (float) IncubatorReservation::whereIn('id', $summaryIds)
+            ->whereIn('insurance_type', ['hi', 'moi', 'health_insurance'])
+            ->sum('insurance_share_amount');
+
         $billingService = app(\App\Services\NicuBillingService::class);
 
         return view('cashier.nicu-statements', compact(
@@ -4861,9 +4886,11 @@ class CashierController extends Controller
             'totalMedications',
             'totalConsultations',
             'totalCollected',
+            'totalInsuranceClaims',
             'billingService',
             'fromDate',
-            'toDate'
+            'toDate',
+            'insuranceFilter'
         ));
     }
 
