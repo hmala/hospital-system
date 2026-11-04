@@ -115,7 +115,28 @@ class SurgeryController extends Controller
             ->paginate(20)
             ->appends(request()->query());
 
-        return view('surgeries.index', compact('activeSurgeries', 'completedSurgeries'));
+        // احتساب إحصاءات ومؤشرات العمليات الشاملة للوحة المؤشرات
+        $statsQuery = Surgery::query();
+        if ($user->hasRole('doctor') && $user->doctor) {
+            if ($user->doctor->type === 'consultant') {
+                $statsQuery->whereRaw('1 = 0');
+            } else {
+                $statsQuery->where('doctor_id', $user->doctor->id);
+            }
+        }
+        $stats = (clone $statsQuery)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) as waiting,
+                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+            ")
+            ->first();
+
+        return view('surgeries.index', compact('activeSurgeries', 'completedSurgeries', 'stats'));
     }
 
     public function create()
@@ -878,14 +899,14 @@ class SurgeryController extends Controller
             ]);
         }
 
-        // لا نجعل حالة العملية "مكتملة" بالكامل هنا لأنها يجب أن تمر بالجراح والتخدير والتمريض
-        // نجعلها "in_progress" لتستمر في دورة المحطات
-        $surgery->status = 'in_progress';
+        // إنهاء العملية واكتمال مرحلة صالة العمليات وخروج المريض للمتابعة
+        $surgery->status = 'completed';
+        $surgery->end_time = now();
         $surgery->save();
 
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم إنهاء مرحلة صالة العمليات ونقل المريض لمحطة الجراح');
+        return redirect()->back()->with('success', 'تم إنهاء العملية بنجاح واكتمال مرحلة صالة العمليات وخروج المريض');
     }
 
     public function discharge(Surgery $surgery)
