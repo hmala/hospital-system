@@ -227,28 +227,41 @@
     @endif
 
     {{-- Header Patient & Surgery Banner --}}
-    <div class="clin-header-card mb-4">
+    {{-- Clean Medical White Patient & Surgery Executive Card --}}
+    <div class="clin-header-card mb-3">
         <div class="row align-items-center gy-3">
             <div class="col-lg-7">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-box rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; font-size: 1.6rem;">
-                        <i class="fas fa-user-injured"></i>
+                    <div class="avatar-box rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                        <i class="fas fa-user-injured text-primary"></i>
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h3 class="fw-bold mb-0 text-white">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
-                            <span class="badge bg-primary bg-opacity-75 px-3 py-1.5 rounded-pill small">
+                            <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-bold">
                                 ملف: {{ $surgery->patient?->patient_id ?? 'N/A' }}
                             </span>
-                            <span class="badge bg-secondary bg-opacity-50 px-2.5 py-1 rounded-pill small">
+                            <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill small">
                                 {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : '' }} | {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
                             </span>
                         </div>
-                        <div class="text-white-50 mt-1 d-flex flex-wrap align-items-center gap-3 small">
-                            <span><i class="fas fa-procedures text-info me-1"></i> العملية: <strong class="text-white">{{ $surgery->surgery_name }}</strong></span>
-                            <span><i class="fas fa-user-md text-success me-1"></i> الجراح: <strong class="text-white">{{ $surgery->doctor?->name ?? 'غير محدد' }}</strong></span>
-                            <span><i class="fas fa-door-open text-warning me-1"></i> الصالة: <strong class="text-white">{{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}</strong></span>
-                            <span><i class="fas fa-clock text-light me-1"></i> الموعد: <strong class="text-white">{{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : 'غير محدد' }}</strong></span>
+                        <div class="mt-2 d-flex flex-wrap align-items-center gap-2 small">
+                            <span class="clin-info-chip">
+                                <i class="fas fa-procedures text-primary"></i>
+                                العملية: <strong>{{ $surgery->surgery_name }}</strong>
+                            </span>
+                            <span class="clin-info-chip">
+                                <i class="fas fa-user-md text-success"></i>
+                                الجراح: <strong>{{ $surgery->doctor?->name ?? 'غير محدد' }}</strong>
+                            </span>
+                            <span class="clin-info-chip">
+                                <i class="fas fa-door-open text-warning"></i>
+                                الصالة/الغرفة: <strong>{{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}</strong>
+                            </span>
+                            <span class="clin-info-chip">
+                                <i class="far fa-clock text-secondary"></i>
+                                الموعد: <strong>{{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : 'غير محدد' }}</strong>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -256,14 +269,14 @@
 
             <div class="col-lg-5 text-lg-end">
                 <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
-                    {{-- Phase Selector --}}
-                    <div class="btn-group bg-dark bg-opacity-50 p-1 rounded-pill border border-secondary" role="group">
+                    {{-- Phase Selector (Light Medical Pill) --}}
+                    <div class="btn-group bg-light p-1 rounded-pill border" role="group">
                         <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'pre_op' ? 'btn-primary text-white fw-bold shadow-sm' : 'text-white-50' }}">
+                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'pre_op' ? 'btn-primary text-white fw-bold shadow-xs' : 'text-secondary bg-transparent' }}">
                             <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية (Pre-Op)
                         </a>
                         <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'post_op' ? 'btn-primary text-white fw-bold shadow-sm' : 'text-white-50' }}">
+                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'post_op' ? 'btn-primary text-white fw-bold shadow-xs' : 'text-secondary bg-transparent' }}">
                             <i class="fas fa-check-circle me-1"></i> ما بعد العملية (Post-Op)
                         </a>
                     </div>
@@ -271,11 +284,11 @@
                     {{-- Phase Status Badge --}}
                     <div>
                         @if($station && $station->status === 'completed')
-                            <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fas fa-check-double me-1"></i> مكتملة</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-double me-1"></i> مكتملة</span>
                         @elseif($station && $station->status === 'in_progress')
-                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="fas fa-spinner fa-spin me-1"></i> قيد المتابعة</span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill fw-bold"><i class="fas fa-spinner fa-spin me-1"></i> قيد المتابعة</span>
                         @else
-                            <span class="badge bg-secondary px-3 py-2 rounded-pill"><i class="fas fa-hourglass-start me-1"></i> بالانتظار</span>
+                            <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 rounded-pill fw-bold"><i class="fas fa-hourglass-start me-1"></i> بالانتظار</span>
                         @endif
                     </div>
                 </div>
@@ -849,6 +862,12 @@
                         ]
                     );
                     $surveyUrl = route('inpatient-surveys.public.show', ['uuid' => $survey->uuid]);
+                    $canResetSurvey = auth()->check() && (
+                        auth()->user()->hasAnyRole(['admin', 'super_admin', 'super-admin', 'hospital_admin', 'مدير النظام']) ||
+                        auth()->user()->role === 'admin' ||
+                        auth()->user()->can('manage settings') ||
+                        auth()->user()->can('manage surgery waiting list')
+                    );
                 @endphp
 
                 <div class="p-4">
@@ -866,7 +885,7 @@
                                     </p>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
                                 @if($survey->status === 'completed')
                                     <span class="badge bg-success text-white rounded-pill px-3 py-2 fs-6 shadow-xs">
                                         <i class="fas fa-check-circle me-1"></i> مكتمل (النسبة العامة: {{ $survey->overall_score }}%)
@@ -876,8 +895,24 @@
                                         <i class="fas fa-hourglass-half me-1"></i> بانتظار استلام التقييم
                                     </span>
                                 @endif
+
+                                @if($canResetSurvey && $survey->status === 'completed')
+                                    <form method="POST" action="{{ route('inpatient-surveys.reset', $surgery) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تصفير وإعادة فتح الاستبيان؟ سيتم حذف الإجابات السابقة وإتاحة التقييم مجدداً.');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm" title="إعادة فتح وتصفير الاستبيان">
+                                            <i class="fas fa-undo-alt me-1"></i> إعادة فتح الاستبيان (أدمن)
+                                        </button>
+                                    </form>
+                                @endif
+
+                                <a href="{{ route('inpatient-surveys.print-a4', $surgery) }}" target="_blank" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                    <i class="fas fa-file-pdf me-1"></i> طباعة تقرير A4
+                                </a>
+                                <a href="{{ route('inpatient-surveys.print-blank') }}" target="_blank" class="btn btn-outline-light rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                    <i class="fas fa-print me-1"></i> استبيان فارغ A4
+                                </a>
                                 <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm">
-                                    <i class="fas fa-print me-1"></i> طباعة كرت QR حراري
+                                    <i class="fas fa-qrcode me-1"></i> طباعة كرت QR حراري
                                 </a>
                             </div>
                         </div>
@@ -930,13 +965,23 @@
                             @if($survey->status === 'completed')
                                 {{-- عرض ملخص التقييم المكتمل --}}
                                 <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                                    <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                                    <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <h6 class="mb-0 fw-bold text-success">
                                             <i class="fas fa-clipboard-check me-1"></i> نتائج وتقييم المريض المسجل
                                         </h6>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
-                                            سُجِّل بواسطة: {{ $survey->submitted_via === 'patient_qr' ? 'هاتف المريض (QR)' : 'إدخال يدوي للكادر' }}
-                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                                سُجِّل بواسطة: {{ $survey->submitted_via === 'patient_qr' ? 'هاتف المريض (QR)' : 'إدخال يدوي للكادر' }}
+                                            </span>
+                                            @if($canResetSurvey)
+                                                <form method="POST" action="{{ route('inpatient-surveys.reset', $surgery) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تصفير وإعادة فتح الاستبيان؟ سيتم حذف الإجابات السابقة وإتاحة التقييم مجدداً.');">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-outline-warning text-dark btn-sm rounded-pill px-3 py-1 fw-bold shadow-xs">
+                                                        <i class="fas fa-undo-alt me-1"></i> إعادة فتح (أدمن)
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </div>
                                     <div class="card-body p-4">
                                         <div class="row g-2 mb-3">
