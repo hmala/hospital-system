@@ -78,6 +78,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 157 (2026-11-04) — استعادة التصميم الأصلي للمحطة السريرية بالتبويبات الأفقية العلوية الكاملة (Clinical Station Original Horizontal Tabs Full Restoration):**
+  * **استعادة كاملة لواجهة المحطة السريرية الأصلية**:
+    - استعادة التبويبات الأفقية العلوية (`.clin-tabs-wrapper`) بكامل عرض الشاشة (`100%`) مباشرة تحت ترويسة المريض.
+    - إلغاء التخطيط المقسم رأسياً واستعادة مساحة العمل الكاملة لجميع أقسام طبلة المريض (السيرة المرضية، العلامات الحيوية، الفحوصات، الأدوية، السوائل، والمتابعة).
+    - الحفاظ الكامل على ميزات استبيان الرقود (`inpatient_survey`) والـ QR والطباعة، ومسارات وإمكانيات الكادر.
+  * **حزم الاختبارات الآلية الشاملة**:
+    - اجتياز اختبارات المحطة السريرية والصلاحيات بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+    - اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (8 passed, 48 assertions).
+
 - **المرحلة 156 (2026-11-04) — منظومة استبيان وتقييم غرف الرقود والأطباء وتكامل طبلة المريض ورمز الـ QR الحراري (Inpatient Room & Doctor Evaluation Survey with Patient QR & Unified Clinical Chart Integration):**
   * **تطبيق مواصفات Spec-Kit وترسانة ECC**:
     - صياغة وثيقة المواصفات الكاملة `specs/002-inpatient-room-survey/spec.md`.
