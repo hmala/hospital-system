@@ -24,7 +24,7 @@ Avoid running broad file scans (`grep_search` or `list_dir`). Target these files
 
 ## 3. Non-Negotiable Operational Rules (القواعد الصارمة)
 1. **Hostinger Multi-Environment URL Rule**: NEVER hardcode root URLs starting with `/` (e.g. `/radiology-staff/...`). ALWAYS use `{{ url('/') }}` or `{{ route(...) }}` in Blade and JS so routes work on Hostinger subpaths and local WAMP without 404 errors.
-2. **Git Rule**: Direct push (`git push`) strictly to `main` branch. No side branches.
+2. **Git Rule**: Direct push strictly to `hr` branch (`git push origin hr`). NEVER push to `main` without explicit user permission. All active work stays exclusively on `hr`.
 3. **Doctor Visit Refund Isolation**: Cancelling a doctor visit refunds only the doctor's appointment fee (`payment_type = 'appointment'`). Never overwrite or auto-refund paid lab or radiology requests.
 4. **State Tracking**: Consult `hospital-memory.md` for current project state before starting tasks, and update its `Current Project State` section at the end of sessions.
 5. **Session Continuity Prompts**: Refer to `SESSION_PROMPTS.md` for standard session start and handoff instructions.
