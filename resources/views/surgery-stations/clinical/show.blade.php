@@ -1196,11 +1196,28 @@
                                                         <i class="fas fa-thumbs-up text-warning me-1"></i> مؤشر التوصية (NPS): <strong class="text-warning">{{ $survey->recommend_score_nps }}</strong> من 10
                                                     </span>
                                                 @endif
+                                                @if($survey->room_score)
+                                                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-2.5 py-1 small">
+                                                        🛏️ الغرفة: {{ round($survey->room_score) }}%
+                                                    </span>
+                                                @endif
+                                                @if($survey->nursing_score)
+                                                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-2.5 py-1 small">
+                                                        🩺 التمريض: {{ round($survey->nursing_score) }}%
+                                                    </span>
+                                                @endif
+                                                @if($survey->lab_score)
+                                                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-2.5 py-1 small">
+                                                        🧪 المختبر: {{ round($survey->lab_score) }}%
+                                                    </span>
+                                                @endif
+                                                @if($survey->pharmacy_score)
+                                                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-2.5 py-1 small">
+                                                        💊 الصيدلية: {{ round($survey->pharmacy_score) }}%
+                                                    </span>
+                                                @endif
                                                 <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-3 py-1 small">
                                                     <i class="fas fa-door-closed me-1"></i> غرفة {{ $surgery->room?->room_number ?? '-' }}
-                                                </span>
-                                                <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-3 py-1 small">
-                                                    <i class="fas fa-user-md me-1"></i> د. {{ $surgery->doctor?->name ?? 'غير محدد' }}
                                                 </span>
                                             </div>
                                         </div>
@@ -1228,108 +1245,295 @@
                             </div>
                         </div>
 
-                        {{-- Comprehensive Results Grid: All 11 Survey Items --}}
-                        <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
-                            <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        {{-- Compact Results Dashboard: 2-Column Balanced View (27 Clinical & Hospitality Metrics) --}}
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-3 px-1 flex-wrap gap-2">
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">
-                                        <i class="fas fa-poll-h text-primary me-2"></i> تفاصيل تقييم جميع مفردات الاستبيان (11 معياراً)
+                                        <i class="fas fa-poll-h text-primary me-2"></i> تفاصيل تقييم جميع خدمات ومفردات الاستبيان (27 معياراً سريرياً وفندقياً)
                                     </h6>
-                                    <small class="text-muted">درجات التقييم من 1 (ضعيف) إلى 5 (ممتاز) مدخلة مباشرة بواسطة المريض</small>
+                                    <small class="text-muted">درجات التقييم من 1 (ضعيف) إلى 5 (ممتاز) مدخلة ومقسمة حسب الأقسام السريرية والخدمية</small>
                                 </div>
-                                <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-semibold">
-                                    إجمالي البنود: 11 / 11
+                                <span class="badge bg-white text-dark border shadow-xs rounded-pill px-3 py-1.5 fw-semibold small">
+                                    إجمالي البنود المقيمة: 27 / 27
                                 </span>
                             </div>
-                            <div class="card-body p-4">
-                                @php
-                                    $detailedMetrics = [
-                                        'cleanliness_room' => ['label' => 'النظافة العامة لغرفة الرقود', 'icon' => 'fas fa-broom', 'color' => '#10b981'],
-                                        'cleanliness_bathroom' => ['label' => 'نظافة الحمام والمرافق الصحية', 'icon' => 'fas fa-sink', 'color' => '#06b6d4'],
-                                        'temperature_ac' => ['label' => 'التكييف والحرارة والتهوية', 'icon' => 'fas fa-wind', 'color' => '#3b82f6'],
-                                        'lighting' => ['label' => 'إضاءة الغرفة ومستوى الراحة البصرية', 'icon' => 'fas fa-lightbulb', 'color' => '#f59e0b'],
-                                        'quietness_privacy' => ['label' => 'الهدوء والسكينة والخصوصية بالقسم', 'icon' => 'fas fa-volume-mute', 'color' => '#8b5cf6'],
-                                        'bed_comfort' => ['label' => 'راحة السرير والمفارش ونظافتها', 'icon' => 'fas fa-bed', 'color' => '#ec4899'],
-                                        'control_panel' => ['label' => 'لوحة استدعاء التمريض وسرعة الاستجابة', 'icon' => 'fas fa-bell', 'color' => '#ef4444'],
-                                        'storage_space' => ['label' => 'مساحات التخزين والدواليب', 'icon' => 'fas fa-door-closed', 'color' => '#64748b'],
-                                        'furniture_safety' => ['label' => 'جودة وأمان الأثاث ومرافق الغرفة', 'icon' => 'fas fa-chair', 'color' => '#14b8a6'],
-                                        'entertainment' => ['label' => 'الترفيه (شاشة التلفاز وخدمة الواي فاي)', 'icon' => 'fas fa-tv', 'color' => '#6366f1'],
-                                        'doctor_communication' => ['label' => 'تواصل وزيارة الطبيب المعالج واهتمامه', 'icon' => 'fas fa-user-md', 'color' => '#059669'],
-                                    ];
-                                @endphp
 
-                                <div class="row g-3">
-                                    @foreach($detailedMetrics as $field => $info)
-                                        @php
-                                            $val = $survey->{$field};
-                                            $pct = $val ? ($val / 5) * 100 : 0;
-                                        @endphp
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="p-3 rounded-4 border bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between transition-hover">
-                                                <div>
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <div class="rounded-3 d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; background-color: {{ $info['color'] }}; font-size: 0.85rem;">
-                                                                <i class="{{ $info['icon'] }}"></i>
-                                                            </div>
-                                                            <span class="fw-bold text-dark small">{{ $info['label'] }}</span>
-                                                        </div>
+                            @php
+                                $getRatingInfo = function($val) {
+                                    return match((int)$val) {
+                                        5 => ['text' => 'ممتاز (5/5)', 'badge' => 'bg-success text-white', 'style' => ''],
+                                        4 => ['text' => 'جيد جداً (4/5)', 'badge' => 'bg-info text-white', 'style' => ''],
+                                        3 => ['text' => 'جيد (3/5)', 'badge' => 'bg-warning text-dark', 'style' => ''],
+                                        2 => ['text' => 'مقبول (2/5)', 'badge' => 'text-white', 'style' => 'background:#f97316;'],
+                                        1 => ['text' => 'ضعيف (1/5)', 'badge' => 'bg-danger text-white', 'style' => ''],
+                                        default => ['text' => 'غير مقيم', 'badge' => 'bg-secondary-subtle text-secondary border', 'style' => ''],
+                                    };
+                                };
+
+                                $roomMetrics = [
+                                    'cleanliness_room' => ['label' => 'النظافة العامة لغرفة الرقود', 'icon' => 'fas fa-broom', 'color' => '#10b981'],
+                                    'cleanliness_bathroom' => ['label' => 'نظافة الحمام والمرافق الصحية', 'icon' => 'fas fa-sink', 'color' => '#06b6d4'],
+                                    'temperature_ac' => ['label' => 'التكييف والحرارة والتهوية', 'icon' => 'fas fa-wind', 'color' => '#3b82f6'],
+                                    'lighting' => ['label' => 'إضاءة الغرفة ومستوى الراحة البصرية', 'icon' => 'fas fa-lightbulb', 'color' => '#f59e0b'],
+                                    'quietness_privacy' => ['label' => 'الهدوء والسكينة والخصوصية بالقسم', 'icon' => 'fas fa-volume-mute', 'color' => '#8b5cf6'],
+                                    'bed_comfort' => ['label' => 'راحة السرير والمفارش ونظافتها', 'icon' => 'fas fa-bed', 'color' => '#ec4899'],
+                                    'control_panel' => ['label' => 'لوحة استدعاء التمريض وسرعة الاستجابة', 'icon' => 'fas fa-bell', 'color' => '#ef4444'],
+                                    'storage_space' => ['label' => 'مساحات التخزين والدواليب', 'icon' => 'fas fa-door-closed', 'color' => '#64748b'],
+                                    'furniture_safety' => ['label' => 'جودة وأمان الأثاث ومرافق الغرفة', 'icon' => 'fas fa-chair', 'color' => '#14b8a6'],
+                                    'entertainment' => ['label' => 'الترفيه (شاشة التلفاز والواي فاي)', 'icon' => 'fas fa-tv', 'color' => '#6366f1'],
+                                ];
+
+                                $doctorMetrics = [
+                                    'doctor_communication' => ['label' => 'تواصل وزيارة الطبيب المعالج واهتمامه', 'icon' => 'fas fa-user-md', 'color' => '#059669'],
+                                ];
+
+                                $nursingMetrics = [
+                                    'nursing_greeting' => ['label' => 'الترحيب والمهنية في التعامل', 'icon' => 'fas fa-smile', 'color' => '#8b5cf6'],
+                                    'nursing_skill' => ['label' => 'المهارة في تقديم الرعاية (حقن وتضميد)', 'icon' => 'fas fa-syringe', 'color' => '#7c3aed'],
+                                    'nursing_care_attention' => ['label' => 'الاهتمام والرعاية المستمرة', 'icon' => 'fas fa-heartbeat', 'color' => '#ec4899'],
+                                    'nursing_instructions' => ['label' => 'وضوح التعليمات والتواصل معك', 'icon' => 'fas fa-comment-medical', 'color' => '#6366f1'],
+                                    'nursing_response_speed' => ['label' => 'سرعة الاستجابة عند طلب المساعدة', 'icon' => 'fas fa-stopwatch', 'color' => '#f59e0b'],
+                                    'nursing_privacy_respect' => ['label' => 'المحافظة على الخصوصية والكرامة', 'icon' => 'fas fa-user-shield', 'color' => '#10b981'],
+                                ];
+
+                                $labMetrics = [
+                                    'lab_prep_instructions' => ['label' => 'وضوح تعليمات التحضير للتحليل', 'icon' => 'fas fa-clipboard-list', 'color' => '#06b6d4'],
+                                    'lab_sampling_skill' => ['label' => 'الاحتراف والمهارة في سحب العينة', 'icon' => 'fas fa-hand-holding-medical', 'color' => '#0284c7'],
+                                    'lab_hygiene_sterilization' => ['label' => 'النظافة والتعقيم في سحب العينات', 'icon' => 'fas fa-pump-soap', 'color' => '#14b8a6'],
+                                    'lab_results_speed' => ['label' => 'سرعة استخراج النتائج وتسليمها', 'icon' => 'fas fa-clock', 'color' => '#3b82f6'],
+                                    'lab_staff_behavior' => ['label' => 'التعامل اللطيف والمطمئن أثناء العملية', 'icon' => 'fas fa-user-check', 'color' => '#10b981'],
+                                ];
+
+                                $pharmacyMetrics = [
+                                    'pharmacy_dispense_speed' => ['label' => 'سرعة وصحة صرف الأدوية المطلوبة', 'icon' => 'fas fa-shipping-fast', 'color' => '#f97316'],
+                                    'pharmacy_instruction_clarity' => ['label' => 'وضوح شرح طريقة استخدام الدواء', 'icon' => 'fas fa-info-circle', 'color' => '#eab308'],
+                                    'pharmacy_comprehension_check' => ['label' => 'التأكد من فهمك الكامل لتعليمات الدواء', 'icon' => 'fas fa-tasks', 'color' => '#84cc16'],
+                                    'pharmacy_respect_politeness' => ['label' => 'اللباقة والاحترام في التعامل من الصيدلي', 'icon' => 'fas fa-smile-beam', 'color' => '#10b981'],
+                                    'pharmacy_med_availability' => ['label' => 'التوفر الكامل للأدوية الموصوفة', 'icon' => 'fas fa-boxes', 'color' => '#3b82f6'],
+                                ];
+                            @endphp
+
+                            <div class="row g-3">
+                                {{-- Column 1: Room & Doctor (11 Metrics) --}}
+                                <div class="col-lg-6">
+                                    {{-- Room Facilities Card --}}
+                                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3 overflow-hidden">
+                                        <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                                    <i class="fas fa-bed" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <strong class="text-dark small">١. مرافق غرفة الرقود (الورقة الأولى)</strong>
+                                            </div>
+                                            @if($survey->room_score)
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">
+                                                    نسبة الرضا: {{ round($survey->room_score) }}%
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-0">
+                                            @foreach($roomMetrics as $field => $info)
+                                                @php
+                                                    $val = $survey->{$field};
+                                                    $rInfo = $getRatingInfo($val);
+                                                @endphp
+                                                <div class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom" style="font-size: 0.82rem;">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                        <i class="{{ $info['icon'] }}" style="color: {{ $info['color'] }}; width: 16px; text-align: center; font-size: 0.82rem;"></i>
+                                                        <span class="text-dark fw-semibold text-truncate">{{ $info['label'] }}</span>
                                                     </div>
-
-                                                    <div class="d-flex align-items-center justify-content-between my-2">
-                                                        <div>
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <div class="d-inline-flex align-items-center" style="gap: 2px;">
                                                             @for($i = 1; $i <= 5; $i++)
-                                                                @if($i <= $val)
-                                                                    <i class="fas fa-star text-warning" style="font-size: 0.95rem;"></i>
-                                                                @else
-                                                                    <i class="far fa-star text-muted opacity-50" style="font-size: 0.95rem;"></i>
-                                                                @endif
+                                                                <i class="{{ $i <= $val ? 'fas fa-star text-warning' : 'far fa-star text-muted opacity-25' }}" style="font-size: 0.72rem;"></i>
                                                             @endfor
                                                         </div>
-                                                        <div>
-                                                            @if($val == 5)
-                                                                <span class="badge bg-success rounded-pill px-2.5 py-1 small fw-bold">ممتاز (5/5)</span>
-                                                            @elseif($val == 4)
-                                                                <span class="badge bg-info text-white rounded-pill px-2.5 py-1 small fw-bold">جيد جداً (4/5)</span>
-                                                            @elseif($val == 3)
-                                                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small fw-bold">جيد (3/5)</span>
-                                                            @elseif($val == 2)
-                                                                <span class="badge text-white rounded-pill px-2.5 py-1 small fw-bold" style="background:#f97316;">مقبول (2/5)</span>
-                                                            @elseif($val == 1)
-                                                                <span class="badge bg-danger rounded-pill px-2.5 py-1 small fw-bold">ضعيف (1/5)</span>
-                                                            @else
-                                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 small">غير مقيم</span>
-                                                            @endif
-                                                        </div>
+                                                        <span class="badge {{ $rInfo['badge'] }} rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.72rem; min-width: 62px; text-align: center; {{ $rInfo['style'] ?? '' }}">
+                                                            {{ $rInfo['text'] }}
+                                                        </span>
                                                     </div>
                                                 </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
 
-                                                {{-- Progress Bar --}}
-                                                <div class="mt-2">
-                                                    <div class="progress" style="height: 6px; border-radius: 999px;">
-                                                        <div class="progress-bar" role="progressbar"
-                                                             style="width: {{ $pct }}%; background-color: {{ $val >= 4 ? '#10b981' : ($val == 3 ? '#f59e0b' : '#ef4444') }};"
-                                                             aria-valuenow="{{ $pct }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                                    </div>
+                                    {{-- Doctor Card --}}
+                                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3 overflow-hidden">
+                                        <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                                    <i class="fas fa-user-md" style="font-size: 0.8rem;"></i>
                                                 </div>
+                                                <strong class="text-dark small">٢. الفريق الطبي المعالج</strong>
                                             </div>
                                         </div>
-                                    @endforeach
+                                        <div class="card-body p-0">
+                                            @foreach($doctorMetrics as $field => $info)
+                                                @php
+                                                    $val = $survey->{$field};
+                                                    $rInfo = $getRatingInfo($val);
+                                                @endphp
+                                                <div class="d-flex align-items-center justify-content-between py-2 px-3" style="font-size: 0.82rem;">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                        <i class="{{ $info['icon'] }}" style="color: {{ $info['color'] }}; width: 16px; text-align: center; font-size: 0.82rem;"></i>
+                                                        <span class="text-dark fw-semibold text-truncate">{{ $info['label'] }}</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <div class="d-inline-flex align-items-center" style="gap: 2px;">
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                <i class="{{ $i <= $val ? 'fas fa-star text-warning' : 'far fa-star text-muted opacity-25' }}" style="font-size: 0.72rem;"></i>
+                                                            @endfor
+                                                        </div>
+                                                        <span class="badge {{ $rInfo['badge'] }} rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.72rem; min-width: 62px; text-align: center; {{ $rInfo['style'] ?? '' }}">
+                                                            {{ $rInfo['text'] }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Column 2: Nursing, Lab & Pharmacy (16 Metrics) --}}
+                                <div class="col-lg-6">
+                                    {{-- Nursing Card --}}
+                                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3 overflow-hidden">
+                                        <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background: rgba(147, 51, 234, 0.1); color: #7c3aed;">
+                                                    <i class="fas fa-user-nurse" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <strong class="text-dark small">٣. طاقم التمريض (الورقة الثانية)</strong>
+                                            </div>
+                                            @if($survey->nursing_score)
+                                                <span class="badge rounded-pill px-2.5 py-1 small fw-bold" style="background: rgba(147, 51, 234, 0.1); color: #7c3aed; border: 1px solid rgba(147, 51, 234, 0.2);">
+                                                    نسبة الرضا: {{ round($survey->nursing_score) }}%
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-0">
+                                            @foreach($nursingMetrics as $field => $info)
+                                                @php
+                                                    $val = $survey->{$field};
+                                                    $rInfo = $getRatingInfo($val);
+                                                @endphp
+                                                <div class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom" style="font-size: 0.82rem;">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                        <i class="{{ $info['icon'] }}" style="color: {{ $info['color'] }}; width: 16px; text-align: center; font-size: 0.82rem;"></i>
+                                                        <span class="text-dark fw-semibold text-truncate">{{ $info['label'] }}</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <div class="d-inline-flex align-items-center" style="gap: 2px;">
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                <i class="{{ $i <= $val ? 'fas fa-star text-warning' : 'far fa-star text-muted opacity-25' }}" style="font-size: 0.72rem;"></i>
+                                                            @endfor
+                                                        </div>
+                                                        <span class="badge {{ $rInfo['badge'] }} rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.72rem; min-width: 62px; text-align: center; {{ $rInfo['style'] ?? '' }}">
+                                                            {{ $rInfo['text'] }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    {{-- Lab Card --}}
+                                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3 overflow-hidden">
+                                        <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                                    <i class="fas fa-vial" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <strong class="text-dark small">٤. قسم المختبر والتحاليل (الورقة الثانية)</strong>
+                                            </div>
+                                            @if($survey->lab_score)
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-1 small fw-bold">
+                                                    نسبة الرضا: {{ round($survey->lab_score) }}%
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-0">
+                                            @foreach($labMetrics as $field => $info)
+                                                @php
+                                                    $val = $survey->{$field};
+                                                    $rInfo = $getRatingInfo($val);
+                                                @endphp
+                                                <div class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom" style="font-size: 0.82rem;">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                        <i class="{{ $info['icon'] }}" style="color: {{ $info['color'] }}; width: 16px; text-align: center; font-size: 0.82rem;"></i>
+                                                        <span class="text-dark fw-semibold text-truncate">{{ $info['label'] }}</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <div class="d-inline-flex align-items-center" style="gap: 2px;">
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                <i class="{{ $i <= $val ? 'fas fa-star text-warning' : 'far fa-star text-muted opacity-25' }}" style="font-size: 0.72rem;"></i>
+                                                            @endfor
+                                                        </div>
+                                                        <span class="badge {{ $rInfo['badge'] }} rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.72rem; min-width: 62px; text-align: center; {{ $rInfo['style'] ?? '' }}">
+                                                            {{ $rInfo['text'] }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    {{-- Pharmacy Card --}}
+                                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3 overflow-hidden">
+                                        <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                                    <i class="fas fa-pills" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <strong class="text-dark small">٥. قسم الصيدلية والتعامل مع الأدوية (الورقة الثانية)</strong>
+                                            </div>
+                                            @if($survey->pharmacy_score)
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 small fw-bold">
+                                                    نسبة الرضا: {{ round($survey->pharmacy_score) }}%
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-0">
+                                            @foreach($pharmacyMetrics as $field => $info)
+                                                @php
+                                                    $val = $survey->{$field};
+                                                    $rInfo = $getRatingInfo($val);
+                                                @endphp
+                                                <div class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom {{ $loop->last ? 'border-bottom-0' : '' }}" style="font-size: 0.82rem;">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                        <i class="{{ $info['icon'] }}" style="color: {{ $info['color'] }}; width: 16px; text-align: center; font-size: 0.82rem;"></i>
+                                                        <span class="text-dark fw-semibold text-truncate">{{ $info['label'] }}</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <div class="d-inline-flex align-items-center" style="gap: 2px;">
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                <i class="{{ $i <= $val ? 'fas fa-star text-warning' : 'far fa-star text-muted opacity-25' }}" style="font-size: 0.72rem;"></i>
+                                                            @endfor
+                                                        </div>
+                                                        <span class="badge {{ $rInfo['badge'] }} rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.72rem; min-width: 62px; text-align: center; {{ $rInfo['style'] ?? '' }}">
+                                                            {{ $rInfo['text'] }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Patient Feedback, Priorities & Qualitative Remarks --}}
+                        {{-- Patient Feedback, Priorities & Departmental Remarks --}}
                         @php
                             $hasPriorities = !empty($survey->top_three_improvements) && is_array($survey->top_three_improvements) && count($survey->top_three_improvements) > 0;
-                            $hasComments = !empty($survey->room_notes) || !empty($survey->patient_suggestions) || !empty($survey->doctor_notes);
+                            $hasComments = !empty($survey->room_notes) || !empty($survey->patient_suggestions) || !empty($survey->doctor_notes) || !empty($survey->nursing_notes) || !empty($survey->lab_notes) || !empty($survey->pharmacy_notes) || !empty($survey->respondent_name);
                         @endphp
 
                         @if($hasPriorities || $hasComments)
                             <div class="row g-4">
                                 {{-- Top 3 Priorities --}}
                                 @if($hasPriorities)
-                                    <div class="{{ $hasComments ? 'col-lg-6' : 'col-12' }}">
+                                    <div class="{{ $hasComments ? 'col-lg-5' : 'col-12' }}">
                                         <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
                                             <div class="card-header bg-white py-3 px-4 border-bottom">
                                                 <h6 class="mb-0 fw-bold text-dark">
@@ -1353,20 +1557,48 @@
                                     </div>
                                 @endif
 
-                                {{-- Qualitative Notes & Suggestions --}}
+                                {{-- Qualitative Notes & Departmental Remarks --}}
                                 @if($hasComments)
-                                    <div class="{{ $hasPriorities ? 'col-lg-6' : 'col-12' }}">
+                                    <div class="{{ $hasPriorities ? 'col-lg-7' : 'col-12' }}">
                                         <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
-                                            <div class="card-header bg-white py-3 px-4 border-bottom">
+                                            <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between">
                                                 <h6 class="mb-0 fw-bold text-dark">
-                                                    <i class="fas fa-comment-dots text-primary me-2"></i> الملاحظات والمقترحات النصية للمريض
+                                                    <i class="fas fa-comment-dots text-primary me-2"></i> ملاحظات ومقترحات المريض التفصيلية
                                                 </h6>
+                                                @if($survey->respondent_name || $survey->respondent_phone || $survey->respondent_email)
+                                                    <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1 small">
+                                                        <i class="fas fa-user-edit me-1"></i> {{ $survey->respondent_name ?? 'المريض/المرافق' }}
+                                                        {{ $survey->respondent_phone ? ' | '.$survey->respondent_phone : '' }}
+                                                        {{ $survey->respondent_email ? ' | '.$survey->respondent_email : '' }}
+                                                    </span>
+                                                @endif
                                             </div>
                                             <div class="card-body p-4 d-flex flex-column gap-3">
                                                 @if(!empty($survey->patient_suggestions))
                                                     <div class="p-3 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
                                                         <strong class="d-block small text-primary mb-1"><i class="fas fa-lightbulb me-1"></i> مقترحات المريض الإضافية:</strong>
                                                         <p class="small text-dark mb-0">{{ $survey->patient_suggestions }}</p>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($survey->nursing_notes))
+                                                    <div class="p-3 rounded-3 bg-purple bg-opacity-10 border border-purple border-opacity-25" style="background: rgba(147, 51, 234, 0.05); border-color: rgba(147, 51, 234, 0.2);">
+                                                        <strong class="d-block small text-purple mb-1" style="color: #7c3aed;"><i class="fas fa-user-nurse me-1"></i> ملاحظات كادر التمريض:</strong>
+                                                        <p class="small text-dark mb-0">{{ $survey->nursing_notes }}</p>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($survey->lab_notes))
+                                                    <div class="p-3 rounded-3 bg-info bg-opacity-10 border border-info border-opacity-25">
+                                                        <strong class="d-block small text-info mb-1"><i class="fas fa-vial me-1"></i> ملاحظات قسم المختبر:</strong>
+                                                        <p class="small text-dark mb-0">{{ $survey->lab_notes }}</p>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($survey->pharmacy_notes))
+                                                    <div class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-25">
+                                                        <strong class="d-block small text-warning text-dark mb-1"><i class="fas fa-pills me-1"></i> ملاحظات الصيدلية وصرف الأدوية:</strong>
+                                                        <p class="small text-dark mb-0">{{ $survey->pharmacy_notes }}</p>
                                                     </div>
                                                 @endif
 

@@ -57,9 +57,40 @@ class InpatientSurveyController extends Controller
             'recommend_score_nps' => 'nullable|integer|between:1,10',
             'doctor_communication' => 'nullable|integer|between:1,5',
             'doctor_notes' => 'nullable|string|max:1000',
+            // الورقة 2: طاقم التمريض (6 بنود + ملاحظات)
+            'nursing_greeting' => 'nullable|integer|between:1,5',
+            'nursing_skill' => 'nullable|integer|between:1,5',
+            'nursing_care_attention' => 'nullable|integer|between:1,5',
+            'nursing_instructions' => 'nullable|integer|between:1,5',
+            'nursing_response_speed' => 'nullable|integer|between:1,5',
+            'nursing_privacy_respect' => 'nullable|integer|between:1,5',
+            'nursing_notes' => 'nullable|string|max:1000',
+            // الورقة 2: قسم المختبر والتحاليل (5 بنود + ملاحظات)
+            'lab_prep_instructions' => 'nullable|integer|between:1,5',
+            'lab_sampling_skill' => 'nullable|integer|between:1,5',
+            'lab_hygiene_sterilization' => 'nullable|integer|between:1,5',
+            'lab_results_speed' => 'nullable|integer|between:1,5',
+            'lab_staff_behavior' => 'nullable|integer|between:1,5',
+            'lab_notes' => 'nullable|string|max:1000',
+            // الورقة 2: الصيدلية والتعامل مع الأدوية (5 بنود + ملاحظات)
+            'pharmacy_dispense_speed' => 'nullable|integer|between:1,5',
+            'pharmacy_instruction_clarity' => 'nullable|integer|between:1,5',
+            'pharmacy_comprehension_check' => 'nullable|integer|between:1,5',
+            'pharmacy_respect_politeness' => 'nullable|integer|between:1,5',
+            'pharmacy_med_availability' => 'nullable|integer|between:1,5',
+            'pharmacy_notes' => 'nullable|string|max:1000',
+            // بيانات المريض
+            'respondent_name' => 'nullable|string|max:255',
+            'respondent_signature' => 'nullable|string|max:255',
+            'respondent_phone' => 'nullable|string|max:50',
+            'respondent_email' => 'nullable|string|max:100',
         ]);
 
         $survey->fill($validated);
+        $survey->room_score = $survey->calculateRoomScore();
+        $survey->nursing_score = $survey->calculateNursingScore();
+        $survey->lab_score = $survey->calculateLabScore();
+        $survey->pharmacy_score = $survey->calculatePharmacyScore();
         $survey->overall_score = $survey->calculateOverallScore();
         $survey->status = 'completed';
         $survey->submitted_via = 'patient_qr';
@@ -102,6 +133,33 @@ class InpatientSurveyController extends Controller
             'recommend_score_nps' => 'nullable|integer|between:1,10',
             'doctor_communication' => 'nullable|integer|between:1,5',
             'doctor_notes' => 'nullable|string|max:1000',
+            // الورقة 2: طاقم التمريض
+            'nursing_greeting' => 'nullable|integer|between:1,5',
+            'nursing_skill' => 'nullable|integer|between:1,5',
+            'nursing_care_attention' => 'nullable|integer|between:1,5',
+            'nursing_instructions' => 'nullable|integer|between:1,5',
+            'nursing_response_speed' => 'nullable|integer|between:1,5',
+            'nursing_privacy_respect' => 'nullable|integer|between:1,5',
+            'nursing_notes' => 'nullable|string|max:1000',
+            // الورقة 2: المختبر والتحاليل
+            'lab_prep_instructions' => 'nullable|integer|between:1,5',
+            'lab_sampling_skill' => 'nullable|integer|between:1,5',
+            'lab_hygiene_sterilization' => 'nullable|integer|between:1,5',
+            'lab_results_speed' => 'nullable|integer|between:1,5',
+            'lab_staff_behavior' => 'nullable|integer|between:1,5',
+            'lab_notes' => 'nullable|string|max:1000',
+            // الورقة 2: الصيدلية والأدوية
+            'pharmacy_dispense_speed' => 'nullable|integer|between:1,5',
+            'pharmacy_instruction_clarity' => 'nullable|integer|between:1,5',
+            'pharmacy_comprehension_check' => 'nullable|integer|between:1,5',
+            'pharmacy_respect_politeness' => 'nullable|integer|between:1,5',
+            'pharmacy_med_availability' => 'nullable|integer|between:1,5',
+            'pharmacy_notes' => 'nullable|string|max:1000',
+            // بيانات المريض
+            'respondent_name' => 'nullable|string|max:255',
+            'respondent_signature' => 'nullable|string|max:255',
+            'respondent_phone' => 'nullable|string|max:50',
+            'respondent_email' => 'nullable|string|max:100',
         ]);
 
         $survey = InpatientRoomSurvey::firstOrNew(['surgery_id' => $surgery->id]);
@@ -112,6 +170,10 @@ class InpatientSurveyController extends Controller
         $survey->room_type = $surgery->room?->type ?? 'regular';
 
         $survey->fill($validated);
+        $survey->room_score = $survey->calculateRoomScore();
+        $survey->nursing_score = $survey->calculateNursingScore();
+        $survey->lab_score = $survey->calculateLabScore();
+        $survey->pharmacy_score = $survey->calculatePharmacyScore();
         $survey->overall_score = $survey->calculateOverallScore();
         $survey->status = 'completed';
         $survey->submitted_via = 'staff_manual';

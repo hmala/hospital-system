@@ -48,7 +48,7 @@
             width: 210mm;
             max-width: 210mm;
             min-height: 297mm;
-            margin: 0 auto;
+            margin: 0 auto 30px auto;
             background: #ffffff;
             padding: 8mm 12mm 8mm 12mm;
             box-sizing: border-box;
@@ -464,9 +464,14 @@
                 min-height: 297mm !important;
                 padding: 8mm 12mm 8mm 12mm !important;
                 box-sizing: border-box !important;
-                page-break-after: avoid !important;
+                page-break-after: always !important;
+                break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+            }
+            .print-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
             }
             .print-toolbar {
                 display: none !important;
@@ -508,6 +513,34 @@
         ];
 
         $topImprovements = (!$isBlank && is_array($survey?->top_three_improvements)) ? $survey->top_three_improvements : [];
+
+        // الورقة 2: معايير طاقم التمريض
+        $nursingCriteria = [
+            'nursing_greeting' => '١- الترحيب والمهنية في التعامل',
+            'nursing_skill' => '٢- المهارة في تقديم الرعاية كحقن الأدوية، تضميد الجروح',
+            'nursing_care_attention' => '٣- الاهتمام والرعاية المستمرة أثناء وجودك',
+            'nursing_instructions' => '٤- وضوح التعليمات والتواصل معك',
+            'nursing_response_speed' => '٥- سرعة الاستجابة عند طلب المساعدة',
+            'nursing_privacy_respect' => '٦- المحافظة على الخصوصية والكرامة',
+        ];
+
+        // الورقة 2: معايير قسم المختبر والتحاليل
+        $labCriteria = [
+            'lab_prep_instructions' => '١- وضوح تعليمات التحضير للتحليل (إذا وجدت)',
+            'lab_sampling_skill' => '٢- الاحتراف والمهارة في سحب العينة',
+            'lab_hygiene_sterilization' => '٣- النظافة والتعقيم في مكان سحب العينات',
+            'lab_results_speed' => '٤- سرعة استخراج النتائج وتسليمها',
+            'lab_staff_behavior' => '٥- التعامل اللطيف والمطمئن أثناء العملية',
+        ];
+
+        // الورقة 2: معايير الصيدلية والتعامل مع الأدوية
+        $pharmacyCriteria = [
+            'pharmacy_dispense_speed' => '١- سرعة وصحة صرف الأدوية المطلوبة',
+            'pharmacy_instruction_clarity' => '٢- وضوح شرح طريقة استخدام الدواء (الجرعة، التوقيت)',
+            'pharmacy_comprehension_check' => '٣- التأكد من فهمك الكامل لتعليمات الدواء',
+            'pharmacy_respect_politeness' => '٤- اللباقة والاحترام في التعامل من قبل الصيدلي',
+            'pharmacy_med_availability' => '٥- التوفر الكامل للأدوية الموصوفة',
+        ];
     @endphp
 
     <!-- Floating Print Controls (Hidden on Print) -->
@@ -725,14 +758,189 @@
                     طُبع بواسطة: <strong>{{ auth()->user()->name ?? 'كادر المستشفى' }}</strong>
                 </div>
                 <div>
-                    وحدة مراقبة الجودة وتجربة المريض (Patient Experience Unit)
+                    وحدة مراقبة الجودة وتجربة المريض (الصفحة 1 من 2)
                 </div>
                 <div>
                     تاريخ ووقت الطباعة: <strong>{{ now()->format('Y/m/d h:i A') }}</strong>
                 </div>
             </div>
             <div class="hospital-contact-line">
-                العراق - كربلاء المقدسة &nbsp;|&nbsp; هاتف: +964 (0) 778 050 7060 &nbsp;|&nbsp; info@alkafaathospital.com
+                بغداد - الحارثية شارع الكندي &nbsp;|&nbsp; هاتف: +964 (0) 776 050 7060 &nbsp;|&nbsp; info@alkafaathospital.com &nbsp;|&nbsp; الرقم المجاني: 7178
+            </div>
+        </div>
+    </div>
+
+    {{-- ========================================================================= --}}
+    {{-- PAGE 2: CLINICAL SERVICES (NURSING, LABORATORY, PHARMACY & SIGNATURES)    --}}
+    {{-- مطابقة 100% للورقة الثانية المعتمدة في مستشفى الكفاءات الأهلي                 --}}
+    {{-- ========================================================================= --}}
+    <div class="print-page">
+        <div>
+            <!-- Header for Page 2 Matching Official Paper -->
+            <div style="text-align: center; margin-bottom: 8px; border-bottom: 1.5px solid #005a9c; padding-bottom: 6px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2px;">
+                    <img src="{{ $hospitalLogoSrc }}" alt="شعار المستشفى" style="max-height: 48px; max-width: 75px; object-fit: contain;">
+                    <div style="text-align: right;">
+                        <h2 style="font-size: 14.5px; font-weight: 900; color: #005a9c; margin: 0; line-height: 1.2;">Alkafaat Private Hospital</h2>
+                        <h3 style="font-size: 13.5px; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2;">مستشفى الكفاءات الأهلي</h3>
+                    </div>
+                </div>
+                <h4 style="font-size: 12px; font-weight: 800; color: #334155; margin: 3px 0 0;">
+                    استبيان تقييم غرفة الرقود في المستشفى (الصفحة الثانية: الخدمات التمريضية والتشخيصية والدوائية)
+                </h4>
+            </div>
+
+            <!-- Section 1: Nursing Staff Evaluation -->
+            <div class="section-header" style="margin-top: 6px;">
+                <span>تقييم طاقم التمريض</span>
+                <span class="sub-guide">يرجى وضع علامة (✓) في الخانة التي تعبر عن رأيك</span>
+            </div>
+
+            <table class="eval-table" style="margin-bottom: 4px;">
+                <thead>
+                    <tr>
+                        <th class="col-crit">المعيار / الخدمة التمريضية</th>
+                        @foreach($ratings as $score => $label)
+                            <th class="col-rate">{{ $label }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($nursingCriteria as $key => $title)
+                        @php $currentVal = (!$isBlank && $survey) ? $survey->$key : null; @endphp
+                        <tr>
+                            <td class="col-crit">{{ $title }}</td>
+                            @foreach($ratings as $score => $label)
+                                <td class="col-rate">
+                                    <span class="box-sq">{{ ($currentVal == $score) ? '✓' : '' }}</span>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <div class="dotted-line-block" style="margin-bottom: 8px;">
+                <span style="white-space: nowrap;">ملاحظات إضافية حول تعامل التمريض:</span>
+                <span class="dotted-line">{{ (!$isBlank && $survey?->nursing_notes) ? $survey->nursing_notes : '' }}</span>
+            </div>
+
+            <!-- Section 2: Laboratory & Analysis Evaluation -->
+            <div class="section-header">
+                <span>تقييم قسم المختبر والتحاليل</span>
+                <span class="sub-guide">يرجى وضع علامة (✓) في الخانة التي تعبر عن رأيك</span>
+            </div>
+
+            <table class="eval-table" style="margin-bottom: 4px;">
+                <thead>
+                    <tr>
+                        <th class="col-crit">المعيار / خدمة المختبر</th>
+                        @foreach($ratings as $score => $label)
+                            <th class="col-rate">{{ $label }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($labCriteria as $key => $title)
+                        @php $currentVal = (!$isBlank && $survey) ? $survey->$key : null; @endphp
+                        <tr>
+                            <td class="col-crit">{{ $title }}</td>
+                            @foreach($ratings as $score => $label)
+                                <td class="col-rate">
+                                    <span class="box-sq">{{ ($currentVal == $score) ? '✓' : '' }}</span>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <div class="dotted-line-block" style="margin-bottom: 8px;">
+                <span style="white-space: nowrap;">ملاحظات إضافية حول تجربة المختبر:</span>
+                <span class="dotted-line">{{ (!$isBlank && $survey?->lab_notes) ? $survey->lab_notes : '' }}</span>
+            </div>
+
+            <!-- Section 3: Pharmacy & Medication Evaluation -->
+            <div class="section-header">
+                <span>تقييم الصيدلية والتعامل مع الأدوية</span>
+                <span class="sub-guide">يرجى وضع علامة (✓) في الخانة التي تعبر عن رأيك</span>
+            </div>
+
+            <table class="eval-table" style="margin-bottom: 4px;">
+                <thead>
+                    <tr>
+                        <th class="col-crit">المعيار / خدمة الصيدلية والأدوية</th>
+                        @foreach($ratings as $score => $label)
+                            <th class="col-rate">{{ $label }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($pharmacyCriteria as $key => $title)
+                        @php $currentVal = (!$isBlank && $survey) ? $survey->$key : null; @endphp
+                        <tr>
+                            <td class="col-crit">{{ $title }}</td>
+                            @foreach($ratings as $score => $label)
+                                <td class="col-rate">
+                                    <span class="box-sq">{{ ($currentVal == $score) ? '✓' : '' }}</span>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <div class="dotted-line-block" style="margin-bottom: 12px;">
+                <span style="white-space: nowrap;">ملاحظات إضافية حول تعامل الصيدلية:</span>
+                <span class="dotted-line">{{ (!$isBlank && $survey?->pharmacy_notes) ? $survey->pharmacy_notes : '' }}</span>
+            </div>
+
+            <!-- Section 4: Respondent Signatures & Thank You (Exact Match to Photo) -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <div style="width: 52%;">
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: 700; width: 75px; color: #1e293b; font-size: 11px;">الاسم:</span>
+                        <span class="dotted-line" style="flex: 1; font-weight: 700;">{{ $survey?->respondent_name ?: ($isBlank ? '' : $patientName) }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: 700; width: 75px; color: #1e293b; font-size: 11px;">التوقيع:</span>
+                        <span class="dotted-line" style="flex: 1;">{{ $survey?->respondent_signature ?: '' }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: 700; width: 75px; color: #1e293b; font-size: 11px;">رقم الهاتف:</span>
+                        <span class="dotted-line" style="flex: 1; font-family: monospace;">{{ $survey?->respondent_phone ?: ($isBlank ? '' : ($survey?->patient?->user?->phone ?? '')) }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-weight: 700; width: 75px; color: #1e293b; font-size: 11px;">الإيميل:</span>
+                        <span class="dotted-line" style="flex: 1;"></span>
+                    </div>
+                </div>
+
+                <div style="width: 44%; text-align: center; padding-right: 15px;">
+                    <p style="font-weight: 800; font-size: 12px; color: #005a9c; margin-bottom: 6px; line-height: 1.4;">
+                        شكراً جزيلاً لك على وقتك وآرائك القيمة.
+                    </p>
+                    <p style="font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 0;">
+                        نتمنى لك الشفاء العاجل مستشفى الكفاءات الأهلي.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Official Report Footer Page 2 (Exact Info from Paper Photo) -->
+        <div class="report-footer-wrapper">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-weight: 700; color: #334155; border-top: 1.5px solid #005a9c; padding-top: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>📞 +964 (0) 776 050 7060</span>
+                    <span>•</span>
+                    <span>+964 (0) 786 050 7060</span>
+                </div>
+                <div>
+                    📍 بغداد - الحارثية شارع الكندي &nbsp;|&nbsp; ✉️ info@alkafaathospital.com
+                </div>
+                <div style="font-weight: 900; color: #005a9c; font-size: 11px;">
+                    7178 <span style="font-size: 8.5px; font-weight: 600; color: #64748b;">(الرقم المجاني)</span>
+                </div>
             </div>
         </div>
     </div>
