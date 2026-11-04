@@ -1,3 +1,13 @@
+@php
+    // الشعار المعتمد مع التضمين الآمن Base64 ليعمل محلياً وعلى هوستنجر فورياً
+    $logoFile = public_path('images/1.jpg');
+    if (!file_exists($logoFile) || filesize($logoFile) === 0) {
+        $logoFile = public_path('images/logo.png');
+    }
+    $hospitalLogoSrc = file_exists($logoFile) && filesize($logoFile) > 0
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFile))
+        : asset('images/1.jpg');
+@endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -473,6 +483,9 @@
 
     <!-- Luxury Hero Header -->
     <header class="luxury-hero">
+        <div class="mb-3 text-center">
+            <img src="{{ $hospitalLogoSrc }}" alt="شعار مستشفى الكفاءات الأهلي" class="rounded-3 shadow-xs bg-white p-1" style="max-height: 52px; max-width: 85px; object-fit: contain;">
+        </div>
         <div class="luxury-badge">
             <i class="fas fa-shield-halved"></i> استبيان الجودة والاعتماد السريري
         </div>

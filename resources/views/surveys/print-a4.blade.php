@@ -1,3 +1,18 @@
+@php
+    // الشعار المعتمد مع التضمين الآمن Base64 ليعمل 100% محلياً وعلى هوستنجر وفي الطباعة الورقية والـ PDF دون الاعتماد على دومين السيرفر
+    $logoFile = public_path('images/1.jpg');
+    if (!file_exists($logoFile) || filesize($logoFile) === 0) {
+        $logoFile = public_path('images/logo.png');
+    }
+    $hospitalLogoSrc = file_exists($logoFile) && filesize($logoFile) > 0
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFile))
+        : asset('images/1.jpg');
+
+    $watermarkFile = public_path('images/logo.png');
+    $watermarkLogoSrc = file_exists($watermarkFile) && filesize($watermarkFile) > 0
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($watermarkFile))
+        : asset('images/logo.png');
+@endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -51,7 +66,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background-image: url('{{ asset('images/logo.png') }}');
+            background-image: url('{{ $watermarkLogoSrc }}');
             background-repeat: no-repeat;
             background-position: center 50%;
             background-size: 58% auto;
@@ -532,7 +547,7 @@
                     <p>وحدة استبيان وتقييم غرف الرقود</p>
                 </div>
                 <div class="header-logo">
-                    <img src="{{ asset('images/1.jpg') }}" 
+                    <img src="{{ $hospitalLogoSrc }}" 
                          alt="شعار المستشفى" 
                          onerror="this.style.display='none'">
                 </div>

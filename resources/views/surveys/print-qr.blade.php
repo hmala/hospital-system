@@ -1,3 +1,13 @@
+@php
+    // الشعار المعتمد مع التضمين الآمن Base64 ليعمل محلياً وعلى هوستنجر فورياً
+    $logoFile = public_path('images/1.jpg');
+    if (!file_exists($logoFile) || filesize($logoFile) === 0) {
+        $logoFile = public_path('images/logo.png');
+    }
+    $hospitalLogoSrc = file_exists($logoFile) && filesize($logoFile) > 0
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoFile))
+        : asset('images/1.jpg');
+@endphp
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -95,6 +105,11 @@
 <body>
 
     <div class="header">
+        @if(!empty($hospitalLogoSrc))
+            <div style="margin-bottom: 5px;">
+                <img src="{{ $hospitalLogoSrc }}" alt="شعار المستشفى" style="max-height: 40px; max-width: 80px; object-fit: contain;">
+            </div>
+        @endif
         <h1 class="hospital-name">مستشفى الكفاءات الأهلي</h1>
         <p class="hospital-sub">AlKafaat Private Hospital</p>
     </div>

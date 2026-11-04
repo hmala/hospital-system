@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-04 — المرحلة 161: حل ظهور شعار المستشفى محلياً وعلى هوستنجر بتضمين Base64 الآمن لصفحات الاستبيان والطباعة Resilient Base64 Hospital Logo Embedding for Surveys & Print)
+
+### Done
+- **تشخيص ومعالجة سبب عدم ظهور الشعار محلياً**:
+  * دالة `asset('images/1.jpg')` تعتمد على `APP_URL` الموجه إلى `localhost` مباشرة، بينما في بيئة WAMP يتم تشغيل المشروع من المجلد الفرعي `/hospital-system/public/` فينتج خطأ 404 محلياً ويختفي الشعار، بينما على هوستنجر يعمل لأن الدومين يشير مباشرة لمجلد الـ public.
+- **تطبيق تقنية Base64 Data URI الموحدة**:
+  * قراءة الشعار مباشرة عبر `public_path('images/1.jpg')` (مع التبديل التلقائي لـ `logo.png` كخيار احتياطي) وتضمينه كـ Base64 Data URI داخل كود الـ HTML والـ CSS.
+  * تحديث جميع قوالب الاستبيان والطباعة المعنية:
+    1. نموذج تقرير الرقود المعتمد A4 (`resources/views/surveys/print-a4.blade.php`) للترويسة والعلامة المائية.
+    2. كرت الاستبيان الحراري 80mm (`resources/views/surveys/print-qr.blade.php`).
+    3. صفحة تعبئة الاستبيان العامة للمريض على الموبايل (`resources/views/surveys/inpatient-public.blade.php`).
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (10 passed, 65 assertions).
+  * اجتياز اختبارات المحطة السريرية الموحدة بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+
 ## Session log (2026-11-04 — المرحلة 160: نمط العرض الثنائي لاستبيان الرقود باركود عملاق في حالة الانتظار ولوحة نتائج شاملة لجميع المفردات عند الاكتمال مع الإخفاء التام للباركود Inpatient Survey 2-State Layout: Grand Centered QR on Pending & Full-Width 11-Item Scorecard on Completion with Total QR Elimination)
 
 ### Done
