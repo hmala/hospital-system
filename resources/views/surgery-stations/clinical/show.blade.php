@@ -5,105 +5,279 @@
     {{-- CSS Styles --}}
     <style>
         :root {
-            --clin-navy: #0f172a;
-            --clin-teal: #1e3a5f;
+            --clin-navy: #476abdff;
+            --clin-teal: #1c6dd8ff;
             --clin-blue: #2563eb;
-            --clin-card-bg: #ffffff;
+            --clin-card-bg: #6866ceff;
         }
 
-        .clin-header-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 18px;
-            color: #ffffff;
-            padding: 22px 26px;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.12);
-            border: 1px solid #334155;
+        /* Ultra-Modern Clinical Executive Header */
+        .clin-header-modern {
+            background: #ffffff !important;
+            border-radius: 16px;
+            padding: 12px 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+        .clin-header-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb 0%, #06b6d4 50%, #3b82f6 100%);
         }
 
+        .avatar-modern-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+        }
+
+        .clin-patient-name {
+            color: #0f172a !important;
+            font-size: 1.22rem;
+            font-weight: 800;
+            letter-spacing: -0.2px;
+        }
+
+        .badge-modern-code {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+            font-family: monospace, system-ui;
+        }
+
+        .badge-modern-sub {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.73rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .clin-v-divider {
+            width: 1px;
+            height: 40px;
+            background: #e2e8f0;
+            margin: 0 4px;
+        }
+
+        .clin-meta-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .badge-doctor-chip {
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-room-chip {
+            background: #fffbeb;
+            color: #92400e;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-time-chip {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Segmented Control iOS / iPadOS Style */
+        .clin-segmented-control {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .clin-segment-item {
+            padding: 5px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 999px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+        }
+        .clin-segment-item:hover {
+            color: #0f172a;
+        }
+        .clin-segment-item.active {
+            background: #ffffff;
+            color: #2563eb !important;
+            font-weight: 800;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+
+        /* Modern Status Badge with Colored Pulse Indicator */
+        .badge-status-modern {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .status-pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .badge-status-completed {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        .badge-status-progress {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .badge-status-waiting {
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Responsive Tablet-Ready Horizontal Tabs Bar (Zero Scroll / Auto-Fit) */
         .clin-tabs-wrapper {
             background: #ffffff;
-            border-radius: 16px;
-            padding: 8px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
             border: 1px solid #e2e8f0;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
         }
 
-        .clin-tabs-wrapper::-webkit-scrollbar {
-            height: 5px;
+        .clin-tabs-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+            width: 100%;
         }
 
-        .clin-tabs-wrapper::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
+        .clin-tab-item {
+            flex: 1 1 0px;
+            min-width: 72px;
         }
 
         @media (max-width: 991px) {
+            .clin-tab-item {
+                flex: 1 1 calc(20% - 4px);
+                min-width: 80px;
+            }
             .clin-header-card {
-                padding: 16px 18px;
-                border-radius: 14px;
+                padding: 10px 14px;
             }
-            .clin-nav-tab {
-                padding: 9px 14px;
-                font-size: 0.82rem;
-                min-height: 42px;
-            }
-            .pane-header {
-                padding: 14px 16px;
-            }
-            .vital-box {
-                padding: 10px;
-            }
-            .vital-box .vital-val {
-                font-size: 1.2rem;
+        }
+
+        @media (max-width: 576px) {
+            .clin-tab-item {
+                flex: 1 1 calc(33.33% - 4px);
             }
         }
 
         .clin-nav-tab {
-            font-size: 0.86rem;
-            font-weight: 600;
-            padding: 10px 18px;
-            border-radius: 12px;
+            font-size: 0.81rem;
+            font-weight: 700;
+            padding: 8px 4px;
+            min-height: 42px;
+            border-radius: 8px;
             color: #475569;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
-            border: 1px solid transparent;
+            justify-content: center;
+            gap: 4px;
+            border: 1px solid #f1f5f9;
+            background: #f8fafc;
             text-decoration: none;
+            text-align: center;
+            width: 100%;
             white-space: nowrap;
         }
         .clin-nav-tab:hover {
             background: #f1f5f9;
-            color: #1e293b;
+            color: #0f172a;
+            border-color: #cbd5e1;
         }
         .clin-nav-tab.active {
-            background: #2563eb;
+            background: #2563eb !important;
             color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            border-color: #1d4ed8 !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
         }
-        .clin-nav-tab.active .badge-perm {
-            background: rgba(255, 255, 255, 0.25) !important;
+        .clin-nav-tab.active * {
+            color: #ffffff !important;
+        }
+        .clin-nav-tab.active .badge-perm-dot {
+            background: rgba(255, 255, 255, 0.3) !important;
             color: #ffffff !important;
         }
 
-        .badge-perm {
-            font-size: 0.7rem;
-            padding: 3px 7px;
-            border-radius: 6px;
-            font-weight: 700;
+        .badge-perm-dot {
+            font-size: 0.6rem;
+            padding: 1px 4px;
+            border-radius: 4px;
+            line-height: 1;
         }
         .badge-perm-read {
             background: #eff6ff;
             color: #1d4ed8;
-            border: 1px solid #bfdbfe;
         }
         .badge-perm-write {
             background: #f0fdf4;
             color: #15803d;
-            border: 1px solid #bbf7d0;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
         }
 
         .pane-card {
@@ -190,76 +364,140 @@
         </div>
     @endif
 
-    {{-- Header Patient & Surgery Banner --}}
-    <div class="clin-header-card mb-4">
-        <div class="row align-items-center gy-3">
-            <div class="col-lg-7">
+    {{-- Ultra-Modern Clinical Executive Header --}}
+    <div class="clin-header-modern mb-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            
+            {{-- Left Side: 3 Visual Pillars --}}
+            <div class="d-flex flex-wrap align-items-center gap-3 gap-xl-4">
+                
+                {{-- Pillar 1: Patient Identity --}}
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-box rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; font-size: 1.6rem;">
+                    <div class="avatar-modern-box flex-shrink-0">
                         <i class="fas fa-user-injured"></i>
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h3 class="fw-bold mb-0 text-white">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
-                            <span class="badge bg-primary bg-opacity-75 px-3 py-1.5 rounded-pill small">
-                                ملف: {{ $surgery->patient?->patient_id ?? 'N/A' }}
-                            </span>
-                            <span class="badge bg-secondary bg-opacity-50 px-2.5 py-1 rounded-pill small">
-                                {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : '' }} | {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
+                            <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
+                            <span class="badge-modern-code">
+                                #{{ $surgery->patient?->patient_id ?? 'N/A' }}
                             </span>
                         </div>
-                        <div class="text-white-50 mt-1 d-flex flex-wrap align-items-center gap-3 small">
-                            <span><i class="fas fa-procedures text-info me-1"></i> العملية: <strong class="text-white">{{ $surgery->surgery_name }}</strong></span>
-                            <span><i class="fas fa-user-md text-success me-1"></i> الجراح: <strong class="text-white">{{ $surgery->doctor?->name ?? 'غير محدد' }}</strong></span>
-                            <span><i class="fas fa-door-open text-warning me-1"></i> الصالة: <strong class="text-white">{{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}</strong></span>
-                            <span><i class="fas fa-clock text-light me-1"></i> الموعد: <strong class="text-white">{{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : 'غير محدد' }}</strong></span>
+                        <div class="d-flex align-items-center gap-2 text-muted small mt-1">
+                            <span class="badge-modern-sub">
+                                <i class="fas fa-birthday-cake me-1 text-primary"></i> {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : 'العمر غير مسجل' }}
+                            </span>
+                            <span class="badge-modern-sub">
+                                <i class="fas fa-venus-mars me-1 text-info"></i> {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
+                            </span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-lg-5 text-lg-end">
-                <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
-                    {{-- Phase Selector --}}
-                    <div class="btn-group bg-dark bg-opacity-50 p-1 rounded-pill border border-secondary" role="group">
-                        <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'pre_op' ? 'btn-primary text-white fw-bold shadow-sm' : 'text-white-50' }}">
-                            <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية (Pre-Op)
-                        </a>
-                        <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
-                           class="btn btn-sm rounded-pill px-3 {{ $currentPhase === 'post_op' ? 'btn-primary text-white fw-bold shadow-sm' : 'text-white-50' }}">
-                            <i class="fas fa-check-circle me-1"></i> ما بعد العملية (Post-Op)
-                        </a>
+                {{-- Vertical Divider 1 --}}
+                <div class="clin-v-divider d-none d-md-block"></div>
+
+                {{-- Pillar 2: Procedure & Doctor --}}
+                <div>
+                    <div class="clin-meta-label">
+                        <i class="fas fa-procedures text-primary me-1"></i> العملية الجراحية
                     </div>
-
-                    {{-- Phase Status Badge --}}
-                    <div>
-                        @if($station && $station->status === 'completed')
-                            <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fas fa-check-double me-1"></i> مكتملة</span>
-                        @elseif($station && $station->status === 'in_progress')
-                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="fas fa-spinner fa-spin me-1"></i> قيد المتابعة</span>
-                        @else
-                            <span class="badge bg-secondary px-3 py-2 rounded-pill"><i class="fas fa-hourglass-start me-1"></i> بالانتظار</span>
-                        @endif
+                    <div class="fw-bold text-dark fs-6 text-truncate" style="max-width: 260px;" title="{{ $surgery->surgery_name }}">
+                        {{ $surgery->surgery_name }}
+                    </div>
+                    <div class="text-secondary small mt-0.5 d-flex align-items-center gap-1.5">
+                        <span class="badge-doctor-chip">
+                            <i class="fas fa-user-md text-success me-1"></i> د. {{ $surgery->doctor?->name ?? 'غير محدد' }}
+                        </span>
                     </div>
                 </div>
+
+                {{-- Vertical Divider 2 --}}
+                <div class="clin-v-divider d-none d-lg-block"></div>
+
+                {{-- Pillar 3: Location & Time --}}
+                <div>
+                    <div class="clin-meta-label">
+                        <i class="fas fa-map-marker-alt text-warning me-1"></i> الموقع والجدولة
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-0.5">
+                        <span class="badge-room-chip">
+                            <i class="fas fa-door-open me-1 text-amber"></i> {{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}
+                        </span>
+                        <span class="badge-time-chip">
+                            <i class="far fa-clock me-1 text-secondary"></i> {{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : '--:--' }}
+                        </span>
+                    </div>
+                </div>
+
             </div>
+
+            {{-- Right Side: Phase Segmented Switcher & Clinical Status --}}
+            <div class="d-flex flex-wrap align-items-center gap-2.5 ms-auto ms-lg-0">
+                {{-- Apple / iPadOS Style Segmented Control --}}
+                <div class="clin-segmented-control" role="group">
+                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
+                       class="clin-segment-item {{ $currentPhase === 'pre_op' ? 'active' : '' }}">
+                        <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية
+                    </a>
+                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
+                       class="clin-segment-item {{ $currentPhase === 'post_op' ? 'active' : '' }}">
+                        <i class="fas fa-check-circle me-1"></i> ما بعد العملية
+                    </a>
+                </div>
+
+                {{-- Phase Status Modern Pill with Glowing Pulse Indicator --}}
+                <div>
+                    @if($station && $station->status === 'completed')
+                        <span class="badge-status-modern badge-status-completed">
+                            <span class="status-pulse-dot bg-success"></span>
+                            مكتملة
+                        </span>
+                    @elseif($station && $station->status === 'in_progress')
+                        <span class="badge-status-modern badge-status-progress">
+                            <span class="status-pulse-dot bg-warning"></span>
+                            قيد المتابعة
+                        </span>
+                    @else
+                        <span class="badge-status-modern badge-status-waiting">
+                            <span class="status-pulse-dot bg-secondary"></span>
+                            بالانتظار
+                        </span>
+                    @endif
+                </div>
+            </div>
+
         </div>
     </div>
 
-    {{-- Tabs Navigation Bar --}}
-    <div class="clin-tabs-wrapper mb-4">
-        <ul class="nav nav-pills d-flex flex-nowrap overflow-auto gap-2 p-1" id="clinicalStationTabs" role="tablist">
+    {{-- Tabs Navigation Bar (Responsive Tablet Grid - Zero Scroll Auto-Fit) --}}
+    @php
+        $shortTabLabels = [
+            'history' => 'السيرة',
+            'vitals' => 'العلامات',
+            'plan' => 'الخطة',
+            'follow_up' => 'المتابعة',
+            'treatments' => 'الأدوية',
+            'fluids' => 'السوائل',
+            'nursing_care' => 'التمريض',
+            'inpatient_survey' => 'الاستبيان ⭐',
+            'tests' => 'الفحوصات',
+        ];
+    @endphp
+
+    <div class="clin-tabs-wrapper mb-3">
+        <ul class="clin-tabs-grid" id="clinicalStationTabs" role="tablist">
             @foreach($visibleTabs as $tKey => $tMeta)
-                <li class="nav-item" role="presentation">
+                <li class="clin-tab-item" role="presentation">
                     <a class="clin-nav-tab {{ $activeTab === $tKey ? 'active' : '' }}" 
-                       href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}">
-                        <i class="{{ $tMeta['icon'] }}"></i>
-                        <span>{{ $tMeta['label'] }}</span>
+                       href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}"
+                       title="{{ $tMeta['label'] }}">
+                        <i class="{{ $tMeta['icon'] }} small"></i>
+                        <span>{{ $shortTabLabels[$tKey] ?? $tMeta['label'] }}</span>
                         @if($tMeta['can_write'])
-                            <span class="badge-perm badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
+                            <span class="badge-perm-dot badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
                         @else
-                            <span class="badge-perm badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
+                            <span class="badge-perm-dot badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
                         @endif
                     </a>
                 </li>
@@ -769,16 +1007,14 @@
                 </div>
 
                 {{-- Action Footer for direct update forms --}}
-                @if(!in_array($activeTab, ['treatments', 'follow_up', 'inpatient_survey']))
+                @if(!in_array($activeTab, ['treatments', 'follow_up', 'inpatient_survey', 'tests']) && $canWriteCurrentTab)
                     <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between">
                         <span class="text-muted small">
                             <i class="fas fa-info-circle text-info me-1"></i> المحطة السريرية تحفظ البيانات فورياً وتزامنها مع ملف المريض وقسم التمريض.
                         </span>
-                        @if($canWriteCurrentTab)
-                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
-                                <i class="fas fa-save me-1"></i> حفظ التحديثات السريرية
-                            </button>
-                        @endif
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                            <i class="fas fa-save me-1"></i> حفظ التحديثات السريرية
+                        </button>
                     </div>
                 @endif
             </form>
@@ -800,266 +1036,360 @@
                         ]
                     );
                     $surveyUrl = route('inpatient-surveys.public.show', ['uuid' => $survey->uuid]);
+                    $canResetSurvey = auth()->check() && (
+                        auth()->user()->hasAnyRole(['admin', 'super_admin', 'super-admin', 'hospital_admin', 'مدير النظام']) ||
+                        auth()->user()->role === 'admin' ||
+                        auth()->user()->can('manage settings') ||
+                        auth()->user()->can('manage surgery waiting list')
+                    );
                 @endphp
 
                 <div class="p-4">
-                    {{-- Header Banner --}}
-                    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
-                        <div class="card-body p-4 text-white d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    {{-- STATE A: PENDING (NOT YET COMPLETED) -> GRAND CENTERED QR CODE ACROSS THE PAGE --}}
+                    @if($survey->status !== 'completed')
+                        {{-- Top Action & Info Bar --}}
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 p-3 bg-white rounded-4 border shadow-xs">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle bg-warning bg-opacity-20 text-warning d-flex align-items-center justify-content-center shadow-xs" style="width: 52px; height: 52px;">
-                                    <i class="fas fa-star fa-2x"></i>
+                                <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                    <i class="fas fa-qrcode fa-lg"></i>
                                 </div>
                                 <div>
-                                    <h5 class="mb-1 fw-bold text-white">استبيان تقييم غرفة الرقود وجودة الرعاية</h5>
-                                    <p class="mb-0 text-light opacity-75 small">
-                                        توثيق تقييم المريض ومرافقه لمرافق الغرفة والخدمات التمريضية والزيارة الطبية (مستشفى الكفاءات الأهلي).
-                                    </p>
+                                    <h6 class="mb-0 fw-bold text-dark">استبيان تقييم غرفة الرقود وجودة الرعاية</h6>
+                                    <small class="text-muted">امسح الرمز أو اطبعه لتمكين المريض أو المرافق من تعبئة التقييم السريري مباشرة من الهاتف</small>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                @if($survey->status === 'completed')
-                                    <span class="badge bg-success text-white rounded-pill px-3 py-2 fs-6 shadow-xs">
-                                        <i class="fas fa-check-circle me-1"></i> مكتمل (النسبة العامة: {{ $survey->overall_score }}%)
-                                    </span>
-                                @else
-                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-6 shadow-xs">
-                                        <i class="fas fa-hourglass-half me-1"></i> بانتظار استلام التقييم
-                                    </span>
-                                @endif
-                                <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm">
-                                    <i class="fas fa-print me-1"></i> طباعة كرت QR حراري
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2 fw-semibold">
+                                    <i class="fas fa-hourglass-half me-1"></i> بانتظار مسح وإرسال التقييم
+                                </span>
+                                <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-outline-dark rounded-pill px-3 py-1.5 fw-semibold small shadow-xs">
+                                    <i class="fas fa-receipt me-1"></i> طباعة كرت حراري (80mm)
                                 </a>
+                                <a href="{{ route('inpatient-surveys.print-a4', $surgery) }}" target="_blank" class="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold small shadow-xs">
+                                    <i class="fas fa-file-pdf me-1"></i> طباعة تقرير A4
+                                </a>
+                                <a href="{{ route('inpatient-surveys.print-blank') }}" target="_blank" class="btn btn-light border rounded-pill px-3 py-1.5 fw-semibold small">
+                                    <i class="fas fa-print me-1"></i> استبيان فارغ A4
+                                </a>
+                                <button type="button" class="btn btn-light border rounded-pill px-3 py-1.5 fw-semibold small" onclick="window.location.reload();" title="تحديث للتحقق من وصول التقييم">
+                                    <i class="fas fa-sync-alt me-1"></i> تحديث
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="row g-4">
-                        {{-- 1. بطاقة الكيو آر لمسح المريض (QR Code Card) --}}
-                        <div class="col-lg-5">
-                            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                                <div class="card-header bg-white py-3 border-bottom text-center">
-                                    <h6 class="mb-0 fw-bold text-dark">
-                                        <i class="fas fa-qrcode text-primary me-1"></i> مسح عبر هاتف المريض / المرافق
-                                    </h6>
-                                    <small class="text-muted">يمسحه المرافق بكاميرا هاتفه لتعبئة الاستبيان بخصوصية تامة</small>
+                        {{-- Grand Centered QR Presentation Card --}}
+                        <div class="card border-0 shadow-sm rounded-4 bg-white text-center p-4 p-md-5 my-2">
+                            <div class="mx-auto" style="max-width: 680px;">
+                                <div class="mb-3">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold fs-6">
+                                        <i class="fas fa-door-open me-1"></i> غرفة {{ $surgery->room?->room_number ?? '-' }} — {{ $surgery->room?->type === 'vip' ? 'جناح خاص VIP' : 'غرفة مشتركة' }}
+                                    </span>
                                 </div>
-                                <div class="card-body p-4 text-center d-flex flex-column align-items-center justify-content-center">
-                                    
-                                    <div class="p-3 bg-light rounded-4 border d-inline-block shadow-xs mb-3 position-relative">
-                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data={{ urlencode($surveyUrl) }}"
-                                             alt="QR Code" class="rounded-3" style="width: 190px; height: 190px; display: block;">
-                                    </div>
 
-                                    <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap mb-3 w-100">
-                                        <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold small" data-bs-toggle="modal" data-bs-target="#qrFullScreenModal">
-                                            <i class="fas fa-expand me-1"></i> تكبير بكامل الشاشة
-                                        </button>
-                                        <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-outline-dark rounded-pill px-3 py-1.5 fw-semibold small">
-                                            <i class="fas fa-receipt me-1"></i> طباعة كرت للمريض
+                                <h3 class="fw-bold text-dark mb-2">
+                                    امسح رمز التقييم عبر كاميرا الهاتف
+                                </h3>
+                                <p class="text-muted mb-4 fs-6">
+                                    وجّه كاميرا الهاتف المحمول أو تطبيق الباركود نحو الرمز التالي ليقوم المريض 
+                                    <strong class="text-dark">({{ $surgery->patient?->name }})</strong> أو مرافقه بالإجابة بخصوصية تامة.
+                                </p>
+
+                                {{-- The Big QR Code Display Box --}}
+                                <div class="p-3 p-sm-4 bg-light rounded-4 border d-inline-block shadow-sm my-2 position-relative">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=0&data={{ urlencode($surveyUrl) }}"
+                                         alt="Inpatient Room Survey QR Code"
+                                         class="rounded-3 bg-white p-2 shadow-xs"
+                                         style="width: 270px; height: 270px; max-width: 100%; display: block; aspect-ratio: 1/1;">
+                                </div>
+
+                                <div class="mt-3 mb-4">
+                                    <span class="badge bg-light text-muted border rounded-pill px-3 py-2 small fw-normal">
+                                        <i class="fas fa-shield-alt text-success me-1"></i> رابط آمن ومباشر لا يتطلب تسجيل الدخول
+                                    </span>
+                                </div>
+
+                                {{-- Fast Actions / Link Tools --}}
+                                <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap mb-4">
+                                    <a href="{{ $surveyUrl }}" target="_blank" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i> فتح صفحة الاستبيان
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold" id="btnCopySurveyLink" onclick="navigator.clipboard.writeText('{{ $surveyUrl }}'); this.innerHTML='<i class=\'fas fa-check text-success me-1\'></i> تم النسخ بنجاح!'; setTimeout(() => { this.innerHTML='<i class=\'fas fa-copy me-1\'></i> نسخ الرابط'; }, 2500);">
+                                        <i class="fas fa-copy me-1"></i> نسخ الرابط
+                                    </button>
+                                    <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 fw-semibold">
+                                        <i class="fas fa-receipt me-1"></i> كرت مريض حراري
+                                    </a>
+                                    <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#qrFullScreenModal">
+                                        <i class="fas fa-expand me-1"></i> تكبير بملء الشاشة
+                                    </button>
+                                </div>
+
+                                {{-- Auto-Transition Note --}}
+                                <div class="p-3 rounded-3 bg-info bg-opacity-10 border border-info border-opacity-25 text-start d-flex align-items-start gap-2">
+                                    <i class="fas fa-info-circle text-info mt-1"></i>
+                                    <div class="small text-dark">
+                                        <strong>ملاحظة للمحطة السريرية:</strong> بمجرد قيام المريض أو مرافقه بإرسال التقييم عبر هاتفه، سيختفي رمز الباركود من هذه الصفحة وستظهر مباشرة نتائج جميع مفردات الاستبيان (النظافة، التكييف، الأثاث، راحة السرير، وزيارة الطبيب).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Full-screen QR Modal (Only available in pending state) --}}
+                        <div class="modal fade" id="qrFullScreenModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content rounded-4 border-0 shadow-lg text-center p-4">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="modal-title fw-bold text-dark w-100">
+                                            مسح استبيان غرفة الرقود (غرفة {{ $surgery->room?->room_number ?? '-' }})
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body py-4">
+                                        <div class="p-3 bg-white border rounded-4 d-inline-block shadow-sm mb-3">
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=0&data={{ urlencode($surveyUrl) }}"
+                                                 alt="QR Code" style="width: 280px; height: 280px; display: block;">
+                                        </div>
+                                        <p class="text-muted fw-semibold mb-0">
+                                            وجّه كاميرا الهاتف نحو الرمز لفتح الاستبيان مباشرة بكل أريحية.
+                                        </p>
+                                    </div>
+                                    <div class="modal-footer border-0 pt-0 justify-content-center">
+                                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
+                                        <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-primary rounded-pill px-4 fw-bold">
+                                            <i class="fas fa-print me-1"></i> طباعة كرت
                                         </a>
                                     </div>
-
-                                    <div class="p-2.5 bg-light rounded-3 text-muted small w-100 text-start">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span>رابط التقييم المباشر:</span>
-                                            <a href="{{ $surveyUrl }}" target="_blank" class="text-primary fw-bold text-decoration-none">
-                                                فتح الرابط <i class="fas fa-external-link-alt small"></i>
-                                            </a>
-                                        </div>
-                                        <div class="text-truncate font-monospace small bg-white p-1 rounded border text-muted">
-                                            {{ $surveyUrl }}
-                                        </div>
-                                    </div>
-
                                 </div>
                             </div>
                         </div>
 
-                        {{-- 2. إما عرض ملخص التقييم إذا اكتمل أو نموذج الإدخال اليدوي للممرض --}}
-                        <div class="col-lg-7">
-                            @if($survey->status === 'completed')
-                                {{-- عرض ملخص التقييم المكتمل --}}
-                                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                                    <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-success">
-                                            <i class="fas fa-clipboard-check me-1"></i> نتائج وتقييم المريض المسجل
-                                        </h6>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
-                                            سُجِّل بواسطة: {{ $survey->submitted_via === 'patient_qr' ? 'هاتف المريض (QR)' : 'إدخال يدوي للكادر' }}
-                                        </span>
+                    {{-- STATE B: COMPLETED -> QR CODE DISAPPEARS AND FULL-WIDTH SCORECARD REPLACES IT --}}
+                    @else
+                        {{-- Executive Result Hero Banner --}}
+                        <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                            <div class="card-body p-4 text-white">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                    {{-- Left: Score & Verdict --}}
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-4 d-flex flex-column align-items-center justify-content-center text-center shadow-sm px-3 py-2"
+                                             style="min-width: 95px; height: 95px; background: {{ $survey->overall_score >= 85 ? 'linear-gradient(135deg, #10b981, #059669)' : ($survey->overall_score >= 70 ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : ($survey->overall_score >= 50 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #ef4444, #b91c1c)')) }};">
+                                            <span class="fs-2 fw-black text-white lh-1">{{ round($survey->overall_score) }}%</span>
+                                            <span class="small text-white-50 mt-1" style="font-size: 0.72rem;">التقييم الإجمالي</span>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <h5 class="mb-0 fw-bold text-white">نتائج استبيان تقييم غرفة الرقود</h5>
+                                                <span class="badge bg-success text-white rounded-pill px-2.5 py-1 small">
+                                                    <i class="fas fa-check-circle me-1"></i> تقييم مكتمل
+                                                </span>
+                                            </div>
+                                            <p class="mb-1 text-light opacity-75 small">
+                                                تم إرسال هذا التقييم بواسطة: 
+                                                <strong class="text-white">{{ $survey->submitted_via === 'patient_qr' ? '📱 هاتف المريض عبر رمز الباركود (QR)' : '👨‍⚕️ إدخال الكادر السريري' }}</strong>
+                                                @if($survey->completed_at)
+                                                    بتاريخ {{ \Carbon\Carbon::parse($survey->completed_at)->format('Y-m-d h:i A') }}
+                                                @endif
+                                            </p>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                @if($survey->recommend_score_nps)
+                                                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-3 py-1 small">
+                                                        <i class="fas fa-thumbs-up text-warning me-1"></i> مؤشر التوصية (NPS): <strong class="text-warning">{{ $survey->recommend_score_nps }}</strong> من 10
+                                                    </span>
+                                                @endif
+                                                <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-3 py-1 small">
+                                                    <i class="fas fa-door-closed me-1"></i> غرفة {{ $surgery->room?->room_number ?? '-' }}
+                                                </span>
+                                                <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-25 rounded-pill px-3 py-1 small">
+                                                    <i class="fas fa-user-md me-1"></i> د. {{ $surgery->doctor?->name ?? 'غير محدد' }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="card-body p-4">
-                                        <div class="row g-2 mb-3">
-                                            @php
-                                                $metricLabels = [
-                                                    'cleanliness_room' => 'النظافة العامة للغرفة',
-                                                    'cleanliness_bathroom' => 'نظافة الحمام والمرافق',
-                                                    'temperature_ac' => 'التكييف والحرارة',
-                                                    'lighting' => 'إضاءة الغرفة',
-                                                    'quietness_privacy' => 'الهدوء والخصوصية',
-                                                    'bed_comfort' => 'راحة السرير والفراش',
-                                                    'control_panel' => 'لوحة التحكم والتمريض',
-                                                    'storage_space' => 'مساحات التخزين',
-                                                    'furniture_safety' => 'جودة وأمان الأثاث',
-                                                    'entertainment' => 'الترفيه (تلفاز وإنترنت)',
-                                                    'doctor_communication' => 'تواصل وزيارة الطبيب',
-                                                ];
-                                            @endphp
-                                            @foreach($metricLabels as $field => $label)
-                                                @php $val = $survey->{$field}; @endphp
-                                                <div class="col-sm-6">
-                                                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
-                                                        <span class="small fw-semibold text-dark">{{ $label }}:</span>
-                                                        @if($val == 5)
-                                                            <span class="badge bg-success rounded-pill px-2 py-0.5">ممتاز (5/5)</span>
-                                                        @elseif($val == 4)
-                                                            <span class="badge bg-info text-white rounded-pill px-2 py-0.5">جيد جداً (4/5)</span>
-                                                        @elseif($val == 3)
-                                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5">جيد (3/5)</span>
-                                                        @elseif($val == 2)
-                                                            <span class="badge bg-orange text-white rounded-pill px-2 py-0.5" style="background:#f97316;">مقبول (2/5)</span>
-                                                        @elseif($val == 1)
-                                                            <span class="badge bg-danger rounded-pill px-2 py-0.5">ضعيف (1/5)</span>
-                                                        @else
-                                                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5">-</span>
-                                                        @endif
+
+                                    {{-- Right: Actions & Admin Reset --}}
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        @if($canResetSurvey)
+                                            <form method="POST" action="{{ route('inpatient-surveys.reset', $surgery) }}" class="d-inline" onsubmit="return confirm('تنبيه هام: هل أنت متأكد من تصفير وإعادة فتح الاستبيان؟\n\nسيتم حذف الإجابات الحالية وإعادة إظهار باركود التقييم للمريض مجدداً.');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm" title="إعادة فتح وتصفير الاستبيان وإعادة إظهار الباركود">
+                                                    <i class="fas fa-undo-alt me-1"></i> إعادة فتح الاستبيان (أدمن)
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        <a href="{{ route('inpatient-surveys.print-a4', $surgery) }}" target="_blank" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                            <i class="fas fa-file-pdf me-1"></i> طباعة تقرير A4
+                                        </a>
+                                        <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                            <i class="fas fa-receipt me-1"></i> إيصال حراري
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Comprehensive Results Grid: All 11 Survey Items --}}
+                        <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+                            <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">
+                                        <i class="fas fa-poll-h text-primary me-2"></i> تفاصيل تقييم جميع مفردات الاستبيان (11 معياراً)
+                                    </h6>
+                                    <small class="text-muted">درجات التقييم من 1 (ضعيف) إلى 5 (ممتاز) مدخلة مباشرة بواسطة المريض</small>
+                                </div>
+                                <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-semibold">
+                                    إجمالي البنود: 11 / 11
+                                </span>
+                            </div>
+                            <div class="card-body p-4">
+                                @php
+                                    $detailedMetrics = [
+                                        'cleanliness_room' => ['label' => 'النظافة العامة لغرفة الرقود', 'icon' => 'fas fa-broom', 'color' => '#10b981'],
+                                        'cleanliness_bathroom' => ['label' => 'نظافة الحمام والمرافق الصحية', 'icon' => 'fas fa-sink', 'color' => '#06b6d4'],
+                                        'temperature_ac' => ['label' => 'التكييف والحرارة والتهوية', 'icon' => 'fas fa-wind', 'color' => '#3b82f6'],
+                                        'lighting' => ['label' => 'إضاءة الغرفة ومستوى الراحة البصرية', 'icon' => 'fas fa-lightbulb', 'color' => '#f59e0b'],
+                                        'quietness_privacy' => ['label' => 'الهدوء والسكينة والخصوصية بالقسم', 'icon' => 'fas fa-volume-mute', 'color' => '#8b5cf6'],
+                                        'bed_comfort' => ['label' => 'راحة السرير والمفارش ونظافتها', 'icon' => 'fas fa-bed', 'color' => '#ec4899'],
+                                        'control_panel' => ['label' => 'لوحة استدعاء التمريض وسرعة الاستجابة', 'icon' => 'fas fa-bell', 'color' => '#ef4444'],
+                                        'storage_space' => ['label' => 'مساحات التخزين والدواليب', 'icon' => 'fas fa-door-closed', 'color' => '#64748b'],
+                                        'furniture_safety' => ['label' => 'جودة وأمان الأثاث ومرافق الغرفة', 'icon' => 'fas fa-chair', 'color' => '#14b8a6'],
+                                        'entertainment' => ['label' => 'الترفيه (شاشة التلفاز وخدمة الواي فاي)', 'icon' => 'fas fa-tv', 'color' => '#6366f1'],
+                                        'doctor_communication' => ['label' => 'تواصل وزيارة الطبيب المعالج واهتمامه', 'icon' => 'fas fa-user-md', 'color' => '#059669'],
+                                    ];
+                                @endphp
+
+                                <div class="row g-3">
+                                    @foreach($detailedMetrics as $field => $info)
+                                        @php
+                                            $val = $survey->{$field};
+                                            $pct = $val ? ($val / 5) * 100 : 0;
+                                        @endphp
+                                        <div class="col-md-6 col-xl-4">
+                                            <div class="p-3 rounded-4 border bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between transition-hover">
+                                                <div>
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="rounded-3 d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; background-color: {{ $info['color'] }}; font-size: 0.85rem;">
+                                                                <i class="{{ $info['icon'] }}"></i>
+                                                            </div>
+                                                            <span class="fw-bold text-dark small">{{ $info['label'] }}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="d-flex align-items-center justify-content-between my-2">
+                                                        <div>
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                @if($i <= $val)
+                                                                    <i class="fas fa-star text-warning" style="font-size: 0.95rem;"></i>
+                                                                @else
+                                                                    <i class="far fa-star text-muted opacity-50" style="font-size: 0.95rem;"></i>
+                                                                @endif
+                                                            @endfor
+                                                        </div>
+                                                        <div>
+                                                            @if($val == 5)
+                                                                <span class="badge bg-success rounded-pill px-2.5 py-1 small fw-bold">ممتاز (5/5)</span>
+                                                            @elseif($val == 4)
+                                                                <span class="badge bg-info text-white rounded-pill px-2.5 py-1 small fw-bold">جيد جداً (4/5)</span>
+                                                            @elseif($val == 3)
+                                                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small fw-bold">جيد (3/5)</span>
+                                                            @elseif($val == 2)
+                                                                <span class="badge text-white rounded-pill px-2.5 py-1 small fw-bold" style="background:#f97316;">مقبول (2/5)</span>
+                                                            @elseif($val == 1)
+                                                                <span class="badge bg-danger rounded-pill px-2.5 py-1 small fw-bold">ضعيف (1/5)</span>
+                                                            @else
+                                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 small">غير مقيم</span>
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            @endforeach
+
+                                                {{-- Progress Bar --}}
+                                                <div class="mt-2">
+                                                    <div class="progress" style="height: 6px; border-radius: 999px;">
+                                                        <div class="progress-bar" role="progressbar"
+                                                             style="width: {{ $pct }}%; background-color: {{ $val >= 4 ? '#10b981' : ($val == 3 ? '#f59e0b' : '#ef4444') }};"
+                                                             aria-valuenow="{{ $pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-
-                                        @if($survey->recommend_score_nps)
-                                            <div class="alert alert-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 p-3 mb-3 d-flex justify-content-between align-items-center">
-                                                <span class="fw-bold small text-primary"><i class="fas fa-thumbs-up me-1"></i> احتمالية التوصية بالمستشفى (NPS):</span>
-                                                <span class="badge bg-primary text-white rounded-pill px-3 py-1 fs-6">{{ $survey->recommend_score_nps }} من 10</span>
-                                            </div>
-                                        @endif
-
-                                        @if($survey->room_notes || $survey->patient_suggestions || $survey->doctor_notes)
-                                            <div class="p-3 bg-light rounded-3 border">
-                                                @if($survey->room_notes)
-                                                    <div class="mb-2">
-                                                        <strong class="small text-dark d-block">ملاحظات الغرفة:</strong>
-                                                        <span class="small text-muted">{{ $survey->room_notes }}</span>
-                                                    </div>
-                                                @endif
-                                                @if($survey->patient_suggestions)
-                                                    <div class="mb-2">
-                                                        <strong class="small text-dark d-block">مقترحات المريض:</strong>
-                                                        <span class="small text-muted">{{ $survey->patient_suggestions }}</span>
-                                                    </div>
-                                                @endif
-                                                @if($survey->doctor_notes)
-                                                    <div>
-                                                        <strong class="small text-dark d-block">ملاحظات حول الطبيب:</strong>
-                                                        <span class="small text-muted">{{ $survey->doctor_notes }}</span>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endif
-                                    </div>
+                                    @endforeach
                                 </div>
-                            @else
-                                {{-- نموذج الإدخال اليدوي المباشر للممرض --}}
-                                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
-                                    <div class="card-header bg-white py-3 border-bottom">
-                                        <h6 class="mb-0 fw-bold text-dark">
-                                            <i class="fas fa-edit text-warning me-1"></i> إدخال يدوي للتقييم بواسطة الكادر
-                                        </h6>
-                                        <small class="text-muted">مخصص في حال طلب المريض تعبئة الاستبيان شفهياً بواسطة الممرض</small>
-                                    </div>
-                                    <div class="card-body p-4">
-                                        <form method="POST" action="{{ route('inpatient-surveys.manual.store', $surgery) }}">
-                                            @csrf
-                                            
-                                            <div class="table-responsive mb-3">
-                                                <table class="table table-sm table-hover align-middle mb-0">
-                                                    <thead class="table-light small">
-                                                        <tr>
-                                                            <th>البند</th>
-                                                            <th class="text-center" style="width: 70px;">ممتاز (5)</th>
-                                                            <th class="text-center" style="width: 70px;">جيد جداً (4)</th>
-                                                            <th class="text-center" style="width: 70px;">جيد (3)</th>
-                                                            <th class="text-center" style="width: 70px;">مقبول (2)</th>
-                                                            <th class="text-center" style="width: 70px;">ضعيف (1)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $manualFields = [
-                                                                'cleanliness_room' => 'النظافة العامة للغرفة',
-                                                                'cleanliness_bathroom' => 'نظافة الحمام والمرافق',
-                                                                'temperature_ac' => 'التكييف والحرارة',
-                                                                'lighting' => 'إضاءة الغرفة',
-                                                                'quietness_privacy' => 'الهدوء والخصوصية',
-                                                                'bed_comfort' => 'راحة السرير والفراش',
-                                                                'control_panel' => 'لوحة التحكم والتمريض',
-                                                                'storage_space' => 'مساحات التخزين',
-                                                                'furniture_safety' => 'جودة وأمان الأثاث',
-                                                                'entertainment' => 'الترفيه (تلفاز وإنترنت)',
-                                                                'doctor_communication' => 'تواصل وزيارة الطبيب',
-                                                            ];
-                                                        @endphp
-                                                        @foreach($manualFields as $f => $l)
-                                                            <tr>
-                                                                <td class="small fw-semibold">{{ $l }}</td>
-                                                                @for($score = 5; $score >= 1; $score--)
-                                                                    <td class="text-center">
-                                                                        <input type="radio" name="{{ $f }}" value="{{ $score }}" class="form-check-input" {{ $score === 5 ? 'checked' : '' }}>
-                                                                    </td>
-                                                                @endfor
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <label class="form-label small fw-bold text-dark">ملاحظات ومقترحات المريض:</label>
-                                                <textarea name="patient_suggestions" class="form-control rounded-3" rows="2" placeholder="اكتب أي ملاحظات ذكرها المريض..."></textarea>
-                                            </div>
-
-                                            <div class="d-flex justify-content-end">
-                                                <button type="submit" class="btn btn-warning rounded-pill px-4 py-2 fw-bold shadow-sm text-dark">
-                                                    <i class="fas fa-save me-1"></i> حفظ وتوثيق التقييم في طبلة المريض
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Full-screen QR Modal --}}
-                <div class="modal fade" id="qrFullScreenModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content rounded-4 border-0 shadow-lg text-center p-4">
-                            <div class="modal-header border-0 pb-0">
-                                <h5 class="modal-title fw-bold text-dark w-100">
-                                    مسح استبيان غرفة الرقود (غرفة {{ $surgery->room?->room_number ?? '-' }})
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body py-4">
-                                <div class="p-3 bg-white border rounded-4 d-inline-block shadow-sm mb-3">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data={{ urlencode($surveyUrl) }}"
-                                         alt="QR Code" style="width: 280px; height: 280px; display: block;">
-                                </div>
-                                <p class="text-muted fw-semibold mb-0">
-                                    وجّه كاميرا الهاتف نحو الرمز لفتح الاستبيان مباشرة بكل أريحية.
-                                </p>
-                            </div>
-                            <div class="modal-footer border-0 pt-0 justify-content-center">
-                                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
-                                <a href="{{ route('inpatient-surveys.print-qr', $surgery) }}" target="_blank" class="btn btn-primary rounded-pill px-4 fw-bold">
-                                    <i class="fas fa-print me-1"></i> طباعة كرت
-                                </a>
                             </div>
                         </div>
-                    </div>
+
+                        {{-- Patient Feedback, Priorities & Qualitative Remarks --}}
+                        @php
+                            $hasPriorities = !empty($survey->top_three_improvements) && is_array($survey->top_three_improvements) && count($survey->top_three_improvements) > 0;
+                            $hasComments = !empty($survey->room_notes) || !empty($survey->patient_suggestions) || !empty($survey->doctor_notes);
+                        @endphp
+
+                        @if($hasPriorities || $hasComments)
+                            <div class="row g-4">
+                                {{-- Top 3 Priorities --}}
+                                @if($hasPriorities)
+                                    <div class="{{ $hasComments ? 'col-lg-6' : 'col-12' }}">
+                                        <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                                            <div class="card-header bg-white py-3 px-4 border-bottom">
+                                                <h6 class="mb-0 fw-bold text-dark">
+                                                    <i class="fas fa-bullseye text-warning me-2"></i> أهم أولويات التحسين المحددة من المريض
+                                                </h6>
+                                            </div>
+                                            <div class="card-body p-4">
+                                                <p class="small text-muted mb-3">حدد المريض المجالات التالية كأولويات تتطلب التطوير مستقبلاً:</p>
+                                                <div class="d-flex flex-column gap-2">
+                                                    @foreach($survey->top_three_improvements as $idx => $priority)
+                                                        <div class="d-flex align-items-center gap-2 p-2.5 rounded-3 bg-light border">
+                                                            <span class="badge bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.8rem;">
+                                                                {{ $idx + 1 }}
+                                                            </span>
+                                                            <span class="small fw-semibold text-dark">{{ $priority }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                {{-- Qualitative Notes & Suggestions --}}
+                                @if($hasComments)
+                                    <div class="{{ $hasPriorities ? 'col-lg-6' : 'col-12' }}">
+                                        <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                                            <div class="card-header bg-white py-3 px-4 border-bottom">
+                                                <h6 class="mb-0 fw-bold text-dark">
+                                                    <i class="fas fa-comment-dots text-primary me-2"></i> الملاحظات والمقترحات النصية للمريض
+                                                </h6>
+                                            </div>
+                                            <div class="card-body p-4 d-flex flex-column gap-3">
+                                                @if(!empty($survey->patient_suggestions))
+                                                    <div class="p-3 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
+                                                        <strong class="d-block small text-primary mb-1"><i class="fas fa-lightbulb me-1"></i> مقترحات المريض الإضافية:</strong>
+                                                        <p class="small text-dark mb-0">{{ $survey->patient_suggestions }}</p>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($survey->room_notes))
+                                                    <div class="p-3 rounded-3 bg-light border">
+                                                        <strong class="d-block small text-dark mb-1"><i class="fas fa-bed me-1"></i> ملاحظات مرافق الغرفة:</strong>
+                                                        <p class="small text-muted mb-0">{{ $survey->room_notes }}</p>
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($survey->doctor_notes))
+                                                    <div class="p-3 rounded-3 bg-light border">
+                                                        <strong class="d-block small text-dark mb-1"><i class="fas fa-user-md me-1"></i> ملاحظات زيارة الطبيب:</strong>
+                                                        <p class="small text-muted mb-0">{{ $survey->doctor_notes }}</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    @endif
                 </div>
             @endif
 

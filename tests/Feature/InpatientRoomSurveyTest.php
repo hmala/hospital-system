@@ -25,6 +25,8 @@ class InpatientRoomSurveyTest extends TestCase
 
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'nurse', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'resident', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'doctor', 'guard_name' => 'web']);
 
         $hospital = Hospital::create([
             'name' => 'مستشفى الكفاءات الأهلي',
@@ -298,5 +300,77 @@ class InpatientRoomSurveyTest extends TestCase
         $this->assertNull($survey->overall_score);
         $this->assertNull($survey->completed_at);
         $this->assertNull($survey->cleanliness_room);
+    }
+
+    public function test_clinical_station_survey_tab_shows_large_qr_when_pending(): void
+    {
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $patient = $this->createPatient('كرار حيدر');
+        $room = Room::create(['room_number' => '303', 'type' => 'vip', 'floor' => 'الطابق الثالث']);
+        $surgery = $this->createSurgery($patient, $room);
+
+        $response = $this->actingAs($nurse)
+            ->get(route('clinical-station.show', ['surgery' => $surgery, 'tab' => 'inpatient_survey']));
+
+        $response->assertStatus(200);
+        $response->assertSee('امسح رمز التقييم عبر كاميرا الهاتف');
+        $response->assertSee('بانتظار مسح وإرسال التقييم');
+        $response->assertSee('create-qr-code');
+        // Manual form should not exist
+        $response->assertDontSee('إدخال يدوي للتقييم بواسطة الكادر');
+        $response->assertDontSee('حفظ وتوثيق التقييم في طبلة المريض');
+    }
+
+    public function test_clinical_station_survey_tab_hides_qr_and_displays_full_scorecard_when_completed(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $patient = $this->createPatient('مريم فاضل');
+        $room = Room::create(['room_number' => '405', 'type' => 'regular', 'floor' => 'الطابق الرابع']);
+        $surgery = $this->createSurgery($patient, $room);
+
+        InpatientRoomSurvey::create([
+            'surgery_id' => $surgery->id,
+            'patient_id' => $patient->id,
+            'room_id' => $room->id,
+            'status' => 'completed',
+            'submitted_via' => 'patient_qr',
+            'completed_at' => now(),
+            'cleanliness_room' => 5,
+            'cleanliness_bathroom' => 5,
+            'temperature_ac' => 4,
+            'lighting' => 5,
+            'quietness_privacy' => 4,
+            'bed_comfort' => 5,
+            'control_panel' => 5,
+            'storage_space' => 4,
+            'furniture_safety' => 5,
+            'entertainment' => 4,
+            'doctor_communication' => 5,
+            'overall_score' => 92.5,
+            'recommend_score_nps' => 10,
+            'top_three_improvements' => ['تحديث الشاشات'],
+            'patient_suggestions' => 'العناية ممتازة جداً',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('clinical-station.show', ['surgery' => $surgery, 'tab' => 'inpatient_survey']));
+
+        $response->assertStatus(200);
+        // The QR code presentation and image should NOT appear in completed state
+        $response->assertDontSee('امسح رمز التقييم عبر كاميرا الهاتف');
+        $response->assertDontSee('create-qr-code');
+        // Full Scorecard and metrics should appear
+        $response->assertSee('نتائج استبيان تقييم غرفة الرقود');
+        $response->assertSee('93%'); // round(92.5)
+        $response->assertSee('تفاصيل تقييم جميع مفردات الاستبيان (11 معياراً)');
+        $response->assertSee('النظافة العامة لغرفة الرقود');
+        $response->assertSee('تواصل وزيارة الطبيب المعالج واهتمامه');
+        $response->assertSee('مؤشر التوصية (NPS)');
+        $response->assertSee('العناية ممتازة جداً');
+        $response->assertSee('إعادة فتح الاستبيان (أدمن)');
     }
 }

@@ -184,7 +184,15 @@ class InpatientSurveyController extends Controller
      */
     public function reset(Surgery $surgery)
     {
-        if (! Auth::user() || ! Auth::user()->hasAnyRole(['admin', 'super-admin'])) {
+        $user = Auth::user();
+        $canReset = $user && (
+            $user->hasAnyRole(['admin', 'super_admin', 'super-admin', 'hospital_admin', 'مدير النظام']) ||
+            $user->role === 'admin' ||
+            $user->can('manage settings') ||
+            $user->can('manage surgery waiting list')
+        );
+
+        if (! $canReset) {
             abort(403, 'غير مصرح لك بإعادة فتح وتصفير الاستبيان، هذه الصلاحية مخصصة لمدير النظام حصراً.');
         }
 

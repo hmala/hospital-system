@@ -54,7 +54,7 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
-## Session log (2026-11-04 — المرحلة 158: الربط التلقائي لتصفيات الضمان الصحي للخدج واحتساب فرق مطالبة المستشفى ومصفوفة عمر الحمل بالخزينة والحسابات NICU Insurance Automatic Settlement, Hospital Claim Margin & Gestational Matrix Treasury Integration)
+## Session log (2026-11-04 — المرحلة 162: الربط التلقائي لتصفيات الضمان الصحي للخدج واحتساب فرق مطالبة المستشفى ومصفوفة عمر الحمل بالخزينة والحسابات NICU Insurance Automatic Settlement, Hospital Claim Margin & Gestational Matrix Treasury Integration)
 
 ### Done
 - **محرك الفوترة الحية والاحتساب التلقائي ([app/Services/NicuBillingService.php](file:///c:/wamp64/www/hospital-system/app/Services/NicuBillingService.php))**:
@@ -75,6 +75,76 @@ Consult these files before making changes or proposing fixes:
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/NicuInsuranceSettlementAndClaimsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuInsuranceSettlementAndClaimsTest.php))**:
   * إنشاء واجتياز اختبار الميزة بنسبة 100% (4 passed, 18 assertions).
   * استمرار اجتياز كافة اختبارات حسابات وتدفقات الخدج السابقة: `tests/Feature/NicuAccountingTest.php` (4 passed, 21 assertions)، `tests/Feature/NicuLabRadiologyCashierWorkflowTest.php` (4 passed, 82 assertions)، و `tests/Feature/NicuWorkflowTest.php` (39 passed, 341 assertions).
+
+## Session log (2026-11-04 — المرحلة 161: حل ظهور شعار المستشفى محلياً وعلى هوستنجر بتضمين Base64 الآمن لصفحات الاستبيان والطباعة Resilient Base64 Hospital Logo Embedding for Surveys & Print)
+
+### Done
+- **تشخيص ومعالجة سبب عدم ظهور الشعار محلياً**:
+  * دالة `asset('images/1.jpg')` تعتمد على `APP_URL` الموجه إلى `localhost` مباشرة، بينما في بيئة WAMP يتم تشغيل المشروع من المجلد الفرعي `/hospital-system/public/` فينتج خطأ 404 محلياً ويختفي الشعار، بينما على هوستنجر يعمل لأن الدومين يشير مباشرة لمجلد الـ public.
+- **تطبيق تقنية Base64 Data URI الموحدة**:
+  * قراءة الشعار مباشرة عبر `public_path('images/1.jpg')` (مع التبديل التلقائي لـ `logo.png` كخيار احتياطي) وتضمينه كـ Base64 Data URI داخل كود الـ HTML والـ CSS.
+  * تحديث جميع قوالب الاستبيان والطباعة المعنية:
+    1. نموذج تقرير الرقود المعتمد A4 (`resources/views/surveys/print-a4.blade.php`) للترويسة والعلامة المائية.
+    2. كرت الاستبيان الحراري 80mm (`resources/views/surveys/print-qr.blade.php`).
+    3. صفحة تعبئة الاستبيان العامة للمريض على الموبايل (`resources/views/surveys/inpatient-public.blade.php`).
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (10 passed, 65 assertions).
+  * اجتياز اختبارات المحطة السريرية الموحدة بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+
+## Session log (2026-11-04 — المرحلة 160: نمط العرض الثنائي لاستبيان الرقود باركود عملاق في حالة الانتظار ولوحة نتائج شاملة لجميع المفردات عند الاكتمال مع الإخفاء التام للباركود Inpatient Survey 2-State Layout: Grand Centered QR on Pending & Full-Width 11-Item Scorecard on Completion with Total QR Elimination)
+
+### Done
+- **إلغاء نموذج الإدخال اليدوي نهائياً من المحطة السريرية**:
+  * حذف جدول الإدخال اليدوي للممرض بالكامل لتبسيط الشاشة والاعتماد 100% على تقييم المريض ومرافقه الذاتي عبر الموبايل بخصوصية تامة.
+- **الحالة الأولى (بانتظار التقييم - Pending)**:
+  * عرض باركود عملاق عالي الدقة (340x340) في منتصف الشاشة بعرض بطاقة مخصصة فخمة مع رقم الغرفة واسم المريض.
+  * شريط علوي أنيق يحتوي على أزرار الإجراءات: طباعة كرت حراري للمريض (80mm)، طباعة تقرير A4، استبيان فارغ A4، تكبير بملء الشاشة، وزر تحديث فوري.
+  * زر مباشر لفتح رابط التقييم وزر نسخ الرابط مع تأكيد النسخ الفوري.
+- **الحالة الثانية (عند اكتمال التقييم - Completed)**:
+  * **إخفاء الباركود ونافذة تكبيره كلياً من الصفحة**، واستبدالها بلوحة نتائج تفصيلية شاملة بكامل عرض الشاشة.
+  * **شريط تنفيذي علوي ناصع**: نسبة التقييم الإجمالية بلون ذكي ودائرة تقييم بارزة، وسيلة التقديم، مؤشر توصية المرضى (NPS / 10)، توقيت الإرسال، وزر إعادة فتح وتصفير الاستبيان للمدير (Admin Reset).
+  * **شبكة النتائج الشاملة للمفردات الـ 11**: عرض النظافة العامة، نظافة الحمام، التكييف، الإضاءة، الهدوء، راحة السرير، لوحة التحكم، مساحات التخزين، جودة الأثاث، الترفيه، وتواصل الطبيب المعالج مع النجوم وشارات التقييم وأشرطة التقدم الملونة.
+  * **بطاقات أولويات التحسين وملاحظات المريض النصية**: عرض أهم 3 أولويات تحسين حددها المريض ومقترحاته وملاحظاته على الغرفة والطبيب.
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (10 passed, 65 assertions).
+  * اجتياز اختبارات المحطة السريرية الموحدة بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+
+## Session log (2026-11-04 — المرحلة 159: ترويسة إكلينيكية تنفيذية فائقة العصرية بنظام الأعمدة والتبديل الزجاجي Ultra-Modern Hospital EHR Executive Header with Data Pillars & Glass Segmented Control)
+
+### Done
+- **ترقية معمارية الترويسة إلى مستوى المستشفيات العالمية (Hospital EHR Standard)**:
+  * بطاقة بيضاء ناصعة وفخمة مع شريط إكلينيكي علوي ناعم (3px Gradient) وظل محيطي خفيف (`0 4px 20px -4px rgba(15, 23, 42, 0.05)`).
+  * أفاتار طبي متدرج (`.avatar-modern-box`) بأبعاد 48x48px وظل أزرق ملكي خفيف.
+  * اسم المريض كحلي داكن ناصع (`#0f172a` 1.22rem) مع شارة كود الملف الطبية (`#P-ID`).
+- **التقسيم المعماري بالأعمدة الذكية (Data Pillars)**:
+  * **عمود 1 (هوية المريض):** الأفاتار، الاسم، رقم الملف، العمر بشارة ناعمة، والجنس.
+  * **فاصل رأسي ناعم (Divider):** يفصل هوية المريض عن بيانات الإجراء.
+  * **عمود 2 (العملية والجراح):** مسمى الإجراء الجراحي بخط واضح، واسم الجراح برتبة طبية خضراء (`badge-doctor-chip`).
+  * **فاصل رأسي ناعم (Divider):** يفصل الإجراء عن الموقع والجدولة.
+  * **عمود 3 (الموقع والجدولة):** رقم الغرفة/الصالة بشارة ذهبية (`badge-room-chip`) وساعة الموعد بشارة رمادية (`badge-time-chip`).
+- **أزرار المرحلة بنظام Segmented Toggle (Apple iPadOS Style)**:
+  * شريط كبسولي عائم ناعم (`.clin-segmented-control`) للتبديل الفوري بين (ما قبل العملية / ما بعد العملية) بزر أبيض عائم ذي ظل ناعم للمرحلة النشطة.
+  * شارة حالة المرحلة مع نقطة نبض ملونة (`.status-pulse-dot`) تنبض بلون الحالة (مكتملة / قيد المتابعة / بالانتظار).
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات المحطة السريرية بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (8 passed, 48 assertions).
+
+## Session log (2026-11-04 — المرحلة 158: ترويسة سريرية بيضاء ناصعة وتبويبات تابلت رشيقة وتحصين زر إعادة فتح الاستبيان للأدمن على هوستنجر Clean White Header, Tablet Auto-Fit Tabs & Resilient Hostinger Admin Survey Reset)
+
+### Done
+- **ترويسة طبية بيضاء عالية التباين والوضوح (Clean Medical White Header)**:
+  * إلغاء السواد بالكامل واستبدال الترويسة ببطاقة بيضاء ناصعة (`#ffffff`) مريحة للعين مع خط كحلي داكن عريض وواضح لاسم المريض (`#0f172a`).
+  * تنظيم بيانات الجراح والعملية والصالة والموعد داخل رقائق معلومات طبية (`.clin-info-chip`) واضحة بنسبة 100% بأيقونات ملونة.
+  * تحويل أزرار تحديد المرحلة (Pre-Op / Post-Op) وشارات الحالة إلى وضعية طبية ناعمة وفاتحة.
+- **تبويبات تابلت أفقية رشيقة بدون سكرول (Responsive Tablet Grid Tabs)**:
+  * اختصار مسميات التبويبات الـ 9 إلى كلمات سريرية ذكية (السيرة، العلامات، الخطة، المتابعة، الأدوية، السوائل، التمريض، الاستبيان ⭐، الفحوصات) مع تلميح كامل (Tooltip).
+  * توزيع شبكي مرن (`flex: 1 1 0px`) يتسع بالكامل على شاشات التابلت واللابتوب بعرض 100% دون أن يختفي أي تبويب ودون الحاجة لأي سكرول أفقي.
+- **تحصين زر إعادة فتح الاستبيان للأدمن على هوستنجر**:
+  * توسيع فحص صلاحية الأدمن الشامل `$canResetSurvey` في الكنترولر وواجهة العرض ليدعم: أدوار Spatie (`admin`, `super_admin`, `super-admin`, `hospital_admin`, `مدير النظام`)، وحقل جدول المستخدمين المباشر `role === 'admin'`، وصلاحيات الإدارة (`manage settings`, `manage surgery waiting list`).
+  * إبراز الزر في مكانين: في شريط الاستبيان العلوي بجوار أزرار الطباعة، وداخل بطاقة نتائج التقييم المكتملة.
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات المحطة السريرية بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (8 passed, 48 assertions).
 
 ## Session log (2026-11-04 — المرحلة 157: استعادة التصميم الأصلي للمحطة السريرية بالتبويبات الأفقية الكاملة Clinical Station Original Full-Width Horizontal Tabs Restoration)
 
