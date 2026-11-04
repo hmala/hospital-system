@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\NursingStation;
 use App\Models\ResidentStationFollowUp;
+use App\Models\StockBatch;
+use App\Models\StockMovement;
 use App\Models\Surgery;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ClinicalStationController extends Controller
 {
@@ -97,9 +100,21 @@ class ClinicalStationController extends Controller
             'residentStations.followUps',
             'nursingStation.nurse',
             'surgeryTreatments.administeredBy',
+            'surgeryTreatments.batch.product',
+            'surgeryTreatments.stockMovement',
             'labTests.labTest',
             'radiologyTests.radiologyType',
         ]);
+
+        // Floor sub-store location for patient's room and available batches
+        $floorLocation = $surgery->getFloorSubStoreLocation();
+        $floorStockBatches = $floorLocation
+            ? StockBatch::with('product')
+                ->where('location_id', $floorLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get()
+            : collect();
 
         // Combined readings for vitals history and charts
         $readings = $station ? $station->readings()->with('resident.user')->get() : collect();
@@ -131,6 +146,8 @@ class ClinicalStationController extends Controller
             'readingsAsc',
             'followUps',
             'treatments',
+            'floorLocation',
+            'floorStockBatches',
             'nurses',
             'residents'
         ));
@@ -378,6 +395,102 @@ class ClinicalStationController extends Controller
         $treatment->delete();
 
         return redirect()->back()->with('success', 'تم حذف الدواء من الخطة العلاجية بنجاح.');
+    }
+
+    /**
+     * Dispense medication or supply directly from the floor sub-store for the patient.
+     */
+    public function dispenseFloorItem(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $access = SurgeryTabPermission::getAccessForUser($user, 'treatments');
+
+        if ($access !== SurgeryTabPermission::ACCESS_WRITE) {
+            return redirect()->back()->with('error', 'غير مصرح لك بصرف الأدوية أو المستلزمات.');
+        }
+
+        $validated = $request->validate([
+            'batch_id' => 'required|exists:stock_batches,id',
+            'quantity' => 'required|integer|min:1',
+            'timing' => 'nullable|string|max:255',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $floorLocation = $surgery->getFloorSubStoreLocation();
+        if (! $floorLocation) {
+            return redirect()->back()->with('error', 'لم يتم العثور على مخزن فرعي مرتبط بطابق غرفة هذا المريض.');
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $surgery, $floorLocation, $user) {
+                $batch = StockBatch::where('id', $validated['batch_id'])
+                    ->where('location_id', $floorLocation->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $batch) {
+                    throw new \Exception('الوجبة المحددة لا تنتمي إلى مخزن عهدة طابق هذا المريض.');
+                }
+
+                if ($batch->current_qty < $validated['quantity']) {
+                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في عهدة الطابق ({$batch->current_qty}).");
+                }
+
+                // خصم الرصيد من وجبة الطابق
+                $batch->decrement('current_qty', $validated['quantity']);
+
+                $patientName = $surgery->patient?->name ?? 'مريض';
+                $roomNumber = $surgery->room?->room_number ?? 'بدون غرفة';
+                $movementNotes = "صرف سريري لمريض: {$patientName} (غرفة: {$roomNumber})";
+                if (! empty($validated['admin_notes'])) {
+                    $movementNotes .= ' - '.$validated['admin_notes'];
+                }
+
+                // تسجيل حركة الإخراج للمريض
+                $movement = StockMovement::create([
+                    'batch_id' => $batch->id,
+                    'from_location_id' => $floorLocation->id,
+                    'to_location_id' => null,
+                    'quantity' => $validated['quantity'],
+                    'type' => 'issue_to_patient',
+                    'user_id' => $user->id,
+                    'surgery_id' => $surgery->id,
+                    'notes' => $movementNotes,
+                ]);
+
+                // تسجيل المادة في جدول علاجات ومستهلكات المريض السريرية
+                $product = $batch->product;
+                $unitName = $product?->unit ?? 'جرعة/قطعة';
+                $dosageText = "{$validated['quantity']} {$unitName}";
+
+                SurgeryTreatment::create([
+                    'surgery_id' => $surgery->id,
+                    'description' => $product?->name ?? 'مستلزم / علاج',
+                    'dosage' => $dosageText,
+                    'timing' => $validated['timing'] ?: 'صرف مباشر من عهدة الطابق',
+                    'status' => 'administered',
+                    'administered_by' => $user->id,
+                    'administered_at' => now(),
+                    'admin_notes' => $validated['admin_notes'] ?? null,
+                    'batch_id' => $batch->id,
+                    'stock_movement_id' => $movement->id,
+                    'quantity' => $validated['quantity'],
+                    'administrations' => [
+                        [
+                            'administered_at' => now()->format('Y-m-d H:i'),
+                            'administered_by' => $user->id,
+                            'administered_by_name' => $user->full_name ?? $user->name ?? 'الكادر التمريضي',
+                            'notes' => $validated['admin_notes'] ?? null,
+                        ],
+                    ],
+                ]);
+            });
+
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'treatments'])
+                ->with('success', "تم صرف العلاج بنجاح من ({$floorLocation->name}) وخصمه من الرصيد وتوثيقه في طبلة المريض.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     /**

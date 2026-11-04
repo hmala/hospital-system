@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-05 — المرحلة 164: منظومة صرف التمريض المباشر من عهدة مخزن الطابق والربط التلقائي بغرفة المريض وخصم الرصيد اللحظي Nursing Floor Sub-Store Direct Patient Dispensing, Auto Floor-Store Inference & Instant Stock Deduction)
+
+### Done
+- **الاستنتاج التلقائي لمخزن عهدة الطابق ([app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php))**:
+  * إضافة دالة `Surgery::getFloorSubStoreLocation()` لقراءة طابق غرفة المريض تلقائياً من علاقة الغرفة `room->floor` وربطه بالمخزن الفرعي المناظر له في `locations` (مثل: ردهة الطابق الثالث #24 لمرضى الطابق الثالث) دون تدخل يدوي لمنع الأخطاء.
+- **توسيع قاعدة البيانات ومايجريشن الربط ([database/migrations/2026_11_05_000001_add_floor_dispense_fields_to_tables.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_05_000001_add_floor_dispense_fields_to_tables.php))**:
+  * ربط حركات المخزون `stock_movements` بالعملية السريرية `surgery_id` وحقل الملاحظات `notes`.
+  * ربط علاجات المريض `surgery_treatments` بالوجبة المخزنية `batch_id` وحركة المخزون `stock_movement_id` والكمية `quantity`.
+- **محرك الصرف المخزني السريري ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إنشاء مسار الإرسال `clinical-station.treatments.dispense-floor-stock`.
+  * تطبيق دالة `dispenseFloorItem`: فحص صلاحية الكتابة، قفل الوجبة في قاعدة البيانات `lockForUpdate`، التحقق من توفر الرصيد في عهدة طابق المريض، خصم الرصيد فوراً `StockBatch->decrement('current_qty', $qty)`، توثيق الحركة `StockMovement` بنوع `issue_to_patient`، وتوثيق العلاج كمنفذ `administered` في طبلة المريض.
+- **تطوير واجهة طبلة المريض السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إبراز شارة عهدة الطابق المعتمدة لغرفة المريض في ترويسة تبويب الأدوية.
+  * زر ونافذة منبثقة تفاعلية (Modal) لصرف الأدوية والمستلزمات مع تحديد أقصى كمية مسموحة برصيد الوجبة في الطابق.
+  * شارة تفصيلية لبيانات العهدة والوجبة بجانب كل مادة في جدول الأدوية الموصوفة.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/NursingFloorDispenseTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingFloorDispenseTest.php))**:
+  * إنشاء واجتياز اختبار الميزة بنسبة 100% (4 passed, 27 assertions).
+  * استمرار اجتياز كافة اختبارات المحطة السريرية السابقة `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+
 ## Session log (2026-11-04 — المرحلة 163: الورقة الثانية للاستبيان (تمريض، مختبر، صيدلية)، إفراغ الإيميل في الطباعة، واللوحة المدمجة للنتائج بـ 27 معياراً Inpatient Survey Page 2 Clinical Services, Blank Print Email & Compact 2-Column Results Dashboard)
 
 ### Done

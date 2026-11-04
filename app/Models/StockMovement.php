@@ -16,6 +16,8 @@ class StockMovement extends Model
         'quantity',
         'type',
         'user_id',
+        'surgery_id',
+        'notes',
     ];
 
     public function batch()
@@ -36,5 +38,10 @@ class StockMovement extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function surgery()
+    {
+        return $this->belongsTo(Surgery::class);
     }
 }

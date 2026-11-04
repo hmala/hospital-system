@@ -392,4 +392,36 @@ class Surgery extends Model
             default => $this->status
         };
     }
+
+    /**
+     * استنتاج مخزن عهدة الطابق المرتبط بغرفة المريض تلقائياً
+     */
+    public function getFloorSubStoreLocation(): ?Location
+    {
+        if ($this->location_id) {
+            $loc = Location::find($this->location_id);
+            if ($loc) {
+                return $loc;
+            }
+        }
+
+        $floor = $this->room?->floor;
+        if (! $floor) {
+            return null;
+        }
+
+        $normalizedFloor = str_replace(' ', '', $floor);
+
+        return Location::where('type', 'sub')
+            ->where(function ($q) use ($floor, $normalizedFloor) {
+                $q->where('name', 'like', "%{$floor}%")
+                    ->orWhereRaw("REPLACE(name, ' ', '') LIKE ?", ["%{$normalizedFloor}%"]);
+            })
+            ->first();
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 }

@@ -1632,9 +1632,21 @@
                 <div class="p-4">
                     {{-- Prescribed Medications Table --}}
                     <div class="card rounded-3 border mb-4">
-                        <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-pills text-warning me-2"></i> جدول الأدوية والعلاجات الموصوفة</h6>
-                            <span class="badge bg-primary rounded-pill">{{ $treatments->count() }} دواء</span>
+                        <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-pills text-warning me-2"></i> جدول الأدوية والعلاجات الموصوفة</h6>
+                                <span class="badge bg-primary rounded-pill">{{ $treatments->count() }} دواء</span>
+                                @if(isset($floorLocation) && $floorLocation)
+                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning-subtle" title="المخزن المعتمد لغرفة المريض">
+                                        <i class="fas fa-warehouse text-warning me-1"></i> عهدة: {{ $floorLocation->name }} ({{ $surgery->room?->room_number ? 'غرفة ' . $surgery->room->room_number : 'طابق ' . ($surgery->room?->floor ?? '--') }})
+                                    </span>
+                                @endif
+                            </div>
+                            @if($canWriteCurrentTab && isset($floorLocation) && $floorLocation)
+                                <button type="button" class="btn btn-sm btn-warning rounded-pill px-3 py-1 fw-bold text-dark shadow-xs" data-bs-toggle="modal" data-bs-target="#dispenseFloorStockModal">
+                                    <i class="fas fa-box-open me-1"></i> صرف علاج / مستلزم من عهدة الطابق
+                                </button>
+                            @endif
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0 align-middle text-center small">
@@ -1656,7 +1668,18 @@
                                     @forelse($treatments as $idx => $t)
                                         <tr>
                                             <td>{{ $idx + 1 }}</td>
-                                            <td class="text-start fw-bold text-dark">{{ $t->description }}</td>
+                                            <td class="text-start fw-bold text-dark">
+                                                {{ $t->description }}
+                                                @if($t->batch)
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-boxes me-1"></i> عهدة: {{ $t->batch->location?->name ?? 'مخزن الطابق' }}
+                                                            @if($t->batch->manufacturer_lot_number) | Lot: {{ $t->batch->manufacturer_lot_number }} @endif
+                                                            @if($t->batch->expiry_date) | نفاد: {{ $t->batch->expiry_date->format('Y-m') }} @endif
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            </td>
                                             <td><span class="badge bg-light text-dark border">{{ $t->dosage ?: 'حسب الإرشاد' }}</span></td>
                                             <td>{{ $t->timing ?: '--' }}</td>
                                             <td>{{ $t->duration_value ? $t->duration_value . ' ' . $t->duration_unit : '--' }}</td>
@@ -1677,13 +1700,15 @@
                                             @if($canWriteCurrentTab)
                                                 <td>
                                                     <div class="d-flex align-items-center justify-content-center gap-1">
-                                                        <form action="{{ route('clinical-station.treatments.administer', $t) }}" method="POST">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="administered">
-                                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1 fw-bold" title="تسجيل إعطاء الجرعة">
-                                                                <i class="fas fa-check me-1"></i> تم الإعطاء
-                                                            </button>
-                                                        </form>
+                                                        @if($t->status !== 'administered')
+                                                            <form action="{{ route('clinical-station.treatments.administer', $t) }}" method="POST">
+                                                                @csrf
+                                                                <input type="hidden" name="status" value="administered">
+                                                                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1 fw-bold" title="تسجيل إعطاء الجرعة">
+                                                                    <i class="fas fa-check me-1"></i> تم الإعطاء
+                                                                </button>
+                                                            </form>
+                                                        @endif
                                                         <form action="{{ route('clinical-station.treatments.delete', $t) }}" method="POST" onsubmit="return confirm('هل تريد حذف هذا الدواء؟');">
                                                             @csrf
                                                             @method('DELETE')
@@ -1734,6 +1759,94 @@
                                 </div>
                             </form>
                         </div>
+                    @endif
+
+                    {{-- Modal: Dispense from Floor Sub-Store --}}
+                    @if($canWriteCurrentTab && isset($floorLocation) && $floorLocation)
+                        <div class="modal fade" id="dispenseFloorStockModal" tabindex="-1" aria-labelledby="dispenseFloorStockModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content rounded-3 shadow border-0">
+                                    <div class="modal-header bg-warning bg-opacity-10 border-bottom py-2.5 px-3">
+                                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="dispenseFloorStockModalLabel">
+                                            <i class="fas fa-box-open text-warning"></i> صرف علاج / مستلزم من عهدة الطابق
+                                        </h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{{ route('clinical-station.treatments.dispense-floor-stock', $surgery) }}" method="POST">
+                                        @csrf
+                                        <div class="modal-body p-3">
+                                            <div class="alert alert-warning p-2 mb-3 d-flex align-items-center gap-2 small border border-warning-subtle" role="alert">
+                                                <i class="fas fa-info-circle text-warning fs-5"></i>
+                                                <div>
+                                                    يتم الصرف والخصم التلقائي من <strong>{{ $floorLocation->name }}</strong> لغرفة المريض ({{ $surgery->room?->room_number ?? '--' }} - {{ $surgery->room?->floor ?? '--' }}).
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-dark">اختر المادة / الوجبة من عهدة الطابق: <span class="text-danger">*</span></label>
+                                                @if(isset($floorStockBatches) && $floorStockBatches->isNotEmpty())
+                                                    <select name="batch_id" id="dispense_batch_id" class="form-select form-select-sm rounded-2" required onchange="updateDispenseMaxQty(this)">
+                                                        <option value="" disabled selected>-- اختر الدواء أو المستلزم المتوفر في الطابق --</option>
+                                                        @foreach($floorStockBatches as $b)
+                                                            <option value="{{ $b->id }}" data-max="{{ $b->current_qty }}" data-unit="{{ $b->product?->unit ?? 'جرعة/قطعة' }}">
+                                                                {{ $b->product?->name }} [المتوفر: {{ $b->current_qty }} {{ $b->product?->unit ?? 'قطعة' }}] (Lot: {{ $b->manufacturer_lot_number ?: $b->internal_barcode }} - نفاد: {{ $b->expiry_date?->format('Y-m') }})
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                @else
+                                                    <div class="alert alert-secondary py-2 px-3 small mb-0">
+                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i> لا توجد وجبات متوفرة برصيد موجب حالياً في مخزن هذا الطابق ({{ $floorLocation->name }}).
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-bold text-dark">الكمية المصروفة: <span class="text-danger">*</span></label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="quantity" id="dispense_qty" class="form-control rounded-start-2" min="1" value="1" required>
+                                                        <span class="input-group-text rounded-end-2 small" id="dispense_unit_label">قطعة</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold text-dark">طريقة الإعطاء / التوقيت:</label>
+                                                    <input type="text" name="timing" class="form-control form-control-sm rounded-2" placeholder="مثال: فوري IV / تضميد">
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold text-dark">ملاحظات التمريض:</label>
+                                                <input type="text" name="admin_notes" class="form-control form-control-sm rounded-2" placeholder="أي تعليمات أو ملاحظات إضافية...">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light py-2 px-3">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                                            @if(isset($floorStockBatches) && $floorStockBatches->isNotEmpty())
+                                                <button type="submit" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold text-dark shadow-xs">
+                                                    <i class="fas fa-check-circle me-1"></i> تأكيد الصرف والخصم من الطابق
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            function updateDispenseMaxQty(select) {
+                                const option = select.options[select.selectedIndex];
+                                const max = option.getAttribute('data-max');
+                                const unit = option.getAttribute('data-unit') || 'قطعة';
+                                const qtyInput = document.getElementById('dispense_qty');
+                                const unitLabel = document.getElementById('dispense_unit_label');
+                                if (max && qtyInput) {
+                                    qtyInput.max = max;
+                                }
+                                if (unitLabel) {
+                                    unitLabel.textContent = unit;
+                                }
+                            }
+                        </script>
                     @endif
                 </div>
             @endif
