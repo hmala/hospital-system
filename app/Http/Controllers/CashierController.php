@@ -633,6 +633,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -2018,6 +2022,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -3477,6 +3485,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -3982,6 +3994,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())

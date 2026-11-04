@@ -78,6 +78,7 @@ class Payment extends Model
         'surgery' => 'العمليات الجراحية',
         'emergency' => 'طوارئ وإسعاف',
         'incubator' => 'الخدج والحاضنات (NICU)',
+        'nursing' => 'خدمات تمريضية وسريرية',
         'other' => 'أخرى',
     ];
 

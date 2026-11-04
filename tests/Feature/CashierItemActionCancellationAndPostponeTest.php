@@ -337,4 +337,46 @@ class CashierItemActionCancellationAndPostponeTest extends TestCase
         $response->assertSee('قلة السيولة');
         $response->assertSee(route('cashier.request.payment.form', $postponedRequest->id));
     }
+
+    public function test_cashier_can_pay_nursing_request(): void
+    {
+        $nursingRequest = MedicalRequest::create([
+            'visit_id' => $this->visit->id,
+            'type' => 'nursing',
+            'status' => 'completed',
+            'payment_status' => 'pending',
+            'description' => 'اعطاء ابر حديد وريدي بالمغذي',
+            'details' => [
+                'description' => 'اعطاء ابر حديد وريدي بالمغذي',
+                'priority' => 'urgent',
+            ],
+        ]);
+
+        $response = $this->actingAs($this->cashierUser)
+            ->post(route('cashier.request.payment.process', $nursingRequest->id), [
+                'included_request_ids' => [$nursingRequest->id],
+                'insurance_type' => 'none',
+                'payment_method' => 'cash',
+                'amount' => 15000,
+                'item_actions' => [
+                    $nursingRequest->id => [
+                        'nursing' => [
+                            $nursingRequest->id => 'pay',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $nursingRequest->refresh();
+        $this->assertEquals('paid', $nursingRequest->payment_status);
+        $this->assertNotNull($nursingRequest->payment_id);
+
+        $payment = Payment::find($nursingRequest->payment_id);
+        $this->assertNotNull($payment);
+        $this->assertEquals('nursing', $payment->payment_type);
+        $this->assertEquals(15000, (float) $payment->amount);
+    }
 }
