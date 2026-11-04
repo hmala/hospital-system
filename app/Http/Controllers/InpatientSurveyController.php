@@ -143,4 +143,77 @@ class InpatientSurveyController extends Controller
 
         return view('surveys.print-qr', compact('surgery', 'survey', 'surveyUrl'));
     }
+
+    /**
+     * طباعة استبيان A4 رسمي مطابق لهوية المستشفى (معبأ بالبيانات أو نموذج فارغ)
+     */
+    public function printA4(Request $request, Surgery $surgery)
+    {
+        $isBlank = (bool) $request->query('blank', false);
+
+        $survey = InpatientRoomSurvey::with(['patient.user', 'room', 'location', 'doctor.user'])
+            ->firstOrCreate(
+                ['surgery_id' => $surgery->id],
+                [
+                    'patient_id' => $surgery->patient_id,
+                    'doctor_id' => $surgery->doctor_id,
+                    'room_id' => $surgery->room_id,
+                    'location_id' => $surgery->location_id ?? $surgery->room?->location_id,
+                    'room_type' => $surgery->room?->type ?? 'regular',
+                    'status' => 'pending',
+                ]
+            );
+
+        return view('surveys.print-a4', compact('surgery', 'survey', 'isBlank'));
+    }
+
+    /**
+     * طباعة استبيان A4 ورقي فارغ عام للتوزيع في الردهات
+     */
+    public function printBlankA4()
+    {
+        $isBlank = true;
+        $survey = null;
+        $surgery = null;
+
+        return view('surveys.print-a4', compact('isBlank', 'survey', 'surgery'));
+    }
+
+    /**
+     * تصفير وإعادة فتح الاستبيان (صلاحية خاصة بالمدير فقط)
+     */
+    public function reset(Surgery $surgery)
+    {
+        if (! Auth::user() || ! Auth::user()->hasAnyRole(['admin', 'super-admin'])) {
+            abort(403, 'غير مصرح لك بإعادة فتح وتصفير الاستبيان، هذه الصلاحية مخصصة لمدير النظام حصراً.');
+        }
+
+        $survey = InpatientRoomSurvey::where('surgery_id', $surgery->id)->firstOrFail();
+
+        $survey->update([
+            'status' => 'pending',
+            'cleanliness_room' => null,
+            'cleanliness_bathroom' => null,
+            'temperature_ac' => null,
+            'lighting' => null,
+            'quietness_privacy' => null,
+            'bed_comfort' => null,
+            'control_panel' => null,
+            'storage_space' => null,
+            'furniture_safety' => null,
+            'entertainment' => null,
+            'room_notes' => null,
+            'top_three_improvements' => null,
+            'patient_suggestions' => null,
+            'recommend_score_nps' => null,
+            'doctor_communication' => null,
+            'doctor_notes' => null,
+            'overall_score' => null,
+            'submitted_via' => null,
+            'submitted_by_user_id' => null,
+            'completed_at' => null,
+        ]);
+
+        return back()->with('success', 'تمت إعادة فتح وتصفير الاستبيان بنجاح، وأصبح جاهزاً لإعادة التعبئة والتقييم.');
+    }
 }

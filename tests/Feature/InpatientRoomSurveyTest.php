@@ -210,4 +210,93 @@ class InpatientRoomSurveyTest extends TestCase
         $response->assertSee('108');
         $response->assertSee('create-qr-code');
     }
+
+    public function test_staff_can_view_and_print_a4_survey_report(): void
+    {
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $patient = $this->createPatient('زينب كاظم');
+        $room = Room::create(['room_number' => '501', 'type' => 'vip', 'floor' => 'الطابق الخامس']);
+        $surgery = $this->createSurgery($patient, $room);
+
+        $survey = InpatientRoomSurvey::create([
+            'surgery_id' => $surgery->id,
+            'patient_id' => $patient->id,
+            'room_id' => $room->id,
+            'status' => 'completed',
+            'cleanliness_room' => 5,
+            'overall_score' => 96.0,
+            'room_notes' => 'خدمة ممتازة جداً',
+        ]);
+
+        $response = $this->actingAs($nurse)
+            ->get(route('inpatient-surveys.print-a4', $surgery));
+
+        $response->assertStatus(200);
+        $response->assertSee('مستشفى الكفاءات الأهلي');
+        $response->assertSee('استبيان تقييم غرفة الرقود في المستشفى');
+        $response->assertSee('القسم الأول: المعلومات الأساسية');
+        $response->assertSee('القسم الثاني: تقييم غرفة الرقود');
+        $response->assertSee('القسم الثالث: أسئلة مفتوحة لمزيد من التفاصيل');
+        $response->assertSee('تقييم الفريق الطبي (زيارة الطبيب المعالج)');
+        $response->assertSee('خدمة ممتازة جداً');
+        $response->assertSee('501');
+    }
+
+    public function test_staff_can_view_and_print_blank_a4_survey_report(): void
+    {
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $response = $this->actingAs($nurse)
+            ->get(route('inpatient-surveys.print-blank'));
+
+        $response->assertStatus(200);
+        $response->assertSee('مستشفى الكفاءات الأهلي');
+        $response->assertSee('استبيان تقييم غرفة الرقود في المستشفى');
+        $response->assertSee('القسم الأول: المعلومات الأساسية');
+        $response->assertSee('القسم الثاني: تقييم غرفة الرقود');
+        $response->assertSee('القسم الثالث: أسئلة مفتوحة لمزيد من التفاصيل');
+        $response->assertSee('تقييم الفريق الطبي (زيارة الطبيب المعالج)');
+    }
+
+    public function test_only_admin_can_reset_completed_survey(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $patient = $this->createPatient('حسام عبد الستار');
+        $room = Room::create(['room_number' => '102', 'type' => 'regular', 'floor' => 'الطابق الأول']);
+        $surgery = $this->createSurgery($patient, $room);
+
+        $survey = InpatientRoomSurvey::create([
+            'surgery_id' => $surgery->id,
+            'patient_id' => $patient->id,
+            'room_id' => $room->id,
+            'status' => 'completed',
+            'cleanliness_room' => 5,
+            'overall_score' => 95.0,
+            'completed_at' => now(),
+        ]);
+
+        // 1. Nurse is forbidden (403)
+        $nurseResponse = $this->actingAs($nurse)
+            ->post(route('inpatient-surveys.reset', $surgery));
+        $nurseResponse->assertStatus(403);
+
+        // 2. Admin can reset successfully
+        $adminResponse = $this->actingAs($admin)
+            ->post(route('inpatient-surveys.reset', $surgery));
+        $adminResponse->assertSessionHas('success');
+
+        $survey->refresh();
+        $this->assertEquals('pending', $survey->status);
+        $this->assertNull($survey->overall_score);
+        $this->assertNull($survey->completed_at);
+        $this->assertNull($survey->cleanliness_room);
+    }
 }

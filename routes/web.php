@@ -747,6 +747,9 @@ Route::middleware(['auth'])->group(function () {
         // استبيان تقييم غرفة الرقود (Inpatient Room Quality Survey)
         Route::post('/clinical/{surgery}/inpatient-survey', [\App\Http\Controllers\InpatientSurveyController::class, 'storeManual'])->name('inpatient-surveys.manual.store');
         Route::get('/clinical/{surgery}/inpatient-survey/print-qr', [\App\Http\Controllers\InpatientSurveyController::class, 'printQr'])->name('inpatient-surveys.print-qr');
+        Route::get('/clinical/{surgery}/inpatient-survey/print-a4', [\App\Http\Controllers\InpatientSurveyController::class, 'printA4'])->name('inpatient-surveys.print-a4');
+        Route::get('/surveys/inpatient/print-blank', [\App\Http\Controllers\InpatientSurveyController::class, 'printBlankA4'])->name('inpatient-surveys.print-blank');
+        Route::post('/clinical/{surgery}/inpatient-survey/reset', [\App\Http\Controllers\InpatientSurveyController::class, 'reset'])->name('inpatient-surveys.reset');
 
         // إعطاء العلاج (مشترك للمقيم والتمريض)
         Route::post('/treatments/{treatment}/administer', [\App\Http\Controllers\ResidentStationController::class, 'administerTreatment'])->name('surgery-treatments.administer');
