@@ -178,12 +178,6 @@
                 </a>
                 @endcan
 
-                @can('manage surgery waiting list')
-                <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark bg-white rounded-pill px-3 py-1.5 shadow-sm fw-semibold" title="تخصيص صلاحيات التبويبات السريرية لكل دور">
-                    <i class="fas fa-sliders-h text-primary me-1"></i> صلاحيات التبويبات
-                </a>
-                @endcan
-
                 <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary bg-white rounded-pill px-3 py-1.5 shadow-sm fw-semibold">
                     <i class="fas fa-list me-1"></i> الأرشيف العام
                 </a>
@@ -365,7 +359,11 @@
                                 <i class="fas fa-check-circle"></i> تم حفظ الوقت
                             </div>
 
-                            @if($surgery->status === 'in_progress')
+                            @php
+                                $isOtCompleted = $surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed';
+                            @endphp
+
+                            @if($surgery->status === 'in_progress' && ! $isOtCompleted)
                                 <div class="mt-1">
                                     <span class="timer-badge-live" data-live-timer="true" data-start="{{ $surgery->started_at ? $surgery->started_at->toISOString() : ($surgery->scheduled_time ? $surgery->scheduled_time->toISOString() : '') }}">
                                         <i class="fas fa-stopwatch me-1 text-success"></i><span>00:00:00</span>
@@ -385,12 +383,18 @@
                                     <i class="fas fa-user-clock"></i> بالانتظار (تحضير)
                                 </span>
                             @elseif($surgery->status === 'in_progress')
-                                <span class="badge-stage bg-success text-white shadow-sm">
-                                    <span class="live-pulse-dot"></span> داخل الصالة (جارية)
-                                </span>
+                                @if($isOtCompleted)
+                                    <span class="badge-stage bg-info text-white shadow-sm" title="خرج المريض من صالة العمليات وانتقل لمرحلة المتابعة والرعاية">
+                                        <i class="fas fa-check-double me-1"></i> خرج من الصالة (متابعة)
+                                    </span>
+                                @else
+                                    <span class="badge-stage bg-success text-white shadow-sm">
+                                        <span class="live-pulse-dot"></span> داخل الصالة (جارية)
+                                    </span>
+                                @endif
                             @elseif($surgery->status === 'completed')
                                 <span class="badge-stage bg-secondary text-white">
-                                    <i class="fas fa-check-circle"></i> منتهية / خرج
+                                    <i class="fas fa-check-circle"></i> مكتملة / خرج
                                 </span>
                             @else
                                 <span class="badge bg-light text-muted">{{ $surgery->status }}</span>
@@ -399,20 +403,12 @@
 
                         {{-- Actions --}}
                         <td class="text-center">
-                            <div class="d-flex align-items-center justify-content-center gap-1">
-                                <a href="{{ route('clinical-station.show', $surgery) }}" class="btn btn-sm btn-info text-white rounded-pill px-2.5 py-1 fw-bold shadow-sm" title="المحطة السريرية الموحدة (المقيم والتمريض)">
-                                    <i class="fas fa-stethoscope"></i> المحطة السريرية
-                                </a>
-
-                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-light border rounded-pill px-2 py-1 text-dark" title="عرض ملف العملية">
-                                    <i class="fas fa-file-medical text-primary"></i>
-                                </a>
-
+                            <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
                                 @if($surgery->status === 'scheduled')
                                     @can('manage surgery waiting list')
                                     <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 shadow-sm fw-bold">
+                                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 py-1 shadow-sm fw-bold">
                                             <i class="fas fa-sign-in-alt me-0.5"></i> دخول
                                         </button>
                                     </form>
@@ -421,20 +417,26 @@
                                     @can('control surgeries')
                                     <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-2.5 py-1 shadow-sm fw-bold">
+                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1 shadow-sm fw-bold">
                                             <i class="fas fa-play me-0.5"></i> تحويل وبدء
                                         </button>
                                     </form>
                                     @endcan
                                 @elseif($surgery->status === 'in_progress')
-                                    @can('control surgeries')
-                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-2.5 py-1 shadow-sm fw-bold" onclick="return confirm('تأكيد إنهاء مرحلة صالة العمليات؟')">
-                                            <i class="fas fa-stop me-0.5"></i> إنهاء
-                                        </button>
-                                    </form>
-                                    @endcan
+                                    @if($isOtCompleted)
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" title="تم إنهاء صالة العمليات وانتقل المريض للمتابعة">
+                                            <i class="fas fa-check-circle text-success me-0.5"></i> تمت الصالة
+                                        </span>
+                                    @else
+                                        @can('control surgeries')
+                                        <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-danger rounded-pill px-2.5 py-1 shadow-sm fw-bold" onclick="return confirm('تأكيد إنهاء مرحلة صالة العمليات ونقل المريض للمتابعة؟')">
+                                                <i class="fas fa-stop me-0.5"></i> إنهاء
+                                            </button>
+                                        </form>
+                                        @endcan
+                                    @endif
                                 @endif
                             </div>
                         </td>
