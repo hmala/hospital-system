@@ -54,6 +54,26 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-04 — المرحلة 159: ترويسة إكلينيكية تنفيذية فائقة العصرية بنظام الأعمدة والتبديل الزجاجي Ultra-Modern Hospital EHR Executive Header with Data Pillars & Glass Segmented Control)
+
+### Done
+- **ترقية معمارية الترويسة إلى مستوى المستشفيات العالمية (Hospital EHR Standard)**:
+  * بطاقة بيضاء ناصعة وفخمة مع شريط إكلينيكي علوي ناعم (3px Gradient) وظل محيطي خفيف (`0 4px 20px -4px rgba(15, 23, 42, 0.05)`).
+  * أفاتار طبي متدرج (`.avatar-modern-box`) بأبعاد 48x48px وظل أزرق ملكي خفيف.
+  * اسم المريض كحلي داكن ناصع (`#0f172a` 1.22rem) مع شارة كود الملف الطبية (`#P-ID`).
+- **التقسيم المعماري بالأعمدة الذكية (Data Pillars)**:
+  * **عمود 1 (هوية المريض):** الأفاتار، الاسم، رقم الملف، العمر بشارة ناعمة، والجنس.
+  * **فاصل رأسي ناعم (Divider):** يفصل هوية المريض عن بيانات الإجراء.
+  * **عمود 2 (العملية والجراح):** مسمى الإجراء الجراحي بخط واضح، واسم الجراح برتبة طبية خضراء (`badge-doctor-chip`).
+  * **فاصل رأسي ناعم (Divider):** يفصل الإجراء عن الموقع والجدولة.
+  * **عمود 3 (الموقع والجدولة):** رقم الغرفة/الصالة بشارة ذهبية (`badge-room-chip`) وساعة الموعد بشارة رمادية (`badge-time-chip`).
+- **أزرار المرحلة بنظام Segmented Toggle (Apple iPadOS Style)**:
+  * شريط كبسولي عائم ناعم (`.clin-segmented-control`) للتبديل الفوري بين (ما قبل العملية / ما بعد العملية) بزر أبيض عائم ذي ظل ناعم للمرحلة النشطة.
+  * شارة حالة المرحلة مع نقطة نبض ملونة (`.status-pulse-dot`) تنبض بلون الحالة (مكتملة / قيد المتابعة / بالانتظار).
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات المحطة السريرية بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+  * اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (8 passed, 48 assertions).
+
 ## Session log (2026-11-04 — المرحلة 158: ترويسة سريرية بيضاء ناصعة وتبويبات تابلت رشيقة وتحصين زر إعادة فتح الاستبيان للأدمن على هوستنجر Clean White Header, Tablet Auto-Fit Tabs & Resilient Hostinger Admin Survey Reset)
 
 ### Done
