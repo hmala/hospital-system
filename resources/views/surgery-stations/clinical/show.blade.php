@@ -13,97 +13,121 @@
 
         .clin-header-card {
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 18px;
+            border-radius: 14px;
             color: #ffffff;
-            padding: 22px 26px;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.12);
+            padding: 12px 18px;
+            box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.12);
             border: 1px solid #334155;
         }
 
+        /* Protect header text from global text-white color overrides */
+        #clinicalStationApp .clin-header-card *,
+        #clinicalStationApp .clin-header-card h4,
+        #clinicalStationApp .clin-header-card h5,
+        #clinicalStationApp .clin-header-card strong,
+        #clinicalStationApp .clin-header-card span.text-white {
+            color: #ffffff !important;
+        }
+        #clinicalStationApp .clin-header-card .text-white-50 {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+
+        /* Responsive Tablet-Ready Horizontal Tabs Bar (Zero Scroll / Auto-Fit) */
         .clin-tabs-wrapper {
             background: #ffffff;
-            border-radius: 16px;
-            padding: 8px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
             border: 1px solid #e2e8f0;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
         }
 
-        .clin-tabs-wrapper::-webkit-scrollbar {
-            height: 5px;
+        .clin-tabs-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+            width: 100%;
         }
 
-        .clin-tabs-wrapper::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
+        .clin-tab-item {
+            flex: 1 1 0px;
+            min-width: 72px;
         }
 
         @media (max-width: 991px) {
+            .clin-tab-item {
+                flex: 1 1 calc(20% - 4px);
+                min-width: 80px;
+            }
             .clin-header-card {
-                padding: 16px 18px;
-                border-radius: 14px;
+                padding: 10px 14px;
             }
-            .clin-nav-tab {
-                padding: 9px 14px;
-                font-size: 0.82rem;
-                min-height: 42px;
-            }
-            .pane-header {
-                padding: 14px 16px;
-            }
-            .vital-box {
-                padding: 10px;
-            }
-            .vital-box .vital-val {
-                font-size: 1.2rem;
+        }
+
+        @media (max-width: 576px) {
+            .clin-tab-item {
+                flex: 1 1 calc(33.33% - 4px);
             }
         }
 
         .clin-nav-tab {
-            font-size: 0.86rem;
-            font-weight: 600;
-            padding: 10px 18px;
-            border-radius: 12px;
+            font-size: 0.81rem;
+            font-weight: 700;
+            padding: 8px 4px;
+            min-height: 42px;
+            border-radius: 8px;
             color: #475569;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
-            border: 1px solid transparent;
+            justify-content: center;
+            gap: 4px;
+            border: 1px solid #f1f5f9;
+            background: #f8fafc;
             text-decoration: none;
+            text-align: center;
+            width: 100%;
             white-space: nowrap;
         }
         .clin-nav-tab:hover {
             background: #f1f5f9;
-            color: #1e293b;
+            color: #0f172a;
+            border-color: #cbd5e1;
         }
         .clin-nav-tab.active {
-            background: #2563eb;
+            background: #2563eb !important;
             color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            border-color: #1d4ed8 !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
         }
-        .clin-nav-tab.active .badge-perm {
-            background: rgba(255, 255, 255, 0.25) !important;
+        .clin-nav-tab.active * {
+            color: #ffffff !important;
+        }
+        .clin-nav-tab.active .badge-perm-dot {
+            background: rgba(255, 255, 255, 0.3) !important;
             color: #ffffff !important;
         }
 
-        .badge-perm {
-            font-size: 0.7rem;
-            padding: 3px 7px;
-            border-radius: 6px;
-            font-weight: 700;
+        .badge-perm-dot {
+            font-size: 0.6rem;
+            padding: 1px 4px;
+            border-radius: 4px;
+            line-height: 1;
         }
         .badge-perm-read {
             background: #eff6ff;
             color: #1d4ed8;
-            border: 1px solid #bfdbfe;
         }
         .badge-perm-write {
             background: #f0fdf4;
             color: #15803d;
-            border: 1px solid #bbf7d0;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
         }
 
         .pane-card {
@@ -247,19 +271,34 @@
         </div>
     </div>
 
-    {{-- Tabs Navigation Bar --}}
-    <div class="clin-tabs-wrapper mb-4">
-        <ul class="nav nav-pills d-flex flex-nowrap overflow-auto gap-2 p-1" id="clinicalStationTabs" role="tablist">
+    {{-- Tabs Navigation Bar (Responsive Tablet Grid - Zero Scroll Auto-Fit) --}}
+    @php
+        $shortTabLabels = [
+            'history' => 'السيرة',
+            'vitals' => 'العلامات',
+            'plan' => 'الخطة',
+            'follow_up' => 'المتابعة',
+            'treatments' => 'الأدوية',
+            'fluids' => 'السوائل',
+            'nursing_care' => 'التمريض',
+            'inpatient_survey' => 'الاستبيان ⭐',
+            'tests' => 'الفحوصات',
+        ];
+    @endphp
+
+    <div class="clin-tabs-wrapper mb-3">
+        <ul class="clin-tabs-grid" id="clinicalStationTabs" role="tablist">
             @foreach($visibleTabs as $tKey => $tMeta)
-                <li class="nav-item" role="presentation">
+                <li class="clin-tab-item" role="presentation">
                     <a class="clin-nav-tab {{ $activeTab === $tKey ? 'active' : '' }}" 
-                       href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}">
-                        <i class="{{ $tMeta['icon'] }}"></i>
-                        <span>{{ $tMeta['label'] }}</span>
+                       href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}"
+                       title="{{ $tMeta['label'] }}">
+                        <i class="{{ $tMeta['icon'] }} small"></i>
+                        <span>{{ $shortTabLabels[$tKey] ?? $tMeta['label'] }}</span>
                         @if($tMeta['can_write'])
-                            <span class="badge-perm badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
+                            <span class="badge-perm-dot badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
                         @else
-                            <span class="badge-perm badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
+                            <span class="badge-perm-dot badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
                         @endif
                     </a>
                 </li>
@@ -769,16 +808,14 @@
                 </div>
 
                 {{-- Action Footer for direct update forms --}}
-                @if(!in_array($activeTab, ['treatments', 'follow_up', 'inpatient_survey']))
+                @if(!in_array($activeTab, ['treatments', 'follow_up', 'inpatient_survey', 'tests']) && $canWriteCurrentTab)
                     <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between">
                         <span class="text-muted small">
                             <i class="fas fa-info-circle text-info me-1"></i> المحطة السريرية تحفظ البيانات فورياً وتزامنها مع ملف المريض وقسم التمريض.
                         </span>
-                        @if($canWriteCurrentTab)
-                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
-                                <i class="fas fa-save me-1"></i> حفظ التحديثات السريرية
-                            </button>
-                        @endif
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                            <i class="fas fa-save me-1"></i> حفظ التحديثات السريرية
+                        </button>
                     </div>
                 @endif
             </form>
