@@ -92,6 +92,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cancel surgeries',
             'manage surgeries',
             'manage surgery waiting list',
+            'manage surgery tab permissions',
             'control surgeries',
             'manage rooms',
             'view bed reservations',

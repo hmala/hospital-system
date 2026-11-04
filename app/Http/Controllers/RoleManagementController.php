@@ -178,6 +178,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -254,6 +255,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -590,6 +592,7 @@ class RoleManagementController extends Controller
             'view anesthesia station' => ['label' => 'دخول محطة طبيب التخدير', 'action' => 'محطة', 'badge' => 'warning'],
             'view nursing station' => ['label' => 'دخول محطة التمريض السريري', 'action' => 'محطة', 'badge' => 'success'],
             'manage rooms' => ['label' => 'إدارة غرف العمليات وأسرة الرقود', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage surgery tab permissions' => ['label' => 'إدارة وتخصيص صلاحيات تبويبات المحطة السريرية', 'action' => 'إدارة', 'badge' => 'primary'],
             'view medical devices' => ['label' => 'عرض دليل الأجهزة والمستلزمات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'manage medical devices' => ['label' => 'إدارة وصيانة الأجهزة الطبية الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
 

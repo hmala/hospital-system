@@ -54,6 +54,33 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-05 — المرحلة 166: إعادة التصميم العصرية لشاشة قائمة انتظار وتدفق العمليات الجراحية كلوحة تحكم ذكية وبطاقات مؤشرات تفاعلية Smart OR Flight Board Modern Redesign, Interactive KPI Filters & Clean Stage Progression)
+
+### Done
+- **إعادة تصميم عصرية شاملة لشاشة قائمة انتظار العمليات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * **ترويسة تنفيذية فائقة الأناقة (Executive Header)**: أيقونة الصالات المتدرجة مع عنوان ناصع وشارة `OR Flight Board`، ومؤشر للتوقيت المباشر للمركز، وأزرار إجراءات تنفيذية أنيقة (حجز عملية جديدة بتدرج أزرق ملكي، والأرشيف العام، وتحديث فوري).
+  * **شريط تقويم أسبوعي تفاعلي (Apple/Tailwind Segmented Strip)**: كبسولات أيام رشيقة بحدود ناعمة وتأثيرات رفع بصرية، تعرض اليوم والتاريخ وعدد العمليات، مع تمييز اليوم النشط بتدرج كحلي داكن فاخر، ونقطة ذهبية متوهجة لليوم الحالي.
+  * **لوحة مؤشرات سريعة تفاعلية (Interactive KPI Stat Cards)**:
+    - 4 بطاقات إحصائية للمسار: (إجمالي عمليات اليوم، مجدولة، بالانتظار - تحضير، وداخل الصالة - جارية).
+    - **فلترة فورية بنقرة واحدة (Client-Side Instant Filter)**: النقر على أي بطاقة يفلتر جدول العمليات فوراً لإظهار الحالات المطابقة مع تمييز البطاقة النشطة وتحديث عداد العمليات الظاهرة دون إعادة تحميل الصفحة.
+  * **شريط بحث فوري ذكي**: حقل بحث مدور مع أيقونة وعدّاد حي للحالات المعروضة نسبةً للإجمالي (`عرض X من أصل Y عملية`).
+  * **جدول الصالات الذكي (Master Flight Board Table)**:
+    - هوية المريض: صورة رمزية متدرجة، الاسم بالخط العريض، شارات صغيرة لرقم الملف والعمر والجنس.
+    - تفاصيل الإجراء: اسم العملية الجراحية مع شارة العمليات الإضافية إن وجدت.
+    - شريحة الطبيب الجراح: كبسولة مريحة بأيقونة الطبيب.
+    - تحديد مباشر وأنيق للصالة والوقت عبر مدخلات مدمجة ومريحة مع وميض تأكيد الحفظ اللحظي.
+    - مؤقت عد تنازلي حي للعمليات الجارية داخل الصالة يختفي فور اكتمالها.
+    - شارات المسار السريري الملونة: مجدولة، بالانتظار، داخل الصالة، خرج من الصالة (متابعة).
+    - حصر عمود الإجراءات بأزرار تقدم المسار فقط: `[ دخول ]`، `[ تحويل وبدء ]`، و `[ إنهاء ]` (يختفي فور انتهاء الصالة وتتحول إلى شارة `✔️ تمت الصالة`)، بدون أي أزرار زائدة.
+- **حوكمة صلاحية إعدادات تبويبات المحطة السريرية ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تخصيص الصلاحية الرسمية `manage surgery tab permissions` لإدارة مصفوفة التبويبات السريرية.
+  * إدراج الرابط في القائمة الجانبية فقط لمن يملك الصلاحية وإزالته تماماً من ترويسة قائمة الانتظار للمحافظة على نظافة لوحة العمليات.
+- **حزم الاختبارات الآلية الشاملة**:
+  * اجتياز اختبارات شاشة قائمة الانتظار `tests/Feature/SurgeryWaitingListFlightBoardTest.php` بنسبة 100% (8 passed, 28 assertions).
+  * اجتياز اختبارات المحطة السريرية ومصفوفة الصلاحيات `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` بنسبة 100% (11 passed, 44 assertions).
+  * اجتياز اختبارات محطة المقيم ما بعد الصالة `tests/Feature/ResidentStationPostOpTest.php` بنسبة 100% (1 passed, 3 assertions).
+  * اجتياز اختبارات صرف التمريض من عهدة الطابق `tests/Feature/NursingFloorDispenseTest.php` بنسبة 100% (4 passed, 27 assertions).
+
 ## Session log (2026-11-05 — المرحلة 165: مزامنة انتقال المريض لمحطة المقيم ما بعد الصالة وترشيق أزرار وشارات قائمة انتظار العمليات Resident Post-Op Lifecycle Sync & Waiting List Complete Button Refinement)
 
 ### Done

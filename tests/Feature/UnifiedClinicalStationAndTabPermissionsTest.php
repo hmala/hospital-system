@@ -108,6 +108,29 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
         $response->assertSee('كادر التمريض');
     }
 
+    public function test_non_authorized_user_cannot_access_or_modify_tab_permissions_matrix()
+    {
+        // 1. Nurse without 'manage surgery tab permissions' gets 403 Forbidden
+        $response = $this->actingAs($this->nurseUser)->get(route('surgery-stations.tab-settings.index'));
+        $response->assertStatus(403);
+
+        $response = $this->actingAs($this->nurseUser)->post(route('surgery-stations.tab-settings.update'), ['permissions' => []]);
+        $response->assertStatus(403);
+
+        $response = $this->actingAs($this->nurseUser)->post(route('surgery-stations.tab-settings.reset'));
+        $response->assertStatus(403);
+    }
+
+    public function test_user_with_explicit_permission_can_manage_tab_settings()
+    {
+        $customStaff = User::factory()->create();
+        $customStaff->givePermissionTo('manage surgery tab permissions');
+
+        $response = $this->actingAs($customStaff)->get(route('surgery-stations.tab-settings.index'));
+        $response->assertStatus(200);
+        $response->assertSee('مصفوفة صلاحيات تبويبات المحطة السريرية الموحدة');
+    }
+
     public function test_admin_can_update_tab_permissions_matrix()
     {
         $payload = [

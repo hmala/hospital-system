@@ -1342,7 +1342,7 @@
                         @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'manage surgery tab permissions', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
@@ -1367,6 +1367,8 @@
                                 @endif
                             </a>
                         </li>
+                        @endcan
+                        @can('manage surgery tab permissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgery-stations.tab-settings.*') ? 'active' : '' }}" href="{{ route('surgery-stations.tab-settings.index') }}">
                                 <i class="fas fa-sliders-h text-warning"></i><span> صلاحيات تبويبات المحطة</span>

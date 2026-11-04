@@ -731,9 +731,11 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // إعدادات مصفوفة صلاحيات التبويبات السريرية (Tab Permissions Matrix)
-        Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
-        Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
-        Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
+        Route::middleware('can:manage surgery tab permissions')->group(function () {
+            Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
+            Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
+            Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
+        });
 
         // المحطة السريرية الموحدة (Unified Clinical Station)
         Route::get('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'show'])->name('clinical-station.show');

@@ -336,7 +336,7 @@
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-2">
-            @can('manage surgery waiting list')
+            @can('manage surgery tab permissions')
                 <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3" title="تخصيص صلاحيات التبويبات">
                     <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
                 </a>
