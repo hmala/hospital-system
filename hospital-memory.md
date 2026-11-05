@@ -78,6 +78,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 163 (2026-11-05) — دمج وتفعيل إضافة Understand Anything وتوليد شبكة المعرفة والعلاقات التفاعلية للمشروع (Understand Anything Knowledge Graph & Interactive Dashboard Integration):**
+  * **تجهيز وبناء حزمة الإضافة (`Understand Anything`)**:
+    - تثبيت بيئة العمل ومكتبات التحليل الـ AST اللغوية (`tree-sitter-php`, `tree-sitter-javascript`, `graphology`, `elkjs`).
+    - بناء الحزمة الأساسية `@understand-anything/core` بنجاح وتجهيز بيئة الـ Dashboard المبنية على Vite 6 و React 19 و @xyflow/react.
+  * **توليد شبكة المعرفة والعلاقات التفاعلية (`.ua/knowledge-graph.json`)**:
+    - إنشاء محرك التوليد الآلي المستدام `scripts/build_ua_graph.mjs` لفحص الـ Models, Controllers, Services, والـ Routes.
+    - استخراج **221 مكوناً وعقدة (Nodes)** و **983 علاقة وارتباط حقيقي (Edges)** تشمل استدعاءات الـ Controllers، علاقات الـ Eloquent (`hasMany`, `belongsTo`, `belongsToMany`)، والمسارات الحية.
+    - تقسيم النظام إلى **7 طبقات معمارية (Layers)** واضحة باللغة العربية (الاستشارية، الكاشير والخزينة، المحطات التشخيصية، الرقود والعمليات، الحاضنات والخدج، المخازن والصيدلية، والبنية التحتية).
+    - إضافة **جولة تعليمية إرشادية بـ 5 مسارات سريرية ومالية (Guided Tour)** تشرح مسارات المريض والتحصيل والعمليات خطوة بخطوة بالرسم التفاعلي.
+  * **تشغيل الـ Dashboard التفاعلي المحلي**:
+    - تشغيل خادم الـ Dashboard المحلي عبر Vite والتوثيق الآمن بـ Access Token وربطه مع المتصفح.
+
 - **المرحلة 162 (2026-11-04) — الربط التلقائي لتصفيات الضمان الصحي للخدج واحتساب فرق مطالبة المستشفى ومصفوفة عمر الحمل بالخزينة والحسابات (NICU Insurance Automatic Settlement, Hospital Claim Margin & Gestational Matrix Treasury Integration):**
   * **محرك الفوترة الحية والاحتساب التلقائي (`NicuBillingService`)**:
     - ترقية عداد الأيام التراكمية في السجل المفتوح (`activeOpenDays`) ليتم احتسابه حياً وتلقائياً بحسب تاريخ الدخول والتوقيت الفندقي وتحديث قاعدة البيانات دون الحاجة لتدخل يدوي.

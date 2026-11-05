@@ -25,7 +25,10 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /graphify-out/
-# Antigravity Chat & Agent Sync
+# Understand Anything cache & intermediate
+/.ua/intermediate/
+/.ua/tmp/
+
 !.antigravity-local/
 __pycache__/
 *.pyc
