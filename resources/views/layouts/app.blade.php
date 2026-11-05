@@ -792,8 +792,12 @@
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
                     <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
                 </span>
-                <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+               <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i>
+                </a>
+            @else
+                <a href="{{ route('login') }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm">
+                    <i class="fas fa-sign-in-alt me-1"></i> تسجيل الدخول
                 </a>
             @endif
         </div>
@@ -819,10 +823,17 @@
                             <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
                         </div>
                         <div class="sidebar-user">
-                            <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
-                            <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                            </a>
+                            @if(Auth::check())
+                                <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
+                                <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                                </a>
+                            @else
+                                <div><i class="fas fa-tv text-primary me-1"></i> <span>شاشة عرض عامة</span></div>
+                                <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
+                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                                </a>
+                            @endif
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf
@@ -1401,16 +1412,7 @@
                         </li>
                         @endcan
                         
-                        @can('view operation theater station')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('operation-theater-station.*') ? 'active' : '' }}" href="{{ route('operation-theater-station.index') }}">
-                                <i class="fas fa-procedures"></i><span> صالة العمليات</span>
-                                @if($operationTheaterStationCount > 0)
-                                    <span class="badge bg-danger ms-2">{{ $operationTheaterStationCount }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        @endcan
+
                         
                         @can('view surgeon station')
                         <li class="nav-item">
@@ -1733,7 +1735,7 @@
                         </li>
                         @endcanany
 
-                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
+                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && auth()->check() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
                                 <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>

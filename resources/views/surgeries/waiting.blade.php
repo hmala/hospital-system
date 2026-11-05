@@ -354,6 +354,25 @@
         .btn-action-stage:hover {
             transform: translateY(-1px);
         }
+
+        /* Fullscreen TV Flight Board Display */
+        body.tv-display-active .sidebar,
+        body.tv-display-active .app-header,
+        body.tv-display-active .sidebar-backdrop,
+        body.tv-display-active footer {
+            display: none !important;
+        }
+        body.tv-display-active main,
+        body.tv-display-active #orScheduleApp {
+            margin: 0 !important;
+            padding: 8px !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+        }
+        body.tv-display-active .or-canvas-card {
+            border-radius: 12px;
+            padding: 16px;
+        }
     </style>
 
     {{-- Main Container Card --}}
@@ -384,9 +403,15 @@
                 </a>
                 @endcan
 
+                @can('view surgeries')
                 <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" style="border-color: #cbd5e1; color: #334155;">
                     <i class="fas fa-archive me-1 text-secondary"></i> الأرشيف العام
                 </a>
+                @endcan
+
+                <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="عرض مخصص لشاشات الـ TV وممرات العمليات">
+                    <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">شاشة العرض (TV)</span>
+                </button>
 
                 <button type="button" class="btn btn-light border rounded-pill px-3 py-2 shadow-sm text-dark fw-bold" onclick="location.reload();">
                     <i class="fas fa-rotate me-1 text-primary"></i> تحديث
@@ -1001,6 +1026,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     updateTimers();
     setInterval(updateTimers, 1000);
+
+    // Auto-refresh every 60s for public TV Flight Board display (only when not searching or using modal)
+    setInterval(function () {
+        const searchInput = document.getElementById('surgerySearchInput');
+        const isSearching = searchInput && searchInput.value.trim().length > 0;
+        const isModalOpen = document.querySelector('.modal.show');
+        if (!isSearching && !isModalOpen) {
+            location.reload();
+        }
+    }, 60000);
 });
+
+// Toggle TV Flight Board Fullscreen Display
+function toggleTvDisplayMode() {
+    document.body.classList.toggle('tv-display-active');
+    const isTv = document.body.classList.contains('tv-display-active');
+    const tvText = document.getElementById('tvModeText');
+    if (tvText) {
+        tvText.textContent = isTv ? 'خروج من وضع الـ TV' : 'شاشة العرض (TV)';
+    }
+    if (isTv && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else if (!isTv && document.exitFullscreen && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+}
 </script>
 @endsection

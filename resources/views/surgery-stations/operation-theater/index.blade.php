@@ -9,6 +9,19 @@
                     <h3 class="card-title">محطة صالة العمليات</h3>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between p-3 mb-3 flex-wrap gap-2" style="background: #f0f9ff; border-radius: 12px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-info-circle text-primary fs-5"></i>
+                            <div>
+                                <strong class="text-dark">تنبيه تنظيمي:</strong>
+                                <span class="text-muted">تدار صالات العمليات والمواعيد والبدء والإنهاء مباشرة عبر لوحة المتابعة الشاملة.</span>
+                            </div>
+                        </div>
+                        <a href="{{ route('surgeries.waiting') }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
+                            <i class="fas fa-clock me-1"></i> الانتقال لقائمة انتظار العمليات (Flight Board)
+                        </a>
+                    </div>
+
                     @if(session('success'))
                         <div class="alert alert-success alert-dismissible fade show">
                             {{ session('success') }}

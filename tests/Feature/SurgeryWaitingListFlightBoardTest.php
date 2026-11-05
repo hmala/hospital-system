@@ -89,17 +89,14 @@ class SurgeryWaitingListFlightBoardTest extends TestCase
         return compact('department', 'doctor', 'patient', 'room', 'surgery');
     }
 
-    public function test_unauthorized_user_cannot_view_waiting_list(): void
+    public function test_guest_and_public_display_screen_can_view_waiting_list(): void
     {
-        $user = User::create([
-            'name' => 'Regular User',
-            'email' => 'regular@example.com',
-            'password' => bcrypt('password'),
-            'role' => 'patient',
-        ]);
+        $this->createSurgerySetup('scheduled');
 
-        $response = $this->actingAs($user)->get(route('surgeries.waiting'));
-        $response->assertStatus(403);
+        // Unauthenticated guest on a wall display TV screen can view the flight board
+        $response = $this->get(route('surgeries.waiting'));
+        $response->assertStatus(200);
+        $response->assertSee('جدول وقائمة انتظار العمليات الجراحية');
     }
 
     public function test_authorized_user_can_view_waiting_list_and_week_navigation(): void

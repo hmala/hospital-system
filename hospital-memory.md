@@ -78,7 +78,23 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-- **المرحلة 165 (2026-11-05) — مزامنة انتقال المريض لمحطة المقيم ما بعد الصالة وترشيق أزرار وشارات قائمة انتظار العمليات (Resident Post-Op Lifecycle Sync & Waiting List Complete Button Refinement):**
+- **المرحلة 167 (2026-11-05) — حوكمة صلاحيات الأجهزة الطبية وإصلاح انتقال عمليات الصالة المكتملة للأرشيف وإعادة تصميم جدول العمليات بدقة الأدوار (Surgery Master Registry Roles Governance, OT Exit Status Auto-Sync & Medical Devices Route Protection):**
+  * **إصلاح انتقال العمليات المكتملة للأرشيف (`SurgeryController@index`, `OperationTheaterStationController@complete`)**:
+    - تحديث `OperationTheaterStationController::complete()` ليقوم بتحديث حالة العملية إلى `status = 'completed'` وتعيين `end_time = now()` فور انتهاء الصالة وخروج المريض.
+    - تحديث استعلام العمليات النشطة في `SurgeryController@index` لاستبعاد أي حالة اكتملت صالتها تلقائياً.
+    - تحديث استعلام ومؤشرات العمليات المكتملة لتضم كل عملية أتمت الصالة أو اكتملت.
+    - مزامنة السجلات السابقة في قاعدة البيانات لتتحول الحالات التي خرجت من الصالة إلى `completed` وتنتقل فوراً لتبويب المكتملة.
+  * **حوكمة دقيقة للإجراءات والأعمدة بالأدوار (`surgeries/index.blade.php`)**:
+    - إخفاء عمود وفحوصات التشخيص والعلاج تماماً عن موظفي الاستقبال والاستعلامات (`@if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))`).
+    - حصر أزرار الإجراءات في الجدول بالأدوار: زر التعديل بـ `@can('edit surgeries')`، زر الحذف بـ `@can('delete surgeries')`، والطباعة بـ `surgeries.print`.
+    - حصر زر إلغاء العملية داخل صف التفاصيل بكادر العمليات والإدارة وطبيب الحالة (`$canManageSurgery`) وفقط للعمليات النشطة الجارية.
+    - المحافظة على صف تفاصيل الفحوصات المنسدل (`detailsRow`) للأشعة والمختبر والعلاجات بتصميم كروت وألوان متناسقة وعصرية.
+    - تصميم عصري فخم بالكامل (ترويسة تنفيذية، بطاقات مؤشرات KPI دقيقة، وشريط بحث وتصفية ذكي).
+  * **حزم الاختبارات الآلية الشاملة**:
+    - اجتياز اختبارات مصفوفة التبويبات والمحطة السريرية `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` بنسبة 100% (11 passed, 44 assertions).
+    - اجتياز اختبارات لوحة الصالات وقائمة الانتظار `tests/Feature/SurgeryWaitingListFlightBoardTest.php` بنسبة 100% (8 passed, 28 assertions).
+
+- **المرحلة 166 (2026-11-05) — إعادة التصميم العصرية لشاشة قائمة انتظار وتدفق العمليات الجراحية كلوحة تحكم ذكية وبطاقات مؤشرات تفاعلية (Smart OR Flight Board Modern Redesign, Interactive KPI Filters & Clean Stage Progression):**
   * **مزامنة محطة المقيم ما بعد العملية (`ResidentStationController@index`)**:
     - تصحيح استعلام مرحلة ما بعد الصالة للمقيم (`postOpSurgeries`) ليتطابق مع التمريض، بحيث ينتقل المريض للمقيم فور اكتمال صالة العمليات (`operationTheaterStation->status === 'completed'`) أو اكتمال التخدير دون اشتراط التخدير حصراً.
     - استبعاد الحالات التي أتمت الصالة من جدول ما قبل الصالة لدى المقيم لضمان نظافة الطابور.
@@ -1831,6 +1847,30 @@
     - الإبقاء على صلاحية أمين المخزن الرقابية فقط: `الموافقة وصرف المواد` أو `رفض الطلب` مع ذكر السبب لحفظ أثر التدقيق (Audit Trail) ومنع تضارب العهدة الجردية.
   * **حزمة الاختبارات الآلية الشاملة (`tests/Feature/FloorCustodianStockTransferTest.php`)**:
     - توسيع حزمة الاختبارات لتشمل `test_warehouse_manager_cannot_edit_or_delete_sub_store_requests` والتحقق من عدم ظهور الأزرار ورفض محاولات الـ PUT/DELETE بـ 403 (11 passed, 52 assertions).
+
+- **المرحلة 169 (2026-11-05) — معالجة ظهور عمليات محطة الجراح، فك ازدواجية سجلات الأطباء، وتحديث واجهة المحطة السريرية (Surgeon Station Identity Multiplicity Resolution, Direct Action Link & Modern Executive Redesign)**:
+  * **معالجة تصفية وصلاحيات محطة الجراح ([app/Http/Controllers/SurgeonStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+    - إضافة دالة `getSurgeonDoctorIds($user)` لجمع كافة معرّفات الطبيب المرتبطة بحساب المستخدم (بما فيها معرّف الطبيب الأساسي، معرّف الطبيب من `user_id`، ومعرّفات الأطباء المطابقة لنفس الاسم بعد تجريد البادئات `د.` و `دكتور`)؛ مما يعالج جذرياً مشكلة الازدواجية التاريخية للأطباء المستوردين.
+    - تحديث استعلام العمليات في `index()` واستعلام التحقق في `authorizeSurgeon()` لاستخدام `whereIn('doctor_id', $surgeonDoctorIds)`.
+  * **إدراج الأطباء الجراحين في نماذج العمليات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - توسيع استعلام الأطباء في `create()` و `edit()` ليشمل كل طبيب يحمل دور الجراح (`role = 'الجراح' / 'surgeon' / 'جراح'`) بالإضافة إلى النوع والتخصص.
+  * **إعادة تصميم واجهة محطة الجراح وإضافة زر الدخول المباشر ([resources/views/surgery-stations/surgeon/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+    - إضافة زر الإجراء السريري الأساسي `[ 🩺 فتح المحطة ]` (`route('surgeon-station.show', $surgery)`).
+    - إضافة ترويسة تنفيذية فخمة، بطاقات مؤشرات KPI ذكية (إجمالي العمليات، بانتظار المعاينة، قيد المتابعة، ومكتملة ومُعتمدة)، وتنسيق جدول رشيق وحديث.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+    - 3 اختبارات تغطي: ظهور العمليات بعد إتمام الصالة، معالجة ازدواجية حسابات الجراحين، وحماية الصلاحيات بنجاح 100% (`3 passed, 10 assertions`).
+
+- **المرحلة 168 (2026-11-05) — توحيد طباعة طلبات تحاليل الطوارئ قبل إدخال النتائج وإظهار فحص CBC في أمر العمل مطابقةً لباقي الأقسام (Emergency Lab Request Print & CBC Work Order Requisition Parity)**:
+  * **معالجة طباعة طلب الطوارئ كأمر عمل قبل إدخال النتائج ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
+    - تعريف وضع أمر العمل `$hasWorkOrder` بدقة: عندما يكون الطلب غير مكتمل ولم تُدخل نتائجه بعد وله تحاليل مطلوبة (`!$isCompleted && !$hasActualResults && $requestedLabTestsList->count() > 0`).
+    - تضمين `$hasWorkOrder` في شرط إظهار الصفحة الأولى `@if($hasStandardContent || $hasUrineContent || $hasWorkOrder)` لمنع ظهور الصفحة فارغة/بيضاء نهائياً.
+    - إدراج قسم أمر العمل الموحد بالبنر الأزرق المتقطع وقائمة الفحوصات المطلوبة متبوعة بخط منقط لكتابة النتيجة يدوياً من قبل فني المختبر وشارة `Pending` لكل تحليل مطلوب.
+    - ضمان ظهور فحص صورة الدم الكاملة (CBC) وكافة الفحوصات المعتمدة على المرفقات في أمر العمل دون استبعادها.
+  * **توحيد أزرار إجراءات الطوارئ مع باقي الأقسام ([resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+    - للطلبات المعلقة: زر `[ إدخال النتائج ]` باللون الأزرق وزر `[ 🖨️ طباعة الطلب ]` بـ `btn-outline-dark`.
+    - للطلبات المكتملة: زر `[ معاينة ]` وزر `[ 🖨️ طباعة ]` بالأخضر وزر الواتساب.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
+    - إضافة واجتياز اختبار التحقق من ظهور CBC في أمر العمل بنجاح بنسبة 100% (`11 passed, 69 assertions`).
 
 - **المرحلة 144 (2026-11-03) — نظام ثبات واستمرارية التبويبات والتبويبات الفرعية وموضع التمرير في قسم الخدج (NICU Full Tab, Pill & Scroll Persistence Across All Operations)**:
   * **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php))**:

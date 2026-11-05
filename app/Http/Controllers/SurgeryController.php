@@ -30,9 +30,12 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // العمليات النشطة (المجدولة والمنتظرة والجارية)
-        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress']);
+        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته)
+        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('operationTheaterStation', function ($q) {
+                $q->where('status', 'completed');
+            });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -73,9 +76,14 @@ class SurgeryController extends Controller
             ->paginate(20)
             ->appends(request()->query());
 
-        // العمليات المكتملة والملغاة
-        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
-            ->whereIn('status', ['completed', 'cancelled']);
+        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها وخرجت)
+        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+            ->where(function ($q) {
+                $q->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereHas('operationTheaterStation', function ($oq) {
+                        $oq->where('status', 'completed');
+                    });
+            });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -127,11 +135,11 @@ class SurgeryController extends Controller
         $stats = (clone $statsQuery)
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled,
-                SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) as waiting,
-                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'scheduled' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN status = 'waiting' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as waiting,
+                SUM(CASE WHEN status = 'in_progress' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN (status = 'completed' OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
             ")
             ->first();
@@ -155,7 +163,12 @@ class SurgeryController extends Controller
             ->where('is_active', true)
             ->where(function ($query) {
                 $query->where('type', 'surgeon')
-                    ->orWhere('specialization', 'جراحة');
+                    ->orWhere('specialization', 'جراحة')
+                    ->orWhereHas('user', function ($uq) {
+                        $uq->whereHas('roles', function ($rq) {
+                            $rq->whereIn('name', ['الجراح', 'surgeon', 'جراح']);
+                        });
+                    });
             })
             ->get()
             ->sortBy(function ($d) {
@@ -434,7 +447,12 @@ class SurgeryController extends Controller
             ->where(function ($query) {
                 $query->where('type', 'surgeon')
                     ->orWhere('specialization', 'جراحة')
-                    ->orWhere('type', 'anesthesia');
+                    ->orWhere('type', 'anesthesia')
+                    ->orWhereHas('user', function ($uq) {
+                        $uq->whereHas('roles', function ($rq) {
+                            $rq->whereIn('name', ['الجراح', 'surgeon', 'جراح']);
+                        });
+                    });
             })
             ->get()
             ->sortBy(function ($d) {
@@ -651,12 +669,7 @@ class SurgeryController extends Controller
 
     public function waiting(?Request $request = null)
     {
-        $user = auth()->user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage surgery waiting list'))) {
-            abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
-        }
-
+        // شاشة قائمة الانتظار عامة للعرض الحي على الشاشات المنفصلة (Public OR Flight Board)
         $request = $request ?? request();
         $selectedDate = $request->query('date', today()->format('Y-m-d'));
         try {

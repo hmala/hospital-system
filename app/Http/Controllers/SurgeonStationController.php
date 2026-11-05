@@ -25,7 +25,8 @@ class SurgeonStationController extends Controller
 
         // إذا كان المستخدم طبيباً جراحاً (وليس مشرفاً أو موظف استقبال/عمليات)، نعرض له عملياته فقط
         if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            $query->where('doctor_id', $user->doctor->id);
+            $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
+            $query->whereIn('doctor_id', $surgeonDoctorIds);
         }
 
         $surgeries = $query->get();
@@ -164,9 +165,36 @@ class SurgeonStationController extends Controller
     {
         $user = auth()->user();
         if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            if ($surgery->doctor_id !== $user->doctor->id) {
+            $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
+            if (! in_array($surgery->doctor_id, $surgeonDoctorIds)) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية');
             }
         }
+    }
+
+    /**
+     * جلب كافة المعرّفات المرتبطة بالطبيب الجراح لمعالجة الازدواجية التاريخية
+     */
+    protected function getSurgeonDoctorIds($user): array
+    {
+        $ids = [];
+        if ($user->doctor) {
+            $ids[] = $user->doctor->id;
+        }
+
+        $doctorByUser = Doctor::where('user_id', $user->id)->pluck('id')->toArray();
+        $ids = array_merge($ids, $doctorByUser);
+
+        // مطابقة أي حساب طبيب مسجل بنفس اسم المستخدم (مع إزالة البادئات د. أو دكتور)
+        $cleanName = trim(preg_replace('/^(د\.|دكتور|دكتورة)\s*/u', '', $user->name));
+        if (! empty($cleanName)) {
+            $matchedByName = Doctor::whereHas('user', function ($q) use ($cleanName) {
+                $q->where('name', 'like', "%{$cleanName}%");
+            })->pluck('id')->toArray();
+
+            $ids = array_merge($ids, $matchedByName);
+        }
+
+        return array_values(array_unique(array_filter($ids)));
     }
 }

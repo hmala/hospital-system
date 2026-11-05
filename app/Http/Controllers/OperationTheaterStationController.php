@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Surgery;
-use App\Models\OperationTheaterStation;
 use App\Models\Doctor;
+use App\Models\Surgery;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -15,17 +13,17 @@ class OperationTheaterStationController extends Controller
     {
         // جلب العمليات التي في محطة صالة العمليات
         $surgeries = Surgery::with(['patient.user', 'doctor.user', 'operationTheaterStation'])
-            ->where(function($query) {
+            ->where(function ($query) {
                 // العمليات التي أنهت مرحلة المقيم (pre_op)
-                $query->whereHas('residentStation', function($q) {
+                $query->whereHas('residentStation', function ($q) {
                     $q->where('phase', 'pre_op')
-                      ->where('status', 'completed');
+                        ->where('status', 'completed');
                 });
             })
-            ->where(function($query) {
+            ->where(function ($query) {
                 // ولم تكتمل مرحلة صالة العمليات بعد
                 $query->whereDoesntHave('operationTheaterStation')
-                    ->orWhereHas('operationTheaterStation', function($q) {
+                    ->orWhereHas('operationTheaterStation', function ($q) {
                         $q->where('status', '!=', 'completed');
                     });
             })
@@ -41,20 +39,20 @@ class OperationTheaterStationController extends Controller
     {
         // التحقق من أن محطة المقيم (pre_op) مكتملة
         $preOpResident = $surgery->residentStation()->where('phase', 'pre_op')->first();
-        if (!$preOpResident || $preOpResident->status !== 'completed') {
+        if (! $preOpResident || $preOpResident->status !== 'completed') {
             return redirect()->route('resident-station.show', $surgery)
                 ->with('error', 'يجب إتمام مرحلة تحضير المقيم أولاً');
         }
 
         // إنشاء محطة إذا لم تكن موجودة
-        if (!$surgery->operationTheaterStation) {
+        if (! $surgery->operationTheaterStation) {
             $surgery->operationTheaterStation()->create([
                 'status' => 'pending',
             ]);
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'operationTheaterStation.orNurse', 'operationTheaterStation.anesthesiologist.user', 'medicalDevices']);
-        
+
         // جلب قائمة الممرضين وأطباء التخدير
         $nurses = User::whereJsonContains('role', 'surgery_nurse')->get();
         $anesthesiologists = Doctor::anesthesia()->get();
@@ -77,7 +75,7 @@ class OperationTheaterStationController extends Controller
         ]);
 
         $station = $surgery->operationTheaterStation;
-        if (!$station) {
+        if (! $station) {
             $station = $surgery->operationTheaterStation()->create([
                 'status' => 'in_progress',
                 'started_at' => now(),
@@ -114,22 +112,26 @@ class OperationTheaterStationController extends Controller
     public function complete(Surgery $surgery)
     {
         $station = $surgery->operationTheaterStation;
-        if (!$station) {
+        if (! $station) {
             return redirect()->back()->with('error', 'المحطة غير موجودة');
         }
 
         $station->markAsCompleted();
 
         // إنشاء محطة الجراح التالية
-        if (!$surgery->surgeonStation) {
+        if (! $surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'pending',
             ]);
         }
 
+        // إتمام الصالة وخروج المريض وتحديث حالة العملية إلى مكتملة
+        $surgery->status = 'completed';
+        $surgery->end_time = now();
+        $surgery->save();
+
         return redirect()->route('operation-theater-station.index')
-            ->with('success', 'تم إتمام صالة العمليات والانتقال لمحطة الجراح');
+            ->with('success', 'تم إتمام صالة العمليات والانتقال لمحطة الجراح وخروج المريض بنجاح');
     }
 }
-

@@ -79,6 +79,10 @@ Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReport
 Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])
     ->name('lab.attachment');
 
+// شاشة عرض قائمة انتظار وتدفق العمليات العامة لشاشات العرض والـ TV (Public OR Flight Board Display Screen)
+Route::get('/surgeries/waiting', [\App\Http\Controllers\SurgeryController::class, 'waitingList'])
+    ->name('surgeries.waiting');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -667,7 +671,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // إدارة العمليات
-    Route::get('/surgeries/waiting', [SurgeryController::class, 'waitingList'])->name('surgeries.waiting');
     Route::post('/surgeries/{surgery}/check-in', [SurgeryController::class, 'checkIn'])->name('surgeries.check-in');
     Route::get('/surgeries/{surgery}/print', [SurgeryController::class, 'print'])->name('surgeries.print');
     Route::resource('surgeries', SurgeryController::class);
