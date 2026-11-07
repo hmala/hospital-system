@@ -1956,6 +1956,20 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
     - اجتياز كامل الاختبارات بنسبة 100% (`13 passed, 89 assertions`).
 
+- **المرحلة 177 (2026-11-07) — حوكمة العلامات الحيوية بالمحطة السريرية: جدول إدخال أفقي بالأعمدة، قفل التعديل بمهلة 30 دقيقة لنفس الحساب، حصر الصلاحية للإدارة، وحجب المنحنيات البيانية عن التمريض (Unified Clinical Station: Horizontal Vitals Flowsheet Grid, 30-Minute Self-Edit Window, Admin Immutability Override & Role-Gated Trend Charts)**:
+  * **تحويل العلامات الحيوية إلى جدول أفقي بالأعمدة (Horizontal Flowsheet Grid)**:
+    - استبدال البطاقات المنفصلة بجدول سريري أفقي متكامل بـ 9 أعمدة: (ضغط الدم BP، الحرارة Temp، النبض PR، التنفس RR، الأكسجين SPo2، سكر الدم RBS، مقياس الألم Pain، مقياس الوعي GCS، امتلاء الشعيرات CRT).
+    - إدخال فوري للقيم داخل خلايا الجدول بتصميم طبي ناعم وسلس، مع عرض الوحدات والمدى الطبيعي المرجعي في ترويسة الأعمدة.
+  * **حوكمة التعديل وقفل السجلات الطبية (30-Minute Immutability Governance)**:
+    - إضافة أعمدة `vitals_recorded_at` و `vitals_recorded_by` في جدول `resident_stations`، وعمود `user_id` في `resident_station_readings`.
+    - قاعدة الـ 30 دقيقة الصارمة: يُسمح بالتعديل حصراً لنفس حساب الموظف الذي أدخل القراءة ولمدة 30 دقيقة فقط من توقيت التسجيل.
+    - انقضاء المهلة أو الدخول من حساب مختلف: تُقفل القراءة تلقائياً (`readonly`) ولا يمكن تعديلها إلا من حساب مدير النظام (`Admin`) حصراً، مدعوماً بحماية صارمة في السيرفر لمنع أي تعديل غير مصرح.
+    - دعم زر [ ➕ تسجيل قراءة دورية جديدة ] لتمكين الكوادر من توثيق قياسات دورية لاحقة دون المساس بالقراءات التاريخية السابقة وبدء عداد جديد لها.
+  * **حجب المنحنيات البيانية عن التمريض**:
+    - حصر ظهور قسم المنحنيات البيانية لتطور العلامات الحيوية (`Chart.js`) للجراح، المقيم، ومدير النظام حصراً، وحجبه كلياً عن طاقم التمريض (`nurse`).
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
+    - كتابة واجتياز 5 اختبارات آلية جديدة تغطي كامل متطلبات الأعمدة، حجب المخططات، حوكمة الـ 30 دقيقة، قفل الحساب، وتجاوز الأدمن بنسبة 100% (`5 passed, 36 assertions`)، واستمرار اجتياز كافة اختبارات المحطة السريرية (`11 passed, 44 assertions`) بإجمالي 16 اختباراً ناجحاً.
+
 - **المرحلة 176 (2026-11-07) — قسم حسابات وتصفية جراحي العمليات: استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات (Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)**:
   * **بنية البيانات وحفظ استقطاعات الباقة المشمولة بالعملية**:
     - إضافة أعمدة `is_package_included`, `included_deductible_price`, `deduction_bearer` في جداول `surgery_lab_tests`, `surgery_radiology_tests`, `surgery_extra_services`.

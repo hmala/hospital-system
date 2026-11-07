@@ -533,7 +533,7 @@
 
                     @if(!$isCancelled && $pendingAmount > 0)
                     <!-- نموذج الدفع للعناصر المعلقة -->
-                    <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm">
+                    <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm" novalidate>
                         @csrf
 
                         @if($defaultInsurance !== 'none')
@@ -2081,6 +2081,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (isPayModePartial) {
             if (partialContainer) partialContainer.style.display = 'block';
+            if (customPaidInput) customPaidInput.disabled = false;
             let enteredPaid = parseFloat(customPaidInput ? customPaidInput.value : 0) || 0;
             if (enteredPaid > netPatientShare) {
                 enteredPaid = netPatientShare;
@@ -2093,7 +2094,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             if (partialContainer) partialContainer.style.display = 'none';
-            if (customPaidInput) customPaidInput.value = Math.round(netPatientShare);
+            if (customPaidInput) {
+                customPaidInput.value = Math.round(netPatientShare);
+                customPaidInput.disabled = true;
+            }
             finalActualAmountToCollect = netPatientShare;
             partialDeferredDebt = 0;
         }
@@ -2131,7 +2135,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (submitBtn) {
-            submitBtn.disabled = selectedCount === 0;
+            if (selectedCount === 0) {
+                submitBtn.classList.add('opacity-50');
+            } else {
+                submitBtn.classList.remove('opacity-50');
+            }
         }
 
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
@@ -2511,21 +2519,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const paymentForm = document.getElementById('paymentForm');
+    const submitBtnEl = document.getElementById('submitBtn');
+
+    function validateAndProcessPayment(e) {
+        const countSpan = document.getElementById('selectedItemsCount');
+        const count = parseInt(countSpan ? countSpan.textContent : '0') || 0;
+
+        if (count === 0) {
+            if (e) e.preventDefault();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'تنبيه',
+                    text: 'يرجى تحديد عنصر واحد على الأقل للدفع قبل التأكيد.',
+                    confirmButtonText: 'حسناً'
+                });
+            } else {
+                alert('يرجى تحديد عنصر واحد على الأقل للدفع قبل التأكيد.');
+            }
+            return false;
+        }
+
+        if (typeof isSplitActive === 'function' && isSplitActive()) {
+            const inputAmount = document.getElementById('amountInput');
+            const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
+            const cashVal = parseFloat(cashAmountInput ? cashAmountInput.value : 0) || 0;
+            const cardVal = parseFloat(cardAmountInput ? cardAmountInput.value : 0) || 0;
+            const totalSplit = Math.round(cashVal + cardVal);
+            const targetRounded = Math.round(currentTarget);
+
+            if (totalSplit !== targetRounded) {
+                if (e) e.preventDefault();
+                alert('تنبيه: مجموع مبالغ الدفع المركب (كاش: ' + numberFormat(cashVal) + ' + بطاقة: ' + numberFormat(cardVal) + ' = ' + numberFormat(totalSplit) + ' د.ع) لا يتطابق مع المبلغ المطلوب قبضه (' + numberFormat(targetRounded) + ' د.ع). يرجى ضبط المبالغ قبل التأكيد.');
+                return false;
+            }
+        }
+
+        const payModePartialRadio = document.getElementById('pay_mode_partial');
+        const customPaidInput = document.getElementById('custom_paid_amount');
+        if (customPaidInput && payModePartialRadio && !payModePartialRadio.checked) {
+            customPaidInput.disabled = true;
+        } else if (customPaidInput) {
+            customPaidInput.disabled = false;
+        }
+
+        if (submitBtnEl) {
+            submitBtnEl.classList.add('disabled');
+            submitBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري تأكيد الدفع...';
+        }
+
+        return true;
+    }
+
     if (paymentForm) {
         paymentForm.addEventListener('submit', function(e) {
-            if (isSplitActive()) {
-                const inputAmount = document.getElementById('amountInput');
-                const currentTarget = parseFloat(inputAmount ? inputAmount.value : 0) || 0;
-                const cashVal = parseFloat(cashAmountInput ? cashAmountInput.value : 0) || 0;
-                const cardVal = parseFloat(cardAmountInput ? cardAmountInput.value : 0) || 0;
-                const totalSplit = Math.round(cashVal + cardVal);
-                const targetRounded = Math.round(currentTarget);
+            if (!validateAndProcessPayment(e)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
 
-                if (totalSplit !== targetRounded) {
-                    e.preventDefault();
-                    alert('تنبيه: مجموع مبالغ الدفع المركب (كاش: ' + numberFormat(cashVal) + ' + بطاقة: ' + numberFormat(cardVal) + ' = ' + numberFormat(totalSplit) + ' د.ع) لا يتطابق مع المبلغ المطلوب قبضه (' + numberFormat(targetRounded) + ' د.ع). يرجى ضبط المبالغ قبل التأكيد.');
-                    return false;
-                }
+    if (submitBtnEl && paymentForm) {
+        submitBtnEl.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (validateAndProcessPayment(e)) {
+                paymentForm.submit();
             }
         });
     }
