@@ -764,31 +764,31 @@
                                     <tbody>
                                         <tr class="bg-white">
                                             <td class="p-2">
-                                                <input type="text" name="bp" id="grid_bp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="120/80" value="{{ $station?->bp }}" data-original="{{ $station?->bp }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="bp" id="grid_bp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="120/80" value="{{ $station?->bp }}" data-original="{{ $station?->bp }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="temp" id="grid_temp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-warning-emphasis {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="37.0" value="{{ $station?->temp }}" data-original="{{ $station?->temp }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="temp" id="grid_temp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-warning-emphasis {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="37.0" value="{{ $station?->temp }}" data-original="{{ $station?->temp }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="pr" id="grid_pr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="75" value="{{ $station?->pr }}" data-original="{{ $station?->pr }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="pr" id="grid_pr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="75" value="{{ $station?->pr }}" data-original="{{ $station?->pr }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="rr" id="grid_rr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-primary {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="16" value="{{ $station?->rr }}" data-original="{{ $station?->rr }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="rr" id="grid_rr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-primary {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="16" value="{{ $station?->rr }}" data-original="{{ $station?->rr }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="spo2" id="grid_spo2" class="form-control form-control-sm text-center fw-bold vital-grid-input text-success {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="98" value="{{ $station?->spo2 }}" data-original="{{ $station?->spo2 }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="spo2" id="grid_spo2" class="form-control form-control-sm text-center fw-bold vital-grid-input text-success {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="98" value="{{ $station?->spo2 }}" data-original="{{ $station?->spo2 }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="rbs" id="grid_rbs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="110" value="{{ $station?->rbs }}" data-original="{{ $station?->rbs }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="rbs" id="grid_rbs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="110" value="{{ $station?->rbs }}" data-original="{{ $station?->rbs }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="pain_score" id="grid_pain_score" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="0 - 10" value="{{ $station?->pain_score }}" data-original="{{ $station?->pain_score }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="pain_score" id="grid_pain_score" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="0 - 10" value="{{ $station?->pain_score }}" data-original="{{ $station?->pain_score }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="gcs" id="grid_gcs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="15/15" value="{{ $station?->gcs }}" data-original="{{ $station?->gcs }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="gcs" id="grid_gcs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="15/15" value="{{ $station?->gcs }}" data-original="{{ $station?->gcs }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                             <td class="p-2">
-                                                <input type="text" name="crt" id="grid_crt" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="< 2 sec" value="{{ $station?->crt }}" data-original="{{ $station?->crt }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                                <input type="text" name="crt" id="grid_crt" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="< 2 sec" value="{{ $station?->crt }}" data-original="{{ $station?->crt }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -800,7 +800,9 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark"><i class="fas fa-stethoscope text-primary me-1"></i> ملاحظات الفحص السريري (Clinical Examination):</label>
                             <textarea name="clinical_examination" class="form-control rounded-3" rows="3" 
-                                      {{ !$canActuallyEditVitals ? 'readonly' : '' }}
+                                      data-original="{{ $station?->clinical_examination }}"
+                                      data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}"
+                                      {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}
                                       placeholder="ملاحظات الفحص العام وفحص الأجهزة الحيوية...">{{ $station?->clinical_examination }}</textarea>
                         </div>
 
@@ -2150,10 +2152,10 @@ window.cancelEditingReading = function() {
             inp.value = inp.getAttribute('data-original') || '';
             inp.style.border = '';
             inp.style.backgroundColor = '';
-            @if(!$canActuallyEditVitals)
+            if (inp.getAttribute('data-original-readonly') === '1') {
                 inp.setAttribute('readonly', 'readonly');
                 inp.classList.add('bg-light');
-            @endif
+            }
         }
     };
 
@@ -2169,12 +2171,12 @@ window.cancelEditingReading = function() {
 
     const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
     if (examTextarea) {
-        examTextarea.value = @json($station?->clinical_examination ?? '');
+        examTextarea.value = examTextarea.getAttribute('data-original') || '';
         examTextarea.style.border = '';
         examTextarea.style.backgroundColor = '';
-        @if(!$canActuallyEditVitals)
+        if (examTextarea.getAttribute('data-original-readonly') === '1') {
             examTextarea.setAttribute('readonly', 'readonly');
-        @endif
+        }
     }
 
     // 3. إخفاء شارة التعديل

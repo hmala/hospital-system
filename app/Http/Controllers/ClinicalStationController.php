@@ -146,6 +146,7 @@ class ClinicalStationController extends Controller
 
         $nurses = User::role('nurse')->where('is_active', true)->get();
         $residents = User::role('resident')->where('is_active', true)->get();
+        $canActuallyEditVitals = (($tabPermissions['vitals'] ?? '') === SurgeryTabPermission::ACCESS_WRITE) && ($canEditVitals ?? true);
 
         return view('surgery-stations.clinical.show', compact(
             'surgery',
@@ -166,6 +167,7 @@ class ClinicalStationController extends Controller
             'nurses',
             'residents',
             'canEditVitals',
+            'canActuallyEditVitals',
             'canViewVitalsCharts',
             'isAdmin'
         ));
