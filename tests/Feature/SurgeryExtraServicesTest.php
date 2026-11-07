@@ -208,4 +208,132 @@ class SurgeryExtraServicesTest extends TestCase
         $surgery->refresh();
         $this->assertEquals('paid', $surgery->payment_status);
     }
+
+    public function test_surgery_auto_attaches_default_extra_services(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية استئصال لوزتين',
+            'surgery_fee' => 300000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '09:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $surgery->attachDefaultExtraServices();
+
+        $this->assertCount(3, $surgery->extraServices);
+        $this->assertDatabaseHas('surgery_extra_services', [
+            'surgery_id' => $surgery->id,
+            'name' => 'تخطيط قلب',
+            'price' => 15000.00,
+            'payment_status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('surgery_extra_services', [
+            'surgery_id' => $surgery->id,
+            'name' => 'اجور فتح طبلة',
+            'price' => 10000.00,
+            'payment_status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('surgery_extra_services', [
+            'surgery_id' => $surgery->id,
+            'name' => 'خدمات فندقية',
+            'price' => 30000.00,
+            'payment_status' => 'pending',
+        ]);
+    }
+
+    public function test_cashier_can_update_extra_service_price(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية غضروف الركبة',
+            'surgery_fee' => 700000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '11:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $extraService = SurgeryExtraService::create([
+            'surgery_id' => $surgery->id,
+            'name' => 'خدمات فندقية',
+            'price' => 30000.00,
+            'quantity' => 1,
+            'total_amount' => 30000.00,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        $response = $this->actingAs($this->cashier)->patchJson(route('cashier.surgeries.extra-services.update', [$surgery, $extraService]), [
+            'price' => 45000,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'price' => 45000,
+            'total_amount' => 45000,
+        ]);
+
+        $extraService->refresh();
+        $this->assertEquals(45000.00, (float) $extraService->price);
+        $this->assertEquals(45000.00, (float) $extraService->total_amount);
+    }
+
+    public function test_cashier_can_pay_surgery_with_inline_edited_extra_service_price(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية ترقيع طبلة الأذن',
+            'surgery_fee' => 500000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '12:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $extraService = SurgeryExtraService::create([
+            'surgery_id' => $surgery->id,
+            'name' => 'خدمات فندقية',
+            'price' => 30000.00,
+            'quantity' => 1,
+            'total_amount' => 30000.00,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        // الكاشير عدل السعر إلى 25,000 أثناء الدفع
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery), [
+            'payment_method' => 'cash',
+            'amount' => 525000, // 500,000 + 25,000
+            'pay_surgery' => 1,
+            'surgery_payment_type' => 'full',
+            'pay_extra_services' => [$extraService->id],
+            'extra_service_prices' => [
+                $extraService->id => 25000,
+            ],
+            'insurance_type' => 'none',
+        ]);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+
+        $extraService->refresh();
+        $this->assertEquals('paid', $extraService->payment_status);
+        $this->assertEquals(25000.00, (float) $extraService->price);
+        $this->assertEquals(25000.00, (float) $extraService->total_amount);
+    }
 }

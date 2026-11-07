@@ -673,28 +673,6 @@
                             </div>
                         @endif
 
-                        <!-- خيار الشمولية العام أو الفردي للعمليات -->
-                        <div class="card border-primary border-opacity-25 rounded-3 mb-4 bg-primary-subtle bg-opacity-10 shadow-2xs">
-                            <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="form-check form-switch m-0 fs-5">
-                                        <input class="form-check-input" type="checkbox" id="inclusive" name="inclusive" {{ old('inclusive') ? 'checked' : '' }} style="cursor: pointer;">
-                                    </div>
-                                    <div>
-                                        <label class="form-check-label fw-bold text-dark mb-0 d-block" for="inclusive" style="cursor: pointer;">
-                                            ✨ باقة شاملة بالكامل (All-Inclusive Surgery Package)
-                                        </label>
-                                        <small class="text-muted">
-                                            تفعيل هذا الخيار يشمل كافة التحاليل، الفحوصات، وتخطيط القلب مجاناً ضمن أجور الجراحة (0 د.ع إضافي). كما يمكنك التحكم بكل خدمة على انفراد أدناه.
-                                        </small>
-                                    </div>
-                                </div>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2 py-1">
-                                    <i class="fas fa-sliders-h me-1"></i>تحكم فردي متوفر لكل بند في الجدول
-                                </span>
-                            </div>
-                        </div>
-
                         <!-- العناصر المعلقة للدفع -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1085,8 +1063,23 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end item-price-display fw-bold">
-                                                        {{ number_format($eTotal, 0) }} د.ع
+                                                    <td class="text-end">
+                                                        <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                                            <input type="number" 
+                                                                   class="form-control form-control-sm text-end fw-bold extra-service-price-input" 
+                                                                   name="extra_service_prices[{{ $extraService->id }}]" 
+                                                                   value="{{ (int)$eTotal }}" 
+                                                                   min="0" 
+                                                                   step="500" 
+                                                                   data-id="{{ $extraService->id }}"
+                                                                   data-url="{{ route('cashier.surgeries.extra-services.update', [$surgery, $extraService]) }}"
+                                                                   style="width: 120px;"
+                                                                   title="سعر الخدمة (يمكن تعديله)">
+                                                            <span class="small text-muted">د.ع</span>
+                                                        </div>
+                                                        <div class="item-price-display small text-muted mt-1">
+                                                            {{ number_format($eTotal, 0) }} د.ع
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -1516,7 +1509,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const isCheckedForPay = itemCheckbox.checked;
             const isPkgIncluded = pkgSwitch ? pkgSwitch.checked : false;
             const itemType = itemCheckbox.dataset.itemType; // 'lab', 'radiology', 'extra'
-            const basePrice = parseFloat(itemCheckbox.dataset.basePrice) || 0;
+            const priceInput = row.querySelector('.extra-service-price-input');
+            let basePrice = parseFloat(itemCheckbox.dataset.basePrice) || 0;
+            if (priceInput && !isNaN(parseFloat(priceInput.value))) {
+                basePrice = Math.max(0, parseFloat(priceInput.value));
+                itemCheckbox.dataset.basePrice = basePrice;
+                itemCheckbox.dataset.moiPrice = basePrice;
+                itemCheckbox.dataset.hiPrice = basePrice;
+            }
             const moiPrice = parseFloat(itemCheckbox.dataset.moiPrice) || basePrice;
             const hiPrice = parseFloat(itemCheckbox.dataset.hiPrice) || basePrice;
             const isMedical = itemCheckbox.dataset.isMedical === '1';
@@ -1546,7 +1546,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (priceCell) {
                     priceCell.innerHTML = '<span class="text-success fw-bold">0 د.ع</span> <small class="text-muted">(مشمول)</small>';
                 }
+                if (priceInput) {
+                    priceInput.classList.add('bg-light', 'text-muted');
+                }
             } else {
+                if (priceInput) {
+                    priceInput.classList.remove('bg-light', 'text-muted');
+                }
                 // Unbundled item:
                 if (itemType === 'lab') {
                     if (currentInsType === 'hi') {
@@ -1786,24 +1792,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    function toggleInclusive() {
-        const isIncl = inclusiveCheckbox && inclusiveCheckbox.checked;
-        document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
-            sw.checked = isIncl;
-        });
-        calculateSelectedAmount();
-    }
-
-    if (inclusiveCheckbox) {
-        inclusiveCheckbox.addEventListener('change', toggleInclusive);
-    }
-
     document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
-        sw.addEventListener('change', function() {
-            if (!this.checked && inclusiveCheckbox && inclusiveCheckbox.checked) {
-                inclusiveCheckbox.checked = false;
-            }
+        sw.addEventListener('change', calculateSelectedAmount);
+    });
+
+    document.querySelectorAll('.extra-service-price-input').forEach(function(input) {
+        input.addEventListener('input', calculateSelectedAmount);
+        input.addEventListener('change', function() {
             calculateSelectedAmount();
+            const url = this.getAttribute('data-url');
+            const val = parseFloat(this.value) || 0;
+            if (url) {
+                fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ price: val })
+                }).then(r => r.json()).catch(err => console.error(err));
+            }
         });
     });
 

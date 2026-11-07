@@ -424,4 +424,60 @@ class Surgery extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
+
+    /**
+     * إلحاق الخدمات الإضافية الافتراضية للعملية تلقائياً (تخطيط قلب، فتح طبلة، خدمات فندقية)
+     */
+    public function attachDefaultExtraServices(): void
+    {
+        $servicesConfig = [
+            [
+                'match' => fn ($q) => $q->where('category', 'medical')->where(fn ($sub) => $sub->where('name', 'like', '%تخطيط%')->orWhere('name', 'like', '%ECG%')),
+                'fallback_id' => 1,
+                'name' => 'تخطيط قلب',
+                'default_price' => 15000,
+            ],
+            [
+                'match' => fn ($q) => $q->where(fn ($sub) => $sub->where('name', 'like', '%طبلة%')->orWhere('name', 'like', '%طبله%')),
+                'fallback_id' => 7,
+                'name' => 'اجور فتح طبلة',
+                'default_price' => 10000,
+            ],
+            [
+                'match' => fn ($q) => $q->where(fn ($sub) => $sub->where('name', 'like', '%فندق%')->orWhere('name', 'like', '%إقامة%')),
+                'fallback_id' => 5,
+                'name' => 'خدمات فندقية',
+                'default_price' => 30000,
+            ],
+        ];
+
+        foreach ($servicesConfig as $cfg) {
+            $matchedService = HospitalExtraService::where($cfg['match'])->first();
+            $serviceId = $matchedService?->id ?? $cfg['fallback_id'];
+            $serviceName = $matchedService ? ($matchedService->id == 5 ? 'خدمات فندقية' : $matchedService->name) : $cfg['name'];
+            $servicePrice = $matchedService ? (float) $matchedService->default_price : $cfg['default_price'];
+
+            $alreadyExists = $this->extraServices()
+                ->where(function ($q) use ($serviceId, $serviceName) {
+                    if ($serviceId) {
+                        $q->where('service_id', $serviceId);
+                    }
+                    $q->orWhere('name', 'like', '%'.$serviceName.'%');
+                })
+                ->exists();
+
+            if (! $alreadyExists) {
+                $this->extraServices()->create([
+                    'service_id' => $serviceId,
+                    'name' => $serviceName,
+                    'price' => $servicePrice,
+                    'quantity' => 1,
+                    'total_amount' => $servicePrice,
+                    'notes' => 'خدمة تلقائية مرافقة لحجز العملية',
+                    'payment_status' => 'pending',
+                    'created_by' => auth()->id() ?? 1,
+                ]);
+            }
+        }
+    }
 }

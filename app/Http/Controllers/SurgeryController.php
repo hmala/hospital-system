@@ -384,6 +384,9 @@ class SurgeryController extends Controller
         // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
         // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
 
+        // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
+        $surgery->attachDefaultExtraServices();
+
         broadcast(new SurgeryUpdated($surgery));
 
         return redirect()->route('surgeries.index')->with('success', 'تم حجز العملية بنجاح');
@@ -660,6 +663,9 @@ class SurgeryController extends Controller
         }
         // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
         // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
+
+        // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
+        $surgery->attachDefaultExtraServices();
 
         broadcast(new SurgeryUpdated($surgery));
 

@@ -3012,6 +3012,49 @@ class CashierController extends Controller
     }
 
     /**
+     * تعديل سعر خدمة إضافية معلقة بالعملية الجراحية
+     */
+    public function updateSurgeryExtraService(Request $request, Surgery $surgery, SurgeryExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بتعديل خدمات العمليات');
+        }
+
+        if ($extraService->surgery_id !== $surgery->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه العملية');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return response()->json(['error' => 'لا يمكن تعديل خدمة مدفوعة'], 422);
+        }
+
+        $request->validate([
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        $price = (float) $request->input('price');
+        $qty = max(1, (int) $extraService->quantity);
+        $extraService->update([
+            'price' => $price,
+            'total_amount' => $price * $qty,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'price' => $price,
+                'total_amount' => $price * $qty,
+                'formatted_price' => number_format($price * $qty, 0).' د.ع',
+            ]);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم تعديل سعر خدمة "'.$extraService->name.'" إلى '.number_format($price * $qty, 0).' د.ع');
+    }
+
+    /**
      * معالجة دفع العملية الجراحية
      */
     public function processSurgeryPayment(Request $request, Surgery $surgery)
@@ -3270,11 +3313,21 @@ class CashierController extends Controller
             $extraApproved = 0.0;
             $extraPatientShare = 0.0;
             $extraInsuranceShare = 0.0;
+            $extraPrices = (array) $request->input('extra_service_prices', []);
 
             if (! empty($payExtraServices)) {
                 $surgery->load('extraServices.service');
                 foreach ($surgery->extraServices as $extraService) {
                     if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        // تحديث السعر إذا تم إدخال سعر مخصص من الكاشير
+                        if (isset($extraPrices[$extraService->id])) {
+                            $customPrice = max(0.0, (float) $extraPrices[$extraService->id]);
+                            $qty = max(1, (int) $extraService->quantity);
+                            $extraService->update([
+                                'price' => $customPrice,
+                                'total_amount' => $customPrice * $qty,
+                            ]);
+                        }
                         $isIncluded = ! empty($pkgIncludedExtra[$extraService->id]) || $isInclusive;
                         $eTotal = (float) $extraService->total_amount;
 
