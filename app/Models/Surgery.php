@@ -355,13 +355,64 @@ class Surgery extends Model
             }
         }
 
-        $initialFee = self::getInitialRoomFeeForType($room->room_type);
+        $isInsurance = in_array($this->insurance_type, ['hi', 'moi'])
+            || in_array($this->patient?->insurance_type, ['hi', 'moi']);
+
+        $standardRoomPrice = HealthInsuranceStayTier::getStandardRoomPrice();
         $dailyFee = (float) $room->daily_fee;
-        $extraNightsFee = $extraNights * $dailyFee;
-        $totalFee = $initialFee + $extraNightsFee;
+        $upgradeDiffDaily = max(0.0, round($dailyFee - $standardRoomPrice, 2));
+
+        $totalNights = 1 + $extraNights;
+        $nightsBreakdown = [];
+        $patientStayShare = 0.0;
+        $insuranceStayShare = 0.0;
+
+        if ($isInsurance) {
+            for ($night = 1; $night <= $totalNights; $night++) {
+                $nightFig = HealthInsuranceStayTier::calculateNightFigures($night, $room);
+                $tier = HealthInsuranceStayTier::getTierForDay($night);
+
+                // الليلة الأولى مشمولة بالعملية للغرفة العادية، وفرق الترقية يُدفع عن كل الليالي
+                $isFirstNight = ($night === 1);
+                $nightCopayPct = $isFirstNight ? 0.0 : (float) $nightFig['copay_percentage'];
+                $regPat = $isFirstNight ? 0.0 : (float) $nightFig['regular_patient_share'];
+                $regIns = $isFirstNight ? 0.0 : (float) $nightFig['regular_insurance_share'];
+                $upDiff = (float) $nightFig['upgrade_diff'];
+
+                $pShare = $regPat + $upDiff;
+                $iShare = $regIns;
+
+                $patientStayShare += $pShare;
+                $insuranceStayShare += $iShare;
+
+                $nightsBreakdown[] = [
+                    'night_number' => $night,
+                    'tier_name' => $isFirstNight ? 'الليلة الأولى (مشمولة بالعملية)' : ($tier?->name ?? 'إقامة'),
+                    'copay_percentage' => $nightCopayPct,
+                    'standard_price' => $standardRoomPrice,
+                    'regular_patient_share' => $regPat,
+                    'regular_insurance_share' => $regIns,
+                    'upgrade_diff' => $upDiff,
+                    'patient_share' => $pShare,
+                    'insurance_share' => $iShare,
+                    'total_night_fee' => $pShare + $iShare,
+                ];
+            }
+
+            $initialFee = $nightsBreakdown[0]['patient_share'] ?? 0;
+            $extraNightsFee = max(0.0, ($patientStayShare + $insuranceStayShare) - ($nightsBreakdown[0]['total_night_fee'] ?? 0));
+            $totalFee = $patientStayShare + $insuranceStayShare;
+        } else {
+            $initialFee = self::getInitialRoomFeeForType($room->room_type);
+            $extraNightsFee = $extraNights * $dailyFee;
+            $totalFee = $initialFee + $extraNightsFee;
+            $patientStayShare = $totalFee;
+            $insuranceStayShare = 0.0;
+        }
+
         $paidAmount = (float) ($this->room_fee_paid_amount ?? 0);
-        $remainingAmount = max(0, $totalFee - $paidAmount);
-        $excessAmount = max(0, $paidAmount - $totalFee);
+        $remainingAmount = max(0, $patientStayShare - $paidAmount);
+        $excessAmount = max(0, $paidAmount - $patientStayShare);
 
         return [
             'has_room' => true,
@@ -371,8 +422,15 @@ class Surgery extends Model
             'daily_fee' => $dailyFee,
             'initial_fee' => $initialFee,
             'extra_nights' => $extraNights,
+            'total_nights' => $totalNights,
             'extra_nights_fee' => $extraNightsFee,
             'total_fee' => $totalFee,
+            'patient_stay_share' => $patientStayShare,
+            'insurance_stay_share' => $insuranceStayShare,
+            'standard_room_price' => $standardRoomPrice,
+            'upgrade_diff_daily' => $upgradeDiffDaily,
+            'nights_breakdown' => $nightsBreakdown,
+            'is_insurance_calculated' => $isInsurance,
             'paid_amount' => $paidAmount,
             'remaining_amount' => $remainingAmount,
             'excess_amount' => $excessAmount,

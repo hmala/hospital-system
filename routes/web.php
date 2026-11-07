@@ -345,6 +345,8 @@ Route::middleware(['auth'])->group(function () {
     // مسارات فئات ونسب الضمان الصحي الوطني
     Route::prefix('health-insurance-categories')->name('health-insurance-categories.')->group(function () {
         Route::get('/', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'index'])->name('index');
+        Route::put('/stay-tiers/{tier}', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'updateStayTier'])->name('stay-tiers.update');
+        Route::post('/stay-tiers/standard-price', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'updateStandardPrice'])->name('stay-tiers.standard-price');
         Route::put('/{category}', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'update'])->name('update');
         Route::get('/api/all', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'getCategoriesJson'])->name('api.all');
     });

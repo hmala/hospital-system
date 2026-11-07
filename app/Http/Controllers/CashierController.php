@@ -2893,8 +2893,13 @@ class CashierController extends Controller
         }
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية/تخفيض الغرفة ويوجد فرق مالي معلق أو مستحق استرجاع)
-        $hasRemainingRoomFee = ! $isCancelled && ((($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0);
-        $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : ($surgery->room_fee ?? 0))) > 0;
+        $stayDetails = $surgery->calculateStayDetails();
+        $isInsuranceSurgery = in_array($surgery->insurance_type, ['hi', 'moi']) || in_array($surgery->patient?->insurance_type, ['hi', 'moi']);
+        $isStayInsForm = $isInsuranceSurgery && ($stayDetails['is_insurance_calculated'] ?? false);
+        $targetRoomFee = $isStayInsForm ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+
+        $hasRemainingRoomFee = ! $isCancelled && (($targetRoomFee - ($surgery->room_fee_paid_amount ?? 0)) > 0);
+        $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : $targetRoomFee)) > 0;
         $totalSurgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price'));
         $hasExcessSurgeryFee = (($surgery->surgery_fee_paid_amount ?? 0) - $totalSurgeryFee) > 0;
         $hasRemainingSurgeryFee = ! $isCancelled && (($totalSurgeryFee - ($surgery->surgery_fee_paid_amount ?? 0)) > 0);
@@ -3102,8 +3107,16 @@ class CashierController extends Controller
         ]);
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
-        $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
-        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee) {
+        $stayDetails = $surgery->calculateStayDetails();
+        $isInsuranceSurgery = in_array($surgery->insurance_type, ['hi', 'moi']) || in_array($surgery->patient?->insurance_type, ['hi', 'moi']);
+        $isStayInsForm = $isInsuranceSurgery && ($stayDetails['is_insurance_calculated'] ?? false);
+        $targetRoomFee = $isStayInsForm ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+        $hasRemainingRoomFee = (($targetRoomFee) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
+        $hasPendingExtraServices = $surgery->extraServices()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingLab = $surgery->labTests()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingRad = $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->exists();
+
+        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
@@ -3158,10 +3171,20 @@ class CashierController extends Controller
                 }
             }
 
+            $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
+            $patient = $surgery->patient;
+            $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
+
             // 2. Room Fee Payment
             $roomFeePaidThisTime = 0;
+            $stayDetails = $surgery->calculateStayDetails();
+            $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+
             if ($payRoom) {
-                $remainingRoomFee = max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
+                $remainingRoomFee = $isStayIns
+                    ? max(0, ($stayDetails['patient_stay_share'] ?? 0) - ($surgery->room_fee_paid_amount ?? 0))
+                    : max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
+
                 if ($remainingRoomFee > 0) {
                     if ($isInclusive) {
                         // inclusive covers room fee
@@ -3178,14 +3201,10 @@ class CashierController extends Controller
                             $roomFeePaidThisTime = $remainingRoomFee;
                         }
                         $actualAmount += $roomFeePaidThisTime;
-                        $paidItems[] = 'أجور الغرفة - مدفوع: '.number_format($roomFeePaidThisTime, 0).' د.ع';
+                        $paidItems[] = 'أجور الغرفة والإقامة - مدفوع: '.number_format($roomFeePaidThisTime, 0).' د.ع';
                     }
                 }
             }
-
-            $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
-            $patient = $surgery->patient;
-            $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
             $surgeryCopay = ($insuranceType === 'hi' && $patient)
                 ? (float) $patient->getCopayPercentageFor('surgery')
@@ -3218,11 +3237,18 @@ class CashierController extends Controller
             $roomPatientShare = 0.0;
             $roomInsuranceShare = 0.0;
             if ($payRoom && $roomFeePaidThisTime > 0) {
-                $roomApproved = (float) $roomFeePaidThisTime;
                 if ($isInsurance) {
-                    $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
-                    $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                    if ($isStayIns) {
+                        $roomPatientShare = (float) $roomFeePaidThisTime;
+                        $roomInsuranceShare = (float) $stayDetails['insurance_stay_share'];
+                        $roomApproved = $roomPatientShare + $roomInsuranceShare;
+                    } else {
+                        $roomApproved = (float) $roomFeePaidThisTime;
+                        $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
+                        $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                    }
                 } else {
+                    $roomApproved = (float) $roomFeePaidThisTime;
                     $roomPatientShare = $roomApproved;
                     $roomInsuranceShare = 0.0;
                 }
@@ -3511,7 +3537,8 @@ class CashierController extends Controller
             $surgery->refresh();
             $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
             $allSurgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $totalSurgeryFee <= ($surgery->surgery_fee_paid_amount ?? 0);
-            $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
+            $targetRoomFeeToPay = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+            $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= $targetRoomFeeToPay;
             $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allExtraServicesPaid = $surgery->extraServices()->where('payment_status', '!=', 'paid')->count() === 0;
@@ -3653,7 +3680,10 @@ class CashierController extends Controller
                 ]);
 
                 // التحقق من الدفع الكامل لكامل البنود (الغرفة، التحاليل، الأشعة)
-                $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
+                $stayDetails = $surgery->calculateStayDetails();
+                $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+                $targetRoomFeeToPay = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= $targetRoomFeeToPay;
                 $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
                 $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
                 $allPaid = $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;

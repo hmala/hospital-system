@@ -74,12 +74,28 @@
     $excessSurgeryFee = $isCancelled ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : $surgeryFeePaidAmount) : ($surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0);
     $surgeryFeePaid = $isCancelled ? ($surgeryFeePaidAmount <= 0) : ($surgery->surgery_fee_paid === 'paid' || ($remainingSurgeryFee <= 0 && $excessSurgeryFee <= 0));
     
-    // رسوم الغرفة الفندقية (الليلة الأولى + الليالي الإضافية بعد 12 ظهراً)
+    // بيانات التأمين والضمان الصحي
+    $patient = $surgery->patient;
+    $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
+    $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
+    $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
+    if ($defaultInsurance === 'hi' && $patient) {
+        $defaultCopay = $patient->getCopayPercentageFor('surgery');
+    } else {
+        $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
+    }
+
+    // رسوم الغرفة الفندقية (الليلة الأولى + الليالي الإضافية بعد 12 ظهراً مع استقطاع الضمان المتدرج)
     $stayDetails = $surgery->calculateStayDetails();
+    $isStayIns = in_array($defaultInsurance, ['hi', 'moi']) && ($stayDetails['is_insurance_calculated'] ?? false);
+    $stayPatientShare = (float)($stayDetails['patient_stay_share'] ?? ($stayDetails['total_fee'] ?? 0));
+    $stayInsuranceShare = (float)($stayDetails['insurance_stay_share'] ?? 0);
+
     $roomFee = $isCancelled ? 0 : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
     $roomFeePaidAmount = (float)($surgery->room_fee_paid_amount ?? 0);
-    $remainingRoomFee = $isCancelled ? 0 : max(0, $roomFee - $roomFeePaidAmount);
-    $excessRoomFee = $isCancelled ? 0 : max(0, $roomFeePaidAmount - $roomFee);
+    $targetPatientRoomFee = $isStayIns ? $stayPatientShare : $roomFee;
+    $remainingRoomFee = $isCancelled ? 0 : max(0, $targetPatientRoomFee - $roomFeePaidAmount);
+    $excessRoomFee = $isCancelled ? 0 : max(0, $roomFeePaidAmount - $targetPatientRoomFee);
     $roomFeePaid = $isCancelled ? ($roomFeePaidAmount <= 0) : ($remainingRoomFee <= 0 && $excessRoomFee <= 0);
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
@@ -113,16 +129,6 @@
     $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
     $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee);
-
-    $patient = $surgery->patient;
-    $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
-    $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
-    $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
-    if ($defaultInsurance === 'hi' && $patient) {
-        $defaultCopay = $patient->getCopayPercentageFor('surgery');
-    } else {
-        $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
-    }
 @endphp
 
 <div class="container-fluid">
@@ -847,24 +853,81 @@
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
                                                     <i class="fas fa-door-open text-primary fs-5"></i>
-                                                    <div>
-                                                        <strong class="text-dark">أجور إقامة الغرفة ({{ $surgery->room->room_number ?? 'غير محدد' }})</strong>
-                                                        @if($surgery->room && $surgery->room->room_type === 'vvip')
-                                                            <span class="badge bg-dark text-white ms-1"><i class="fas fa-gem text-warning me-1"></i>VVIP</span>
-                                                        @elseif($surgery->room && $surgery->room->room_type === 'vip')
-                                                            <span class="badge bg-warning text-dark ms-1"><i class="fas fa-crown me-1"></i>VIP</span>
-                                                        @else
-                                                            <span class="badge bg-light text-secondary border ms-1">عادية</span>
-                                                        @endif
+                                                    <div class="w-100">
+                                                        <div class="d-flex align-items-center flex-wrap gap-1">
+                                                            <strong class="text-dark">أجور إقامة الغرفة ({{ $surgery->room->room_number ?? 'غير محدد' }})</strong>
+                                                            @if($surgery->room && $surgery->room->room_type === 'vvip')
+                                                                <span class="badge bg-dark text-white"><i class="fas fa-gem text-warning me-1"></i>VVIP</span>
+                                                            @elseif($surgery->room && $surgery->room->room_type === 'vip')
+                                                                <span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>VIP</span>
+                                                            @else
+                                                                <span class="badge bg-light text-secondary border">عادية</span>
+                                                            @endif
+
+                                                            @if($isStayIns)
+                                                                <span class="badge bg-primary text-white"><i class="fas fa-shield-alt me-1"></i>استقطاع متدرج (ضمان)</span>
+                                                            @endif
+                                                        </div>
+
                                                         <small class="text-muted d-block mt-1">
                                                             أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
                                                             @if($stayDetails['extra_nights'] > 0)
                                                                 + {{ $stayDetails['extra_nights'] }} ليال إضافية ({{ number_format($stayDetails['extra_nights_fee'], 0) }} د.ع)
                                                             @endif
-                                                            (نظام فندقي 12:00 ظهراً)
+                                                            (نظام فندقي 12:00 ظهراً - إجمالي {{ $stayDetails['total_nights'] }} ليال)
                                                         </small>
+
                                                         @if($roomFeePaidAmount > 0)
                                                             <span class="badge bg-warning text-dark mt-1">تم دفع {{ number_format($roomFeePaidAmount, 0) }} سابقاً</span>
+                                                        @endif
+
+                                                        @if(!empty($stayDetails['nights_breakdown']))
+                                                            <div class="mt-2">
+                                                                <a class="btn btn-xs btn-outline-info py-0 px-2 rounded-pill small" data-bs-toggle="collapse" href="#stayNightsCollapse" role="button" aria-expanded="false" style="font-size: 0.75rem;">
+                                                                    <i class="fas fa-table-list me-1"></i>عرض تفكيك استقطاع الليالي ({{ count($stayDetails['nights_breakdown']) }})
+                                                                </a>
+                                                                <div class="collapse mt-2" id="stayNightsCollapse">
+                                                                    <div class="card card-body p-2 bg-light border-0 small">
+                                                                        <div class="table-responsive">
+                                                                            <table class="table table-sm table-bordered bg-white mb-0 text-center align-middle" style="font-size: 0.72rem;">
+                                                                                <thead class="table-light">
+                                                                                    <tr>
+                                                                                        <th>الليلة</th>
+                                                                                        <th>الشريحة</th>
+                                                                                        <th>نسبة التحمل</th>
+                                                                                        <th>سعر العادية</th>
+                                                                                        <th>فرق الترقية</th>
+                                                                                        <th>تحمل المريض</th>
+                                                                                        <th>مطالبة الضمان</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    @foreach($stayDetails['nights_breakdown'] as $nb)
+                                                                                        <tr>
+                                                                                            <td class="fw-bold">{{ $nb['night_number'] }}</td>
+                                                                                            <td>{{ $nb['tier_name'] }}</td>
+                                                                                            <td><span class="badge bg-secondary">{{ $nb['copay_percentage'] }}%</span></td>
+                                                                                            <td>{{ number_format($nb['standard_price'], 0) }}</td>
+                                                                                            <td class="{{ $nb['upgrade_diff'] > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                                                                                                {{ $nb['upgrade_diff'] > 0 ? '+'.number_format($nb['upgrade_diff'], 0) : '0' }}
+                                                                                            </td>
+                                                                                            <td class="text-success fw-bold">{{ number_format($nb['patient_share'], 0) }}</td>
+                                                                                            <td class="text-primary fw-bold">{{ number_format($nb['insurance_share'], 0) }}</td>
+                                                                                        </tr>
+                                                                                    @endforeach
+                                                                                </tbody>
+                                                                                <tfoot class="table-secondary fw-bold">
+                                                                                    <tr>
+                                                                                        <td colspan="5" class="text-end">المجموع الكلي للإقامة:</td>
+                                                                                        <td class="text-success">{{ number_format($stayDetails['patient_stay_share'], 0) }} د.ع</td>
+                                                                                        <td class="text-primary">{{ number_format($stayDetails['insurance_stay_share'], 0) }} د.ع</td>
+                                                                                    </tr>
+                                                                                </tfoot>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -877,7 +940,7 @@
                                                 <input type="hidden" id="room_fee_value" value="{{ $remainingRoomFee }}">
                                             </td>
                                             <td class="text-end text-muted fw-bold" id="room_insurance_display">
-                                                0 د.ع
+                                                {{ number_format($isStayIns ? $stayInsuranceShare : 0, 0) }} د.ع
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex flex-column align-items-center gap-1">
@@ -1391,6 +1454,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const pendingAmount = {{ $pendingAmount }};
     const remainingSurgeryFee = {{ $remainingSurgeryFee }};
     const remainingRoomFee = {{ $remainingRoomFee }};
+    const remainingRoomFeeSelfPay = {{ max(0, $roomFee - $roomFeePaidAmount) }};
+    const remainingRoomFeeInsurance = {{ max(0, $stayPatientShare - $roomFeePaidAmount) }};
+    const roomInsuranceShareVal = {{ $stayInsuranceShare }};
+    const isInsuranceStayCalculated = {{ $isStayIns ? 'true' : 'false' }};
     const inclusiveCheckbox = document.getElementById('inclusive');
 
     // عناصر الضمان
@@ -1579,40 +1646,50 @@ document.addEventListener('DOMContentLoaded', function() {
             const custWrapper = document.getElementById('room_custom_amount_wrapper');
             const custInput = document.getElementById('room_custom_amount');
             const feeDisp = document.getElementById('room_fee_display');
+            const insDisp = document.getElementById('room_insurance_display');
+
+            const effectiveRemainingRoom = (isIns && isInsuranceStayCalculated)
+                ? remainingRoomFeeInsurance
+                : remainingRoomFeeSelfPay;
 
             if (payFull) {
-                roomPaidThisTime = remainingRoomFee;
-                if (custInput) custInput.value = Math.round(remainingRoomFee);
+                roomPaidThisTime = effectiveRemainingRoom;
+                if (custInput) custInput.value = Math.round(effectiveRemainingRoom);
                 if (custWrapper) custWrapper.style.display = 'none';
-                if (feeDisp) feeDisp.textContent = numberFormat(remainingRoomFee);
             } else {
                 if (custWrapper) custWrapper.style.display = 'block';
                 let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                if (customVal > remainingRoomFee) {
-                    customVal = remainingRoomFee;
-                    if (custInput) custInput.value = Math.round(remainingRoomFee);
+                if (customVal > effectiveRemainingRoom) {
+                    customVal = effectiveRemainingRoom;
+                    if (custInput) custInput.value = Math.round(effectiveRemainingRoom);
                 }
                 roomPaidThisTime = customVal;
-                if (feeDisp) feeDisp.textContent = numberFormat(customVal);
             }
 
             if (roomPaidThisTime > 0) {
-                totalApprovedPayable += roomPaidThisTime;
                 let rPatShare = roomPaidThisTime;
                 let rInsShare = 0;
                 if (isIns) {
-                    rPatShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
-                    rInsShare = Math.max(0, roomPaidThisTime - rPatShare);
+                    if (isInsuranceStayCalculated) {
+                        rPatShare = roomPaidThisTime;
+                        rInsShare = roomInsuranceShareVal;
+                    } else {
+                        rPatShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
+                        rInsShare = Math.max(0, roomPaidThisTime - rPatShare);
+                    }
+                    totalApprovedPayable += (rPatShare + rInsShare);
                     totalPatientShare += rPatShare;
                     totalInsuranceShare += rInsShare;
                 } else {
+                    totalApprovedPayable += roomPaidThisTime;
                     totalPatientShare += roomPaidThisTime;
                 }
-                const feeDisp = document.getElementById('room_fee_display');
                 if (feeDisp) feeDisp.textContent = numberFormat(rPatShare);
-                const insDisp = document.getElementById('room_insurance_display');
                 if (insDisp) insDisp.textContent = numberFormat(rInsShare) + ' د.ع';
                 selectedCount++;
+            } else {
+                if (feeDisp) feeDisp.textContent = '0';
+                if (insDisp) insDisp.textContent = '0 د.ع';
             }
         } else if (payRoomCheckbox) {
             const custWrapper = document.getElementById('room_custom_amount_wrapper');
