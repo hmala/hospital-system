@@ -34,6 +34,8 @@ class Surgery extends Model
         'surgery_fee',
         'surgery_fee_paid_amount',
         'room_fee_paid_amount',
+        'is_room_package_included',
+        'room_deduction_bearer',
         'referring_doctor_type',
         'referring_doctor_name',
         'notes',
@@ -77,6 +79,7 @@ class Surgery extends Model
         'end_time' => 'datetime',
         'follow_up_date' => 'date',
         'discharged_at' => 'datetime',
+        'is_room_package_included' => 'boolean',
         'status' => 'string',
     ];
 

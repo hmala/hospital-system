@@ -19,10 +19,15 @@ class SurgeryLabTest extends Model
         'completed_at',
         'notes',
         'payment_id',
+        'is_package_included',
+        'included_deductible_price',
+        'deduction_bearer',
     ];
 
     protected $casts = [
         'completed_at' => 'datetime',
+        'is_package_included' => 'boolean',
+        'included_deductible_price' => 'decimal:2',
     ];
 
     public function surgery()

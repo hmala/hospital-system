@@ -374,6 +374,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency/payment-status', [\App\Http\Controllers\EmergencyController::class, 'paymentStatus'])->name('emergency.payment.status');
         Route::get('/surgeries', [\App\Http\Controllers\CashierController::class, 'surgeriesIndex'])->name('surgeries.index');
         Route::get('/surgeries/paid', [\App\Http\Controllers\CashierController::class, 'surgeriesPaid'])->name('surgeries.paid');
+        Route::get('/surgeries/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorAccounts'])->name('surgeries.doctor-accounts');
+        Route::get('/surgeries/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorAccount'])->name('surgeries.doctor-account');
+        Route::post('/surgeries/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorPayout'])->name('surgeries.doctor-payout');
+        Route::post('/surgeries/doctor-accounts/{doctor}/settle-surgery/{surgery}', [\App\Http\Controllers\CashierController::class, 'settleSingleSurgeryDoctorDue'])->name('surgeries.settle-single-surgery');
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');

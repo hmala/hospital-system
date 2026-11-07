@@ -544,4 +544,155 @@ class SurgeryExtraServicesTest extends TestCase
             'amount' => 800000,
         ]);
     }
+
+    public function test_cash_included_services_are_deducted_from_doctor_due_and_saved_in_payment(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية استئصال الزائدة بالمنظار',
+            'surgery_fee' => 1000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $extraService = SurgeryExtraService::create([
+            'surgery_id' => $surgery->id,
+            'name' => 'خدمات فندقية',
+            'price' => 50000.00,
+            'quantity' => 1,
+            'total_amount' => 50000.00,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        $labCatalog = LabTest::create([
+            'name' => 'تحليل سكر تراكمي HbA1c',
+            'code' => 'HBA1C-99',
+            'price' => 25000,
+            'is_active' => true,
+        ]);
+
+        $surgeryLab = SurgeryLabTest::create([
+            'surgery_id' => $surgery->id,
+            'lab_test_id' => $labCatalog->id,
+            'payment_status' => 'pending',
+            'created_by' => $this->cashier->id,
+        ]);
+
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery), [
+            'pay_surgery' => 1,
+            'surgery_payment_type' => 'full',
+            'amount' => 1000000,
+            'pay_extra_services' => [$extraService->id],
+            'pay_lab_tests' => [$surgeryLab->id],
+            'package_included' => [
+                'extra' => [
+                    $extraService->id => '1',
+                ],
+                'lab' => [
+                    $surgeryLab->id => '1',
+                ],
+            ],
+            'payment_method' => 'cash',
+        ]);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+
+        // 1. Check item records updated with deduction bearer doctor
+        $extraService->refresh();
+        $this->assertEquals(1, $extraService->is_package_included);
+        $this->assertEquals(50000.00, (float) $extraService->included_deductible_price);
+        $this->assertEquals('doctor', $extraService->deduction_bearer);
+
+        $surgeryLab->refresh();
+        $this->assertEquals(1, $surgeryLab->is_package_included);
+        $this->assertEquals(25000.00, (float) $surgeryLab->included_deductible_price);
+        $this->assertEquals('doctor', $surgeryLab->deduction_bearer);
+
+        // 2. Check payment recorded total deductions = 75,000 (50k extra + 25k lab)
+        $payment = \App\Models\Payment::where('surgery_id', $surgery->id)->first();
+        $this->assertNotNull($payment);
+        $this->assertEquals(75000.00, (float) $payment->doctor_deductions_amount);
+        $this->assertNotEmpty($payment->included_package_items);
+
+        // 3. Check doctor due created with net amount = 925,000 (1,000,000 - 75,000)
+        $doctorDue = \App\Models\DoctorDue::where('payment_id', $payment->id)->first();
+        $this->assertNotNull($doctorDue);
+        $this->assertEquals($this->doctor->id, $doctorDue->doctor_id);
+        $this->assertEquals(925000.00, (float) $doctorDue->amount);
+        $this->assertEquals('pending', $doctorDue->status);
+    }
+
+    public function test_accountant_can_view_surgery_doctor_accounts_and_details_page(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية تكميم المعدة',
+            'surgery_fee' => 1500000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '09:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+            'insurance_type' => 'none',
+        ]);
+
+        $payment = \App\Models\Payment::create([
+            'patient_id' => $this->patient->id,
+            'cashier_id' => $this->cashier->id,
+            'surgery_id' => $surgery->id,
+            'receipt_number' => \App\Models\Payment::generateReceiptNumber(),
+            'amount' => 1500000,
+            'payment_method' => 'cash',
+            'payment_type' => 'surgery',
+            'doctor_deductions_amount' => 100000,
+            'included_package_items' => [
+                ['type' => 'extra', 'name' => 'خدمات فندقية', 'price' => 100000, 'bearer' => 'doctor'],
+            ],
+            'paid_at' => now(),
+        ]);
+
+        $doctorDue = \App\Models\DoctorDue::create([
+            'doctor_id' => $this->doctor->id,
+            'payment_id' => $payment->id,
+            'amount' => 1400000,
+            'status' => 'pending',
+            'notes' => 'أتعاب جراحة مستحقة',
+        ]);
+
+        // 1. View doctor accounts index
+        $indexResponse = $this->actingAs($this->cashier)->get(route('cashier.surgeries.doctor-accounts'));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee($this->doctor->user->name);
+
+        // 2. View doctor account details page
+        $detailsResponse = $this->actingAs($this->cashier)->get(route('cashier.surgeries.doctor-account', $this->doctor));
+        $detailsResponse->assertOk();
+        $detailsResponse->assertSee('عملية تكميم المعدة');
+        $detailsResponse->assertSee('1,400,000');
+
+        // 3. Settle single surgery
+        $settleResponse = $this->actingAs($this->cashier)->postJson(route('cashier.surgeries.settle-single-surgery', [$this->doctor, $surgery]));
+        $settleResponse->assertOk();
+        $settleResponse->assertJson(['success' => true]);
+
+        $doctorDue->refresh();
+        $this->assertEquals('paid', $doctorDue->status);
+
+        // 4. Test doctor payout
+        $payoutResponse = $this->actingAs($this->cashier)->post(route('cashier.surgeries.doctor-payout', $this->doctor), [
+            'amount' => 100000,
+            'notes' => 'سند صرف إضافي',
+        ]);
+        // Since balance was settled (1,400,000 paid out of 1,400,000 earned, balance is 0), payout of 100k should return with error
+        $payoutResponse->assertSessionHas('error');
+    }
 }

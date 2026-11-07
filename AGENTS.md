@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-07 — المرحلة 176: قسم حسابات وتصفية جراحي العمليات — استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)
+
+### Done
+- **بنية البيانات وحفظ استقطاعات الباقة المشمولة بالعملية ([database/migrations/2026_11_07_202000_add_package_deduction_fields_to_surgery_tables.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_07_202000_add_package_deduction_fields_to_surgery_tables.php))**:
+  * إضافة أعمدة `is_package_included`, `included_deductible_price`, `deduction_bearer` في جداول `surgery_lab_tests`, `surgery_radiology_tests`, `surgery_extra_services`.
+  * إضافة `is_room_package_included`, `room_deduction_bearer` في جدول `surgeries`.
+  * إضافة `doctor_deductions_amount`, `included_package_items` (JSON Snapshot) في جدول `payments`.
+  * تحديث موديلات `SurgeryLabTest`, `SurgeryRadiologyTest`, `SurgeryExtraService`, `Surgery`, `Payment`, و `Doctor` (إضافة علاقة `surgeries()`).
+- **معالجة الدفع وحساب الاستقطاعات في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * للمرضى النقديين: احتساب قيمة الخدمات المشمولة بالباقة وتحميلها كاستقطاع على حصة الطبيب الجراح (`deduction_bearer = 'doctor'`) لصالح إيراد المستشفى.
+  * لمرضى الضمان الصحي: إدراجها ضمن التغطية العقدية (`deduction_bearer = 'insurance'`).
+  * تسجيل صافي الاستحقاق للجراح تلقائياً في `DoctorDue` بالمعادلة: صافي المستحق = أتعاب الجراحة - استقطاعات الباقة.
+- **القائمة الجانبية والشاشات الجديدة للحسابات المالية**:
+  * إضافة قسم فرعي: `حسابات جراحي العمليات` ضمن قسم "الحسابات العامة والمالية" في [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php).
+  * **شاشة ملخص حسابات الجراحين ([resources/views/cashier/surgeries/doctor-accounts.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/doctor-accounts.blade.php))**: جدول بكافة الجراحين، عدد العمليات، الأتعاب الاسمية، استقطاعات الباقة، صافي المستحق، إجمالي المصروف، والرصيد المتبقي بذمة المستشفى، مع زر [ 👁️ كشف الحساب والتفاصيل ].
+  * **شاشة كشف حساب الجراح وعملياته التفصيلية ([resources/views/cashier/surgeries/doctor-account-details.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/doctor-account-details.blade.php))**: بطاقات مؤشرات علوية، نموذج صرف دفعة / تصفية رصيد للجراح، جدول مفصل بجميع عمليات الجراح مع تفكيك دقيق للخدمات المشمولة بالباقة، وزر صرف وتصفية العملية بشكل فوري.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * اجتياز كامل اختبارات التحقق من استقطاع الباقة من حصة الجراح نقداً، عرض حسابات الجراحين، كشف الحساب المفصل، والصرف الفعلي بنسبة 100% (`13 passed, 85 assertions`)، واستمرار اجتياز كافة اختبارات الضمان والتمريض (`13 passed, 97 assertions`).
+
 ## Session log (2026-11-07 — المرحلة 175: نظام الكاشير الموحد للعمليات الجراحية — الشمول التام للغرفة بالباقة، الحذف الفوري لتحاليل وأشعة العمليات، والدفع الجزئي العام الإجمالي للمبلغ الكلي Surgery Cashier Unified Suite: Granular Lab/Radiology Deletion, Room Package Inclusion Toggle & Global Bottom Invoice Split/Partial Payment)
 
 ### Done

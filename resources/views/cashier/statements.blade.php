@@ -71,11 +71,11 @@
                                 @forelse($revenues as $revenue)
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ optional($revenue->appointment)->appointment_date ? \Carbon\Carbon::parse($revenue->appointment->appointment_date)->format('Y-m-d') : '-' }}</td>
+                                        <td>{{ $revenue->appointment?->appointment_date ? \Carbon\Carbon::parse($revenue->appointment->appointment_date)->format('Y-m-d') : '-' }}</td>
                                         <td>{{ $revenue->examination_count ?? 1 }}</td>
-                                        <td>{{ optional($revenue->serviceType)->name ?? '-' }}</td>
-                                        <td>{{ optional($revenue->doctor->user)->name ?? '-' }}</td>
-                                        <td>{{ optional($revenue->appointment->patient->user)->name ?? optional($revenue->patient->user)->name ?? '-' }}</td>
+                                        <td>{{ $revenue->serviceType?->name ?? '-' }}</td>
+                                        <td>{{ $revenue->doctor?->user?->name ?? '-' }}</td>
+                                        <td>{{ $revenue->appointment?->patient?->user?->name ?? $revenue->patient?->user?->name ?? '-' }}</td>
                                         <td>{{ number_format($revenue->total_amount, 0) }}</td>
                                         <td>{{ number_format($revenue->doctor_share, 0) }}</td>
                                         <td>{{ number_format($revenue->hospital_share, 0) }}</td>
@@ -135,7 +135,7 @@
                                         <td>{{ $group->first_appointment_date ? \Carbon\Carbon::parse($group->first_appointment_date)->format('Y-m-d') : '-' }}</td>
                                         <td>{{ $group->examination_count }}</td>
                                         <td>جميع الخدمات</td>
-                                        <td>{{ optional($group->doctor->user)->name ?? '-' }}</td>
+                                        <td>{{ $group->doctor?->user?->name ?? '-' }}</td>
                                         <td>{{ number_format($group->total_amount, 0) }}</td>
                                         <td>{{ number_format($group->doctor_share, 0) }}</td>
                                         <td>{{ number_format($group->hospital_share, 0) }}</td>
@@ -192,7 +192,7 @@
                                     @php $maxMonthValue = max($item->months) ?: 0; @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ optional($item->doctor->user)->name ?? '-' }}</td>
+                                        <td>{{ $item->doctor?->user?->name ?? '-' }}</td>
                                         @foreach($item->months as $month => $count)
                                             @php $trendClass = $item->month_trends[$month] ?? 'flat'; @endphp
                                             <td>

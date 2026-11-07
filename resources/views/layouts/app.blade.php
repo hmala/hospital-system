@@ -1154,8 +1154,9 @@
                                                  request()->routeIs('cashier.nicu.statements') ||
                                                  request()->routeIs('cashier.nicu.doctor-accounts') ||
                                                  request()->routeIs('cashier.nicu.doctor-account');
+                            $isSurgeryAccountsActive = request()->routeIs('cashier.surgeries.doctor-accounts*');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1327,6 +1328,21 @@
                                 </a>
                             </li>
                             @endcan
+                        </div>
+                        @endcanany
+
+                        <!-- القسم الفرعي: العمليات الجراحية -->
+                        @canany(['view account statements', 'view doctor accounts', 'process surgery payments'])
+                        <div class="sidebar-section-title {{ $isSurgeryAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#surgeryAccountingSubSection" aria-expanded="{{ $isSurgeryAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
+                            <span><i class="fas fa-procedures text-danger me-1"></i> حسابات جراحي العمليات</span>
+                            <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="collapse {{ $isSurgeryAccountsActive ? 'show' : '' }} ms-2" id="surgeryAccountingSubSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.surgeries.doctor-accounts*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.doctor-accounts') }}">
+                                    <i class="fas fa-wallet text-danger"></i><span> حسابات الأطباء الجراحين</span>
+                                </a>
+                            </li>
                         </div>
                         @endcanany
                         </div> <!-- end unifiedAccountingSection -->

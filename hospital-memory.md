@@ -1943,6 +1943,23 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
     - اجتياز كامل اختبارات التحقق من بنية الجدول الموحد وكبسولات الشمول والإلحاق الرجعي بنسبة 100% (`8 passed, 47 assertions`)، واستمرار اجتياز كافة اختبارات دفع وتجزئة العمليات والضمان (`15 passed, 98 assertions`).
 
+- **المرحلة 176 (2026-11-07) — قسم حسابات وتصفية جراحي العمليات: استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات (Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)**:
+  * **بنية البيانات وحفظ استقطاعات الباقة المشمولة بالعملية**:
+    - إضافة أعمدة `is_package_included`, `included_deductible_price`, `deduction_bearer` في جداول `surgery_lab_tests`, `surgery_radiology_tests`, `surgery_extra_services`.
+    - إضافة `is_room_package_included`, `room_deduction_bearer` في جدول `surgeries`.
+    - إضافة `doctor_deductions_amount`, `included_package_items` (JSON Snapshot) في جدول `payments`.
+    - تحديث موديلات `SurgeryLabTest`, `SurgeryRadiologyTest`, `SurgeryExtraService`, `Surgery`, `Payment`, و `Doctor` (إضافة علاقة `surgeries()`).
+  * **معالجة الدفع وحساب الاستقطاعات في الكاشير (`CashierController@processSurgeryPayment`)**:
+    - للمرضى النقديين: احتساب قيمة الخدمات المشمولة بالباقة وتحميلها كاستقطاع على حصة الطبيب الجراح (`deduction_bearer = 'doctor'`) لصالح إيراد المستشفى.
+    - لمرضى الضمان الصحي: إدراجها ضمن التغطية العقدية (`deduction_bearer = 'insurance'`).
+    - تسجيل صافي الاستحقاق للجراح تلقائياً في `DoctorDue` بالمعادلة: صافي المستحق = أتعاب الجراحة - استقطاعات الباقة.
+  * **القائمة الجانبية والشاشات الجديدة للحسابات المالية**:
+    - إضافة قسم فرعي: `حسابات جراحي العمليات` ضمن قسم "الحسابات العامة والمالية" في `resources/views/layouts/app.blade.php`.
+    - **شاشة ملخص حسابات الجراحين (`resources/views/cashier/surgeries/doctor-accounts.blade.php`)**: جدول بكافة الجراحين، عدد العمليات، الأتعاب الاسمية، استقطاعات الباقة، صافي المستحق، إجمالي المصروف، والرصيد المتبقي بذمة المستشفى، مع زر [ 👁️ كشف الحساب والتفاصيل ].
+    - **شاشة كشف حساب الجراح وعملياته التفصيلية (`resources/views/cashier/surgeries/doctor-account-details.blade.php`)**: بطاقات مؤشرات علوية، نموذج صرف دفعة / تصفية رصيد للجراح، جدول مفصل بجميع عمليات الجراح مع تفكيك دقيق للخدمات المشمولة بالباقة، وزر صرف وتصفية العملية بشكل فوري.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل اختبارات التحقق من استقطاع الباقة من حصة الجراح نقداً، عرض حسابات الجراحين، كشف الحساب المفصل، والصرف الفعلي بنسبة 100% (`13 passed, 85 assertions`)، واستمرار اجتياز كافة اختبارات الضمان والتمريض (`13 passed, 97 assertions`).
+
 - **المرحلة 175 (2026-11-07) — نظام الكاشير الموحد للعمليات الجراحية: الشمول التام للغرفة بالباقة، الحذف الفوري لتحاليل وأشعة العمليات، والدفع الجزئي العام الإجمالي للمبلغ الكلي (Surgery Cashier Unified Suite: Granular Lab/Radiology Deletion, Room Package Inclusion Toggle & Global Bottom Invoice Split/Partial Payment)**:
   * **الحذف الفوري للتحاليل والأشعة المعلقة بالعملية**: إضافة مسارات وتوابع `removeSurgeryLabTest()` و `removeSurgeryRadiologyTest()` في الكاشير وحمايتها وتطبيق أزرار الحذف الدائرية الحمراء `delete-surgery-item-btn` مع تأكيد SweetAlert2 فاخر وحذف لحظي من الجدول وإعادة احتساب فوري.
   * **توحيد كبسولات الشمول بالباقة للغرفة**: استبدال مفاتيح التجزئة المشتتة بكبسولات موحدة: `[ 📦 مشمول بالعملية ]` (حصة المريض 0 د.ع) مقابل `[ 💵 منفصل ]` (احتساب الاستقطاع الاعتيادي أو الضمان)، مع دعم كامل في السيرفر وتحديث المبالغ وإصدار الوصل بما يطابق الشمول.
