@@ -54,6 +54,27 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-07 — المرحلة 171: توحيد جدول دفع العمليات الجراحية مطابقةً لواجهة الطلبات الطبية، وأزرار كبسولات الشمول المنفصلة السداسية الأعمدة Surgery Cashier Payment Table Modern Redesign & Segmented Action Pills Parity)
+
+### Done
+- **إعادة تصميم جدول دفع العمليات الجراحية بستة أعمدة موحدة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * مطابقة هيكلية التصميم وتجربة المستخدم لشاشة تسديد الطلبات الطبية (`request-payment-form.blade.php`):
+    1. `# / التحديد`: مربع اختيار البند الفردي أو الإجمالي لكل قسم.
+    2. `البند والخدمة`: اسم العملية/الغرفة/التحليل/الأشعة/الخدمة الإضافية مع شارات وأيقونات ملونة وتفاصيل الإقامة والكميات.
+    3. `السعر المعتمد`: السعر الإجمالي للبند، مع حقل التعديل المباشر `extra-service-price-input` للخدمات الإضافية.
+    4. `تحمل المريض (نقداً)`: حصة المريض المحدثة لحظياً `row-patient-share` (تصبح 0 د.ع عند الشمول).
+    5. `حصة الضمان (ذمة)`: مطالبة جهة الضمان `row-insurance-share` (ضمان صحي أو داخلية).
+    6. `الإجراء والشمول بالباقة`: كبسولات تحكم مقسمة عصرية (Segmented Control Pills) لاختيار نمط الدفع أو الشمول.
+- **تطبيق كبسولات التحكم العصرية (iOS/Apple Segmented Control Pills)**:
+  * استبدال المفاتيح التقليدية بكبسولات اختيار رشيقة:
+    - للعملية والغرفة: `[ دفع كامل ]` vs `[ دفع جزء ]` مع إظهار حقل المبلغ المخصص تلقائياً.
+    - للمختبر والأشعة والخدمات الإضافية: `[ 📦 مشمول ]` (أخضر زمردي مع شارة 0 د.ع) vs `[ 💵 منفصل ]` (أزرق ملكي مع احتساب المبلغ).
+    - زر حذف دائري أنيق للخدمات الإضافية `delete-extra-service-btn`.
+- **مزامنة فورية ودقيقة للحسابات المالية (Live Dynamic Recalculation)**:
+  * ربط مستمعي الأحداث لأزرار الراديو الكبسولية `inclusion-pill-radio` بالمفاتيح المخفية `package-inclusion-switch` لتحديث حصة المريض ومطالبة الضمان وإجمالي البنود المعتمدة في تذييل الجدول `tfoot` وصندوق الدفع اللحظي دون الحاجة لإعادة تحميل الصفحة.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * إضافة واجتياز اختبار التحقق من بنية الجدول والكبسولات السداسية بنسبة 100% (7 passed, 40 assertions)، واستمرار اجتياز كافة اختبارات تجزئة ودفع العمليات والضمان (14 passed, 91 assertions).
+
 ## Session log (2026-11-07 — المرحلة 170: الإلحاق التلقائي لخدمات العمليات (تخطيط قلب، فتح طبلة، خدمات فندقية)، تسعيرها المرن القابل للتعديل، والتحكم الفردي بالشمول وإلغاء الشمول الكلي Auto Surgery Default Services, Inline Editable Pricing, Granular Per-Service Inclusion & All-Inclusive Toggle Removal)
 
 ### Done

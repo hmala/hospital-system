@@ -1877,6 +1877,19 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
     - 3 اختبارات تغطي: ظهور العمليات بعد إتمام الصالة، معالجة ازدواجية حسابات الجراحين، وحماية الصلاحيات بنجاح 100% (`3 passed, 10 assertions`).
 
+- **المرحلة 171 (2026-11-07) — توحيد جدول دفع العمليات الجراحية مطابقةً لواجهة الطلبات الطبية وكبسولات الشمول المنفصلة السداسية الأعمدة (Surgery Cashier Payment Table Modern Redesign & Segmented Action Pills Parity)**:
+  * **إعادة تصميم جدول دفع العمليات الجراحية بستة أعمدة موحدة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+    - مطابقة هيكلية التصميم وتجربة المستخدم لشاشة تسديد الطلبات الطبية (`request-payment-form.blade.php`) بستة أعمدة موحدة: (`# / التحديد`، `البند والخدمة`، `السعر المعتمد`، `تحمل المريض (نقداً)`، `حصة الضمان (ذمة)`، `الإجراء والشمول بالباقة`).
+    - دمج كبسولات التحكم العصرية (iOS/Apple Segmented Control Pills): `[ دفع كامل ]` vs `[ دفع جزء ]` للعملية والغرفة، و `[ 📦 مشمول ]` (أخضر زمردي مع شارة 0 د.ع) vs `[ 💵 منفصل ]` (أزرق ملكي) للمختبر والأشعة والخدمات الإضافية.
+    - المحافظة على التعديل المباشر للأسعار `extra-service-price-input`، مع ربط مستمعي الأحداث لإعادة احتساب وتحديث خانات تحمل المريض ومطالبة الضمان وتذييل الجدول `tfoot` لحظياً.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل اختبارات التحقق من بنية الجدول الموحد وكبسولات الشمول بنسبة 100% (`7 passed, 40 assertions`)، واستمرار اجتياز كافة اختبارات دفع وتجزئة العمليات والضمان (`14 passed, 91 assertions`).
+
+- **المرحلة 170 (2026-11-07) — الإلحاق التلقائي لخدمات العمليات (تخطيط قلب، فتح طبلة، خدمات فندقية)، تسعيرها المرن، والتحكم الفردي بالشمول (Auto Surgery Default Services, Inline Editable Pricing & Granular Inclusion)**:
+  * الإلحاق التلقائي لـ 3 خدمات إضافية افتراضية مع كل حجز عملية: (تخطيط قلب 15,000 د.ع، اجور فتح طبلة 10,000 د.ع، خدمات فندقية 30,000 د.ع) عبر `attachDefaultExtraServices` على موديل `Surgery`.
+  * دعم التعديل المباشر للسعر للخدمات الإضافية مع مسار PATCH المخصص في الكاشير.
+  * إلغاء مفتاح الشمول الكلي العام وتمكين الشمول الفردي المستقل لكل خدمة بدون تعارض.
+
 - **المرحلة 168 (2026-11-05) — توحيد طباعة طلبات تحاليل الطوارئ قبل إدخال النتائج وإظهار فحص CBC في أمر العمل مطابقةً لباقي الأقسام (Emergency Lab Request Print & CBC Work Order Requisition Parity)**:
   * **معالجة طباعة طلب الطوارئ كأمر عمل قبل إدخال النتائج ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
     - تعريف وضع أمر العمل `$hasWorkOrder` بدقة: عندما يكون الطلب غير مكتمل ولم تُدخل نتائجه بعد وله تحاليل مطلوبة (`!$isCompleted && !$hasActualResults && $requestedLabTestsList->count() > 0`).

@@ -1,6 +1,65 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .segmented-control-pills {
+        display: inline-flex;
+        align-items: center;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 50rem;
+        padding: 3px;
+        gap: 2px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        position: relative;
+        user-select: none;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .segmented-pill-input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+    .segmented-pill-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        border-radius: 50rem;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 0;
+        flex: 1;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .segmented-pill-label:hover {
+        color: #1e293b;
+        background: rgba(255, 255, 255, 0.7);
+    }
+    .segmented-pill-label i {
+        font-size: 0.72rem;
+    }
+    /* Active Included (Green) */
+    .segmented-pill-input:checked + .segmented-pill-label.pill-included {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+    /* Active Unbundled / Non-included (Blue) */
+    .segmented-pill-input:checked + .segmented-pill-label.pill-unbundled {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+    }
+</style>
 @php
     $isCancelled = $surgery->status === 'cancelled';
     $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
@@ -693,15 +752,17 @@
                             </div>
 
                             <div class="table-responsive">
-                                <table class="table table-bordered align-middle" id="surgeryItemsTable">
-                                    <thead class="table-warning">
+                                <table class="table table-bordered align-middle table-hover shadow-2xs rounded-3 overflow-hidden" id="surgeryItemsTable">
+                                    <thead class="table-primary text-dark" style="background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);">
                                         <tr>
-                                            <th style="width: 50px;" class="text-center">
+                                            <th style="width: 45px;" class="text-center">
                                                 <i class="fas fa-check-square"></i>
                                             </th>
-                                            <th style="width: 220px;">البند والخدمة</th>
-                                            <th>التفاصيل ومحدد الشمولية ضمن باقة الجراحة</th>
-                                            <th class="text-end" style="width: 170px;">التكلفة / حصة المريض</th>
+                                            <th>البند والخدمة</th>
+                                            <th class="text-end" style="width: 150px;">السعر المعتمد</th>
+                                            <th class="text-end" style="width: 150px;">تحمل المريض (نقداً)</th>
+                                            <th class="text-end" style="width: 140px;">حصة الضمان (ذمة)</th>
+                                            <th class="text-center" style="width: 220px;">الإجراء والشمول بالباقة</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -718,46 +779,55 @@
                                                        checked>
                                             </td>
                                             <td>
-                                                <i class="fas fa-procedures text-danger me-2"></i>
-                                                <strong>رسوم العمليات الجراحية</strong>
-                                                <div class="small text-muted ms-4">
-                                                    العملية الأساسية: {{ number_format($surgeryFee, 0) }} د.ع
-                                                    @if($additionalOpsFee > 0)
-                                                        + العمليات الإضافية: {{ number_format($additionalOpsFee, 0) }} د.ع
-                                                    @endif
-                                                    @if($surgery->medicalDevices->isNotEmpty())
-                                                        <br>
-                                                        + الأجهزة الطبية ({{ $surgery->medicalDevices->count() }}): 
-                                                        @foreach($surgery->medicalDevices as $device)
-                                                            {{ $device->name }} ({{ number_format($device->pivot->price ?? 0, 0) }} د.ع)@if(!$loop->last)، @endif
-                                                        @endforeach
-                                                    @endif
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="fas fa-procedures text-danger fs-5"></i>
+                                                    <div>
+                                                        <strong class="text-dark fs-6">{{ $surgery->surgery_type ?? 'عملية جراحية' }}</strong>
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">العملية الأساسية</span>
+                                                        <div class="small text-muted mt-1">
+                                                            أجور الجراحة الأساسية: {{ number_format($surgeryFee, 0) }} د.ع
+                                                            @if($additionalOpsFee > 0)
+                                                                + العمليات الإضافية: {{ number_format($additionalOpsFee, 0) }} د.ع
+                                                            @endif
+                                                            @if($surgery->medicalDevices->isNotEmpty())
+                                                                <br>+ الأجهزة الطبية ({{ $surgery->medicalDevices->count() }}): 
+                                                                @foreach($surgery->medicalDevices as $device)
+                                                                    {{ $device->name }} ({{ number_format($device->pivot->price ?? 0, 0) }} د.ع)@if(!$loop->last)، @endif
+                                                                @endforeach
+                                                            @endif
+                                                        </div>
+                                                        @if($surgeryFeePaidAmount > 0)
+                                                            <span class="badge bg-warning text-dark mt-1">تم دفع {{ number_format($surgeryFeePaidAmount, 0) }} سابقاً</span>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                                @if($surgeryFeePaidAmount > 0)
-                                                    <span class="badge bg-warning text-dark ms-1">تم دفع {{ number_format($surgeryFeePaidAmount, 0) }} سابقاً</span>
-                                                @endif
                                             </td>
-                                            <td>
-                                                <div class="surgery-payment-options" id="surgery_payment_options_container">
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input surgery-payment-type" type="radio" name="surgery_payment_type" id="surgery_pay_full" value="full" checked>
-                                                        <label class="form-check-label text-dark" for="surgery_pay_full">دفع كامل المتبقي</label>
+                                            <td class="text-end fw-bold">
+                                                {{ number_format($totalSurgeryFee, 0) }} د.ع
+                                            </td>
+                                            <td class="text-end fw-bold text-success fs-6">
+                                                <strong id="surgery_fee_display">{{ number_format($remainingSurgeryFee, 0) }}</strong> د.ع
+                                                <input type="hidden" id="surgery_fee_value" value="{{ $remainingSurgeryFee }}">
+                                            </td>
+                                            <td class="text-end text-muted fw-bold" id="surgery_insurance_display">
+                                                0 د.ع
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    <div class="segmented-control-pills" style="max-width: 190px;">
+                                                        <input type="radio" class="segmented-pill-input surgery-payment-type" name="surgery_payment_type" id="surgery_pay_full" value="full" checked autocomplete="off">
+                                                        <label class="segmented-pill-label pill-unbundled" for="surgery_pay_full">دفع كامل</label>
+
+                                                        <input type="radio" class="segmented-pill-input surgery-payment-type" name="surgery_payment_type" id="surgery_pay_part" value="partial" autocomplete="off">
+                                                        <label class="segmented-pill-label pill-unbundled" for="surgery_pay_part">دفع جزء</label>
                                                     </div>
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input surgery-payment-type" type="radio" name="surgery_payment_type" id="surgery_pay_part" value="partial">
-                                                        <label class="form-check-label text-dark" for="surgery_pay_part">دفع جزء من الرسوم</label>
-                                                    </div>
-                                                    <div class="mt-2" id="surgery_custom_amount_wrapper" style="display: none; max-width: 200px;">
+                                                    <div class="mt-1" id="surgery_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
                                                         <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control" id="surgery_custom_amount" name="surgery_custom_amount" value="{{ $remainingSurgeryFee }}" min="1" max="{{ $remainingSurgeryFee }}">
-                                                            <span class="input-group-text">IQD</span>
+                                                            <input type="number" class="form-control form-control-sm text-end" id="surgery_custom_amount" name="surgery_custom_amount" value="{{ $remainingSurgeryFee }}" min="1" max="{{ $remainingSurgeryFee }}">
+                                                            <span class="input-group-text small">IQD</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td class="text-end">
-                                                <strong id="surgery_fee_display">{{ number_format($remainingSurgeryFee, 0) }}</strong>
-                                                <input type="hidden" id="surgery_fee_value" value="{{ $remainingSurgeryFee }}">
                                             </td>
                                         </tr>
                                         @endif
@@ -775,54 +845,56 @@
                                                        checked>
                                             </td>
                                             <td>
-                                                <i class="fas fa-door-open text-info me-2"></i>
-                                                <strong>أجور الغرفة</strong>
-                                                @if($roomFeePaidAmount > 0)
-                                                    <span class="badge bg-warning text-dark ms-1">تم دفع {{ number_format($roomFeePaidAmount, 0) }} سابقاً</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <div class="mb-2">
-                                                    <strong>{{ $surgery->room->room_number ?? 'غير محدد' }}</strong>
-                                                    @if($surgery->room && $surgery->room->room_type === 'vvip')
-                                                        <span class="badge bg-dark text-white ms-1">
-                                                            <i class="fas fa-gem text-warning me-1"></i> VVIP
-                                                        </span>
-                                                    @elseif($surgery->room && $surgery->room->room_type === 'vip')
-                                                        <span class="badge bg-warning text-dark ms-1">
-                                                            <i class="fas fa-crown text-dark me-1"></i> VIP
-                                                        </span>
-                                                    @else
-                                                        <span class="badge bg-light text-secondary border ms-1">عادية</span>
-                                                    @endif
-                                                    <br><small class="text-muted">
-                                                        أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
-                                                        @if($stayDetails['extra_nights'] > 0)
-                                                            + {{ $stayDetails['extra_nights'] }} ليلة إضافية ({{ number_format($stayDetails['extra_nights_fee'], 0) }} د.ع)
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="fas fa-door-open text-primary fs-5"></i>
+                                                    <div>
+                                                        <strong class="text-dark">أجور إقامة الغرفة ({{ $surgery->room->room_number ?? 'غير محدد' }})</strong>
+                                                        @if($surgery->room && $surgery->room->room_type === 'vvip')
+                                                            <span class="badge bg-dark text-white ms-1"><i class="fas fa-gem text-warning me-1"></i>VVIP</span>
+                                                        @elseif($surgery->room && $surgery->room->room_type === 'vip')
+                                                            <span class="badge bg-warning text-dark ms-1"><i class="fas fa-crown me-1"></i>VIP</span>
+                                                        @else
+                                                            <span class="badge bg-light text-secondary border ms-1">عادية</span>
                                                         @endif
-                                                    </small>
-                                                    <br><small class="text-primary" style="font-size:0.75rem;">(نظام فندقي 12:00 ظهراً)</small>
+                                                        <small class="text-muted d-block mt-1">
+                                                            أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
+                                                            @if($stayDetails['extra_nights'] > 0)
+                                                                + {{ $stayDetails['extra_nights'] }} ليال إضافية ({{ number_format($stayDetails['extra_nights_fee'], 0) }} د.ع)
+                                                            @endif
+                                                            (نظام فندقي 12:00 ظهراً)
+                                                        </small>
+                                                        @if($roomFeePaidAmount > 0)
+                                                            <span class="badge bg-warning text-dark mt-1">تم دفع {{ number_format($roomFeePaidAmount, 0) }} سابقاً</span>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                                <div class="room-payment-options" id="room_payment_options_container">
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input room-payment-type" type="radio" name="room_payment_type" id="room_pay_full" value="full" checked>
-                                                        <label class="form-check-label text-dark" for="room_pay_full">دفع كامل المتبقي</label>
+                                            </td>
+                                            <td class="text-end fw-bold">
+                                                {{ number_format($roomFee, 0) }} د.ع
+                                            </td>
+                                            <td class="text-end fw-bold text-success fs-6">
+                                                <strong id="room_fee_display">{{ number_format($remainingRoomFee, 0) }}</strong> د.ع
+                                                <input type="hidden" id="room_fee_value" value="{{ $remainingRoomFee }}">
+                                            </td>
+                                            <td class="text-end text-muted fw-bold" id="room_insurance_display">
+                                                0 د.ع
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    <div class="segmented-control-pills" style="max-width: 190px;">
+                                                        <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_full" value="full" checked autocomplete="off">
+                                                        <label class="segmented-pill-label pill-unbundled" for="room_pay_full">دفع كامل</label>
+
+                                                        <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_part" value="partial" autocomplete="off">
+                                                        <label class="segmented-pill-label pill-unbundled" for="room_pay_part">دفع جزء</label>
                                                     </div>
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input room-payment-type" type="radio" name="room_payment_type" id="room_pay_part" value="partial">
-                                                        <label class="form-check-label text-dark" for="room_pay_part">دفع جزء من الرسوم</label>
-                                                    </div>
-                                                    <div class="mt-2" id="room_custom_amount_wrapper" style="display: none; max-width: 200px;">
+                                                    <div class="mt-1" id="room_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
                                                         <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
-                                                            <span class="input-group-text">IQD</span>
+                                                            <input type="number" class="form-control form-control-sm text-end" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
+                                                            <span class="input-group-text small">IQD</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td class="text-end">
-                                                <strong id="room_fee_display">{{ number_format($remainingRoomFee, 0) }}</strong>
-                                                <input type="hidden" id="room_fee_value" value="{{ $remainingRoomFee }}">
                                             </td>
                                         </tr>
                                         @endif
@@ -831,18 +903,16 @@
                                         @if($pendingLabTests->count() > 0)
                                             <tr class="table-info">
                                                 <td class="text-center">
-                                                    <input type="checkbox" 
-                                                           class="form-check-input" 
-                                                           id="selectAllLab">
+                                                    <input type="checkbox" class="form-check-input" id="selectAllLab">
                                                 </td>
-                                                <td colspan="3">
+                                                <td colspan="5">
                                                     <div class="d-flex align-items-center justify-content-between">
                                                         <strong>
-                                                            <i class="fas fa-flask me-2"></i>
-                                                            التحاليل المعلقة ({{ $pendingLabTests->count() }})
+                                                            <i class="fas fa-flask me-2 text-primary"></i>
+                                                            التحاليل المخبرية للعملية ({{ $pendingLabTests->count() }})
                                                         </strong>
                                                         <span class="badge bg-white text-info border small">
-                                                            <i class="fas fa-info-circle me-1"></i>يمكن جعلها مشمولة بالعملية أو تسديدها كخدمة منفصلة
+                                                            <i class="fas fa-info-circle me-1"></i>يمكن شمولها ضمن باقة العملية (0 د.ع) أو تسديدها منفصلة
                                                         </span>
                                                     </div>
                                                 </td>
@@ -868,32 +938,48 @@
                                                                data-item-type="lab"
                                                                checked>
                                                     </td>
-                                                    <td class="ps-4">
-                                                        <i class="fas fa-vial text-primary me-2"></i>
-                                                        <span class="fw-semibold">تحليل روتيني للعملية</span>
-                                                    </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="fas fa-vial text-primary me-1"></i>
                                                             <div>
                                                                 <strong class="text-dark">{{ $lModel->name ?? 'غير محدد' }}</strong> 
                                                                 <small class="text-muted">({{ $lModel->code ?? '-' }})</small>
                                                             </div>
-                                                            <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
-                                                                <input class="form-check-input package-inclusion-switch" type="checkbox" 
-                                                                       name="package_included[lab][{{ $labTest->id }}]" 
-                                                                       id="pkg_incl_lab_{{ $labTest->id }}" 
-                                                                       value="1" 
-                                                                       checked>
-                                                                <label class="form-check-label small fw-bold mb-0" for="pkg_incl_lab_{{ $labTest->id }}" style="cursor: pointer;">
-                                                                    <span class="package-status-badge badge bg-success-subtle text-success border border-success">
-                                                                        <i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)
-                                                                    </span>
-                                                                </label>
-                                                            </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end item-price-display fw-bold">
+                                                    <td class="text-end fw-bold">
+                                                        {{ number_format($lBase, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end fw-bold text-success row-patient-share item-price-display">
                                                         0 د.ع
+                                                    </td>
+                                                    <td class="text-end fw-bold text-primary row-insurance-share">
+                                                        0 د.ع
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
+                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                   name="pkg_radio_lab_{{ $labTest->id }}" 
+                                                                   id="rad_inc_lab_{{ $labTest->id }}" 
+                                                                   value="1" checked autocomplete="off">
+                                                            <label class="segmented-pill-label pill-included" for="rad_inc_lab_{{ $labTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                <i class="fas fa-box-open"></i>
+                                                                <span>مشمول</span>
+                                                            </label>
+
+                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                   name="pkg_radio_lab_{{ $labTest->id }}" 
+                                                                   id="rad_sep_lab_{{ $labTest->id }}" 
+                                                                   value="0" autocomplete="off">
+                                                            <label class="segmented-pill-label pill-unbundled" for="rad_sep_lab_{{ $labTest->id }}" title="غير مشمول - منفصل">
+                                                                <i class="fas fa-coins"></i>
+                                                                <span>منفصل</span>
+                                                            </label>
+                                                            <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                   name="package_included[lab][{{ $labTest->id }}]" 
+                                                                   id="pkg_incl_lab_{{ $labTest->id }}" 
+                                                                   value="1" checked>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -901,6 +987,7 @@
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع التحاليل المعلقة:</strong></td>
                                                 <td class="text-end"><strong id="pending_lab_fee_display" class="text-success">0 د.ع</strong></td>
+                                                <td colspan="2"></td>
                                             </tr>
                                         @endif
 
@@ -912,10 +999,10 @@
                                                            class="form-check-input" 
                                                            id="selectAllRadiology">
                                                 </td>
-                                                <td colspan="3">
+                                                <td colspan="5">
                                                     <div class="d-flex align-items-center justify-content-between">
                                                         <strong>
-                                                            <i class="fas fa-x-ray me-2"></i>
+                                                            <i class="fas fa-x-ray me-2 text-info"></i>
                                                             الفحوصات الإشعاعية المعلقة ({{ $pendingRadiologyTests->count() }})
                                                         </strong>
                                                         <span class="badge bg-white text-secondary border small">
@@ -942,35 +1029,50 @@
                                                                data-base-price="{{ $rBase }}"
                                                                data-moi-price="{{ $rMoi }}"
                                                                data-hi-price="{{ $rHi }}"
-                                                               data-is-moi-active="{{ $rMoiActive ? '1' : '0' }}"
-                                                               data-is-hi-active="{{ $rHiActive ? '1' : '0' }}"
+                                                               data-is-moi-active="{{ ($rModel?->is_moi_active ?? true) ? '1' : '0' }}"
+                                                               data-is-hi-active="{{ ($rModel?->is_hi_active ?? true) ? '1' : '0' }}"
                                                                data-item-type="radiology"
                                                                checked>
                                                     </td>
-                                                    <td class="ps-4">
-                                                        <i class="fas fa-radiation text-info me-2"></i>
-                                                        <span class="fw-semibold">فحص إشعاعي</span>
-                                                    </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                                            <div>
-                                                                <strong class="text-dark">{{ $rModel->name ?? 'غير محدد' }}</strong>
-                                                            </div>
-                                                            <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
-                                                                <input class="form-check-input package-inclusion-switch" type="checkbox" 
-                                                                       name="package_included[radiology][{{ $radiologyTest->id }}]" 
-                                                                       id="pkg_incl_rad_{{ $radiologyTest->id }}" 
-                                                                       value="1">
-                                                                <label class="form-check-label small fw-bold mb-0" for="pkg_incl_rad_{{ $radiologyTest->id }}" style="cursor: pointer;">
-                                                                    <span class="package-status-badge badge bg-secondary-subtle text-secondary border">
-                                                                        <i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)
-                                                                    </span>
-                                                                </label>
-                                                            </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="fas fa-radiation text-info me-1"></i>
+                                                            <strong class="text-dark">{{ $rModel->name ?? 'غير محدد' }}</strong>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end item-price-display fw-bold">
+                                                    <td class="text-end fw-bold">
                                                         {{ number_format($rBase, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end fw-bold text-success row-patient-share item-price-display">
+                                                        {{ number_format($rBase, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end fw-bold text-primary row-insurance-share">
+                                                        0 د.ع
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
+                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                   name="pkg_radio_rad_{{ $radiologyTest->id }}" 
+                                                                   id="rad_inc_rad_{{ $radiologyTest->id }}" 
+                                                                   value="1" autocomplete="off">
+                                                            <label class="segmented-pill-label pill-included" for="rad_inc_rad_{{ $radiologyTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                <i class="fas fa-box-open"></i>
+                                                                <span>مشمول</span>
+                                                            </label>
+
+                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                   name="pkg_radio_rad_{{ $radiologyTest->id }}" 
+                                                                   id="rad_sep_rad_{{ $radiologyTest->id }}" 
+                                                                   value="0" checked autocomplete="off">
+                                                            <label class="segmented-pill-label pill-unbundled" for="rad_sep_rad_{{ $radiologyTest->id }}" title="غير مشمول - منفصل">
+                                                                <i class="fas fa-coins"></i>
+                                                                <span>منفصل</span>
+                                                            </label>
+                                                            <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                   name="package_included[radiology][{{ $radiologyTest->id }}]" 
+                                                                   id="pkg_incl_rad_{{ $radiologyTest->id }}" 
+                                                                   value="1">
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -978,6 +1080,7 @@
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع الأشعة المعلقة:</strong></td>
                                                 <td class="text-end"><strong id="pending_radiology_fee_display">{{ number_format($pendingRadiologyFee, 0) }}</strong></td>
+                                                <td colspan="2"></td>
                                             </tr>
                                         @endif
 
@@ -989,14 +1092,14 @@
                                                            class="form-check-input" 
                                                            id="selectAllExtraServices" checked>
                                                 </td>
-                                                <td colspan="3">
+                                                <td colspan="5">
                                                     <div class="d-flex align-items-center justify-content-between">
                                                         <strong>
                                                             <i class="fas fa-concierge-bell me-2 text-warning"></i>
                                                             الخدمات الإضافية والفندقية المعلقة ({{ $pendingExtraServices->count() }})
                                                         </strong>
                                                         <span class="badge bg-white text-dark border small">
-                                                            <i class="fas fa-heartbeat text-danger me-1"></i>تخطيط القلب قابل للشمول بالاتفاق مع الطبيب
+                                                            <i class="fas fa-heartbeat text-danger me-1"></i>تخطيط القلب والخدمات قابلة للشمول بالاتفاق
                                                         </span>
                                                     </div>
                                                 </td>
@@ -1021,45 +1124,22 @@
                                                                data-item-type="extra"
                                                                checked>
                                                     </td>
-                                                    <td class="ps-4">
-                                                        <i class="fas {{ $isEcgOrMedical ? 'fa-heartbeat text-danger' : 'fa-concierge-bell text-warning' }} me-2"></i>
-                                                        <strong>{{ $isEcgOrMedical ? 'فحص سريري / تخطيط' : 'خدمة إضافية' }}</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                            <div>
-                                                                <span class="fw-bold text-dark fs-6">{{ $extraService->name }}</span>
-                                                                @if($extraService->quantity > 1)
-                                                                    <span class="badge bg-secondary ms-1">×{{ $extraService->quantity }}</span>
-                                                                    <small class="text-muted ms-1">({{ number_format($extraService->price, 0) }} د.ع للوحدة)</small>
-                                                                @endif
-                                                                @if($extraService->notes)
-                                                                    <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</small>
-                                                                @endif
+                                                    <td class="ps-3">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="rounded-circle p-2 {{ $isEcgOrMedical ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning' }} d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                                <i class="fas {{ $isEcgOrMedical ? 'fa-heartbeat' : 'fa-concierge-bell' }} small"></i>
                                                             </div>
-                                                            <div class="d-flex align-items-center gap-2">
-                                                                <div class="form-check form-switch m-0 d-inline-flex align-items-center gap-2 bg-white px-2 py-1 rounded border shadow-2xs">
-                                                                    <input class="form-check-input package-inclusion-switch" type="checkbox" 
-                                                                           name="package_included[extra][{{ $extraService->id }}]" 
-                                                                           id="pkg_incl_extra_{{ $extraService->id }}" 
-                                                                           value="1" 
-                                                                           {{ $isEcgOrMedical ? 'checked' : '' }}>
-                                                                    <label class="form-check-label small fw-bold mb-0" for="pkg_incl_extra_{{ $extraService->id }}" style="cursor: pointer;">
-                                                                        <span class="package-status-badge badge {{ $isEcgOrMedical ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary border' }}">
-                                                                            @if($isEcgOrMedical)
-                                                                                <i class="fas fa-check-circle me-1"></i>مشمول بالعملية (0 د.ع)
-                                                                            @else
-                                                                                <i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)
-                                                                            @endif
-                                                                        </span>
-                                                                    </label>
+                                                            <div>
+                                                                <span class="fw-bold text-dark">{{ $extraService->name }}</span>
+                                                                <div class="small text-muted mt-1">
+                                                                    <span class="badge bg-light text-secondary border me-1">{{ $isEcgOrMedical ? 'فحص سريري / تخطيط' : 'خدمة إضافية' }}</span>
+                                                                    @if($extraService->quantity > 1)
+                                                                        <span class="badge bg-secondary-subtle text-secondary me-1">×{{ $extraService->quantity }}</span>
+                                                                    @endif
+                                                                    @if($extraService->notes)
+                                                                        <span><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</span>
+                                                                    @endif
                                                                 </div>
-                                                                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill delete-extra-service-btn" 
-                                                                        data-url="{{ route('cashier.surgeries.extra-services.remove', [$surgery, $extraService]) }}"
-                                                                        data-name="{{ $extraService->name }}"
-                                                                        title="إلغاء وحذف الخدمة المعلقة">
-                                                                    <i class="fas fa-trash-alt me-1"></i>حذف
-                                                                </button>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -1073,12 +1153,53 @@
                                                                    step="500" 
                                                                    data-id="{{ $extraService->id }}"
                                                                    data-url="{{ route('cashier.surgeries.extra-services.update', [$surgery, $extraService]) }}"
-                                                                   style="width: 120px;"
+                                                                   style="width: 110px;"
                                                                    title="سعر الخدمة (يمكن تعديله)">
                                                             <span class="small text-muted">د.ع</span>
                                                         </div>
-                                                        <div class="item-price-display small text-muted mt-1">
-                                                            {{ number_format($eTotal, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end fw-bold text-success fs-6 row-patient-share">
+                                                        {{ number_format($isEcgOrMedical ? 0 : $eTotal, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end text-muted fw-bold row-insurance-share">
+                                                        0 د.ع
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <div class="segmented-control-pills" style="max-width: 160px;">
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_extra_{{ $extraService->id }}" 
+                                                                       id="extra_inc_{{ $extraService->id }}" 
+                                                                       value="1" 
+                                                                       {{ $isEcgOrMedical ? 'checked' : '' }} autocomplete="off">
+                                                                <label class="segmented-pill-label pill-included" for="extra_inc_{{ $extraService->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                    <i class="fas fa-box-open"></i>
+                                                                    <span>مشمول</span>
+                                                                </label>
+
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_extra_{{ $extraService->id }}" 
+                                                                       id="extra_sep_{{ $extraService->id }}" 
+                                                                       value="0" 
+                                                                       {{ !$isEcgOrMedical ? 'checked' : '' }} autocomplete="off">
+                                                                <label class="segmented-pill-label pill-unbundled" for="extra_sep_{{ $extraService->id }}" title="غير مشمول - منفصل">
+                                                                    <i class="fas fa-coins"></i>
+                                                                    <span>منفصل</span>
+                                                                </label>
+                                                                
+                                                                <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                       name="package_included[extra][{{ $extraService->id }}]" 
+                                                                       id="pkg_incl_extra_{{ $extraService->id }}" 
+                                                                       value="1" 
+                                                                       {{ $isEcgOrMedical ? 'checked' : '' }}>
+                                                            </div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle delete-extra-service-btn d-inline-flex align-items-center justify-content-center" 
+                                                                    style="width: 28px; height: 28px;"
+                                                                    data-url="{{ route('cashier.surgeries.extra-services.remove', [$surgery, $extraService]) }}"
+                                                                    data-name="{{ $extraService->name }}"
+                                                                    title="حذف الخدمة المعلقة">
+                                                                <i class="fas fa-trash-alt small"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1086,42 +1207,33 @@
                                             <tr class="table-light">
                                                 <td></td>
                                                 <td colspan="2" class="text-end"><strong>مجموع الخدمات الإضافية:</strong></td>
-                                                <td class="text-end"><strong id="pending_extra_services_fee_display">{{ number_format($pendingExtraFee, 0) }}</strong></td>
+                                                <td class="text-end"><strong id="pending_extra_services_fee_display">{{ number_format($pendingExtraFee, 0) }} د.ع</strong></td>
+                                                <td colspan="2"></td>
                                             </tr>
                                         @endif
                                     </tbody>
                                     <tfoot>
-                                        <!-- إجمالي المعلق -->
-                                        <tr class="table-secondary">
-                                            <td></td>
-                                            <td colspan="2" class="text-end"><h6 class="mb-0">إجمالي المعلق:</h6></td>
-                                            <td class="text-end"><h5 class="mb-0">{{ number_format($pendingAmount, 0) }} IQD</h5></td>
-                                        </tr>
-                                        <!-- المبلغ المحدد للدفع -->
-                                        <tr class="table-success">
-                                            <td></td>
-                                            <td colspan="2" class="text-end">
-                                                <h5 class="mb-0 text-success">
-                                                    <i class="fas fa-money-bill-wave me-2"></i>
-                                                    المبلغ المحدد للدفع الآن:
-                                                </h5>
-                                            </td>
-                                            <td class="text-end">
-                                                <h4 class="mb-0 text-success" id="selectedAmount">{{ number_format($pendingAmount, 0) }} IQD</h4>
+                                        <!-- المجموع الإجمالي المعتمد والمحدد -->
+                                        <tr class="table-light border-top border-2">
+                                            <td class="text-center"><i class="fas fa-calculator text-muted"></i></td>
+                                            <td class="fw-bold fs-6">إجمالي البنود والخدمات المعتمدة:</td>
+                                            <td class="text-end fw-bold text-dark fs-6" id="table_total_approved">{{ number_format($pendingAmount, 0) }} د.ع</td>
+                                            <td class="text-end fw-bold text-success fs-5" id="selectedAmount">{{ number_format($pendingAmount, 0) }} IQD</td>
+                                            <td class="text-end fw-bold text-primary fs-6" id="table_total_insurance">0 د.ع</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1" id="table_actions_summary">
+                                                    <i class="fas fa-check-circle me-1"></i>جاهز للدفع
+                                                </span>
                                             </td>
                                         </tr>
-                                        <!-- المبلغ المؤجل -->
+                                        <!-- المبلغ المؤجل إن وجد -->
                                         <tr class="table-warning" id="deferredRow" style="display: none;">
                                             <td></td>
-                                            <td colspan="2" class="text-end">
-                                                <h6 class="mb-0 text-warning">
-                                                    <i class="fas fa-clock me-2"></i>
-                                                    سيبقى معلقاً (للدفع لاحقاً):
-                                                </h6>
+                                            <td colspan="2" class="text-end fw-bold text-warning">
+                                                <i class="fas fa-clock me-1"></i> سيبقى معلقاً (مؤجل للدفع لاحقاً):
                                             </td>
-                                            <td class="text-end">
-                                                <h5 class="mb-0 text-warning" id="deferredAmount">0 IQD</h5>
-                                            </td>
+                                            <td class="text-end fw-bold text-warning fs-5" id="deferredAmount">0 IQD</td>
+                                            <td colspan="2"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1434,20 +1546,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (surgeryPaidThisTime > 0) {
                 totalApprovedPayable += surgeryPaidThisTime;
+                let sPatShare = surgeryPaidThisTime;
+                let sInsShare = 0;
                 if (isIns) {
-                    const pShare = Math.round(surgeryPaidThisTime * (surgeryCopayPct / 100));
-                    totalPatientShare += pShare;
-                    totalInsuranceShare += Math.max(0, surgeryPaidThisTime - pShare);
+                    sPatShare = Math.round(surgeryPaidThisTime * (surgeryCopayPct / 100));
+                    sInsShare = Math.max(0, surgeryPaidThisTime - sPatShare);
+                    totalPatientShare += sPatShare;
+                    totalInsuranceShare += sInsShare;
                 } else {
                     totalPatientShare += surgeryPaidThisTime;
                 }
+                const feeDisp = document.getElementById('surgery_fee_display');
+                if (feeDisp) feeDisp.textContent = numberFormat(sPatShare);
+                const insDisp = document.getElementById('surgery_insurance_display');
+                if (insDisp) insDisp.textContent = numberFormat(sInsShare) + ' د.ع';
                 selectedCount++;
             }
         } else if (paySurgeryCheckbox) {
             const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
             const feeDisp = document.getElementById('surgery_fee_display');
+            const insDisp = document.getElementById('surgery_insurance_display');
             if (custWrapper) custWrapper.style.display = 'none';
             if (feeDisp) feeDisp.textContent = '0';
+            if (insDisp) insDisp.textContent = '0 د.ع';
         }
 
         // 2. Room Fee portion
@@ -1477,20 +1598,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (roomPaidThisTime > 0) {
                 totalApprovedPayable += roomPaidThisTime;
+                let rPatShare = roomPaidThisTime;
+                let rInsShare = 0;
                 if (isIns) {
-                    const pShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
-                    totalPatientShare += pShare;
-                    totalInsuranceShare += Math.max(0, roomPaidThisTime - pShare);
+                    rPatShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
+                    rInsShare = Math.max(0, roomPaidThisTime - rPatShare);
+                    totalPatientShare += rPatShare;
+                    totalInsuranceShare += rInsShare;
                 } else {
                     totalPatientShare += roomPaidThisTime;
                 }
+                const feeDisp = document.getElementById('room_fee_display');
+                if (feeDisp) feeDisp.textContent = numberFormat(rPatShare);
+                const insDisp = document.getElementById('room_insurance_display');
+                if (insDisp) insDisp.textContent = numberFormat(rInsShare) + ' د.ع';
                 selectedCount++;
             }
         } else if (payRoomCheckbox) {
             const custWrapper = document.getElementById('room_custom_amount_wrapper');
             const feeDisp = document.getElementById('room_fee_display');
+            const insDisp = document.getElementById('room_insurance_display');
             if (custWrapper) custWrapper.style.display = 'none';
             if (feeDisp) feeDisp.textContent = '0';
+            if (insDisp) insDisp.textContent = '0 د.ع';
         }
 
         // 3. Other items: Lab Tests, Radiology, Extra Services
@@ -1619,6 +1749,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            const patShareCell = row.querySelector('.row-patient-share');
+            const insShareCell = row.querySelector('.row-insurance-share');
+
+            if (patShareCell) {
+                if (isPkgIncluded) {
+                    patShareCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success">0 د.ع (مشمول)</span>';
+                } else {
+                    patShareCell.textContent = numberFormat(itemPatientShare) + ' د.ع';
+                }
+            }
+            if (insShareCell) {
+                insShareCell.textContent = numberFormat(itemInsuranceShare) + ' د.ع';
+            }
+
             if (isCheckedForPay) {
                 totalApprovedPayable += itemApproved;
                 totalPatientShare += itemPatientShare;
@@ -1701,6 +1845,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inputAmount) inputAmount.value = netPatientShare;
         if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(netPatientShare) + ' IQD)';
         if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
+
+        const tableApproved = document.getElementById('table_total_approved');
+        const tableInsurance = document.getElementById('table_total_insurance');
+        if (tableApproved) tableApproved.textContent = numberFormat(totalApprovedPayable) + ' د.ع';
+        if (tableInsurance) tableInsurance.textContent = numberFormat(totalInsuranceShare) + ' د.ع';
 
         if (deferredRow) {
             deferredRow.style.display = deferredAmount > 0 ? '' : 'none';
@@ -1794,6 +1943,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
         sw.addEventListener('change', calculateSelectedAmount);
+    });
+
+    document.querySelectorAll('.inclusion-pill-radio').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const container = this.closest('.segmented-control-pills');
+            if (container) {
+                const hiddenSwitch = container.querySelector('.package-inclusion-switch');
+                if (hiddenSwitch) {
+                    hiddenSwitch.checked = (this.value === '1');
+                }
+            }
+            calculateSelectedAmount();
+        });
     });
 
     document.querySelectorAll('.extra-service-price-input').forEach(function(input) {

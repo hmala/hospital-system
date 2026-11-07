@@ -336,4 +336,39 @@ class SurgeryExtraServicesTest extends TestCase
         $this->assertEquals(25000.00, (float) $extraService->price);
         $this->assertEquals(25000.00, (float) $extraService->total_amount);
     }
+
+    public function test_payment_form_renders_modern_6_column_table_with_segmented_control_pills(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'استئصال الزائدة الدودية',
+            'surgery_fee' => 750000,
+            'room_fee' => 50000,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $surgery->attachDefaultExtraServices($this->cashier->id);
+
+        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.payment.form', $surgery));
+
+        $response->assertOk();
+        $response->assertSee('الإجراء والشمول بالباقة');
+        $response->assertSee('السعر المعتمد');
+        $response->assertSee('تحمل المريض (نقداً)');
+        $response->assertSee('حصة الضمان (ذمة)');
+        $response->assertSee('segmented-control-pills');
+        $response->assertSee('pill-included');
+        $response->assertSee('pill-unbundled');
+        $response->assertSee('extra-service-price-input');
+        $response->assertSee('تخطيط قلب');
+        $response->assertSee('اجور فتح طبلة');
+        $response->assertSee('خدمات فندقية');
+        $response->assertDontSee('id="inclusive"', false);
+    }
 }
