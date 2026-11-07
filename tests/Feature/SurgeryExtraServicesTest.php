@@ -5,9 +5,13 @@ namespace Tests\Feature;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Hospital;
+use App\Models\LabTest;
 use App\Models\Patient;
+use App\Models\RadiologyType;
 use App\Models\Surgery;
 use App\Models\SurgeryExtraService;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -398,5 +402,146 @@ class SurgeryExtraServicesTest extends TestCase
         $response->assertSee('تخطيط قلب');
         $response->assertSee('اجور فتح طبلة');
         $response->assertSee('خدمات فندقية');
+    }
+
+    public function test_cashier_can_delete_pending_surgery_lab_test_and_radiology_test(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'تفتيت حصى كلى بالليزر',
+            'surgery_fee' => 750000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $labTest = LabTest::create([
+            'name' => 'تحليل وظائف كلى KFT',
+            'code' => 'KFT-01',
+            'price' => 25000,
+            'is_active' => true,
+        ]);
+
+        $surgeryLab = SurgeryLabTest::create([
+            'surgery_id' => $surgery->id,
+            'lab_test_id' => $labTest->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        $radType = RadiologyType::create([
+            'name' => 'سونار البطن والحوض',
+            'code' => 'US-ABD-01',
+            'base_price' => 40000,
+            'is_active' => true,
+        ]);
+
+        $surgeryRad = SurgeryRadiologyTest::create([
+            'surgery_id' => $surgery->id,
+            'radiology_type_id' => $radType->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+        ]);
+
+        // Cashier deletes lab test via AJAX
+        $labResponse = $this->actingAs($this->cashier)->deleteJson(
+            route('cashier.surgeries.lab-tests.remove', [$surgery, $surgeryLab])
+        );
+        $labResponse->assertOk()->assertJson(['success' => true]);
+        $this->assertDatabaseMissing('surgery_lab_tests', ['id' => $surgeryLab->id]);
+
+        // Cashier deletes radiology test via AJAX
+        $radResponse = $this->actingAs($this->cashier)->deleteJson(
+            route('cashier.surgeries.radiology-tests.remove', [$surgery, $surgeryRad])
+        );
+        $radResponse->assertOk()->assertJson(['success' => true]);
+        $this->assertDatabaseMissing('surgery_radiology_tests', ['id' => $surgeryRad->id]);
+    }
+
+    public function test_cashier_can_include_room_in_surgery_package_and_pay_with_zero_room_fee(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'تبديل مفصل ركبة',
+            'surgery_fee' => 1200000,
+            'room_fee' => 150000,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery), [
+            'pay_surgery' => 1,
+            'pay_room' => 1,
+            'package_included' => ['room' => '1'],
+            'amount' => 1200000,
+            'payment_mode' => 'full',
+            'payment_method' => 'cash',
+        ]);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $surgery->id,
+            'room_fee_paid_amount' => 150000,
+            'surgery_fee_paid' => 'paid',
+            'payment_status' => 'paid',
+        ]);
+
+        // Verify receipt shows room included under surgery package (0 IQD)
+        $this->assertDatabaseHas('payments', [
+            'patient_id' => $this->patient->id,
+            'surgery_id' => $surgery->id,
+            'amount' => 1200000,
+        ]);
+    }
+
+    public function test_cashier_can_make_global_partial_payment_at_bottom(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية عمود فقري وتثبيت فقرات',
+            'surgery_fee' => 2000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        // Cashier selects surgery (2,000,000 IQD) but pays 800,000 IQD via global partial mode
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.payment.process', $surgery), [
+            'pay_surgery' => 1,
+            'amount' => 800000,
+            'payment_mode' => 'partial',
+            'custom_paid_amount' => 800000,
+            'payment_method' => 'cash',
+        ]);
+
+        $response->assertRedirect(route('cashier.surgeries.index'));
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $surgery->id,
+            'surgery_fee_paid' => 'partial',
+            'surgery_fee_paid_amount' => 800000,
+            'payment_status' => 'partial',
+        ]);
+
+        // Verify payment receipt recorded the 800,000 IQD
+        $this->assertDatabaseHas('payments', [
+            'patient_id' => $this->patient->id,
+            'surgery_id' => $surgery->id,
+            'amount' => 800000,
+        ]);
     }
 }

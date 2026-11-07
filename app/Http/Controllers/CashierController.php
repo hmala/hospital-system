@@ -14,6 +14,8 @@ use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
 use App\Models\SurgeryExtraService;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\Visit;
 use App\Models\VisitExtraService;
 use Carbon\Carbon;
@@ -3014,6 +3016,10 @@ class CashierController extends Controller
         }
 
         if ($extraService->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً'], 422);
+            }
+
             return redirect()->route('cashier.surgeries.payment.form', $surgery)
                 ->with('error', 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً');
         }
@@ -3021,8 +3027,82 @@ class CashierController extends Controller
         $serviceName = $extraService->name;
         $extraService->delete();
 
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف خدمة "'.$serviceName.'" بنجاح']);
+        }
+
         return redirect()->route('cashier.surgeries.payment.form', $surgery)
             ->with('success', 'تم حذف خدمة "'.$serviceName.'" بنجاح');
+    }
+
+    /**
+     * حذف تحليل مخبري معلق من العملية الجراحية
+     */
+    public function removeSurgeryLabTest(Surgery $surgery, SurgeryLabTest $labTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة تحاليل العمليات');
+        }
+
+        if ($labTest->surgery_id !== $surgery->id) {
+            abort(404, 'التحليل غير مرتبط بهذه العملية');
+        }
+
+        if ($labTest->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف تحليل تم دفعه وتسديده مسبقاً'], 422);
+            }
+
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف تحليل تم دفعه وتسديده مسبقاً');
+        }
+
+        $testName = $labTest->labTest->name ?? 'تحليل مخبري';
+        $labTest->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف التحليل "'.$testName.'" بنجاح']);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف التحليل "'.$testName.'" بنجاح');
+    }
+
+    /**
+     * حذف فحص أشعة معلق من العملية الجراحية
+     */
+    public function removeSurgeryRadiologyTest(Surgery $surgery, SurgeryRadiologyTest $radiologyTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة أشعة العمليات');
+        }
+
+        if ($radiologyTest->surgery_id !== $surgery->id) {
+            abort(404, 'فحص الأشعة غير مرتبط بهذه العملية');
+        }
+
+        if ($radiologyTest->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف فحص أشعة تم دفعه وتسديده مسبقاً'], 422);
+            }
+
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف فحص أشعة تم دفعه وتسديده مسبقاً');
+        }
+
+        $radName = $radiologyTest->radiologyType->name ?? 'فحص أشعة';
+        $radiologyTest->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف فحص الأشعة "'.$radName.'" بنجاح']);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف فحص الأشعة "'.$radName.'" بنجاح');
     }
 
     /**
@@ -3174,50 +3254,7 @@ class CashierController extends Controller
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
-
-            // 2. Room Fee Payment
-            $roomFeePaidThisTime = 0;
-            $stayDetails = $surgery->calculateStayDetails();
-            $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
-
-            if ($payRoom) {
-                $remainingRoomFee = $isStayIns
-                    ? max(0, ($stayDetails['patient_stay_share'] ?? 0) - ($surgery->room_fee_paid_amount ?? 0))
-                    : max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
-
-                if ($remainingRoomFee > 0) {
-                    if ($isInclusive) {
-                        // inclusive covers room fee
-                        $roomFeePaidThisTime = $remainingRoomFee;
-                        $paidItems[] = 'أجور الغرفة (مشمولة في عرض العملية)';
-                    } else {
-                        if ($request->input('room_payment_type') === 'partial') {
-                            $customAmount = floatval($request->input('room_custom_amount'));
-                            if ($customAmount <= 0) {
-                                throw new \Exception('المبلغ المحدد لدفع أجور الغرفة غير صالح');
-                            }
-                            $roomFeePaidThisTime = min($customAmount, $remainingRoomFee);
-                        } else {
-                            $roomFeePaidThisTime = $remainingRoomFee;
-                        }
-                        $actualAmount += $roomFeePaidThisTime;
-                        $paidItems[] = 'أجور الغرفة والإقامة - مدفوع: '.number_format($roomFeePaidThisTime, 0).' د.ع';
-                    }
-                }
-            }
-
-            $surgeryCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('surgery')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $labCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('lab')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $radCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('radiology')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $ecgCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('ecg')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
 
             $surgeryApproved = 0.0;
             $surgeryPatientShare = 0.0;
@@ -3233,24 +3270,46 @@ class CashierController extends Controller
                 }
             }
 
+            // 2. Room Fee Payment
+            $roomFeePaidThisTime = 0;
             $roomApproved = 0.0;
             $roomPatientShare = 0.0;
             $roomInsuranceShare = 0.0;
-            if ($payRoom && $roomFeePaidThisTime > 0) {
-                if ($isInsurance) {
-                    if ($isStayIns) {
-                        $roomPatientShare = (float) $roomFeePaidThisTime;
-                        $roomInsuranceShare = (float) $stayDetails['insurance_stay_share'];
-                        $roomApproved = $roomPatientShare + $roomInsuranceShare;
+            $stayDetails = $surgery->calculateStayDetails();
+            $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+            $isRoomPackageIncluded = $isInclusive || ($request->has('package_included.room') && $request->input('package_included.room') == '1');
+
+            if ($payRoom) {
+                $remainingRoomFee = $isStayIns
+                    ? max(0, ($stayDetails['patient_stay_share'] ?? 0) - ($surgery->room_fee_paid_amount ?? 0))
+                    : max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
+
+                if ($remainingRoomFee > 0 || $isStayIns) {
+                    $roomFeePaidThisTime = $remainingRoomFee;
+                    if ($isRoomPackageIncluded) {
+                        $roomApproved = (float) $remainingRoomFee;
+                        $roomPatientShare = 0.0;
+                        $roomInsuranceShare = (float) ($isStayIns ? ($stayDetails['insurance_stay_share'] ?? 0) : 0);
+                        $paidItems[] = 'أجور الغرفة والإقامة (مشمولة بالكامل ضمن باقة العملية - 0 د.ع)';
                     } else {
-                        $roomApproved = (float) $roomFeePaidThisTime;
-                        $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
-                        $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                        $actualAmount += $roomFeePaidThisTime;
+                        if ($isInsurance) {
+                            if ($isStayIns) {
+                                $roomPatientShare = (float) $roomFeePaidThisTime;
+                                $roomInsuranceShare = (float) ($stayDetails['insurance_stay_share'] ?? 0);
+                                $roomApproved = $roomPatientShare + $roomInsuranceShare;
+                            } else {
+                                $roomApproved = (float) $roomFeePaidThisTime;
+                                $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
+                                $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                            }
+                        } else {
+                            $roomApproved = (float) $roomFeePaidThisTime;
+                            $roomPatientShare = $roomApproved;
+                            $roomInsuranceShare = 0.0;
+                        }
+                        $paidItems[] = 'أجور الغرفة والإقامة - مدفوع: '.number_format($roomPatientShare, 0).' د.ع';
                     }
-                } else {
-                    $roomApproved = (float) $roomFeePaidThisTime;
-                    $roomPatientShare = $roomApproved;
-                    $roomInsuranceShare = 0.0;
                 }
             }
 
@@ -3420,6 +3479,22 @@ class CashierController extends Controller
                 $paidItems[] = 'حصة المريض: '.number_format($patientPaidAmount, 0).' د.ع | مطالبة الضمان: '.number_format($totalInsuranceShare, 0).' د.ع';
             }
 
+            // معالجة نمط الدفع (كامل أم جزئي للمبلغ الكلي)
+            $isPartialPayment = ($request->input('payment_mode') === 'partial') && $request->filled('custom_paid_amount');
+            if ($isPartialPayment) {
+                $customPaid = max(0.0, (float) $request->input('custom_paid_amount'));
+                if ($customPaid <= 0) {
+                    throw new \Exception('يرجى تحديد المبلغ المقبوض في الدفع الجزئي');
+                }
+                if ($customPaid > $patientPaidAmount) {
+                    throw new \Exception('المبلغ المقبوض في الدفع الجزئي ('.number_format($customPaid, 0).' د.ع) لا يمكن أن يتجاوز صافي المبلغ المطلوب ('.number_format($patientPaidAmount, 0).' د.ع)');
+                }
+
+                $remainingDebt = max(0.0, $patientPaidAmount - $customPaid);
+                $patientPaidAmount = $customPaid;
+                $paidItems[] = 'نوع التسديد: دفع جزئي (المقبوض فعلياً: '.number_format($patientPaidAmount, 0).' د.ع | المتبقي كدين بذمة العملية: '.number_format($remainingDebt, 0).' د.ع)';
+            }
+
             // التحقق من الدفع المركب (كاش + بطاقة)
             $paymentMethod = $request->input('payment_method', 'cash');
             $cashAmount = (float) $request->input('cash_amount', 0);
@@ -3470,9 +3545,15 @@ class CashierController extends Controller
             ]);
 
             // تحديث مبالغ وحالة رسوم العملية
-            if ($paySurgery && $surgeryFeePaidThisTime > 0) {
+            if ($paySurgery) {
                 $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
-                $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
+                if ($isPartialPayment) {
+                    $ancillariesPaid = $roomPatientShare + $labPatientShare + $radPatientShare + $extraPatientShare;
+                    $creditedToSurgery = max(0.0, $patientPaidAmount - $ancillariesPaid);
+                    $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + min($creditedToSurgery, $remainingSurgeryFee);
+                } else {
+                    $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
+                }
                 $surgeryFeePaidStatus = $newSurgeryFeePaidAmount >= $totalSurgeryFee ? 'paid' : 'partial';
 
                 $surgery->update([

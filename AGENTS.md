@@ -54,6 +54,26 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-07 — المرحلة 175: نظام الكاشير الموحد للعمليات الجراحية — الشمول التام للغرفة بالباقة، الحذف الفوري لتحاليل وأشعة العمليات، والدفع الجزئي العام الإجمالي للمبلغ الكلي Surgery Cashier Unified Suite: Granular Lab/Radiology Deletion, Room Package Inclusion Toggle & Global Bottom Invoice Split/Partial Payment)
+
+### Done
+- **الحذف الفوري للتحاليل والأشعة المعلقة بالعملية ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسارات وتوابع `removeSurgeryLabTest()` و `removeSurgeryRadiologyTest()` للتحقق من صلاحية الكاشير وملكية الفحص وعدم تسديده مسبقاً، مع دعم استجابة JSON للـ AJAX.
+  * تحديث مايجريشن `database/migrations/2026_01_13_063801_add_payment_fields_to_surgery_radiology_tests_table.php` لإضافة أعمدة `payment_status` و `payment_id` في جدول `surgery_radiology_tests`.
+  * إضافة أزرار الحذف الدائرية الحمراء `delete-surgery-item-btn` في جدول تسديد العمليات مع تأكيد SweetAlert2 أنيق وإعادة حساب فوري للمجاميع.
+- **توحيد كبسولات الشمول بالباقة للغرفة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * استبدال أزرار التجزئة المشتتة داخل سطر الغرفة بكبسولات موحدة: `[ 📦 مشمول بالعملية ]` (حصة المريض 0 د.ع) مقابل `[ 💵 منفصل ]` (احتساب الاستقطاع الاعتيادي أو الضمان).
+  * ربط `package_included[room]` في السيرفر وتحديث مبالغ الغرفة والإقامة وإصدار الوصل بما يطابق الشمول.
+- **بطاقة الدفع الجزئي العام أسفل الفاتورة (Global Partial Payment)**:
+  * نقل خيار الدفع الكامل والجزئي من تشتته بالأسطر إلى بطاقة تحكم عامة وموحدة أسفل الجدول أعلى وسائل الدفع: `[ 🟢 دفع كامل للمبلغ المعتمد ]` مقابل `[ 🟡 دفع جزئي (دفعة مقبوضة الآن) ]`.
+  * حقل إدخال المبلغ المقبوض فعلياً مع شارة احتساب دين العملية المتبقي حياً ولحظياً.
+  * معالجة `CashierController@processSurgeryPayment` لحفظ الدفعة وتوزيعها وإبقاء العملية كـ `partial` وتوثيق المتبقي في الوصل وسجل المدفوعات.
+- **فصل شاشة الانتظار وتقويم العمليات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * تحويل شاشة الانتظار `/surgeries/waiting` إلى شاشة عرض مخصصة لعمليات اليوم فقط مع تنقل يومي سلس `[ السابق / التالي ]`.
+  * نقل وتخصيص التقويم الشهري المدمج إلى سجل العمليات العام `/surgeries`.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * كتابة واجتياز 3 اختبارات آلية جديدة تغطي حذف التحاليل والأشعة، شمول الغرفة بالباقة بدقة، والدفع الجزئي العام الإجمالي بنسبة 100% (11 passed, 61 assertions) واستمرار اجتياز كافة اختبارات الضمان وشرائح الإقامة (19 passed, 131 assertions).
+
 ## Session log (2026-11-07 — المرحلة 174: حظر فتح المحطة السريرية للمقيم قبل استلام المريض في الغرفة، وتطبيق نظام التنبيهات الطبي الشامل SweetAlert2 Resident Clinical Station Gate & Global Hospital SweetAlert2 & Toastr Modern Styling System)
 
 ### Done

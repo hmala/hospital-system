@@ -819,21 +819,10 @@
                                                 0 د.ع
                                             </td>
                                             <td class="text-center">
-                                                <div class="d-flex flex-column align-items-center gap-1">
-                                                    <div class="segmented-control-pills" style="max-width: 190px;">
-                                                        <input type="radio" class="segmented-pill-input surgery-payment-type" name="surgery_payment_type" id="surgery_pay_full" value="full" checked autocomplete="off">
-                                                        <label class="segmented-pill-label pill-unbundled" for="surgery_pay_full">دفع كامل</label>
-
-                                                        <input type="radio" class="segmented-pill-input surgery-payment-type" name="surgery_payment_type" id="surgery_pay_part" value="partial" autocomplete="off">
-                                                        <label class="segmented-pill-label pill-unbundled" for="surgery_pay_part">دفع جزء</label>
-                                                    </div>
-                                                    <div class="mt-1" id="surgery_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control form-control-sm text-end" id="surgery_custom_amount" name="surgery_custom_amount" value="{{ $remainingSurgeryFee }}" min="1" max="{{ $remainingSurgeryFee }}">
-                                                            <span class="input-group-text small">IQD</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 fw-bold" style="font-size: 0.82rem;">
+                                                    <i class="fas fa-procedures me-1"></i>أصل العملية الجراحية
+                                                </span>
+                                                <input type="hidden" name="surgery_payment_type" value="full">
                                             </td>
                                         </tr>
                                         @endif
@@ -947,28 +936,33 @@
                                                 {{ number_format($isStayIns ? $stayInsuranceShare : 0, 0) }} د.ع
                                             </td>
                                             <td class="text-center">
-                                                @if($remainingRoomFee > 0)
-                                                    <div class="d-flex flex-column align-items-center gap-1">
-                                                        <div class="segmented-control-pills" style="max-width: 190px;">
-                                                            <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_full" value="full" checked autocomplete="off">
-                                                            <label class="segmented-pill-label pill-unbundled" for="room_pay_full">دفع كامل</label>
+                                                <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
+                                                    <input type="radio" class="segmented-pill-input room-inclusion-radio inclusion-pill-radio" 
+                                                           name="pkg_radio_room" 
+                                                           id="rad_inc_room" 
+                                                           value="1" 
+                                                           {{ ($remainingRoomFee == 0 || $isStayIns) ? 'checked' : '' }} autocomplete="off">
+                                                    <label class="segmented-pill-label pill-included" for="rad_inc_room" title="مشمول ضمن باقة وتكلفة العملية (0 د.ع)">
+                                                        <i class="fas fa-box-open"></i>
+                                                        <span>مشمول</span>
+                                                    </label>
 
-                                                            <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_part" value="partial" autocomplete="off">
-                                                            <label class="segmented-pill-label pill-unbundled" for="room_pay_part">دفع جزء</label>
-                                                        </div>
-                                                        <div class="mt-1" id="room_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
-                                                            <div class="input-group input-group-sm">
-                                                                <input type="number" class="form-control form-control-sm text-end" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
-                                                                <span class="input-group-text small">IQD</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
-                                                        <i class="fas fa-box-open me-1"></i>مشمول بالعملية (0 د.ع)
-                                                    </span>
-                                                    <input type="hidden" name="room_payment_type" value="full">
-                                                @endif
+                                                    <input type="radio" class="segmented-pill-input room-inclusion-radio inclusion-pill-radio" 
+                                                           name="pkg_radio_room" 
+                                                           id="rad_sep_room" 
+                                                           value="0" 
+                                                           {{ ($remainingRoomFee > 0 && !$isStayIns) ? 'checked' : '' }} autocomplete="off">
+                                                    <label class="segmented-pill-label pill-unbundled" for="rad_sep_room" title="غير مشمول - تسديد أجور الإقامة منفصلة">
+                                                        <i class="fas fa-coins"></i>
+                                                        <span>منفصل</span>
+                                                    </label>
+                                                    <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                           name="package_included[room]" 
+                                                           id="pkg_incl_room" 
+                                                           value="1" 
+                                                           {{ ($remainingRoomFee == 0 || $isStayIns) ? 'checked' : '' }}>
+                                                </div>
+                                                <input type="hidden" name="room_payment_type" value="full">
                                             </td>
                                         </tr>
                                         @endif
@@ -1031,28 +1025,37 @@
                                                         0 د.ع
                                                     </td>
                                                     <td class="text-center">
-                                                        <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
-                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
-                                                                   name="pkg_radio_lab_{{ $labTest->id }}" 
-                                                                   id="rad_inc_lab_{{ $labTest->id }}" 
-                                                                   value="1" checked autocomplete="off">
-                                                            <label class="segmented-pill-label pill-included" for="rad_inc_lab_{{ $labTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
-                                                                <i class="fas fa-box-open"></i>
-                                                                <span>مشمول</span>
-                                                            </label>
+                                                        <div class="d-flex align-items-center justify-content-center gap-1.5">
+                                                            <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_lab_{{ $labTest->id }}" 
+                                                                       id="rad_inc_lab_{{ $labTest->id }}" 
+                                                                       value="1" checked autocomplete="off">
+                                                                <label class="segmented-pill-label pill-included" for="rad_inc_lab_{{ $labTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                    <i class="fas fa-box-open"></i>
+                                                                    <span>مشمول</span>
+                                                                </label>
 
-                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
-                                                                   name="pkg_radio_lab_{{ $labTest->id }}" 
-                                                                   id="rad_sep_lab_{{ $labTest->id }}" 
-                                                                   value="0" autocomplete="off">
-                                                            <label class="segmented-pill-label pill-unbundled" for="rad_sep_lab_{{ $labTest->id }}" title="غير مشمول - منفصل">
-                                                                <i class="fas fa-coins"></i>
-                                                                <span>منفصل</span>
-                                                            </label>
-                                                            <input type="checkbox" class="package-inclusion-switch d-none" 
-                                                                   name="package_included[lab][{{ $labTest->id }}]" 
-                                                                   id="pkg_incl_lab_{{ $labTest->id }}" 
-                                                                   value="1" checked>
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_lab_{{ $labTest->id }}" 
+                                                                       id="rad_sep_lab_{{ $labTest->id }}" 
+                                                                       value="0" autocomplete="off">
+                                                                <label class="segmented-pill-label pill-unbundled" for="rad_sep_lab_{{ $labTest->id }}" title="غير مشمول - منفصل">
+                                                                    <i class="fas fa-coins"></i>
+                                                                    <span>منفصل</span>
+                                                                </label>
+                                                                <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                       name="package_included[lab][{{ $labTest->id }}]" 
+                                                                       id="pkg_incl_lab_{{ $labTest->id }}" 
+                                                                       value="1" checked>
+                                                            </div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle delete-surgery-item-btn d-inline-flex align-items-center justify-content-center" 
+                                                                    style="width: 28px; height: 28px; flex-shrink: 0;"
+                                                                    data-url="{{ route('cashier.surgeries.lab-tests.remove', [$surgery, $labTest]) }}"
+                                                                    data-name="{{ $lModel->name ?? 'تحليل' }}"
+                                                                    title="حذف هذا التحليل من العملية">
+                                                                <i class="fas fa-trash-alt small"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1124,28 +1127,37 @@
                                                         0 د.ع
                                                     </td>
                                                     <td class="text-center">
-                                                        <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
-                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
-                                                                   name="pkg_radio_rad_{{ $radiologyTest->id }}" 
-                                                                   id="rad_inc_rad_{{ $radiologyTest->id }}" 
-                                                                   value="1" autocomplete="off">
-                                                            <label class="segmented-pill-label pill-included" for="rad_inc_rad_{{ $radiologyTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
-                                                                <i class="fas fa-box-open"></i>
-                                                                <span>مشمول</span>
-                                                            </label>
+                                                        <div class="d-flex align-items-center justify-content-center gap-1.5">
+                                                            <div class="segmented-control-pills" style="max-width: 170px; margin: 0 auto;">
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_rad_{{ $radiologyTest->id }}" 
+                                                                       id="rad_inc_rad_{{ $radiologyTest->id }}" 
+                                                                       value="1" autocomplete="off">
+                                                                <label class="segmented-pill-label pill-included" for="rad_inc_rad_{{ $radiologyTest->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                    <i class="fas fa-box-open"></i>
+                                                                    <span>مشمول</span>
+                                                                </label>
 
-                                                            <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
-                                                                   name="pkg_radio_rad_{{ $radiologyTest->id }}" 
-                                                                   id="rad_sep_rad_{{ $radiologyTest->id }}" 
-                                                                   value="0" checked autocomplete="off">
-                                                            <label class="segmented-pill-label pill-unbundled" for="rad_sep_rad_{{ $radiologyTest->id }}" title="غير مشمول - منفصل">
-                                                                <i class="fas fa-coins"></i>
-                                                                <span>منفصل</span>
-                                                            </label>
-                                                            <input type="checkbox" class="package-inclusion-switch d-none" 
-                                                                   name="package_included[radiology][{{ $radiologyTest->id }}]" 
-                                                                   id="pkg_incl_rad_{{ $radiologyTest->id }}" 
-                                                                   value="1">
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_rad_{{ $radiologyTest->id }}" 
+                                                                       id="rad_sep_rad_{{ $radiologyTest->id }}" 
+                                                                       value="0" checked autocomplete="off">
+                                                                <label class="segmented-pill-label pill-unbundled" for="rad_sep_rad_{{ $radiologyTest->id }}" title="غير مشمول - منفصل">
+                                                                    <i class="fas fa-coins"></i>
+                                                                    <span>منفصل</span>
+                                                                </label>
+                                                                <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                       name="package_included[radiology][{{ $radiologyTest->id }}]" 
+                                                                       id="pkg_incl_rad_{{ $radiologyTest->id }}" 
+                                                                       value="1">
+                                                            </div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle delete-surgery-item-btn d-inline-flex align-items-center justify-content-center" 
+                                                                    style="width: 28px; height: 28px; flex-shrink: 0;"
+                                                                    data-url="{{ route('cashier.surgeries.radiology-tests.remove', [$surgery, $radiologyTest]) }}"
+                                                                    data-name="{{ $rModel->name ?? 'فحص أشعة' }}"
+                                                                    title="حذف هذا الفحص من العملية">
+                                                                <i class="fas fa-trash-alt small"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1317,6 +1329,54 @@
                         <!-- حقل المبلغ المخفي -->
                         <input type="hidden" name="amount" id="amountInput" value="{{ $pendingAmount }}">
                         <input type="hidden" name="total_amount" value="{{ $totalAmount }}">
+
+                        <!-- بطاقة اختيار نمط السداد الإجمالي: دفع كامل أو دفع جزئي من إجمالي الفاتورة -->
+                        <div class="card border rounded-4 p-3 mb-4 shadow-2xs bg-white" id="global_payment_split_card">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-hand-holding-usd text-primary fs-5"></i>
+                                    <label class="form-label fw-bolder mb-0 text-dark fs-6">نمط تسديد الفاتورة الإجمالية:</label>
+                                </div>
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5 small fw-bold">
+                                    صافي المطلوب قبضه: <strong class="text-success fs-6" id="grand_patient_total_display">{{ number_format($pendingAmount, 0) }} د.ع</strong>
+                                </span>
+                            </div>
+
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-6">
+                                    <div class="segmented-control-pills w-100" style="height: 42px;">
+                                        <input type="radio" class="segmented-pill-input global-payment-mode" name="payment_mode" id="pay_mode_full" value="full" checked autocomplete="off">
+                                        <label class="segmented-pill-label pill-included fs-6 fw-bold" for="pay_mode_full">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            دفع كامل للمبلغ المعتمد (<span id="btn_full_amount_label">{{ number_format($pendingAmount, 0) }}</span> د.ع)
+                                        </label>
+
+                                        <input type="radio" class="segmented-pill-input global-payment-mode" name="payment_mode" id="pay_mode_partial" value="partial" autocomplete="off">
+                                        <label class="segmented-pill-label pill-unbundled fs-6 fw-bold" for="pay_mode_partial">
+                                            <i class="fas fa-coins me-1"></i>
+                                            دفع جزئي (دفعة مقبوضة الآن)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6" id="partial_payment_amount_container" style="display: none;">
+                                    <div class="p-2.5 rounded-3 border bg-warning-subtle d-flex align-items-center justify-content-between gap-3">
+                                        <div class="flex-grow-1">
+                                            <label class="form-label small fw-bold text-dark mb-1">المبلغ المقبوض فعلياً الآن (IQD) *</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white text-success fw-bold">IQD</span>
+                                                <input type="number" class="form-control form-control-sm fw-bolder text-success fs-6" 
+                                                       id="custom_paid_amount" name="custom_paid_amount" min="1" step="1000" placeholder="0">
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block fw-bold" style="font-size: 0.72rem;">المتبقي كدين / مؤجل</small>
+                                            <span class="badge bg-danger fs-6" id="partial_remaining_badge">0 د.ع</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="row">
                             <div class="col-md-6">
@@ -1601,26 +1661,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const paySurgeryCheckbox = document.getElementById('pay_surgery_checkbox');
         let surgeryPaidThisTime = 0;
         if (paySurgeryCheckbox && paySurgeryCheckbox.checked) {
-            const payFull = document.getElementById('surgery_pay_full') ? document.getElementById('surgery_pay_full').checked : true;
-            const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
-            const custInput = document.getElementById('surgery_custom_amount');
-            const feeDisp = document.getElementById('surgery_fee_display');
-
-            if (payFull) {
-                surgeryPaidThisTime = remainingSurgeryFee;
-                if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                if (custWrapper) custWrapper.style.display = 'none';
-                if (feeDisp) feeDisp.textContent = numberFormat(remainingSurgeryFee);
-            } else {
-                if (custWrapper) custWrapper.style.display = 'block';
-                let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                if (customVal > remainingSurgeryFee) {
-                    customVal = remainingSurgeryFee;
-                    if (custInput) custInput.value = Math.round(remainingSurgeryFee);
-                }
-                surgeryPaidThisTime = customVal;
-                if (feeDisp) feeDisp.textContent = numberFormat(customVal);
-            }
+            surgeryPaidThisTime = remainingSurgeryFee;
 
             if (surgeryPaidThisTime > 0) {
                 totalApprovedPayable += surgeryPaidThisTime;
@@ -1641,10 +1682,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedCount++;
             }
         } else if (paySurgeryCheckbox) {
-            const custWrapper = document.getElementById('surgery_custom_amount_wrapper');
             const feeDisp = document.getElementById('surgery_fee_display');
             const insDisp = document.getElementById('surgery_insurance_display');
-            if (custWrapper) custWrapper.style.display = 'none';
             if (feeDisp) feeDisp.textContent = '0';
             if (insDisp) insDisp.textContent = '0 د.ع';
         }
@@ -1653,9 +1692,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const payRoomCheckbox = document.getElementById('pay_room_checkbox');
         let roomPaidThisTime = 0;
         if (payRoomCheckbox && payRoomCheckbox.checked) {
-            const payFull = document.getElementById('room_pay_full') ? document.getElementById('room_pay_full').checked : true;
-            const custWrapper = document.getElementById('room_custom_amount_wrapper');
-            const custInput = document.getElementById('room_custom_amount');
+            const pkgSwitchRoom = document.getElementById('pkg_incl_room');
+            const isRoomIncluded = pkgSwitchRoom ? pkgSwitchRoom.checked : false;
             const feeDisp = document.getElementById('room_fee_display');
             const insDisp = document.getElementById('room_insurance_display');
 
@@ -1663,50 +1701,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? remainingRoomFeeInsurance
                 : remainingRoomFeeSelfPay;
 
-            if (payFull) {
-                roomPaidThisTime = effectiveRemainingRoom;
-                if (custInput) custInput.value = Math.round(effectiveRemainingRoom);
-                if (custWrapper) custWrapper.style.display = 'none';
-            } else {
-                if (custWrapper) custWrapper.style.display = 'block';
-                let customVal = parseFloat(custInput ? custInput.value : 0) || 0;
-                if (customVal > effectiveRemainingRoom) {
-                    customVal = effectiveRemainingRoom;
-                    if (custInput) custInput.value = Math.round(effectiveRemainingRoom);
-                }
-                roomPaidThisTime = customVal;
-            }
-
-            if (roomPaidThisTime > 0) {
-                let rPatShare = roomPaidThisTime;
-                let rInsShare = 0;
-                if (isIns) {
-                    if (isInsuranceStayCalculated) {
-                        rPatShare = roomPaidThisTime;
-                        rInsShare = roomInsuranceShareVal;
-                    } else {
-                        rPatShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
-                        rInsShare = Math.max(0, roomPaidThisTime - rPatShare);
-                    }
-                    totalApprovedPayable += (rPatShare + rInsShare);
-                    totalPatientShare += rPatShare;
-                    totalInsuranceShare += rInsShare;
-                } else {
-                    totalApprovedPayable += roomPaidThisTime;
-                    totalPatientShare += roomPaidThisTime;
-                }
-                if (feeDisp) feeDisp.textContent = numberFormat(rPatShare);
+            if (isRoomIncluded) {
+                // مشمول ضمن باقة وتكلفة العملية (0 د.ع على المريض)
+                let rInsShare = isIns ? roomInsuranceShareVal : 0;
+                totalApprovedPayable += rInsShare;
+                totalInsuranceShare += rInsShare;
+                if (feeDisp) feeDisp.textContent = '0';
                 if (insDisp) insDisp.textContent = numberFormat(rInsShare) + ' د.ع';
                 selectedCount++;
             } else {
-                if (feeDisp) feeDisp.textContent = '0';
-                if (insDisp) insDisp.textContent = '0 د.ع';
+                // منفصل: يحسب بالكامل
+                roomPaidThisTime = effectiveRemainingRoom;
+                if (roomPaidThisTime > 0) {
+                    let rPatShare = roomPaidThisTime;
+                    let rInsShare = 0;
+                    if (isIns) {
+                        if (isInsuranceStayCalculated) {
+                            rPatShare = roomPaidThisTime;
+                            rInsShare = roomInsuranceShareVal;
+                        } else {
+                            rPatShare = Math.round(roomPaidThisTime * (surgeryCopayPct / 100));
+                            rInsShare = Math.max(0, roomPaidThisTime - rPatShare);
+                        }
+                        totalApprovedPayable += (rPatShare + rInsShare);
+                        totalPatientShare += rPatShare;
+                        totalInsuranceShare += rInsShare;
+                    } else {
+                        totalApprovedPayable += roomPaidThisTime;
+                        totalPatientShare += roomPaidThisTime;
+                    }
+                    if (feeDisp) feeDisp.textContent = numberFormat(rPatShare);
+                    if (insDisp) insDisp.textContent = numberFormat(rInsShare) + ' د.ع';
+                    selectedCount++;
+                } else {
+                    if (feeDisp) feeDisp.textContent = '0';
+                    if (insDisp) insDisp.textContent = '0 د.ع';
+                }
             }
         } else if (payRoomCheckbox) {
-            const custWrapper = document.getElementById('room_custom_amount_wrapper');
             const feeDisp = document.getElementById('room_fee_display');
             const insDisp = document.getElementById('room_insurance_display');
-            if (custWrapper) custWrapper.style.display = 'none';
             if (feeDisp) feeDisp.textContent = '0';
             if (insDisp) insDisp.textContent = '0 د.ع';
         }
@@ -1908,6 +1942,40 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Global Payment Mode: Full vs Partial
+        const payModePartialRadio = document.getElementById('pay_mode_partial');
+        const isPayModePartial = payModePartialRadio ? payModePartialRadio.checked : false;
+        const partialContainer = document.getElementById('partial_payment_amount_container');
+        const customPaidInput = document.getElementById('custom_paid_amount');
+        const partialRemainingBadge = document.getElementById('partial_remaining_badge');
+        const grandPatientTotalDisplay = document.getElementById('grand_patient_total_display');
+        const btnFullAmountLabel = document.getElementById('btn_full_amount_label');
+
+        if (grandPatientTotalDisplay) grandPatientTotalDisplay.textContent = numberFormat(netPatientShare) + ' د.ع';
+        if (btnFullAmountLabel) btnFullAmountLabel.textContent = numberFormat(netPatientShare);
+
+        let finalActualAmountToCollect = netPatientShare;
+        let partialDeferredDebt = 0;
+
+        if (isPayModePartial) {
+            if (partialContainer) partialContainer.style.display = 'block';
+            let enteredPaid = parseFloat(customPaidInput ? customPaidInput.value : 0) || 0;
+            if (enteredPaid > netPatientShare) {
+                enteredPaid = netPatientShare;
+                if (customPaidInput) customPaidInput.value = Math.round(netPatientShare);
+            }
+            finalActualAmountToCollect = enteredPaid;
+            partialDeferredDebt = Math.max(0, netPatientShare - enteredPaid);
+            if (partialRemainingBadge) {
+                partialRemainingBadge.textContent = numberFormat(partialDeferredDebt) + ' د.ع';
+            }
+        } else {
+            if (partialContainer) partialContainer.style.display = 'none';
+            if (customPaidInput) customPaidInput.value = Math.round(netPatientShare);
+            finalActualAmountToCollect = netPatientShare;
+            partialDeferredDebt = 0;
+        }
+
         // Update displays
         const dispApproved = document.getElementById('display_approved_price');
         const dispPatient = document.getElementById('display_patient_share');
@@ -1924,14 +1992,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inclusiveCheckbox && inclusiveCheckbox.checked) {
             deferredAmount = 0;
         }
+        let totalDeferredToDisplay = deferredAmount + partialDeferredDebt;
 
         if (dispApproved) dispApproved.textContent = numberFormat(totalApprovedPayable) + ' د.ع';
-        if (dispPatient) dispPatient.textContent = numberFormat(netPatientShare) + ' د.ع';
+        if (dispPatient) dispPatient.textContent = numberFormat(finalActualAmountToCollect) + ' د.ع';
         if (dispInsurance) dispInsurance.textContent = numberFormat(totalInsuranceShare) + ' د.ع';
-        if (dispSelected) dispSelected.textContent = numberFormat(netPatientShare) + ' IQD';
-        if (dispDeferred) dispDeferred.textContent = numberFormat(deferredAmount) + ' IQD';
-        if (inputAmount) inputAmount.value = netPatientShare;
-        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(netPatientShare) + ' IQD)';
+        if (dispSelected) dispSelected.textContent = numberFormat(finalActualAmountToCollect) + ' IQD';
+        if (dispDeferred) dispDeferred.textContent = numberFormat(totalDeferredToDisplay) + ' IQD';
+        if (inputAmount) inputAmount.value = finalActualAmountToCollect;
+        if (submitAmountSpan) submitAmountSpan.textContent = '(' + numberFormat(finalActualAmountToCollect) + ' IQD)';
         if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
 
         const tableApproved = document.getElementById('table_total_approved');
@@ -1940,7 +2009,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tableInsurance) tableInsurance.textContent = numberFormat(totalInsuranceShare) + ' د.ع';
 
         if (deferredRow) {
-            deferredRow.style.display = deferredAmount > 0 ? '' : 'none';
+            deferredRow.style.display = totalDeferredToDisplay > 0 ? '' : 'none';
         }
 
         if (submitBtn) {
@@ -2187,48 +2256,110 @@ document.addEventListener('DOMContentLoaded', function() {
         serviceNameInput.addEventListener('change', updatePriceFromCatalog);
     }
 
-    // تأكيد وحذف خدمة إضافية معلقة
-    document.querySelectorAll('.delete-extra-service-btn').forEach(btn => {
+    // تأكيد وحذف العناصر المعلقة (تحاليل، أشعة، خدمات إضافية)
+    document.querySelectorAll('.delete-surgery-item-btn, .delete-extra-service-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const url = this.getAttribute('data-url');
             const name = this.getAttribute('data-name');
-            if (confirm('هل أنت متأكد من حذف خدمة "' + name + '" من العملية؟')) {
-                const delForm = document.createElement('form');
-                delForm.method = 'POST';
-                delForm.action = url;
-                const csrf = document.createElement('input');
-                csrf.type = 'hidden';
-                csrf.name = '_token';
-                csrf.value = '{{ csrf_token() }}';
-                const method = document.createElement('input');
-                method.type = 'hidden';
-                method.name = '_method';
-                method.value = 'DELETE';
-                delForm.appendChild(csrf);
-                delForm.appendChild(method);
-                document.body.appendChild(delForm);
-                delForm.submit();
+            const row = this.closest('tr');
+
+            const doDelete = function() {
+                fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (row) {
+                            row.style.transition = 'all 0.3s ease';
+                            row.style.opacity = '0';
+                            setTimeout(() => {
+                                row.remove();
+                                calculateSelectedAmount();
+                            }, 300);
+                        }
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'تم الحذف',
+                                text: data.message,
+                                timer: 1800,
+                                showConfirmButton: false
+                            });
+                        }
+                    } else {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('خطأ', data.message || 'تعذر الحذف', 'error');
+                        } else {
+                            alert(data.message || 'تعذر الحذف');
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Fallback form submit
+                    const delForm = document.createElement('form');
+                    delForm.method = 'POST';
+                    delForm.action = url;
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = '{{ csrf_token() }}';
+                    const method = document.createElement('input');
+                    method.type = 'hidden';
+                    method.name = '_method';
+                    method.value = 'DELETE';
+                    delForm.appendChild(csrf);
+                    delForm.appendChild(method);
+                    document.body.appendChild(delForm);
+                    delForm.submit();
+                });
+            };
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'تأكيد الحذف',
+                    html: 'هل أنت متأكد من حذف <strong>' + name + '</strong> من العملية؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'نعم، احذف',
+                    cancelButtonText: 'إلغاء'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete();
+                    }
+                });
+            } else if (confirm('هل أنت متأكد من حذف "' + name + '" من العملية؟')) {
+                doDelete();
             }
         });
     });
 
-    // مستمعي أحداث تغيير الراديو للعملية
-    document.querySelectorAll('.surgery-payment-type').forEach(function(radio) {
-        radio.addEventListener('change', calculateSelectedAmount);
+    // مستمعي أحداث تغيير الراديو للغرفة (مشمول / منفصل)
+    document.querySelectorAll('.room-inclusion-radio').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const hiddenSwitch = document.getElementById('pkg_incl_room');
+            if (hiddenSwitch) {
+                hiddenSwitch.checked = (this.value === '1');
+            }
+            calculateSelectedAmount();
+        });
     });
-    const surgeryCustomAmount = document.getElementById('surgery_custom_amount');
-    if (surgeryCustomAmount) {
-        surgeryCustomAmount.addEventListener('input', calculateSelectedAmount);
-    }
 
-    // مستمعي أحداث تغيير الراديو للغرفة
-    document.querySelectorAll('.room-payment-type').forEach(function(radio) {
+    // مستمعي أحداث اختيار نمط الدفع الكلي (دفع كامل / دفع جزئي)
+    document.querySelectorAll('.global-payment-mode').forEach(function(radio) {
         radio.addEventListener('change', calculateSelectedAmount);
     });
-    const roomCustomAmount = document.getElementById('room_custom_amount');
-    if (roomCustomAmount) {
-        roomCustomAmount.addEventListener('input', calculateSelectedAmount);
+    const customPaidAmountInput = document.getElementById('custom_paid_amount');
+    if (customPaidAmountInput) {
+        customPaidAmountInput.addEventListener('input', calculateSelectedAmount);
+        customPaidAmountInput.addEventListener('change', calculateSelectedAmount);
     }
 
     // إضافة مستمعي الأحداث لجميع checkboxes العناصر

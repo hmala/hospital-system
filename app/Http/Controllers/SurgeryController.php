@@ -685,9 +685,26 @@ class SurgeryController extends Controller
             $selectedDate = $parsedDate->format('Y-m-d');
         }
 
-        // حساب أيام الأسبوع المحيطة باليوم المختار (من السبت إلى الجمعة)
-        $startOfWeek = $parsedDate->copy()->startOfWeek(\Carbon\Carbon::SATURDAY);
-        $weekDays = [];
+        // 1. تحديد الشهر والسنة لليوم المختار وبناء شبكة التقويم الشهري
+        $month = $parsedDate->month;
+        $year = $parsedDate->year;
+        $startOfMonth = $parsedDate->copy()->startOfMonth();
+        $endOfMonth = $parsedDate->copy()->endOfMonth();
+
+        // بداية ونهاية شبكة التقويم (من السبت إلى الجمعة لتغطية كل أسابيع الشهر)
+        $calendarStart = $startOfMonth->copy()->startOfWeek(\Carbon\Carbon::SATURDAY);
+        $calendarEnd = $endOfMonth->copy()->endOfWeek(\Carbon\Carbon::FRIDAY);
+
+        // جلب أعداد العمليات لكافة أيام شبكة التقويم باستعلام تجميعي واحد وسريع
+        $monthlyCounts = Surgery::whereBetween('scheduled_date', [
+            $calendarStart->format('Y-m-d'),
+            $calendarEnd->format('Y-m-d'),
+        ])
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('DATE(scheduled_date) as day_date, count(*) as count')
+            ->groupBy('day_date')
+            ->pluck('count', 'day_date');
+
         $arabicDayNames = [
             'Saturday' => 'السبت',
             'Sunday' => 'الأحد',
@@ -698,25 +715,48 @@ class SurgeryController extends Controller
             'Friday' => 'الجمعة',
         ];
 
-        for ($i = 0; $i < 7; $i++) {
-            $d = $startOfWeek->copy()->addDays($i);
-            $dayKey = $d->format('Y-m-d');
-            $count = Surgery::whereDate('scheduled_date', $dayKey)
-                ->where('status', '!=', 'cancelled')
-                ->count();
+        $arabicMonths = [
+            1 => 'كانون الثاني (يناير)',
+            2 => 'شباط (فبراير)',
+            3 => 'آذار (مارس)',
+            4 => 'نيسان (أبريل)',
+            5 => 'أيار (مايو)',
+            6 => 'حزيران (يونيو)',
+            7 => 'تموز (يوليو)',
+            8 => 'آب (أغسطس)',
+            9 => 'أيلول (سبتمبر)',
+            10 => 'تشرين الأول (أكتوبر)',
+            11 => 'تشرين الثاني (نوفمبر)',
+            12 => 'كانون الأول (ديسمبر)',
+        ];
 
-            $englishDay = $d->format('l');
-            $arabicDay = $arabicDayNames[$englishDay] ?? $englishDay;
+        $calendarDays = [];
+        $curr = $calendarStart->copy();
+        while ($curr->lte($calendarEnd)) {
+            $dayKey = $curr->format('Y-m-d');
+            $count = (int) ($monthlyCounts[$dayKey] ?? 0);
+            $englishDay = $curr->format('l');
 
-            $weekDays[] = [
+            $calendarDays[] = [
                 'date' => $dayKey,
-                'day_name' => $arabicDay,
-                'formatted_date' => $d->format('d/m'),
+                'day_number' => $curr->format('j'),
+                'day_name' => $arabicDayNames[$englishDay] ?? $englishDay,
+                'formatted_date' => $curr->format('d/m'),
+                'is_current_month' => $curr->month === $month,
+                'is_today' => $curr->isToday(),
                 'is_selected' => $dayKey === $selectedDate,
-                'is_today' => $d->isToday(),
                 'count' => $count,
             ];
+            $curr->addDay();
         }
+
+        $weekDays = $calendarDays; // للتوافق العكسي
+        $prevMonthDate = $startOfMonth->copy()->subMonth()->format('Y-m-d');
+        $nextMonthDate = $startOfMonth->copy()->addMonth()->format('Y-m-d');
+        $monthTitle = ($arabicMonths[$month] ?? $parsedDate->format('F')).' '.$year;
+        $totalMonthSurgeries = Surgery::whereBetween('scheduled_date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
+            ->where('status', '!=', 'cancelled')
+            ->count();
 
         // جلب كافة عمليات اليوم المحدد
         $daySurgeries = Surgery::with([
@@ -768,6 +808,11 @@ class SurgeryController extends Controller
             'activeSurgeries',
             'recoverySurgeries',
             'daySurgeries',
+            'calendarDays',
+            'prevMonthDate',
+            'nextMonthDate',
+            'monthTitle',
+            'totalMonthSurgeries',
             'weekDays',
             'selectedDate',
             'parsedDate',

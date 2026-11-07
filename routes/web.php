@@ -380,6 +380,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/surgeries/{surgery}/extra-services', [\App\Http\Controllers\CashierController::class, 'addSurgeryExtraService'])->name('surgeries.extra-services.add');
         Route::patch('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'updateSurgeryExtraService'])->name('surgeries.extra-services.update');
         Route::delete('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryExtraService'])->name('surgeries.extra-services.remove');
+        Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
+        Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');

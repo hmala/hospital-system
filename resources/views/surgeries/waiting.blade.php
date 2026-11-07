@@ -49,158 +49,159 @@
             flex-shrink: 0;
         }
 
-        /* Weekday navigation strip */
-        .week-nav-container {
-            background: #f8fafc;
-            border: 1px solid var(--or-border);
-            border-radius: 14px;
-            padding: 8px 10px;
-            margin-bottom: 18px;
-        }
-        .week-nav-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 6px;
-        }
-        @media (max-width: 991px) {
-            .week-nav-grid {
-                display: flex;
-                overflow-x: auto;
-                scrollbar-width: thin;
-                padding-bottom: 3px;
-            }
-            .week-day-pill {
-                min-width: 105px;
-                flex: 1;
-            }
-        }
-        .week-day-pill {
+        /* ===== Compact Month Calendar Grid & Side KPI Dashboard ===== */
+        .mini-calendar-card {
             background: #ffffff;
             border: 1px solid var(--or-border);
-            border-radius: 10px;
-            padding: 6px 10px;
-            text-decoration: none;
-            color: #334155;
-            transition: all 0.18s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            border-radius: 16px;
         }
-        .week-day-pill:hover {
-            transform: translateY(-1px);
-            border-color: var(--or-primary);
-            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
-            color: var(--or-primary);
+        .mini-cal-title {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
         }
-        .week-day-pill.active {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            border-color: #0f172a;
-            color: #ffffff;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+        .calendar-weekdays-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-bottom: 5px;
         }
-        .pill-inline-wrap {
+        .calendar-weekdays-header > div {
+            background: #f1f5f9;
+            padding: 3px 2px;
+            border-radius: 6px;
+        }
+        .calendar-days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day-cell {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 3px 6px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            width: 100%;
-            gap: 6px;
+            text-decoration: none;
+            transition: all 0.15s ease-in-out;
+            position: relative;
         }
-        .pill-day-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            line-height: 1.15;
+        .calendar-day-cell:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+            border-color: #3b82f6;
         }
-        .week-day-pill .day-title-label {
-            font-weight: 700;
+        .calendar-day-cell .day-number {
             font-size: 0.8rem;
-            white-space: nowrap;
-        }
-        .week-day-pill .day-date-label {
-            font-size: 0.68rem;
-            color: #64748b;
+            font-weight: 700;
+            color: #1e293b;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
         }
-        .week-day-pill.active .day-date-label {
-            color: rgba(255, 255, 255, 0.72);
-        }
-        .week-day-pill .badge-count {
-            font-size: 0.72rem;
-            font-weight: 700;
-            min-width: 22px;
-            height: 22px;
-            border-radius: 6px;
+        .calendar-day-cell .badge-surgery-count {
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: #10b981;
+            color: #ffffff;
+            border-radius: 5px;
+            padding: 1px 5px;
+            min-width: 17px;
+            height: 17px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: #f1f5f9;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            flex-shrink: 0;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-            transition: all 0.15s;
+            box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);
         }
-        .week-day-pill .badge-count.has-ops {
-            background: #e0f2fe;
-            color: #0284c7;
-            border-color: #bae6fd;
-            font-weight: 800;
-        }
-        .week-day-pill.active .badge-count {
-            background: rgba(255, 255, 255, 0.18);
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.25);
-        }
-        .week-day-pill.active .badge-count.has-ops {
-            background: #0284c7;
-            color: #ffffff;
-            border-color: #38bdf8;
-            box-shadow: 0 0 6px rgba(2, 132, 199, 0.4);
-        }
-        .today-glow-dot {
-            width: 6px;
-            height: 6px;
+        .today-dot-mini {
+            width: 5px;
+            height: 5px;
             background-color: #f59e0b;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: 0 0 6px #f59e0b;
-            position: absolute;
-            top: 4px;
-            inset-inline-end: 4px;
         }
 
-        /* KPI Quick Stat Cards */
-        .kpi-card {
+        /* State 1: Has Surgeries */
+        .calendar-day-cell.day-has-surgeries {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .calendar-day-cell.day-has-surgeries .day-number {
+            color: #15803d;
+            font-weight: 800;
+        }
+
+        /* State 2: Today */
+        .calendar-day-cell.day-today {
+            box-shadow: 0 0 0 2px #f59e0b, 0 2px 6px rgba(245, 158, 11, 0.18) !important;
+            border-color: #f59e0b !important;
+        }
+
+        /* State 3: Selected Day */
+        .calendar-day-cell.day-selected {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+            border-color: #1e3a8a !important;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35) !important;
+            z-index: 2;
+        }
+        .calendar-day-cell.day-selected .day-number {
+            color: #ffffff !important;
+        }
+        .calendar-day-cell.day-selected .badge-surgery-count {
             background: #ffffff;
+            color: #1e3a8a;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Outside Month */
+        .calendar-day-cell.day-outside-month {
+            opacity: 0.35;
+            background: #f8fafc;
+            border-color: #f1f5f9;
+        }
+
+        /* Legend boxes */
+        .legend-color-box {
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .legend-selected { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
+        .legend-today { background: #f59e0b; }
+        .legend-has-ops { background: #10b981; }
+
+        /* KPI Side Dashboard Cards */
+        .kpi-side-card {
+            background: #f8fafc;
             border: 1.5px solid var(--or-border);
-            border-radius: 14px;
-            padding: 12px 16px;
+            border-radius: 12px;
+            padding: 9px 12px;
+            cursor: pointer;
+            transition: all 0.18s ease;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            cursor: pointer;
-            transition: all 0.2s ease;
             user-select: none;
         }
-        .kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        .kpi-side-card:hover {
+            transform: translateY(-1px);
             border-color: #cbd5e1;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
         }
-        .kpi-card.kpi-active {
+        .kpi-side-card.kpi-active {
             border-color: var(--or-primary);
-            background: #f8fafc;
-            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+            background: #f0f9ff;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
         }
         .kpi-icon-wrap {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
         }
 
         /* Modern Table Styling */
@@ -409,6 +410,10 @@
                 </a>
                 @endcan
 
+                <button type="button" class="btn btn-outline-primary bg-white rounded-pill px-3 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-1.5" id="btnToggleDashboard" data-bs-toggle="collapse" data-bs-target="#topDashboardCollapse" aria-expanded="true" title="طي أو إظهار التقويم والمؤشرات لتكبير مساحة الجدول">
+                    <i class="fas fa-chevron-up" id="toggleDashboardIcon"></i> <span id="toggleDashboardText">طي التقويم</span>
+                </button>
+
                 <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="عرض مخصص لشاشات الـ TV وممرات العمليات">
                     <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">شاشة العرض (TV)</span>
                 </button>
@@ -419,46 +424,7 @@
             </div>
         </div>
 
-        {{-- Weekdays Compact Segmented Strip (شريط أيام الأسبوع المدمج) --}}
-        <div class="week-nav-container">
-            <div class="d-flex align-items-center justify-content-between mb-2 px-1">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-dark small d-flex align-items-center gap-1.5" style="font-size: 0.84rem;">
-                        <i class="far fa-calendar-alt text-primary"></i>
-                        <span>اختر اليوم من الأسبوع:</span>
-                    </span>
-                    <span class="badge bg-white text-dark border px-2 py-0.5 font-monospace fw-semibold" style="font-size: 0.74rem;">
-                        {{ $parsedDate->locale('ar')->translatedFormat('l، d F Y') }}
-                    </span>
-                </div>
-                <div class="small text-muted d-none d-md-block" style="font-size: 0.76rem;">
-                    انقر على أي يوم لاستعراض جدول العمليات
-                </div>
-            </div>
-
-            <div class="week-nav-grid">
-                @foreach($weekDays as $day)
-                <a href="{{ route('surgeries.waiting', ['date' => $day['date']]) }}" 
-                   class="week-day-pill {{ $day['is_selected'] ? 'active' : '' }}"
-                   title="{{ $day['day_name'] }} {{ $day['date'] }} ({{ $day['count'] }} عمليات)">
-                    @if($day['is_today'])
-                        <span class="today-glow-dot" title="اليوم الحالي"></span>
-                    @endif
-                    <div class="pill-inline-wrap">
-                        <div class="pill-day-info">
-                            <span class="day-title-label">{{ $day['day_name'] }}</span>
-                            <span class="day-date-label">{{ $day['formatted_date'] }}</span>
-                        </div>
-                        <span class="badge-count {{ $day['count'] > 0 ? 'has-ops' : '' }}">
-                            {{ $day['count'] }}
-                        </span>
-                    </div>
-                </a>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Interactive KPI Stat Cards (فلترة فورية بنقرة واحدة) --}}
+        {{-- Side-by-Side Dashboard: Compact Month Calendar Grid & Interactive KPIs --}}
         @php
             $inTheaterCount = $daySurgeries->filter(function($s) {
                 $isDone = $s->status === 'completed' || ($s->operationTheaterStation && $s->operationTheaterStation->status === 'completed');
@@ -468,76 +434,192 @@
             $completedCount = $daySurgeries->filter(function($s) {
                 return $s->status === 'completed' || ($s->operationTheaterStation && $s->operationTheaterStation->status === 'completed');
             })->count();
+
+            $waitingCount = $activeSurgeries->whereIn('status', ['waiting', 'checked_in'])->count();
         @endphp
-        <div class="row g-2 mb-3">
-            {{-- All surgeries --}}
-            <div class="col-6 col-md">
-                <div class="kpi-card kpi-active" data-status-filter="all" id="kpi-filter-all" onclick="filterTableByStatus('all')">
-                    <div>
-                        <div class="text-muted small fw-bold">إجمالي عمليات اليوم</div>
-                        <div class="fs-4 fw-bolder text-dark font-monospace mt-0.5">{{ $daySurgeries->count() }}</div>
-                    </div>
-                    <div class="kpi-icon-wrap bg-light text-primary">
-                        <i class="fas fa-layer-group"></i>
-                    </div>
-                </div>
-            </div>
 
-            {{-- Scheduled --}}
-            <div class="col-6 col-md">
-                <div class="kpi-card" data-status-filter="scheduled" id="kpi-filter-scheduled" onclick="filterTableByStatus('scheduled')">
-                    <div>
-                        <div class="text-muted small fw-bold">مجدولة</div>
-                        <div class="fs-4 fw-bolder text-primary font-monospace mt-0.5">{{ $scheduledSurgeries->count() }}</div>
-                    </div>
-                    <div class="kpi-icon-wrap bg-primary bg-opacity-10 text-primary">
-                        <i class="far fa-calendar-alt"></i>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Waiting / Preparation --}}
-            <div class="col-6 col-md">
-                <div class="kpi-card" data-status-filter="waiting" id="kpi-filter-waiting" onclick="filterTableByStatus('waiting')">
-                    <div>
-                        <div class="text-muted small fw-bold">بالانتظار (تحضير)</div>
-                        <div class="fs-4 fw-bolder text-warning font-monospace mt-0.5">{{ $activeSurgeries->whereIn('status', ['waiting', 'checked_in'])->count() }}</div>
-                    </div>
-                    <div class="kpi-icon-wrap bg-warning bg-opacity-10 text-warning">
-                        <i class="fas fa-user-clock"></i>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Inside OR (In Progress) --}}
-            <div class="col-6 col-md">
-                <div class="kpi-card" data-status-filter="in_progress" id="kpi-filter-in_progress" onclick="filterTableByStatus('in_progress')">
-                    <div>
-                        <div class="text-muted small fw-bold d-flex align-items-center gap-1">
-                            <span class="live-pulse-dot"></span> داخل الصالة (جارية)
+        <div class="collapse show" id="topDashboardCollapse">
+            <div class="row g-3 mb-4 align-items-stretch">
+            {{-- Right Column: Compact Month Calendar Grid (التقويم الشهري المدمج) --}}
+            <div class="col-12 col-lg-7 col-xl-7">
+                <div class="mini-calendar-card shadow-sm h-100 d-flex flex-column justify-content-between p-3">
+                    {{-- Mini Cal Header --}}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-1.5">
+                            <a href="{{ route('surgeries.waiting', ['date' => $prevMonthDate]) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5" title="الشهر السابق" style="font-size: 0.76rem;">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            <span class="mini-cal-title px-1">
+                                <i class="far fa-calendar-alt text-primary me-1"></i> {{ $monthTitle }}
+                            </span>
+                            <a href="{{ route('surgeries.waiting', ['date' => $nextMonthDate]) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5" title="الشهر القادم" style="font-size: 0.76rem;">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
                         </div>
-                        <div class="fs-4 fw-bolder text-info font-monospace mt-0.5">{{ $inTheaterCount }}</div>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                {{ $totalMonthSurgeries }} عملية بالشهر
+                            </span>
+                            <a href="{{ route('surgeries.waiting', ['date' => today()->format('Y-m-d')]) }}" class="btn btn-sm {{ today()->format('Y-m-d') === $selectedDate ? 'btn-primary' : 'btn-outline-primary' }} rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.74rem;">
+                                🌟 اليوم
+                            </a>
+                        </div>
                     </div>
-                    <div class="kpi-icon-wrap bg-info bg-opacity-10 text-info">
-                        <i class="fas fa-procedures"></i>
+
+                    {{-- 7 Weekdays Header --}}
+                    <div class="calendar-weekdays-header">
+                        <div>السبت</div>
+                        <div>الأحد</div>
+                        <div>الاثنين</div>
+                        <div>الثلاثاء</div>
+                        <div>الأربعاء</div>
+                        <div>الخميس</div>
+                        <div>الجمعة</div>
+                    </div>
+
+                    {{-- Calendar Days Grid (7 columns) --}}
+                    <div class="calendar-days-grid my-auto">
+                        @foreach($calendarDays as $day)
+                            @php
+                                $cellClass = [];
+                                if ($day['is_selected']) {
+                                    $cellClass[] = 'day-selected';
+                                } elseif ($day['is_today']) {
+                                    $cellClass[] = 'day-today';
+                                } elseif ($day['count'] > 0) {
+                                    $cellClass[] = 'day-has-surgeries';
+                                } else {
+                                    $cellClass[] = 'day-empty';
+                                }
+
+                                if (!$day['is_current_month']) {
+                                    $cellClass[] = 'day-outside-month';
+                                }
+                            @endphp
+                            <a href="{{ route('surgeries.waiting', ['date' => $day['date']]) }}" 
+                               class="calendar-day-cell {{ implode(' ', $cellClass) }}"
+                               title="{{ $day['day_name'] }} {{ $day['date'] }} ({{ $day['count'] }} عمليات)">
+                                <span class="day-number">{{ $day['day_number'] }}</span>
+                                @if($day['count'] > 0)
+                                    <span class="badge-surgery-count">{{ $day['count'] }}</span>
+                                @elseif($day['is_today'])
+                                    <span class="today-dot-mini"></span>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+
+                    {{-- Mini Cal Footer Legend --}}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 mt-2 border-top small text-muted" style="font-size: 0.72rem;">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-selected" style="width: 10px; height: 10px;"></span>
+                                <span>المختار: <strong>{{ $parsedDate->format('d/m') }}</strong></span>
+                            </span>
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-today" style="width: 10px; height: 10px;"></span>
+                                <span>اليوم</span>
+                            </span>
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-has-ops" style="width: 10px; height: 10px;"></span>
+                                <span>أيام بها عمليات</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Completed / Exited OR --}}
-            <div class="col-12 col-md">
-                <div class="kpi-card" data-status-filter="completed" id="kpi-filter-completed" onclick="filterTableByStatus('completed')">
-                    <div>
-                        <div class="text-muted small fw-bold d-flex align-items-center gap-1">
-                            <i class="fas fa-check-circle text-success"></i> مكتملة (خرجت من الصالة)
-                        </div>
-                        <div class="fs-4 fw-bolder text-success font-monospace mt-0.5">{{ $completedCount }}</div>
+            {{-- Left Column: Compact KPI Cards Dashboard (كروت المؤشرات بجانب التقويم) --}}
+            <div class="col-12 col-lg-5 col-xl-5">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white d-flex flex-column justify-content-between" style="border: 1px solid var(--or-border) !important;">
+                    <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                        <span class="fw-bold text-dark small d-flex align-items-center gap-1.5" style="font-size: 0.84rem;">
+                            <i class="fas fa-chart-pie text-primary"></i>
+                            <span>مؤشرات: {{ $parsedDate->locale('ar')->translatedFormat('l، d F') }}</span>
+                        </span>
+                        <span class="badge bg-light text-muted border px-2 py-0.5 font-monospace" style="font-size: 0.72rem;">
+                            {{ $daySurgeries->count() }} عمليات
+                        </span>
                     </div>
-                    <div class="kpi-icon-wrap bg-success bg-opacity-10 text-success">
-                        <i class="fas fa-flag-checkered"></i>
+
+                    {{-- 2x2 Grid + 1 Completed Bar --}}
+                    <div class="d-flex flex-column gap-2 my-auto">
+                        <div class="row g-2">
+                            {{-- All Surgeries --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card kpi-active" data-status-filter="all" id="kpi-filter-all" onclick="filterTableByStatus('all')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">إجمالي اليوم</div>
+                                        <div class="fs-4 fw-bolder text-dark font-monospace">{{ $daySurgeries->count() }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-light text-primary" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-layer-group"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Scheduled --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="scheduled" id="kpi-filter-scheduled" onclick="filterTableByStatus('scheduled')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">مجدولة</div>
+                                        <div class="fs-4 fw-bolder text-primary font-monospace">{{ $scheduledSurgeries->count() }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-primary bg-opacity-10 text-primary" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="far fa-calendar-alt"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Waiting / Prep --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="waiting" id="kpi-filter-waiting" onclick="filterTableByStatus('waiting')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">بالانتظار (تحضير)</div>
+                                        <div class="fs-4 fw-bolder text-warning font-monospace">{{ $waitingCount }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-warning bg-opacity-10 text-warning" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-user-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- In OR (In Progress) --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="in_progress" id="kpi-filter-in_progress" onclick="filterTableByStatus('in_progress')">
+                                    <div>
+                                        <div class="text-muted small fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                            <span class="live-pulse-dot" style="width: 5px; height: 5px;"></span> داخل الصالة
+                                        </div>
+                                        <div class="fs-4 fw-bolder text-info font-monospace">{{ $inTheaterCount }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-info bg-opacity-10 text-info" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-procedures"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Completed Full Width Bar --}}
+                        <div class="kpi-side-card" data-status-filter="completed" id="kpi-filter-completed" onclick="filterTableByStatus('completed')">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="kpi-icon-wrap bg-success bg-opacity-10 text-success" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                                    <i class="fas fa-flag-checkered"></i>
+                                </div>
+                                <div class="text-muted small fw-bold" style="font-size: 0.76rem;">
+                                    مكتملة (خرجت من الصالة للتعافي / الطابق)
+                                </div>
+                            </div>
+                            <div class="fs-5 fw-bolder text-success font-monospace">{{ $completedCount }}</div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-top text-muted small text-center" style="font-size: 0.72rem;">
+                        <i class="fas fa-hand-pointer me-1 text-primary"></i> انقر على أي مؤشر لتصفية جدول العمليات بالأسفل
                     </div>
                 </div>
             </div>
+        </div>
         </div>
 
         {{-- Realtime Search Bar --}}
@@ -551,19 +633,16 @@
             </div>
         </div>
 
-        {{-- Master Flight Board Table --}}
+        {{-- Master Flight Board Table (5 Consolidated Columns) --}}
         <div class="or-table-shell table-responsive">
             <table class="or-master-table">
                 <thead>
                     <tr>
-                        <th style="width: 70px;"># الرقم</th>
-                        <th>المريض</th>
-                        <th>العملية الجراحية</th>
-                        <th>الطبيب الجراح</th>
-                        <th style="min-width: 195px;">الصالة المخصصة (تحديد مباشر)</th>
-                        <th style="min-width: 155px;">الوقت (تحديد مباشر)</th>
-                        <th>حالة المسار</th>
-                        <th class="text-center" style="width: 170px;">الإجراءات السريعة</th>
+                        <th style="width: 25%;"># / المريض والملف</th>
+                        <th style="width: 25%;">العملية الجراحية والجراح</th>
+                        <th style="width: 24%;">الصالة والتوقيت المباشر</th>
+                        <th style="width: 13%;">حالة المسار</th>
+                        <th class="text-center" style="width: 13%;">الإجراء السريع</th>
                     </tr>
                 </thead>
                 <tbody id="surgeriesTableBody">
@@ -594,21 +673,19 @@
                         }
                     @endphp
                     <tr class="surgery-row" data-search="{{ $searchData }}" data-status="{{ $normalizedStatus }}" id="surgeryRow-{{ $surgery->id }}">
-                        {{-- ID --}}
-                        <td>
-                            <span class="fw-bold font-monospace text-muted small">#{{ $surgery->id }}</span>
-                        </td>
-
-                        {{-- Patient Details --}}
+                        {{-- Col 1: ID, Patient & File --}}
                         <td>
                             <div class="d-flex align-items-center gap-2.5">
                                 <div class="patient-avatar-box">
                                     {{ mb_substr($patientName, 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{ $patientName }}</div>
-                                    <div class="d-flex align-items-center gap-1.5 mt-0.5">
-                                        <span class="badge bg-light text-dark border font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">#{{ $fileNumber }}</span>
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <span class="badge bg-light text-muted border font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">#{{ $surgery->id }}</span>
+                                        <span class="fw-bold text-dark" style="font-size: 0.95rem;">{{ $patientName }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ملف #{{ $fileNumber }}</span>
                                         @if($surgery->patient && $surgery->patient->age)
                                             <span class="badge bg-light text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
                                         @endif
@@ -620,85 +697,93 @@
                             </div>
                         </td>
 
-                        {{-- Surgery Type --}}
-                        <td>
-                            <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.92rem;">
-                                {{ $surgery->surgery_type }}
-                            </div>
-                            @if($surgery->additionalOperations && $surgery->additionalOperations->count() > 0)
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2 py-0.5 small mt-1">
-                                    + {{ $surgery->additionalOperations->count() }} عمليات إضافية
-                                </span>
-                            @endif
-                        </td>
-
-                        {{-- Surgeon --}}
-                        <td>
-                            <div class="d-inline-flex align-items-center gap-1.5 bg-light border rounded-pill px-2.5 py-1 text-dark small fw-semibold">
-                                <i class="fas fa-user-md text-primary"></i>
-                                <span>د. {{ $doctorName }}</span>
-                            </div>
-                        </td>
-
-                        {{-- Operation Theater (Inline Select + Quick Add) --}}
-                        <td>
-                            <div class="d-flex align-items-center gap-1">
-                                <select class="form-select form-select-sm or-inline-select or-theater-select"
-                                        data-surgery-id="{{ $surgery->id }}"
-                                        onchange="inlineSaveTheater(this, {{ $surgery->id }})">
-                                    <option value="">-- اختر الصالة المخصصة --</option>
-                                    @foreach($operationTheaters as $theater)
-                                        <option value="{{ $theater->id }}" {{ $surgery->operation_theater_id == $theater->id ? 'selected' : '' }}>
-                                            {{ $theater->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-3 shadow-none p-0 d-inline-flex align-items-center justify-content-center"
-                                        title="إضافة صالة جديدة للقائمة"
-                                        onclick="openNewTheaterModal({{ $surgery->id }})"
-                                        style="width: 32px; height: 32px; flex-shrink: 0;">
-                                    <i class="fas fa-plus small"></i>
-                                </button>
-                            </div>
-                            <div class="small text-success fw-bold mt-1 d-none save-msg" id="saveTheaterMsg-{{ $surgery->id }}" style="font-size: 0.72rem;">
-                                <i class="fas fa-check-circle"></i> تم حفظ الصالة
-                            </div>
-                        </td>
-
-                        {{-- Time (Inline Time Input + Live Stopwatch) --}}
+                        {{-- Col 2: Surgery Type & Surgeon --}}
                         <td>
                             <div>
-                                <input type="time" class="form-control form-control-sm or-inline-time or-time-input"
-                                       value="{{ $rawTime }}"
-                                       data-surgery-id="{{ $surgery->id }}"
-                                       onchange="inlineSaveTime(this, {{ $surgery->id }})">
-                            </div>
-                            <div class="small text-success fw-bold mt-1 d-none save-msg" id="saveTimeMsg-{{ $surgery->id }}" style="font-size: 0.72rem;">
-                                <i class="fas fa-check-circle"></i> تم حفظ الوقت
-                            </div>
-
-                            @if($surgery->status === 'in_progress' && ! $isOtCompleted)
-                                <div class="mt-1">
-                                    <span class="live-stopwatch-capsule" data-live-timer="true" data-start="{{ $surgery->started_at ? $surgery->started_at->toISOString() : ($surgery->scheduled_time ? $surgery->scheduled_time->toISOString() : '') }}">
-                                        <i class="fas fa-stopwatch text-success"></i><span>00:00:00</span>
-                                    </span>
+                                <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.94rem;">
+                                    {{ $surgery->surgery_type }}
                                 </div>
-                            @endif
+                                <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
+                                    <span class="d-inline-flex align-items-center gap-1 bg-light border rounded-pill px-2.5 py-0.5 text-dark small fw-semibold" style="font-size: 0.78rem;">
+                                        <i class="fas fa-user-md text-primary"></i>
+                                        <span>د. {{ $doctorName }}</span>
+                                    </span>
+                                    @if($surgery->additionalOperations && $surgery->additionalOperations->count() > 0)
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.7rem;">
+                                            + {{ $surgery->additionalOperations->count() }} إضافية
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
 
-                        {{-- Stage / Status --}}
+                        {{-- Col 3: Theater & Time (Compact Inline Configuration) --}}
+                        <td>
+                            <div class="d-flex flex-column gap-1.5" style="max-width: 260px;">
+                                {{-- Theater Selector --}}
+                                <div class="d-flex align-items-center gap-1">
+                                    <select class="form-select form-select-sm or-inline-select or-theater-select py-1"
+                                            data-surgery-id="{{ $surgery->id }}"
+                                            onchange="inlineSaveTheater(this, {{ $surgery->id }})"
+                                            style="font-size: 0.8rem;">
+                                        <option value="">-- اختر الصالة المخصصة --</option>
+                                        @foreach($operationTheaters as $theater)
+                                            <option value="{{ $theater->id }}" {{ $surgery->operation_theater_id == $theater->id ? 'selected' : '' }}>
+                                                {{ $theater->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-3 shadow-none p-0 d-inline-flex align-items-center justify-content-center"
+                                            title="إضافة صالة جديدة للقائمة"
+                                            onclick="openNewTheaterModal({{ $surgery->id }})"
+                                            style="width: 28px; height: 28px; flex-shrink: 0;">
+                                        <i class="fas fa-plus small" style="font-size: 0.72rem;"></i>
+                                    </button>
+                                </div>
+
+                                {{-- Time Input & Stopwatch --}}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="input-group input-group-sm" style="max-width: 125px;">
+                                        <span class="input-group-text bg-light text-muted px-1.5 py-0 border-end-0" style="font-size: 0.75rem;"><i class="far fa-clock"></i></span>
+                                        <input type="time" class="form-control form-control-sm or-inline-time or-time-input ps-1 py-0.5"
+                                               value="{{ $rawTime }}"
+                                               data-surgery-id="{{ $surgery->id }}"
+                                               onchange="inlineSaveTime(this, {{ $surgery->id }})"
+                                               style="font-size: 0.8rem; height: 28px;">
+                                    </div>
+
+                                    @if($surgery->status === 'in_progress' && ! $isOtCompleted)
+                                        <span class="live-stopwatch-capsule py-0.5 px-2" data-live-timer="true" data-start="{{ $surgery->started_at ? $surgery->started_at->toISOString() : ($surgery->scheduled_time ? $surgery->scheduled_time->toISOString() : '') }}" style="font-size: 0.72rem;">
+                                            <i class="fas fa-stopwatch text-success"></i><span>00:00:00</span>
+                                        </span>
+                                    @endif
+                                </div>
+
+                                {{-- Feedback messages --}}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="small text-success fw-bold d-none save-msg" id="saveTheaterMsg-{{ $surgery->id }}" style="font-size: 0.7rem;">
+                                        <i class="fas fa-check-circle"></i> تم حفظ الصالة
+                                    </div>
+                                    <div class="small text-success fw-bold d-none save-msg" id="saveTimeMsg-{{ $surgery->id }}" style="font-size: 0.7rem;">
+                                        <i class="fas fa-check-circle"></i> تم حفظ الوقت
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        {{-- Col 4: Stage / Status --}}
                         <td>
                             @if($isOtCompleted)
                                 <span class="badge-stage-pill bg-success text-white shadow-sm" title="تم إنهاء صالة العمليات واكتمال العملية">
-                                    <i class="fas fa-check-circle me-0.5"></i> مكتملة (خرجت من الصالة)
+                                    <i class="fas fa-check-circle me-0.5"></i> مكتملة (خرجت)
                                 </span>
                             @elseif($surgery->status === 'in_progress')
                                 <span class="badge-stage-pill bg-info text-white shadow-sm">
-                                    <span class="live-pulse-dot"></span> داخل الصالة (جارية)
+                                    <span class="live-pulse-dot"></span> داخل الصالة
                                 </span>
                             @elseif($surgery->status === 'waiting' || $surgery->status === 'checked_in')
                                 <span class="badge-stage-pill bg-warning bg-opacity-10 text-warning border border-warning-subtle">
-                                    <i class="fas fa-user-clock"></i> بالانتظار (تحضير)
+                                    <i class="fas fa-user-clock"></i> بالانتظار
                                 </span>
                             @elseif($surgery->status === 'scheduled')
                                 <span class="badge-stage-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle">
@@ -709,7 +794,7 @@
                             @endif
                         </td>
 
-                        {{-- Actions Column: Strictly stage progress buttons, no irrelevant buttons --}}
+                        {{-- Col 5: Actions Column --}}
                         <td class="text-center">
                             <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
                                 @if($isOtCompleted)
@@ -749,13 +834,13 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
+                        <td colspan="5" class="text-center py-5 text-muted">
                             <div class="py-4">
                                 <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center p-3 mb-2 text-muted" style="width: 70px; height: 70px;">
                                     <i class="far fa-calendar-times fs-2"></i>
                                 </div>
                                 <div class="fw-bold fs-6 text-dark">لا توجد عمليات مسجلة في هذا اليوم</div>
-                                <div class="small text-muted mt-1">اختر يوماً آخر من شريط الأسبوع في الأعلى أو قم بحجز عملية جديدة</div>
+                                <div class="small text-muted mt-1">اختر يوماً آخر من التقويم في الأعلى أو قم بحجز عملية جديدة</div>
                                 @can('create surgeries')
                                 <a href="{{ route('surgeries.create') }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 mt-3 fw-bold">
                                     <i class="fas fa-plus me-1"></i> حجز عملية الآن
@@ -893,7 +978,7 @@ function filterTableByStatus(status) {
     currentActiveFilter = status;
 
     // Highlight active card
-    document.querySelectorAll('.kpi-card').forEach(card => {
+    document.querySelectorAll('.kpi-side-card, .kpi-card').forEach(card => {
         if (card.getAttribute('data-status-filter') === status) {
             card.classList.add('kpi-active');
         } else {
@@ -932,6 +1017,34 @@ function applyFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Dashboard Collapse/Expand state management
+    const dashboardCollapseEl = document.getElementById('topDashboardCollapse');
+    const toggleDashboardIcon = document.getElementById('toggleDashboardIcon');
+    const toggleDashboardText = document.getElementById('toggleDashboardText');
+
+    if (dashboardCollapseEl) {
+        // Restore user's collapsed state from localStorage
+        const isCollapsed = localStorage.getItem('waiting_dashboard_collapsed') === 'true';
+        if (isCollapsed) {
+            const bsCollapse = new bootstrap.Collapse(dashboardCollapseEl, { toggle: false });
+            bsCollapse.hide();
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-down';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'إظهار التقويم';
+        }
+
+        dashboardCollapseEl.addEventListener('hide.bs.collapse', function () {
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-down';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'إظهار التقويم';
+            localStorage.setItem('waiting_dashboard_collapsed', 'true');
+        });
+
+        dashboardCollapseEl.addEventListener('show.bs.collapse', function () {
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-up';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'طي التقويم';
+            localStorage.setItem('waiting_dashboard_collapsed', 'false');
+        });
+    }
+
     // Search Filter
     const searchInput = document.getElementById('surgerySearchInput');
     if (searchInput) {
