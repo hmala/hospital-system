@@ -68,6 +68,23 @@ Consult these files before making changes or proposing fixes:
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
   * اجتياز كامل الاختبارات بنسبة نجاح 100% (`8 passed, 50 assertions`) واستمرار اجتياز كافة اختبارات المحطة وصلاحيات التبويبات (`11 passed, 44 assertions`).
 
+## Session log (2026-11-07 — المرحلة 178: عزل العمليات الملغاة والمسترجعة في تبويب رقابي مستقل وتصفير مستحقاتها المحاسبية Doctor Accounts Cancelled & Refunded Surgeries Segregation, Informational Audit Tab & Zero-Balance Dues Governance)
+
+### Done
+- **عزل العمليات الملغاة والمسترجعة محاسبياً في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * في ملخص حسابات الجراحين (`surgeryDoctorAccounts`): استبعاد العمليات التي تحمل حالة `cancelled` أو `refunded` من عدد العمليات المحسوبة وإجمالي الأتعاب والمستحقات، بحيث لا تؤثر أي عملية ملغاة على الرصيد المستحق.
+  * في كشف حساب وتفاصيل الجراح (`surgeryDoctorAccount`): فصل الاستعلام إلى مجموعتين:
+    1. `$validQuery`: العمليات المعتمدة السارية المؤثرة على الأتعاب الاسمية وصافي المستحق والرصيد (`$grossFees`, `$packageDeductions`, `$netEarned`, `$balance`).
+    2. `$cancelledQuery`: العمليات الملغاة أو المسترجعة (`cancelledSurgeries`) لعرضها في تبويب رقابي للعلم والأرشفة دون التأثير على حساب الجراح.
+  * في عملية استرجاع الرسوم للمواطن (`processSurgeryRefund`): إضافة إجراء الإلغاء التلقائي لأي قيد `DoctorDue` معلق مرتبط بالعملية المسترجعة مع تدوين ملاحظة رقابية واضحة: `[أُلغيت المستحقات لاسترجاع رسوم العملية للمريض]`.
+- **تصميم التبويب الرقابي في كشف حساب الجراح ([resources/views/cashier/surgeries/doctor-account-details.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/doctor-account-details.blade.php))**:
+  * إضافة تبويبات Nav Pills ثلاثية أنيقة:
+    1. `العمليات الجراحية المستحقة`: تعرض العمليات المعتمدة فقط مع أزرار الصرف والتصفية.
+    2. `[ 🚫 العمليات الملغاة والمسترجعة (للعلم) ]`: مع شارة حمراء توضح عدد العمليات الملغاة، جدول شفاف يوضح تفاصيل العملية، الأجور الاسمية مشطوبة، شارة `0 د.ع (لا يترتب استحقاق)`، وشارة `تم استرجاع المبلغ للمواطن`، مع تفاصيل ورقم إيصال الاسترجاع وتاريخه.
+    3. `سجل سندات الصرف والتسويات`: سجل الدفعات السابقة.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * إضافة اختبار شامل `test_cancelled_and_refunded_surgeries_are_separated_in_doctor_account_with_zero_due` للتأكد من عزل العمليات الملغاة، تصفير رصيدها، وعرضها في التبويب الرقابي بنجاح 100% (`14 passed, 99 assertions`).
+
 ## Session log (2026-11-07 — المرحلة 177: شارات استقطاع حصة الجراح والضمان وتلخيص الاستقطاعات التلقائي في نموذج دفع العمليات Surgery Cashier Smart Package Inclusions Badges & Live Doctor Deductions Total Breakdown)
 
 ### Done

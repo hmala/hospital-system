@@ -699,4 +699,74 @@ class SurgeryExtraServicesTest extends TestCase
         // Since balance was settled (1,400,000 paid out of 1,400,000 earned, balance is 0), payout of 100k should return with error
         $payoutResponse->assertSessionHas('error');
     }
+
+    public function test_cancelled_and_refunded_surgeries_are_separated_in_doctor_account_with_zero_due(): void
+    {
+        // 1. Create active paid surgery
+        $activeSurgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية استئصال الغضروف',
+            'surgery_fee' => 1200000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'paid',
+            'insurance_type' => 'none',
+        ]);
+
+        $activePayment = \App\Models\Payment::create([
+            'patient_id' => $this->patient->id,
+            'cashier_id' => $this->cashier->id,
+            'surgery_id' => $activeSurgery->id,
+            'receipt_number' => \App\Models\Payment::generateReceiptNumber(),
+            'amount' => 1200000,
+            'payment_method' => 'cash',
+            'payment_type' => 'surgery',
+            'paid_at' => now(),
+        ]);
+
+        \App\Models\DoctorDue::create([
+            'doctor_id' => $this->doctor->id,
+            'payment_id' => $activePayment->id,
+            'amount' => 1200000,
+            'status' => 'pending',
+            'notes' => 'أتعاب عملية استئصال الغضروف',
+        ]);
+
+        // 2. Create cancelled & refunded surgery
+        $cancelledSurgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية رباط صليبي ملغاة',
+            'surgery_fee' => 1500000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '12:00:00',
+            'status' => 'cancelled',
+            'payment_status' => 'refunded',
+            'insurance_type' => 'none',
+        ]);
+
+        // 3. View doctor account details
+        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.doctor-account', $this->doctor));
+        $response->assertOk();
+
+        // Active tab should have the active surgery and active count = 1
+        $response->assertSee('عملية استئصال الغضروف');
+        $response->assertSee('العمليات الجراحية المستحقة');
+        $response->assertSee('العمليات الملغاة والمسترجعة (للعلم)');
+        $response->assertSee('عملية رباط صليبي ملغاة');
+        $response->assertSee('0 د.ع (لا يترتب استحقاق)');
+
+        // Gross fees and balance must only count the active surgery (1,200,000 not 2,700,000)
+        $stats = $response->viewData('stats');
+        $this->assertEquals(1, $stats['surgeries_count']);
+        $this->assertEquals(1, $stats['cancelled_count']);
+        $this->assertEquals(1200000.0, (float) $stats['gross_fees']);
+        $this->assertEquals(1200000.0, (float) $stats['balance']);
+    }
 }
