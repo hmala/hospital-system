@@ -1635,6 +1635,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalPatientShare = 0;
         let totalInsuranceShare = 0;
         let selectedCount = 0;
+        let unselectedDeferredAmount = 0;
 
         const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
         const isIns = (currentInsType === 'hi' || currentInsType === 'moi');
@@ -1682,6 +1683,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedCount++;
             }
         } else if (paySurgeryCheckbox) {
+            let sPatShare = remainingSurgeryFee;
+            if (isIns) {
+                sPatShare = Math.round(remainingSurgeryFee * (surgeryCopayPct / 100));
+            }
+            unselectedDeferredAmount += sPatShare;
             const feeDisp = document.getElementById('surgery_fee_display');
             const insDisp = document.getElementById('surgery_insurance_display');
             if (feeDisp) feeDisp.textContent = '0';
@@ -1691,15 +1697,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // 2. Room Fee portion
         const payRoomCheckbox = document.getElementById('pay_room_checkbox');
         let roomPaidThisTime = 0;
+        const pkgSwitchRoom = document.getElementById('pkg_incl_room');
+        const isRoomIncluded = pkgSwitchRoom ? pkgSwitchRoom.checked : false;
+        const effectiveRemainingRoom = (isIns && isInsuranceStayCalculated)
+            ? remainingRoomFeeInsurance
+            : remainingRoomFeeSelfPay;
+
         if (payRoomCheckbox && payRoomCheckbox.checked) {
-            const pkgSwitchRoom = document.getElementById('pkg_incl_room');
-            const isRoomIncluded = pkgSwitchRoom ? pkgSwitchRoom.checked : false;
             const feeDisp = document.getElementById('room_fee_display');
             const insDisp = document.getElementById('room_insurance_display');
-
-            const effectiveRemainingRoom = (isIns && isInsuranceStayCalculated)
-                ? remainingRoomFeeInsurance
-                : remainingRoomFeeSelfPay;
 
             if (isRoomIncluded) {
                 // مشمول ضمن باقة وتكلفة العملية (0 د.ع على المريض)
@@ -1739,6 +1745,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         } else if (payRoomCheckbox) {
+            if (!isRoomIncluded && effectiveRemainingRoom > 0) {
+                let rPatShare = effectiveRemainingRoom;
+                if (isIns && !isInsuranceStayCalculated) {
+                    rPatShare = Math.round(effectiveRemainingRoom * (surgeryCopayPct / 100));
+                }
+                unselectedDeferredAmount += rPatShare;
+            }
             const feeDisp = document.getElementById('room_fee_display');
             const insDisp = document.getElementById('room_insurance_display');
             if (feeDisp) feeDisp.textContent = '0';
@@ -1894,6 +1907,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (itemType === 'lab') currentLabTotal += itemPatientShare;
                 if (itemType === 'radiology') currentRadTotal += itemPatientShare;
                 if (itemType === 'extra') currentExtraTotal += itemPatientShare;
+            } else {
+                if (!isPkgIncluded && itemPatientShare > 0) {
+                    unselectedDeferredAmount += itemPatientShare;
+                }
             }
         });
 
@@ -1988,11 +2005,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitBtn = document.getElementById('submitBtn');
         const deferredRow = document.getElementById('deferredRow');
 
-        let deferredAmount = Math.max(0, pendingAmount - totalApprovedPayable);
-        if (inclusiveCheckbox && inclusiveCheckbox.checked) {
-            deferredAmount = 0;
-        }
-        let totalDeferredToDisplay = deferredAmount + partialDeferredDebt;
+        let totalDeferredToDisplay = unselectedDeferredAmount + partialDeferredDebt;
 
         if (dispApproved) dispApproved.textContent = numberFormat(totalApprovedPayable) + ' د.ع';
         if (dispPatient) dispPatient.textContent = numberFormat(finalActualAmountToCollect) + ' د.ع';
