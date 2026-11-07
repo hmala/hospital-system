@@ -838,8 +838,8 @@
                                         </tr>
                                         @endif
 
-                                        <!-- رسوم الغرفة (إذا لم تُدفع بالكامل) -->
-                                        @if(!$roomFeePaid && $remainingRoomFee > 0)
+                                        <!-- رسوم الغرفة (إذا كانت محجوزة للعملية ولم تُدفع بالكامل أو مشمولة بالعملية) -->
+                                        @if($surgery->room && (!$roomFeePaid || $remainingRoomFee > 0 || ($isStayIns && $roomFeePaidAmount == 0)))
                                         <tr class="table-primary align-middle">
                                             <td class="text-center">
                                                 <input type="checkbox" 
@@ -870,7 +870,11 @@
                                                         </div>
 
                                                         <small class="text-muted d-block mt-1">
-                                                            أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
+                                                            @if($remainingRoomFee == 0 && $isStayIns)
+                                                                أجرة الليلة الأولى: مشمولة بالكامل ضمن باقة وتكلفة العملية (0 د.ع)
+                                                            @else
+                                                                أجرة الليلة الأولى: {{ number_format($stayDetails['initial_fee'], 0) }} د.ع
+                                                            @endif
                                                             @if($stayDetails['extra_nights'] > 0)
                                                                 + {{ $stayDetails['extra_nights'] }} ليال إضافية ({{ number_format($stayDetails['extra_nights_fee'], 0) }} د.ع)
                                                             @endif
@@ -943,21 +947,28 @@
                                                 {{ number_format($isStayIns ? $stayInsuranceShare : 0, 0) }} د.ع
                                             </td>
                                             <td class="text-center">
-                                                <div class="d-flex flex-column align-items-center gap-1">
-                                                    <div class="segmented-control-pills" style="max-width: 190px;">
-                                                        <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_full" value="full" checked autocomplete="off">
-                                                        <label class="segmented-pill-label pill-unbundled" for="room_pay_full">دفع كامل</label>
+                                                @if($remainingRoomFee > 0)
+                                                    <div class="d-flex flex-column align-items-center gap-1">
+                                                        <div class="segmented-control-pills" style="max-width: 190px;">
+                                                            <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_full" value="full" checked autocomplete="off">
+                                                            <label class="segmented-pill-label pill-unbundled" for="room_pay_full">دفع كامل</label>
 
-                                                        <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_part" value="partial" autocomplete="off">
-                                                        <label class="segmented-pill-label pill-unbundled" for="room_pay_part">دفع جزء</label>
-                                                    </div>
-                                                    <div class="mt-1" id="room_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control form-control-sm text-end" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
-                                                            <span class="input-group-text small">IQD</span>
+                                                            <input type="radio" class="segmented-pill-input room-payment-type" name="room_payment_type" id="room_pay_part" value="partial" autocomplete="off">
+                                                            <label class="segmented-pill-label pill-unbundled" for="room_pay_part">دفع جزء</label>
+                                                        </div>
+                                                        <div class="mt-1" id="room_custom_amount_wrapper" style="display: none; width: 100%; max-width: 170px;">
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" class="form-control form-control-sm text-end" id="room_custom_amount" name="room_custom_amount" value="{{ $remainingRoomFee }}" min="1" max="{{ $remainingRoomFee }}">
+                                                                <span class="input-group-text small">IQD</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                @else
+                                                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                                                        <i class="fas fa-box-open me-1"></i>مشمول بالعملية (0 د.ع)
+                                                    </span>
+                                                    <input type="hidden" name="room_payment_type" value="full">
+                                                @endif
                                             </td>
                                         </tr>
                                         @endif

@@ -92,9 +92,12 @@ class HealthInsuranceStayTier extends Model
             $regularInsuranceShare = max(0.0, round($standardRoomPrice - $regularPatientShare, 2));
         }
 
-        // 2. فرق ترقية الغرفة الفعلي (إذا كانت VIP أو VVIP - يتحمله المريض بالكامل عن كل ليلة)
+        // 2. فرق ترقية الغرفة الفعلي (يسري حصراً وفقط إذا اختار المريض غرفة أعلى VIP أو VVIP)
+        // الغرفة العادية (regular) لا يوجد عليها أي فرق ترقية إطلاقاً (0 د.ع) لأنها معتمدة بسعر 200,000 للضمان
+        $roomType = $room ? strtolower($room->room_type ?? 'regular') : 'regular';
+        $isUpgrade = in_array($roomType, ['vip', 'vvip']);
         $actualRoomDailyFee = (float) ($room ? $room->daily_fee : $standardRoomPrice);
-        $upgradeDiff = max(0.0, round($actualRoomDailyFee - $standardRoomPrice, 2));
+        $upgradeDiff = $isUpgrade ? max(0.0, round($actualRoomDailyFee - $standardRoomPrice, 2)) : 0.0;
 
         // 3. الإجماليات
         $totalPatientShare = $regularPatientShare + $upgradeDiff;

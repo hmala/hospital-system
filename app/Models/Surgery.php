@@ -346,8 +346,10 @@ class Surgery extends Model
         $firstNightCutoff = (clone $checkin)->addDay()->setTime(12, 0, 0);
 
         // احتساب الليالي الإضافية: كم 12:00 ظهراً إضافية مرت بعد نهاية الليلة الأولى
+        // لا يتم احتساب ليالي إضافية إذا كانت العملية مجدولة فقط أو ملغاة أو لم تبدأ بعد
+        $hasActuallyStarted = ! empty($this->started_at) || in_array($this->status, ['in_progress', 'completed']);
         $extraNights = 0;
-        if ($checkout->greaterThan($firstNightCutoff)) {
+        if ($hasActuallyStarted && $checkout->greaterThan($firstNightCutoff)) {
             $cursor = clone $firstNightCutoff;
             while ($checkout->greaterThan($cursor)) {
                 $extraNights++;
@@ -360,7 +362,9 @@ class Surgery extends Model
 
         $standardRoomPrice = HealthInsuranceStayTier::getStandardRoomPrice();
         $dailyFee = (float) $room->daily_fee;
-        $upgradeDiffDaily = max(0.0, round($dailyFee - $standardRoomPrice, 2));
+        $roomType = strtolower($room->room_type ?? 'regular');
+        $isUpgrade = in_array($roomType, ['vip', 'vvip']);
+        $upgradeDiffDaily = $isUpgrade ? max(0.0, round($dailyFee - $standardRoomPrice, 2)) : 0.0;
 
         $totalNights = 1 + $extraNights;
         $nightsBreakdown = [];
