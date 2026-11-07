@@ -77,6 +77,7 @@
     // بيانات التأمين والضمان الصحي
     $patient = $surgery->patient;
     $defaultInsurance = $surgery->insurance_type ?? $patient->insurance_type ?? 'none';
+    $isInsurance = ($defaultInsurance !== 'none');
     $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
     $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
     if ($defaultInsurance === 'hi' && $patient) {
@@ -874,6 +875,24 @@
                                                             <span class="badge bg-warning text-dark mt-1">تم دفع {{ number_format($roomFeePaidAmount, 0) }} سابقاً</span>
                                                         @endif
 
+                                                        <div id="room_package_badge_container" class="mt-1">
+                                                            @if($remainingRoomFee == 0 || $isStayIns)
+                                                                @if(!$isInsurance)
+                                                                    <span class="package-status-badge badge bg-warning-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1">
+                                                                        <i class="fas fa-cut"></i> استقطاع من حصة الجراح: <strong id="room_deduction_val">{{ number_format($roomFee, 0) }}</strong> د.ع
+                                                                    </span>
+                                                                @else
+                                                                    <span class="package-status-badge badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1">
+                                                                        <i class="fas fa-shield-alt"></i> مشمول بعقد الضمان
+                                                                    </span>
+                                                                @endif
+                                                            @else
+                                                                <span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-1">
+                                                                    <i class="fas fa-coins me-1"></i>تسديد أجور الإقامة منفصلة
+                                                                </span>
+                                                            @endif
+                                                        </div>
+
                                                         @if(!empty($stayDetails['nights_breakdown']))
                                                             <div class="mt-2">
                                                                 <a class="btn btn-xs btn-outline-info py-0 px-2 rounded-pill small" data-bs-toggle="collapse" href="#stayNightsCollapse" role="button" aria-expanded="false" style="font-size: 0.75rem;">
@@ -1012,6 +1031,17 @@
                                                             <div>
                                                                 <strong class="text-dark">{{ $lModel->name ?? 'غير محدد' }}</strong> 
                                                                 <small class="text-muted">({{ $lModel->code ?? '-' }})</small>
+                                                                <div class="package-badge-container mt-1">
+                                                                    @if(!$isInsurance)
+                                                                        <span class="package-status-badge badge bg-warning-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1">
+                                                                            <i class="fas fa-cut"></i> استقطاع من حصة الجراح: <strong>{{ number_format($lBase, 0) }}</strong> د.ع
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="package-status-badge badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1">
+                                                                            <i class="fas fa-shield-alt"></i> مشمول بعقد الضمان
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -1114,7 +1144,14 @@
                                                     <td>
                                                         <div class="d-flex align-items-center gap-2">
                                                             <i class="fas fa-radiation text-info me-1"></i>
-                                                            <strong class="text-dark">{{ $rModel->name ?? 'غير محدد' }}</strong>
+                                                            <div>
+                                                                <strong class="text-dark">{{ $rModel->name ?? 'غير محدد' }}</strong>
+                                                                <div class="package-badge-container mt-1">
+                                                                    <span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0-5">
+                                                                        <i class="fas fa-coins me-1"></i>منفصل عن العملية
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-end fw-bold">
@@ -1226,6 +1263,23 @@
                                                                         <span><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</span>
                                                                     @endif
                                                                 </div>
+                                                                <div class="package-badge-container mt-1">
+                                                                    @if($isEcgOrMedical)
+                                                                        @if(!$isInsurance)
+                                                                            <span class="package-status-badge badge bg-warning-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1">
+                                                                                <i class="fas fa-cut"></i> استقطاع من حصة الجراح: <strong>{{ number_format($eTotal, 0) }}</strong> د.ع
+                                                                            </span>
+                                                                        @else
+                                                                            <span class="package-status-badge badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1">
+                                                                                <i class="fas fa-shield-alt"></i> مشمول بعقد الضمان
+                                                                            </span>
+                                                                        @endif
+                                                                    @else
+                                                                        <span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0-5">
+                                                                            <i class="fas fa-coins me-1"></i>منفصل عن العملية
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -1312,6 +1366,19 @@
                                                 </span>
                                             </td>
                                         </tr>
+                                        @if(!$isInsurance)
+                                            <!-- إجمالي استقطاعات الباقة المخصومة من حصة الجراح لصالح المستشفى -->
+                                            <tr class="table-warning bg-opacity-10 border-top" id="doctorDeductionsRow">
+                                                <td class="text-center"><i class="fas fa-cut text-danger"></i></td>
+                                                <td class="fw-bold text-danger">إجمالي استقطاعات الباقة المخصومة من حصة الجراح:</td>
+                                                <td class="text-end fw-bold text-danger fs-6" id="totalDoctorDeductionsDisplay">0 د.ع</td>
+                                                <td colspan="3" class="small text-muted align-middle">
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1">
+                                                        <i class="fas fa-info-circle me-1"></i> تُقيد كإيراد مستشفى وتُخصم من صافي أتعاب الجراح في كشوفات الحسابات
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endif
                                         <!-- المبلغ المؤجل إن وجد -->
                                         <tr class="table-warning" id="deferredRow" style="display: none;">
                                             <td></td>
@@ -1636,6 +1703,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalInsuranceShare = 0;
         let selectedCount = 0;
         let unselectedDeferredAmount = 0;
+        let totalDoctorDeductions = 0;
 
         const currentInsType = insuranceTypeSelect ? insuranceTypeSelect.value : 'none';
         const isIns = (currentInsType === 'hi' || currentInsType === 'moi');
@@ -1702,6 +1770,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const effectiveRemainingRoom = (isIns && isInsuranceStayCalculated)
             ? remainingRoomFeeInsurance
             : remainingRoomFeeSelfPay;
+
+        const roomDeductionContainer = document.getElementById('room_package_badge_container');
+        const roomFeeValue = parseFloat(document.getElementById('room_fee_value')?.value || {{ (float)$roomFee }});
+        if (roomDeductionContainer) {
+            if (isRoomIncluded) {
+                if (!isIns) {
+                    roomDeductionContainer.innerHTML = '<span class="package-status-badge badge bg-warning-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1"><i class="fas fa-cut"></i> استقطاع من حصة الجراح: <strong id="room_deduction_val">' + numberFormat(roomFeeValue) + ' د.ع</strong></span>';
+                    if (payRoomCheckbox && payRoomCheckbox.checked) {
+                        totalDoctorDeductions += roomFeeValue;
+                    }
+                } else {
+                    roomDeductionContainer.innerHTML = '<span class="package-status-badge badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1"><i class="fas fa-shield-alt"></i> مشمول بعقد الضمان</span>';
+                }
+            } else {
+                roomDeductionContainer.innerHTML = '<span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-1"><i class="fas fa-coins me-1"></i>تسديد أجور الإقامة منفصلة</span>';
+            }
+        }
 
         if (payRoomCheckbox && payRoomCheckbox.checked) {
             const feeDisp = document.getElementById('room_fee_display');
@@ -1787,13 +1872,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const isMedical = itemCheckbox.dataset.isMedical === '1';
 
             // Update badge UI
-            if (statusBadge) {
-                if (isPkgIncluded) {
-                    statusBadge.className = 'package-status-badge badge bg-success-subtle text-success border border-success';
-                    statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>مشمول ضمن باقة العملية (0 د.ع)';
+            const badgeContainer = row.querySelector('.package-badge-container');
+            if (isPkgIncluded) {
+                if (!isIns) {
+                    if (badgeContainer) {
+                        badgeContainer.innerHTML = '<span class="package-status-badge badge bg-warning-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1"><i class="fas fa-cut"></i> استقطاع من حصة الجراح: <strong>' + numberFormat(basePrice) + ' د.ع</strong></span>';
+                    }
+                    if (isCheckedForPay) {
+                        totalDoctorDeductions += basePrice;
+                    }
                 } else {
-                    statusBadge.className = 'package-status-badge badge bg-secondary-subtle text-secondary border';
-                    statusBadge.innerHTML = '<i class="fas fa-times-circle me-1"></i>غير مشمول (منفصل)';
+                    if (badgeContainer) {
+                        badgeContainer.innerHTML = '<span class="package-status-badge badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-0-5 d-inline-flex align-items-center gap-1"><i class="fas fa-shield-alt"></i> مشمول بعقد الضمان</span>';
+                    }
+                }
+            } else {
+                if (badgeContainer) {
+                    badgeContainer.innerHTML = '<span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0-5"><i class="fas fa-coins me-1"></i>منفصل عن العملية</span>';
                 }
             }
 
@@ -1920,6 +2015,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal) + ' د.ع';
         const extraTotalDisplay = document.getElementById('pending_extra_services_fee_display');
         if (extraTotalDisplay) extraTotalDisplay.textContent = numberFormat(currentExtraTotal) + ' د.ع';
+
+        const doctorDeductionsDisplay = document.getElementById('totalDoctorDeductionsDisplay');
+        if (doctorDeductionsDisplay) {
+            doctorDeductionsDisplay.textContent = numberFormat(totalDoctorDeductions) + ' د.ع';
+        }
+
+        const doctorDeductionsRow = document.getElementById('doctorDeductionsRow');
+        if (doctorDeductionsRow) {
+            doctorDeductionsRow.style.display = (!isIns && totalDoctorDeductions > 0) ? '' : 'none';
+        }
 
         // Discounts for cash
         const discountInput = document.getElementById('discount_percentage');

@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-07 — المرحلة 177: شارات استقطاع حصة الجراح والضمان وتلخيص الاستقطاعات التلقائي في نموذج دفع العمليات Surgery Cashier Smart Package Inclusions Badges & Live Doctor Deductions Total Breakdown)
+
+### Done
+- **شارات الباقة الذكية في جدول بنود تسديد العمليات ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إضافة حاوية الشارة الذكية `package-status-badge` لأسطر: الغرفة والإقامة، التحاليل المخبرية، الفحوصات الإشعاعية، والخدمات الإضافية/الفندقية.
+  * **للمرضى النقديين (كاش)** عند شمول البند: إبراز شارة تحذيرية حمراء واضحة `[ ✂️ استقطاع من حصة الجراح: X د.ع ]` توضح للكاشير والمحاسب المبلغ الدقيق المستقطع من أتعاب الجراح لصالح المستشفى.
+  * **لمرضى الضمان الصحي** عند شمول البند: إبراز شارة تعاقدية `[ 🛡️ مشمول بعقد الضمان ]`.
+  * عند اختيار البند منفصلاً: إبراز شارة رمادية `[ 🪙 منفصل عن العملية ]` أو `[ تسديد أجور الإقامة منفصلة ]`.
+- **سطر التلخيص الإجمالي للاستقطاعات بأسفل جدول الفاتورة (`tfoot`)**:
+  * إضافة سطر بارز بلون تحذيري هادئ خاص بالمرضى النقديين: `إجمالي استقطاعات الباقة المخصومة من حصة الجراح: [ X د.ع ]` مع شارة توضيحية: `[ ℹ️ تُقيد كإيراد مستشفى وتُخصم من صافي أتعاب الجراح في كشوفات الحسابات ]`.
+- **تحديث محرك الجافاسكريبت التفاعلي اللحظي (`calculateSelectedAmount()`)**:
+  * ربط دالة الحساب لتحديث نص وألوان الشارات وحساب مجموع استقطاعات الطبيب الجراح فورياً ولحظياً عند التبديل بين كبسولات `[ مشمول / منفصل ]` لأي خدمة أو للغرفة.
+  * إظهار أو إخفاء سطر ملخص الاستقطاعات ديناميكياً بحسب نوع التأمين وقيمة الاستقطاع.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+  * تعزيز الاختبارات لتأكيد رندرة شارات الاستقطاع وسطر التلخيص في نموذج الدفع بنسبة نجاح 100% (`13 passed, 89 assertions`).
+
 ## Session log (2026-11-07 — المرحلة 176: قسم حسابات وتصفية جراحي العمليات — استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)
 
 ### Done

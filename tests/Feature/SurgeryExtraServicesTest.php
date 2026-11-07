@@ -373,6 +373,10 @@ class SurgeryExtraServicesTest extends TestCase
         $response->assertSee('تخطيط قلب');
         $response->assertSee('اجور فتح طبلة');
         $response->assertSee('خدمات فندقية');
+        $response->assertSee('استقطاع من حصة الجراح:');
+        $response->assertSee('package-status-badge');
+        $response->assertSee('doctorDeductionsRow');
+        $response->assertSee('إجمالي استقطاعات الباقة المخصومة من حصة الجراح');
         $response->assertDontSee('id="inclusive"', false);
     }
 

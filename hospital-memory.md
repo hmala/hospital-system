@@ -1943,6 +1943,19 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
     - اجتياز كامل اختبارات التحقق من بنية الجدول الموحد وكبسولات الشمول والإلحاق الرجعي بنسبة 100% (`8 passed, 47 assertions`)، واستمرار اجتياز كافة اختبارات دفع وتجزئة العمليات والضمان (`15 passed, 98 assertions`).
 
+- **المرحلة 177 (2026-11-07) — شارات استقطاع حصة الجراح والضمان وتلخيص الاستقطاعات التلقائي في نموذج دفع العمليات (Surgery Cashier Smart Package Inclusions Badges & Live Doctor Deductions Total Breakdown)**:
+  * **شارات الباقة الذكية في جدول بنود تسديد العمليات**:
+    - إضافة شارات `package-status-badge` التفاعلية لأسطر الغرفة، التحاليل، الأشعة، والخدمات الإضافية.
+    - للمريض النقدي (كاش): شارة واضحة `[ ✂️ استقطاع من حصة الجراح: X د.ع ]` تظهر فور اختيار كبسولة `[ 📦 مشمول ]`.
+    - لمرضى الضمان الصحي: شارة تعاقدية `[ 🛡️ مشمول بعقد الضمان ]`.
+    - للبند المنفصل: شارة رمادية `[ 🪙 منفصل عن العملية ]`.
+  * **سطر التلخيص الإجمالي للاستقطاعات بأسفل جدول الفاتورة (`tfoot`)**:
+    - إضافة سطر ملخص استقطاعات الجراح لصالح المستشفى: `إجمالي استقطاعات الباقة المخصومة من حصة الجراح: [ X د.ع ]` مع شارة توضيحية لنظام المحاسبة.
+  * **تحديث الجافاسكريبت اللحظي (`calculateSelectedAmount()`)**:
+    - حساب مجموع استقطاعات الجراح لحظياً وتحديث نصوص وألوان الشارات وسطر الملخص فورياً عند التبديل بين الكبسولات.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل الاختبارات بنسبة 100% (`13 passed, 89 assertions`).
+
 - **المرحلة 176 (2026-11-07) — قسم حسابات وتصفية جراحي العمليات: استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات (Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)**:
   * **بنية البيانات وحفظ استقطاعات الباقة المشمولة بالعملية**:
     - إضافة أعمدة `is_package_included`, `included_deductible_price`, `deduction_bearer` في جداول `surgery_lab_tests`, `surgery_radiology_tests`, `surgery_extra_services`.
