@@ -625,8 +625,13 @@
                             $canActuallyEditVitals = $canWriteCurrentTab && ($canEditVitals ?? true);
                             $hasRecordedVitals = !empty($station?->vitals_recorded_at);
                             $recordedTime = $station?->vitals_recorded_at;
-                            $minutesPassed = $recordedTime ? now()->diffInMinutes($recordedTime) : 0;
-                            $minutesLeft = $recordedTime ? max(0, 30 - $minutesPassed) : 30;
+                            if ($recordedTime) {
+                                $lockExpiresAt = $recordedTime->copy()->addMinutes(30);
+                                $secondsRemaining = now()->diffInSeconds($lockExpiresAt, false);
+                                $minutesLeft = (int) max(0, min(30, ceil($secondsRemaining / 60)));
+                            } else {
+                                $minutesLeft = 30;
+                            }
                             $recordedByName = $station?->vitalsRecordedBy?->name ?? 'طاقم الرعاية';
                         @endphp
 

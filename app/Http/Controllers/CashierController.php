@@ -4205,12 +4205,15 @@ class CashierController extends Controller
                 ]);
 
                 // إلغاء أي مستحقات غير مدفوعة للجراح مرتبطة بالعملية المسترجعة
-                $paymentIds = $surgery->payments()->pluck('id')->toArray();
+                $paymentIds = $surgery->payments()->pluck('id')->filter()->toArray();
                 DoctorDue::where('status', 'pending')
                     ->where(function ($q) use ($surgery, $paymentIds) {
-                        $q->where('surgery_id', $surgery->id)
-                            ->orWhereIn('payment_id', $paymentIds)
-                            ->orWhere('notes', 'like', "%#{$surgery->id}%");
+                        if (! empty($paymentIds)) {
+                            $q->whereIn('payment_id', $paymentIds)
+                                ->orWhere('notes', 'like', "%#{$surgery->id}%");
+                        } else {
+                            $q->where('notes', 'like', "%#{$surgery->id}%");
+                        }
                     })
                     ->update([
                         'status' => 'cancelled',
