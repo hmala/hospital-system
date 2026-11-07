@@ -23,6 +23,12 @@ class ClinicalStationController extends Controller
     {
         $user = Auth::user();
 
+        // Check if patient has a room assigned but nursing has not checked them in yet
+        if ($surgery->room_id && ! $surgery->room_checkin_at && $user && $user->hasRole('nurse') && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'doctor', 'surgeon', 'anesthesiologist'])) {
+            return redirect()->route('nursing-station.index')
+                ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
+        }
+
         // 1. Ensure Resident Stations exist (pre_op and post_op)
         $preOpStation = $surgery->residentStations()->firstOrCreate(
             ['phase' => 'pre_op'],

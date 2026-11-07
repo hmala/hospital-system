@@ -447,7 +447,7 @@
                 </div>
 
                 {{-- Phase Status Modern Pill with Glowing Pulse Indicator --}}
-                <div>
+                <div class="d-flex align-items-center gap-1.5">
                     @if($station && $station->status === 'completed')
                         <span class="badge-status-modern badge-status-completed">
                             <span class="status-pulse-dot bg-success"></span>
@@ -463,6 +463,15 @@
                             <span class="status-pulse-dot bg-secondary"></span>
                             بالانتظار
                         </span>
+                    @endif
+
+                    @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
+                        <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 shadow-xs fw-semibold" style="font-size: 0.78rem;" title="تخريج المريض وإخلاء السرير">
+                                <i class="fas fa-sign-out-alt me-1"></i> تخريج من الغرفة
+                            </button>
+                        </form>
                     @endif
                 </div>
             </div>

@@ -78,7 +78,15 @@
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-header bg-white py-3 border-bottom border-light d-flex align-items-center justify-content-between">
                     <h3 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-user-nurse text-primary me-2"></i>محطة التمريض - العملية رقم {{ $surgery->id }}</h3>
-                    <div class="card-tools">
+                    <div class="card-tools d-flex align-items-center gap-2">
+                        @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
+                            <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إنهاء احتساب الإقامة وتحرير الغرفة.')">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-danger rounded-pill px-3 py-1.5 small fw-bold shadow-xs" title="تخريج المريض وإخلاء السرير">
+                                    <i class="fas fa-sign-out-alt me-1"></i> تخريج المريض من الغرفة
+                                </button>
+                            </form>
+                        @endif
                         <a href="{{ route('nursing-station.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-1.5 small">
                             <i class="fas fa-arrow-right me-1"></i> العودة للقائمة
                         </a>
@@ -138,6 +146,26 @@
                                         <th class="text-muted">الطبيب المقيم:</th>
                                         <td class="text-dark fw-bold">{{ $surgery->residentStation?->resident?->user?->full_name ?? '-' }}</td>
                                     </tr>
+                                    @if($surgery->room)
+                                    <tr>
+                                        <th class="text-muted">الغرفة والإقامة:</th>
+                                        <td>
+                                            <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                                                <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                            </span>
+                                            @if($surgery->room_checkin_at)
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 ms-1">
+                                                    <i class="fas fa-clock me-1"></i> دخول: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}
+                                                </span>
+                                            @endif
+                                            @if($surgery->discharged_at)
+                                                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-1 ms-1">
+                                                    <i class="fas fa-sign-out-alt me-1"></i> خروج: {{ $surgery->discharged_at->format('Y-m-d h:i A') }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endif
                                 </table>
                             </div>
                         </div>

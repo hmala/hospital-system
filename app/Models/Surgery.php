@@ -15,6 +15,8 @@ class Surgery extends Model
         'surgeon_name',
         'department_id',
         'room_id',
+        'room_checkin_at',
+        'room_checkin_by',
         'expected_stay_days',
         'room_fee',
         'visit_id',
@@ -70,6 +72,7 @@ class Surgery extends Model
         'scheduled_date' => 'date',
         'scheduled_time' => 'datetime',
         'started_at' => 'datetime',
+        'room_checkin_at' => 'datetime',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'follow_up_date' => 'date',
@@ -100,6 +103,11 @@ class Surgery extends Model
     public function room()
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function roomCheckinBy()
+    {
+        return $this->belongsTo(User::class, 'room_checkin_by');
     }
 
     public function inpatientSurvey()
@@ -330,14 +338,16 @@ class Surgery extends Model
 
         $tz = 'Asia/Baghdad';
 
-        // وقت الدخول (Checkin): إما started_at أو وقت الحجز أو وقت الإنشاء
-        $checkin = $this->started_at
-            ? \Carbon\Carbon::parse($this->started_at)->setTimezone($tz)
-            : ($this->scheduled_date
-                ? \Carbon\Carbon::parse($this->scheduled_date->format('Y-m-d').' '.($this->scheduled_time ? (is_string($this->scheduled_time) ? $this->scheduled_time : $this->scheduled_time->format('H:i:s')) : '08:00:00'))->setTimezone($tz)
-                : ($this->created_at ? \Carbon\Carbon::parse($this->created_at)->setTimezone($tz) : now($tz)));
+        // وقت الدخول (Checkin): الأولوية لتسجيل دخول الغرفة الفعلي room_checkin_at، ثم started_at، ثم وقت الجدولة
+        $checkin = $this->room_checkin_at
+            ? \Carbon\Carbon::parse($this->room_checkin_at)->setTimezone($tz)
+            : ($this->started_at
+                ? \Carbon\Carbon::parse($this->started_at)->setTimezone($tz)
+                : ($this->scheduled_date
+                    ? \Carbon\Carbon::parse($this->scheduled_date->format('Y-m-d').' '.($this->scheduled_time ? (is_string($this->scheduled_time) ? $this->scheduled_time : $this->scheduled_time->format('H:i:s')) : '08:00:00'))->setTimezone($tz)
+                    : ($this->created_at ? \Carbon\Carbon::parse($this->created_at)->setTimezone($tz) : now($tz))));
 
-        // وقت الخروج (Checkout): إما وقت الخروج الفعلي أو الوقت الحالي
+        // وقت الخروج (Checkout): إما وقت الخروج الفعلي أو الوقت المحدد أو الوقت الحالي
         $checkout = $asOfTime
             ? \Carbon\Carbon::parse($asOfTime)->setTimezone($tz)
             : ($this->discharged_at ? \Carbon\Carbon::parse($this->discharged_at)->setTimezone($tz) : now($tz));
@@ -346,8 +356,8 @@ class Surgery extends Model
         $firstNightCutoff = (clone $checkin)->addDay()->setTime(12, 0, 0);
 
         // احتساب الليالي الإضافية: كم 12:00 ظهراً إضافية مرت بعد نهاية الليلة الأولى
-        // لا يتم احتساب ليالي إضافية إذا كانت العملية مجدولة فقط أو ملغاة أو لم تبدأ بعد
-        $hasActuallyStarted = ! empty($this->started_at) || in_array($this->status, ['in_progress', 'completed']);
+        // لا يتم احتساب ليالي إضافية إلا إذا تم تسجيل الدخول الفعلي للغرفة أو بدأت العملية
+        $hasActuallyStarted = ! empty($this->room_checkin_at) || ! empty($this->started_at) || in_array($this->status, ['in_progress', 'completed']);
         $extraNights = 0;
         if ($hasActuallyStarted && $checkout->greaterThan($firstNightCutoff)) {
             $cursor = clone $firstNightCutoff;
@@ -441,6 +451,8 @@ class Surgery extends Model
             'checkin_at' => $checkin,
             'checkout_at' => $checkout,
             'first_night_cutoff' => $firstNightCutoff,
+            'room_checkin_at' => $this->room_checkin_at,
+            'is_room_checked_in' => ! empty($this->room_checkin_at),
         ];
     }
 

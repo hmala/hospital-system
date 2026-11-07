@@ -734,6 +734,8 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
             Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
             Route::post('/nursing/{surgery}/follow-ups', [\App\Http\Controllers\NursingStationController::class, 'storeFollowUp'])->name('nursing-station.follow-ups.store');
+            Route::post('/nursing/{surgery}/room-checkin', [\App\Http\Controllers\NursingStationController::class, 'roomCheckin'])->name('nursing-station.room-checkin');
+            Route::post('/nursing/{surgery}/room-checkout', [\App\Http\Controllers\NursingStationController::class, 'roomCheckout'])->name('nursing-station.room-checkout');
         });
 
         // إعدادات مصفوفة صلاحيات التبويبات السريرية (Tab Permissions Matrix)

@@ -121,10 +121,24 @@
                                                     <div>
                                                         <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
                                                         @if($surgery->room)
-                                                            <div class="mt-0.5">
+                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
                                                                 <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
                                                                 </span>
+                                                                @if($surgery->room_checkin_at)
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                        <i class="fas fa-check-circle me-1"></i> تم الدخول ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام الغرفة
+                                                                    </span>
+                                                                @endif
+                                                                @if($surgery->discharged_at)
+                                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
+                                                                    </span>
+                                                                @endif
                                                             </div>
                                                         @endif
                                                     </div>
@@ -166,9 +180,28 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
-                                                    <i class="fas fa-eye me-1"></i> عرض وتعديل
-                                                </a>
+                                                @if($surgery->room_id && !$surgery->room_checkin_at)
+                                                    <form action="{{ route('nursing-station.room-checkin', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تسجيل استلام المريض للغرفة الآن؟ سيبدأ احتساب الإقامة الفندقية.')">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 shadow-sm fw-bold">
+                                                            <i class="fas fa-bed me-1"></i> تسجيل دخول الغرفة
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <div class="d-inline-flex align-items-center gap-1">
+                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
+                                                            <i class="fas fa-eye me-1"></i> عرض وتعديل
+                                                        </a>
+                                                        @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
+                                                            <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
+                                                                @csrf
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="تخريج المريض وإخلاء السرير">
+                                                                    <i class="fas fa-sign-out-alt me-1"></i> تخريج
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             </td>
                                         </tr>
                                         @empty
@@ -211,10 +244,24 @@
                                                     <div>
                                                         <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
                                                         @if($surgery->room)
-                                                            <div class="mt-0.5">
+                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
                                                                 <span class="badge bg-light text-info border border-info-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-info me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
                                                                 </span>
+                                                                @if($surgery->room_checkin_at)
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                        <i class="fas fa-check-circle me-1"></i> تم الدخول ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام الغرفة
+                                                                    </span>
+                                                                @endif
+                                                                @if($surgery->discharged_at)
+                                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
+                                                                    </span>
+                                                                @endif
                                                             </div>
                                                         @endif
                                                     </div>
@@ -248,9 +295,28 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-info rounded-pill px-3 py-1.5 text-white shadow-sm">
-                                                    <i class="fas fa-eye me-1"></i> عرض وتعديل
-                                                </a>
+                                                @if($surgery->room_id && !$surgery->room_checkin_at)
+                                                    <form action="{{ route('nursing-station.room-checkin', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تسجيل استلام المريض للغرفة الآن؟ سيبدأ احتساب الإقامة الفندقية.')">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 shadow-sm fw-bold">
+                                                            <i class="fas fa-bed me-1"></i> تسجيل دخول الغرفة
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <div class="d-inline-flex align-items-center gap-1">
+                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-info rounded-pill px-3 py-1.5 text-white shadow-sm">
+                                                            <i class="fas fa-eye me-1"></i> عرض وتعديل
+                                                        </a>
+                                                        @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
+                                                            <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
+                                                                @csrf
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="تخريج المريض وإخلاء السرير">
+                                                                    <i class="fas fa-sign-out-alt me-1"></i> تخريج
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             </td>
                                         </tr>
                                         @empty
