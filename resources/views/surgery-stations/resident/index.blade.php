@@ -16,6 +16,20 @@
                         </div>
                     @endif
 
+                    @if(session('warning'))
+                        <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('warning') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                            <i class="fas fa-times-circle me-2"></i> {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
                     <!-- Tabs Switcher -->
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm" id="residentTabs" role="tablist" style="width: fit-content;">
                         <li class="nav-item" role="presentation">
@@ -68,7 +82,25 @@
                                                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
-                                                    <span class="fw-semibold">{{ $surgery->patient->user->full_name }}</span>
+                                                    <div>
+                                                        <span class="fw-semibold text-dark">{{ $surgery->patient->user->full_name }}</span>
+                                                        @if($surgery->room)
+                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                    <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                                @if($surgery->room_checkin_at)
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                        <i class="fas fa-check-circle me-1"></i> تم الاستلام ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام ممرض الطابق
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
@@ -105,9 +137,15 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('resident-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
-                                                    <i class="fas fa-eye me-1"></i> عرض وتعديل
-                                                </a>
+                                                @if($surgery->room_id && !$surgery->room_checkin_at)
+                                                    <button type="button" class="btn btn-sm btn-secondary opacity-75 rounded-pill px-3 py-1.5 shadow-sm fw-semibold" onclick="alert('تنبيه: لا يمكن فتح المحطة السريرية للمريض.\n\nالمريض مخصص للغرفة ({{ $surgery->room?->room_number ?? '-' }}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.')" title="بانتظار استلام ممرض الطابق للغرفة">
+                                                        <i class="fas fa-lock me-1"></i> بانتظار استلام الغرفة
+                                                    </button>
+                                                @else
+                                                    <a href="{{ route('resident-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
+                                                        <i class="fas fa-eye me-1"></i> عرض وتعديل
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                         @empty
@@ -152,7 +190,25 @@
                                                     <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
-                                                    <span class="fw-semibold">{{ $surgery->patient->user->full_name }}</span>
+                                                    <div>
+                                                        <span class="fw-semibold text-dark">{{ $surgery->patient->user->full_name }}</span>
+                                                        @if($surgery->room)
+                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                                                <span class="badge bg-light text-info border border-info-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                    <i class="fas fa-bed text-info me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                                @if($surgery->room_checkin_at)
+                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                        <i class="fas fa-check-circle me-1"></i> تم الاستلام ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام ممرض الطابق
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
@@ -189,9 +245,15 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('resident-station.show', $surgery) }}?phase=post_op" class="btn btn-sm btn-info rounded-pill px-3 py-1.5 shadow-sm text-white">
-                                                    <i class="fas fa-eye me-1"></i> عرض وتعديل
-                                                </a>
+                                                @if($surgery->room_id && !$surgery->room_checkin_at)
+                                                    <button type="button" class="btn btn-sm btn-secondary opacity-75 rounded-pill px-3 py-1.5 shadow-sm fw-semibold" onclick="alert('تنبيه: لا يمكن فتح المحطة السريرية للمريض.\n\nالمريض مخصص للغرفة ({{ $surgery->room?->room_number ?? '-' }}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.')" title="بانتظار استلام ممرض الطابق للغرفة">
+                                                        <i class="fas fa-lock me-1"></i> بانتظار استلام الغرفة
+                                                    </button>
+                                                @else
+                                                    <a href="{{ route('resident-station.show', $surgery) }}?phase=post_op" class="btn btn-sm btn-info rounded-pill px-3 py-1.5 shadow-sm text-white">
+                                                        <i class="fas fa-eye me-1"></i> عرض وتعديل
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                         @empty

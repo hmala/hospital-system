@@ -13,7 +13,7 @@ class ResidentStationController extends Controller
     public function index()
     {
         // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
-        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation'])
+        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation'])
             ->where('status', '!=', 'cancelled')
             ->where(function ($query) {
                 $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
@@ -36,7 +36,7 @@ class ResidentStationController extends Controller
             ->get();
 
         // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد خروج المريض من الصالة)
-        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation', 'anesthesiaStation'])
+        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation', 'anesthesiaStation'])
             ->where('status', '!=', 'cancelled')
             ->where(function ($query) {
                 $query->whereHas('operationTheaterStation', function ($sq) {
@@ -64,7 +64,7 @@ class ResidentStationController extends Controller
             ->get();
 
         // 3. جلب العمليات التي أتمت كل مراحل المقيم (pre_op و post_op)
-        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
             ->whereHas('residentStations', function ($q) {
                 $q->where('phase', 'pre_op')->where('status', 'completed');
             })
@@ -79,6 +79,13 @@ class ResidentStationController extends Controller
 
     public function show(Surgery $surgery, Request $request)
     {
+        if ($surgery->room_id && ! $surgery->room_checkin_at) {
+            $roomNum = $surgery->room?->room_number ?? 'المخصصة';
+
+            return redirect()->route('resident-station.index')
+                ->with('warning', "لا يمكن فتح المحطة السريرية للمريض: المريض مخصص للغرفة ({$roomNum}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.");
+        }
+
         return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
     }
 
