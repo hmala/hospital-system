@@ -134,19 +134,35 @@
         </div>
     @endif
 
+    {{-- تنبيه رقابي لوجود عمليات ملغاة مع زر وصول سريع --}}
+    @if($cancelledSurgeries->isNotEmpty())
+        <div class="alert alert-danger bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-4 p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-sm">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-exclamation-triangle text-danger fs-5"></i>
+                <div>
+                    <strong class="text-danger">تنبيه رقابي:</strong>
+                    <span class="text-dark small">يوجد لهذا الجراح <strong>{{ $cancelledSurgeries->count() }} عملية ملغاة ومسترجعة للمواطنين</strong> (استحقاقها 0 د.ع ومحفوظة في تبويب الأرشيف الرقابي دون التأثير على حسابه).</span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm" onclick="if(window.activateDoctorTab) window.activateDoctorTab('#cancelled-surgeries-pane');">
+                <i class="fas fa-eye me-1"></i> عرض العمليات الملغاة ({{ $cancelledSurgeries->count() }})
+            </button>
+        </div>
+    @endif
+
     {{-- تبويبات حسابات الجراح --}}
     <ul class="nav nav-pills gap-2 mb-3 bg-white p-2 rounded-4 shadow-sm border" id="doctorAccountTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
-                    id="active-surgeries-tab" data-bs-toggle="pill" data-bs-target="#active-surgeries-pane" type="button" role="tab">
+            <button class="nav-link active doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                    id="active-surgeries-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#active-surgeries-pane" data-target="#active-surgeries-pane" type="button" role="tab" aria-controls="active-surgeries-pane" aria-selected="true">
                 <i class="fas fa-procedures text-primary"></i>
                 <span>العمليات الجراحية المستحقة</span>
                 <span class="badge bg-primary text-white rounded-pill px-2">{{ $surgeries->total() }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2 {{ $cancelledSurgeries->isNotEmpty() ? 'text-danger' : 'text-muted' }}" 
-                    id="cancelled-surgeries-tab" data-bs-toggle="pill" data-bs-target="#cancelled-surgeries-pane" type="button" role="tab">
+            <button class="nav-link doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2 {{ $cancelledSurgeries->isNotEmpty() ? 'text-danger' : 'text-muted' }}" 
+                    id="cancelled-surgeries-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#cancelled-surgeries-pane" data-target="#cancelled-surgeries-pane" type="button" role="tab" aria-controls="cancelled-surgeries-pane" aria-selected="false">
                 <i class="fas fa-ban text-danger"></i>
                 <span>العمليات الملغاة والمسترجعة (للعلم)</span>
                 <span class="badge {{ $cancelledSurgeries->isNotEmpty() ? 'bg-danger text-white' : 'bg-light text-secondary border' }} rounded-pill px-2">
@@ -155,8 +171,8 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
-                    id="payouts-history-tab" data-bs-toggle="pill" data-bs-target="#payouts-history-pane" type="button" role="tab">
+            <button class="nav-link doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                    id="payouts-history-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#payouts-history-pane" data-target="#payouts-history-pane" type="button" role="tab" aria-controls="payouts-history-pane" aria-selected="false">
                 <i class="fas fa-history text-success"></i>
                 <span>سجل سندات الصرف والتسويات</span>
                 <span class="badge bg-success text-white rounded-pill px-2">{{ $payouts->count() }}</span>
@@ -669,7 +685,112 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    // 3. التبديل الفوري والصلب بين التبويبات (Fail-safe direct tab switching)
+    const tabNavButtons = document.querySelectorAll('#doctorAccountTabs button');
+    const tabPanes = document.querySelectorAll('#doctorAccountTabsContent .tab-pane');
+
+    window.activateDoctorTab = function(targetId) {
+        if (!targetId) return;
+        const cleanId = targetId.startsWith('#') ? targetId : '#' + targetId;
+        const targetBtn = document.querySelector(`#doctorAccountTabs button[data-bs-target="${cleanId}"], #doctorAccountTabs button[data-target="${cleanId}"]`);
+        const targetPane = document.querySelector(cleanId);
+
+        if (targetBtn && targetPane) {
+            tabNavButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+            tabPanes.forEach(pane => {
+                pane.classList.remove('show', 'active');
+                pane.style.display = 'none';
+            });
+
+            targetBtn.classList.add('active');
+            targetBtn.setAttribute('aria-selected', 'true');
+            targetPane.classList.add('show', 'active');
+            targetPane.style.display = 'block';
+
+            if (history.replaceState) {
+                history.replaceState(null, null, cleanId);
+            }
+        }
+    };
+
+    tabNavButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetSelector = this.getAttribute('data-bs-target') || this.getAttribute('data-target');
+            window.activateDoctorTab(targetSelector);
+        });
+    });
+
+    // دعم الانتقال المباشر للتبويب عبر الهاش أو الرابط
+    const currentHash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+
+    if (currentHash && document.querySelector(currentHash)) {
+        window.activateDoctorTab(currentHash);
+    } else if (tabParam === 'cancelled') {
+        window.activateDoctorTab('#cancelled-surgeries-pane');
+    } else if (tabParam === 'payouts') {
+        window.activateDoctorTab('#payouts-history-pane');
+    }
 });
 </script>
+@endpush
+
+@push('styles')
+<style>
+    .doctor-account-tab-btn {
+        transition: all 0.2s ease-in-out;
+        border: 1px solid #dee2e6 !important;
+        background-color: #f8f9fa;
+        color: #495057;
+    }
+    .doctor-account-tab-btn:hover {
+        background-color: #e9ecef;
+    }
+    .doctor-account-tab-btn.active#active-surgeries-tab {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+    }
+    .doctor-account-tab-btn.active#active-surgeries-tab i {
+        color: #ffffff !important;
+    }
+    .doctor-account-tab-btn.active#active-surgeries-tab .badge {
+        background-color: #ffffff !important;
+        color: #0d6efd !important;
+    }
+    .doctor-account-tab-btn.active#cancelled-surgeries-tab {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+    }
+    .doctor-account-tab-btn.active#cancelled-surgeries-tab i {
+        color: #ffffff !important;
+    }
+    .doctor-account-tab-btn.active#cancelled-surgeries-tab .badge {
+        background-color: #ffffff !important;
+        color: #dc3545 !important;
+    }
+    .doctor-account-tab-btn.active#payouts-history-tab {
+        background-color: #198754 !important;
+        border-color: #198754 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
+    }
+    .doctor-account-tab-btn.active#payouts-history-tab i {
+        color: #ffffff !important;
+    }
+    .doctor-account-tab-btn.active#payouts-history-tab .badge {
+        background-color: #ffffff !important;
+        color: #198754 !important;
+    }
+</style>
 @endpush
 @endsection

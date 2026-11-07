@@ -65,6 +65,8 @@ Consult these files before making changes or proposing fixes:
 - **معالجة الحفظ الموحد عبر زر "حفظ التحديثات السريرية" ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
   * دعم مدخل `editing_reading_id` المخفي ضمن النموذج الرئيسي، والتحقق الصارم من مهلة الـ 30 دقيقة لنفس الحساب أو صلاحية مدير النظام (`Admin`).
   * مزامنة وتحديث قيم المحطة السريرية العلوية ومحطة التمريض تلقائياً ولحظياً في حال كانت القراءة المعدلة هي الأحدث للمريض.
+  * تصحيح حساب الدقائق المتبقية للمهلة في الشارة التنبيهية لتظهر كعدد صحيح بدون كسور عشرية `(int) max(0, min(30, ceil($secondsRemaining / 60)))`.
+  * تصحيح استعلام إلغاء مستحقات الجراح عند استرجاع العملية في الكاشير وحذف `surgery_id` غير المعرف في جدول `doctor_dues` والاعتماد على `payment_id` وملاحظات العملية لمنع أخطاء SQL 1054.
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
   * اجتياز كامل الاختبارات بنسبة نجاح 100% (`8 passed, 50 assertions`) واستمرار اجتياز كافة اختبارات المحطة وصلاحيات التبويبات (`11 passed, 44 assertions`).
 
