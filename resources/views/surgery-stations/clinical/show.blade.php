@@ -11,6 +11,20 @@
             --clin-card-bg: #6866ceff;
         }
 
+        .vital-grid-input {
+            border-radius: 8px;
+            font-size: 0.95rem;
+            padding: 6px 4px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s ease-in-out;
+        }
+        .vital-grid-input:focus {
+            background-color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
         /* Ultra-Modern Clinical Executive Header */
         .clin-header-modern {
             background: #ffffff !important;
@@ -607,115 +621,178 @@
                     {{-- TAB 2: VITALS & PHYSICAL EXAM (العلامات الحيوية والفحص السريري) --}}
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'vitals')
-                        {{-- Top Vital Sign Cards --}}
-                        <div class="row g-3 row-cols-2 row-cols-md-3 row-cols-lg-5 mb-4">
-                            <div class="col">
-                                <div class="vital-box vital-box-red">
-                                    <div class="small fw-bold text-danger"><i class="fas fa-tachometer-alt me-1"></i> ضغط الدم (BP)</div>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="bp" class="form-control form-control-sm text-center fw-bold mt-2" 
-                                               placeholder="120/80" value="{{ $station?->bp }}">
-                                    @else
-                                        <div class="vital-val text-danger">{{ $station?->bp ?: '--/--' }}</div>
-                                    @endif
-                                    <div class="text-muted" style="font-size: 0.72rem;">mmHg</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="vital-box vital-box-orange">
-                                    <div class="small fw-bold text-warning-emphasis"><i class="fas fa-thermometer-half me-1"></i> الحرارة (Temp)</div>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="temp" class="form-control form-control-sm text-center fw-bold mt-2" 
-                                               placeholder="37.0" value="{{ $station?->temp }}">
-                                    @else
-                                        <div class="vital-val text-warning-emphasis">{{ $station?->temp ?: '--' }}</div>
-                                    @endif
-                                    <div class="text-muted" style="font-size: 0.72rem;">°C</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="vital-box vital-box-red">
-                                    <div class="small fw-bold text-danger"><i class="fas fa-heart me-1"></i> النبض (PR)</div>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="pr" class="form-control form-control-sm text-center fw-bold mt-2" 
-                                               placeholder="75" value="{{ $station?->pr }}">
-                                    @else
-                                        <div class="vital-val text-danger">{{ $station?->pr ?: '--' }}</div>
-                                    @endif
-                                    <div class="text-muted" style="font-size: 0.72rem;">bpm</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="vital-box vital-box-blue">
-                                    <div class="small fw-bold text-primary"><i class="fas fa-lungs me-1"></i> التنفس (RR)</div>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="rr" class="form-control form-control-sm text-center fw-bold mt-2" 
-                                               placeholder="16" value="{{ $station?->rr }}">
-                                    @else
-                                        <div class="vital-val text-primary">{{ $station?->rr ?: '--' }}</div>
-                                    @endif
-                                    <div class="text-muted" style="font-size: 0.72rem;">/min</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="vital-box vital-box-green">
-                                    <div class="small fw-bold text-success"><i class="fas fa-wind me-1"></i> الأكسجين (SPo2)</div>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="spo2" class="form-control form-control-sm text-center fw-bold mt-2" 
-                                               placeholder="98" value="{{ $station?->spo2 }}">
-                                    @else
-                                        <div class="vital-val text-success">{{ $station?->spo2 ? $station->spo2 . '%' : '--%' }}</div>
-                                    @endif
-                                    <div class="text-muted" style="font-size: 0.72rem;">%</div>
-                                </div>
-                            </div>
-                        </div>
+                        @php
+                            $canActuallyEditVitals = $canWriteCurrentTab && ($canEditVitals ?? true);
+                            $hasRecordedVitals = !empty($station?->vitals_recorded_at);
+                            $recordedTime = $station?->vitals_recorded_at;
+                            $minutesPassed = $recordedTime ? now()->diffInMinutes($recordedTime) : 0;
+                            $minutesLeft = $recordedTime ? max(0, 30 - $minutesPassed) : 30;
+                            $recordedByName = $station?->vitalsRecordedBy?->name ?? 'طاقم الرعاية';
+                        @endphp
 
-                        {{-- Secondary Vitals Row --}}
-                        <div class="row g-3 row-cols-2 row-cols-md-4 mb-4">
-                            <div class="col">
-                                <div class="card p-2 text-center rounded-3 border bg-light">
-                                    <span class="small text-muted fw-bold">مقياس الألم (Pain Score):</span>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="pain_score" class="form-control form-control-sm text-center fw-bold mt-1" 
-                                               placeholder="0 - 10" value="{{ $station?->pain_score }}">
-                                    @else
-                                        <strong class="text-dark fs-6">{{ $station?->pain_score ?: '0' }} / 10</strong>
-                                    @endif
+                        {{-- Hidden Input for New Routine Reading Action & Editing Historical Reading --}}
+                        <input type="hidden" name="is_new_reading" id="isNewReadingInput" value="0">
+                        <input type="hidden" name="editing_reading_id" id="editingReadingId" value="">
+
+                        {{-- Governance & 30-Minute Lock Status Banner --}}
+                        @if(!$hasRecordedVitals)
+                            <div class="alert alert-info py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #e0f2fe; color: #0369a1;">
+                                <div class="small fw-bold">
+                                    <i class="fas fa-info-circle me-1 text-primary"></i> لم يتم تسجيل علامات حيوية لهذه العملية بعد. يمكنك إدخال القراءة الأولى لبدء المتابعة واحتساب مهلة التعديل (30 دقيقة).
                                 </div>
                             </div>
-                            <div class="col">
-                                <div class="card p-2 text-center rounded-3 border bg-light">
-                                    <span class="small text-muted fw-bold">سكر الدم (RBS):</span>
+                        @elseif($canActuallyEditVitals)
+                            @if(!empty($isAdmin))
+                                <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #eef2ff; color: #3730a3;">
+                                    <div class="small">
+                                        <i class="fas fa-user-shield me-1 text-primary"></i> <strong>صلاحية مدير النظام (Admin):</strong> التعديل والتصحيح متاح لك دائماً. (آخر تسجيل: <strong>{{ $recordedByName }}</strong> في {{ $recordedTime->format('Y-m-d h:i A') }}).
+                                    </div>
                                     @if($canWriteCurrentTab)
-                                        <input type="text" name="rbs" class="form-control form-control-sm text-center fw-bold mt-1" 
-                                               placeholder="110 mg/dL" value="{{ $station?->rbs }}">
-                                    @else
-                                        <strong class="text-dark fs-6">{{ $station?->rbs ?: '--' }} mg/dL</strong>
+                                        <button type="button" class="btn btn-sm btn-outline-primary bg-white fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
+                                            <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
+                                        </button>
                                     @endif
                                 </div>
+                            @else
+                                <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #ecfdf5; color: #065f46;">
+                                    <div class="small">
+                                        <i class="fas fa-check-circle me-1 text-success"></i> <strong>متاح للتعديل:</strong> مسجلة بواسطة <strong>{{ $recordedByName }}</strong> في الساعة <strong>{{ $recordedTime->format('h:i A') }}</strong> — متبقي <strong>{{ $minutesLeft }} دقيقة</strong> على قفل التعديل التلقائي.
+                                    </div>
+                                    @if($canWriteCurrentTab)
+                                        <button type="button" class="btn btn-sm btn-outline-success bg-white fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
+                                            <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
+                                        </button>
+                                    @endif
+                                </div>
+                            @endif
+                        @else
+                            <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #fef2f2; color: #991b1b;">
+                                <div class="small">
+                                    <i class="fas fa-lock me-1 text-danger"></i> <strong>القراءة الحالية مقفلة:</strong>
+                                    @if($minutesLeft <= 0)
+                                        مضى أكثر من 30 دقيقة على تسجيلها (في {{ $recordedTime->format('Y-m-d h:i A') }}). لا يمكن التعديل إلا بواسطة مدير النظام (Admin) حصراً.
+                                    @else
+                                        تم تسجيلها بواسطة موظف آخر ({{ $recordedByName }}). لا يحق تعديلها إلا لنفس الحساب أو لمدير النظام.
+                                    @endif
+                                </div>
+                                @if($canWriteCurrentTab)
+                                    <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
+                                        <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
+                                    </button>
+                                @endif
                             </div>
-                            <div class="col">
-                                <div class="card p-2 text-center rounded-3 border bg-light">
-                                    <span class="small text-muted fw-bold">مقياس الوعي (GCS):</span>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="gcs" class="form-control form-control-sm text-center fw-bold mt-1" 
-                                               placeholder="15/15" value="{{ $station?->gcs }}">
-                                    @else
-                                        <strong class="text-dark fs-6">{{ $station?->gcs ?: '15/15' }}</strong>
-                                    @endif
-                                </div>
+                        @endif
+
+                        {{-- Horizontal Vital Signs Flowsheet Grid Table --}}
+                        <div class="card rounded-4 border shadow-sm mb-4 overflow-hidden" id="vitalsFlowsheetCard">
+                            <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between border-bottom">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-heartbeat text-danger me-2"></i> جدول العلامات الحيوية السريرية (Vital Signs Flowsheet)
+                                </h6>
+                                @if($hasRecordedVitals)
+                                    <span class="badge bg-white text-secondary border small">
+                                        آخر تسجيل: {{ $recordedTime->format('h:i A') }} ({{ $recordedByName }})
+                                    </span>
+                                @endif
                             </div>
-                            <div class="col">
-                                <div class="card p-2 text-center rounded-3 border bg-light">
-                                    <span class="small text-muted fw-bold">إعادة امتلاء الشعيرات (CRT):</span>
-                                    @if($canWriteCurrentTab)
-                                        <input type="text" name="crt" class="form-control form-control-sm text-center fw-bold mt-1" 
-                                               placeholder="< 2 sec" value="{{ $station?->crt }}">
-                                    @else
-                                        <strong class="text-dark fs-6">{{ $station?->crt ?: '< 2 sec' }}</strong>
-                                    @endif
+
+                            {{-- Dynamic Banner for Editing Reading inline in the top form --}}
+                            <div id="editingReadingAlert" class="p-2.5 px-3 bg-primary bg-opacity-10 border-bottom border-primary-subtle d-flex align-items-center justify-content-between flex-wrap gap-2" style="display: none;">
+                                <div class="small text-primary-emphasis fw-bold">
+                                    <i class="fas fa-pen-square me-1 fa-lg text-primary"></i>
+                                    <span>أنت الآن تقوم بتعديل قراءة سابقة مسجلة في: </span>
+                                    <span id="editingReadingTimestamp" class="badge bg-white text-dark border border-primary-subtle px-2 py-1 mx-1"></span>
+                                    <span>بواسطة: <span id="editingReadingUser" class="text-dark fw-bold"></span></span>
+                                    <span class="text-muted fw-normal d-block mt-0.5" style="font-size: 0.78rem;">عدّل القيم في خانات الجدول أدناه ثم اضغط "حفظ التحديثات السريرية" لحفظها مباشرة، أو اضغط إلغاء التعديل.</span>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger bg-white rounded-pill px-3 fw-bold" onclick="cancelEditingReading()">
+                                    <i class="fas fa-times me-1"></i> إلغاء التعديل
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle text-center mb-0" id="vitalsGridTable" style="min-width: 950px;">
+                                    <thead class="table-light text-secondary small align-middle">
+                                        <tr>
+                                            <th style="width: 12%;">
+                                                <div class="fw-bold text-danger"><i class="fas fa-tachometer-alt me-1"></i> ضغط الدم</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">BP (mmHg)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">120/80</span>
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <div class="fw-bold text-warning-emphasis"><i class="fas fa-thermometer-half me-1"></i> الحرارة</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">Temp (°C)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">36.5 - 37.5</span>
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <div class="fw-bold text-danger"><i class="fas fa-heart me-1"></i> النبض</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">PR (bpm)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">60 - 100</span>
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <div class="fw-bold text-primary"><i class="fas fa-lungs me-1"></i> التنفس</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">RR (/min)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">12 - 20</span>
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <div class="fw-bold text-success"><i class="fas fa-wind me-1"></i> الأكسجين</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">SPo2 (%)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">95 - 100%</span>
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <div class="fw-bold text-secondary"><i class="fas fa-tint me-1"></i> سكر الدم</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">RBS (mg/dL)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">70 - 140</span>
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <div class="fw-bold text-secondary"><i class="fas fa-bolt me-1"></i> مقياس الألم</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">Pain (0 - 10)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">0 / 10</span>
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <div class="fw-bold text-secondary"><i class="fas fa-brain me-1"></i> مقياس الوعي</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">GCS (15)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">15/15</span>
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <div class="fw-bold text-secondary"><i class="fas fa-stopwatch me-1"></i> امتلاء الشعيرات</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">CRT (sec)</div>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">&lt; 2 sec</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="bg-white">
+                                            <td class="p-2">
+                                                <input type="text" name="bp" id="grid_bp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="120/80" value="{{ $station?->bp }}" data-original="{{ $station?->bp }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="temp" id="grid_temp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-warning-emphasis {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="37.0" value="{{ $station?->temp }}" data-original="{{ $station?->temp }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="pr" id="grid_pr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="75" value="{{ $station?->pr }}" data-original="{{ $station?->pr }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="rr" id="grid_rr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-primary {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="16" value="{{ $station?->rr }}" data-original="{{ $station?->rr }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="spo2" id="grid_spo2" class="form-control form-control-sm text-center fw-bold vital-grid-input text-success {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="98" value="{{ $station?->spo2 }}" data-original="{{ $station?->spo2 }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="rbs" id="grid_rbs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="110" value="{{ $station?->rbs }}" data-original="{{ $station?->rbs }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="pain_score" id="grid_pain_score" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="0 - 10" value="{{ $station?->pain_score }}" data-original="{{ $station?->pain_score }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="gcs" id="grid_gcs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="15/15" value="{{ $station?->gcs }}" data-original="{{ $station?->gcs }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                            <td class="p-2">
+                                                <input type="text" name="crt" id="grid_crt" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ !$canActuallyEditVitals ? 'bg-light' : '' }}" placeholder="< 2 sec" value="{{ $station?->crt }}" data-original="{{ $station?->crt }}" {{ !$canActuallyEditVitals ? 'readonly' : '' }}>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -723,35 +800,37 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark"><i class="fas fa-stethoscope text-primary me-1"></i> ملاحظات الفحص السريري (Clinical Examination):</label>
                             <textarea name="clinical_examination" class="form-control rounded-3" rows="3" 
-                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                      {{ !$canActuallyEditVitals ? 'readonly' : '' }}
                                       placeholder="ملاحظات الفحص العام وفحص الأجهزة الحيوية...">{{ $station?->clinical_examination }}</textarea>
                         </div>
 
-                        {{-- Trend Charts Section --}}
-                        <div class="card rounded-4 border p-3 mb-4">
-                            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i> المنحنيات البيانية لتطور العلامات الحيوية</h6>
-                                <span class="badge bg-light text-secondary border small">{{ $readingsAsc->count() }} قراءة مسجلة</span>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <div class="border rounded-3 p-2 bg-light bg-opacity-25">
-                                        <div class="text-center small fw-bold text-danger mb-2">منحنى ضغط الدم (BP Trend)</div>
-                                        <div style="height: 180px;">
-                                            <canvas id="bpChart"></canvas>
+                        {{-- Trend Charts Section (Visible only to Surgeon, Resident, and Admin - Hidden from Nurses) --}}
+                        @if(!empty($canViewVitalsCharts))
+                            <div class="card rounded-4 border p-3 mb-4">
+                                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                                    <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i> المنحنيات البيانية لتطور العلامات الحيوية</h6>
+                                    <span class="badge bg-light text-secondary border small">{{ $readingsAsc->count() }} قراءة مسجلة</span>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="border rounded-3 p-2 bg-light bg-opacity-25">
+                                            <div class="text-center small fw-bold text-danger mb-2">منحنى ضغط الدم (BP Trend)</div>
+                                            <div style="height: 180px;">
+                                                <canvas id="bpChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded-3 p-2 bg-light bg-opacity-25">
+                                            <div class="text-center small fw-bold text-danger mb-2">منحنى النبض (Pulse Rate Trend)</div>
+                                            <div style="height: 180px;">
+                                                <canvas id="prChart"></canvas>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="border rounded-3 p-2 bg-light bg-opacity-25">
-                                        <div class="text-center small fw-bold text-danger mb-2">منحنى النبض (Pulse Rate Trend)</div>
-                                        <div style="height: 180px;">
-                                            <canvas id="prChart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         {{-- Readings Log Table --}}
                         <div class="card rounded-4 border overflow-hidden">
@@ -771,10 +850,18 @@
                                             <th>الأكسجين</th>
                                             <th>السكر</th>
                                             <th>المسجل</th>
+                                            <th style="width: 110px;">الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse($readings as $r)
+                                            @php
+                                                $canManageThisReading = !empty($isAdmin) || (
+                                                    auth()->check() && (
+                                                        (int)$r->user_id === (int)auth()->id() || (empty($r->user_id) && $r->resident_id === auth()->user()->doctor?->id)
+                                                    ) && now()->lte($r->created_at->copy()->addMinutes(30))
+                                                );
+                                            @endphp
                                             <tr>
                                                 <td class="text-muted">{{ $r->created_at->format('Y-m-d h:i A') }}</td>
                                                 <td><span class="badge bg-danger bg-opacity-10 text-danger border">{{ $r->bp ?: '--' }}</span></td>
@@ -783,11 +870,31 @@
                                                 <td>{{ $r->rr ?: '--' }}</td>
                                                 <td><span class="badge bg-success bg-opacity-10 text-success border">{{ $r->spo2 ? $r->spo2 . '%' : '--' }}</span></td>
                                                 <td>{{ $r->rbs ?: '--' }}</td>
-                                                <td class="text-secondary">{{ $r->resident?->user?->name ?? 'طاقم الرعاية' }}</td>
+                                                <td class="text-secondary">{{ $r->user?->name ?? $r->resident?->user?->name ?? 'طاقم الرعاية' }}</td>
+                                                <td>
+                                                    @if($canManageThisReading)
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2.5 rounded-pill edit-reading-btn fw-bold" 
+                                                                    title="تعديل القراءة بالأعلى"
+                                                                    onclick='loadReadingIntoTopForm(@json($r))'>
+                                                                <i class="fas fa-pen small me-1"></i> تعديل
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill delete-reading-btn" 
+                                                                    title="حذف القراءة"
+                                                                    onclick='confirmDeleteReading("{{ route('clinical-station.readings.delete', $r->id) }}")'>
+                                                                <i class="fas fa-trash small"></i>
+                                                            </button>
+                                                        </div>
+                                                    @else
+                                                        <span class="badge bg-light text-muted border" title="مقفل (مضى أكثر من 30 دقيقة أو مسجل بحساب آخر)">
+                                                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i> مقفل
+                                                        </span>
+                                                    @endif
+                                                </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-muted py-3">لم يتم تسجيل قراءات أرشيفية سابقة حتى الآن.</td>
+                                                <td colspan="9" class="text-muted py-3">لم يتم تسجيل قراءات أرشيفية سابقة حتى الآن.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -1952,11 +2059,197 @@
     @endif
 </div>
 
-{{-- Scripts for Chart.js --}}
+{{-- Hidden Form for Delete Reading (Placed outside all parent forms) --}}
+<form id="deleteReadingForm" method="POST" style="display: none;">
+    @csrf
+    @method('DELETE')
+</form>
+
+{{-- Scripts for Chart.js and Vitals Actions --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+window.loadReadingIntoTopForm = function(reading) {
+    if (!reading) return;
+
+    // 1. تحديد معرف القراءة المراد تعديلها
+    const idInput = document.getElementById('editingReadingId');
+    if (idInput) idInput.value = reading.id;
+
+    // إلغاء وضع القراءة الدورية الجديدة إن كان مفعلاً
+    const isNewInput = document.getElementById('isNewReadingInput');
+    if (isNewInput) isNewInput.value = '0';
+
+    // 2. تعبئة خانات الجدول العلوي بالقيم
+    const setGridVal = function(id, val) {
+        const inp = document.getElementById(id);
+        if (inp) {
+            inp.value = (val !== null && val !== undefined) ? val : '';
+            inp.removeAttribute('readonly');
+            inp.removeAttribute('disabled');
+            inp.classList.remove('bg-light');
+            inp.style.border = '2px solid #2563eb';
+            inp.style.backgroundColor = '#eff6ff';
+        }
+    };
+
+    setGridVal('grid_bp', reading.bp);
+    setGridVal('grid_temp', reading.temp);
+    setGridVal('grid_pr', reading.pr);
+    setGridVal('grid_rr', reading.rr);
+    setGridVal('grid_spo2', reading.spo2);
+    setGridVal('grid_rbs', reading.rbs);
+    setGridVal('grid_pain_score', reading.pain_score);
+    setGridVal('grid_gcs', reading.gcs);
+    setGridVal('grid_crt', reading.crt);
+
+    // ملاحظات الفحص السريري
+    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
+    if (examTextarea) {
+        if (reading.clinical_examination || reading.notes) {
+            examTextarea.value = reading.clinical_examination || reading.notes || '';
+        }
+        examTextarea.removeAttribute('readonly');
+        examTextarea.style.border = '2px solid #2563eb';
+        examTextarea.style.backgroundColor = '#eff6ff';
+    }
+
+    // 3. إظهار شارة التعديل العلوية
+    const alertBox = document.getElementById('editingReadingAlert');
+    if (alertBox) {
+        alertBox.style.display = 'flex';
+        const tsEl = document.getElementById('editingReadingTimestamp');
+        if (tsEl) {
+            let dateStr = reading.created_at ? new Date(reading.created_at).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : 'قراءة أرشيفية';
+            tsEl.textContent = dateStr;
+        }
+        const userEl = document.getElementById('editingReadingUser');
+        if (userEl) {
+            userEl.textContent = (reading.user && reading.user.name) ? reading.user.name : (reading.resident && reading.resident.user ? reading.resident.user.name : 'طاقم الرعاية');
+        }
+    }
+
+    // 4. تمرير الصفحة بسلاسة نحو جدول المؤشرات في الأعلى
+    const tableCard = document.getElementById('vitalsFlowsheetCard') || document.getElementById('vitalsGridTable');
+    if (tableCard) {
+        tableCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    const firstInp = document.getElementById('grid_bp');
+    if (firstInp) firstInp.focus();
+};
+
+window.cancelEditingReading = function() {
+    // 1. تصفير معرف القراءة
+    const idInput = document.getElementById('editingReadingId');
+    if (idInput) idInput.value = '';
+
+    // 2. استرجاع القيم الأصلية
+    const resetGridVal = function(id) {
+        const inp = document.getElementById(id);
+        if (inp) {
+            inp.value = inp.getAttribute('data-original') || '';
+            inp.style.border = '';
+            inp.style.backgroundColor = '';
+            @if(!$canActuallyEditVitals)
+                inp.setAttribute('readonly', 'readonly');
+                inp.classList.add('bg-light');
+            @endif
+        }
+    };
+
+    resetGridVal('grid_bp');
+    resetGridVal('grid_temp');
+    resetGridVal('grid_pr');
+    resetGridVal('grid_rr');
+    resetGridVal('grid_spo2');
+    resetGridVal('grid_rbs');
+    resetGridVal('grid_pain_score');
+    resetGridVal('grid_gcs');
+    resetGridVal('grid_crt');
+
+    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
+    if (examTextarea) {
+        examTextarea.value = @json($station?->clinical_examination ?? '');
+        examTextarea.style.border = '';
+        examTextarea.style.backgroundColor = '';
+        @if(!$canActuallyEditVitals)
+            examTextarea.setAttribute('readonly', 'readonly');
+        @endif
+    }
+
+    // 3. إخفاء شارة التعديل
+    const alertBox = document.getElementById('editingReadingAlert');
+    if (alertBox) alertBox.style.display = 'none';
+};
+
+window.enableNewReadingMode = function() {
+    // تصفير معرف القراءة في حال كان هناك تعديل سابق
+    const editIdInput = document.getElementById('editingReadingId');
+    if (editIdInput) editIdInput.value = '';
+
+    const alertBox = document.getElementById('editingReadingAlert');
+    if (alertBox) alertBox.style.display = 'none';
+
+    const hiddenInput = document.getElementById('isNewReadingInput');
+    if (hiddenInput) {
+        hiddenInput.value = '1';
+    }
+    const table = document.getElementById('vitalsGridTable');
+    if (table) {
+        table.querySelectorAll('input').forEach(function(inp) {
+            inp.removeAttribute('readonly');
+            inp.removeAttribute('disabled');
+            inp.classList.remove('bg-light');
+            inp.value = '';
+            inp.style.border = '2px solid #16a34a';
+            inp.style.backgroundColor = '#f0fdf4';
+        });
+        const firstInp = document.getElementById('grid_bp') || table.querySelector('input[name="bp"]');
+        if (firstInp) firstInp.focus();
+    }
+    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
+    if (examTextarea) {
+        examTextarea.removeAttribute('readonly');
+        examTextarea.value = '';
+        examTextarea.style.border = '2px solid #16a34a';
+        examTextarea.style.backgroundColor = '#f0fdf4';
+    }
+
+    const tableCard = document.getElementById('vitalsFlowsheetCard') || document.getElementById('vitalsGridTable');
+    if (tableCard) {
+        tableCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+};
+
+window.confirmDeleteReading = function(deleteUrl) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'هل أنت متأكد من حذف هذه القراءة؟',
+            text: 'سيتم حذف القراءة من السجل ومزامنة قراءات المريض الحالية تلقائياً.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.getElementById('deleteReadingForm');
+                form.action = deleteUrl;
+                form.submit();
+            }
+        });
+    } else {
+        if (confirm('هل أنت متأكد من حذف هذه القراءة؟')) {
+            const form = document.getElementById('deleteReadingForm');
+            form.action = deleteUrl;
+            form.submit();
+        }
+    }
+};
+
 document.addEventListener("DOMContentLoaded", function () {
-    @if($activeTab === 'vitals' && $readingsAsc->count() > 0)
+    @if($activeTab === 'vitals' && !empty($canViewVitalsCharts) && $readingsAsc->count() > 0)
         const labels = @json($readingsAsc->map(fn($r) => $r->created_at->format('h:i A')));
         
         // BP Data

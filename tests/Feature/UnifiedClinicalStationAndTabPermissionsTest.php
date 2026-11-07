@@ -95,6 +95,7 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             'surgery_type' => 'major',
             'scheduled_date' => now()->toDateString(),
             'scheduled_time' => '10:00:00',
+            'room_checkin_at' => now(),
             'status' => 'scheduled',
         ]);
     }

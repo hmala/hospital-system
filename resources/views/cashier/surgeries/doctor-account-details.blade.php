@@ -134,18 +134,50 @@
         </div>
     @endif
 
-    {{-- جدول العمليات الجراحية المفصل الخاص بالجراح --}}
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
-                <i class="fas fa-procedures text-danger"></i>
-                <span>سجل العمليات الجراحية واستقطاعاتها وتصفيتها</span>
-            </h5>
-            <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
-                عدد العمليات: {{ $surgeries->total() }}
-            </span>
-        </div>
-        <div class="card-body p-0">
+    {{-- تبويبات حسابات الجراح --}}
+    <ul class="nav nav-pills gap-2 mb-3 bg-white p-2 rounded-4 shadow-sm border" id="doctorAccountTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                    id="active-surgeries-tab" data-bs-toggle="pill" data-bs-target="#active-surgeries-pane" type="button" role="tab">
+                <i class="fas fa-procedures text-primary"></i>
+                <span>العمليات الجراحية المستحقة</span>
+                <span class="badge bg-primary text-white rounded-pill px-2">{{ $surgeries->total() }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2 {{ $cancelledSurgeries->isNotEmpty() ? 'text-danger' : 'text-muted' }}" 
+                    id="cancelled-surgeries-tab" data-bs-toggle="pill" data-bs-target="#cancelled-surgeries-pane" type="button" role="tab">
+                <i class="fas fa-ban text-danger"></i>
+                <span>العمليات الملغاة والمسترجعة (للعلم)</span>
+                <span class="badge {{ $cancelledSurgeries->isNotEmpty() ? 'bg-danger text-white' : 'bg-light text-secondary border' }} rounded-pill px-2">
+                    {{ $cancelledSurgeries->count() }}
+                </span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                    id="payouts-history-tab" data-bs-toggle="pill" data-bs-target="#payouts-history-pane" type="button" role="tab">
+                <i class="fas fa-history text-success"></i>
+                <span>سجل سندات الصرف والتسويات</span>
+                <span class="badge bg-success text-white rounded-pill px-2">{{ $payouts->count() }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="doctorAccountTabsContent">
+        {{-- التبويب 1: جدول العمليات الجراحية المستحقة المعتمدة --}}
+        <div class="tab-pane fade show active" id="active-surgeries-pane" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="fas fa-procedures text-danger"></i>
+                        <span>سجل العمليات الجراحية المعتمدة واستقطاعاتها وتصفيتها</span>
+                    </h5>
+                    <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                        عدد العمليات: {{ $surgeries->total() }}
+                    </span>
+                </div>
+                <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 text-nowrap">
                     <thead class="table-light text-secondary small fw-bold">
@@ -306,50 +338,160 @@
                 {{ $surgeries->links() }}
             </div>
         @endif
-    </div>
-
-    {{-- سجل السندات والدفعات المصروفة سابقاً للطبيب --}}
-    @if($payouts->isNotEmpty())
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="card-header bg-white py-3 px-4 border-bottom">
-                <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
-                    <i class="fas fa-history text-success"></i>
-                    <span>سجل سندات الصرف والتسويات السابقة للطبيب</span>
-                </h6>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 text-nowrap">
-                        <thead class="table-light text-secondary small fw-bold">
-                            <tr>
-                                <th class="ps-4">رقم السند</th>
-                                <th>تاريخ ووقت الصرف</th>
-                                <th>المحاسب المسؤول</th>
-                                <th class="text-end">المبلغ المصروف</th>
-                                <th class="pe-4">البيان والملاحظات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($payouts as $payout)
+        </div>
+
+        {{-- التبويب 2: جدول العمليات الملغاة والمسترجعة (للعلم والأرشفة التدقيقية) --}}
+        <div class="tab-pane fade" id="cancelled-surgeries-pane" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-danger bg-opacity-10 py-3 px-4 border-bottom border-danger border-opacity-25 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-danger d-flex align-items-center gap-2">
+                        <i class="fas fa-ban"></i>
+                        <span>أرشيف العمليات الملغاة والمسترجعة (للعلم والتدقيق الرقابي)</span>
+                    </h5>
+                    <span class="badge bg-danger text-white px-3 py-2 rounded-pill">
+                        عدد العمليات: {{ $cancelledSurgeries->count() }} (استحقاق الطبيب: 0 د.ع)
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light text-secondary small fw-bold">
                                 <tr>
-                                    <td class="ps-4 fw-bold font-monospace text-dark">#{{ $payout->id }}</td>
-                                    <td>{{ $payout->paid_at ? $payout->paid_at->format('Y-m-d H:i') : '---' }}</td>
-                                    <td>
-                                        <i class="fas fa-user-tag text-muted me-1"></i>
-                                        {{ $payout->paidBy?->name ?? 'محاسب' }}
-                                    </td>
-                                    <td class="text-end font-monospace text-success fw-bold fs-6">
-                                        {{ number_format($payout->amount, 0) }} د.ع
-                                    </td>
-                                    <td class="pe-4 text-muted small">{{ $payout->notes ?? '---' }}</td>
+                                    <th class="ps-4"># / العملية</th>
+                                    <th>التاريخ</th>
+                                    <th>المريض</th>
+                                    <th class="text-end">أجور الجراحة الاسمية</th>
+                                    <th class="text-center">استحقاق الجراح</th>
+                                    <th class="text-center">حالة الإلغاء والاسترجاع</th>
+                                    <th class="pe-4">سندات الاسترجاع والتفاصيل</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @forelse($cancelledSurgeries as $cancelledSurgery)
+                                    @php
+                                        $cPatient = $cancelledSurgery->patient;
+                                        $refundPayment = $cancelledSurgery->payments->where('amount', '<', 0)->first();
+                                    @endphp
+                                    <tr class="table-light bg-opacity-50">
+                                        {{-- رقم العملية ونوعها --}}
+                                        <td class="ps-4">
+                                            <div class="fw-bold text-dark fs-6">#{{ $cancelledSurgery->id }} - {{ $cancelledSurgery->surgery_type }}</div>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1" style="font-size: 0.7rem;">
+                                                <i class="fas fa-times-circle me-1"></i>عملية ملغاة
+                                            </span>
+                                        </td>
+
+                                        {{-- التاريخ --}}
+                                        <td>
+                                            <div class="fw-bold text-secondary">{{ $cancelledSurgery->scheduled_date ? $cancelledSurgery->scheduled_date->format('Y-m-d') : '---' }}</div>
+                                        </td>
+
+                                        {{-- المريض --}}
+                                        <td>
+                                            <div class="fw-bold text-dark">{{ $cPatient?->user?->name ?? $cPatient?->name ?? 'مريض غير محدد' }}</div>
+                                            <small class="text-muted font-monospace">{{ $cPatient?->patient_id ?? '-' }}</small>
+                                        </td>
+
+                                        {{-- الأجور الاسمية --}}
+                                        <td class="text-end text-muted text-decoration-line-through font-monospace">
+                                            {{ number_format($cancelledSurgery->surgery_fee, 0) }} د.ع
+                                        </td>
+
+                                        {{-- استحقاق الجراح --}}
+                                        <td class="text-center">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1 fw-bold">
+                                                <i class="fas fa-ban me-1"></i>0 د.ع (لا يترتب استحقاق)
+                                            </span>
+                                        </td>
+
+                                        {{-- حالة الاسترجاع --}}
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
+                                                <i class="fas fa-undo me-1"></i>تم استرجاع المبلغ للمواطن
+                                            </span>
+                                        </td>
+
+                                        {{-- سند الاسترجاع والتفاصيل --}}
+                                        <td class="pe-4 small text-muted">
+                                            @if($refundPayment)
+                                                <span class="fw-bold text-danger font-monospace d-block">
+                                                    إيصال استرجاع #{{ $refundPayment->receipt_number }} ({{ number_format(abs($refundPayment->amount), 0) }} د.ع)
+                                                </span>
+                                                <small class="text-muted">{{ $refundPayment->paid_at ? $refundPayment->paid_at->format('Y-m-d H:i') : '' }}</small>
+                                            @else
+                                                <span class="text-muted">أُلغيت قبل التسديد المالي</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
+                                            <p class="mb-0 fw-bold">لا توجد أي عمليات ملغاة أو مسترجعة لهذا الطبيب.</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    @endif
+
+        {{-- التبويب 3: سجل السندات والدفعات المصروفة سابقاً للطبيب --}}
+        <div class="tab-pane fade" id="payouts-history-pane" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="fas fa-history text-success"></i>
+                        <span>سجل سندات الصرف والتسويات السابقة للطبيب</span>
+                    </h6>
+                    <span class="badge bg-success text-white px-3 py-2 rounded-pill">
+                        عدد السندات: {{ $payouts->count() }} (الإجمالي: {{ number_format($stats['total_paid'], 0) }} د.ع)
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light text-secondary small fw-bold">
+                                <tr>
+                                    <th class="ps-4">رقم السند</th>
+                                    <th>تاريخ ووقت الصرف</th>
+                                    <th>المحاسب المسؤول</th>
+                                    <th class="text-end">المبلغ المصروف</th>
+                                    <th class="pe-4">البيان والملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($payouts as $payout)
+                                    <tr>
+                                        <td class="ps-4 fw-bold font-monospace text-dark">#{{ $payout->id }}</td>
+                                        <td>{{ $payout->paid_at ? $payout->paid_at->format('Y-m-d H:i') : '---' }}</td>
+                                        <td>
+                                            <i class="fas fa-user-tag text-muted me-1"></i>
+                                            {{ $payout->paidBy?->name ?? 'محاسب' }}
+                                        </td>
+                                        <td class="text-end font-monospace text-success fw-bold fs-6">
+                                            {{ number_format($payout->amount, 0) }} د.ع
+                                        </td>
+                                        <td class="pe-4 text-muted small">{{ $payout->notes ?? '---' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
+                                            <p class="mb-0 fw-bold">لا توجد سندات صرف مسجلة لهذا الطبيب حتى الآن.</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {{-- نافذة منبثقة لتفاصيل استقطاعات الباقة (Modal) --}}

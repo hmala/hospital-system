@@ -12,6 +12,7 @@ class ResidentStationReading extends Model
     protected $fillable = [
         'resident_station_id',
         'resident_id',
+        'user_id',
         'bp',
         'temp',
         'pr',
@@ -42,5 +43,10 @@ class ResidentStationReading extends Model
     public function resident()
     {
         return $this->belongsTo(Doctor::class, 'resident_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

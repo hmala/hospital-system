@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ResidentStationFollowUp;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -47,12 +46,15 @@ class ResidentStation extends Model
         'status',
         'started_at',
         'completed_at',
+        'vitals_recorded_at',
+        'vitals_recorded_by',
     ];
 
     protected $casts = [
         'follow_up_date' => 'date',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'vitals_recorded_at' => 'datetime',
     ];
 
     public function surgery()
@@ -65,9 +67,42 @@ class ResidentStation extends Model
         return $this->belongsTo(Doctor::class, 'resident_id');
     }
 
+    public function vitalsRecordedBy()
+    {
+        return $this->belongsTo(User::class, 'vitals_recorded_by');
+    }
+
+    /**
+     * هل يحق للمستخدم تعديل العلامات الحيوية الحالية (خلال 30 دقيقة لنفس الحساب أو للأدمن حصراً)
+     */
+    public function canUserEditVitals(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        // 1. مدير النظام يملك صلاحية التعديل والتصحيح دائماً
+        if ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
+            return true;
+        }
+
+        // 2. إذا لم يتم تسجيل قراءة سابقة بعد، يتاح الإدخال لأي مستخدم مصرح له بالكتابة
+        if (! $this->vitals_recorded_at || ! $this->vitals_recorded_by) {
+            return true;
+        }
+
+        // 3. يجب أن يكون التعديل من نفس الحساب الذي سجل القراءة حصراً
+        if ((int) $this->vitals_recorded_by !== (int) $user->id) {
+            return false;
+        }
+
+        // 4. يجب أن يكون التعديل خلال 30 دقيقة من وقت التسجيل
+        return now()->lte($this->vitals_recorded_at->copy()->addMinutes(30));
+    }
+
     public function readings()
     {
-        return $this->hasMany(ResidentStationReading::class, 'resident_station_id')->orderBy('created_at', 'desc');
+        return $this->hasMany(ResidentStationReading::class, 'resident_station_id')->orderByDesc('created_at')->orderByDesc('id');
     }
 
     public function followUps()

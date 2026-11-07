@@ -760,6 +760,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
         Route::post('/clinical/{surgery}/treatments/dispense-floor-stock', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.treatments.dispense-floor-stock');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
+        Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
+        Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');
 
         // استبيان تقييم غرفة الرقود (Inpatient Room Quality Survey)
         Route::post('/clinical/{surgery}/inpatient-survey', [\App\Http\Controllers\InpatientSurveyController::class, 'storeManual'])->name('inpatient-surveys.manual.store');

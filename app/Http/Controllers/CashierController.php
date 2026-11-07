@@ -2894,7 +2894,10 @@ class CashierController extends Controller
 
         $doctorsSummary = $doctors->map(function ($doctor) {
             $surgeries = $doctor->surgeries->filter(function ($s) {
-                return in_array($s->payment_status, ['paid', 'partial']) || $s->payments->isNotEmpty();
+                if ($s->status === 'cancelled' || $s->payment_status === 'refunded') {
+                    return false;
+                }
+                return in_array($s->payment_status, ['paid', 'partial']) || $s->payments->where('amount', '>', 0)->isNotEmpty();
             });
 
             $surgeriesCount = $surgeries->count();
@@ -2981,7 +2984,7 @@ class CashierController extends Controller
         $toDate = $request->query('to_date');
         $paymentStatusFilter = $request->query('payment_status');
 
-        $query = Surgery::with([
+        $baseQuery = Surgery::with([
             'patient.user',
             'department',
             'room',
@@ -2991,20 +2994,33 @@ class CashierController extends Controller
             'radiologyTests.radiologyType',
             'extraServices',
         ])
-            ->where('doctor_id', $doctor->id)
-            ->where(function ($q) {
-                $q->whereIn('payment_status', ['paid', 'partial'])
-                    ->orWhereHas('payments', fn ($pq) => $pq->where('payment_type', 'surgery'));
-            });
+            ->where('doctor_id', $doctor->id);
 
         if ($fromDate) {
-            $query->whereDate('scheduled_date', '>=', $fromDate);
+            $baseQuery->whereDate('scheduled_date', '>=', $fromDate);
         }
         if ($toDate) {
-            $query->whereDate('scheduled_date', '<=', $toDate);
+            $baseQuery->whereDate('scheduled_date', '<=', $toDate);
         }
 
-        $allSurgeries = (clone $query)->get();
+        // العمليات المعتمدة السارية (تدخل في الحسابات والرصيد المالي للجراح)
+        $validQuery = (clone $baseQuery)
+            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', '!=', 'refunded')
+            ->where(function ($q) {
+                $q->whereIn('payment_status', ['paid', 'partial'])
+                    ->orWhereHas('payments', fn ($pq) => $pq->where('payment_type', 'surgery')->where('amount', '>', 0));
+            });
+
+        // العمليات الملغاة والمسترجعة (للعلم والأرشفة والتدقيق الرقابي دون التأثير المالي)
+        $cancelledQuery = (clone $baseQuery)
+            ->where(function ($q) {
+                $q->where('status', 'cancelled')
+                    ->orWhere('payment_status', 'refunded');
+            });
+
+        $allSurgeries = (clone $validQuery)->get();
+        $cancelledSurgeries = (clone $cancelledQuery)->orderBy('scheduled_date', 'desc')->get();
 
         $grossFees = 0.0;
         $packageDeductions = 0.0;
@@ -3035,7 +3051,7 @@ class CashierController extends Controller
 
         $balance = max(0.0, $netEarned - $totalPaid);
 
-        $surgeries = $query->orderBy('scheduled_date', 'desc')->paginate(15)->withQueryString();
+        $surgeries = $validQuery->orderBy('scheduled_date', 'desc')->paginate(15)->withQueryString();
 
         // سجل الدفعات المصروفة للطبيب
         $payouts = DoctorDue::with('paidBy')
@@ -3058,9 +3074,10 @@ class CashierController extends Controller
             'total_paid' => $totalPaid,
             'balance' => $balance,
             'surgeries_count' => $allSurgeries->count(),
+            'cancelled_count' => $cancelledSurgeries->count(),
         ];
 
-        return view('cashier.surgeries.doctor-account-details', compact('doctor', 'surgeries', 'payouts', 'stats', 'fromDate', 'toDate', 'paymentStatusFilter'));
+        return view('cashier.surgeries.doctor-account-details', compact('doctor', 'surgeries', 'cancelledSurgeries', 'payouts', 'stats', 'fromDate', 'toDate', 'paymentStatusFilter'));
     }
 
     /**
@@ -4186,6 +4203,19 @@ class CashierController extends Controller
                     'surgery_fee_paid' => 'refunded',
                     'payment_status' => 'refunded',
                 ]);
+
+                // إلغاء أي مستحقات غير مدفوعة للجراح مرتبطة بالعملية المسترجعة
+                $paymentIds = $surgery->payments()->pluck('id')->toArray();
+                DoctorDue::where('status', 'pending')
+                    ->where(function ($q) use ($surgery, $paymentIds) {
+                        $q->where('surgery_id', $surgery->id)
+                            ->orWhereIn('payment_id', $paymentIds)
+                            ->orWhere('notes', 'like', "%#{$surgery->id}%");
+                    })
+                    ->update([
+                        'status' => 'cancelled',
+                        'notes' => DB::raw("CONCAT(COALESCE(notes, ''), ' [أُلغيت المستحقات لاسترجاع رسوم العملية للمريض]')"),
+                    ]);
             } else {
                 // تحديث مبالغ الدفع وحالتها في الجراحة
                 $surgery->update([

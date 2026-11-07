@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-07 — المرحلة 178: تعديل العلامات الحيوية السريرية مباشرة في الجدول العلوي وإلغاء المودل المنبثق نهائياً وتمرير سلس سريع Inline Flowsheet Vitals Editing, Modal Removal, Direct Table Sync & 30-Minute Governance Enforcement)
+
+### Done
+- **تعديل مباشر وسلس في الجدول العلوي دون فتح نوافذ منبثقة (Zero-Modal Direct Flowsheet Editing)**:
+  * إلغاء نافذة المودل المنبثقة `#editReadingModal` نهائياً والتخلص من أي مشاكل تشوه أو قطع في الواجهة.
+  * عند النقر على زر `[ ✏️ تعديل ]` في سجل القراءات التاريخية: تعبئة قيم القراءة فورياً في خلايا الجدول العلوي (`grid_bp`, `grid_temp`, `grid_pr`, `grid_rr`, `grid_spo2`, `grid_rbs`, `grid_pain_score`, `grid_gcs`, `grid_crt`) وتفعيل الخانات وتحديدها باللون الأزرق.
+  * تمرير الشاشة تلقائياً وبسلاسة (`smooth scroll`) نحو جدول العلامات الحيوية في الأعلى وتركيز المؤشر داخل خانة ضغط الدم.
+  * إظهار شارة إرشادية أنيقة أعلى الجدول توضح توقيت القراءة واسم مسجلها مع زر سريع `[ ✕ إلغاء التعديل ]` لإرجاع القيم السابقة فوراً.
+- **معالجة الحفظ الموحد عبر زر "حفظ التحديثات السريرية" ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * دعم مدخل `editing_reading_id` المخفي ضمن النموذج الرئيسي، والتحقق الصارم من مهلة الـ 30 دقيقة لنفس الحساب أو صلاحية مدير النظام (`Admin`).
+  * مزامنة وتحديث قيم المحطة السريرية العلوية ومحطة التمريض تلقائياً ولحظياً في حال كانت القراءة المعدلة هي الأحدث للمريض.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
+  * اجتياز كامل الاختبارات بنسبة نجاح 100% (`8 passed, 50 assertions`) واستمرار اجتياز كافة اختبارات المحطة وصلاحيات التبويبات (`11 passed, 44 assertions`).
+
 ## Session log (2026-11-07 — المرحلة 177: شارات استقطاع حصة الجراح والضمان وتلخيص الاستقطاعات التلقائي في نموذج دفع العمليات Surgery Cashier Smart Package Inclusions Badges & Live Doctor Deductions Total Breakdown)
 
 ### Done
