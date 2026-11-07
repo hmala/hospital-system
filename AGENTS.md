@@ -72,8 +72,11 @@ Consult these files before making changes or proposing fixes:
     - زر حذف دائري أنيق للخدمات الإضافية `delete-extra-service-btn`.
 - **مزامنة فورية ودقيقة للحسابات المالية (Live Dynamic Recalculation)**:
   * ربط مستمعي الأحداث لأزرار الراديو الكبسولية `inclusion-pill-radio` بالمفاتيح المخفية `package-inclusion-switch` لتحديث حصة المريض ومطالبة الضمان وإجمالي البنود المعتمدة في تذييل الجدول `tfoot` وصندوق الدفع اللحظي دون الحاجة لإعادة تحميل الصفحة.
+- **إلحاق تلقائي رجعي وفك حظر العمليات في الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * استدعاء `attachDefaultExtraServices()` تلقائياً في `showSurgeryPaymentForm` للعمليات غير الملغاة لضمان وجود الخدمات الافتراضية للعمليات القديمة.
+  * فك حظر فتح شاشة الدفع إذا كان هناك أي بنود معلقة (خدمات إضافية، تحاليل، أشعة، أو متبقي جراحة) حتى لو كانت حالة العملية مسجلة `paid` قديماً.
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
-  * إضافة واجتياز اختبار التحقق من بنية الجدول والكبسولات السداسية بنسبة 100% (7 passed, 40 assertions)، واستمرار اجتياز كافة اختبارات تجزئة ودفع العمليات والضمان (14 passed, 91 assertions).
+  * إضافة واجتياز اختبار التحقق من بنية الجدول والكبسولات السداسية والإلحاق التلقائي الرجعي بنسبة 100% (8 passed, 47 assertions)، واستمرار اجتياز كافة اختبارات تجزئة ودفع العمليات والضمان (15 passed, 98 assertions).
 
 ## Session log (2026-11-07 — المرحلة 170: الإلحاق التلقائي لخدمات العمليات (تخطيط قلب، فتح طبلة، خدمات فندقية)، تسعيرها المرن القابل للتعديل، والتحكم الفردي بالشمول وإلغاء الشمول الكلي Auto Surgery Default Services, Inline Editable Pricing, Granular Per-Service Inclusion & All-Inclusive Toggle Removal)
 

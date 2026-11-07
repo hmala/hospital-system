@@ -2887,13 +2887,22 @@ class CashierController extends Controller
                 ->with('warning', 'لا يمكن دفع عملية ملغاة');
         }
 
+        // إلحاق الخدمات الإضافية الافتراضية للعمليات النشطة إذا لم تكن ملحقة مسبقاً
+        if (! $isCancelled) {
+            $surgery->attachDefaultExtraServices();
+        }
+
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية/تخفيض الغرفة ويوجد فرق مالي معلق أو مستحق استرجاع)
         $hasRemainingRoomFee = ! $isCancelled && ((($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0);
         $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : ($surgery->room_fee ?? 0))) > 0;
         $totalSurgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price'));
         $hasExcessSurgeryFee = (($surgery->surgery_fee_paid_amount ?? 0) - $totalSurgeryFee) > 0;
+        $hasRemainingSurgeryFee = ! $isCancelled && (($totalSurgeryFee - ($surgery->surgery_fee_paid_amount ?? 0)) > 0);
+        $hasPendingExtraServices = ! $isCancelled && $surgery->extraServices()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingLab = ! $isCancelled && $surgery->labTests()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingRad = ! $isCancelled && $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->exists();
 
-        if (! $isCancelled && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee) {
+        if (! $isCancelled && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee && ! $hasRemainingSurgeryFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }

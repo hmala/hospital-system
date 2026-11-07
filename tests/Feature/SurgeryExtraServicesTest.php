@@ -371,4 +371,32 @@ class SurgeryExtraServicesTest extends TestCase
         $response->assertSee('خدمات فندقية');
         $response->assertDontSee('id="inclusive"', false);
     }
+
+    public function test_payment_form_auto_attaches_default_services_when_missing_and_allows_payment_if_pending_items_exist(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'بتر اصبع قدم سكري',
+            'surgery_fee' => 1000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'scheduled',
+            'payment_status' => 'paid',
+            'insurance_type' => 'hi',
+        ]);
+
+        $this->assertEquals(0, $surgery->extraServices()->count());
+
+        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.payment.form', $surgery));
+
+        $response->assertOk();
+        $this->assertEquals(3, $surgery->extraServices()->count());
+        $response->assertSee('بتر اصبع قدم سكري');
+        $response->assertSee('تخطيط قلب');
+        $response->assertSee('اجور فتح طبلة');
+        $response->assertSee('خدمات فندقية');
+    }
 }
