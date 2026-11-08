@@ -1073,6 +1073,31 @@ class ConsultantAvailabilityController extends Controller
 
         $revenues = $revenueQuery->orderBy('paid_at', 'desc')->paginate(20, ['*'], 'rev_page')->withQueryString();
 
+        // إحصائيات البحث والفلترة المحددة للكشفيات
+        $hasRevenueFilter = ! empty($fromDate) || ! empty($toDate) || ! empty($revenueSearch) || ! empty($filterType);
+        $filteredTotalAmount = (float) (clone $revenueQuery)->sum('total_amount');
+        $filteredDoctorShare = (float) (clone $revenueQuery)->sum('doctor_share');
+        $filteredHospitalShare = (float) (clone $revenueQuery)->sum('hospital_share');
+        $filteredCount = (clone $revenueQuery)->count();
+
+        $availableBalance = (float) (optional($doctor->financialAccount)->balance ?? 0);
+        $suggestedPayoutAmount = $hasRevenueFilter
+            ? min($availableBalance, max(0.0, $filteredDoctorShare))
+            : $availableBalance;
+
+        $suggestedPayoutNotes = '';
+        if ($fromDate && $toDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب للفترة من {$fromDate} إلى {$toDate}";
+        } elseif ($fromDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب من تاريخ {$fromDate}";
+        } elseif ($toDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب لغاية تاريخ {$toDate}";
+        } elseif ($revenueSearch) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات محددة حسب البحث ({$revenueSearch})";
+        } elseif ($hasRevenueFilter) {
+            $suggestedPayoutNotes = 'صرف مستحقات كشفيات الطبيب حسب الفلترة المحددة';
+        }
+
         // إحصائيات الكشفيات الإجمالية للطبيب
         $totalsQuery = ConsultationRevenue::where('doctor_id', $doctor->id);
         $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
@@ -1121,7 +1146,15 @@ class ConsultantAvailabilityController extends Controller
             'payoutSearch',
             'revenueSearch',
             'fromDate',
-            'toDate'
+            'toDate',
+            'hasRevenueFilter',
+            'filteredTotalAmount',
+            'filteredDoctorShare',
+            'filteredHospitalShare',
+            'filteredCount',
+            'availableBalance',
+            'suggestedPayoutAmount',
+            'suggestedPayoutNotes'
         ));
     }
 

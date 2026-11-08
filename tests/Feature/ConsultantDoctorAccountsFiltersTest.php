@@ -205,4 +205,62 @@ class ConsultantDoctorAccountsFiltersTest extends TestCase
         $this->assertEquals(500000.00, (float) $account->balance);
         $this->assertEquals(500000.00, (float) $account->total_paid);
     }
+
+    public function test_consultant_doctor_account_filtered_payout_amount_calculation(): void
+    {
+        // 1. Create two consultation revenues with different dates
+        $todayStr = now()->format('Y-m-d');
+        $tenDaysAgoStr = now()->subDays(10)->format('Y-m-d');
+
+        \App\Models\ConsultationRevenue::create([
+            'doctor_id' => $this->doctorWithBalance->id,
+            'receipt_number' => 'REC-TODAY-001',
+            'payment_method' => 'cash',
+            'payment_type' => 'consultation',
+            'cashier_id' => $this->admin->id,
+            'total_amount' => 50000,
+            'doctor_share' => 30000,
+            'hospital_share' => 20000,
+            'movement_type' => 'payment',
+            'revenue_date' => $todayStr,
+            'paid_at' => now(),
+        ]);
+
+        \App\Models\ConsultationRevenue::create([
+            'doctor_id' => $this->doctorWithBalance->id,
+            'receipt_number' => 'REC-OLD-002',
+            'payment_method' => 'cash',
+            'payment_type' => 'consultation',
+            'cashier_id' => $this->admin->id,
+            'total_amount' => 25000,
+            'doctor_share' => 15000,
+            'hospital_share' => 10000,
+            'movement_type' => 'payment',
+            'revenue_date' => $tenDaysAgoStr,
+            'paid_at' => now()->subDays(10),
+        ]);
+
+        // 2. Request without filters: suggested amount should be full available balance (750,000)
+        $unfilteredResponse = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', $this->doctorWithBalance));
+        $unfilteredResponse->assertOk();
+        $this->assertFalse($unfilteredResponse->viewData('hasRevenueFilter'));
+        $this->assertEquals(750000.00, (float) $unfilteredResponse->viewData('suggestedPayoutAmount'));
+
+        // 3. Request with date filter (only today)
+        $filteredResponse = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', [
+            'doctor' => $this->doctorWithBalance,
+            'from_date' => $todayStr,
+            'to_date' => $todayStr,
+        ]));
+        $filteredResponse->assertOk();
+        $this->assertTrue($filteredResponse->viewData('hasRevenueFilter'));
+        $this->assertEquals(30000.00, (float) $filteredResponse->viewData('filteredDoctorShare'));
+        $this->assertEquals(30000.00, (float) $filteredResponse->viewData('suggestedPayoutAmount'));
+        $this->assertStringContainsString($todayStr, $filteredResponse->viewData('suggestedPayoutNotes'));
+
+        // View assertions: shows filtered summary and today's receipt, omits old receipt
+        $filteredResponse->assertSee('REC-TODAY-001');
+        $filteredResponse->assertDontSee('REC-OLD-002');
+        $filteredResponse->assertSee('مستحقات الفترة المحددة: 30,000 د.ع');
+    }
 }

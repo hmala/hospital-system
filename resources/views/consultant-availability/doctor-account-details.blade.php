@@ -126,17 +126,104 @@
         </div>
     </div>
 
+    {{-- شريط البحث والفلترة الذكي لحساب الطبيب --}}
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white border">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ route('consultant-availability.doctor-account', $doctor) }}" class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                               name="revenue_search" 
+                               class="form-control form-control-sm border-start-0 rounded-end-pill" 
+                               placeholder="ابحث باسم المريض أو رقم الإيصال..." 
+                               value="{{ $revenueSearch ?? '' }}">
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted border-end-0 rounded-start-pill"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" name="from_date" class="form-control form-control-sm border-start-0 rounded-end-pill" value="{{ $fromDate ?? '' }}" title="من تاريخ">
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted border-end-0 rounded-start-pill"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" name="to_date" class="form-control form-control-sm border-start-0 rounded-end-pill" value="{{ $toDate ?? '' }}" title="إلى تاريخ">
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select name="filter_type" class="form-select form-select-sm rounded-pill">
+                        <option value="">كل الحركات</option>
+                        <option value="payment" {{ ($filterType ?? '') === 'payment' ? 'selected' : '' }}>كشفية مقبوضة</option>
+                        <option value="refund" {{ ($filterType ?? '') === 'refund' ? 'selected' : '' }}>مسترجعة</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100 fw-bold shadow-sm">
+                        <i class="fas fa-filter me-1"></i> تصفية
+                    </button>
+                    @if($hasRevenueFilter)
+                        <a href="{{ route('consultant-availability.doctor-account', $doctor) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3" title="إلغاء الفلترة والعودة للحساب الإجمالي">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    @endif
+                </div>
+            </form>
+
+            {{-- شريط ملخص نتائج البحث والفترة المحددة --}}
+            @if($hasRevenueFilter)
+                <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-0 mt-3 p-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="fas fa-info"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold text-primary">نتائج الفلترة المحددة:</span>
+                                @if($fromDate && $toDate)
+                                    <span>الفترة من <strong class="font-monospace text-dark">{{ $fromDate }}</strong> إلى <strong class="font-monospace text-dark">{{ $toDate }}</strong></span>
+                                @elseif($fromDate)
+                                    <span>من تاريخ <strong class="font-monospace text-dark">{{ $fromDate }}</strong></span>
+                                @elseif($toDate)
+                                    <span>لغاية تاريخ <strong class="font-monospace text-dark">{{ $toDate }}</strong></span>
+                                @endif
+                                @if($revenueSearch)
+                                    <span class="ms-1">(بحث: "<strong class="text-dark">{{ $revenueSearch }}</strong>")</span>
+                                @endif
+                                <span class="badge bg-primary text-white rounded-pill ms-2 px-2 py-1">{{ $filteredCount }} حركة</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-3 font-monospace small">
+                            <span class="text-secondary">إجمالي الكشفيات: <strong>{{ number_format($filteredTotalAmount, 0) }} د.ع</strong></span>
+                            <span class="badge bg-primary text-white px-3 py-2 rounded-pill fs-6">
+                                <i class="fas fa-coins me-1"></i> مستحقات الطبيب للفترة: {{ number_format($filteredDoctorShare, 0) }} د.ع
+                            </span>
+                            <span class="text-muted">حصة المستشفى: <strong>{{ number_format($filteredHospitalShare, 0) }} د.ع</strong></span>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+
     {{-- بطاقة صرف دفعة وتسوية رصيد الطبيب --}}
-    @php
-        $availableBalance = (float) (optional($doctor->financialAccount)->balance ?? 0);
-    @endphp
     <div class="card border-0 shadow-sm rounded-4 mb-4 bg-light border">
         <div class="card-body p-3">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                    <i class="fas fa-hand-holding-usd text-success"></i>
-                    <span>تسجيل وصرف دفعة نقدية من مستحقات الطبيب</span>
-                </h6>
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                        <i class="fas fa-hand-holding-usd text-success"></i>
+                        <span>تسجيل وصرف دفعة نقدية من مستحقات الطبيب</span>
+                    </h6>
+                    @if($hasRevenueFilter)
+                        <span class="badge bg-primary-subtle text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill small">
+                            <i class="fas fa-calendar-check me-1"></i> مستحقات الفترة المحددة: {{ number_format($filteredDoctorShare, 0) }} د.ع
+                        </span>
+                    @endif
+                </div>
                 @if($availableBalance > 0)
                     <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-1 rounded-pill">
                         الرصيد المتاح للصرف: <strong>{{ number_format($availableBalance, 0) }} د.ع</strong>
@@ -151,33 +238,51 @@
             @if($availableBalance > 0)
                 <form action="{{ route('consultant-availability.doctor-payout', $doctor) }}" method="POST" id="payoutForm" class="row g-2 align-items-end">
                     @csrf
-                    <div class="col-12 col-md-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">المبلغ المراد صرفه (د.ع)</label>
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-secondary mb-0">المبلغ المراد صرفه (د.ع)</label>
+                            @if($hasRevenueFilter && $filteredDoctorShare > 0)
+                                <small class="text-primary fw-bold" style="font-size: 0.75rem;">
+                                    (تم اقتراح مستحقات الفترة تلقائياً)
+                                </small>
+                            @endif
+                        </div>
                         <div class="input-group input-group-sm">
                             <input type="number" 
                                    name="amount" 
                                    id="payout_amount" 
-                                   class="form-control form-control-sm rounded-start-3 fw-bold font-monospace" 
+                                   class="form-control form-control-sm fw-bold font-monospace {{ $hasRevenueFilter ? 'border-primary' : '' }}" 
                                    max="{{ $availableBalance }}" 
                                    min="1" 
                                    step="500" 
-                                   value="{{ $availableBalance }}" 
+                                   value="{{ $suggestedPayoutAmount }}" 
+                                   data-available-balance="{{ $availableBalance }}"
+                                   data-filtered-share="{{ min($availableBalance, max(0.0, $filteredDoctorShare)) }}"
                                    required>
+                            @if($hasRevenueFilter && $filteredDoctorShare > 0)
+                                <button type="button" 
+                                        class="btn btn-outline-primary btn-sm fw-bold" 
+                                        id="fillFilteredPeriodBtn" 
+                                        title="تعبئة مستحقات الفترة المحددة بالبحث">
+                                    <i class="fas fa-calendar-alt me-1"></i> الفترة
+                                </button>
+                            @endif
                             <button type="button" 
                                     class="btn btn-outline-secondary btn-sm rounded-end-3" 
                                     id="fillMaxBalanceBtn" 
-                                    title="تعبئة كامل الرصيد المتاح">
-                                كامل الرصيد
+                                    title="تعبئة كامل الرصيد المتاح للطبيب">
+                                <i class="fas fa-bolt me-1"></i> كامل الرصيد
                             </button>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-5">
                         <label class="form-label small fw-bold text-secondary mb-1">البيان والملاحظات</label>
                         <input type="text" 
                                name="notes" 
                                id="payout_notes"
                                class="form-control form-control-sm rounded-3" 
-                               placeholder="مثال: صرف مستحقات كشفيات العيادة الاستشارية عن شهر...">
+                               value="{{ $suggestedPayoutNotes }}"
+                               placeholder="مثال: صرف مستحقات كشفيات العيادة الاستشارية...">
                     </div>
                     <div class="col-12 col-md-3">
                         <button type="submit" class="btn btn-success btn-sm w-100 rounded-3 fw-bold py-1-5 shadow-sm" id="submitPayoutBtn">
@@ -233,45 +338,25 @@
         {{-- التبويب 1: جدول كشفيات ومراجعات المرضى --}}
         <div class="tab-pane fade show active" id="revenues-pane" role="tabpanel">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-                {{-- شريط فلاتر الكشفيات --}}
-                <div class="card-header bg-white py-3 px-4 border-bottom">
-                    <form method="GET" action="{{ route('consultant-availability.doctor-account', $doctor) }}" class="row g-2 align-items-center">
-                        <div class="col-12 col-md-4">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light border-end-0 rounded-start-pill text-muted">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" 
-                                       name="revenue_search" 
-                                       class="form-control form-control-sm border-start-0 rounded-end-pill" 
-                                       placeholder="ابحث باسم المريض أو رقم الإيصال..." 
-                                       value="{{ $revenueSearch ?? '' }}">
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <input type="date" name="from_date" class="form-control form-control-sm rounded-pill" value="{{ $fromDate ?? '' }}" title="من تاريخ">
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <input type="date" name="to_date" class="form-control form-control-sm rounded-pill" value="{{ $toDate ?? '' }}" title="إلى تاريخ">
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <select name="filter_type" class="form-select form-select-sm rounded-pill">
-                                <option value="">كل الحركات</option>
-                                <option value="payment" {{ ($filterType ?? '') === 'payment' ? 'selected' : '' }}>كشفية مقبوضة</option>
-                                <option value="refund" {{ ($filterType ?? '') === 'refund' ? 'selected' : '' }}>مسترجعة</option>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100 fw-bold shadow-sm">
-                                <i class="fas fa-filter me-1"></i> تصفية
-                            </button>
-                            @if($revenueSearch || $fromDate || $toDate || $filterType)
-                                <a href="{{ route('consultant-availability.doctor-account', $doctor) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3" title="إلغاء الفلترة">
-                                    <i class="fas fa-times"></i>
-                                </a>
-                            @endif
-                        </div>
-                    </form>
+                {{-- ترويسة سجل الكشفيات --}}
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-clipboard-list text-primary"></i>
+                            <span>سجل كشفيات ومراجعات المرضى</span>
+                        </h5>
+                        <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill small">
+                            معروض: {{ $revenues->count() }} من أصل {{ $revenues->total() }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 font-monospace small">
+                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1 rounded-pill">
+                            المقبوض: {{ number_format($totalReceived, 0) }} د.ع
+                        </span>
+                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill">
+                            المسترجع: {{ number_format($totalRefunded, 0) }} د.ع
+                        </span>
+                    </div>
                 </div>
 
                 <div class="card-body p-0">
@@ -519,12 +604,21 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. زر تعبئة كامل الرصيد
-    const fillBtn = document.getElementById('fillMaxBalanceBtn');
+    // 1. أزرار تعبئة المبالغ السريعة (كامل الرصيد ومستحقات الفترة المحددة)
+    const fillMaxBtn = document.getElementById('fillMaxBalanceBtn');
+    const fillFilteredBtn = document.getElementById('fillFilteredPeriodBtn');
     const amountInput = document.getElementById('payout_amount');
-    if (fillBtn && amountInput) {
-        fillBtn.addEventListener('click', function() {
-            amountInput.value = amountInput.getAttribute('max');
+    const notesInput = document.getElementById('payout_notes');
+
+    if (fillMaxBtn && amountInput) {
+        fillMaxBtn.addEventListener('click', function() {
+            amountInput.value = this.getAttribute('data-amount') || amountInput.getAttribute('data-available-balance') || amountInput.getAttribute('max');
+        });
+    }
+
+    if (fillFilteredBtn && amountInput) {
+        fillFilteredBtn.addEventListener('click', function() {
+            amountInput.value = this.getAttribute('data-amount') || amountInput.getAttribute('data-filtered-share') || '0';
         });
     }
 
@@ -534,11 +628,13 @@ document.addEventListener('DOMContentLoaded', function() {
         payoutForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const amountVal = Number(amountInput.value || 0).toLocaleString();
+            const notesVal = notesInput ? notesInput.value.trim() : '';
+            const notesHtml = notesVal ? `<div class="small text-muted mt-2 p-2 bg-light rounded"><i class="fas fa-file-alt me-1 text-primary"></i> ${notesVal}</div>` : '';
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: 'تأكيد صرف مستحقات الطبيب',
-                    html: `هل أنت متأكد من صرف دفعة نقدية للطبيب بمبلغ <b class="text-success fs-5">${amountVal} د.ع</b>؟`,
+                    html: `هل أنت متأكد من صرف دفعة نقدية للطبيب بمبلغ <b class="text-success fs-5">${amountVal} د.ع</b>؟${notesHtml}`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#198754',
