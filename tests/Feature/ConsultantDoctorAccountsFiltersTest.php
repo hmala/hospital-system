@@ -262,5 +262,7 @@ class ConsultantDoctorAccountsFiltersTest extends TestCase
         $filteredResponse->assertSee('REC-TODAY-001');
         $filteredResponse->assertDontSee('REC-OLD-002');
         $filteredResponse->assertSee('مستحقات الفترة المحددة: 30,000 د.ع');
+        $filteredResponse->assertSee('step="any"', false);
+        $filteredResponse->assertSee('min="0.01"', false);
     }
 }

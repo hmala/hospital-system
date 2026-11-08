@@ -2037,6 +2037,14 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
     - إضافة واجتياز اختبار التحقق من ظهور CBC في أمر العمل بنجاح بنسبة 100% (`11 passed, 69 assertions`).
 
+- **المرحلة 184 (2026-11-08) — حل مشكلة التحقق من صحة مبلغ الصرف وإلغاء قيود الخطوة في كشف حساب الطبيب الاستشاري (Consultant Doctor Payout Input Validation Fix & Arbitrary Amount Step-Any Support)**:
+  * **معالجة خطأ التحقق في المتصفح ([resources/views/consultant-availability/doctor-account-details.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/doctor-account-details.blade.php))**:
+    - حل مشكلة ظهور تنبيه المتصفح `Please select a valid value` عند النقر على "تسجيل واعتماد سند الصرف".
+    - إزالة التعارض بين `min="1"` و `step="500"` الذي كان يفرض قيوداً رياضية على المبالغ `min + (k * step)` فتفشل كافة المبالغ المستديرة (مثل 25,000 أو 10,000).
+    - تعيين `step="any"` و `min="0.01"` للسماح بأي مبلغ صحيح أو عشري ضمن حدود الرصيد المتاح للطبيب.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ConsultantDoctorAccountsFiltersTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantDoctorAccountsFiltersTest.php))**:
+    - تحديث الاختبارات للتأكد من رندرة مدخلات الصرف بخصائص `step="any"` و `min="0.01"` واجتياز الاختبارات بنجاح 100% (`6 passed, 49 assertions`).
+
 - **المرحلة 183 (2026-11-08) — ترقية طباعة كشف مقبوضات الكاشير، إضافة الهدر المعتمد، منع تكرار المجموع في كل صفحة، وإظهار عمود نوع التغطية (Cashier Report Print Standard Header, Single Table Total Row & Insurance/Cash Coverage Column)**:
   * **الهدر الموحد المعتمد ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
     - تطبيق الهدر الثلاثي الرسمي (مستشفى الكفاءات الأهلي، قسم الحسابات المالية والتدقيق، Al-Kafa'at Private Hospital).
