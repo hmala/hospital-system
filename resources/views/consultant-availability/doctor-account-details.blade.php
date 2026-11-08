@@ -179,9 +179,10 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <select name="filter_type" class="form-select form-select-sm rounded-pill">
-                        <option value="">كل الحركات</option>
-                        <option value="payment" {{ ($filterType ?? '') === 'payment' ? 'selected' : '' }}>كشفية مقبوضة</option>
-                        <option value="refund" {{ ($filterType ?? '') === 'refund' ? 'selected' : '' }}>مسترجعة</option>
+                        <option value="">كل الوصولات</option>
+                        <option value="pending" {{ ($filterType ?? '') === 'pending' ? 'selected' : '' }}>غير مقبوضة (معلقة)</option>
+                        <option value="paid" {{ ($filterType ?? '') === 'paid' ? 'selected' : '' }}>مقبوضة (مسددة للطبيب)</option>
+                        <option value="refund" {{ ($filterType ?? '') === 'refund' ? 'selected' : '' }}>مسترجعة للمريض</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-2 d-flex gap-2">
@@ -464,11 +465,15 @@
                                         <td class="text-center pe-4">
                                             @if($isRefund)
                                                 <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">
-                                                    <i class="fas fa-undo me-1"></i> مسترجع
+                                                    <i class="fas fa-undo me-1"></i> مسترجعة
+                                                </span>
+                                            @elseif($rev->doctorDue && $rev->doctorDue->status === 'paid')
+                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-3 py-1" title="تم صرف حصة الطبيب من هذا الوصل">
+                                                    <i class="fas fa-check-circle me-1"></i> مقبوضة
                                                 </span>
                                             @else
-                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-3 py-1">
-                                                    <i class="fas fa-check me-1"></i> مقبوضة
+                                                <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1" title="لم يتم صرف حصة الطبيب بعد أو تم استرجاع الصرف">
+                                                    <i class="fas fa-hourglass-half me-1"></i> غير مقبوضة
                                                 </span>
                                             @endif
                                         </td>
@@ -760,8 +765,8 @@
                             <span class="font-monospace fw-bold text-dark fs-6" id="modalVoucherNumber">---</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted small">المبلغ الأصلي المسدد:</span>
-                            <span class="font-monospace fw-bold text-danger fs-6" id="modalVoucherAmount">0 د.ع</span>
+                            <span class="text-muted small">المبلغ المسترجع بالكامل:</span>
+                            <span class="font-monospace fw-bold text-danger fs-5" id="modalVoucherAmount">0 د.ع</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted small">الطبيب:</span>
@@ -769,69 +774,28 @@
                         </div>
                     </div>
 
-                    {{-- خيارات نوع الاسترجاع (كلي أم جزئي) --}}
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-2">نوع الاسترجاع المطلوب:</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="form-check p-2 border rounded-3 bg-white h-100 d-flex align-items-center">
-                                    <input class="form-check-input ms-2" type="radio" name="reversal_type" id="reversalTypeFull" value="full" checked>
-                                    <label class="form-check-label fw-bold small text-dark mb-0 cursor-pointer" for="reversalTypeFull">
-                                        استرجاع كلي (كامل السند)
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="form-check p-2 border rounded-3 bg-white h-100 d-flex align-items-center">
-                                    <input class="form-check-input ms-2" type="radio" name="reversal_type" id="reversalTypePartial" value="partial">
-                                    <label class="form-check-label fw-bold small text-dark mb-0 cursor-pointer" for="reversalTypePartial">
-                                        استرجاع جزئي (مبلغ محدد)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- حقل المبلغ المسترجع (عند اختيار استرجاع جزئي) --}}
-                    <div class="mb-3" id="partialAmountGroup" style="display: none;">
-                        <label class="form-label small fw-bold text-secondary mb-1">
-                            المبلغ المراد استرجاعه (د.ع) <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="number" 
-                                   name="refund_amount" 
-                                   id="modalRefundAmount" 
-                                   class="form-control fw-bold font-monospace text-danger" 
-                                   step="any" 
-                                   min="0.01" 
-                                   placeholder="أدخل المبلغ المسترجع">
-                            <span class="input-group-text fw-bold bg-light">د.ع</span>
-                        </div>
-                        <small class="text-muted">يجب ألا يتجاوز المبلغ الأصلي للسند.</small>
-                    </div>
-
                     {{-- سبب الاسترجاع --}}
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1">
-                            سبب الاسترجاع / الإلغاء <span class="text-danger">*</span>
+                            سبب الاسترجاع والإلغاء <span class="text-danger">*</span>
                         </label>
                         <textarea name="reversal_reason" 
                                   id="modalReversalReason" 
                                   class="form-control rounded-3" 
                                   rows="2" 
                                   required 
-                                  placeholder="اكتب سبب إلغاء أو استرجاع هذا السند (مثال: خطأ في الصرف، تصحيح حساب الطبيب، إلخ)..."></textarea>
+                                  placeholder="اكتب سبب إلغاء هذا السند (مثال: إلغاء الصرف لإعادة تدقيق الكشفيات، خطأ في الحساب، إلخ)..."></textarea>
                     </div>
 
                     <div class="alert alert-warning py-2 px-3 small rounded-3 mb-0">
                         <i class="fas fa-exclamation-triangle me-1"></i>
-                        <strong>تنبيه مالي:</strong> سيتم إضافة المبلغ المسترجع فوراً إلى رصيد الطبيب المتاح، وإعادة الكشفيات المسددة إلى قائمة المستحقات المعلقة، وتسجيل سند استرجاع مالي في الخزينة.
+                        <strong>تنبيه محاسبي:</strong> سيتم إلغاء هذا السند بالكامل، وإعادة المبلغ كاملاً إلى رصيد الطبيب المتاح، وستعود كافة الوصولات المرتبطة به فوراً إلى حالة <strong>(غير مقبوضة)</strong>.
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 px-4 border-top">
                     <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm" id="confirmReversalSubmitBtn">
-                        <i class="fas fa-undo-alt me-1"></i> تأكيد الاسترجاع وإعادة القيد
+                        <i class="fas fa-undo-alt me-1"></i> تأكيد استرجاع السند بالكامل
                     </button>
                 </div>
             </form>
@@ -932,14 +896,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 4. معالجة وتجهيز نافذة استرجاع سند الصرف (Payout Reversal Modal)
+    // 4. معالجة وتجهيز نافذة استرجاع سند الصرف بالكامل (Payout Reversal Modal)
     const reverseForm = document.getElementById('reversePayoutForm');
     const modalVoucherNumber = document.getElementById('modalVoucherNumber');
     const modalVoucherAmount = document.getElementById('modalVoucherAmount');
-    const modalRefundAmount = document.getElementById('modalRefundAmount');
-    const partialAmountGroup = document.getElementById('partialAmountGroup');
-    const reversalTypeFull = document.getElementById('reversalTypeFull');
-    const reversalTypePartial = document.getElementById('reversalTypePartial');
 
     document.querySelectorAll('.open-reverse-modal-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -952,33 +912,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (modalVoucherNumber) modalVoucherNumber.textContent = voucher;
             if (modalVoucherAmount) modalVoucherAmount.textContent = Number(amount).toLocaleString() + ' د.ع';
-            if (modalRefundAmount) {
-                modalRefundAmount.max = amount;
-                modalRefundAmount.value = amount;
-            }
-            if (reversalTypeFull) reversalTypeFull.checked = true;
-            if (partialAmountGroup) partialAmountGroup.style.display = 'none';
         });
     });
-
-    if (reversalTypeFull && reversalTypePartial && partialAmountGroup) {
-        reversalTypeFull.addEventListener('change', function() {
-            if (this.checked) {
-                partialAmountGroup.style.display = 'none';
-                if (modalRefundAmount) modalRefundAmount.removeAttribute('required');
-            }
-        });
-
-        reversalTypePartial.addEventListener('change', function() {
-            if (this.checked) {
-                partialAmountGroup.style.display = 'block';
-                if (modalRefundAmount) {
-                    modalRefundAmount.setAttribute('required', 'required');
-                    modalRefundAmount.focus();
-                }
-            }
-        });
-    }
 
     if (reverseForm) {
         reverseForm.addEventListener('submit', function() {

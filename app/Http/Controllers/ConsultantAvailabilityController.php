@@ -1047,20 +1047,34 @@ class ConsultantAvailabilityController extends Controller
         $toDate = $request->query('to_date');
 
         // استعلام كشفيات ومراجعات الطبيب
-        $revenueQuery = ConsultationRevenue::with(['appointment.patient.user', 'patient.user', 'cashier', 'serviceType'])
+        $revenueQuery = ConsultationRevenue::with(['appointment.patient.user', 'patient.user', 'cashier', 'serviceType', 'doctorDue'])
             ->where('doctor_id', $doctor->id);
 
-        if ($filterType === 'payment') {
-            $revenueQuery->where('movement_type', 'payment');
+        if ($filterType === 'pending') {
+            $revenueQuery->where('movement_type', 'payment')
+                ->where(function ($q) {
+                    $q->whereDoesntHave('doctorDue')
+                        ->orWhereHas('doctorDue', fn ($dq) => $dq->where('status', '!=', 'paid'));
+                });
+        } elseif ($filterType === 'paid') {
+            $revenueQuery->whereHas('doctorDue', fn ($dq) => $dq->where('status', 'paid'));
         } elseif ($filterType === 'refund') {
             $revenueQuery->where('movement_type', 'refund');
+        } elseif ($filterType === 'payment') {
+            $revenueQuery->where('movement_type', 'payment');
         }
 
         if ($fromDate) {
-            $revenueQuery->whereDate('paid_at', '>=', $fromDate);
+            $revenueQuery->where(function ($q) use ($fromDate) {
+                $q->whereDate('revenue_date', '>=', $fromDate)
+                    ->orWhereDate('paid_at', '>=', $fromDate);
+            });
         }
         if ($toDate) {
-            $revenueQuery->whereDate('paid_at', '<=', $toDate);
+            $revenueQuery->where(function ($q) use ($toDate) {
+                $q->whereDate('revenue_date', '<=', $toDate)
+                    ->orWhereDate('paid_at', '<=', $toDate);
+            });
         }
 
         if ($revenueSearch) {
@@ -1081,9 +1095,18 @@ class ConsultantAvailabilityController extends Controller
         $filteredHospitalShare = (float) (clone $revenueQuery)->sum('hospital_share');
         $filteredCount = (clone $revenueQuery)->count();
 
+        // حساب مستحقات الكشفيات غير المقبوضة فقط (Pending) المتبقية للصرف
+        $filteredPendingDoctorShare = (float) (clone $revenueQuery)
+            ->where('movement_type', 'payment')
+            ->where(function ($q) {
+                $q->whereDoesntHave('doctorDue')
+                    ->orWhereHas('doctorDue', fn ($dq) => $dq->where('status', '!=', 'paid'));
+            })
+            ->sum('doctor_share');
+
         $availableBalance = (float) (optional($doctor->financialAccount)->balance ?? 0);
         $suggestedPayoutAmount = $hasRevenueFilter
-            ? min($availableBalance, max(0.0, $filteredDoctorShare))
+            ? min($availableBalance, max(0.0, $filteredPendingDoctorShare))
             : $availableBalance;
 
         $suggestedPayoutNotes = '';
@@ -1346,8 +1369,6 @@ class ConsultantAvailabilityController extends Controller
         }
 
         $request->validate([
-            'reversal_type' => 'required|in:full,partial',
-            'refund_amount' => 'nullable|numeric|min:0.01',
             'reversal_reason' => 'required|string|max:1000',
         ]);
 
@@ -1358,28 +1379,21 @@ class ConsultantAvailabilityController extends Controller
 
         $doctor = Doctor::with(['user', 'financialAccount'])->findOrFail($transaction->related_id);
 
-        $previousRefunds = (float) FinancialTransaction::where('related_type', Doctor::class)
+        $alreadyRefunded = FinancialTransaction::where('related_type', Doctor::class)
             ->where('related_id', $doctor->id)
             ->where('category', 'doctor_payout_reversal')
             ->where('description', 'like', '%'.$transaction->voucher_number.'%')
-            ->sum('amount');
+            ->exists();
 
-        $maxRefundable = max(0.0, round($transaction->amount - $previousRefunds, 2));
-        if ($maxRefundable <= 0) {
-            return redirect()->back()->with('error', 'تم استرجاع وإلغاء هذا السند بالكامل مسبقاً.');
+        if ($alreadyRefunded) {
+            return redirect()->back()->with('error', 'تم استرجاع وإلغاء هذا السند مسبقاً بالكامل.');
         }
 
-        $refundAmount = $request->input('reversal_type') === 'full'
-            ? $maxRefundable
-            : round((float) $request->input('refund_amount'), 2);
-
-        if ($refundAmount <= 0 || $refundAmount > $maxRefundable) {
-            return redirect()->back()->with('error', 'المبلغ المراد استرجاعه غير صالح. أقصى مبلغ متاح للاسترجاع هو '.number_format($maxRefundable, 0).' د.ع.');
-        }
+        $refundAmount = (float) $transaction->amount;
 
         DB::beginTransaction();
         try {
-            // 1. إعادة الرصيد المالي لحساب الطبيب
+            // 1. إعادة كامل الرصيد المالي لحساب الطبيب
             $account = DoctorFinancialAccount::firstOrCreate(
                 ['doctor_id' => $doctor->id],
                 ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
@@ -1388,17 +1402,16 @@ class ConsultantAvailabilityController extends Controller
             $account->total_paid = round(max(0, $account->total_paid - $refundAmount), 2);
             $account->save();
 
-            // 2. إعادة المستحقات المسددة إلى حالة معلقة (pending)
+            // 2. إعادة كافة المستحقات المسددة بهذا السند إلى حالة غير مقبوضة (pending)
             $duesToRestore = DoctorDue::where('doctor_id', $doctor->id)
                 ->where('status', 'paid')
                 ->where(function ($q) use ($transaction) {
                     $q->where('notes', 'like', '%'.$transaction->voucher_number.'%')
                         ->orWhereBetween('paid_at', [
-                            $transaction->performed_at->copy()->subMinutes(10),
-                            $transaction->performed_at->copy()->addMinutes(10),
+                            $transaction->performed_at->copy()->subMinutes(15),
+                            $transaction->performed_at->copy()->addMinutes(15),
                         ]);
                 })
-                ->orderByDesc('id')
                 ->get();
 
             $remainingRestore = $refundAmount;
@@ -1406,27 +1419,13 @@ class ConsultantAvailabilityController extends Controller
                 if ($remainingRestore <= 0) {
                     break;
                 }
-
-                if ($due->amount <= $remainingRestore) {
-                    $remainingRestore = round($remainingRestore - $due->amount, 2);
-                    $due->update([
-                        'status' => 'pending',
-                        'paid_by_id' => null,
-                        'paid_at' => null,
-                        'notes' => trim(str_replace("[سند: {$transaction->voucher_number}]", '', (string) $due->notes).' [تم استرجاع الصرف بتاريخ '.now()->format('Y-m-d').']'),
-                    ]);
-                } else {
-                    $due->amount = round($due->amount - $remainingRestore, 2);
-                    $due->save();
-
-                    DoctorDue::create([
-                        'doctor_id' => $doctor->id,
-                        'amount' => $remainingRestore,
-                        'status' => 'pending',
-                        'notes' => 'مستحقات معادة من استرجاع سند '.$transaction->voucher_number,
-                    ]);
-                    $remainingRestore = 0;
-                }
+                $remainingRestore = round($remainingRestore - $due->amount, 2);
+                $due->update([
+                    'status' => 'pending',
+                    'paid_by_id' => null,
+                    'paid_at' => null,
+                    'notes' => trim(str_replace("[سند: {$transaction->voucher_number}]", '', (string) $due->notes)),
+                ]);
             }
 
             if ($remainingRestore > 0) {
@@ -1434,7 +1433,7 @@ class ConsultantAvailabilityController extends Controller
                     'doctor_id' => $doctor->id,
                     'amount' => $remainingRestore,
                     'status' => 'pending',
-                    'notes' => 'مستحقات مسترجعة من إلغاء سند '.$transaction->voucher_number,
+                    'notes' => 'مستحقات معادة من إلغاء سند '.$transaction->voucher_number,
                 ]);
             }
 
@@ -1450,19 +1449,19 @@ class ConsultantAvailabilityController extends Controller
                 'amount' => $refundAmount,
                 'currency' => 'IQD',
                 'payment_method' => 'cash',
-                'description' => 'استرجاع '.($request->input('reversal_type') === 'full' ? 'كلي' : 'جزئي').' لسند الصرف ['.$transaction->voucher_number.'] للطبيب '.optional($doctor->user)->name,
-                'notes' => 'سبب الاسترجاع: '.$request->input('reversal_reason'),
+                'description' => 'استرجاع كلي وإلغاء سند الصرف ['.$transaction->voucher_number.'] للطبيب '.optional($doctor->user)->name,
+                'notes' => 'سبب الإلغاء: '.$request->input('reversal_reason'),
                 'performed_by_id' => auth()->id(),
                 'performed_at' => now(),
             ]);
 
-            $transaction->notes = trim(($transaction->notes ?? '').' | [تم استرجاع '.number_format($refundAmount, 0).' د.ع بسند '.$refVoucher.' بتاريخ '.now()->format('Y-m-d H:i').' - السبب: '.$request->input('reversal_reason').']');
+            $transaction->notes = trim(($transaction->notes ?? '').' | [تم استرجاع وإلغاء السند بالكامل بتاريخ '.now()->format('Y-m-d H:i').' بسند '.$refVoucher.' - السبب: '.$request->input('reversal_reason').']');
             $transaction->save();
 
             DB::commit();
 
             return redirect()->route('consultant-availability.doctor-account', $doctor)
-                ->with('success', 'تم بنجاح استرجاع مبلغ '.number_format($refundAmount, 0)." د.ع من سند الصرف [{$transaction->voucher_number}] وإعادته لرصيد الطبيب المتاح.")
+                ->with('success', "تم بنجاح إلغاء واسترجاع سند الصرف [{$transaction->voucher_number}] بالكامل بمبلغ ".number_format($refundAmount, 0).' د.ع، وعادت كافة الوصولات التابعة له إلى حالة (غير مقبوضة).')
                 ->with('new_payout_tx_id', $revTx->id)
                 ->with('new_payout_voucher', $refVoucher)
                 ->with('new_payout_amount', $refundAmount);

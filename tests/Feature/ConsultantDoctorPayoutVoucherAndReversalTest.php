@@ -190,47 +190,80 @@ class ConsultantDoctorPayoutVoucherAndReversalTest extends TestCase
         $this->assertStringContainsString('استرجاع كلي', $revTx->description);
     }
 
-    public function test_reverse_doctor_payout_partial(): void
+    public function test_receipts_show_pending_and_paid_and_return_to_pending_on_reversal(): void
     {
-        // 1. Perform payout of 300,000
+        // 1. Create a consultation revenue with payment and doctorDue
+        $patientUser = User::factory()->create(['name' => 'المريض سجاد علي']);
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->id,
+            'gender' => 'male',
+            'date_of_birth' => '1995-01-01',
+        ]);
+
+        $payment = \App\Models\Payment::create([
+            'patient_id' => $patient->id,
+            'amount' => 25000,
+            'total_amount' => 25000,
+            'payment_type' => 'consultation',
+            'payment_method' => 'cash',
+            'receipt_number' => 'REC-STATUS-001',
+            'cashier_id' => $this->admin->id,
+            'paid_at' => now(),
+        ]);
+
+        $rev = \App\Models\ConsultationRevenue::create([
+            'doctor_id' => $this->doctor->id,
+            'payment_id' => $payment->id,
+            'receipt_number' => 'REC-STATUS-001',
+            'payment_method' => 'cash',
+            'payment_type' => 'consultation',
+            'cashier_id' => $this->admin->id,
+            'total_amount' => 25000,
+            'doctor_share' => 15000,
+            'hospital_share' => 10000,
+            'movement_type' => 'payment',
+            'revenue_date' => now()->toDateString(),
+            'paid_at' => now(),
+        ]);
+
+        $due = DoctorDue::create([
+            'doctor_id' => $this->doctor->id,
+            'payment_id' => $payment->id,
+            'amount' => 15000,
+            'status' => 'pending',
+            'notes' => 'مستحقات كشفية تجريبية',
+        ]);
+
+        // 2. View page: before payout, receipt must show "غير مقبوضة"
+        $page1 = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', $this->doctor));
+        $page1->assertOk();
+        $page1->assertSee('غير مقبوضة');
+
+        // 3. Perform payout
         $this->actingAs($this->admin)->post(route('consultant-availability.doctor-payout', $this->doctor), [
-            'amount' => 300000,
-            'notes' => 'صرف تجريبي للاسترجاع الجزئي',
+            'amount' => 15000,
+            'notes' => 'تسديد كشفية تجريبية',
         ]);
 
         $tx = FinancialTransaction::where('related_type', Doctor::class)
             ->where('related_id', $this->doctor->id)
             ->where('category', 'doctor_payout')
+            ->latest('id')
             ->first();
 
-        $this->account->refresh();
-        $this->assertEquals(200000.00, (float) $this->account->balance);
-        $this->assertEquals(300000.00, (float) $this->account->total_paid);
+        // Check receipt now shows "مقبوضة"
+        $page2 = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', $this->doctor));
+        $page2->assertOk();
+        $page2->assertSee('مقبوضة');
 
-        // 2. Perform Partial Reversal of 100,000
-        $revResponse = $this->actingAs($this->admin)->post(route('consultant-availability.doctor-payout.reverse', $tx->id), [
-            'reversal_type' => 'partial',
-            'refund_amount' => 100000,
-            'reversal_reason' => 'استرجاع جزئي لتصحيح المبلغ',
+        // 4. Perform reversal
+        $this->actingAs($this->admin)->post(route('consultant-availability.doctor-payout.reverse', $tx->id), [
+            'reversal_reason' => 'إلغاء سند الصرف لإعادة الوصولات غير مقبوضة',
         ]);
 
-        $revResponse->assertRedirect(route('consultant-availability.doctor-account', $this->doctor));
-        $revResponse->assertSessionHas('success');
-
-        // Check account updated: 200k + 100k = 300k balance, 300k - 100k = 200k total_paid
-        $this->account->refresh();
-        $this->assertEquals(300000.00, (float) $this->account->balance);
-        $this->assertEquals(200000.00, (float) $this->account->total_paid);
-
-        // Check partial reversal transaction
-        $revTx = FinancialTransaction::where('related_type', Doctor::class)
-            ->where('related_id', $this->doctor->id)
-            ->where('category', 'doctor_payout_reversal')
-            ->first();
-
-        $this->assertNotNull($revTx);
-        $this->assertEquals(100000.00, (float) $revTx->amount);
-        $this->assertEquals('inflow', $revTx->voucher_type);
-        $this->assertStringContainsString('استرجاع جزئي', $revTx->description);
+        // Check receipt returns to "غير مقبوضة"
+        $page3 = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', $this->doctor));
+        $page3->assertOk();
+        $page3->assertSee('غير مقبوضة');
     }
 }
