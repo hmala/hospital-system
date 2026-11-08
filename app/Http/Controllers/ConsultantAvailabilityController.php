@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\DoctorDue;
 use App\Models\DoctorFinancialAccount;
 use App\Models\FinancialTransaction;
+use App\Services\TafqeetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1131,6 +1132,26 @@ class ConsultantAvailabilityController extends Controller
             ->paginate(15, ['*'], 'pending_page')
             ->withQueryString();
 
+        // استعلام سندات الصرف الرسمية من الخزينة
+        $payoutTransactions = FinancialTransaction::with('performer')
+            ->where('related_type', Doctor::class)
+            ->where('related_id', $doctor->id)
+            ->whereIn('category', ['doctor_payout', 'doctor_payout_reversal'])
+            ->when($payoutSearch, function ($query) use ($payoutSearch) {
+                $query->where(function ($sub) use ($payoutSearch) {
+                    $sub->where('voucher_number', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('notes', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('description', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('amount', 'like', '%'.$payoutSearch.'%');
+                });
+            })
+            ->when($fromDate, fn ($query) => $query->whereDate('performed_at', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('performed_at', '<=', $toDate))
+            ->orderByDesc('performed_at')
+            ->orderByDesc('id')
+            ->paginate(15, ['*'], 'tx_page')
+            ->withQueryString();
+
         return view('consultant-availability.doctor-account-details', compact(
             'doctor',
             'revenues',
@@ -1143,6 +1164,7 @@ class ConsultantAvailabilityController extends Controller
             'filterType',
             'paidDues',
             'pendingDues',
+            'payoutTransactions',
             'payoutSearch',
             'revenueSearch',
             'fromDate',
@@ -1172,6 +1194,7 @@ class ConsultantAvailabilityController extends Controller
         ]);
 
         $amount = round($request->input('amount'), 2);
+        $notes = $request->input('notes');
 
         $account = DoctorFinancialAccount::firstOrCreate(
             ['doctor_id' => $doctor->id],
@@ -1192,6 +1215,7 @@ class ConsultantAvailabilityController extends Controller
         $account->save();
 
         $remaining = $amount;
+        $voucherNumber = 'EXP-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
         $pendingDues = DoctorDue::where('doctor_id', $doctor->id)
             ->where('status', 'pending')
             ->orderBy('created_at')
@@ -1208,6 +1232,7 @@ class ConsultantAvailabilityController extends Controller
                     'status' => 'paid',
                     'paid_by_id' => auth()->id(),
                     'paid_at' => now(),
+                    'notes' => trim(($due->notes ?? '')." [سند: {$voucherNumber}]"),
                 ]);
             } else {
                 $due->amount = round($due->amount - $remaining, 2);
@@ -1217,7 +1242,7 @@ class ConsultantAvailabilityController extends Controller
                     'doctor_id' => $doctor->id,
                     'amount' => $remaining,
                     'status' => 'paid',
-                    'notes' => 'صرف جزئي لمستحقات الطبيب',
+                    'notes' => trim(($notes ?: 'صرف جزئي لمستحقات الطبيب')." [سند: {$voucherNumber}]"),
                     'paid_by_id' => auth()->id(),
                     'paid_at' => now(),
                 ]);
@@ -1231,14 +1256,13 @@ class ConsultantAvailabilityController extends Controller
                 'doctor_id' => $doctor->id,
                 'amount' => $remaining,
                 'status' => 'paid',
-                'notes' => 'صرف للطبيب دون وجود مستحقات سابقة',
+                'notes' => trim(($notes ?: 'صرف للطبيب دون وجود مستحقات سابقة')." [سند: {$voucherNumber}]"),
                 'paid_by_id' => auth()->id(),
                 'paid_at' => now(),
             ]);
         }
 
-        $voucherNumber = 'EXP-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
-        FinancialTransaction::create([
+        $transaction = FinancialTransaction::create([
             'transaction_type' => 'expense',
             'voucher_type' => 'outflow',
             'category' => 'doctor_payout',
@@ -1248,14 +1272,205 @@ class ConsultantAvailabilityController extends Controller
             'amount' => $amount,
             'currency' => 'IQD',
             'payment_method' => 'cash',
-            'description' => 'صرف مستحقات للطبيب '.optional($doctor->user)->name,
+            'description' => $notes ?: ('صرف مستحقات للطبيب '.optional($doctor->user)->name),
             'notes' => 'سند صرف نقدي - حسابات الاستشارية',
             'performed_by_id' => auth()->id(),
             'performed_at' => now(),
         ]);
 
         return redirect()->route('consultant-availability.doctor-account', $doctor)
-            ->with('success', 'تم تسجيل صرف للطبيب بنجاح.');
+            ->with('success', 'تم تسجيل سند صرف للطبيب بنجاح بمبلغ '.number_format($amount, 0)." د.ع برقم سند [{$voucherNumber}].")
+            ->with('new_payout_tx_id', $transaction->id)
+            ->with('new_payout_voucher', $voucherNumber)
+            ->with('new_payout_amount', $amount);
+    }
+
+    /**
+     * طباعة سند صرف مستحقات الطبيب الرسمي
+     */
+    public function printDoctorPayout(Request $request, $id)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بطباعة سندات الصرف');
+        }
+
+        $transaction = FinancialTransaction::with('performer')
+            ->where(function ($q) use ($id) {
+                $q->where('id', $id)
+                    ->orWhere('voucher_number', $id);
+            })
+            ->first();
+
+        if (! $transaction) {
+            $due = DoctorDue::with(['doctor.user', 'paidBy'])->find($id);
+            if ($due) {
+                $doctor = $due->doctor;
+                $amountWords = TafqeetService::inArabic($due->amount);
+                $transaction = new FinancialTransaction([
+                    'voucher_number' => 'DUE-DOC-'.$due->id,
+                    'amount' => $due->amount,
+                    'category' => 'doctor_payout',
+                    'voucher_type' => 'outflow',
+                    'description' => $due->notes ?: ('صرف مستحقات للطبيب '.optional($doctor->user)->name),
+                    'notes' => 'سند صرف من مستحقات الطبيب',
+                    'performed_at' => $due->paid_at ?: $due->created_at,
+                ]);
+                $transaction->setRelation('performer', $due->paidBy);
+
+                return view('consultant-availability.doctor-payout-print', compact('transaction', 'doctor', 'amountWords'));
+            }
+            abort(404, 'سند الصرف المطلوب غير موجود');
+        }
+
+        $doctor = Doctor::with(['user', 'department'])->find($transaction->related_id);
+        if (! $doctor) {
+            abort(404, 'بيانات الطبيب المرتبطة بهذا السند غير موجودة');
+        }
+
+        $amountWords = TafqeetService::inArabic($transaction->amount);
+
+        return view('consultant-availability.doctor-payout-print', compact('transaction', 'doctor', 'amountWords'));
+    }
+
+    /**
+     * استرجاع أو إلغاء سند صرف كلياً أو جزئياً وإعادة الرصيد للطبيب
+     */
+    public function reverseDoctorPayout(Request $request, $id)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('void payment receipt')))) {
+            abort(403, 'غير مصرح لك بإلغاء أو استرجاع سندات الصرف');
+        }
+
+        $request->validate([
+            'reversal_type' => 'required|in:full,partial',
+            'refund_amount' => 'nullable|numeric|min:0.01',
+            'reversal_reason' => 'required|string|max:1000',
+        ]);
+
+        $transaction = FinancialTransaction::where(function ($q) use ($id) {
+            $q->where('id', $id)
+                ->orWhere('voucher_number', $id);
+        })->firstOrFail();
+
+        $doctor = Doctor::with(['user', 'financialAccount'])->findOrFail($transaction->related_id);
+
+        $previousRefunds = (float) FinancialTransaction::where('related_type', Doctor::class)
+            ->where('related_id', $doctor->id)
+            ->where('category', 'doctor_payout_reversal')
+            ->where('description', 'like', '%'.$transaction->voucher_number.'%')
+            ->sum('amount');
+
+        $maxRefundable = max(0.0, round($transaction->amount - $previousRefunds, 2));
+        if ($maxRefundable <= 0) {
+            return redirect()->back()->with('error', 'تم استرجاع وإلغاء هذا السند بالكامل مسبقاً.');
+        }
+
+        $refundAmount = $request->input('reversal_type') === 'full'
+            ? $maxRefundable
+            : round((float) $request->input('refund_amount'), 2);
+
+        if ($refundAmount <= 0 || $refundAmount > $maxRefundable) {
+            return redirect()->back()->with('error', 'المبلغ المراد استرجاعه غير صالح. أقصى مبلغ متاح للاسترجاع هو '.number_format($maxRefundable, 0).' د.ع.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. إعادة الرصيد المالي لحساب الطبيب
+            $account = DoctorFinancialAccount::firstOrCreate(
+                ['doctor_id' => $doctor->id],
+                ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+            );
+            $account->balance = round($account->balance + $refundAmount, 2);
+            $account->total_paid = round(max(0, $account->total_paid - $refundAmount), 2);
+            $account->save();
+
+            // 2. إعادة المستحقات المسددة إلى حالة معلقة (pending)
+            $duesToRestore = DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'paid')
+                ->where(function ($q) use ($transaction) {
+                    $q->where('notes', 'like', '%'.$transaction->voucher_number.'%')
+                        ->orWhereBetween('paid_at', [
+                            $transaction->performed_at->copy()->subMinutes(10),
+                            $transaction->performed_at->copy()->addMinutes(10),
+                        ]);
+                })
+                ->orderByDesc('id')
+                ->get();
+
+            $remainingRestore = $refundAmount;
+            foreach ($duesToRestore as $due) {
+                if ($remainingRestore <= 0) {
+                    break;
+                }
+
+                if ($due->amount <= $remainingRestore) {
+                    $remainingRestore = round($remainingRestore - $due->amount, 2);
+                    $due->update([
+                        'status' => 'pending',
+                        'paid_by_id' => null,
+                        'paid_at' => null,
+                        'notes' => trim(str_replace("[سند: {$transaction->voucher_number}]", '', (string) $due->notes).' [تم استرجاع الصرف بتاريخ '.now()->format('Y-m-d').']'),
+                    ]);
+                } else {
+                    $due->amount = round($due->amount - $remainingRestore, 2);
+                    $due->save();
+
+                    DoctorDue::create([
+                        'doctor_id' => $doctor->id,
+                        'amount' => $remainingRestore,
+                        'status' => 'pending',
+                        'notes' => 'مستحقات معادة من استرجاع سند '.$transaction->voucher_number,
+                    ]);
+                    $remainingRestore = 0;
+                }
+            }
+
+            if ($remainingRestore > 0) {
+                DoctorDue::create([
+                    'doctor_id' => $doctor->id,
+                    'amount' => $remainingRestore,
+                    'status' => 'pending',
+                    'notes' => 'مستحقات مسترجعة من إلغاء سند '.$transaction->voucher_number,
+                ]);
+            }
+
+            // 3. تسجيل حركة القيد العكسي في الخزينة
+            $refVoucher = 'REF-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
+            $revTx = FinancialTransaction::create([
+                'transaction_type' => 'other',
+                'voucher_type' => 'inflow',
+                'category' => 'doctor_payout_reversal',
+                'voucher_number' => $refVoucher,
+                'related_type' => Doctor::class,
+                'related_id' => $doctor->id,
+                'amount' => $refundAmount,
+                'currency' => 'IQD',
+                'payment_method' => 'cash',
+                'description' => 'استرجاع '.($request->input('reversal_type') === 'full' ? 'كلي' : 'جزئي').' لسند الصرف ['.$transaction->voucher_number.'] للطبيب '.optional($doctor->user)->name,
+                'notes' => 'سبب الاسترجاع: '.$request->input('reversal_reason'),
+                'performed_by_id' => auth()->id(),
+                'performed_at' => now(),
+            ]);
+
+            $transaction->notes = trim(($transaction->notes ?? '').' | [تم استرجاع '.number_format($refundAmount, 0).' د.ع بسند '.$refVoucher.' بتاريخ '.now()->format('Y-m-d H:i').' - السبب: '.$request->input('reversal_reason').']');
+            $transaction->save();
+
+            DB::commit();
+
+            return redirect()->route('consultant-availability.doctor-account', $doctor)
+                ->with('success', 'تم بنجاح استرجاع مبلغ '.number_format($refundAmount, 0)." د.ع من سند الصرف [{$transaction->voucher_number}] وإعادته لرصيد الطبيب المتاح.")
+                ->with('new_payout_tx_id', $revTx->id)
+                ->with('new_payout_voucher', $refVoucher)
+                ->with('new_payout_amount', $refundAmount);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء استرجاع السند: '.$e->getMessage());
+        }
     }
 
     /**

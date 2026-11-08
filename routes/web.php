@@ -151,6 +151,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('consultant-availability.doctor-account.export');
     Route::post('/consultant-availability/doctor-accounts/{doctor}/payout', [ConsultantAvailabilityController::class, 'doctorPayout'])
         ->name('consultant-availability.doctor-payout');
+    Route::get('/consultant-availability/doctor-payouts/{id}/print', [ConsultantAvailabilityController::class, 'printDoctorPayout'])
+        ->name('consultant-availability.doctor-payout.print');
+    Route::post('/consultant-availability/doctor-payouts/{id}/reverse', [ConsultantAvailabilityController::class, 'reverseDoctorPayout'])
+        ->name('consultant-availability.doctor-payout.reverse');
 
     // خزينة المستشفى المركزية وحركة النقدية والمصروفات
     Route::prefix('treasury')->name('treasury.')->group(function () {

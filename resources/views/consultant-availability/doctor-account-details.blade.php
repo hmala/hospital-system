@@ -46,6 +46,29 @@
     </div>
 
     {{-- رسائل التنبيه والنجاح --}}
+    @if(session('new_payout_tx_id'))
+        <div class="alert alert-success border-2 border-success rounded-4 shadow-sm p-3 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-success text-white p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <i class="fas fa-receipt fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1 text-success">
+                        تم تسجيل العملية بنجاح برقم سند: 
+                        <span class="font-monospace text-dark">{{ session('new_payout_voucher') }}</span>
+                    </h6>
+                    <div class="small text-muted">
+                        المبلغ: <strong class="text-dark">{{ number_format(session('new_payout_amount'), 0) }} د.ع</strong> • تم تحديث رصيد الطبيب والقيد المالي بنجاح.
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ route('consultant-availability.doctor-payout.print', session('new_payout_tx_id')) }}" target="_blank" class="btn btn-success fw-bold px-4 rounded-pill shadow-sm">
+                    <i class="fas fa-print me-1"></i> طباعة سند الصرف الآن
+                </a>
+            </div>
+        </div>
+    @endif
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm" role="alert">
             <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
@@ -317,7 +340,7 @@
                     id="paid-dues-tab" data-bs-toggle="tab" data-bs-target="#paid-dues-pane" type="button" role="tab" aria-controls="paid-dues-pane" aria-selected="false">
                 <i class="fas fa-receipt text-success"></i>
                 <span>سجل سندات الصرف والتسويات</span>
-                <span class="badge bg-success text-white rounded-pill px-2">{{ $paidDues->total() }}</span>
+                <span class="badge bg-success text-white rounded-pill px-2">{{ $payoutTransactions->total() }}</span>
             </button>
         </li>
 
@@ -474,13 +497,17 @@
 
         {{-- التبويب 2: سجل سندات الصرف والتسويات المسددة --}}
         <div class="tab-pane fade" id="paid-dues-pane" role="tabpanel">
+            {{-- جدول سندات الصرف الرسمية المعتمدة --}}
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-                <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
-                        <i class="fas fa-receipt text-success"></i>
-                        <span>سجل سندات الصرف والتسويات المسددة للطبيب</span>
-                    </h5>
-                    <span class="badge bg-success text-white px-3 py-2 rounded-pill">
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-file-invoice-dollar text-success"></i>
+                            <span>سندات الصرف والتسويات المعتمدة في الخزينة</span>
+                        </h5>
+                        <small class="text-muted">السندات المالية الصادرة رسمياً لصالح الطبيب مع إمكانية الطباعة والاسترجاع</small>
+                    </div>
+                    <span class="badge bg-success text-white px-3 py-2 rounded-pill fs-6">
                         إجمالي المسدد: {{ number_format(optional($doctor->financialAccount)->total_paid ?? 0, 0) }} د.ع
                     </span>
                 </div>
@@ -490,38 +517,82 @@
                             <thead class="table-light text-secondary small fw-bold">
                                 <tr>
                                     <th class="ps-4">رقم السند</th>
-                                    <th>تاريخ ووقت الصرف</th>
-                                    <th class="text-end">المبلغ المصروف</th>
+                                    <th>تاريخ ووقت السند</th>
+                                    <th>نوع السند</th>
+                                    <th class="text-end">المبلغ</th>
                                     <th>المحاسب المسؤول</th>
-                                    <th class="pe-4">البيان والملاحظات</th>
+                                    <th>البيان والملاحظات</th>
+                                    <th class="text-center pe-4">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($paidDues as $due)
-                                    <tr>
-                                        <td class="ps-4 font-monospace fw-bold text-dark">
-                                            #{{ $due->id }}
+                                @forelse($payoutTransactions as $tx)
+                                    @php
+                                        $isTxRefund = ($tx->category === 'doctor_payout_reversal' || $tx->voucher_type === 'inflow');
+                                    @endphp
+                                    <tr class="{{ $isTxRefund ? 'bg-danger bg-opacity-10' : '' }}">
+                                        <td class="ps-4 font-monospace fw-bold">
+                                            <span class="badge {{ $isTxRefund ? 'bg-danger' : 'bg-primary' }} px-2 py-1 rounded-pill">
+                                                {{ $tx->voucher_number }}
+                                            </span>
                                         </td>
                                         <td>
-                                            <div class="fw-bold text-secondary">{{ $due->paid_at ? $due->paid_at->format('Y-m-d') : ($due->created_at ? $due->created_at->format('Y-m-d') : '---') }}</div>
-                                            <small class="text-muted font-monospace">{{ $due->paid_at ? $due->paid_at->format('h:i A') : '' }}</small>
+                                            <div class="fw-bold text-secondary">{{ $tx->performed_at ? $tx->performed_at->format('Y-m-d') : '---' }}</div>
+                                            <small class="text-muted font-monospace">{{ $tx->performed_at ? $tx->performed_at->format('h:i A') : '' }}</small>
                                         </td>
-                                        <td class="text-end font-monospace text-success fw-bold fs-6">
-                                            {{ number_format($due->amount, 0) }} د.ع
+                                        <td>
+                                            @if($isTxRefund)
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                                                    <i class="fas fa-undo-alt me-1"></i> سند استرجاع مالي
+                                                </span>
+                                            @else
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                                                    <i class="fas fa-hand-holding-usd me-1"></i> سند صرف نقدي
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="text-end font-monospace fw-bold fs-6 {{ $isTxRefund ? 'text-danger' : 'text-success' }}">
+                                            {{ $isTxRefund ? '+' : '-' }}{{ number_format($tx->amount, 0) }} د.ع
                                         </td>
                                         <td>
                                             <i class="fas fa-user-shield text-muted me-1"></i>
-                                            {{ $due->paidBy?->name ?? 'محاسب' }}
+                                            {{ $tx->performer?->name ?? 'محاسب الخزينة' }}
                                         </td>
-                                        <td class="pe-4 text-muted small">
-                                            {{ $due->notes ?? 'صرف مستحقات أتعاب استشارية' }}
+                                        <td class="text-muted small" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;" title="{{ $tx->description }} {{ $tx->notes }}">
+                                            <div class="fw-bold text-dark">{{ $tx->description }}</div>
+                                            @if($tx->notes)
+                                                <small class="text-secondary d-block">{{ $tx->notes }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center pe-4">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <a href="{{ route('consultant-availability.doctor-payout.print', $tx->id) }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm fw-bold" 
+                                                   title="طباعة سند الصرف الرسمي">
+                                                    <i class="fas fa-print me-1"></i> طباعة السند
+                                                </a>
+                                                @if(! $isTxRefund)
+                                                    <button type="button" 
+                                                            class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm fw-bold open-reverse-modal-btn"
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#reversePayoutModal"
+                                                            data-tx-id="{{ $tx->id }}"
+                                                            data-voucher="{{ $tx->voucher_number }}"
+                                                            data-amount="{{ $tx->amount }}"
+                                                            data-doctor="{{ optional($doctor->user)->name }}"
+                                                            title="استرجاع أو إلغاء هذا السند كلياً أو جزئياً">
+                                                        <i class="fas fa-undo-alt me-1"></i> استرجاع / إلغاء
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">
-                                            <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
-                                            <p class="mb-0 fw-bold">لا توجد سندات صرف مسجلة لهذا الطبيب حتى الآن.</p>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="fas fa-file-invoice-dollar fa-3x mb-3 text-secondary opacity-50"></i>
+                                            <p class="mb-0 fw-bold">لا توجد سندات صرف معتمدة مسجلة لهذا الطبيب حتى الآن.</p>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -530,11 +601,79 @@
                     </div>
                 </div>
 
-                @if($paidDues->hasPages())
+                @if($payoutTransactions->hasPages())
                     <div class="card-footer bg-white py-3 border-top d-flex justify-content-center">
-                        {{ $paidDues->links() }}
+                        {{ $payoutTransactions->links() }}
                     </div>
                 @endif
+            </div>
+
+            {{-- قسم تفاصيل الكشفيات المسددة فردياً (الأرشيف التفصيلي) --}}
+            <div class="card border shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-light py-2 px-4 d-flex justify-content-between align-items-center">
+                    <a class="text-decoration-none text-dark fw-bold small d-flex align-items-center gap-2" 
+                       data-bs-toggle="collapse" 
+                       href="#individualDuesCollapse" 
+                       role="button" 
+                       aria-expanded="false" 
+                       aria-controls="individualDuesCollapse">
+                        <i class="fas fa-list-ul text-secondary"></i>
+                        <span>عرض تفاصيل الكشفيات والمستحقات المسددة فردياً ({{ $paidDues->total() }} كشفية مسددة)</span>
+                        <i class="fas fa-chevron-down text-muted small ms-1"></i>
+                    </a>
+                    <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-pill">أرشيف الكشفيات المسددة</span>
+                </div>
+                <div class="collapse" id="individualDuesCollapse">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-nowrap">
+                                <thead class="table-light text-secondary small fw-bold">
+                                    <tr>
+                                        <th class="ps-4">رقم القيد</th>
+                                        <th>تاريخ ووقت السداد</th>
+                                        <th class="text-end">المبلغ</th>
+                                        <th>المحاسب المسؤول</th>
+                                        <th class="pe-4">البيان والملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($paidDues as $due)
+                                        <tr>
+                                            <td class="ps-4 font-monospace fw-bold text-dark">
+                                                #{{ $due->id }}
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-secondary">{{ $due->paid_at ? $due->paid_at->format('Y-m-d') : ($due->created_at ? $due->created_at->format('Y-m-d') : '---') }}</div>
+                                                <small class="text-muted font-monospace">{{ $due->paid_at ? $due->paid_at->format('h:i A') : '' }}</small>
+                                            </td>
+                                            <td class="text-end font-monospace text-success fw-bold fs-6">
+                                                {{ number_format($due->amount, 0) }} د.ع
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-user-shield text-muted me-1"></i>
+                                                {{ $due->paidBy?->name ?? 'محاسب' }}
+                                            </td>
+                                            <td class="pe-4 text-muted small">
+                                                {{ $due->notes ?? 'صرف مستحقات أتعاب استشارية' }}
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                لا توجد قيود مسددة تفصيلية.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @if($paidDues->hasPages())
+                        <div class="card-footer bg-white py-2 border-top d-flex justify-content-center">
+                            {{ $paidDues->links() }}
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -596,6 +735,106 @@
                     </div>
                 @endif
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- مودال: استرجاع أو إلغاء سند الصرف (Full & Partial Reversal Modal) --}}
+<div class="modal fade" id="reversePayoutModal" tabindex="-1" aria-labelledby="reversePayoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-danger text-white py-3 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="reversePayoutModalLabel">
+                    <i class="fas fa-undo-alt"></i>
+                    <span>استرجاع أو إلغاء سند الصرف</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reversePayoutForm" method="POST" action="">
+                @csrf
+                <div class="modal-body p-4">
+                    {{-- بطاقة تفاصيل السند المراد استرجاعه --}}
+                    <div class="bg-light p-3 rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">رقم السند:</span>
+                            <span class="font-monospace fw-bold text-dark fs-6" id="modalVoucherNumber">---</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">المبلغ الأصلي المسدد:</span>
+                            <span class="font-monospace fw-bold text-danger fs-6" id="modalVoucherAmount">0 د.ع</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">الطبيب:</span>
+                            <span class="fw-bold text-primary" id="modalDoctorName">{{ optional($doctor->user)->name }}</span>
+                        </div>
+                    </div>
+
+                    {{-- خيارات نوع الاسترجاع (كلي أم جزئي) --}}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-2">نوع الاسترجاع المطلوب:</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="form-check p-2 border rounded-3 bg-white h-100 d-flex align-items-center">
+                                    <input class="form-check-input ms-2" type="radio" name="reversal_type" id="reversalTypeFull" value="full" checked>
+                                    <label class="form-check-label fw-bold small text-dark mb-0 cursor-pointer" for="reversalTypeFull">
+                                        استرجاع كلي (كامل السند)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check p-2 border rounded-3 bg-white h-100 d-flex align-items-center">
+                                    <input class="form-check-input ms-2" type="radio" name="reversal_type" id="reversalTypePartial" value="partial">
+                                    <label class="form-check-label fw-bold small text-dark mb-0 cursor-pointer" for="reversalTypePartial">
+                                        استرجاع جزئي (مبلغ محدد)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- حقل المبلغ المسترجع (عند اختيار استرجاع جزئي) --}}
+                    <div class="mb-3" id="partialAmountGroup" style="display: none;">
+                        <label class="form-label small fw-bold text-secondary mb-1">
+                            المبلغ المراد استرجاعه (د.ع) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   name="refund_amount" 
+                                   id="modalRefundAmount" 
+                                   class="form-control fw-bold font-monospace text-danger" 
+                                   step="any" 
+                                   min="0.01" 
+                                   placeholder="أدخل المبلغ المسترجع">
+                            <span class="input-group-text fw-bold bg-light">د.ع</span>
+                        </div>
+                        <small class="text-muted">يجب ألا يتجاوز المبلغ الأصلي للسند.</small>
+                    </div>
+
+                    {{-- سبب الاسترجاع --}}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">
+                            سبب الاسترجاع / الإلغاء <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="reversal_reason" 
+                                  id="modalReversalReason" 
+                                  class="form-control rounded-3" 
+                                  rows="2" 
+                                  required 
+                                  placeholder="اكتب سبب إلغاء أو استرجاع هذا السند (مثال: خطأ في الصرف، تصحيح حساب الطبيب، إلخ)..."></textarea>
+                    </div>
+
+                    <div class="alert alert-warning py-2 px-3 small rounded-3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>تنبيه مالي:</strong> سيتم إضافة المبلغ المسترجع فوراً إلى رصيد الطبيب المتاح، وإعادة الكشفيات المسددة إلى قائمة المستحقات المعلقة، وتسجيل سند استرجاع مالي في الخزينة.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 px-4 border-top">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm" id="confirmReversalSubmitBtn">
+                        <i class="fas fa-undo-alt me-1"></i> تأكيد الاسترجاع وإعادة القيد
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -692,6 +931,64 @@ document.addEventListener('DOMContentLoaded', function() {
             window.activateConsultantTab(targetSelector);
         });
     });
+
+    // 4. معالجة وتجهيز نافذة استرجاع سند الصرف (Payout Reversal Modal)
+    const reverseForm = document.getElementById('reversePayoutForm');
+    const modalVoucherNumber = document.getElementById('modalVoucherNumber');
+    const modalVoucherAmount = document.getElementById('modalVoucherAmount');
+    const modalRefundAmount = document.getElementById('modalRefundAmount');
+    const partialAmountGroup = document.getElementById('partialAmountGroup');
+    const reversalTypeFull = document.getElementById('reversalTypeFull');
+    const reversalTypePartial = document.getElementById('reversalTypePartial');
+
+    document.querySelectorAll('.open-reverse-modal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const txId = this.getAttribute('data-tx-id');
+            const voucher = this.getAttribute('data-voucher');
+            const amount = parseFloat(this.getAttribute('data-amount') || 0);
+
+            if (reverseForm) {
+                reverseForm.action = '{{ url("consultant-availability/doctor-payouts") }}/' + txId + '/reverse';
+            }
+            if (modalVoucherNumber) modalVoucherNumber.textContent = voucher;
+            if (modalVoucherAmount) modalVoucherAmount.textContent = Number(amount).toLocaleString() + ' د.ع';
+            if (modalRefundAmount) {
+                modalRefundAmount.max = amount;
+                modalRefundAmount.value = amount;
+            }
+            if (reversalTypeFull) reversalTypeFull.checked = true;
+            if (partialAmountGroup) partialAmountGroup.style.display = 'none';
+        });
+    });
+
+    if (reversalTypeFull && reversalTypePartial && partialAmountGroup) {
+        reversalTypeFull.addEventListener('change', function() {
+            if (this.checked) {
+                partialAmountGroup.style.display = 'none';
+                if (modalRefundAmount) modalRefundAmount.removeAttribute('required');
+            }
+        });
+
+        reversalTypePartial.addEventListener('change', function() {
+            if (this.checked) {
+                partialAmountGroup.style.display = 'block';
+                if (modalRefundAmount) {
+                    modalRefundAmount.setAttribute('required', 'required');
+                    modalRefundAmount.focus();
+                }
+            }
+        });
+    }
+
+    if (reverseForm) {
+        reverseForm.addEventListener('submit', function() {
+            const submitBtn = document.getElementById('confirmReversalSubmitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الاسترجاع...';
+            }
+        });
+    }
 
     // دعم الانتقال المباشر للتبويب عبر الهاش
     if (window.location.hash && document.querySelector(window.location.hash)) {

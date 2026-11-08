@@ -54,6 +54,30 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 185: طباعة سندات صرف مستحقات الطبيب الاستشاري A4 وحراري 78mm ومحرك استرجاع وإلغاء الصرف كلياً أو جزئياً Consultant Doctor Payout Voucher Printing & Full/Partial Reversal Engine)
+
+### Done
+- **صفحة وقالب طباعة سند الصرف الرسمي ([resources/views/consultant-availability/doctor-payout-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/doctor-payout-print.blade.php))**:
+  * تطبيق الهدر الرسمي الثلاثي لمستشفى الكفاءات الأهلي مع الشعار المعتمد بتقنية Base64.
+  * تفقيط المبالغ المالية باللغة العربية وتحويل الأرقام إلى كلمات عبر الخدمة الجديدة `TafqeetService`.
+  * شريط عنوان السند (`سند صرف نقدي - مستحقات طبيب استشاري` أو `سند استرجاع مالي`).
+  * مساحات التواقيع الرسمية الثلاثية: توقيع الطبيب المستلم، منظم السند/المحاسب، واعتماد الإدارة المالية.
+  * التبديل الفوري بنقرة زر بين وضع الطباعة الرسمية A4 ووضع الوصل الحراري الصغير (Thermal Receipt 78mm) المناسب لطابعات الكاشير.
+- **تطوير واجهة كشف الحساب والتبويبات ([resources/views/consultant-availability/doctor-account-details.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/doctor-account-details.blade.php))**:
+  * إظهار شريط إشعار علوي بارز عند اعتماد أي صرف يحتوي على زر فوري `[ 🖨️ طباعة سند الصرف الآن ]`.
+  * إعادة هيكلة تبويب "سجل سندات الصرف والتسويات" ليعرض جدول سندات الخزينة الرسمية الصادرة (`FinancialTransaction`) برقم السند، تاريخ الصرف، المبلغ، المحاسب، البيان، وزرين للإجراءات: `[ 🖨️ طباعة السند ]` و `[ 🔄 استرجاع / إلغاء ]`.
+  * وضع تفاصيل الكشفيات المسددة فردياً (`DoctorDue`) داخل قسم قابل للطي (Accordion) لمنع ازدحام الواجهة.
+- **محرك استرجاع وإلغاء سندات الصرف كلياً أو جزئياً ([app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php))**:
+  * إضافة دالتي `printDoctorPayout` و `reverseDoctorPayout`.
+  * نافذة استرجاع تفاعلية (Modal) تتيح الاختيار بين الاسترجاع الكلي أو الاسترجاع الجزئي لمبلغ محدد مع إدخال سبب الإلغاء.
+  * إعادة المبلغ المسترجع فوراً إلى رصيد الطبيب المتاح، وخصمه من إجمالي المسدد.
+  * إعادة المستحقات المسددة المعنية إلى حالة معلقة `pending` في الكشف لتعود مستحقة للطبيب.
+  * توثيق القيد العكسي في الخزينة برقم سند استرجاع `REF-DOC-...` وتوثيق العملية في ملاحظات السند الأصلي.
+- **خدمة التفقيط المالي بالدينار العراقي ([app/Services/TafqeetService.php](file:///c:/wamp64/www/hospital-system/app/Services/TafqeetService.php))**:
+  * خدمة احترافية لتحويل الأرقام والمبالغ بالدينار العراقي إلى نصوص عربية نحوية متقنة.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/ConsultantDoctorPayoutVoucherAndReversalTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantDoctorPayoutVoucherAndReversalTest.php))**:
+  * 4 اختبارات آلية جديدة تغطي توليد السندات، عرض وتفقيط الطباعة، الاسترجاع الكلي، والاسترجاع الجزئي بنجاح 100% (`4 passed, 45 assertions`)، مع اجتياز كامل اختبارات فلاتر الحسابات (`6 passed, 49 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 184: حل مشكلة التحقق من صحة مبلغ الصرف وإلغاء قيود الخطوة في كشف حساب الطبيب الاستشاري Consultant Doctor Payout Input Validation Fix & Arbitrary Amount Step-Any Support)
 
 ### Done
