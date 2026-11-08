@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 180: منظومة البحث والفلترة الذكية والمؤشرات الإحصائية لحسابات الأطباء الاستشاريين Consultant Doctor Accounts Smart Search, Balance Filters, Executive KPIs & Dynamic Pagination)
+
+### Done
+- **تطوير محرك البحث والفلاتر في وحدة التحكم ([app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php))**:
+  * إضافة محرك بحث نصي ذكي (`search`) يستعلم في اسم الطبيب (`users.name`)، والتخصص الطبي (`doctors.specialization`)، ورقم هاتف الطبيب (`users.phone`).
+  * إضافة فلتر حالة الرصيد والمستحقات (`balance_status`):
+    - `with_balance`: استخراج الأطباء الذين بذمة المستشفى رصيد مستحق لصالحهم (`balance > 0`).
+    - `zero_balance`: استخراج الأطباء الذين رصيدهم صفر أو تم تصفية حسابهم بالكامل.
+  * إضافة محرك ترتيب مرن ومتقدم (`sort_by`): الترتيب حسب أعلى رصيد مستحق، أقل رصيد، أعلى مستحقات مكتسبة، أعلى مبالغ مصروفة، أحدث تاريخ صرف، والترتيب الأبجدي بالاسم (أ-ي أو ي-أ).
+  * احتساب المؤشرات الإحصائية العامة (`stats`): إجمالي عدد الأطباء الاستشاريين، عدد الأطباء الذين لديهم رصيد نشط، إجمالي الأرصدة المتبقية بذمة المستشفى، إجمالي المستحقات المكتسبة تاريخياً، وإجمالي المبالغ المصروفة والمسددة فعلياً.
+  * تطبيق ترقيم الصفحات (`paginate(20)`) مع تثبيت واستبقاء كافة معاملات البحث والفلاتر في الروابط عبر `withQueryString()`.
+- **ترقية وتحديث واجهة حسابات الاستشاريين ([resources/views/consultant-availability/doctor-accounts.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/doctor-accounts.blade.php))**:
+  * تصميم 4 بطاقات مؤشرات KPI علوية أنيقة ومريحة للعين (الرصيد المتبقي الإجمالي بلون أخضر، إجمالي المستحقات بلون أزرق، إجمالي المسدد بلون أخضر زمردي، وعدد الأطباء ذوي المستحقات النشطة).
+  * إضافة شريط فلاتر عصري وبسيط داخل بطاقة بيضاء منحنية (`rounded-4`) يضم حقل البحث النصي مع أيقونة عدسة، قائمة حالة الرصيد، قائمة الترتيب، وزر [ 🔍 تصفية ] مع زر [ ✕ ] لمسح الفلاتر.
+  * ترقية جدول الأطباء: إضافة رقم هاتف ومعرف الطبيب، تمييز الرصيد المتبقي بشارات ملونة ناصعة (خضراء عند وجود رصيد مستحق، ورمادية عند تصفية الحساب)، وتنسيق المبالغ بالدينار العراقي (`د.ع`).
+  * تذييل أنيق للجدول يعرض عداد النتائج المعروضة من إجمالي الأطباء مع أزرار التنقل بين الصفحات.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/ConsultantDoctorAccountsFiltersTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantDoctorAccountsFiltersTest.php))**:
+  * إنشاء واجتياز 4 اختبارات آلية جديدة تغطي رندرة المؤشرات، البحث النصي بالاسم والتخصص، فلترة حالة الرصيد (مستحق وصفري)، وخيارات الترتيب بنسبة نجاح 100% (`4 passed, 25 assertions`)، مع استمرار اجتياز كافة اختبارات مصفوفة الصلاحيات (`11 passed, 183 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 179: تأمين كشوفات وحسابات الطوارئ ضد الانهيار البرمجي ودعم استخراج اسم وهوية المريض بدقة Emergency Cashier Statements & Movements Null-Safety Hardening & Emergency Patient Resolution)
 
 ### Done

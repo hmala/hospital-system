@@ -951,16 +951,82 @@ class ConsultantAvailabilityController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى حسابات الأطباء');
         }
 
-        $consultantDoctors = Doctor::with(['user', 'department', 'financialAccount'])
-            ->join('users', 'doctors.user_id', '=', 'users.id')
-            ->where('doctors.type', 'consultant')
-            ->where('doctors.is_active', true)
-            ->orderBy('doctors.specialization')
-            ->orderBy('users.name')
-            ->select('doctors.*')
-            ->get();
+        $search = $request->query('search');
+        $balanceStatus = $request->query('balance_status');
+        $sortBy = $request->query('sort_by', 'balance_desc');
 
-        return view('consultant-availability.doctor-accounts', compact('consultantDoctors'));
+        $query = Doctor::with(['user', 'department', 'financialAccount'])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('doctor_financial_accounts', 'doctors.id', '=', 'doctor_financial_accounts.doctor_id')
+            ->where('doctors.type', 'consultant')
+            ->where('doctors.is_active', true);
+
+        // فلترة بالبحث النصي (الاسم، التخصص، الهاتف)
+        if ($request->filled('search')) {
+            $searchTerm = trim($search);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('users.name', 'like', "%{$searchTerm}%")
+                    ->orWhere('doctors.specialization', 'like', "%{$searchTerm}%")
+                    ->orWhere('users.phone', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // فلترة بحالة الرصيد (له رصيد مستحق بذمة المستشفى أم حسابه مصفى)
+        if ($request->filled('balance_status')) {
+            if ($balanceStatus === 'with_balance') {
+                $query->where('doctor_financial_accounts.balance', '>', 0);
+            } elseif ($balanceStatus === 'zero_balance') {
+                $query->where(function ($q) {
+                    $q->whereNull('doctor_financial_accounts.balance')
+                        ->orWhere('doctor_financial_accounts.balance', '<=', 0);
+                });
+            }
+        }
+
+        // الترتيب
+        switch ($sortBy) {
+            case 'name_asc':
+                $query->orderBy('users.name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('users.name', 'desc');
+                break;
+            case 'earned_desc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.total_earned, 0) DESC');
+                break;
+            case 'paid_desc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.total_paid, 0) DESC');
+                break;
+            case 'last_paid':
+                $query->orderByRaw('doctor_financial_accounts.last_paid_at DESC');
+                break;
+            case 'balance_asc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.balance, 0) ASC');
+                break;
+            case 'balance_desc':
+            default:
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.balance, 0) DESC');
+                break;
+        }
+
+        $consultantDoctors = $query->select('doctors.*')
+            ->paginate(20)
+            ->withQueryString();
+
+        // إحصائيات المؤشرات الإجمالية
+        $allConsultantAccounts = DoctorFinancialAccount::whereHas('doctor', function ($q) {
+            $q->where('type', 'consultant')->where('is_active', true);
+        });
+
+        $stats = [
+            'total_doctors' => Doctor::where('type', 'consultant')->where('is_active', true)->count(),
+            'doctors_with_balance' => (clone $allConsultantAccounts)->where('balance', '>', 0)->count(),
+            'total_balance' => (float) (clone $allConsultantAccounts)->sum('balance'),
+            'total_earned' => (float) (clone $allConsultantAccounts)->sum('total_earned'),
+            'total_paid' => (float) (clone $allConsultantAccounts)->sum('total_paid'),
+        ];
+
+        return view('consultant-availability.doctor-accounts', compact('consultantDoctors', 'stats', 'search', 'balanceStatus', 'sortBy'));
     }
 
     public function doctorAccount(Request $request, Doctor $doctor)
