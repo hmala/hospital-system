@@ -1943,6 +1943,18 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
     - اجتياز كامل اختبارات التحقق من بنية الجدول الموحد وكبسولات الشمول والإلحاق الرجعي بنسبة 100% (`8 passed, 47 assertions`)، واستمرار اجتياز كافة اختبارات دفع وتجزئة العمليات والضمان (`15 passed, 98 assertions`).
 
+- **المرحلة 179 (2026-11-08) — تأمين واستقرار كشوفات وحسابات الطوارئ ضد الانهيار البرمجي ودعم مرضى الطوارئ المؤقتين (Emergency Cashier Statements & Movements Null-Safety Hardening & Emergency Patient Resolution)**:
+  * **معالجة الانهيار البرمجي في كشوفات وحسابات الطوارئ**:
+    - معالجة خطأ `Attempt to read property "user" on null` في شاشة كشوفات حسابات الطوارئ (`/cashier/emergency/statements`) الناتج عن استدعاء متداخل لدالة `optional()` عند وجود حالات طوارئ لمرضى مسجلين سريعاً بدون ملف دائم (`emergency_patient_id`).
+    - استبدال دوال `optional()` المتداخلة في عروض Blade بمعامل الأمان المتسلسل الأصلي في PHP 8 (`?->`) ودعم استخراج الاسم بدقة متسلسلة: مريض الطوارئ الدائم ⬅️ مريض الطوارئ السريع ⬅️ مريض السند المباشر ⬅️ `غير معروف`.
+    - شمول التحديث لشاشات: كشوفات حسابات الطوارئ (`emergency-statements.blade.php`)، الحركات المالية للطوارئ (`emergency-movements.blade.php`)، وتفاصيل حساب طبيب الطوارئ (`emergency-doctor-account.blade.php`).
+  * **تطوير نموذج البيانات والتحسين الأدائي (Eager-Loading & Model Accessors)**:
+    - إضافة Accessor موحد وآمن `$payment->patient_name` في موديل `Payment` يمنع أي انهيار مستقبلي في أي قسم مالي.
+    - إضافة Accessor موحد `$emergency->patient_name` في موديل `Emergency`.
+    - في كنترولر الكاشير (`CashierController.php`): تضمين `emergency.emergencyPatient` و `patient.user` في الـ Eager Loading لمنع استعلامات N+1 وتأمين استخراج أسماء المرضى في تقرير الإحالات التشخيصية والعمليات (`emergencyReferrals`).
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/EmergencyCashierStatementsNullSafetyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyCashierStatementsNullSafetyTest.php))**:
+    - كتابة واجتياز 3 اختبارات آلية جديدة تغطي كشوفات الطوارئ، الحركات المالية، وحسابات أطباء الطوارئ لمرضى الطوارئ السريعين والنظاميين والمدفوعات اليتيمة بنسبة 100% (`3 passed, 8 assertions`)، مع استمرار اجتياز مصفوفة الصلاحيات بالكامل (`11 passed, 183 assertions`).
+
 - **المرحلة 178 (2026-11-07) — تعديل العلامات الحيوية السريرية مباشرة في الجدول العلوي وإلغاء المودل المنبثق نهائياً، مع حوكمة الـ 30 دقيقة والتمرير السلس السريع (Inline Flowsheet Vitals Editing, Modal Removal, Direct Table Sync & 30-Minute Governance Enforcement)**:
   * **تعديل مباشر وسلس في الجدول العلوي دون فتح نوافذ منبثقة (Zero-Modal Direct Flowsheet Editing)**:
     - إلغاء المودل المنبثق نهائياً والتخلص من أي مشاكل تنسيق أو قطع في رأس الصفحة.

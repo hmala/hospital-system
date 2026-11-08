@@ -246,6 +246,18 @@ class Payment extends Model
     }
 
     /**
+     * الحصول على اسم المريض بأمان لكافة أنواع السندات (عيادات، طوارئ، عمليات، أقسام)
+     */
+    public function getPatientNameAttribute(): string
+    {
+        return $this->emergency?->patient?->user?->name
+            ?? $this->emergency?->emergencyPatient?->name
+            ?? $this->patient?->user?->name
+            ?? $this->patient?->name
+            ?? 'غير معروف';
+    }
+
+    /**
      * اسم الطبيب المعالج / الاستشاري المرتبط بالإيصال
      */
     public function getAttendingDoctorNameAttribute(): ?string

@@ -2897,6 +2897,7 @@ class CashierController extends Controller
                 if ($s->status === 'cancelled' || $s->payment_status === 'refunded') {
                     return false;
                 }
+
                 return in_array($s->payment_status, ['paid', 'partial']) || $s->payments->where('amount', '>', 0)->isNotEmpty();
             });
 
@@ -4660,7 +4661,7 @@ class CashierController extends Controller
         $toDate = $request->query('to_date');
         $paymentMethod = $request->query('payment_method');
 
-        $query = Payment::with(['emergency.patient.user', 'cashier'])
+        $query = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'patient.user', 'cashier'])
             ->where('payment_type', 'emergency')
             ->whereNotNull('paid_at');
 
@@ -4708,7 +4709,7 @@ class CashierController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
-        $query = \App\Models\Payment::with(['emergency.patient.user', 'cashier'])
+        $query = \App\Models\Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'patient.user', 'cashier'])
             ->where('payment_type', 'emergency')
             ->whereNotNull('paid_at');
 
@@ -5089,7 +5090,7 @@ class CashierController extends Controller
             abort(404, 'الطبيب غير موجود');
         }
 
-        $emergencies = \App\Models\Emergency::with(['patient.user'])
+        $emergencies = \App\Models\Emergency::with(['patient.user', 'emergencyPatient'])
             ->where('doctor_id', $doctorId)
             ->when($fromDate, function ($q) use ($fromDate) {
                 $q->whereDate('created_at', '>=', $fromDate);
@@ -5119,7 +5120,7 @@ class CashierController extends Controller
                     }
                 }
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
                     'amount' => $caseSum,
@@ -5156,7 +5157,7 @@ class CashierController extends Controller
                     }
                 }
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
                     'amount' => $caseSum,
@@ -5175,7 +5176,7 @@ class CashierController extends Controller
                 $items = $surgery ? $surgery->surgery_type : 'تحويل للعمليات (قيد الانتظار)';
 
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => $items,
                     'amount' => $caseSum,
@@ -5260,7 +5261,7 @@ class CashierController extends Controller
 
         $doctor->load(['user', 'department']);
 
-        $earnedCases = \App\Models\Emergency::with(['patient.user', 'followUpPayment'])
+        $earnedCases = \App\Models\Emergency::with(['patient.user', 'emergencyPatient', 'followUpPayment'])
             ->where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
             ->whereHas('followUpPayment', function ($q) {
