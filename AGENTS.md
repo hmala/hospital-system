@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 183: ترقية طباعة كشف مقبوضات الكاشير، إضافة الهدر المعتمد، منع تكرار المجموع في كل صفحة، وإظهار عمود نوع التغطية Cashier Report Print Standard Header, Single Table Total Row & Insurance/Cash Coverage Column)
+
+### Done
+- **إضافة الهدر الرسمي المعتمد في أقسام المستشفى ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
+  * تطبيق الهدر الثلاثي الرسمي (مستشفى الكفاءات الأهلي، قسم الحسابات المالية والتدقيق، Al-Kafa'at Private Hospital).
+  * تضمين شعار المستشفى المعتمد (`images/1.jpg`) مع تشفير Base64 لضمان سرعة التحميل ودقة الطباعة العالية.
+  * إضافة شريط عنوان المستند الرسمي `كشف مقبوضات ووصولات الكاشير المعتمد (Cashier Revenue & Receipts Statement)`.
+  * إضافة بطاقة الملخص المالي السريع: إجمالي المقبوضات المحصلة، إجمالي مطالبات الضمان، وعدد الوصولات.
+- **حل مشكلة تكرار المجموع الكلي أسفل كل صفحة مطبوعة ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
+  * تصحيح خاصية CSS لذيل الجدول من `display: table-footer-group` إلى `display: table-row-group`.
+  * حصر ظهور سطر المجموع الكلي ليظهر **مرة واحدة فقط في نهاية الجدول والتقرير على الصفحة الأخيرة**.
+- **إضافة عمود "نوع التغطية" (كاش أم ضمان) وتطوير الموديل ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php), [app/Models/Payment.php](file:///c:/wamp64/www/hospital-system/app/Models/Payment.php))**:
+  * إضافة عمود صريح في الجدول يعرض نوع التغطية لكل وصل: `نقدي (كاش)` أو `ضمان (الضمان الصحي الوطني / قوى الأمن الداخلي)` مع رقم البطاقة وإيضاح حصة الضمان بدقة.
+  * تزويد موديل `Payment` بالـ Accessor التوافقي `insurance_type_name`.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierReportPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierReportPrintTest.php))**:
+  * إنشاء واجتياز اختبار التحقق من رندرة الهدر المعتمد، منع تكرار المجموع، ظهور عمود نوع التغطية والمجاميع بنجاح 100% (`1 passed, 15 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 182: ديناميكية مبلغ الصرف واعتماده على البحث والفترة المحددة وشريط الفلترة الموحد لكشف حساب الطبيب الاستشاري Consultant Doctor Filtered Payout Amount Engine, Unified Top Filters & Period Dues Sync)
 
 ### Done

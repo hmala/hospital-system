@@ -2037,6 +2037,20 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
     - إضافة واجتياز اختبار التحقق من ظهور CBC في أمر العمل بنجاح بنسبة 100% (`11 passed, 69 assertions`).
 
+- **المرحلة 183 (2026-11-08) — ترقية طباعة كشف مقبوضات الكاشير، إضافة الهدر المعتمد، منع تكرار المجموع في كل صفحة، وإظهار عمود نوع التغطية (Cashier Report Print Standard Header, Single Table Total Row & Insurance/Cash Coverage Column)**:
+  * **الهدر الموحد المعتمد ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
+    - تطبيق الهدر الثلاثي الرسمي (مستشفى الكفاءات الأهلي، قسم الحسابات المالية والتدقيق، Al-Kafa'at Private Hospital).
+    - تضمين شعار المستشفى المعتمد (`images/1.jpg`) مع تشفير Base64 لضمان سرعة التحميل ودقة الطباعة العالية.
+    - إضافة شريط عنوان المستند الموحد وكروت الملخص المالي السريع.
+  * **منع تكرار المجموع الكلي أسفل كل صفحة مطبوعة ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
+    - تصحيح خاصية CSS لذيل الجدول من `display: table-footer-group` إلى `display: table-row-group`.
+    - حصر ظهور سطر المجموع الكلي ليظهر **مرة واحدة فقط في نهاية الجدول والتقرير على الصفحة الأخيرة**.
+  * **إضافة عمود "نوع التغطية" وتطوير الموديل ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php), [app/Models/Payment.php](file:///c:/wamp64/www/hospital-system/app/Models/Payment.php))**:
+    - إضافة عمود صريح في الجدول يعرض نوع التغطية لكل وصل: `نقدي (كاش)` أو `ضمان (الضمان الصحي الوطني / قوى الأمن الداخلي)` مع رقم البطاقة وحصة الضمان بدقة.
+    - تزويد موديل `Payment` بالـ Accessor التوافقي `insurance_type_name`.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/CashierReportPrintTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierReportPrintTest.php))**:
+    - اجتياز اختبار رندرة الهدر المعتمد، منع تكرار المجموع، وظهور عمود نوع التغطية بنجاح 100% (`1 passed, 15 assertions`).
+
 - **المرحلة 182 (2026-11-08) — ديناميكية مبلغ الصرف واعتماده على البحث والفترة المحددة وشريط الفلترة الموحد لكشف حساب الطبيب الاستشاري (Consultant Doctor Filtered Payout Amount Engine, Unified Top Filters & Period Dues Sync)**:
   * **محرك احتساب مستحقات الفترة والبيان التلقائي ([app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php))**:
     - استخراج إحصائيات البحث والفترة المفلترة بدقة (`filteredDoctorShare`, `filteredHospitalShare`, `filteredTotalAmount`, `filteredCount`).

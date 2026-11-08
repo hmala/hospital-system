@@ -236,13 +236,21 @@ class Payment extends Model
         $type = $this->insurance_type ?: ($this->patient?->insurance_type ?? 'hi');
 
         return match ($type) {
-            'hi' => 'الضمان الصحي',
+            'hi' => 'الضمان الصحي الوطني',
             'moi' => 'قوى الأمن الداخلي',
             'syndicate' => 'نقابات وتعاقدات',
             'private' => 'تأمين خاص',
             'none' => 'بدون ضمان',
             default => $type ?: 'الضمان الصحي',
         };
+    }
+
+    /**
+     * مسمى الضمان المتوافق مع شاشات وتقارير الكاشير
+     */
+    public function getInsuranceTypeNameAttribute(): string
+    {
+        return $this->insurance_type_label;
     }
 
     /**
