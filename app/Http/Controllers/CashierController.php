@@ -2512,7 +2512,14 @@ class CashierController extends Controller
         });
 
         $cashiers = $canViewAllCashiers
-            ? \App\Models\User::whereIn('id', \App\Models\Payment::select('cashier_id')->distinct())->orderBy('name')->get()
+            ? \App\Models\User::where(function ($q) {
+                $q->whereHas('roles', function ($rq) {
+                    $rq->whereIn('name', ['cashier', 'casshieradmin']);
+                })->orWhereIn('role', ['cashier', 'casshieradmin']);
+            })
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
             : collect();
 
         // إذا كان الطلب طباعة

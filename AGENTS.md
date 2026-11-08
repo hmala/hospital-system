@@ -65,6 +65,9 @@ Consult these files before making changes or proposing fixes:
   * إضافة Accessor موحد وآمن `$payment->patient_name` في موديل `Payment` لتوفير وصول محمي وشامل لاسم المريض في كافة العمليات المالية.
   * إضافة Accessor موحد `$emergency->patient_name` في موديل `Emergency`.
   * تحسين استعلامات الكاشير وإضافة `emergency.emergencyPatient` و `patient.user` ضمن الـ Eager Loading لمنع استعلامات N+1، وتصحيح استخراج الأسماء في تقرير الإحالات الطبية والعمليات (`emergencyReferrals`).
+- **تنقية وحصر فلتر الكاشير في التقارير المالية بالأدوار الرسمية ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [app/Models/Appointment.php](file:///c:/wamp64/www/hospital-system/app/Models/Appointment.php))**:
+  * حصر استعلام فلتر الكاشير في شاشة تقارير المدفوعات `/cashier/report` بالمستخدمين النشطين الذين يحملون دور الكاشير الرسمي (`cashier`, `casshieradmin`) بدلاً من جلب كل مستخدم سُجل في حقل `cashier_id`، مما أزال الأطباء وموظفي الاستعلامات والمحاسبين من القائمة المنسدلة.
+  * تصحيح عملية تسجيل سند استرجاع كشفية الموعد الملغى في `Appointment::cancel()` لينسب السند إلى الكاشير الأصلي الذي قبض الدفعة `$consultationPayment?->cashier_id ?? auth()->id()` لمنع تلوث حقل `cashier_id` بحساب الطبيب مستقبلاً.
 - **حزم الاختبارات الآلية الشاملة ([tests/Feature/EmergencyCashierStatementsNullSafetyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyCashierStatementsNullSafetyTest.php))**:
   * إنشاء واجتياز 3 اختبارات آلية جديدة تغطي رندرة كشوفات الطوارئ، الحركات المالية، وحسابات أطباء الطوارئ لمرضى الطوارئ السريعين والنظاميين والمدفوعات اليتيمة بنسبة نجاح 100% (`3 passed, 8 assertions`)، مع اجتياز كامل اختبارات الصلاحيات (`11 passed, 183 assertions`).
 
