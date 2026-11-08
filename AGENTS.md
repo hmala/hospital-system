@@ -62,6 +62,10 @@ Consult these files before making changes or proposing fixes:
   * تضمين شعار المستشفى المعتمد (`images/1.jpg`) مع تشفير Base64 لضمان سرعة التحميل ودقة الطباعة العالية.
   * إضافة شريط عنوان المستند الرسمي `كشف مقبوضات ووصولات الكاشير المعتمد (Cashier Revenue & Receipts Statement)`.
   * إضافة بطاقة الملخص المالي السريع: إجمالي المقبوضات المحصلة، إجمالي مطالبات الضمان، وعدد الوصولات.
+- **ضبط استقامة وانتظام ترويسة الجدول عبر الصفحات المتعددة (Multi-Page Header & Table Layout Alignment)**:
+  * فصل الترويسة الرئيسية والملخص المالي ليكون أعلى الجدول، وتخصيص `thead` فقط لصف عناوين الأعمدة الصريحة.
+  * تطبيق `table-layout: fixed; width: 100%;` بنسب مئوية دقيقة لكل عمود مع منع انشطار الصفوف `break-inside: avoid`.
+  * ضمان بدء الجدول في الصفحة الثانية والثالثة وما بعدها مباشرة من أعلى الصفحة بصفوف أعمدة ثابتة ونظيفة دون أي تشوه أو تصادم.
 - **حل مشكلة تكرار المجموع الكلي أسفل كل صفحة مطبوعة ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
   * تصحيح خاصية CSS لذيل الجدول من `display: table-footer-group` إلى `display: table-row-group`.
   * حصر ظهور سطر المجموع الكلي ليظهر **مرة واحدة فقط في نهاية الجدول والتقرير على الصفحة الأخيرة**.

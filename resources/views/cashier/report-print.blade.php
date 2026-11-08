@@ -20,38 +20,14 @@
             font-family: 'Cairo', sans-serif;
             background-color: #fff;
             color: #212529;
-            font-size: 11.5px;
+            font-size: 11px;
             margin: 0;
             padding: 0;
+            line-height: 1.4;
         }
-        .table-print {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .table-print thead {
-            display: table-header-group; /* يضمن تكرار الهدر في كل صفحة مطبوعة */
-        }
-        .table-print tfoot {
-            display: table-row-group; /* يمنع تكرار المجموع في كل صفحة ويجعله يظهر مرة واحدة فقط في نهاية الجدول */
-        }
-        .table-print tr {
-            page-break-inside: avoid;
-        }
-        .table-print th.col-header {
-            background-color: #f1f5f9 !important;
-            color: #1e293b;
-            font-weight: 800;
-            border: 1px solid #cbd5e1;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 11px;
-        }
-        .table-print td {
-            border: 1px solid #e2e8f0;
-            padding: 6px;
-            text-align: center;
-            font-size: 11px;
-            vertical-align: middle;
+
+        .report-header-container {
+            margin-bottom: 12px;
         }
 
         /* Standard 3-Zone Hospital Header */
@@ -130,7 +106,7 @@
             align-items: center;
         }
         .banner-title {
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 800;
             color: #ffffff;
         }
@@ -154,6 +130,42 @@
             border-radius: 6px;
             padding: 8px 12px;
             margin-bottom: 10px;
+        }
+
+        /* Fixed Layout Table Architecture */
+        .table-print {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+        .table-print thead {
+            display: table-header-group; /* يضمن تكرار عناوين الأعمدة فقط في كل صفحة */
+        }
+        .table-print tfoot {
+            display: table-row-group; /* يمنع تكرار المجموع في كل صفحة ويحصره في نهاية التقرير */
+        }
+        .table-print tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .table-print th.col-header {
+            background-color: #f1f5f9 !important;
+            color: #1e293b;
+            font-weight: 800;
+            border: 1px solid #cbd5e1;
+            padding: 7px 4px;
+            text-align: center;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .table-print td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 10.5px;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         @media print {
@@ -193,7 +205,7 @@
     <div class="no-print d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
         <div>
             <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>معاينة طباعة كشف مقبوضات الكاشير</h5>
-            <small class="text-muted">الهدر الرسمي المعتمد سيتكرر في أعلى كل صفحة، بينما يظهر المجموع الكلي مرة واحدة فقط في نهاية التقرير</small>
+            <small class="text-muted">الهدر المعتمد يظهر في ترويسة التقرير، وعناوين الأعمدة تتكرر بانتظام وثبات تام عبر كافة الصفحات</small>
         </div>
         <div class="d-flex gap-2">
             <button onclick="window.print()" class="btn btn-primary btn-sm px-4 fw-bold">
@@ -205,98 +217,96 @@
         </div>
     </div>
 
-    <!-- جدول الوصولات الرئيسي مع تكرار الهدر في كل صفحة -->
+    <!-- الترويسة الرسمية المعتمدة (تظهر في رأس التقرير) -->
+    <div class="report-header-container">
+        <div class="header-box">
+            <div class="d-flex justify-content-between align-items-center">
+                <!-- الجانب الأيمن (عربي) -->
+                <div class="header-hospital-ar">
+                    <h2>مستشفى الكفاءات الأهلي</h2>
+                    <h4>قسم الحسابات المالية والتدقيق</h4>
+                    <p>إدارة الصناديق والمقبوضات المركزية المعتمدة</p>
+                </div>
+
+                <!-- المنتصف (الشعار الرسمي) -->
+                <div class="header-logo">
+                    <img src="{!! $hospitalLogoSrc !!}" 
+                         alt="Hospital Logo" 
+                         class="hospital-logo-img" 
+                         onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
+                         style="max-height: 80px; max-width: 120px; object-fit: contain;">
+                </div>
+
+                <!-- الجانب الأيسر (إنجليزي) -->
+                <div class="header-hospital-en">
+                    <h2>Al-Kafa'at Private Hospital</h2>
+                    <h4>Finance & Cashier Audit Dept</h4>
+                    <p>Central Revenue & Cash Management Unit</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- شريط عنوان المستند الموحد (Document Title Banner) -->
+        <div class="document-title-banner">
+            <div class="banner-title">
+                <i class="fas fa-file-invoice-dollar me-2"></i>
+                <span>كشف مقبوضات ووصولات الكاشير المعتمد (Cashier Revenue & Receipts Statement)</span>
+            </div>
+            <div class="banner-meta">
+                <span class="report-badge">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    @if($fromDate && $toDate)
+                        الفترة: {{ $fromDate }} إلى {{ $toDate }}
+                    @elseif($fromDate)
+                        من تاريخ: {{ $fromDate }}
+                    @elseif($toDate)
+                        لغاية تاريخ: {{ $toDate }}
+                    @else
+                        كافة الفترات المسجلة
+                    @endif
+                </span>
+                <span class="report-badge">
+                    <i class="fas fa-clock me-1"></i>
+                    {{ now()->format('Y-m-d H:i') }}
+                </span>
+            </div>
+        </div>
+
+        <!-- ملخص مالي سريع متكرر -->
+        <div class="summary-card">
+            <div class="row text-center gy-1 align-items-center">
+                <div class="col-3 border-end">
+                    <span class="text-muted small d-block" style="font-size: 11px;">المقبوضات المحصلة (المريض)</span>
+                    <strong class="text-success fs-6">{{ number_format($totalAmount, 0) }} د.ع</strong>
+                </div>
+                <div class="col-3 border-end">
+                    <span class="text-muted small d-block" style="font-size: 11px;">إجمالي مطالبات الضمان</span>
+                    <strong class="text-primary fs-6">{{ number_format($totalInsurance, 0) }} د.ع</strong>
+                </div>
+                <div class="col-3 border-end">
+                    <span class="text-muted small d-block" style="font-size: 11px;">عدد الوصولات المصدرة</span>
+                    <strong class="text-dark fs-6">{{ number_format($totalCount) }} وصل</strong>
+                </div>
+                <div class="col-3">
+                    <span class="text-muted small d-block" style="font-size: 11px;">القسم / الكاشير المستعلم</span>
+                    <strong class="text-secondary small">{{ $paymentType ? (\App\Models\Payment::PAYMENT_TYPES[$paymentType] ?? $paymentType) : 'كافة الأقسام' }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول الوصولات الرئيسي المنظم بدقة عبر كافة الصفحات -->
     <table class="table-print mb-4">
         <thead>
-            <!-- الهدر الرسمي المعتمد المتكرر في أعلى كل ورقة -->
+            <!-- عناوين أعمدة الجدول المتكررة بثبات هندسي في أعلى كل صفحة -->
             <tr>
-                <th colspan="9" class="p-0 border-0 bg-white text-start">
-                    <div class="header-box">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <!-- الجانب الأيمن (عربي) -->
-                            <div class="header-hospital-ar">
-                                <h2>مستشفى الكفاءات الأهلي</h2>
-                                <h4>قسم الحسابات المالية والتدقيق</h4>
-                                <p>إدارة الصناديق والمقبوضات المركزية المعتمدة</p>
-                            </div>
-
-                            <!-- المنتصف (الشعار الرسمي) -->
-                            <div class="header-logo">
-                                <img src="{!! $hospitalLogoSrc !!}" 
-                                     alt="Hospital Logo" 
-                                     class="hospital-logo-img" 
-                                     onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
-                                     style="max-height: 80px; max-width: 120px; object-fit: contain;">
-                            </div>
-
-                            <!-- الجانب الأيسر (إنجليزي) -->
-                            <div class="header-hospital-en">
-                                <h2>Al-Kafa'at Private Hospital</h2>
-                                <h4>Finance & Cashier Audit Dept</h4>
-                                <p>Central Revenue & Cash Management Unit</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- شريط عنوان المستند الموحد (Document Title Banner) -->
-                    <div class="document-title-banner">
-                        <div class="banner-title">
-                            <i class="fas fa-file-invoice-dollar me-2"></i>
-                            <span>كشف مقبوضات ووصولات الكاشير المعتمد (Cashier Revenue & Receipts Statement)</span>
-                        </div>
-                        <div class="banner-meta">
-                            <span class="report-badge">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                @if($fromDate && $toDate)
-                                    الفترة: {{ $fromDate }} إلى {{ $toDate }}
-                                @elseif($fromDate)
-                                    من تاريخ: {{ $fromDate }}
-                                @elseif($toDate)
-                                    لغاية تاريخ: {{ $toDate }}
-                                @else
-                                    كافة الفترات المسجلة
-                                @endif
-                            </span>
-                            <span class="report-badge">
-                                <i class="fas fa-clock me-1"></i>
-                                {{ now()->format('Y-m-d H:i') }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- ملخص مالي سريع متكرر -->
-                    <div class="summary-card">
-                        <div class="row text-center gy-1 align-items-center">
-                            <div class="col-3 border-end">
-                                <span class="text-muted small d-block" style="font-size: 11px;">المقبوضات المحصلة (المريض)</span>
-                                <strong class="text-success fs-6">{{ number_format($totalAmount, 0) }} د.ع</strong>
-                            </div>
-                            <div class="col-3 border-end">
-                                <span class="text-muted small d-block" style="font-size: 11px;">إجمالي مطالبات الضمان</span>
-                                <strong class="text-primary fs-6">{{ number_format($totalInsurance, 0) }} د.ع</strong>
-                            </div>
-                            <div class="col-3 border-end">
-                                <span class="text-muted small d-block" style="font-size: 11px;">عدد الوصولات المصدرة</span>
-                                <strong class="text-dark fs-6">{{ number_format($totalCount) }} وصل</strong>
-                            </div>
-                            <div class="col-3">
-                                <span class="text-muted small d-block" style="font-size: 11px;">القسم / الكاشير المستعلم</span>
-                                <strong class="text-secondary small">{{ $paymentType ? (\App\Models\Payment::PAYMENT_TYPES[$paymentType] ?? $paymentType) : 'كافة الأقسام' }}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </th>
-            </tr>
-
-            <!-- عناوين أعمدة الجدول المتكررة -->
-            <tr>
-                <th class="col-header" style="width: 3%;">#</th>
+                <th class="col-header" style="width: 3.5%;">#</th>
                 <th class="col-header" style="width: 12%;">رقم الوصل</th>
-                <th class="col-header" style="width: 11%;">التاريخ والوقت</th>
+                <th class="col-header" style="width: 11.5%;">التاريخ والوقت</th>
                 <th class="col-header" style="text-align: right; width: 18%;">اسم المريض</th>
-                <th class="col-header" style="width: 11%;">المستخدم (الكاشير)</th>
-                <th class="col-header" style="width: 14%;">القسم / نوع الخدمة</th>
-                <th class="col-header" style="width: 12%;">نوع التغطية</th>
+                <th class="col-header" style="width: 10%;">الكاشير</th>
+                <th class="col-header" style="width: 13%;">القسم / الخدمة</th>
+                <th class="col-header" style="width: 13%;">نوع التغطية</th>
                 <th class="col-header" style="width: 11%;">المحصل (المريض)</th>
                 <th class="col-header" style="width: 8%;">طريقة الدفع</th>
             </tr>
@@ -325,7 +335,7 @@
                 <td>
                     <span class="fw-bold text-dark">{{ \App\Models\Payment::PAYMENT_TYPES[$payment->payment_type] ?? $payment->payment_type }}</span>
                     @if($payment->description)
-                        <br><small class="text-muted">{{ Str::limit($payment->description, 40) }}</small>
+                        <br><small class="text-muted">{{ Str::limit($payment->description, 35) }}</small>
                     @endif
                 </td>
                 {{-- نوع التغطية (كاش أم ضمان) --}}
@@ -383,7 +393,7 @@
     </table>
 
     <!-- قسم التواقيع والاعتماد في نهاية التقرير -->
-    <div class="row mt-4 pt-3" style="page-break-inside: avoid;">
+    <div class="row mt-4 pt-3" style="page-break-inside: avoid; break-inside: avoid;">
         <div class="col-4 text-center">
             <p class="fw-bold mb-4">أمين الصندوق (الكاشير)</p>
             <p class="text-muted">........................................</p>
