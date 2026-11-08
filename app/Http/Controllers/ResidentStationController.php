@@ -12,30 +12,43 @@ class ResidentStationController extends Controller
 {
     public function index()
     {
-        // 1. جلب العمليات التي تحتاج مرحلة pre_op
-        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+        // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
+        $preOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation'])
+            ->where('status', '!=', 'cancelled')
             ->where(function ($query) {
-                $query->where(function ($q) {
-                    // حالة 1: العمليات المحجوزة التي تحتاج pre_op
-                    $q->where('status', 'scheduled')
-                        ->whereDoesntHave('residentStations', function ($sq) {
-                            $sq->where('phase', 'pre_op');
-                        });
-                })
+                $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
+                    ->orWhere(function ($q) {
+                        $q->where('status', 'in_progress')
+                            ->whereDoesntHave('operationTheaterStation', function ($otq) {
+                                $otq->where('status', 'completed');
+                            });
+                    })
                     ->orWhereHas('residentStations', function ($sq) {
-                        // حالة 2: pre_op موجود لكن غير مكتمل
                         $sq->where('phase', 'pre_op')
                             ->where('status', '!=', 'completed');
                     });
+            })
+            ->whereDoesntHave('operationTheaterStation', function ($otq) {
+                $otq->where('status', 'completed');
             })
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
             ->get();
 
-        // 2. جلب العمليات التي تحتاج مرحلة post_op بعد اكتمال صالة العمليات
-        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
-            ->whereHas('anesthesiaStation', function ($sq) {
-                $sq->where('status', 'completed');
+        // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد خروج المريض من الصالة)
+        $postOpSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation', 'anesthesiaStation'])
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->whereHas('operationTheaterStation', function ($sq) {
+                    $sq->where('status', 'completed');
+                })
+                    ->orWhereHas('anesthesiaStation', function ($sq) {
+                        $sq->where('status', 'completed');
+                    })
+                    ->orWhere('status', 'completed')
+                    ->orWhereHas('residentStations', function ($sq) {
+                        $sq->where('phase', 'post_op');
+                    });
             })
             ->where(function ($query) {
                 $query->whereDoesntHave('residentStations', function ($sq) {
@@ -46,12 +59,12 @@ class ResidentStationController extends Controller
                             ->where('status', '!=', 'completed');
                     });
             })
-            ->orderBy('scheduled_date')
-            ->orderBy('scheduled_time')
+            ->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
             ->get();
 
         // 3. جلب العمليات التي أتمت كل مراحل المقيم (pre_op و post_op)
-        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
+        $completedSurgeries = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
             ->whereHas('residentStations', function ($q) {
                 $q->where('phase', 'pre_op')->where('status', 'completed');
             })
@@ -66,6 +79,13 @@ class ResidentStationController extends Controller
 
     public function show(Surgery $surgery, Request $request)
     {
+        if ($surgery->room_id && ! $surgery->room_checkin_at) {
+            $roomNum = $surgery->room?->room_number ?? 'المخصصة';
+
+            return redirect()->route('resident-station.index')
+                ->with('warning', "لا يمكن فتح المحطة السريرية للمريض: المريض مخصص للغرفة ({$roomNum}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.");
+        }
+
         return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
     }
 

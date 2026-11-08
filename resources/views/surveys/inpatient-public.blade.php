@@ -461,6 +461,34 @@
             'entertainment' => ['title' => '١٠. وسائل الترفيه (التلفاز والإنترنت)', 'sub' => 'سرعة الواي فاي وجودة القنوات التلفزيونية'],
         ];
 
+        // الورقة 2: طاقم التمريض
+        $nursingCriteriaList = [
+            'nursing_greeting' => ['title' => '١. الترحيب والمهنية في التعامل', 'sub' => 'أسلوب الاستقبال واللباقة'],
+            'nursing_skill' => ['title' => '٢. المهارة في تقديم الرعاية السريرية', 'sub' => 'حقن الأدوية، تركيب الكانيولا، وتضميد الجروح'],
+            'nursing_care_attention' => ['title' => '٣. الاهتمام والرعاية المستمرة أثناء وجودك', 'sub' => 'المتابعة الدورية وتفقد حالة المريض'],
+            'nursing_instructions' => ['title' => '٤. وضوح التعليمات والتواصل معك', 'sub' => 'شرح الخطوات ومواعيد العلاج بلغة مبسطة'],
+            'nursing_response_speed' => ['title' => '٥. سرعة الاستجابة عند طلب المساعدة', 'sub' => 'الحضور الفوري عند الضغط على جرس النداء'],
+            'nursing_privacy_respect' => ['title' => '٦. المحافظة على الخصوصية والكرامة', 'sub' => 'مراعاة الستر وحفظ أسرار وخصوصية المريض'],
+        ];
+
+        // الورقة 2: قسم المختبر والتحاليل
+        $labCriteriaList = [
+            'lab_prep_instructions' => ['title' => '١. وضوح تعليمات التحضير للتحليل (إن وجدت)', 'sub' => 'توضيح شروط الصيام وأوقات سحب العينات'],
+            'lab_sampling_skill' => ['title' => '٢. الاحتراف والمهارة في سحب العينة', 'sub' => 'سحب الدم بدون ألم وبدقة عالية'],
+            'lab_hygiene_sterilization' => ['title' => '٣. النظافة والتعقيم في مكان سحب العينات', 'sub' => 'استخدام أدوات معقمة جديدة وقفازات نظيفة'],
+            'lab_results_speed' => ['title' => '٤. سرعة استخراج النتائج وتسليمها', 'sub' => 'إصدار النتائج في الوقت المحدد'],
+            'lab_staff_behavior' => ['title' => '٥. التعامل اللطيف والمطمئن أثناء العملية', 'sub' => 'تهدئة المريض والتعامل الإنساني الراقي'],
+        ];
+
+        // الورقة 2: الصيدلية والتعامل مع الأدوية
+        $pharmacyCriteriaList = [
+            'pharmacy_dispense_speed' => ['title' => '١. سرعة وصحة صرف الأدوية المطلوبة', 'sub' => 'صرف الأدوية الدقيقة دون تأخير أو أخطاء'],
+            'pharmacy_instruction_clarity' => ['title' => '٢. وضوح شرح طريقة استخدام الدواء', 'sub' => 'شرح الجرعة، التوقيت، ومع الأكل أو قبله'],
+            'pharmacy_comprehension_check' => ['title' => '٣. التأكد من فهمك الكامل لتعليمات الدواء', 'sub' => 'الإجابة على الاستفسارات والتأكد من إدراك المريض'],
+            'pharmacy_respect_politeness' => ['title' => '٤. اللباقة والاحترام في التعامل من قبل الصيدلي', 'sub' => 'حسن الاستقبال وطول البال'],
+            'pharmacy_med_availability' => ['title' => '٥. التوفر الكامل للأدوية الموصوفة', 'sub' => 'وجود كامل العلاجات دون نقص أو استبدال غير مبرر'],
+        ];
+
         $ratingLabels = [
             5 => ['name' => 'ممتاز', 'stars' => '5'],
             4 => ['name' => 'جيد جداً', 'stars' => '4'],
@@ -624,6 +652,153 @@
                 </div>
             </div>
 
+            {{-- ========================================================= --}}
+            {{-- الورقة 2: تقييم طاقم التمريض                              --}}
+            {{-- ========================================================= --}}
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon purple">
+                        <i class="fas fa-user-nurse"></i>
+                    </div>
+                    <div>
+                        <h3 class="section-title">تقييم طاقم التمريض والرعاية السريرية</h3>
+                        <p class="section-sub">الورقة الثانية: المهارة والاهتمام وسرعة الاستجابة</p>
+                    </div>
+                </div>
+
+                <div class="section-body">
+                    @foreach($nursingCriteriaList as $field => $info)
+                        <div class="criterion-item">
+                            <span class="criterion-label">{{ $info['title'] }}</span>
+                            <div class="segmented-rating-group">
+                                @foreach($ratingLabels as $val => $meta)
+                                    <div class="segmented-rating-option opt-score-{{ $val }}">
+                                        <input type="radio" 
+                                               name="{{ $field }}" 
+                                               id="{{ $field }}_{{ $val }}" 
+                                               value="{{ $val }}"
+                                               {{ old($field) == $val ? 'checked' : '' }}
+                                               onchange="updateProgress()">
+                                        <label class="segmented-rating-label" for="{{ $field }}_{{ $val }}">
+                                            <span class="star-num">
+                                                <i class="fas fa-star star-icon"></i>
+                                                {{ $meta['stars'] }}
+                                            </span>
+                                            <span>{{ $meta['name'] }}</span>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div class="mt-3 pt-2">
+                        <label class="form-label small fw-bold text-dark">
+                            <i class="far fa-comment-alt text-primary me-1"></i> ملاحظات إضافية حول تعامل التمريض (إن وجدت):
+                        </label>
+                        <textarea name="nursing_notes" class="custom-form-input" rows="2" placeholder="اكتب ملاحظاتك حول خدمات واستجابة كادر التمريض...">{{ old('nursing_notes') }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ========================================================= --}}
+            {{-- الورقة 2: تقييم قسم المختبر والتحاليل                     --}}
+            {{-- ========================================================= --}}
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon blue">
+                        <i class="fas fa-vial"></i>
+                    </div>
+                    <div>
+                        <h3 class="section-title">تقييم قسم المختبر وسحب التحاليل</h3>
+                        <p class="section-sub">الورقة الثانية: مهارة سحب العينات والتعقيم وسرعة النتائج</p>
+                    </div>
+                </div>
+
+                <div class="section-body">
+                    @foreach($labCriteriaList as $field => $info)
+                        <div class="criterion-item">
+                            <span class="criterion-label">{{ $info['title'] }}</span>
+                            <div class="segmented-rating-group">
+                                @foreach($ratingLabels as $val => $meta)
+                                    <div class="segmented-rating-option opt-score-{{ $val }}">
+                                        <input type="radio" 
+                                               name="{{ $field }}" 
+                                               id="{{ $field }}_{{ $val }}" 
+                                               value="{{ $val }}"
+                                               {{ old($field) == $val ? 'checked' : '' }}
+                                               onchange="updateProgress()">
+                                        <label class="segmented-rating-label" for="{{ $field }}_{{ $val }}">
+                                            <span class="star-num">
+                                                <i class="fas fa-star star-icon"></i>
+                                                {{ $meta['stars'] }}
+                                            </span>
+                                            <span>{{ $meta['name'] }}</span>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div class="mt-3 pt-2">
+                        <label class="form-label small fw-bold text-dark">
+                            <i class="far fa-comment-alt text-primary me-1"></i> ملاحظات إضافية حول تجربة المختبر (إن وجدت):
+                        </label>
+                        <textarea name="lab_notes" class="custom-form-input" rows="2" placeholder="اكتب ملاحظاتك حول تجربة التحاليل وسحب العينات...">{{ old('lab_notes') }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ========================================================= --}}
+            {{-- الورقة 2: تقييم الصيدلية والتعامل مع الأدوية              --}}
+            {{-- ========================================================= --}}
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon gold">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div>
+                        <h3 class="section-title">تقييم الصيدلية والتعامل مع الأدوية</h3>
+                        <p class="section-sub">الورقة الثانية: توفر العلاج ودقة الصرف وشرح الاستخدام</p>
+                    </div>
+                </div>
+
+                <div class="section-body">
+                    @foreach($pharmacyCriteriaList as $field => $info)
+                        <div class="criterion-item">
+                            <span class="criterion-label">{{ $info['title'] }}</span>
+                            <div class="segmented-rating-group">
+                                @foreach($ratingLabels as $val => $meta)
+                                    <div class="segmented-rating-option opt-score-{{ $val }}">
+                                        <input type="radio" 
+                                               name="{{ $field }}" 
+                                               id="{{ $field }}_{{ $val }}" 
+                                               value="{{ $val }}"
+                                               {{ old($field) == $val ? 'checked' : '' }}
+                                               onchange="updateProgress()">
+                                        <label class="segmented-rating-label" for="{{ $field }}_{{ $val }}">
+                                            <span class="star-num">
+                                                <i class="fas fa-star star-icon"></i>
+                                                {{ $meta['stars'] }}
+                                            </span>
+                                            <span>{{ $meta['name'] }}</span>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div class="mt-3 pt-2">
+                        <label class="form-label small fw-bold text-dark">
+                            <i class="far fa-comment-alt text-primary me-1"></i> ملاحظات إضافية حول تعامل الصيدلية (إن وجدت):
+                        </label>
+                        <textarea name="pharmacy_notes" class="custom-form-input" rows="2" placeholder="اكتب ملاحظاتك حول خدمة صرف الأدوية وتوفرها...">{{ old('pharmacy_notes') }}</textarea>
+                    </div>
+                </div>
+            </div>
+
             <!-- البطاقة الثالثة: مقترحات التحسين ومؤشر التوصية NPS -->
             <div class="section-card">
                 <div class="section-header">
@@ -677,6 +852,38 @@
                 </div>
             </div>
 
+            {{-- ========================================================= --}}
+            {{-- الورقة 2: بيانات المريض والتوقيع (اختياري)                 --}}
+            {{-- ========================================================= --}}
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon teal">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div>
+                        <h3 class="section-title">بيانات التواصل (اختياري)</h3>
+                        <p class="section-sub">لمساعدتنا في متابعة ملاحظاتك وتقدير وقتك الثمين</p>
+                    </div>
+                </div>
+
+                <div class="section-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-bold text-dark">الاسم الكريم:</label>
+                            <input type="text" name="respondent_name" class="custom-form-input" value="{{ old('respondent_name', $survey->patient?->user?->name) }}" placeholder="اسم المريض أو المرافق...">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-bold text-dark">رقم الهاتف:</label>
+                            <input type="text" name="respondent_phone" class="custom-form-input font-monospace" value="{{ old('respondent_phone', $survey->patient?->user?->phone) }}" placeholder="07XXXXXXXXX">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">البريد الإلكتروني (إن وجد):</label>
+                            <input type="email" name="respondent_email" class="custom-form-input" value="{{ old('respondent_email', '') }}" placeholder="name@example.com">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div style="height: 40px;"></div>
 
             <!-- Bottom Floating Action Bar -->
@@ -694,36 +901,37 @@
 
     <script>
         function updateProgress() {
-            const totalCriteria = 12; // 10 room criteria + 1 doctor + 1 nps
+            const allKeys = [
+                // الغرفة (10)
+                'cleanliness_room', 'cleanliness_bathroom', 'temperature_ac', 'lighting',
+                'quietness_privacy', 'bed_comfort', 'control_panel', 'storage_space',
+                'furniture_safety', 'entertainment',
+                // الطبيب (1)
+                'doctor_communication',
+                // التمريض (6)
+                'nursing_greeting', 'nursing_skill', 'nursing_care_attention',
+                'nursing_instructions', 'nursing_response_speed', 'nursing_privacy_respect',
+                // المختبر (5)
+                'lab_prep_instructions', 'lab_sampling_skill', 'lab_hygiene_sterilization',
+                'lab_results_speed', 'lab_staff_behavior',
+                // الصيدلية (5)
+                'pharmacy_dispense_speed', 'pharmacy_instruction_clarity', 'pharmacy_comprehension_check',
+                'pharmacy_respect_politeness', 'pharmacy_med_availability',
+                // مؤشر التوصية (1)
+                'recommend_score_nps'
+            ];
+
             const form = document.getElementById('publicSurveyForm');
             if (!form) return;
 
             let answeredCount = 0;
-
-            // Check the 10 room criteria
-            const roomKeys = [
-                'cleanliness_room', 'cleanliness_bathroom', 'temperature_ac', 'lighting',
-                'quietness_privacy', 'bed_comfort', 'control_panel', 'storage_space',
-                'furniture_safety', 'entertainment'
-            ];
-
-            roomKeys.forEach(k => {
+            allKeys.forEach(k => {
                 if (form.querySelector('input[name="' + k + '"]:checked')) {
                     answeredCount++;
                 }
             });
 
-            // Doctor communication
-            if (form.querySelector('input[name="doctor_communication"]:checked')) {
-                answeredCount++;
-            }
-
-            // NPS
-            if (form.querySelector('input[name="recommend_score_nps"]:checked')) {
-                answeredCount++;
-            }
-
-            const percent = Math.min(100, Math.round((answeredCount / totalCriteria) * 100));
+            const percent = Math.min(100, Math.round((answeredCount / allKeys.length) * 100));
             const fill = document.getElementById('progressBarFill');
             const text = document.getElementById('progressPercentText');
 

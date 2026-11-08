@@ -487,7 +487,7 @@ class RolePermissionsMatrixTest extends TestCase
         $role->syncPermissions([]);
         $this->actingAs($user)->get(route('surgeries.index'))->assertStatus(403);
         $this->actingAs($user)->get(route('surgeries.create'))->assertStatus(403);
-        $this->actingAs($user)->get(route('surgeries.waiting'))->assertStatus(403);
+        $this->actingAs($user)->postJson(route('surgeries.theaters.quick-store'), ['name' => 'OR Forbidden'])->assertStatus(403);
         $this->actingAs($user)->get(route('rooms.create'))->assertStatus(403);
         $this->actingAs($user)->get(route('surgical-operations.index'))->assertStatus(403);
         $this->actingAs($user)->get(route('surgeon-station.index'))->assertStatus(403);
@@ -507,9 +507,9 @@ class RolePermissionsMatrixTest extends TestCase
         $role->givePermissionTo('create surgeries');
         $this->actingAs($user)->get(route('surgeries.create'))->assertStatus(200);
 
-        // 4. Grant 'manage surgery waiting list': waiting page returns 200
+        // 4. Grant 'manage surgery waiting list': waiting management actions authorized
         $role->givePermissionTo('manage surgery waiting list');
-        $this->actingAs($user)->get(route('surgeries.waiting'))->assertStatus(200);
+        $this->actingAs($user)->postJson(route('surgeries.theaters.quick-store'), ['name' => 'OR Authorized'])->assertStatus(200);
 
         // 5. Grant 'manage rooms': room creation returns 200
         $role->givePermissionTo('manage rooms');

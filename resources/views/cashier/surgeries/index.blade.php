@@ -15,6 +15,10 @@
                     </p>
                 </div>
                 <div>
+                    <a href="{{ route('cashier.surgeries.doctor-accounts') }}" class="btn btn-outline-danger me-2">
+                        <i class="fas fa-wallet me-2"></i>
+                        حسابات الجراحين
+                    </a>
                     <a href="{{ route('cashier.surgeries.paid') }}" class="btn btn-success me-2">
                         <i class="fas fa-file-invoice-dollar me-2"></i>
                         المدفوعات والإيصالات

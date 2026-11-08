@@ -1222,8 +1222,31 @@
         $standardResults = $allResults->filter(fn($r) => !$isGeneralUrine($r));
         $urineResults = $allResults->filter(fn($r) => $isGeneralUrine($r));
 
-        $hasStandardContent = ($standardResults->count() > 0) || ($urineResults->count() === 0);
-        $hasUrineContent = ($urineResults->count() > 0);
+        // قائمة التحاليل المطلوبة لأمر العمل (مطابقة لباقي الأقسام في print.blade.php)
+        $requestedLabTestsList = $emergencyLab->labTests;
+
+        // التحقق من وجود نتائج مدخلة فعلياً أو اكتمال الفحص
+        $hasActualResults = $allResults->contains(fn($r) => !empty(trim((string)$r->value)));
+        $isCompleted = ($emergencyLab->status === 'completed');
+
+        $hasWorkOrder = (!$isCompleted && !$hasActualResults && $requestedLabTestsList->count() > 0);
+        $hasStandardContent = !$hasWorkOrder && (($standardResults->count() > 0) || ($urineResults->count() === 0));
+        $hasUrineContent = !$hasWorkOrder && ($urineResults->count() > 0);
+
+        // حصر الفحوصات المطلوبة التي لم تكتمل نتائجها بعد أو التي تعتمد على مرفق خارجي
+        $handledTestNames = $urineResults->pluck('parent_test_name')->filter()->unique()->toArray();
+        $handledTestNames = array_merge(
+            $handledTestNames,
+            $standardResults->pluck('test_name')->toArray(),
+            $standardResults->pluck('parent_test_name')->filter()->toArray()
+        );
+        $pendingTests = collect($requestedLabTestsList ?? [])->filter(function($item) use ($handledTestNames) {
+            $name = is_array($item) ? ($item['name'] ?? '') : (is_object($item) ? $item->name : (string)$item);
+            foreach ($handledTestNames as $hn) {
+                if (strcasecmp(trim($hn), trim($name)) === 0) return false;
+            }
+            return true;
+        });
     @endphp
 
     <!-- Print Action Toolbar -->
@@ -1278,9 +1301,9 @@
     </div>
 
     {{-- =========================================================================
-         PAGE 1: Standard Laboratory Tests (or Standalone G.U.E if it's the only test)
+         PAGE 1: Standard Laboratory Tests (or Standalone G.U.E if it's the only test, or Work Order)
          ========================================================================= --}}
-    @if($hasStandardContent || $hasUrineContent)
+    @if($hasStandardContent || $hasUrineContent || $hasWorkOrder)
     <div class="report-page page-1">
         <div class="report-main-content">
             <!-- Full Official Hospital Header -->
@@ -1307,10 +1330,10 @@
             <!-- Document Title Banner -->
             <div class="document-title-banner">
                 <h3>
-                    @if($hasStandardContent)
-                        CLINICAL LABORATORY REPORT (EMERGENCY STAT)
-                    @else
+                    @if(!$hasStandardContent && $hasUrineContent && !$hasWorkOrder)
                         CLINICAL LABORATORY REPORT (EMERGENCY STAT) - GENERAL URINE EXAMINATION (G.U.E)
+                    @else
+                        CLINICAL LABORATORY REPORT (EMERGENCY STAT)
                     @endif
                 </h3>
                 <div class="report-code-badge">
@@ -1544,6 +1567,71 @@
                             </div>
                         </div>
                     @endforeach
+                </div>
+            @elseif($hasWorkOrder)
+                <!-- Requisition / Work Order Mode (مطابق تماماً لما في print.blade.php لباقي الأقسام) -->
+                <div style="background: #f8fafc; border: 1px dashed #0284c7; border-radius: 6px; padding: 6px 12px; margin-bottom: 12px; font-size: 13px; color: #0369a1; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-clipboard-list me-1"></i> قائمة التحاليل المطلوبة (أمر عمل المختبر / Test Work Order)</span>
+                    <span class="badge bg-primary px-2 py-1">بانتظار إدخال النتائج</span>
+                </div>
+
+                <div class="tests-header-bar">
+                    <div class="header-col">INVESTIGATION / TEST NAME</div>
+                    <div class="header-col center">Conventional Units / Result</div>
+                    <div class="header-col right">Status / Flag</div>
+                </div>
+
+                @php $currentGroup = null; @endphp
+                @foreach($requestedLabTestsList as $reqTestItem)
+                    @php
+                        $tName = is_array($reqTestItem) ? ($reqTestItem['name'] ?? '') : (is_object($reqTestItem) ? $reqTestItem->name : (string)$reqTestItem);
+                        $tUnit = is_array($reqTestItem) ? ($reqTestItem['unit'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->unit ?? '') : '');
+                        $tRef = is_array($reqTestItem) ? ($reqTestItem['reference_range'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->reference_range ?? '') : '');
+                        $tCat = is_array($reqTestItem) ? ($reqTestItem['category'] ?? $reqTestItem['main_category'] ?? '') : (is_object($reqTestItem) ? ($reqTestItem->category ?? $reqTestItem->main_category ?? '') : '');
+
+                        if (empty($tUnit) || empty($tRef) || empty($tCat)) {
+                            $dbTest = \App\Models\LabTest::where('name', $tName)->first();
+                            if ($dbTest) {
+                                $tUnit = $tUnit ?: $dbTest->unit;
+                                $tRef = $tRef ?: $dbTest->reference_range;
+                                $tCat = $tCat ?: ($dbTest->category ?? $dbTest->main_category);
+                            }
+                        }
+                    @endphp
+
+                    @if($tCat && $tCat !== $currentGroup)
+                        @php $currentGroup = $tCat; @endphp
+                        <div class="category-header-row">
+                            {{ $currentGroup }}
+                        </div>
+                    @endif
+
+                    <div class="test-card">
+                        <div class="test-main-row">
+                            <div class="test-name">{{ $tName }}</div>
+                            <div class="test-value-cell">
+                                <div class="current-val-line">
+                                    <span style="display: inline-block; width: 80px; border-bottom: 1.5px dotted #94a3b8; margin-right: 5px;">&nbsp;</span>
+                                    @if($tUnit) <span class="unit-label">{{ $tUnit }}</span> @endif
+                                </div>
+                            </div>
+                            <div class="test-value-cell right">
+                                <span class="badge" style="background-color: #f1f5f9; color: #64748b; font-size: 11px; border: 1px solid #cbd5e1; font-weight: normal;">Pending</span>
+                            </div>
+                        </div>
+                        @if($tRef)
+                        <div class="test-meta-row">
+                            <div class="meta-label">Reference Range :</div>
+                            <div class="meta-conv-range">{{ $tRef }}</div>
+                            <div class="meta-status-blank"></div>
+                        </div>
+                        @endif
+                        <div class="test-device-row">STAT Emergency Lab Diagnostic System • Rapid Automated Analysis</div>
+                    </div>
+                @endforeach
+            @else
+                <div style="text-align: center; padding: 40px; color: #888;">
+                    No laboratory tests or results recorded for this request yet.
                 </div>
             @endif
 

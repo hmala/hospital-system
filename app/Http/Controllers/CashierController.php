@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\ConsultationRevenue;
+use App\Models\Doctor;
+use App\Models\DoctorDue;
 use App\Models\Emergency;
 use App\Models\HospitalExtraService;
 use App\Models\IncubatorReservation;
@@ -14,6 +16,8 @@ use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
 use App\Models\Surgery;
 use App\Models\SurgeryExtraService;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\Visit;
 use App\Models\VisitExtraService;
 use Carbon\Carbon;
@@ -633,6 +637,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -2018,6 +2026,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -2560,7 +2572,7 @@ class CashierController extends Controller
 
     protected function buildStatementData(Request $request): array
     {
-        $query = ConsultationRevenue::with(['doctor.user', 'appointment.patient.user', 'serviceType'])
+        $query = ConsultationRevenue::with(['doctor.user', 'appointment.patient.user', 'patient.user', 'serviceType'])
             ->where('movement_type', 'payment')
             ->whereHas('doctor', function ($q) {
                 $q->where('type', 'consultant');
@@ -2861,6 +2873,357 @@ class CashierController extends Controller
     }
 
     /**
+     * حسابات الأطباء الجراحين (الشاشة الرئيسية)
+     */
+    public function surgeryDoctorAccounts(Request $request)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view account statements') && ! $user->can('view doctor accounts') && ! $user->can('process surgery payments')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى حسابات جراحي العمليات');
+        }
+
+        // جلب الأطباء الذين أجروا عمليات جراحية أو تخصصهم جراحة
+        $doctors = Doctor::with(['user', 'department', 'surgeries.additionalOperations', 'surgeries.payments'])
+            ->where(function ($q) {
+                $q->whereHas('surgeries')
+                    ->orWhere('type', 'surgeon')
+                    ->orWhere('specialization', 'like', '%جراح%');
+            })
+            ->get();
+
+        $doctorsSummary = $doctors->map(function ($doctor) {
+            $surgeries = $doctor->surgeries->filter(function ($s) {
+                if ($s->status === 'cancelled' || $s->payment_status === 'refunded') {
+                    return false;
+                }
+                return in_array($s->payment_status, ['paid', 'partial']) || $s->payments->where('amount', '>', 0)->isNotEmpty();
+            });
+
+            $surgeriesCount = $surgeries->count();
+            $grossFees = 0.0;
+            $packageDeductions = 0.0;
+            $netEarned = 0.0;
+
+            foreach ($surgeries as $surgery) {
+                $gross = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
+                $grossFees += $gross;
+
+                $surgeryDeductions = (float) $surgery->payments->where('payment_type', 'surgery')->sum('doctor_deductions_amount');
+                $packageDeductions += $surgeryDeductions;
+
+                $isIns = in_array($surgery->insurance_type, ['hi', 'moi', 'health_insurance']);
+                $net = $isIns ? $gross : max(0.0, $gross - $surgeryDeductions);
+                $netEarned += $net;
+            }
+
+            // مستحقات الطبيب المسددة / المصروفة
+            $totalPaid = (float) DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'paid')
+                ->where(function ($q) {
+                    $q->whereHas('payment', function ($pq) {
+                        $pq->where('payment_type', 'surgery');
+                    })
+                        ->orWhere('notes', 'like', '%عملي%')
+                        ->orWhere('notes', 'like', '%جراح%');
+                })
+                ->sum('amount');
+
+            $balance = max(0.0, $netEarned - $totalPaid);
+
+            $lastPaid = DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'paid')
+                ->where(function ($q) {
+                    $q->whereHas('payment', function ($pq) {
+                        $pq->where('payment_type', 'surgery');
+                    })
+                        ->orWhere('notes', 'like', '%عملي%')
+                        ->orWhere('notes', 'like', '%جراح%');
+                })
+                ->latest('paid_at')
+                ->first();
+
+            return (object) [
+                'doctor' => $doctor,
+                'surgeries_count' => $surgeriesCount,
+                'gross_fees' => $grossFees,
+                'package_deductions' => $packageDeductions,
+                'net_earned' => $netEarned,
+                'total_paid' => $totalPaid,
+                'balance' => $balance,
+                'last_paid_at' => $lastPaid?->paid_at,
+            ];
+        })->sortByDesc('balance');
+
+        $totals = [
+            'total_surgeries' => $doctorsSummary->sum('surgeries_count'),
+            'total_gross' => $doctorsSummary->sum('gross_fees'),
+            'total_deductions' => $doctorsSummary->sum('package_deductions'),
+            'total_net' => $doctorsSummary->sum('net_earned'),
+            'total_paid' => $doctorsSummary->sum('total_paid'),
+            'total_balance' => $doctorsSummary->sum('balance'),
+        ];
+
+        return view('cashier.surgeries.doctor-accounts', compact('doctorsSummary', 'totals'));
+    }
+
+    /**
+     * كشف حساب الجراح التفصيلي وعملياته
+     */
+    public function surgeryDoctorAccount(Request $request, Doctor $doctor)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view account statements') && ! $user->can('view doctor accounts') && ! $user->can('process surgery payments')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى كشف حساب الجراح');
+        }
+
+        $doctor->load(['user', 'department']);
+
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+        $paymentStatusFilter = $request->query('payment_status');
+
+        $baseQuery = Surgery::with([
+            'patient.user',
+            'department',
+            'room',
+            'additionalOperations',
+            'payments' => fn ($q) => $q->where('payment_type', 'surgery')->latest(),
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'extraServices',
+        ])
+            ->where('doctor_id', $doctor->id);
+
+        if ($fromDate) {
+            $baseQuery->whereDate('scheduled_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $baseQuery->whereDate('scheduled_date', '<=', $toDate);
+        }
+
+        // العمليات المعتمدة السارية (تدخل في الحسابات والرصيد المالي للجراح)
+        $validQuery = (clone $baseQuery)
+            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', '!=', 'refunded')
+            ->where(function ($q) {
+                $q->whereIn('payment_status', ['paid', 'partial'])
+                    ->orWhereHas('payments', fn ($pq) => $pq->where('payment_type', 'surgery')->where('amount', '>', 0));
+            });
+
+        // العمليات الملغاة والمسترجعة (للعلم والأرشفة والتدقيق الرقابي دون التأثير المالي)
+        $cancelledQuery = (clone $baseQuery)
+            ->where(function ($q) {
+                $q->where('status', 'cancelled')
+                    ->orWhere('payment_status', 'refunded');
+            });
+
+        $allSurgeries = (clone $validQuery)->get();
+        $cancelledSurgeries = (clone $cancelledQuery)->orderBy('scheduled_date', 'desc')->get();
+
+        $grossFees = 0.0;
+        $packageDeductions = 0.0;
+        $netEarned = 0.0;
+
+        foreach ($allSurgeries as $surgery) {
+            $gross = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
+            $grossFees += $gross;
+
+            $sDed = (float) $surgery->payments->where('payment_type', 'surgery')->sum('doctor_deductions_amount');
+            $packageDeductions += $sDed;
+
+            $isIns = in_array($surgery->insurance_type, ['hi', 'moi', 'health_insurance']);
+            $net = $isIns ? $gross : max(0.0, $gross - $sDed);
+            $netEarned += $net;
+        }
+
+        $totalPaid = (float) DoctorDue::where('doctor_id', $doctor->id)
+            ->where('status', 'paid')
+            ->where(function ($q) {
+                $q->whereHas('payment', function ($pq) {
+                    $pq->where('payment_type', 'surgery');
+                })
+                    ->orWhere('notes', 'like', '%عملي%')
+                    ->orWhere('notes', 'like', '%جراح%');
+            })
+            ->sum('amount');
+
+        $balance = max(0.0, $netEarned - $totalPaid);
+
+        $surgeries = $validQuery->orderBy('scheduled_date', 'desc')->paginate(15)->withQueryString();
+
+        // سجل الدفعات المصروفة للطبيب
+        $payouts = DoctorDue::with('paidBy')
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'paid')
+            ->where(function ($q) {
+                $q->whereHas('payment', function ($pq) {
+                    $pq->where('payment_type', 'surgery');
+                })
+                    ->orWhere('notes', 'like', '%عملي%')
+                    ->orWhere('notes', 'like', '%جراح%');
+            })
+            ->orderBy('paid_at', 'desc')
+            ->get();
+
+        $stats = [
+            'gross_fees' => $grossFees,
+            'package_deductions' => $packageDeductions,
+            'net_earned' => $netEarned,
+            'total_paid' => $totalPaid,
+            'balance' => $balance,
+            'surgeries_count' => $allSurgeries->count(),
+            'cancelled_count' => $cancelledSurgeries->count(),
+        ];
+
+        return view('cashier.surgeries.doctor-account-details', compact('doctor', 'surgeries', 'cancelledSurgeries', 'payouts', 'stats', 'fromDate', 'toDate', 'paymentStatusFilter'));
+    }
+
+    /**
+     * صرف دفعة / تصفية رصيد للجراح
+     */
+    public function surgeryDoctorPayout(Request $request, Doctor $doctor)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('process surgery payments')))) {
+            abort(403, 'غير مصرح لك بصرف مستحقات الأطباء');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $amount = (float) $request->input('amount');
+
+        // حساب الرصيد المتاح
+        $surgeries = Surgery::with(['additionalOperations', 'payments'])
+            ->where('doctor_id', $doctor->id)
+            ->where(function ($q) {
+                $q->whereIn('payment_status', ['paid', 'partial'])
+                    ->orWhereHas('payments', fn ($pq) => $pq->where('payment_type', 'surgery'));
+            })
+            ->get();
+
+        $netEarned = 0.0;
+        foreach ($surgeries as $surgery) {
+            $gross = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
+            $sDed = (float) $surgery->payments->where('payment_type', 'surgery')->sum('doctor_deductions_amount');
+            $isIns = in_array($surgery->insurance_type, ['hi', 'moi', 'health_insurance']);
+            $netEarned += $isIns ? $gross : max(0.0, $gross - $sDed);
+        }
+
+        $totalPaid = (float) DoctorDue::where('doctor_id', $doctor->id)
+            ->where('status', 'paid')
+            ->where(function ($q) {
+                $q->whereHas('payment', function ($pq) {
+                    $pq->where('payment_type', 'surgery');
+                })
+                    ->orWhere('notes', 'like', '%عملي%')
+                    ->orWhere('notes', 'like', '%جراح%');
+            })
+            ->sum('amount');
+
+        $balance = max(0.0, $netEarned - $totalPaid);
+
+        if ($amount > $balance) {
+            return back()->with('error', 'المبلغ المطلوب صرفه ('.number_format($amount, 0).' د.ع) أكبر من الرصيد المتبقي المتاح للطبيب ('.number_format($balance, 0).' د.ع).');
+        }
+
+        DB::beginTransaction();
+        try {
+            $voucherNo = 'EXP-SURG-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
+            DoctorDue::create([
+                'doctor_id' => $doctor->id,
+                'amount' => $amount,
+                'status' => 'paid',
+                'notes' => trim(($request->input('notes') ?? 'صرف مستحقات أتعاب عمليات جراحية').' [سند: '.$voucherNo.']'),
+                'paid_by_id' => $user->id,
+                'paid_at' => Carbon::now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.surgeries.doctor-account', $doctor)
+                ->with('success', 'تم تسجيل سند صرف مستحقات الجراح د. '.$doctor->user?->name.' بمبلغ '.number_format($amount, 0).' د.ع بنجاح.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'حدث خطأ أثناء تسجيل الصرف: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * تصفية عملية جراحية محددة للطبيب
+     */
+    public function settleSingleSurgeryDoctorDue(Request $request, Doctor $doctor, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('process surgery payments')))) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح لك بصرف مستحقات الأطباء'], 403);
+            }
+            abort(403, 'غير مصرح لك بصرف مستحقات الأطباء');
+        }
+
+        $payment = $surgery->payments()->where('payment_type', 'surgery')->latest()->first();
+        if (! $payment) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'لم يتم سداد هذه العملية في الكاشير بعد'], 422);
+            }
+
+            return back()->with('error', 'لم يتم سداد هذه العملية في الكاشير بعد');
+        }
+
+        $gross = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
+        $deductions = (float) ($payment->doctor_deductions_amount ?? 0);
+        $isIns = in_array($surgery->insurance_type, ['hi', 'moi', 'health_insurance']);
+        $net = $isIns ? $gross : max(0.0, $gross - $deductions);
+
+        $due = DoctorDue::firstOrCreate(
+            [
+                'doctor_id' => $doctor->id,
+                'payment_id' => $payment->id,
+            ],
+            [
+                'amount' => $net,
+                'status' => 'pending',
+                'notes' => 'أتعاب عملية جراحية #'.$surgery->id,
+            ]
+        );
+
+        if ($due->status === 'paid') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'تم صرف مستحقات هذه العملية مسبقاً']);
+            }
+
+            return back()->with('warning', 'تم صرف مستحقات هذه العملية مسبقاً');
+        }
+
+        $due->update([
+            'status' => 'paid',
+            'amount' => $net,
+            'paid_by_id' => $user->id,
+            'paid_at' => Carbon::now(),
+            'notes' => trim(($due->notes ?? '').' - تم الصرف والتصفية من كشف حساب الجراح'),
+        ]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تمت تصفية وصرف مستحقات العملية #'.$surgery->id.' بنجاح',
+                'paid_at' => $due->paid_at->format('Y-m-d H:i'),
+                'paid_by' => $user->name,
+            ]);
+        }
+
+        return back()->with('success', 'تمت تصفية وصرف مستحقات العملية بنجاح');
+    }
+
+    /**
      * عرض نموذج دفع العملية الجراحية
      */
     public function showSurgeryPaymentForm(Surgery $surgery)
@@ -2879,13 +3242,27 @@ class CashierController extends Controller
                 ->with('warning', 'لا يمكن دفع عملية ملغاة');
         }
 
+        // إلحاق الخدمات الإضافية الافتراضية للعمليات النشطة إذا لم تكن ملحقة مسبقاً
+        if (! $isCancelled) {
+            $surgery->attachDefaultExtraServices();
+        }
+
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية/تخفيض الغرفة ويوجد فرق مالي معلق أو مستحق استرجاع)
-        $hasRemainingRoomFee = ! $isCancelled && ((($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0);
-        $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : ($surgery->room_fee ?? 0))) > 0;
+        $stayDetails = $surgery->calculateStayDetails();
+        $isInsuranceSurgery = in_array($surgery->insurance_type, ['hi', 'moi']) || in_array($surgery->patient?->insurance_type, ['hi', 'moi']);
+        $isStayInsForm = $isInsuranceSurgery && ($stayDetails['is_insurance_calculated'] ?? false);
+        $targetRoomFee = $isStayInsForm ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+
+        $hasRemainingRoomFee = ! $isCancelled && (($targetRoomFee - ($surgery->room_fee_paid_amount ?? 0)) > 0);
+        $hasExcessRoomFee = (($surgery->room_fee_paid_amount ?? 0) - ($isCancelled ? 0 : $targetRoomFee)) > 0;
         $totalSurgeryFee = $isCancelled ? 0 : (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price'));
         $hasExcessSurgeryFee = (($surgery->surgery_fee_paid_amount ?? 0) - $totalSurgeryFee) > 0;
+        $hasRemainingSurgeryFee = ! $isCancelled && (($totalSurgeryFee - ($surgery->surgery_fee_paid_amount ?? 0)) > 0);
+        $hasPendingExtraServices = ! $isCancelled && $surgery->extraServices()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingLab = ! $isCancelled && $surgery->labTests()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingRad = ! $isCancelled && $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->exists();
 
-        if (! $isCancelled && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee) {
+        if (! $isCancelled && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee && ! $hasRemainingSurgeryFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
@@ -2992,6 +3369,10 @@ class CashierController extends Controller
         }
 
         if ($extraService->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً'], 422);
+            }
+
             return redirect()->route('cashier.surgeries.payment.form', $surgery)
                 ->with('error', 'لا يمكن حذف خدمة تم دفعها وتسديدها مسبقاً');
         }
@@ -2999,8 +3380,125 @@ class CashierController extends Controller
         $serviceName = $extraService->name;
         $extraService->delete();
 
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف خدمة "'.$serviceName.'" بنجاح']);
+        }
+
         return redirect()->route('cashier.surgeries.payment.form', $surgery)
             ->with('success', 'تم حذف خدمة "'.$serviceName.'" بنجاح');
+    }
+
+    /**
+     * حذف تحليل مخبري معلق من العملية الجراحية
+     */
+    public function removeSurgeryLabTest(Surgery $surgery, SurgeryLabTest $labTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة تحاليل العمليات');
+        }
+
+        if ($labTest->surgery_id !== $surgery->id) {
+            abort(404, 'التحليل غير مرتبط بهذه العملية');
+        }
+
+        if ($labTest->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف تحليل تم دفعه وتسديده مسبقاً'], 422);
+            }
+
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف تحليل تم دفعه وتسديده مسبقاً');
+        }
+
+        $testName = $labTest->labTest->name ?? 'تحليل مخبري';
+        $labTest->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف التحليل "'.$testName.'" بنجاح']);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف التحليل "'.$testName.'" بنجاح');
+    }
+
+    /**
+     * حذف فحص أشعة معلق من العملية الجراحية
+     */
+    public function removeSurgeryRadiologyTest(Surgery $surgery, SurgeryRadiologyTest $radiologyTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بإدارة أشعة العمليات');
+        }
+
+        if ($radiologyTest->surgery_id !== $surgery->id) {
+            abort(404, 'فحص الأشعة غير مرتبط بهذه العملية');
+        }
+
+        if ($radiologyTest->payment_status === 'paid') {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'لا يمكن حذف فحص أشعة تم دفعه وتسديده مسبقاً'], 422);
+            }
+
+            return redirect()->route('cashier.surgeries.payment.form', $surgery)
+                ->with('error', 'لا يمكن حذف فحص أشعة تم دفعه وتسديده مسبقاً');
+        }
+
+        $radName = $radiologyTest->radiologyType->name ?? 'فحص أشعة';
+        $radiologyTest->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف فحص الأشعة "'.$radName.'" بنجاح']);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حذف فحص الأشعة "'.$radName.'" بنجاح');
+    }
+
+    /**
+     * تعديل سعر خدمة إضافية معلقة بالعملية الجراحية
+     */
+    public function updateSurgeryExtraService(Request $request, Surgery $surgery, SurgeryExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
+            abort(403, 'غير مصرح لك بتعديل خدمات العمليات');
+        }
+
+        if ($extraService->surgery_id !== $surgery->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه العملية');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return response()->json(['error' => 'لا يمكن تعديل خدمة مدفوعة'], 422);
+        }
+
+        $request->validate([
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        $price = (float) $request->input('price');
+        $qty = max(1, (int) $extraService->quantity);
+        $extraService->update([
+            'price' => $price,
+            'total_amount' => $price * $qty,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'price' => $price,
+                'total_amount' => $price * $qty,
+                'formatted_price' => number_format($price * $qty, 0).' د.ع',
+            ]);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم تعديل سعر خدمة "'.$extraService->name.'" إلى '.number_format($price * $qty, 0).' د.ع');
     }
 
     /**
@@ -3042,8 +3540,16 @@ class CashierController extends Controller
         ]);
 
         // التحقق من أن العملية لم يتم دفعها بالكامل (أو تم ترقية الغرفة ويوجد فرق مالي)
-        $hasRemainingRoomFee = (($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
-        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee) {
+        $stayDetails = $surgery->calculateStayDetails();
+        $isInsuranceSurgery = in_array($surgery->insurance_type, ['hi', 'moi']) || in_array($surgery->patient?->insurance_type, ['hi', 'moi']);
+        $isStayInsForm = $isInsuranceSurgery && ($stayDetails['is_insurance_calculated'] ?? false);
+        $targetRoomFee = $isStayInsForm ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+        $hasRemainingRoomFee = (($targetRoomFee) - ($surgery->room_fee_paid_amount ?? 0)) > 0;
+        $hasPendingExtraServices = $surgery->extraServices()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingLab = $surgery->labTests()->where('payment_status', '!=', 'paid')->exists();
+        $hasPendingRad = $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->exists();
+
+        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad) {
             return redirect()->route('cashier.surgeries.index')
                 ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
         }
@@ -3098,47 +3604,10 @@ class CashierController extends Controller
                 }
             }
 
-            // 2. Room Fee Payment
-            $roomFeePaidThisTime = 0;
-            if ($payRoom) {
-                $remainingRoomFee = max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
-                if ($remainingRoomFee > 0) {
-                    if ($isInclusive) {
-                        // inclusive covers room fee
-                        $roomFeePaidThisTime = $remainingRoomFee;
-                        $paidItems[] = 'أجور الغرفة (مشمولة في عرض العملية)';
-                    } else {
-                        if ($request->input('room_payment_type') === 'partial') {
-                            $customAmount = floatval($request->input('room_custom_amount'));
-                            if ($customAmount <= 0) {
-                                throw new \Exception('المبلغ المحدد لدفع أجور الغرفة غير صالح');
-                            }
-                            $roomFeePaidThisTime = min($customAmount, $remainingRoomFee);
-                        } else {
-                            $roomFeePaidThisTime = $remainingRoomFee;
-                        }
-                        $actualAmount += $roomFeePaidThisTime;
-                        $paidItems[] = 'أجور الغرفة - مدفوع: '.number_format($roomFeePaidThisTime, 0).' د.ع';
-                    }
-                }
-            }
-
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
-
-            $surgeryCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('surgery')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $labCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('lab')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $radCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('radiology')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
-            $ecgCopay = ($insuranceType === 'hi' && $patient)
-                ? (float) $patient->getCopayPercentageFor('ecg')
-                : (float) ($request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
 
             $surgeryApproved = 0.0;
             $surgeryPatientShare = 0.0;
@@ -3154,17 +3623,60 @@ class CashierController extends Controller
                 }
             }
 
+            // 2. Room Fee Payment
+            $includedPackageItems = [];
+            $doctorDeductionsAmount = 0.0;
+            $roomFeePaidThisTime = 0;
             $roomApproved = 0.0;
             $roomPatientShare = 0.0;
             $roomInsuranceShare = 0.0;
-            if ($payRoom && $roomFeePaidThisTime > 0) {
-                $roomApproved = (float) $roomFeePaidThisTime;
-                if ($isInsurance) {
-                    $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
-                    $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
-                } else {
-                    $roomPatientShare = $roomApproved;
-                    $roomInsuranceShare = 0.0;
+            $stayDetails = $surgery->calculateStayDetails();
+            $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+            $isRoomPackageIncluded = $isInclusive || ($request->has('package_included.room') && $request->input('package_included.room') == '1');
+
+            if ($payRoom) {
+                $remainingRoomFee = $isStayIns
+                    ? max(0, ($stayDetails['patient_stay_share'] ?? 0) - ($surgery->room_fee_paid_amount ?? 0))
+                    : max(0, ($surgery->room_fee ?? 0) - ($surgery->room_fee_paid_amount ?? 0));
+
+                if ($remainingRoomFee > 0 || $isStayIns) {
+                    $roomFeePaidThisTime = $remainingRoomFee;
+                    if ($isRoomPackageIncluded) {
+                        $roomApproved = (float) $remainingRoomFee;
+                        $roomPatientShare = 0.0;
+                        $roomInsuranceShare = (float) ($isStayIns ? ($stayDetails['insurance_stay_share'] ?? 0) : 0);
+                        $roomBearer = $isInsurance ? 'insurance' : 'doctor';
+                        $roomDeductPrice = (float) ($surgery->room_fee > 0 ? $surgery->room_fee : $remainingRoomFee);
+                        if (! $isInsurance && $roomDeductPrice > 0) {
+                            $doctorDeductionsAmount += $roomDeductPrice;
+                        }
+                        $includedPackageItems[] = [
+                            'type' => 'room',
+                            'id' => $surgery->room_id,
+                            'name' => 'أجور الغرفة والإقامة',
+                            'price' => $roomDeductPrice,
+                            'bearer' => $roomBearer,
+                        ];
+                        $paidItems[] = 'أجور الغرفة والإقامة (مشمولة بالكامل ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $roomDeductPrice > 0 ? ' [استقطاع جراح: '.number_format($roomDeductPrice, 0).' د.ع]' : '');
+                    } else {
+                        $actualAmount += $roomFeePaidThisTime;
+                        if ($isInsurance) {
+                            if ($isStayIns) {
+                                $roomPatientShare = (float) $roomFeePaidThisTime;
+                                $roomInsuranceShare = (float) ($stayDetails['insurance_stay_share'] ?? 0);
+                                $roomApproved = $roomPatientShare + $roomInsuranceShare;
+                            } else {
+                                $roomApproved = (float) $roomFeePaidThisTime;
+                                $roomPatientShare = round($roomApproved * ($surgeryCopay / 100.0), 2);
+                                $roomInsuranceShare = max(0.0, $roomApproved - $roomPatientShare);
+                            }
+                        } else {
+                            $roomApproved = (float) $roomFeePaidThisTime;
+                            $roomPatientShare = $roomApproved;
+                            $roomInsuranceShare = 0.0;
+                        }
+                        $paidItems[] = 'أجور الغرفة والإقامة - مدفوع: '.number_format($roomPatientShare, 0).' د.ع';
+                    }
                 }
             }
 
@@ -3184,7 +3696,19 @@ class CashierController extends Controller
                             : true; // افتراض الشمول للتحاليل الروتينية إذا لم يُرسل مصفوفة التخصيص
 
                         if ($isIncluded) {
-                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (مشمول ضمن باقة العملية - 0 د.ع)';
+                            $lPrice = (float) ($lModel->price ?? 0);
+                            $lBearer = $isInsurance ? 'insurance' : 'doctor';
+                            if (! $isInsurance && $lPrice > 0) {
+                                $doctorDeductionsAmount += $lPrice;
+                            }
+                            $includedPackageItems[] = [
+                                'type' => 'lab',
+                                'id' => $labTest->id,
+                                'name' => $lModel->name ?? 'تحليل مختبري',
+                                'price' => $lPrice,
+                                'bearer' => $lBearer,
+                            ];
+                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (مشمول ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $lPrice > 0 ? ' [استقطاع جراح: '.number_format($lPrice, 0).' د.ع]' : '');
                         } else {
                             $lBase = (float) ($lModel->price ?? 0);
                             $lHi = (float) (($lModel && $lModel->hi_price > 0) ? $lModel->hi_price : $lBase);
@@ -3227,7 +3751,19 @@ class CashierController extends Controller
                         $isIncluded = ! empty($pkgIncludedRad[$radiologyTest->id]) || $isInclusive;
 
                         if ($isIncluded) {
-                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (مشمولة ضمن باقة العملية - 0 د.ع)';
+                            $rPrice = (float) ($rModel ? $rModel->getRegularPrice() : 0);
+                            $rBearer = $isInsurance ? 'insurance' : 'doctor';
+                            if (! $isInsurance && $rPrice > 0) {
+                                $doctorDeductionsAmount += $rPrice;
+                            }
+                            $includedPackageItems[] = [
+                                'type' => 'radiology',
+                                'id' => $radiologyTest->id,
+                                'name' => $rModel->name ?? 'فحص أشعة',
+                                'price' => $rPrice,
+                                'bearer' => $rBearer,
+                            ];
+                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $rPrice > 0 ? ' [استقطاع جراح: '.number_format($rPrice, 0).' د.ع]' : '');
                         } else {
                             $rBase = (float) ($rModel ? $rModel->getRegularPrice() : 0);
                             $rHi = (float) (($rModel && $rModel->hi_price > 0) ? $rModel->hi_price : $rBase);
@@ -3262,16 +3798,37 @@ class CashierController extends Controller
             $extraApproved = 0.0;
             $extraPatientShare = 0.0;
             $extraInsuranceShare = 0.0;
+            $extraPrices = (array) $request->input('extra_service_prices', []);
 
             if (! empty($payExtraServices)) {
                 $surgery->load('extraServices.service');
                 foreach ($surgery->extraServices as $extraService) {
                     if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
+                        // تحديث السعر إذا تم إدخال سعر مخصص من الكاشير
+                        if (isset($extraPrices[$extraService->id])) {
+                            $customPrice = max(0.0, (float) $extraPrices[$extraService->id]);
+                            $qty = max(1, (int) $extraService->quantity);
+                            $extraService->update([
+                                'price' => $customPrice,
+                                'total_amount' => $customPrice * $qty,
+                            ]);
+                        }
                         $isIncluded = ! empty($pkgIncludedExtra[$extraService->id]) || $isInclusive;
                         $eTotal = (float) $extraService->total_amount;
 
                         if ($isIncluded) {
-                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.' (مشمولة ضمن باقة العملية - 0 د.ع)';
+                            $eBearer = $isInsurance ? 'insurance' : 'doctor';
+                            if (! $isInsurance && $eTotal > 0) {
+                                $doctorDeductionsAmount += $eTotal;
+                            }
+                            $includedPackageItems[] = [
+                                'type' => 'extra',
+                                'id' => $extraService->id,
+                                'name' => $extraService->name,
+                                'price' => $eTotal,
+                                'bearer' => $eBearer,
+                            ];
+                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $eTotal > 0 ? ' [استقطاع جراح: '.number_format($eTotal, 0).' د.ع]' : '');
                         } else {
                             $isMedical = ($extraService->service?->category === 'medical')
                                 || str_contains($extraService->name, 'تخطيط')
@@ -3324,6 +3881,22 @@ class CashierController extends Controller
                 $paidItems[] = 'حصة المريض: '.number_format($patientPaidAmount, 0).' د.ع | مطالبة الضمان: '.number_format($totalInsuranceShare, 0).' د.ع';
             }
 
+            // معالجة نمط الدفع (كامل أم جزئي للمبلغ الكلي)
+            $isPartialPayment = ($request->input('payment_mode') === 'partial') && $request->filled('custom_paid_amount');
+            if ($isPartialPayment) {
+                $customPaid = max(0.0, (float) $request->input('custom_paid_amount'));
+                if ($customPaid <= 0) {
+                    throw new \Exception('يرجى تحديد المبلغ المقبوض في الدفع الجزئي');
+                }
+                if ($customPaid > $patientPaidAmount) {
+                    throw new \Exception('المبلغ المقبوض في الدفع الجزئي ('.number_format($customPaid, 0).' د.ع) لا يمكن أن يتجاوز صافي المبلغ المطلوب ('.number_format($patientPaidAmount, 0).' د.ع)');
+                }
+
+                $remainingDebt = max(0.0, $patientPaidAmount - $customPaid);
+                $patientPaidAmount = $customPaid;
+                $paidItems[] = 'نوع التسديد: دفع جزئي (المقبوض فعلياً: '.number_format($patientPaidAmount, 0).' د.ع | المتبقي كدين بذمة العملية: '.number_format($remainingDebt, 0).' د.ع)';
+            }
+
             // التحقق من الدفع المركب (كاش + بطاقة)
             $paymentMethod = $request->input('payment_method', 'cash');
             $cashAmount = (float) $request->input('cash_amount', 0);
@@ -3367,6 +3940,8 @@ class CashierController extends Controller
                 'claim_status' => $isInsurance ? 'pending' : 'none',
                 'payment_method' => $paymentMethod,
                 'payment_type' => 'surgery',
+                'doctor_deductions_amount' => $doctorDeductionsAmount,
+                'included_package_items' => $includedPackageItems,
                 'description' => $description,
                 'notes' => $request->notes,
                 'is_inclusive' => $isInclusive,
@@ -3374,23 +3949,63 @@ class CashierController extends Controller
             ]);
 
             // تحديث مبالغ وحالة رسوم العملية
-            if ($paySurgery && $surgeryFeePaidThisTime > 0) {
+            if ($paySurgery) {
                 $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
-                $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
+                if ($isPartialPayment) {
+                    $ancillariesPaid = $roomPatientShare + $labPatientShare + $radPatientShare + $extraPatientShare;
+                    $creditedToSurgery = max(0.0, $patientPaidAmount - $ancillariesPaid);
+                    $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + min($creditedToSurgery, $remainingSurgeryFee);
+                } else {
+                    $newSurgeryFeePaidAmount = ($surgery->surgery_fee_paid_amount ?? 0) + $surgeryFeePaidThisTime;
+                }
                 $surgeryFeePaidStatus = $newSurgeryFeePaidAmount >= $totalSurgeryFee ? 'paid' : 'partial';
 
                 $surgery->update([
                     'surgery_fee_paid_amount' => $newSurgeryFeePaidAmount,
                     'surgery_fee_paid' => $surgeryFeePaidStatus,
                 ]);
+
+                // تسجيل استحقاق الطبيب الجراح الصافي في جدول DoctorDue
+                if ($surgery->doctor_id) {
+                    $grossSurgeryFee = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
+                    if (! $isInsurance) {
+                        $netDoctorDue = max(0.0, $grossSurgeryFee - $doctorDeductionsAmount);
+                        $dueNotes = 'أتعاب جراحة العملية #'.$surgery->id.' ('.number_format($grossSurgeryFee, 0).' د.ع)';
+                        if ($doctorDeductionsAmount > 0) {
+                            $dueNotes .= ' - مخصوماً منها استقطاعات الباقة ('.number_format($doctorDeductionsAmount, 0).' د.ع) لصالح المستشفى';
+                        }
+                    } else {
+                        $netDoctorDue = $grossSurgeryFee;
+                        $dueNotes = 'أتعاب جراحة عملية ضمان صحي #'.$surgery->id.' ('.number_format($grossSurgeryFee, 0).' د.ع)';
+                    }
+
+                    DoctorDue::updateOrCreate(
+                        [
+                            'doctor_id' => $surgery->doctor_id,
+                            'payment_id' => $payment->id,
+                        ],
+                        [
+                            'amount' => $netDoctorDue,
+                            'status' => 'pending',
+                            'notes' => $dueNotes,
+                        ]
+                    );
+                }
             }
 
             // تحديث مبالغ وحالة رسوم الغرفة
-            if ($payRoom && $roomFeePaidThisTime > 0) {
-                $newRoomFeePaidAmount = ($surgery->room_fee_paid_amount ?? 0) + $roomFeePaidThisTime;
-                $surgery->update([
-                    'room_fee_paid_amount' => $newRoomFeePaidAmount,
-                ]);
+            if ($payRoom) {
+                $surgeryUpdates = [];
+                if ($roomFeePaidThisTime > 0) {
+                    $surgeryUpdates['room_fee_paid_amount'] = ($surgery->room_fee_paid_amount ?? 0) + $roomFeePaidThisTime;
+                }
+                if ($isRoomPackageIncluded) {
+                    $surgeryUpdates['is_room_package_included'] = true;
+                    $surgeryUpdates['room_deduction_bearer'] = $isInsurance ? 'insurance' : 'doctor';
+                }
+                if (! empty($surgeryUpdates)) {
+                    $surgery->update($surgeryUpdates);
+                }
             }
 
             // تحديث حالة التحاليل المدفوعة
@@ -3401,9 +4016,13 @@ class CashierController extends Controller
                             ? (! empty($pkgIncludedLabs[$labTest->id]) || $isInclusive)
                             : true;
                         $labNote = $isIncluded ? trim(($labTest->notes ?? '').' (مشمول ضمن باقة العملية)') : $labTest->notes;
+                        $lPrice = (float) ($labTest->labTest?->price ?? 0);
                         $labTest->update([
                             'payment_status' => 'paid',
                             'payment_id' => $payment->id,
+                            'is_package_included' => $isIncluded,
+                            'included_deductible_price' => $isIncluded ? $lPrice : null,
+                            'deduction_bearer' => $isIncluded ? ($isInsurance ? 'insurance' : 'doctor') : null,
                             'notes' => $labNote,
                         ]);
                     }
@@ -3414,9 +4033,14 @@ class CashierController extends Controller
             if (! empty($payRadiologyTests)) {
                 foreach ($surgery->radiologyTests as $radiologyTest) {
                     if (in_array($radiologyTest->id, $payRadiologyTests) && $radiologyTest->payment_status !== 'paid') {
+                        $isIncluded = ! empty($pkgIncludedRad[$radiologyTest->id]) || $isInclusive;
+                        $rPrice = (float) ($radiologyTest->radiologyType ? $radiologyTest->radiologyType->getRegularPrice() : 0);
                         $radiologyTest->update([
                             'payment_status' => 'paid',
                             'payment_id' => $payment->id,
+                            'is_package_included' => $isIncluded,
+                            'included_deductible_price' => $isIncluded ? $rPrice : null,
+                            'deduction_bearer' => $isIncluded ? ($isInsurance ? 'insurance' : 'doctor') : null,
                         ]);
                     }
                 }
@@ -3428,9 +4052,13 @@ class CashierController extends Controller
                     if (in_array($extraService->id, $payExtraServices) && $extraService->payment_status !== 'paid') {
                         $isIncluded = ! empty($pkgIncludedExtra[$extraService->id]) || $isInclusive;
                         $extraNote = $isIncluded ? trim(($extraService->notes ?? '').' (مشمول ضمن باقة العملية)') : $extraService->notes;
+                        $ePrice = (float) $extraService->total_amount;
                         $extraService->update([
                             'payment_status' => 'paid',
                             'payment_id' => $payment->id,
+                            'is_package_included' => $isIncluded,
+                            'included_deductible_price' => $isIncluded ? $ePrice : null,
+                            'deduction_bearer' => $isIncluded ? ($isInsurance ? 'insurance' : 'doctor') : null,
                             'notes' => $extraNote,
                         ]);
                     }
@@ -3441,7 +4069,8 @@ class CashierController extends Controller
             $surgery->refresh();
             $totalSurgeryFee = ($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee') + $surgery->medicalDevices->sum('pivot.price');
             $allSurgeryFeePaid = $surgery->surgery_fee_paid === 'paid' || $totalSurgeryFee <= ($surgery->surgery_fee_paid_amount ?? 0);
-            $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
+            $targetRoomFeeToPay = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+            $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= $targetRoomFeeToPay;
             $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
             $allExtraServicesPaid = $surgery->extraServices()->where('payment_status', '!=', 'paid')->count() === 0;
@@ -3477,6 +4106,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())
@@ -3570,6 +4203,22 @@ class CashierController extends Controller
                     'surgery_fee_paid' => 'refunded',
                     'payment_status' => 'refunded',
                 ]);
+
+                // إلغاء أي مستحقات غير مدفوعة للجراح مرتبطة بالعملية المسترجعة
+                $paymentIds = $surgery->payments()->pluck('id')->filter()->toArray();
+                DoctorDue::where('status', 'pending')
+                    ->where(function ($q) use ($surgery, $paymentIds) {
+                        if (! empty($paymentIds)) {
+                            $q->whereIn('payment_id', $paymentIds)
+                                ->orWhere('notes', 'like', "%#{$surgery->id}%");
+                        } else {
+                            $q->where('notes', 'like', "%#{$surgery->id}%");
+                        }
+                    })
+                    ->update([
+                        'status' => 'cancelled',
+                        'notes' => DB::raw("CONCAT(COALESCE(notes, ''), ' [أُلغيت المستحقات لاسترجاع رسوم العملية للمريض]')"),
+                    ]);
             } else {
                 // تحديث مبالغ الدفع وحالتها في الجراحة
                 $surgery->update([
@@ -3579,7 +4228,10 @@ class CashierController extends Controller
                 ]);
 
                 // التحقق من الدفع الكامل لكامل البنود (الغرفة، التحاليل، الأشعة)
-                $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= ($surgery->room_fee ?? 0);
+                $stayDetails = $surgery->calculateStayDetails();
+                $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+                $targetRoomFeeToPay = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                $allRoomFeePaid = ($surgery->room_fee_paid_amount ?? 0) >= $targetRoomFeeToPay;
                 $allLabTestsPaid = $surgery->labTests->where('payment_status', '!=', 'paid')->count() === 0;
                 $allRadiologyTestsPaid = $surgery->radiologyTests->where('payment_status', '!=', 'paid')->count() === 0;
                 $allPaid = $allRoomFeePaid && $allLabTestsPaid && $allRadiologyTestsPaid;
@@ -3982,6 +4634,10 @@ class CashierController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error processing request payment: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_id' => $request->id,
+            ]);
 
             return redirect()->back()
                 ->with('error', 'حدث خطأ أثناء معالجة الدفع: '.$e->getMessage())

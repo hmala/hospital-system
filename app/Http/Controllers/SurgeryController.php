@@ -30,9 +30,12 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // العمليات النشطة (المجدولة والمنتظرة والجارية)
-        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress']);
+        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته)
+        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('operationTheaterStation', function ($q) {
+                $q->where('status', 'completed');
+            });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -73,9 +76,14 @@ class SurgeryController extends Controller
             ->paginate(20)
             ->appends(request()->query());
 
-        // العمليات المكتملة والملغاة
-        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests'])
-            ->whereIn('status', ['completed', 'cancelled']);
+        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها وخرجت)
+        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+            ->where(function ($q) {
+                $q->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereHas('operationTheaterStation', function ($oq) {
+                        $oq->where('status', 'completed');
+                    });
+            });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->hasRole('doctor') && $user->doctor) {
@@ -115,7 +123,28 @@ class SurgeryController extends Controller
             ->paginate(20)
             ->appends(request()->query());
 
-        return view('surgeries.index', compact('activeSurgeries', 'completedSurgeries'));
+        // احتساب إحصاءات ومؤشرات العمليات الشاملة للوحة المؤشرات
+        $statsQuery = Surgery::query();
+        if ($user->hasRole('doctor') && $user->doctor) {
+            if ($user->doctor->type === 'consultant') {
+                $statsQuery->whereRaw('1 = 0');
+            } else {
+                $statsQuery->where('doctor_id', $user->doctor->id);
+            }
+        }
+        $stats = (clone $statsQuery)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'scheduled' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN status = 'waiting' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as waiting,
+                SUM(CASE WHEN status = 'in_progress' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN (status = 'completed' OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+            ")
+            ->first();
+
+        return view('surgeries.index', compact('activeSurgeries', 'completedSurgeries', 'stats'));
     }
 
     public function create()
@@ -134,7 +163,12 @@ class SurgeryController extends Controller
             ->where('is_active', true)
             ->where(function ($query) {
                 $query->where('type', 'surgeon')
-                    ->orWhere('specialization', 'جراحة');
+                    ->orWhere('specialization', 'جراحة')
+                    ->orWhereHas('user', function ($uq) {
+                        $uq->whereHas('roles', function ($rq) {
+                            $rq->whereIn('name', ['الجراح', 'surgeon', 'جراح']);
+                        });
+                    });
             })
             ->get()
             ->sortBy(function ($d) {
@@ -350,6 +384,9 @@ class SurgeryController extends Controller
         // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
         // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
 
+        // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
+        $surgery->attachDefaultExtraServices();
+
         broadcast(new SurgeryUpdated($surgery));
 
         return redirect()->route('surgeries.index')->with('success', 'تم حجز العملية بنجاح');
@@ -413,7 +450,12 @@ class SurgeryController extends Controller
             ->where(function ($query) {
                 $query->where('type', 'surgeon')
                     ->orWhere('specialization', 'جراحة')
-                    ->orWhere('type', 'anesthesia');
+                    ->orWhere('type', 'anesthesia')
+                    ->orWhereHas('user', function ($uq) {
+                        $uq->whereHas('roles', function ($rq) {
+                            $rq->whereIn('name', ['الجراح', 'surgeon', 'جراح']);
+                        });
+                    });
             })
             ->get()
             ->sortBy(function ($d) {
@@ -622,6 +664,9 @@ class SurgeryController extends Controller
         // ملاحظة: لا نقوم بإنشاء سجلات عامة (بدون radiology_type_id)
         // سيقوم موظف الأشعة بإضافة الأشعة المطلوبة لاحقاً
 
+        // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
+        $surgery->attachDefaultExtraServices();
+
         broadcast(new SurgeryUpdated($surgery));
 
         return redirect()->route('surgeries.index')
@@ -630,12 +675,7 @@ class SurgeryController extends Controller
 
     public function waiting(?Request $request = null)
     {
-        $user = auth()->user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage surgery waiting list'))) {
-            abort(403, 'غير مصرح لك بالوصول إلى قائمة الانتظار');
-        }
-
+        // شاشة قائمة الانتظار عامة للعرض الحي على الشاشات المنفصلة (Public OR Flight Board)
         $request = $request ?? request();
         $selectedDate = $request->query('date', today()->format('Y-m-d'));
         try {
@@ -645,9 +685,26 @@ class SurgeryController extends Controller
             $selectedDate = $parsedDate->format('Y-m-d');
         }
 
-        // حساب أيام الأسبوع المحيطة باليوم المختار (من السبت إلى الجمعة)
-        $startOfWeek = $parsedDate->copy()->startOfWeek(\Carbon\Carbon::SATURDAY);
-        $weekDays = [];
+        // 1. تحديد الشهر والسنة لليوم المختار وبناء شبكة التقويم الشهري
+        $month = $parsedDate->month;
+        $year = $parsedDate->year;
+        $startOfMonth = $parsedDate->copy()->startOfMonth();
+        $endOfMonth = $parsedDate->copy()->endOfMonth();
+
+        // بداية ونهاية شبكة التقويم (من السبت إلى الجمعة لتغطية كل أسابيع الشهر)
+        $calendarStart = $startOfMonth->copy()->startOfWeek(\Carbon\Carbon::SATURDAY);
+        $calendarEnd = $endOfMonth->copy()->endOfWeek(\Carbon\Carbon::FRIDAY);
+
+        // جلب أعداد العمليات لكافة أيام شبكة التقويم باستعلام تجميعي واحد وسريع
+        $monthlyCounts = Surgery::whereBetween('scheduled_date', [
+            $calendarStart->format('Y-m-d'),
+            $calendarEnd->format('Y-m-d'),
+        ])
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('DATE(scheduled_date) as day_date, count(*) as count')
+            ->groupBy('day_date')
+            ->pluck('count', 'day_date');
+
         $arabicDayNames = [
             'Saturday' => 'السبت',
             'Sunday' => 'الأحد',
@@ -658,25 +715,48 @@ class SurgeryController extends Controller
             'Friday' => 'الجمعة',
         ];
 
-        for ($i = 0; $i < 7; $i++) {
-            $d = $startOfWeek->copy()->addDays($i);
-            $dayKey = $d->format('Y-m-d');
-            $count = Surgery::whereDate('scheduled_date', $dayKey)
-                ->where('status', '!=', 'cancelled')
-                ->count();
+        $arabicMonths = [
+            1 => 'كانون الثاني (يناير)',
+            2 => 'شباط (فبراير)',
+            3 => 'آذار (مارس)',
+            4 => 'نيسان (أبريل)',
+            5 => 'أيار (مايو)',
+            6 => 'حزيران (يونيو)',
+            7 => 'تموز (يوليو)',
+            8 => 'آب (أغسطس)',
+            9 => 'أيلول (سبتمبر)',
+            10 => 'تشرين الأول (أكتوبر)',
+            11 => 'تشرين الثاني (نوفمبر)',
+            12 => 'كانون الأول (ديسمبر)',
+        ];
 
-            $englishDay = $d->format('l');
-            $arabicDay = $arabicDayNames[$englishDay] ?? $englishDay;
+        $calendarDays = [];
+        $curr = $calendarStart->copy();
+        while ($curr->lte($calendarEnd)) {
+            $dayKey = $curr->format('Y-m-d');
+            $count = (int) ($monthlyCounts[$dayKey] ?? 0);
+            $englishDay = $curr->format('l');
 
-            $weekDays[] = [
+            $calendarDays[] = [
                 'date' => $dayKey,
-                'day_name' => $arabicDay,
-                'formatted_date' => $d->format('d/m'),
+                'day_number' => $curr->format('j'),
+                'day_name' => $arabicDayNames[$englishDay] ?? $englishDay,
+                'formatted_date' => $curr->format('d/m'),
+                'is_current_month' => $curr->month === $month,
+                'is_today' => $curr->isToday(),
                 'is_selected' => $dayKey === $selectedDate,
-                'is_today' => $d->isToday(),
                 'count' => $count,
             ];
+            $curr->addDay();
         }
+
+        $weekDays = $calendarDays; // للتوافق العكسي
+        $prevMonthDate = $startOfMonth->copy()->subMonth()->format('Y-m-d');
+        $nextMonthDate = $startOfMonth->copy()->addMonth()->format('Y-m-d');
+        $monthTitle = ($arabicMonths[$month] ?? $parsedDate->format('F')).' '.$year;
+        $totalMonthSurgeries = Surgery::whereBetween('scheduled_date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
+            ->where('status', '!=', 'cancelled')
+            ->count();
 
         // جلب كافة عمليات اليوم المحدد
         $daySurgeries = Surgery::with([
@@ -728,6 +808,11 @@ class SurgeryController extends Controller
             'activeSurgeries',
             'recoverySurgeries',
             'daySurgeries',
+            'calendarDays',
+            'prevMonthDate',
+            'nextMonthDate',
+            'monthTitle',
+            'totalMonthSurgeries',
             'weekDays',
             'selectedDate',
             'parsedDate',
@@ -878,14 +963,14 @@ class SurgeryController extends Controller
             ]);
         }
 
-        // لا نجعل حالة العملية "مكتملة" بالكامل هنا لأنها يجب أن تمر بالجراح والتخدير والتمريض
-        // نجعلها "in_progress" لتستمر في دورة المحطات
-        $surgery->status = 'in_progress';
+        // إنهاء العملية واكتمال مرحلة صالة العمليات وخروج المريض للمتابعة
+        $surgery->status = 'completed';
+        $surgery->end_time = now();
         $surgery->save();
 
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم إنهاء مرحلة صالة العمليات ونقل المريض لمحطة الجراح');
+        return redirect()->back()->with('success', 'تم إنهاء العملية بنجاح واكتمال مرحلة صالة العمليات وخروج المريض');
     }
 
     public function discharge(Surgery $surgery)

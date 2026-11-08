@@ -3,16 +3,19 @@
 namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class CashierStatementsExport implements WithMultipleSheets, ShouldAutoSize
+class CashierStatementsExport implements ShouldAutoSize, WithMultipleSheets
 {
     protected $revenues;
+
     protected $groupedRevenues;
+
     protected $monthlyDoctorSummary;
+
     protected $monthNames;
 
     public function __construct($revenues, $groupedRevenues, $monthlyDoctorSummary, $monthNames)
@@ -33,7 +36,7 @@ class CashierStatementsExport implements WithMultipleSheets, ShouldAutoSize
     }
 }
 
-class CashierStatementsDetailSheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize
+class CashierStatementsDetailSheet implements FromArray, ShouldAutoSize, WithHeadings, WithTitle
 {
     protected $rows;
 
@@ -47,11 +50,11 @@ class CashierStatementsDetailSheet implements FromArray, WithHeadings, WithTitle
         return $this->rows->map(function ($row) {
             return [
                 $row->id,
-                optional($row->appointment)->appointment_date ? \Carbon\Carbon::parse($row->appointment->appointment_date)->format('Y-m-d') : '-',
+                $row->appointment?->appointment_date ? \Carbon\Carbon::parse($row->appointment->appointment_date)->format('Y-m-d') : '-',
                 $row->examination_count ?? 1,
-                optional($row->serviceType)->name ?? '-',
-                optional($row->doctor->user)->name ?? '-',
-                optional($row->appointment->patient->user)->name ?? optional($row->patient->user)->name ?? '-',
+                $row->serviceType?->name ?? '-',
+                $row->doctor?->user?->name ?? '-',
+                $row->appointment?->patient?->user?->name ?? $row->patient?->user?->name ?? '-',
                 $row->total_amount,
                 $row->doctor_share,
                 $row->hospital_share,
@@ -80,7 +83,7 @@ class CashierStatementsDetailSheet implements FromArray, WithHeadings, WithTitle
     }
 }
 
-class CashierStatementsDoctorSummarySheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize
+class CashierStatementsDoctorSummarySheet implements FromArray, ShouldAutoSize, WithHeadings, WithTitle
 {
     protected $rows;
 
@@ -93,7 +96,7 @@ class CashierStatementsDoctorSummarySheet implements FromArray, WithHeadings, Wi
     {
         return $this->rows->map(function ($row) {
             return [
-                optional($row->doctor->user)->name ?? '-',
+                $row->doctor?->user?->name ?? '-',
                 $row->first_appointment_date ? \Carbon\Carbon::parse($row->first_appointment_date)->format('Y-m-d') : '-',
                 $row->examination_count,
                 $row->total_amount,
@@ -121,9 +124,10 @@ class CashierStatementsDoctorSummarySheet implements FromArray, WithHeadings, Wi
     }
 }
 
-class CashierStatementsMonthlySummarySheet implements FromArray, WithHeadings, WithTitle, ShouldAutoSize
+class CashierStatementsMonthlySummarySheet implements FromArray, ShouldAutoSize, WithHeadings, WithTitle
 {
     protected $rows;
+
     protected $monthNames;
 
     public function __construct($rows, $monthNames)
@@ -135,7 +139,7 @@ class CashierStatementsMonthlySummarySheet implements FromArray, WithHeadings, W
     public function array(): array
     {
         return $this->rows->map(function ($row) {
-            $data = [optional($row->doctor->user)->name ?? '-'];
+            $data = [$row->doctor?->user?->name ?? '-'];
 
             foreach ($this->monthNames as $monthNumber => $monthName) {
                 $data[] = $row->months[$monthNumber] ?? 0;

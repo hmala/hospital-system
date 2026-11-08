@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\NursingStation;
 use App\Models\ResidentStationFollowUp;
+use App\Models\ResidentStationReading;
+use App\Models\StockBatch;
+use App\Models\StockMovement;
 use App\Models\Surgery;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ClinicalStationController extends Controller
 {
@@ -19,6 +23,12 @@ class ClinicalStationController extends Controller
     public function show(Surgery $surgery, Request $request)
     {
         $user = Auth::user();
+
+        // Check if patient has a room assigned but nursing has not checked them in yet
+        if ($surgery->room_id && ! $surgery->room_checkin_at && $user && $user->hasRole('nurse') && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'doctor', 'surgeon', 'anesthesiologist'])) {
+            return redirect()->route('nursing-station.index')
+                ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
+        }
 
         // 1. Ensure Resident Stations exist (pre_op and post_op)
         $preOpStation = $surgery->residentStations()->firstOrCreate(
@@ -97,13 +107,33 @@ class ClinicalStationController extends Controller
             'residentStations.followUps',
             'nursingStation.nurse',
             'surgeryTreatments.administeredBy',
+            'surgeryTreatments.batch.product',
+            'surgeryTreatments.stockMovement',
             'labTests.labTest',
             'radiologyTests.radiologyType',
         ]);
 
+        // Floor sub-store location for patient's room and available batches
+        $floorLocation = $surgery->getFloorSubStoreLocation();
+        $floorStockBatches = $floorLocation
+            ? StockBatch::with('product')
+                ->where('location_id', $floorLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get()
+            : collect();
+
+        if ($station) {
+            $station->load(['vitalsRecordedBy']);
+        }
+
         // Combined readings for vitals history and charts
-        $readings = $station ? $station->readings()->with('resident.user')->get() : collect();
+        $readings = $station ? $station->readings()->with(['resident.user', 'user'])->get() : collect();
         $readingsAsc = $readings->sortBy('created_at');
+
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canEditVitals = $station ? $station->canUserEditVitals($user) : true;
+        $canViewVitalsCharts = $isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor']) && ! $user->hasRole('nurse'));
 
         // All follow-up logs
         $followUps = ResidentStationFollowUp::where('surgery_id', $surgery->id)
@@ -116,6 +146,7 @@ class ClinicalStationController extends Controller
 
         $nurses = User::role('nurse')->where('is_active', true)->get();
         $residents = User::role('resident')->where('is_active', true)->get();
+        $canActuallyEditVitals = (($tabPermissions['vitals'] ?? '') === SurgeryTabPermission::ACCESS_WRITE) && ($canEditVitals ?? true);
 
         return view('surgery-stations.clinical.show', compact(
             'surgery',
@@ -131,8 +162,14 @@ class ClinicalStationController extends Controller
             'readingsAsc',
             'followUps',
             'treatments',
+            'floorLocation',
+            'floorStockBatches',
             'nurses',
-            'residents'
+            'residents',
+            'canEditVitals',
+            'canActuallyEditVitals',
+            'canViewVitalsCharts',
+            'isAdmin'
         ));
     }
 
@@ -180,7 +217,52 @@ class ClinicalStationController extends Controller
 
             $hasAnyVitals = ! empty($vitalsData['bp']) || ! empty($vitalsData['temp']) ||
                             ! empty($vitalsData['pr']) || ! empty($vitalsData['rr']) ||
-                            ! empty($vitalsData['spo2']) || ! empty($vitalsData['clinical_examination']);
+                            ! empty($vitalsData['spo2']) || ! empty($vitalsData['clinical_examination']) ||
+                            ! empty($vitalsData['pain_score']) || ! empty($vitalsData['rbs']) ||
+                            ! empty($vitalsData['gcs']) || ! empty($vitalsData['crt']);
+
+            // إذا كان الطلب تعديلاً لقراءة تاريخية محددة تم تحميلها للأعلى
+            $editingReadingId = $request->input('editing_reading_id');
+            if ($editingReadingId) {
+                $reading = ResidentStationReading::find($editingReadingId);
+                if ($reading && $reading->resident_station_id === $station->id) {
+                    $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+                    $isOwner = (int) $reading->user_id === (int) $user->id || (empty($reading->user_id) && $reading->resident_id === $user->doctor?->id);
+                    $isWithin30Min = $reading->created_at ? now()->lte($reading->created_at->copy()->addMinutes(30)) : true;
+
+                    if (! $isAdmin && (! $isOwner || ! $isWithin30Min)) {
+                        return back()->with('error', 'عفواً، لا يمكن تعديل هذه القراءة لانقضاء مهلة 30 دقيقة أو لأنها مسجلة بحساب آخر. التعديل محصور بمدير النظام حصراً.');
+                    }
+
+                    $reading->update($vitalsData);
+
+                    // إذا كانت هذه القراءة هي الأحدث، نقوم بتحديث قيم المحطة السريرية العلوية ومحطة التمريض
+                    $latestReading = $station->readings()->orderByDesc('created_at')->orderByDesc('id')->first();
+                    if ($latestReading && $latestReading->id === $reading->id) {
+                        $station->update(array_merge($vitalsData, [
+                            'vitals_recorded_at' => $reading->created_at,
+                            'vitals_recorded_by' => $reading->user_id ?? $user->id,
+                        ]));
+
+                        if ($surgery && $surgery->nursingStation) {
+                            $nursingVitalsString = implode(' | ', array_filter([
+                                ! empty($vitalsData['bp']) ? "ضغط الدم: {$vitalsData['bp']}" : null,
+                                ! empty($vitalsData['temp']) ? "الحرارة: {$vitalsData['temp']}°C" : null,
+                                ! empty($vitalsData['pr']) ? "النبض: {$vitalsData['pr']} bpm" : null,
+                                ! empty($vitalsData['rr']) ? "التنفس: {$vitalsData['rr']} /min" : null,
+                                ! empty($vitalsData['spo2']) ? "الأكسجين: {$vitalsData['spo2']}%" : null,
+                            ]));
+
+                            $surgery->nursingStation->update([
+                                'vital_signs' => $nursingVitalsString ?: $surgery->nursingStation->vital_signs,
+                            ]);
+                        }
+                    }
+
+                    return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => $activeTab])
+                        ->with('success', 'تم تعديل القراءة السريرية وحفظها بنجاح.');
+                }
+            }
 
             if ($hasAnyVitals) {
                 // Check if changed from current
@@ -189,17 +271,31 @@ class ClinicalStationController extends Controller
                              ($station->pr !== ($vitalsData['pr'] ?? null)) ||
                              ($station->rr !== ($vitalsData['rr'] ?? null)) ||
                              ($station->spo2 !== ($vitalsData['spo2'] ?? null)) ||
+                             ($station->pain_score !== ($vitalsData['pain_score'] ?? null)) ||
+                             ($station->rbs !== ($vitalsData['rbs'] ?? null)) ||
+                             ($station->gcs !== ($vitalsData['gcs'] ?? null)) ||
+                             ($station->crt !== ($vitalsData['crt'] ?? null)) ||
                              ($station->clinical_examination !== ($vitalsData['clinical_examination'] ?? null));
 
-                if ($isChanged) {
+                $isNewReading = $request->boolean('is_new_reading');
+
+                if ($isChanged || $isNewReading) {
+                    if (! $isNewReading && ! $station->canUserEditVitals($user)) {
+                        return back()->with('error', 'عفواً، لا يمكن تعديل هذه القراءة لانقضاء مهلة 30 دقيقة أو لأنها مسجلة بحساب آخر. التعديل محصور بمدير النظام حصراً.');
+                    }
+
                     $station->readings()->create(array_merge($vitalsData, [
+                        'user_id' => $user->id,
                         'resident_id' => $user->doctor?->id,
                         'notes' => $request->input('vital_notes'),
                     ]));
+
+                    $station->update(array_merge($vitalsData, [
+                        'vitals_recorded_at' => now(),
+                        'vitals_recorded_by' => $user->id,
+                    ]));
                 }
             }
-
-            $station->update($vitalsData);
 
             // Synchronize with NursingStation
             $nursingVitalsString = implode(' | ', array_filter([
@@ -381,6 +477,102 @@ class ClinicalStationController extends Controller
     }
 
     /**
+     * Dispense medication or supply directly from the floor sub-store for the patient.
+     */
+    public function dispenseFloorItem(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $access = SurgeryTabPermission::getAccessForUser($user, 'treatments');
+
+        if ($access !== SurgeryTabPermission::ACCESS_WRITE) {
+            return redirect()->back()->with('error', 'غير مصرح لك بصرف الأدوية أو المستلزمات.');
+        }
+
+        $validated = $request->validate([
+            'batch_id' => 'required|exists:stock_batches,id',
+            'quantity' => 'required|integer|min:1',
+            'timing' => 'nullable|string|max:255',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $floorLocation = $surgery->getFloorSubStoreLocation();
+        if (! $floorLocation) {
+            return redirect()->back()->with('error', 'لم يتم العثور على مخزن فرعي مرتبط بطابق غرفة هذا المريض.');
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $surgery, $floorLocation, $user) {
+                $batch = StockBatch::where('id', $validated['batch_id'])
+                    ->where('location_id', $floorLocation->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $batch) {
+                    throw new \Exception('الوجبة المحددة لا تنتمي إلى مخزن عهدة طابق هذا المريض.');
+                }
+
+                if ($batch->current_qty < $validated['quantity']) {
+                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في عهدة الطابق ({$batch->current_qty}).");
+                }
+
+                // خصم الرصيد من وجبة الطابق
+                $batch->decrement('current_qty', $validated['quantity']);
+
+                $patientName = $surgery->patient?->name ?? 'مريض';
+                $roomNumber = $surgery->room?->room_number ?? 'بدون غرفة';
+                $movementNotes = "صرف سريري لمريض: {$patientName} (غرفة: {$roomNumber})";
+                if (! empty($validated['admin_notes'])) {
+                    $movementNotes .= ' - '.$validated['admin_notes'];
+                }
+
+                // تسجيل حركة الإخراج للمريض
+                $movement = StockMovement::create([
+                    'batch_id' => $batch->id,
+                    'from_location_id' => $floorLocation->id,
+                    'to_location_id' => null,
+                    'quantity' => $validated['quantity'],
+                    'type' => 'issue_to_patient',
+                    'user_id' => $user->id,
+                    'surgery_id' => $surgery->id,
+                    'notes' => $movementNotes,
+                ]);
+
+                // تسجيل المادة في جدول علاجات ومستهلكات المريض السريرية
+                $product = $batch->product;
+                $unitName = $product?->unit ?? 'جرعة/قطعة';
+                $dosageText = "{$validated['quantity']} {$unitName}";
+
+                SurgeryTreatment::create([
+                    'surgery_id' => $surgery->id,
+                    'description' => $product?->name ?? 'مستلزم / علاج',
+                    'dosage' => $dosageText,
+                    'timing' => $validated['timing'] ?: 'صرف مباشر من عهدة الطابق',
+                    'status' => 'administered',
+                    'administered_by' => $user->id,
+                    'administered_at' => now(),
+                    'admin_notes' => $validated['admin_notes'] ?? null,
+                    'batch_id' => $batch->id,
+                    'stock_movement_id' => $movement->id,
+                    'quantity' => $validated['quantity'],
+                    'administrations' => [
+                        [
+                            'administered_at' => now()->format('Y-m-d H:i'),
+                            'administered_by' => $user->id,
+                            'administered_by_name' => $user->full_name ?? $user->name ?? 'الكادر التمريضي',
+                            'notes' => $validated['admin_notes'] ?? null,
+                        ],
+                    ],
+                ]);
+            });
+
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'treatments'])
+                ->with('success', "تم صرف العلاج بنجاح من ({$floorLocation->name}) وخصمه من الرصيد وتوثيقه في طبلة المريض.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
      * Complete phase or clinical station.
      */
     public function complete(Surgery $surgery, Request $request)
@@ -405,5 +597,127 @@ class ClinicalStationController extends Controller
         }
 
         return redirect()->route('surgeries.waiting')->with('success', $message);
+    }
+
+    /**
+     * تعديل قراءة علامات حيوية تاريخية فردية
+     */
+    public function updateReading(Request $request, ResidentStationReading $reading)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $station = $reading->residentStation;
+        $surgery = $station?->surgery;
+
+        // Check if user is owner within 30 min, or Admin
+        $isOwner = (int) $reading->user_id === (int) $user->id || (empty($reading->user_id) && $reading->resident_id === $user->doctor?->id);
+        $isWithin30Min = $reading->created_at ? now()->lte($reading->created_at->copy()->addMinutes(30)) : true;
+
+        if (! $isAdmin && (! $isOwner || ! $isWithin30Min)) {
+            return redirect()->back()->with('error', 'عفواً، لا يمكن تعديل هذه القراءة لانقضاء مهلة 30 دقيقة أو لأنها مسجلة بحساب آخر. التعديل محصور بمدير النظام حصراً.');
+        }
+
+        $vitalsData = $request->only([
+            'bp', 'temp', 'pr', 'rr', 'spo2',
+            'pain_score', 'rbs', 'gcs', 'crt',
+            'clinical_examination', 'notes',
+        ]);
+
+        $reading->update($vitalsData);
+
+        // إذا كانت هذه القراءة هي الأحدث، نقوم بتحديث قيم المحطة السريرية العلوية ومحطة التمريض
+        $latestReading = $station ? $station->readings()->orderByDesc('created_at')->orderByDesc('id')->first() : null;
+        if ($latestReading && $latestReading->id === $reading->id) {
+            $station->update(array_merge($vitalsData, [
+                'vitals_recorded_at' => $reading->created_at,
+                'vitals_recorded_by' => $reading->user_id ?? $user->id,
+            ]));
+
+            if ($surgery && $surgery->nursingStation) {
+                $nursingVitalsString = implode(' | ', array_filter([
+                    ! empty($vitalsData['bp']) ? "ضغط الدم: {$vitalsData['bp']}" : null,
+                    ! empty($vitalsData['temp']) ? "الحرارة: {$vitalsData['temp']}°C" : null,
+                    ! empty($vitalsData['pr']) ? "النبض: {$vitalsData['pr']} bpm" : null,
+                    ! empty($vitalsData['rr']) ? "التنفس: {$vitalsData['rr']} /min" : null,
+                    ! empty($vitalsData['spo2']) ? "الأكسجين: {$vitalsData['spo2']}%" : null,
+                ]));
+
+                $surgery->nursingStation->update([
+                    'vital_signs' => $nursingVitalsString ?: $surgery->nursingStation->vital_signs,
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', 'تم تعديل القراءة السريرية بنجاح.');
+    }
+
+    /**
+     * حذف قراءة علامات حيوية تاريخية فردية وإعادة مزامنة المحطة
+     */
+    public function deleteReading(ResidentStationReading $reading)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $station = $reading->residentStation;
+        $surgery = $station?->surgery;
+
+        // Check if user is owner within 30 min, or Admin
+        $isOwner = (int) $reading->user_id === (int) $user->id || (empty($reading->user_id) && $reading->resident_id === $user->doctor?->id);
+        $isWithin30Min = $reading->created_at ? now()->lte($reading->created_at->copy()->addMinutes(30)) : true;
+
+        if (! $isAdmin && (! $isOwner || ! $isWithin30Min)) {
+            return redirect()->back()->with('error', 'عفواً، لا يمكن حذف هذه القراءة لانقضاء مهلة 30 دقيقة أو لأنها مسجلة بحساب آخر. الحذف محصور بمدير النظام حصراً.');
+        }
+
+        $wasLatest = false;
+        $latestReading = $station ? $station->readings()->orderByDesc('created_at')->orderByDesc('id')->first() : null;
+        if ($latestReading && $latestReading->id === $reading->id) {
+            $wasLatest = true;
+        }
+
+        $reading->delete();
+
+        // إذا تم حذف القراءة الأخيرة، نعيد مزامنة المحطة مع القراءة السابقة لها إن وجدت
+        if ($station && $wasLatest) {
+            $newLatest = $station->readings()->orderByDesc('created_at')->orderByDesc('id')->first();
+            if ($newLatest) {
+                $syncData = $newLatest->only([
+                    'bp', 'temp', 'pr', 'rr', 'spo2',
+                    'pain_score', 'rbs', 'gcs', 'crt',
+                    'clinical_examination',
+                ]);
+                $station->update(array_merge($syncData, [
+                    'vitals_recorded_at' => $newLatest->created_at,
+                    'vitals_recorded_by' => $newLatest->user_id,
+                ]));
+
+                if ($surgery && $surgery->nursingStation) {
+                    $nursingVitalsString = implode(' | ', array_filter([
+                        ! empty($syncData['bp']) ? "ضغط الدم: {$syncData['bp']}" : null,
+                        ! empty($syncData['temp']) ? "الحرارة: {$syncData['temp']}°C" : null,
+                        ! empty($syncData['pr']) ? "النبض: {$syncData['pr']} bpm" : null,
+                        ! empty($syncData['rr']) ? "التنفس: {$syncData['rr']} /min" : null,
+                        ! empty($syncData['spo2']) ? "الأكسجين: {$syncData['spo2']}%" : null,
+                    ]));
+                    $surgery->nursingStation->update([
+                        'vital_signs' => $nursingVitalsString ?: null,
+                    ]);
+                }
+            } else {
+                // لم يعد هناك أي قراءات متبقية في الأرشيف
+                $station->update([
+                    'bp' => null, 'temp' => null, 'pr' => null, 'rr' => null, 'spo2' => null,
+                    'pain_score' => null, 'rbs' => null, 'gcs' => null, 'crt' => null,
+                    'clinical_examination' => null,
+                    'vitals_recorded_at' => null,
+                    'vitals_recorded_by' => null,
+                ]);
+                if ($surgery && $surgery->nursingStation) {
+                    $surgery->nursingStation->update(['vital_signs' => null]);
+                }
+            }
+        }
+
+        return redirect()->back()->with('success', 'تم حذف القراءة السريرية وإعادة مزامنة سجل العلامات بنجاح.');
     }
 }

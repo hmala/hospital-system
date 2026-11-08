@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Surgery;
-use App\Models\SurgeonStation;
 use App\Models\Doctor;
+use App\Models\Surgery;
 use App\Models\SurgeryTreatment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,16 +16,17 @@ class SurgeonStationController extends Controller
 
         // جلب العمليات التي في محطة الجراح (بعد صالة العمليات)
         $query = Surgery::with(['patient.user', 'doctor.user', 'surgeonStation'])
-            ->whereHas('operationTheaterStation', function($q) {
+            ->whereHas('operationTheaterStation', function ($q) {
                 $q->where('status', 'completed');
             })
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
             ->orderBy('scheduled_date')
             ->orderBy('scheduled_time');
 
         // إذا كان المستخدم طبيباً جراحاً (وليس مشرفاً أو موظف استقبال/عمليات)، نعرض له عملياته فقط
-        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            $query->where('doctor_id', $user->doctor->id);
+        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+            $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
+            $query->whereIn('doctor_id', $surgeonDoctorIds);
         }
 
         $surgeries = $query->get();
@@ -39,13 +39,13 @@ class SurgeonStationController extends Controller
         $this->authorizeSurgeon($surgery);
 
         // التحقق من أن صالة العمليات مكتملة
-        if (!$surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed') {
+        if (! $surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed') {
             return redirect()->route('operation-theater-station.show', $surgery)
                 ->with('error', 'يجب إتمام مرحلة صالة العمليات أولاً');
         }
 
         // إنشاء محطة إذا لم تكن موجودة
-        if (!$surgery->surgeonStation) {
+        if (! $surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'pending',
@@ -86,7 +86,7 @@ class SurgeonStationController extends Controller
             'monitoring_protocol' => 'nullable|string|in:standard,fluid_monitoring,intensive',
             'required_fluids' => 'nullable|array',
             'required_fluids.*' => 'string|in:intake_iv_fluids,intake_oral,intake_blood,output_urine,output_drain,output_gtube_ng,output_vomiting,output_stool',
-            
+
             'prescribed_medications.surgery_treatments' => 'nullable|array',
             'prescribed_medications.surgery_treatments.*' => 'nullable|array',
             'prescribed_medications.surgery_treatments.*.*' => 'nullable|array',
@@ -98,7 +98,7 @@ class SurgeonStationController extends Controller
         ]);
 
         $station = $surgery->surgeonStation;
-        if (!$station) {
+        if (! $station) {
             $station = $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'in_progress',
@@ -120,7 +120,7 @@ class SurgeonStationController extends Controller
             $surgery->surgeryTreatments()->delete();
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
             foreach ($treatments as $index => $treatment) {
-                if (!empty($treatment['description'])) {
+                if (! empty($treatment['description'])) {
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
                         'description' => $treatment['description'],
@@ -143,14 +143,14 @@ class SurgeonStationController extends Controller
         $this->authorizeSurgeon($surgery);
 
         $station = $surgery->surgeonStation;
-        if (!$station) {
+        if (! $station) {
             return redirect()->back()->with('error', 'المحطة غير موجودة');
         }
 
         $station->markAsCompleted();
 
         // إنشاء محطة التخدير التالية
-        if (!$surgery->anesthesiaStation) {
+        if (! $surgery->anesthesiaStation) {
             $surgery->anesthesiaStation()->create([
                 'anesthesiologist_id' => $surgery->operationTheaterStation?->anesthesiologist_id,
                 'status' => 'pending',
@@ -164,10 +164,37 @@ class SurgeonStationController extends Controller
     private function authorizeSurgeon(Surgery $surgery)
     {
         $user = auth()->user();
-        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            if ($surgery->doctor_id !== $user->doctor->id) {
+        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+            $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
+            if (! in_array($surgery->doctor_id, $surgeonDoctorIds)) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية');
             }
         }
+    }
+
+    /**
+     * جلب كافة المعرّفات المرتبطة بالطبيب الجراح لمعالجة الازدواجية التاريخية
+     */
+    protected function getSurgeonDoctorIds($user): array
+    {
+        $ids = [];
+        if ($user->doctor) {
+            $ids[] = $user->doctor->id;
+        }
+
+        $doctorByUser = Doctor::where('user_id', $user->id)->pluck('id')->toArray();
+        $ids = array_merge($ids, $doctorByUser);
+
+        // مطابقة أي حساب طبيب مسجل بنفس اسم المستخدم (مع إزالة البادئات د. أو دكتور)
+        $cleanName = trim(preg_replace('/^(د\.|دكتور|دكتورة)\s*/u', '', $user->name));
+        if (! empty($cleanName)) {
+            $matchedByName = Doctor::whereHas('user', function ($q) use ($cleanName) {
+                $q->where('name', 'like', "%{$cleanName}%");
+            })->pluck('id')->toArray();
+
+            $ids = array_merge($ids, $matchedByName);
+        }
+
+        return array_values(array_unique(array_filter($ids)));
     }
 }

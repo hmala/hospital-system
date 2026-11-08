@@ -123,6 +123,26 @@ class InpatientRoomSurveyTest extends TestCase
             'entertainment' => 4,
             'doctor_communication' => 5,
             'room_notes' => 'الغرفة نظيفة جداً والخدمة راقية',
+            // الورقة 2: التمريض، المختبر، الصيدلية وبيانات المريض
+            'nursing_greeting' => 5,
+            'nursing_skill' => 5,
+            'nursing_care_attention' => 5,
+            'nursing_instructions' => 5,
+            'nursing_response_speed' => 5,
+            'nursing_privacy_respect' => 5,
+            'nursing_notes' => 'الممرضون متعاونون جداً',
+            'lab_prep_instructions' => 4,
+            'lab_sampling_skill' => 5,
+            'lab_hygiene_sterilization' => 5,
+            'lab_results_speed' => 4,
+            'lab_staff_behavior' => 5,
+            'pharmacy_dispense_speed' => 5,
+            'pharmacy_instruction_clarity' => 5,
+            'pharmacy_comprehension_check' => 5,
+            'pharmacy_respect_politeness' => 5,
+            'pharmacy_med_availability' => 5,
+            'respondent_name' => 'علي حسن',
+            'respondent_phone' => '07701234567',
             'top_three_improvements' => ['تحديث قائمة التلفاز', 'زيادة وسائد السرير'],
             'patient_suggestions' => 'استمروا بهذا الأداء الممتاز',
             'recommend_score_nps' => 10,
@@ -137,6 +157,10 @@ class InpatientRoomSurveyTest extends TestCase
         $this->assertEquals('patient_qr', $survey->submitted_via);
         $this->assertNotNull($survey->completed_at);
         $this->assertGreaterThan(85.0, $survey->overall_score);
+        $this->assertEquals(100.0, $survey->nursing_score);
+        $this->assertNotNull($survey->lab_score);
+        $this->assertNotNull($survey->pharmacy_score);
+        $this->assertEquals('علي حسن', $survey->respondent_name);
         $this->assertEquals(10, $survey->recommend_score_nps);
         $this->assertEquals('الغرفة نظيفة جداً والخدمة راقية', $survey->room_notes);
     }
@@ -244,6 +268,12 @@ class InpatientRoomSurveyTest extends TestCase
         $response->assertSee('تقييم الفريق الطبي (زيارة الطبيب المعالج)');
         $response->assertSee('خدمة ممتازة جداً');
         $response->assertSee('501');
+        // Page 2 Assertions
+        $response->assertSee('تقييم طاقم التمريض');
+        $response->assertSee('تقييم قسم المختبر والتحاليل');
+        $response->assertSee('تقييم الصيدلية والتعامل مع الأدوية');
+        $response->assertSee('بغداد - الحارثية شارع الكندي');
+        $response->assertSee('7178');
     }
 
     public function test_staff_can_view_and_print_blank_a4_survey_report(): void
@@ -366,7 +396,7 @@ class InpatientRoomSurveyTest extends TestCase
         // Full Scorecard and metrics should appear
         $response->assertSee('نتائج استبيان تقييم غرفة الرقود');
         $response->assertSee('93%'); // round(92.5)
-        $response->assertSee('تفاصيل تقييم جميع مفردات الاستبيان (11 معياراً)');
+        $response->assertSee('تفاصيل تقييم جميع خدمات ومفردات الاستبيان');
         $response->assertSee('النظافة العامة لغرفة الرقود');
         $response->assertSee('تواصل وزيارة الطبيب المعالج واهتمامه');
         $response->assertSee('مؤشر التوصية (NPS)');

@@ -15,6 +15,10 @@
                     </p>
                 </div>
                 <div>
+                    <a href="{{ route('cashier.surgeries.doctor-accounts') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-wallet me-2"></i>
+                        حسابات الجراحين
+                    </a>
                     <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-danger me-2">
                         <i class="fas fa-clock me-2"></i>
                         العمليات المعلقة

@@ -176,6 +176,11 @@ class NursingStationController extends Controller
 
     public function show(Surgery $surgery, Request $request)
     {
+        if ($surgery->room_id && ! $surgery->room_checkin_at) {
+            return redirect()->route('nursing-station.index')
+                ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
+        }
+
         return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
     }
 
@@ -475,5 +480,75 @@ class NursingStationController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'تم تسجيل متابعة جديدة بنجاح بواسطة التمريض.');
+    }
+
+    /**
+     * تسجيل دخول المريض الفعلي للغرفة في الطابق
+     */
+    public function roomCheckin(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('view nursing station'))) {
+            abort(403, 'غير مصرح لك بتسجيل دخول الغرفة.');
+        }
+
+        if ($surgery->room_checkin_at) {
+            return redirect()->back()->with('info', 'تم تسجيل دخول المريض للغرفة مسبقاً بتاريخ '.$surgery->room_checkin_at->format('Y-m-d h:i A'));
+        }
+
+        $surgery->update([
+            'room_checkin_at' => now(),
+            'room_checkin_by' => $user->id,
+        ]);
+
+        if ($surgery->room) {
+            $surgery->room->update(['status' => 'occupied']);
+        }
+
+        \App\Services\UserActivityLogger::log(
+            action: 'surgery_room_checkin',
+            category: 'nursing',
+            description: "تسجيل دخول المريض {$surgery->patient?->name} للغرفة رقم {$surgery->room?->room_number} (الطابق: {$surgery->room?->floor})",
+            subject: $surgery,
+            isSensitive: false
+        );
+
+        $roomNum = $surgery->room?->room_number ?? 'غير محددة';
+
+        return redirect()->back()->with('success', "تم تسجيل دخول المريض للغرفة ({$roomNum}) بنجاح وبدء احتساب الإقامة الفندقية.");
+    }
+
+    /**
+     * تخريج المريض من الغرفة في الطابق وتحرير السرير
+     */
+    public function roomCheckout(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('view nursing station'))) {
+            abort(403, 'غير مصرح لك بتخريج المريض من الغرفة.');
+        }
+
+        $surgery->update([
+            'discharged_at' => now(),
+            'discharge_notes' => $request->input('discharge_notes') ?: $surgery->discharge_notes,
+        ]);
+
+        if ($surgery->room) {
+            $surgery->room->update(['status' => 'available']);
+        }
+
+        \App\Services\UserActivityLogger::log(
+            action: 'surgery_room_checkout',
+            category: 'nursing',
+            description: "تخريج المريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتحرير السرير",
+            subject: $surgery,
+            isSensitive: false
+        );
+
+        $roomNum = $surgery->room?->room_number ?? 'غير محددة';
+
+        return redirect()->back()->with('success', "تم تخريج المريض وتحرير الغرفة ({$roomNum}) بنجاح وتثبيت حساب الإقامة النهائي.");
     }
 }

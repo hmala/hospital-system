@@ -2,122 +2,272 @@
 
 @section('content')
 <div class="container-fluid px-3 px-md-4 py-3" id="orScheduleApp">
-    {{-- CSS Styles --}}
+    {{-- Ultra-Modern Hospital EHR Flight Board Styles --}}
     <style>
         :root {
-            --or-teal-deep: #1b4958;
-            --or-teal-header: #205869;
-            --or-mint-soft: #eaf5f7;
+            --or-navy: #0f172a;
+            --or-slate-dark: #1e293b;
+            --or-primary: #0284c7;
+            --or-primary-dark: #0369a1;
+            --or-primary-light: #f0f9ff;
+            --or-emerald: #10b981;
+            --or-amber: #f59e0b;
+            --or-rose: #f43f5e;
+            --or-border: #e2e8f0;
             --or-card-bg: #ffffff;
         }
 
+        /* Canvas Card Container */
         .or-canvas-card {
             background-color: #ffffff;
             border-radius: 20px;
-            padding: 22px;
-            box-shadow: 0 4px 20px -2px rgba(27, 73, 88, 0.07);
-            border: 1px solid #e2e8f0;
+            padding: 24px;
+            box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04), 0 4px 6px -2px rgba(15, 23, 42, 0.02);
+            border: 1px solid var(--or-border);
         }
 
-        /* Weekday navigation tabs */
-        .week-nav-scroll {
+        /* Top Executive Header */
+        .or-header-box {
             display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding-bottom: 6px;
-            scrollbar-width: thin;
-        }
-        .week-day-pill {
-            flex: 1;
-            min-width: 125px;
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 10px 14px;
-            text-align: center;
-            text-decoration: none;
-            color: #475569;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 22px;
         }
-        .week-day-pill:hover {
-            transform: translateY(-2px);
-            border-color: var(--or-teal-deep);
-            color: var(--or-teal-deep);
-            box-shadow: 0 4px 12px rgba(27, 73, 88, 0.08);
-        }
-        .week-day-pill.active {
-            background: var(--or-teal-deep);
-            border-color: var(--or-teal-deep);
+        .or-header-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: #ffffff;
-            box-shadow: 0 4px 14px rgba(27, 73, 88, 0.25);
-        }
-        .week-day-pill.active .badge-count {
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-        }
-        .week-day-pill .badge-count {
-            background: #f1f5f9;
-            color: #475569;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-top: 4px;
+            font-size: 20px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+            flex-shrink: 0;
         }
 
-        /* Table styling */
+        /* ===== Compact Month Calendar Grid & Side KPI Dashboard ===== */
+        .mini-calendar-card {
+            background: #ffffff;
+            border: 1px solid var(--or-border);
+            border-radius: 16px;
+        }
+        .mini-cal-title {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .calendar-weekdays-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        .calendar-weekdays-header > div {
+            background: #f1f5f9;
+            padding: 3px 2px;
+            border-radius: 6px;
+        }
+        .calendar-days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day-cell {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 3px 6px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            transition: all 0.15s ease-in-out;
+            position: relative;
+        }
+        .calendar-day-cell:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+            border-color: #3b82f6;
+        }
+        .calendar-day-cell .day-number {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1e293b;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+        }
+        .calendar-day-cell .badge-surgery-count {
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: #10b981;
+            color: #ffffff;
+            border-radius: 5px;
+            padding: 1px 5px;
+            min-width: 17px;
+            height: 17px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);
+        }
+        .today-dot-mini {
+            width: 5px;
+            height: 5px;
+            background-color: #f59e0b;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* State 1: Has Surgeries */
+        .calendar-day-cell.day-has-surgeries {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .calendar-day-cell.day-has-surgeries .day-number {
+            color: #15803d;
+            font-weight: 800;
+        }
+
+        /* State 2: Today */
+        .calendar-day-cell.day-today {
+            box-shadow: 0 0 0 2px #f59e0b, 0 2px 6px rgba(245, 158, 11, 0.18) !important;
+            border-color: #f59e0b !important;
+        }
+
+        /* State 3: Selected Day */
+        .calendar-day-cell.day-selected {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+            border-color: #1e3a8a !important;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35) !important;
+            z-index: 2;
+        }
+        .calendar-day-cell.day-selected .day-number {
+            color: #ffffff !important;
+        }
+        .calendar-day-cell.day-selected .badge-surgery-count {
+            background: #ffffff;
+            color: #1e3a8a;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Outside Month */
+        .calendar-day-cell.day-outside-month {
+            opacity: 0.35;
+            background: #f8fafc;
+            border-color: #f1f5f9;
+        }
+
+        /* Legend boxes */
+        .legend-color-box {
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .legend-selected { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
+        .legend-today { background: #f59e0b; }
+        .legend-has-ops { background: #10b981; }
+
+        /* KPI Side Dashboard Cards */
+        .kpi-side-card {
+            background: #f8fafc;
+            border: 1.5px solid var(--or-border);
+            border-radius: 12px;
+            padding: 9px 12px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+        .kpi-side-card:hover {
+            transform: translateY(-1px);
+            border-color: #cbd5e1;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        .kpi-side-card.kpi-active {
+            border-color: var(--or-primary);
+            background: #f0f9ff;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
+        }
+        .kpi-icon-wrap {
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Modern Table Styling */
+        .or-table-shell {
+            border: 1px solid var(--or-border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: #ffffff;
+        }
         .or-master-table {
-            border-collapse: separate;
-            border-spacing: 0;
+            border-collapse: collapse;
             width: 100%;
+            margin-bottom: 0;
         }
         .or-master-table thead th {
             background: #f8fafc;
             color: #475569;
             font-weight: 700;
-            font-size: 0.85rem;
-            padding: 12px 14px;
-            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--or-border);
             white-space: nowrap;
         }
         .or-master-table tbody tr {
             transition: all 0.15s ease;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .or-master-table tbody tr:last-child {
+            border-bottom: none;
         }
         .or-master-table tbody tr:hover {
             background-color: #f8fafc;
         }
         .or-master-table tbody td {
-            padding: 12px 14px;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 12px 16px;
             vertical-align: middle;
         }
 
-        .patient-avatar-circle {
-            width: 38px;
-            height: 38px;
+        /* Patient Avatar */
+        .patient-avatar-box {
+            width: 40px;
+            height: 40px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 15px;
             color: #ffffff;
-            background: linear-gradient(135deg, #1b4958, #2a738a);
+            background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+            flex-shrink: 0;
         }
 
-        .badge-stage {
-            font-size: 0.8rem;
-            padding: 4px 10px;
-            border-radius: 50px;
+        /* Status & Timer Badges */
+        .badge-stage-pill {
+            font-size: 0.78rem;
+            padding: 5px 12px;
+            border-radius: 30px;
             font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            white-space: nowrap;
         }
-
         .live-pulse-dot {
             width: 8px;
             height: 8px;
@@ -133,17 +283,22 @@
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        .timer-badge-live {
+        /* Stopwatch Live Capsule */
+        .live-stopwatch-capsule {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
             background: #ecfdf5;
             color: #065f46;
             border: 1px solid #a7f3d0;
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.76rem;
             font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
+        /* Success save highlight */
         .inline-save-success {
             animation: highlight-green 1.5s ease-out;
         }
@@ -151,116 +306,343 @@
             0% { background-color: #dcfce7; border-color: #10b981; }
             100% { background-color: transparent; }
         }
+
+        /* Modern Form Controls Inside Table */
+        .or-inline-select {
+            border: 1.5px solid var(--or-border);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #1e293b;
+            background-color: #f8fafc;
+            padding: 6px 10px;
+            transition: all 0.2s;
+        }
+        .or-inline-select:focus {
+            background-color: #ffffff;
+            border-color: var(--or-primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+        .or-inline-time {
+            border: 1.5px solid var(--or-border);
+            border-radius: 10px;
+            font-size: 0.83rem;
+            font-weight: 700;
+            color: #0f172a;
+            background-color: #f8fafc;
+            padding: 5px 8px;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+            transition: all 0.2s;
+        }
+        .or-inline-time:focus {
+            background-color: #ffffff;
+            border-color: var(--or-primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        /* Quick action buttons */
+        .btn-action-stage {
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 6px 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-action-stage:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Fullscreen TV Flight Board Display */
+        body.tv-display-active .sidebar,
+        body.tv-display-active .app-header,
+        body.tv-display-active .sidebar-backdrop,
+        body.tv-display-active footer {
+            display: none !important;
+        }
+        body.tv-display-active main,
+        body.tv-display-active #orScheduleApp {
+            margin: 0 !important;
+            padding: 8px !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+        }
+        body.tv-display-active .or-canvas-card {
+            border-radius: 12px;
+            padding: 16px;
+        }
     </style>
 
     {{-- Main Container Card --}}
     <div class="or-canvas-card mb-4">
         {{-- Header Section: Title & Actions --}}
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-            <div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                        <i class="fas fa-procedures fs-5" style="color: var(--or-teal-deep);"></i>
+        <div class="or-header-box">
+            <div class="d-flex align-items-center gap-3">
+                <div class="or-header-icon">
+                    <i class="fas fa-procedures"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="mb-0 fw-bolder text-dark" style="font-size: 1.35rem; color: #0f172a;">جدول وقائمة انتظار العمليات الجراحية</h4>
+                        <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">OR Flight Board</span>
                     </div>
-                    <div>
-                        <h4 class="mb-0 fw-bolder text-dark">جدول وقائمة انتظار العمليات الجراحية</h4>
-                        <div class="text-muted small mt-0.5">
-                            متابعة وتحديث حالات العمليات، الصالات المخصصة، والمواعيد
-                        </div>
+                    <div class="text-muted small mt-1">
+                        متابعة وتحديث حالات العمليات، الصالات المخصصة، والمواعيد
+                        <span class="mx-1">•</span>
+                        <span class="text-dark fw-semibold"><i class="far fa-clock text-primary me-0.5"></i> التوقيت المباشر للمركز</span>
                     </div>
                 </div>
             </div>
 
             <div class="d-flex flex-wrap align-items-center gap-2">
                 @can('create surgeries')
-                <a href="{{ route('surgeries.create') }}" class="btn rounded-pill px-3 py-1.5 fw-bold text-white shadow-sm" style="background: var(--or-teal-deep);">
+                <a href="{{ route('surgeries.create') }}" class="btn rounded-pill px-3 py-2 fw-bold text-white shadow-sm" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
                     <i class="fas fa-plus me-1"></i> حجز عملية جديدة
                 </a>
                 @endcan
 
-                @can('manage surgery waiting list')
-                <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark bg-white rounded-pill px-3 py-1.5 shadow-sm fw-semibold" title="تخصيص صلاحيات التبويبات السريرية لكل دور">
-                    <i class="fas fa-sliders-h text-primary me-1"></i> صلاحيات التبويبات
+                @can('view surgeries')
+                <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" style="border-color: #cbd5e1; color: #334155;">
+                    <i class="fas fa-archive me-1 text-secondary"></i> الأرشيف العام
                 </a>
                 @endcan
 
-                <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary bg-white rounded-pill px-3 py-1.5 shadow-sm fw-semibold">
-                    <i class="fas fa-list me-1"></i> الأرشيف العام
-                </a>
+                <button type="button" class="btn btn-outline-primary bg-white rounded-pill px-3 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-1.5" id="btnToggleDashboard" data-bs-toggle="collapse" data-bs-target="#topDashboardCollapse" aria-expanded="true" title="طي أو إظهار التقويم والمؤشرات لتكبير مساحة الجدول">
+                    <i class="fas fa-chevron-up" id="toggleDashboardIcon"></i> <span id="toggleDashboardText">طي التقويم</span>
+                </button>
 
-                <button type="button" class="btn btn-light border rounded-pill px-3 py-1.5 shadow-sm text-dark fw-bold" onclick="location.reload();">
+                <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="عرض مخصص لشاشات الـ TV وممرات العمليات">
+                    <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">شاشة العرض (TV)</span>
+                </button>
+
+                <button type="button" class="btn btn-light border rounded-pill px-3 py-2 shadow-sm text-dark fw-bold" onclick="location.reload();">
                     <i class="fas fa-rotate me-1 text-primary"></i> تحديث
                 </button>
             </div>
         </div>
 
-        {{-- Weekdays Tabs (تبويبات أيام الأسبوع في الأعلى) --}}
-        <div class="mb-4">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fw-bold text-dark small">
-                    <i class="far fa-calendar-alt text-primary me-1"></i> اختر اليوم من الأسبوع:
-                </span>
-                <span class="small text-muted">
-                    تاريخ اليوم المعروض: <strong class="text-dark">{{ $parsedDate->format('Y-m-d') }}</strong>
-                </span>
+        {{-- Side-by-Side Dashboard: Compact Month Calendar Grid & Interactive KPIs --}}
+        @php
+            $inTheaterCount = $daySurgeries->filter(function($s) {
+                $isDone = $s->status === 'completed' || ($s->operationTheaterStation && $s->operationTheaterStation->status === 'completed');
+                return $s->status === 'in_progress' && ! $isDone;
+            })->count();
+
+            $completedCount = $daySurgeries->filter(function($s) {
+                return $s->status === 'completed' || ($s->operationTheaterStation && $s->operationTheaterStation->status === 'completed');
+            })->count();
+
+            $waitingCount = $activeSurgeries->whereIn('status', ['waiting', 'checked_in'])->count();
+        @endphp
+
+        <div class="collapse show" id="topDashboardCollapse">
+            <div class="row g-3 mb-4 align-items-stretch">
+            {{-- Right Column: Compact Month Calendar Grid (التقويم الشهري المدمج) --}}
+            <div class="col-12 col-lg-7 col-xl-7">
+                <div class="mini-calendar-card shadow-sm h-100 d-flex flex-column justify-content-between p-3">
+                    {{-- Mini Cal Header --}}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-1.5">
+                            <a href="{{ route('surgeries.waiting', ['date' => $prevMonthDate]) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5" title="الشهر السابق" style="font-size: 0.76rem;">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            <span class="mini-cal-title px-1">
+                                <i class="far fa-calendar-alt text-primary me-1"></i> {{ $monthTitle }}
+                            </span>
+                            <a href="{{ route('surgeries.waiting', ['date' => $nextMonthDate]) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5" title="الشهر القادم" style="font-size: 0.76rem;">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                {{ $totalMonthSurgeries }} عملية بالشهر
+                            </span>
+                            <a href="{{ route('surgeries.waiting', ['date' => today()->format('Y-m-d')]) }}" class="btn btn-sm {{ today()->format('Y-m-d') === $selectedDate ? 'btn-primary' : 'btn-outline-primary' }} rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.74rem;">
+                                🌟 اليوم
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- 7 Weekdays Header --}}
+                    <div class="calendar-weekdays-header">
+                        <div>السبت</div>
+                        <div>الأحد</div>
+                        <div>الاثنين</div>
+                        <div>الثلاثاء</div>
+                        <div>الأربعاء</div>
+                        <div>الخميس</div>
+                        <div>الجمعة</div>
+                    </div>
+
+                    {{-- Calendar Days Grid (7 columns) --}}
+                    <div class="calendar-days-grid my-auto">
+                        @foreach($calendarDays as $day)
+                            @php
+                                $cellClass = [];
+                                if ($day['is_selected']) {
+                                    $cellClass[] = 'day-selected';
+                                } elseif ($day['is_today']) {
+                                    $cellClass[] = 'day-today';
+                                } elseif ($day['count'] > 0) {
+                                    $cellClass[] = 'day-has-surgeries';
+                                } else {
+                                    $cellClass[] = 'day-empty';
+                                }
+
+                                if (!$day['is_current_month']) {
+                                    $cellClass[] = 'day-outside-month';
+                                }
+                            @endphp
+                            <a href="{{ route('surgeries.waiting', ['date' => $day['date']]) }}" 
+                               class="calendar-day-cell {{ implode(' ', $cellClass) }}"
+                               title="{{ $day['day_name'] }} {{ $day['date'] }} ({{ $day['count'] }} عمليات)">
+                                <span class="day-number">{{ $day['day_number'] }}</span>
+                                @if($day['count'] > 0)
+                                    <span class="badge-surgery-count">{{ $day['count'] }}</span>
+                                @elseif($day['is_today'])
+                                    <span class="today-dot-mini"></span>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+
+                    {{-- Mini Cal Footer Legend --}}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 mt-2 border-top small text-muted" style="font-size: 0.72rem;">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-selected" style="width: 10px; height: 10px;"></span>
+                                <span>المختار: <strong>{{ $parsedDate->format('d/m') }}</strong></span>
+                            </span>
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-today" style="width: 10px; height: 10px;"></span>
+                                <span>اليوم</span>
+                            </span>
+                            <span class="d-flex align-items-center gap-1">
+                                <span class="legend-color-box legend-has-ops" style="width: 10px; height: 10px;"></span>
+                                <span>أيام بها عمليات</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="week-nav-scroll">
-                @foreach($weekDays as $day)
-                <a href="{{ route('surgeries.waiting', ['date' => $day['date']]) }}" class="week-day-pill {{ $day['is_selected'] ? 'active' : '' }}">
-                    <div class="fw-bold" style="font-size: 0.95rem;">
-                        {{ $day['day_name'] }}
-                        @if($day['is_today'])
-                            <span class="badge bg-warning text-dark rounded-circle p-1 ms-1" style="font-size: 0.6rem;" title="اليوم الحالي">●</span>
-                        @endif
+            {{-- Left Column: Compact KPI Cards Dashboard (كروت المؤشرات بجانب التقويم) --}}
+            <div class="col-12 col-lg-5 col-xl-5">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white d-flex flex-column justify-content-between" style="border: 1px solid var(--or-border) !important;">
+                    <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                        <span class="fw-bold text-dark small d-flex align-items-center gap-1.5" style="font-size: 0.84rem;">
+                            <i class="fas fa-chart-pie text-primary"></i>
+                            <span>مؤشرات: {{ $parsedDate->locale('ar')->translatedFormat('l، d F') }}</span>
+                        </span>
+                        <span class="badge bg-light text-muted border px-2 py-0.5 font-monospace" style="font-size: 0.72rem;">
+                            {{ $daySurgeries->count() }} عمليات
+                        </span>
                     </div>
-                    <div class="small opacity-75 font-monospace" style="font-size: 0.8rem;">
-                        {{ $day['formatted_date'] }}
+
+                    {{-- 2x2 Grid + 1 Completed Bar --}}
+                    <div class="d-flex flex-column gap-2 my-auto">
+                        <div class="row g-2">
+                            {{-- All Surgeries --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card kpi-active" data-status-filter="all" id="kpi-filter-all" onclick="filterTableByStatus('all')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">إجمالي اليوم</div>
+                                        <div class="fs-4 fw-bolder text-dark font-monospace">{{ $daySurgeries->count() }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-light text-primary" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-layer-group"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Scheduled --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="scheduled" id="kpi-filter-scheduled" onclick="filterTableByStatus('scheduled')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">مجدولة</div>
+                                        <div class="fs-4 fw-bolder text-primary font-monospace">{{ $scheduledSurgeries->count() }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-primary bg-opacity-10 text-primary" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="far fa-calendar-alt"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Waiting / Prep --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="waiting" id="kpi-filter-waiting" onclick="filterTableByStatus('waiting')">
+                                    <div>
+                                        <div class="text-muted small fw-bold" style="font-size: 0.72rem;">بالانتظار (تحضير)</div>
+                                        <div class="fs-4 fw-bolder text-warning font-monospace">{{ $waitingCount }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-warning bg-opacity-10 text-warning" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-user-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- In OR (In Progress) --}}
+                            <div class="col-6">
+                                <div class="kpi-side-card" data-status-filter="in_progress" id="kpi-filter-in_progress" onclick="filterTableByStatus('in_progress')">
+                                    <div>
+                                        <div class="text-muted small fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                            <span class="live-pulse-dot" style="width: 5px; height: 5px;"></span> داخل الصالة
+                                        </div>
+                                        <div class="fs-4 fw-bolder text-info font-monospace">{{ $inTheaterCount }}</div>
+                                    </div>
+                                    <div class="kpi-icon-wrap bg-info bg-opacity-10 text-info" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                        <i class="fas fa-procedures"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Completed Full Width Bar --}}
+                        <div class="kpi-side-card" data-status-filter="completed" id="kpi-filter-completed" onclick="filterTableByStatus('completed')">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="kpi-icon-wrap bg-success bg-opacity-10 text-success" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                                    <i class="fas fa-flag-checkered"></i>
+                                </div>
+                                <div class="text-muted small fw-bold" style="font-size: 0.76rem;">
+                                    مكتملة (خرجت من الصالة للتعافي / الطابق)
+                                </div>
+                            </div>
+                            <div class="fs-5 fw-bolder text-success font-monospace">{{ $completedCount }}</div>
+                        </div>
                     </div>
-                    <span class="badge-count">
-                        {{ $day['count'] }} {{ $day['count'] == 1 ? 'عملية' : ($day['count'] == 2 ? 'عمليتان' : 'عمليات') }}
-                    </span>
-                </a>
-                @endforeach
+
+                    <div class="pt-2 border-top text-muted small text-center" style="font-size: 0.72rem;">
+                        <i class="fas fa-hand-pointer me-1 text-primary"></i> انقر على أي مؤشر لتصفية جدول العمليات بالأسفل
+                    </div>
+                </div>
             </div>
         </div>
+        </div>
 
-        {{-- Search & Counter Bar --}}
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pt-2 border-top">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-bold">
-                    إجمالي عمليات اليوم: <span class="text-primary">{{ $daySurgeries->count() }}</span>
-                </span>
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
-                    مجدولة: {{ $scheduledSurgeries->count() }}
-                </span>
-                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle rounded-pill px-2.5 py-1">
-                    بالانتظار: {{ $activeSurgeries->whereIn('status', ['waiting', 'checked_in'])->count() }}
-                </span>
-                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1">
-                    داخل الصالة: {{ $activeSurgeries->where('status', 'in_progress')->count() }}
-                </span>
-            </div>
-
-            <div class="position-relative" style="min-width: 250px;">
+        {{-- Realtime Search Bar --}}
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="position-relative flex-grow-1" style="max-width: 520px;">
                 <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                <input type="text" id="surgerySearchInput" class="form-control form-control-sm rounded-pill ps-5 pe-3 py-1.5 border" placeholder="بحث باسم المريض، الملف، الصالة، الطبيب...">
+                <input type="text" id="surgerySearchInput" class="form-control rounded-pill ps-5 pe-4 py-2 border" style="background: #f8fafc; font-size: 0.88rem;" placeholder="بحث فوري بالاسم، رقم الملف، الصالة المخصصة، الطبيب، العملية...">
+            </div>
+            <div class="small text-muted fw-semibold">
+                عرض <span id="visibleRowCount" class="text-primary font-monospace fw-bold">{{ $daySurgeries->count() }}</span> من أصل <span class="font-monospace fw-bold">{{ $daySurgeries->count() }}</span> عملية
             </div>
         </div>
 
-        {{-- Main Surgery Table --}}
-        <div class="table-responsive">
+        {{-- Master Flight Board Table (5 Consolidated Columns) --}}
+        <div class="or-table-shell table-responsive">
             <table class="or-master-table">
                 <thead>
                     <tr>
-                        <th style="width: 70px;"># الرقم</th>
-                        <th>المريض</th>
-                        <th>العملية الجراحية</th>
-                        <th>الطبيب الجراح</th>
-                        <th style="min-width: 190px;">الصالة المخصصة (تحديد مباشر)</th>
-                        <th style="min-width: 140px;">الوقت (تحديد مباشر)</th>
-                        <th>حالة المسار</th>
-                        <th class="text-center" style="width: 170px;">الإجراءات السريعة</th>
+                        <th style="width: 25%;"># / المريض والملف</th>
+                        <th style="width: 25%;">العملية الجراحية والجراح</th>
+                        <th style="width: 24%;">الصالة والتوقيت المباشر</th>
+                        <th style="width: 13%;">حالة المسار</th>
+                        <th class="text-center" style="width: 13%;">الإجراء السريع</th>
                     </tr>
                 </thead>
                 <tbody id="surgeriesTableBody">
@@ -279,141 +661,152 @@
                             $doctorName . ' ' .
                             ($theaterName ?? '')
                         );
-                    @endphp
-                    <tr class="surgery-row" data-search="{{ $searchData }}" id="surgeryRow-{{ $surgery->id }}">
-                        {{-- ID --}}
-                        <td>
-                            <span class="fw-bold font-monospace text-dark">#{{ $surgery->id }}</span>
-                        </td>
 
-                        {{-- Patient --}}
+                        $isOtCompleted = $surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed');
+
+                        // Normalized status for interactive KPI filter
+                        $normalizedStatus = $surgery->status;
+                        if (in_array($normalizedStatus, ['waiting', 'checked_in'])) {
+                            $normalizedStatus = 'waiting';
+                        } elseif ($isOtCompleted) {
+                            $normalizedStatus = 'completed';
+                        }
+                    @endphp
+                    <tr class="surgery-row" data-search="{{ $searchData }}" data-status="{{ $normalizedStatus }}" id="surgeryRow-{{ $surgery->id }}">
+                        {{-- Col 1: ID, Patient & File --}}
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="patient-avatar-circle">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="patient-avatar-box">
                                     {{ mb_substr($patientName, 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-dark">{{ $patientName }}</div>
-                                    <div class="small text-muted font-monospace">
-                                        ملف: {{ $fileNumber }}
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <span class="badge bg-light text-muted border font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">#{{ $surgery->id }}</span>
+                                        <span class="fw-bold text-dark" style="font-size: 0.95rem;">{{ $patientName }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ملف #{{ $fileNumber }}</span>
                                         @if($surgery->patient && $surgery->patient->age)
-                                            • {{ $surgery->patient->age }} سنة
+                                            <span class="badge bg-light text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
                                         @endif
                                         @if($surgery->patient && $surgery->patient->gender)
-                                            • {{ $surgery->patient->gender == 'male' ? 'ذكر' : 'أنثى' }}
+                                            <span class="badge bg-light text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->gender == 'male' ? 'ذكر' : 'أنثى' }}</span>
                                         @endif
                                     </div>
                                 </div>
                             </div>
                         </td>
 
-                        {{-- Surgery Type --}}
-                        <td>
-                            <div class="fw-bold text-dark" style="color: var(--or-teal-deep) !important;">
-                                {{ $surgery->surgery_type }}
-                            </div>
-                            @if($surgery->additionalOperations && $surgery->additionalOperations->count() > 0)
-                                <span class="badge bg-light text-primary border rounded-pill px-2 py-0.5 small mt-0.5">
-                                    + {{ $surgery->additionalOperations->count() }} عمليات إضافية
-                                </span>
-                            @endif
-                        </td>
-
-                        {{-- Surgeon --}}
-                        <td>
-                            <div class="fw-semibold text-dark small">
-                                <i class="fas fa-user-md text-primary me-1"></i> د. {{ $doctorName }}
-                            </div>
-                        </td>
-
-                        {{-- Operation Theater (Inline Select + Quick Add) --}}
-                        <td>
-                            <div class="d-flex align-items-center gap-1">
-                                <select class="form-select form-select-sm rounded-3 py-1 or-theater-select"
-                                        data-surgery-id="{{ $surgery->id }}"
-                                        onchange="inlineSaveTheater(this, {{ $surgery->id }})"
-                                        style="font-size: 0.83rem;">
-                                    <option value="">-- اختر الصالة --</option>
-                                    @foreach($operationTheaters as $theater)
-                                        <option value="{{ $theater->id }}" {{ $surgery->operation_theater_id == $theater->id ? 'selected' : '' }}>
-                                            {{ $theater->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-2 shadow-none"
-                                        title="إضافة صالة جديدة للقائمة"
-                                        onclick="openNewTheaterModal({{ $surgery->id }})"
-                                        style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    <i class="fas fa-plus small"></i>
-                                </button>
-                            </div>
-                            <div class="small text-success fw-bold mt-1 d-none save-msg" id="saveTheaterMsg-{{ $surgery->id }}" style="font-size: 0.72rem;">
-                                <i class="fas fa-check-circle"></i> تم حفظ الصالة
-                            </div>
-                        </td>
-
-                        {{-- Time (Inline Time Input) --}}
+                        {{-- Col 2: Surgery Type & Surgeon --}}
                         <td>
                             <div>
-                                <input type="time" class="form-control form-control-sm font-monospace text-center rounded-3 py-1 or-time-input"
-                                       value="{{ $rawTime }}"
-                                       data-surgery-id="{{ $surgery->id }}"
-                                       onchange="inlineSaveTime(this, {{ $surgery->id }})"
-                                       style="font-size: 0.85rem;">
-                            </div>
-                            <div class="small text-success fw-bold mt-1 d-none save-msg" id="saveTimeMsg-{{ $surgery->id }}" style="font-size: 0.72rem;">
-                                <i class="fas fa-check-circle"></i> تم حفظ الوقت
-                            </div>
-
-                            @if($surgery->status === 'in_progress')
-                                <div class="mt-1">
-                                    <span class="timer-badge-live" data-live-timer="true" data-start="{{ $surgery->started_at ? $surgery->started_at->toISOString() : ($surgery->scheduled_time ? $surgery->scheduled_time->toISOString() : '') }}">
-                                        <i class="fas fa-stopwatch me-1 text-success"></i><span>00:00:00</span>
-                                    </span>
+                                <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.94rem;">
+                                    {{ $surgery->surgery_type }}
                                 </div>
-                            @endif
+                                <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
+                                    <span class="d-inline-flex align-items-center gap-1 bg-light border rounded-pill px-2.5 py-0.5 text-dark small fw-semibold" style="font-size: 0.78rem;">
+                                        <i class="fas fa-user-md text-primary"></i>
+                                        <span>د. {{ $doctorName }}</span>
+                                    </span>
+                                    @if($surgery->additionalOperations && $surgery->additionalOperations->count() > 0)
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.7rem;">
+                                            + {{ $surgery->additionalOperations->count() }} إضافية
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
 
-                        {{-- Stage / Status --}}
+                        {{-- Col 3: Theater & Time (Compact Inline Configuration) --}}
                         <td>
-                            @if($surgery->status === 'scheduled')
-                                <span class="badge-stage bg-primary bg-opacity-10 text-primary border border-primary-subtle">
-                                    <i class="fas fa-calendar-alt"></i> مجدولة
-                                </span>
-                            @elseif($surgery->status === 'waiting' || $surgery->status === 'checked_in')
-                                <span class="badge-stage bg-warning bg-opacity-10 text-warning border border-warning-subtle">
-                                    <i class="fas fa-user-clock"></i> بالانتظار (تحضير)
+                            <div class="d-flex flex-column gap-1.5" style="max-width: 260px;">
+                                {{-- Theater Selector --}}
+                                <div class="d-flex align-items-center gap-1">
+                                    <select class="form-select form-select-sm or-inline-select or-theater-select py-1"
+                                            data-surgery-id="{{ $surgery->id }}"
+                                            onchange="inlineSaveTheater(this, {{ $surgery->id }})"
+                                            style="font-size: 0.8rem;">
+                                        <option value="">-- اختر الصالة المخصصة --</option>
+                                        @foreach($operationTheaters as $theater)
+                                            <option value="{{ $theater->id }}" {{ $surgery->operation_theater_id == $theater->id ? 'selected' : '' }}>
+                                                {{ $theater->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-3 shadow-none p-0 d-inline-flex align-items-center justify-content-center"
+                                            title="إضافة صالة جديدة للقائمة"
+                                            onclick="openNewTheaterModal({{ $surgery->id }})"
+                                            style="width: 28px; height: 28px; flex-shrink: 0;">
+                                        <i class="fas fa-plus small" style="font-size: 0.72rem;"></i>
+                                    </button>
+                                </div>
+
+                                {{-- Time Input & Stopwatch --}}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="input-group input-group-sm" style="max-width: 125px;">
+                                        <span class="input-group-text bg-light text-muted px-1.5 py-0 border-end-0" style="font-size: 0.75rem;"><i class="far fa-clock"></i></span>
+                                        <input type="time" class="form-control form-control-sm or-inline-time or-time-input ps-1 py-0.5"
+                                               value="{{ $rawTime }}"
+                                               data-surgery-id="{{ $surgery->id }}"
+                                               onchange="inlineSaveTime(this, {{ $surgery->id }})"
+                                               style="font-size: 0.8rem; height: 28px;">
+                                    </div>
+
+                                    @if($surgery->status === 'in_progress' && ! $isOtCompleted)
+                                        <span class="live-stopwatch-capsule py-0.5 px-2" data-live-timer="true" data-start="{{ $surgery->started_at ? $surgery->started_at->toISOString() : ($surgery->scheduled_time ? $surgery->scheduled_time->toISOString() : '') }}" style="font-size: 0.72rem;">
+                                            <i class="fas fa-stopwatch text-success"></i><span>00:00:00</span>
+                                        </span>
+                                    @endif
+                                </div>
+
+                                {{-- Feedback messages --}}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="small text-success fw-bold d-none save-msg" id="saveTheaterMsg-{{ $surgery->id }}" style="font-size: 0.7rem;">
+                                        <i class="fas fa-check-circle"></i> تم حفظ الصالة
+                                    </div>
+                                    <div class="small text-success fw-bold d-none save-msg" id="saveTimeMsg-{{ $surgery->id }}" style="font-size: 0.7rem;">
+                                        <i class="fas fa-check-circle"></i> تم حفظ الوقت
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        {{-- Col 4: Stage / Status --}}
+                        <td>
+                            @if($isOtCompleted)
+                                <span class="badge-stage-pill bg-success text-white shadow-sm" title="تم إنهاء صالة العمليات واكتمال العملية">
+                                    <i class="fas fa-check-circle me-0.5"></i> مكتملة (خرجت)
                                 </span>
                             @elseif($surgery->status === 'in_progress')
-                                <span class="badge-stage bg-success text-white shadow-sm">
-                                    <span class="live-pulse-dot"></span> داخل الصالة (جارية)
+                                <span class="badge-stage-pill bg-info text-white shadow-sm">
+                                    <span class="live-pulse-dot"></span> داخل الصالة
                                 </span>
-                            @elseif($surgery->status === 'completed')
-                                <span class="badge-stage bg-secondary text-white">
-                                    <i class="fas fa-check-circle"></i> منتهية / خرج
+                            @elseif($surgery->status === 'waiting' || $surgery->status === 'checked_in')
+                                <span class="badge-stage-pill bg-warning bg-opacity-10 text-warning border border-warning-subtle">
+                                    <i class="fas fa-user-clock"></i> بالانتظار
+                                </span>
+                            @elseif($surgery->status === 'scheduled')
+                                <span class="badge-stage-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle">
+                                    <i class="far fa-calendar-alt"></i> مجدولة
                                 </span>
                             @else
                                 <span class="badge bg-light text-muted">{{ $surgery->status }}</span>
                             @endif
                         </td>
 
-                        {{-- Actions --}}
+                        {{-- Col 5: Actions Column --}}
                         <td class="text-center">
-                            <div class="d-flex align-items-center justify-content-center gap-1">
-                                <a href="{{ route('clinical-station.show', $surgery) }}" class="btn btn-sm btn-info text-white rounded-pill px-2.5 py-1 fw-bold shadow-sm" title="المحطة السريرية الموحدة (المقيم والتمريض)">
-                                    <i class="fas fa-stethoscope"></i> المحطة السريرية
-                                </a>
-
-                                <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-light border rounded-pill px-2 py-1 text-dark" title="عرض ملف العملية">
-                                    <i class="fas fa-file-medical text-primary"></i>
-                                </a>
-
-                                @if($surgery->status === 'scheduled')
-                                    @can('manage surgery waiting list')
-                                    <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
+                            <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
+                                @if($isOtCompleted)
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold" title="تم إنهاء صالة العمليات واكتمال العملية">
+                                        <i class="fas fa-check-circle text-success me-1"></i> ✔️ عملية مكتملة
+                                    </span>
+                                @elseif($surgery->status === 'in_progress')
+                                    @can('control surgeries')
+                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 shadow-sm fw-bold">
-                                            <i class="fas fa-sign-in-alt me-0.5"></i> دخول
+                                        <button type="submit" class="btn btn-sm btn-danger btn-action-stage shadow-sm" onclick="return confirm('تأكيد إنهاء مرحلة صالة العمليات واكتمال العملية؟')">
+                                            <i class="fas fa-stop"></i> إنهاء
                                         </button>
                                     </form>
                                     @endcan
@@ -421,17 +814,17 @@
                                     @can('control surgeries')
                                     <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-2.5 py-1 shadow-sm fw-bold">
-                                            <i class="fas fa-play me-0.5"></i> تحويل وبدء
+                                        <button type="submit" class="btn btn-sm btn-success btn-action-stage shadow-sm" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                                            <i class="fas fa-play"></i> تحويل وبدء
                                         </button>
                                     </form>
                                     @endcan
-                                @elseif($surgery->status === 'in_progress')
-                                    @can('control surgeries')
-                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline">
+                                @elseif($surgery->status === 'scheduled')
+                                    @can('manage surgery waiting list')
+                                    <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-2.5 py-1 shadow-sm fw-bold" onclick="return confirm('تأكيد إنهاء مرحلة صالة العمليات؟')">
-                                            <i class="fas fa-stop me-0.5"></i> إنهاء
+                                        <button type="submit" class="btn btn-sm btn-primary btn-action-stage shadow-sm">
+                                            <i class="fas fa-sign-in-alt"></i> دخول
                                         </button>
                                     </form>
                                     @endcan
@@ -441,10 +834,19 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
-                            <i class="fas fa-calendar-times fa-3x text-muted opacity-25 mb-2"></i>
-                            <div class="fw-semibold">لا توجد عمليات مسجلة في هذا اليوم</div>
-                            <div class="small text-muted mt-1">اختر يوماً آخر من شريط الأسبوع في الأعلى</div>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <div class="py-4">
+                                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center p-3 mb-2 text-muted" style="width: 70px; height: 70px;">
+                                    <i class="far fa-calendar-times fs-2"></i>
+                                </div>
+                                <div class="fw-bold fs-6 text-dark">لا توجد عمليات مسجلة في هذا اليوم</div>
+                                <div class="small text-muted mt-1">اختر يوماً آخر من التقويم في الأعلى أو قم بحجز عملية جديدة</div>
+                                @can('create surgeries')
+                                <a href="{{ route('surgeries.create') }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 mt-3 fw-bold">
+                                    <i class="fas fa-plus me-1"></i> حجز عملية الآن
+                                </a>
+                                @endcan
+                            </div>
                         </td>
                     </tr>
                     @endforelse
@@ -457,25 +859,25 @@
 {{-- Small Modal ONLY for adding a new Operation Theater (فقط لإضافة صالة جديدة) --}}
 <div class="modal fade" id="newTheaterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-bottom-0 pb-1">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-1 pt-3 px-3">
                 <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-1.5">
                     <i class="fas fa-door-closed text-primary"></i>
                     إضافة صالة جديدة
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body pt-1">
+            <div class="modal-body pt-1 px-3 pb-3">
                 <input type="hidden" id="activeSurgeryIdForNewTheater">
-                <div class="mb-2">
-                    <label class="form-label small text-muted mb-1">اسم الصالة</label>
-                    <input type="text" id="newTheaterNameModalInput" class="form-control form-control-sm rounded-3" placeholder="مثلاً: صالة 4، صالة القسطرة...">
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-1 fw-semibold">اسم الصالة</label>
+                    <input type="text" id="newTheaterNameModalInput" class="form-control form-control-sm rounded-3 py-1.5" placeholder="مثلاً: صالة 4، صالة القسطرة...">
                     <div id="newTheaterModalError" class="text-danger small mt-1 d-none"></div>
                 </div>
                 <div class="d-flex justify-content-end gap-1.5 pt-2 border-top">
                     <button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" id="btnSaveTheaterFromModal">
-                        <i class="fas fa-check me-1"></i> حفظ
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" id="btnSaveTheaterFromModal">
+                        <i class="fas fa-check me-1"></i> حفظ الصالة
                     </button>
                 </div>
             </div>
@@ -487,6 +889,7 @@
 @section('scripts')
 <script>
 let newTheaterModalInstance = null;
+let currentActiveFilter = 'all';
 
 // Open New Theater Modal
 function openNewTheaterModal(surgeryId) {
@@ -570,23 +973,82 @@ function inlineSaveTime(inputEl, surgeryId) {
     .catch(() => alert('تعذر الاتصال بالسيرفر'));
 }
 
+// Interactive Status Filter via KPI Cards
+function filterTableByStatus(status) {
+    currentActiveFilter = status;
+
+    // Highlight active card
+    document.querySelectorAll('.kpi-side-card, .kpi-card').forEach(card => {
+        if (card.getAttribute('data-status-filter') === status) {
+            card.classList.add('kpi-active');
+        } else {
+            card.classList.remove('kpi-active');
+        }
+    });
+
+    applyFilters();
+}
+
+function applyFilters() {
+    const searchInput = document.getElementById('surgerySearchInput');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const rows = document.querySelectorAll('.surgery-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const searchData = (row.getAttribute('data-search') || '').toLowerCase();
+        const rowStatus = row.getAttribute('data-status') || '';
+
+        const matchesSearch = !query || searchData.includes(query);
+        const matchesStatus = (currentActiveFilter === 'all') || (rowStatus === currentActiveFilter);
+
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const counterEl = document.getElementById('visibleRowCount');
+    if (counterEl) {
+        counterEl.textContent = visibleCount;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    // Dashboard Collapse/Expand state management
+    const dashboardCollapseEl = document.getElementById('topDashboardCollapse');
+    const toggleDashboardIcon = document.getElementById('toggleDashboardIcon');
+    const toggleDashboardText = document.getElementById('toggleDashboardText');
+
+    if (dashboardCollapseEl) {
+        // Restore user's collapsed state from localStorage
+        const isCollapsed = localStorage.getItem('waiting_dashboard_collapsed') === 'true';
+        if (isCollapsed) {
+            const bsCollapse = new bootstrap.Collapse(dashboardCollapseEl, { toggle: false });
+            bsCollapse.hide();
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-down';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'إظهار التقويم';
+        }
+
+        dashboardCollapseEl.addEventListener('hide.bs.collapse', function () {
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-down';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'إظهار التقويم';
+            localStorage.setItem('waiting_dashboard_collapsed', 'true');
+        });
+
+        dashboardCollapseEl.addEventListener('show.bs.collapse', function () {
+            if (toggleDashboardIcon) toggleDashboardIcon.className = 'fas fa-chevron-up';
+            if (toggleDashboardText) toggleDashboardText.textContent = 'طي التقويم';
+            localStorage.setItem('waiting_dashboard_collapsed', 'false');
+        });
+    }
+
     // Search Filter
     const searchInput = document.getElementById('surgerySearchInput');
-    const rows = document.querySelectorAll('.surgery-row');
-
     if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            const query = this.value.toLowerCase().trim();
-            rows.forEach(row => {
-                const searchData = (row.getAttribute('data-search') || '').toLowerCase();
-                if (!query || searchData.includes(query)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
+        searchInput.addEventListener('input', applyFilters);
     }
 
     // Save New Theater from modal
@@ -619,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 btnSaveTheater.disabled = false;
-                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ';
+                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ الصالة';
 
                 if (data.success && data.theater) {
                     // Append option to all theater selects on the page
@@ -644,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(() => {
                 btnSaveTheater.disabled = false;
-                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ';
+                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ الصالة';
                 errDiv.textContent = 'تعذر الاتصال بالسيرفر';
                 errDiv.classList.remove('d-none');
             });
@@ -677,6 +1139,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     updateTimers();
     setInterval(updateTimers, 1000);
+
+    // Auto-refresh every 60s for public TV Flight Board display (only when not searching or using modal)
+    setInterval(function () {
+        const searchInput = document.getElementById('surgerySearchInput');
+        const isSearching = searchInput && searchInput.value.trim().length > 0;
+        const isModalOpen = document.querySelector('.modal.show');
+        if (!isSearching && !isModalOpen) {
+            location.reload();
+        }
+    }, 60000);
 });
+
+// Toggle TV Flight Board Fullscreen Display
+function toggleTvDisplayMode() {
+    document.body.classList.toggle('tv-display-active');
+    const isTv = document.body.classList.contains('tv-display-active');
+    const tvText = document.getElementById('tvModeText');
+    if (tvText) {
+        tvText.textContent = isTv ? 'خروج من وضع الـ TV' : 'شاشة العرض (TV)';
+    }
+    if (isTv && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else if (!isTv && document.exitFullscreen && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+}
 </script>
 @endsection

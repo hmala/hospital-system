@@ -464,4 +464,35 @@ class UnifiedEmergencyLabStationAndReportTest extends TestCase
         $response->assertDontSee('تقارير الأجهزة والفحوصات المرفقة');
         $response->assertDontSee('CBC (5-Part Diff) — WBC', false);
     }
+
+    public function test_emergency_lab_print_requisition_work_order_contains_cbc_when_pending(): void
+    {
+        $cbcTest = LabTest::create([
+            'name' => 'Complete Blood Count (CBC)',
+            'code' => 'CBC_PENDING_STAT',
+            'main_category' => 'Hematology',
+            'result_entry_type' => LabTest::ENTRY_TYPE_ATTACHMENT,
+            'price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $pendingReq = EmergencyLabRequest::create([
+            'emergency_id' => $this->emergency->id,
+            'patient_id' => $this->emergency->patient_id,
+            'status' => 'pending',
+            'priority' => 'critical',
+            'requested_at' => now(),
+        ]);
+        $pendingReq->labTests()->attach($cbcTest->id);
+
+        $response = $this->actingAs($this->labStaffUser)
+            ->get(route('staff.emergency-lab.print', $pendingReq));
+
+        $response->assertStatus(200);
+        $response->assertSee('قائمة التحاليل المطلوبة (أمر عمل المختبر / Test Work Order)');
+        $response->assertSee('بانتظار إدخال النتائج');
+        $response->assertSee('Complete Blood Count (CBC)');
+        $response->assertSee('Pending');
+        $response->assertDontSee('No laboratory tests or results recorded for this request yet');
+    }
 }

@@ -152,7 +152,104 @@
     <!-- <link href="{{ asset('css/select2-bootstrap4-theme.min.css') }}" rel="stylesheet" /> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
+        /* ===== Custom Hospital SweetAlert2 & Toastr Modern Styling ===== */
+        .swal2-popup.hospital-swal-popup {
+            font-family: inherit !important;
+            border-radius: 22px !important;
+            padding: 2rem 1.8rem !important;
+            background: #ffffff !important;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+            color: #0f172a !important;
+            direction: rtl !important;
+            text-align: center !important;
+        }
+        .swal2-title.hospital-swal-title {
+            font-size: 1.28rem !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            padding: 0 0 0.5rem 0 !important;
+        }
+        .swal2-html-container.hospital-swal-content {
+            font-size: 0.95rem !important;
+            line-height: 1.65 !important;
+            color: #334155 !important;
+            white-space: pre-line !important;
+            margin: 0.5rem 0 1rem 0 !important;
+        }
+        .swal2-actions.hospital-swal-actions {
+            margin-top: 1.5rem !important;
+            gap: 12px !important;
+            justify-content: center !important;
+        }
+        .hospital-swal-btn-confirm {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            color: #ffffff !important;
+            border-radius: 50px !important;
+            padding: 0.6rem 2.2rem !important;
+            font-size: 0.92rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28) !important;
+            border: none !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        .hospital-swal-btn-confirm:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+        }
+        .hospital-swal-btn-cancel {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            border-radius: 50px !important;
+            padding: 0.6rem 2rem !important;
+            font-size: 0.92rem !important;
+            font-weight: 600 !important;
+            border: 1px solid #cbd5e1 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        .hospital-swal-btn-cancel:hover {
+            background: #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+        /* Modern Clean Toastr Styling (Override dark 2012 styling) */
+        #toast-container > .toast {
+            background-image: none !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+            opacity: 0.98 !important;
+            padding: 14px 18px 14px 45px !important;
+            color: #0f172a !important;
+            font-family: inherit !important;
+            font-size: 0.92rem !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        #toast-container > .toast-success {
+            background-color: #f0fdf4 !important;
+            color: #166534 !important;
+            border-right: 5px solid #22c55e !important;
+        }
+        #toast-container > .toast-error {
+            background-color: #fef2f2 !important;
+            color: #991b1b !important;
+            border-right: 5px solid #ef4444 !important;
+        }
+        #toast-container > .toast-warning {
+            background-color: #fffbeb !important;
+            color: #92400e !important;
+            border-right: 5px solid #f59e0b !important;
+        }
+        #toast-container > .toast-info {
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
+            border-right: 5px solid #3b82f6 !important;
+        }
+        #toast-container > div .toast-progress {
+            opacity: 0.3 !important;
+        }
+
         html, body {
             height: 100%;
         }
@@ -792,8 +889,12 @@
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
                     <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
                 </span>
-                <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+               <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i>
+                </a>
+            @else
+                <a href="{{ route('login') }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm">
+                    <i class="fas fa-sign-in-alt me-1"></i> تسجيل الدخول
                 </a>
             @endif
         </div>
@@ -819,10 +920,17 @@
                             <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" class="img-fluid">
                         </div>
                         <div class="sidebar-user">
-                            <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
-                            <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                            </a>
+                            @if(Auth::check())
+                                <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
+                                <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                                </a>
+                            @else
+                                <div><i class="fas fa-tv text-primary me-1"></i> <span>شاشة عرض عامة</span></div>
+                                <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
+                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                                </a>
+                            @endif
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf
@@ -1046,8 +1154,9 @@
                                                  request()->routeIs('cashier.nicu.statements') ||
                                                  request()->routeIs('cashier.nicu.doctor-accounts') ||
                                                  request()->routeIs('cashier.nicu.doctor-account');
+                            $isSurgeryAccountsActive = request()->routeIs('cashier.surgeries.doctor-accounts*');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1221,6 +1330,21 @@
                             @endcan
                         </div>
                         @endcanany
+
+                        <!-- القسم الفرعي: العمليات الجراحية -->
+                        @canany(['view account statements', 'view doctor accounts', 'process surgery payments'])
+                        <div class="sidebar-section-title {{ $isSurgeryAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#surgeryAccountingSubSection" aria-expanded="{{ $isSurgeryAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
+                            <span><i class="fas fa-procedures text-danger me-1"></i> حسابات جراحي العمليات</span>
+                            <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="collapse {{ $isSurgeryAccountsActive ? 'show' : '' }} ms-2" id="surgeryAccountingSubSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.surgeries.doctor-accounts*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.doctor-accounts') }}">
+                                    <i class="fas fa-wallet text-danger"></i><span> حسابات الأطباء الجراحين</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endcanany
                         </div> <!-- end unifiedAccountingSection -->
                         @endcanany
 
@@ -1342,7 +1466,7 @@
                         @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'manage surgery tab permissions', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
@@ -1367,6 +1491,8 @@
                                 @endif
                             </a>
                         </li>
+                        @endcan
+                        @can('manage surgery tab permissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgery-stations.tab-settings.*') ? 'active' : '' }}" href="{{ route('surgery-stations.tab-settings.index') }}">
                                 <i class="fas fa-sliders-h text-warning"></i><span> صلاحيات تبويبات المحطة</span>
@@ -1399,16 +1525,7 @@
                         </li>
                         @endcan
                         
-                        @can('view operation theater station')
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('operation-theater-station.*') ? 'active' : '' }}" href="{{ route('operation-theater-station.index') }}">
-                                <i class="fas fa-procedures"></i><span> صالة العمليات</span>
-                                @if($operationTheaterStationCount > 0)
-                                    <span class="badge bg-danger ms-2">{{ $operationTheaterStationCount }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        @endcan
+
                         
                         @can('view surgeon station')
                         <li class="nav-item">
@@ -1731,7 +1848,7 @@
                         </li>
                         @endcanany
 
-                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
+                        @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && auth()->check() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
                                 <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>
@@ -1948,6 +2065,7 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // إعدادات toastr
         toastr.options = {
@@ -1969,6 +2087,167 @@
             "rtl": true
         };
 
+        // ===== Universal Hospital SweetAlert2 Alert & Session Notification Engine =====
+        (function() {
+            // Backup native window.alert
+            if (typeof window.originalAlert === 'undefined') {
+                window.originalAlert = window.alert;
+            }
+
+            // Universal Interceptor: Turn ALL native alert(...) in the entire system into beautiful SweetAlert modals
+            window.alert = function(message) {
+                if (typeof Swal !== 'undefined') {
+                    var msg = String(message || '');
+                    var icon = 'info';
+                    var title = 'تنبيه من النظام';
+
+                    if (/تنبيه|تحذير|عذراً|لا يمكن|ممنوع|يرجى|تأكد/i.test(msg)) {
+                        icon = 'warning';
+                        title = 'تنبيه سريري / إداري';
+                    } else if (/خطأ|فشل|تعذر|لم يتم|رفض/i.test(msg)) {
+                        icon = 'error';
+                        title = 'تنبيه بالنظام';
+                    } else if (/نجاح|تم|بنجاح|اكتمل/i.test(msg)) {
+                        icon = 'success';
+                        title = 'تم بنجاح';
+                    }
+
+                    return Swal.fire({
+                        title: title,
+                        text: msg,
+                        icon: icon,
+                        confirmButtonText: 'حسناً، فهمت',
+                        customClass: {
+                            popup: 'hospital-swal-popup',
+                            title: 'hospital-swal-title',
+                            htmlContainer: 'hospital-swal-content',
+                            confirmButton: 'hospital-swal-btn-confirm',
+                            actions: 'hospital-swal-actions'
+                        },
+                        buttonsStyling: false
+                    });
+                } else {
+                    window.originalAlert(message);
+                }
+            };
+
+            // Global Hospital Alert Helper
+            window.hospitalAlert = function(title, message, icon) {
+                if (typeof Swal !== 'undefined') {
+                    return Swal.fire({
+                        title: title || 'تنبيه',
+                        text: message || '',
+                        icon: icon || 'info',
+                        confirmButtonText: 'حسناً',
+                        customClass: {
+                            popup: 'hospital-swal-popup',
+                            title: 'hospital-swal-title',
+                            htmlContainer: 'hospital-swal-content',
+                            confirmButton: 'hospital-swal-btn-confirm',
+                            actions: 'hospital-swal-actions'
+                        },
+                        buttonsStyling: false
+                    });
+                } else {
+                    alert(message);
+                }
+            };
+
+            // Global Hospital Confirm Helper
+            window.hospitalConfirm = function(options) {
+                if (typeof Swal !== 'undefined') {
+                    return Swal.fire({
+                        title: options.title || 'تأكيد الإجراء',
+                        text: options.text || 'هل أنت متأكد من المتابعة؟',
+                        icon: options.icon || 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: options.confirmButtonText || 'نعم، متابعة',
+                        cancelButtonText: options.cancelButtonText || 'إلغاء',
+                        customClass: {
+                            popup: 'hospital-swal-popup',
+                            title: 'hospital-swal-title',
+                            htmlContainer: 'hospital-swal-content',
+                            confirmButton: 'hospital-swal-btn-confirm',
+                            cancelButton: 'hospital-swal-btn-cancel',
+                            actions: 'hospital-swal-actions'
+                        },
+                        buttonsStyling: false
+                    }).then(function(result) {
+                        if (result.isConfirmed && typeof options.onConfirm === 'function') {
+                            options.onConfirm();
+                        } else if (result.isDismissed && typeof options.onCancel === 'function') {
+                            options.onCancel();
+                        }
+                    });
+                } else {
+                    if (confirm(options.text || 'هل أنت متأكد؟')) {
+                        if (typeof options.onConfirm === 'function') options.onConfirm();
+                    }
+                }
+            };
+
+            // Handle Global Laravel Session Flash Alerts
+            document.addEventListener('DOMContentLoaded', function() {
+                @if(session('success'))
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-start',
+                            icon: 'success',
+                            title: @json(session('success')),
+                            showConfirmButton: false,
+                            timer: 4500,
+                            timerProgressBar: true,
+                            customClass: { popup: 'hospital-swal-popup' }
+                        });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.success(@json(session('success')));
+                    }
+                @endif
+
+                @if(session('warning'))
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'تنبيه سريري / إداري',
+                            text: @json(session('warning')),
+                            icon: 'warning',
+                            confirmButtonText: 'حسناً، فهمت',
+                            customClass: {
+                                popup: 'hospital-swal-popup',
+                                title: 'hospital-swal-title',
+                                htmlContainer: 'hospital-swal-content',
+                                confirmButton: 'hospital-swal-btn-confirm',
+                                actions: 'hospital-swal-actions'
+                            },
+                            buttonsStyling: false
+                        });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.warning(@json(session('warning')));
+                    }
+                @endif
+
+                @if(session('error'))
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'خطأ بالنظام',
+                            text: @json(session('error')),
+                            icon: 'error',
+                            confirmButtonText: 'إغلاق',
+                            customClass: {
+                                popup: 'hospital-swal-popup',
+                                title: 'hospital-swal-title',
+                                htmlContainer: 'hospital-swal-content',
+                                confirmButton: 'hospital-swal-btn-confirm',
+                                actions: 'hospital-swal-actions'
+                            },
+                            buttonsStyling: false
+                        });
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.error(@json(session('error')));
+                    }
+                @endif
+            });
+        })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>

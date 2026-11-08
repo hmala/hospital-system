@@ -337,15 +337,38 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
-                                                <a href="{{ route('staff.emergency-lab.show', $emergencyRequest) }}" class="btn btn-sm btn-primary fw-bold shadow-xs px-2.5 py-1" title="معاينة وإدخال نتائج الفحص">
-                                                    <i class="fas fa-microscope me-1"></i> {{ $emCompleted ? 'معاينة' : 'إدخال النتائج' }}
-                                                </a>
-                                                <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة التقرير">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                @if($emergencyRequest->getPatientPhone())
-                                                    <a href="{{ $emergencyRequest->getWhatsAppShareUrl() }}" target="_blank" class="btn btn-sm text-white fw-bold px-2 py-1 shadow-xs" style="background-color: #25d366;" title="إرسال عبر واتساب">
-                                                        <i class="fab fa-whatsapp"></i>
+                                                @if($emCompleted)
+                                                    <a href="{{ route('staff.emergency-lab.show', $emergencyRequest) }}" 
+                                                       class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1 shadow-sm" 
+                                                       title="معاينة أو تعديل النتائج">
+                                                        <i class="fas fa-eye me-1"></i> معاينة
+                                                    </a>
+                                                    <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" 
+                                                       class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-sm" 
+                                                       target="_blank" 
+                                                       title="طباعة التقرير الطبي">
+                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    </a>
+                                                    @if($emergencyRequest->getPatientPhone())
+                                                        <a href="{{ $emergencyRequest->getWhatsAppShareUrl() }}" 
+                                                           target="_blank" 
+                                                           class="btn btn-sm fw-bold px-2 py-1 shadow-sm text-white" 
+                                                           style="background-color: #25d366; border-color: #20ba5a;" 
+                                                           title="إرسال عبر واتساب">
+                                                            <i class="fab fa-whatsapp me-1"></i> واتساب
+                                                        </a>
+                                                    @endif
+                                                @else
+                                                    <a href="{{ route('staff.emergency-lab.show', $emergencyRequest) }}" 
+                                                       class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-sm" 
+                                                       title="إدخال نتائج الفحص واعتمادها">
+                                                        <i class="fas fa-bolt me-1"></i> إدخال النتائج
+                                                    </a>
+                                                    <a href="{{ route('staff.emergency-lab.print', $emergencyRequest) }}" 
+                                                       class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-sm" 
+                                                       target="_blank" 
+                                                       title="طباعة طلب التحاليل / أمر العمل">
+                                                        <i class="fas fa-print me-1"></i> طباعة الطلب
                                                     </a>
                                                 @endif
                                             </div>

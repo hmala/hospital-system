@@ -78,6 +78,127 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 174 (2026-11-07) — حظر فتح المحطة السريرية للمقيم قبل استلام المريض في الغرفة، وتطبيق نظام التنبيهات الطبي الشامل SweetAlert2 (Resident Clinical Station Gate & Global Hospital SweetAlert2 & Toastr Modern Styling System):**
+  * **حوكمة محطة المقيم السريرية ([app/Http/Controllers/ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+    - قفل زر "عرض وتعديل" في محطة المقيم وتحويله إلى `[ 🔒 بانتظار استلام الغرفة ]` إذا كان المريض مخصصاً لغرفة ولم يسجل ممرض الطابق استلامه الفعلي بعد.
+    - إضافة شارة صفراء أنيقة تحت اسم المريض: `[ ⏳ بانتظار استلام ممرض الطابق ]` تتحول تلقائياً إلى خضراء `[ ✔️ تم الاستلام (hh:mm A) ]`.
+    - حظر الدخول المباشر بالرابط في `ResidentStationController@show` وإعادة التوجيه مع رسالة تحذيرية واضحة.
+  * **محرك التنبيهات الطبي الشامل والتخلص من النوافذ السوداء ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - دمج مكتبة SweetAlert2 الفاخرة مع تنسيق طبي مخصص: بطاقة بيضاء ناصعة، خط النظام الطبي، زوايا دائرية `rounded-4`، أيقونات طبية متحركة ونابضة، وأزرار كبسولية عصرية.
+    - **Global Alert Interceptor**: اعتراض دالة `window.alert` في المتصفح تلقائياً وتحويل أي تنبيه في كامل شاشات المستشفى إلى SweetAlert2 ملون وأنيق بدلاً من نوافذ المتصفح السوداء الافتراضية.
+    - تحديث تنسيقات Toastr لتتحول من الصناديق الداكنة القديمة إلى بطاقات زجاجية ملونة وناعمة بنمط الباستيل الطبي.
+    - ربط رسائل الـ Session (النجاح والتحذيرات والخطأ) لتظهر تلقائياً كـ Toasts عائمة أو بطاقات تحذيرية فاخرة.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ResidentStationRoomCheckinGateTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationRoomCheckinGateTest.php))**:
+    - كتابة واجتياز اختبارات قفل المحطة للمقيم وحظر الرابط بنسبة 100% (2 passed, 11 assertions)، واستمرار اجتياز كافة اختبارات محطة التمريض والضمان (15 passed, 108 assertions).
+
+- **المرحلة 173 (2026-11-07) — حوكمة دخول وتخريج المريض من غرف الطابق في محطة التمريض، ربط محرك الإقامة الفندقية بلحظة الاستلام الفعلي، وحجب ملف المريض قبل الاستلام (Floor Nursing Room Check-in / Checkout Governance, Bed Release, Stay Calculation Synchronization & Check-in Clinical Access Gate):**
+  * **تصميم مسار حوكمة إشغال الغرف ومحطة التمريض ([app/Http/Controllers/NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - إضافة توابع `roomCheckin()` و `roomCheckout()` لتسجيل الدخول الفعلي للغرفة وتخريج المريض مع تدقيق أمني وحفظ هوية الممرض ووقت الإشغال وتحديث حالة الغرفة بين `occupied` و `available` وتسجيل الحركات في `UserActivityLogger`.
+    - **بوابة حجب الوصول السريري (Check-in Gate)**: في `NursingStationController@show` و `ClinicalStationController@show`، منع الممرضين من فتح ملف المريض وتعديل بياناته السريرية إذا كانت الحالة مخصصة لغرفة ولم يتم تسجيل دخولها واستلامها بعد، مع توجيه تنبيهي فوري: "يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري".
+  * **تطوير واجهة محطة التمريض وتبديل الأزرار ([resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [resources/views/surgery-stations/nursing/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/show.blade.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - في تبويبي ما قبل وما بعد الصالة:
+      - **قبل تسجيل الدخول**: إخفاء زر "عرض وتعديل" تماماً وعرض زر وحيد أخضر بارز `[ 🛏️ تسجيل دخول الغرفة ]` مع شارة `[ ⏳ بانتظار استلام الغرفة ]`.
+      - **بعد تسجيل الدخول**: يختفي زر تسجيل الدخول ويتبدل مكانه إلى زر `[ 📋 عرض وتعديل ]` وبجانبه زر أحمر سريع `[ 🚪 تخريج ]` لإخلاء السرير مع شارة خضراء أنيقة `[ ✔️ تم الدخول (hh:mm A) ]`.
+    - إضافة زر التخريج السريع ومعلومات الغرفة وتوقيت الدخول في الترويسة العلوية لملف التمريض والمحطة السريرية.
+  * **قاعدة احتساب الإقامة الفندقية الصارمة وتصحيح الغرف العادية ([app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [app/Models/HealthInsuranceStayTier.php](file:///c:/wamp64/www/hospital-system/app/Models/HealthInsuranceStayTier.php))**:
+    - ربط وقت بدء احتساب الإقامة الفندقية في `calculateStayDetails()` بحقل `room_checkin_at` كأساس أولي بدلاً من تاريخ الجدولة.
+    - تجميد الإقامة عند تاريخ التخريج `discharged_at` فور نقر زر التخريج.
+    - قفل وتأكيد أن الغرفة العادية (`regular`) لا يترتب عليها أي فرق ترقية إطلاقاً (`upgrade_diff = 0`) حتى لو كان سعرها التجاري أعلى من سعر عقد الضمان.
+    - قفل الليالي الإضافية للعمليات المجدولة التي لم تبدأ أو لم تسجل دخولها بعد لتكون 0 ليلة إضافية، مما يجعل حصة المريض للغرفة العادية في العملية #1 تساوي 0 د.ع تماماً ومطابقة للنظام.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php))**:
+    - كتابة واجتياز 5 اختبارات آلية بنسبة 100% (5 passed, 27 assertions) تغطي: زر تسجيل الدخول، الحجب قبل الدخول، التبديل إلى العرض والتخريج، التخريج الفعلي وإخلاء السرير، ومطابقة محرك احتساب الإقامة مع `room_checkin_at`.
+    - اجتياز كافة اختبارات استقطاع الإقامة والخدمات الإضافية للعمليات بإجمالي 21 اختباراً ناجحاً بنسبة 100%.
+
+- **المرحلة 172 (2026-11-07) — نظام استقطاع الإقامة الفندقية المتدرج للضمان الصحي، تسعير الغرف، وفرق الترقية الفعلي (VIP/VVIP) عن كل الليالي، وتفكيك الحسابات في الكاشير (Health Insurance Tiered Stay Deduction Engine, Dynamic Room Tariff Management, Ubiquitous Room Upgrade Surcharge & Cashier Live Nights Breakdown):**
+  * **بنية قاعدة البيانات والشرائح الخمس المعتمدة ([database/migrations/2026_11_07_140000_create_health_insurance_stay_tiers_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_07_140000_create_health_insurance_stay_tiers_table.php), [app/Models/HealthInsuranceStayTier.php](file:///c:/wamp64/www/hospital-system/app/Models/HealthInsuranceStayTier.php))**:
+    - إنشاء جدول وموديل `health_insurance_stay_tiers` مع الشرائح الخمس القياسية للضمان:
+      1. الليلة الأولى (يوم 1): تحمل 0% (مشمولة بالعملية للغرفة العادية، 0 د.ع مريض و 0 د.ع ضمان).
+      2. الليلة الثانية (يوم 2): تحمل 10% (20,000 د.ع مريض، و 180,000 د.ع ضمان).
+      3. إقامة اعتيادية (أيام 3 إلى 8): تحمل 25% (50,000 د.ع مريض / يوم، و 150,000 د.ع ضمان / يوم).
+      4. إقامة ممتدة (أيام 9 إلى 13 - 5 أيام): تحمل 50% (100,000 د.ع مريض / يوم، و 100,000 د.ع ضمان / يوم).
+      5. إقامة طويلة (أيام 14 فأكثر): تحمل 75% (150,000 د.ع مريض / يوم، و 50,000 د.ع ضمان / يوم).
+    - حفظ وإدارة السعر اليومي المعتمد للغرفة العادية لدى الضمان (`standard_room_daily_price = 200,000 د.ع`).
+    - توفير توابع حسابية ذكية: `getStandardRoomPrice()`, `getTierForDay()`, `getCopayPercentageForDay()`, `calculateNightFigures()`.
+  * **إدارة نسب الاستقطاع وأسعار الغرف بتبويب تفاعلي ([app/Http/Controllers/HealthInsuranceCategoryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/HealthInsuranceCategoryController.php), [resources/views/health-insurance-categories/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/health-insurance-categories/index.blade.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - إضافة تبويب مستقل في واجهة نسب استقطاع الضمان الصحي (`/health-insurance-categories`):
+      - تبويب 1: فئات العمليات والخدمات الطبية (أ - ط).
+      - تبويب 2: شرائح استقطاع الإقامة والغرف للضمان، مع بطاقات مؤشرات أسعار الغرف الفعلية (عادية: 250k، VIP: 350k، VVIP: 450k) وفروقات الترقية اليومية.
+    - إضافة نوافذ منبثقة (Modals) ومسارات لتعديل السعر المعتمد وتعديل نسب وأيام وملاحظات أي شريحة ديناميكياً.
+  * **محرك حساب الليالي وفروقات الترقية الصارمة ([app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php))**:
+    - تطوير دالة `calculateStayDetails()` لتعتمد قاعدة 12:00 ظهراً ونظام الشرائح المتدرجة لمرضى الضمان:
+    - **قاعدة فرق الترقية الفعلي عن كل الليالي**: الضمان يغطي حصراً تسعيرة الغرفة العادية (200,000 د.ع). أي ترقية لـ VIP (فرق 150,000 د.ع / يوم) أو VVIP (فرق 250,000 د.ع / يوم) يتحملها المريض بالكامل بنسبة 100% عن كل ليلة دون استثناء (بما فيها الليلة الأولى).
+    - توليد مصفوفة تفصيلية `nights_breakdown` لكل ليلة مع تفكيك دقيق لحصة المريض ومطالبة الضمان وفرق الترقية.
+  * **تطوير واجهة دفع العمليات ودعم تفكيك الليالي بالكاشير ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+    - عرض شارة "استقطاع متدرج (ضمان)" في سطر الغرفة بجدول العمليات، وزر منسدل لعرض جدول تفكيك الليالي والاستقطاعات.
+    - مزامنة حية وفورية في JavaScript لاحتساب حصة المريض ومطالبة الضمان للغرفة عند الدفع الكامل أو الجزئي.
+    - معالجة وإصلاح حصر حالة الغرفة كمدفوعة في الكاشير `processSurgeryPayment` لتطابق حصة المريض الفعلية المطلوبة بدلاً من كامل سعر الغرفة التجاري.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/HealthInsuranceStayTiersTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HealthInsuranceStayTiersTest.php))**:
+    - كتابة واجتياز 8 اختبارات آلية بنسبة 100% (8 passed, 70 assertions) واختبارات الخدمات الإضافية السابقة (8 passed, 47 assertions) بإجمالي 16 اختباراً و117 توكيداً ناجحاً.
+
+- **المرحلة 171 (2026-11-07) — توحيد جدول دفع العمليات الجراحية مطابقةً لواجهة الطلبات الطبية وكبسولات الشمول المنفصلة السداسية الأعمدة (Surgery Cashier Payment Table Modern Redesign & Segmented Action Pills Parity):**
+  * **الإلحاق التلقائي مع حجز وتحديث العمليات ([app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - إضافة دالة `attachDefaultExtraServices()` على موديل `Surgery` لربط 3 خدمات إضافية افتراضية تلقائياً لكل عملية جديدة (كاش أو ضمان):
+      1. **تخطيط قلب**: 15,000 د.ع (تصنيف طبي `medical`).
+      2. **اجور فتح طبلة**: 10,000 د.ع (تصنيف إداري `administrative`).
+      3. **خدمات فندقية**: 30,000 د.ع (تصنيف إقامة `accommodation`).
+    - منع تكرار الخدمات عند استدعاء الدالة مرات متكررة، وربطها فورياً بالعملية الحالية #4 (منير سمير يوسف).
+  * **تعديل السعر المباشر للخدمات الإضافية ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - إضافة مسار وتابع `CashierController::updateSurgeryExtraService` عبر `PATCH /surgeries/{surgery}/extra-services/{extraService}` لتعديل سعر وكمية الخدمة بالدينار العراقي فورياً عبر AJAX.
+    - دعم قراءة مصفوفة `extra_service_prices` في معالجة دفع العملية `processSurgeryPayment` لحفظ وتحديث السعر المخصص الذي يكتبه الكاشير في قاعدة البيانات مباشرة واحتساب الحصص والوصولات بدقة.
+  * **تطوير واجهة دفع العمليات في الكاشير ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+    - **إلغاء زر الشمول الكلي ("الغاء زر شمول الكلي")**: إزالة كارت ومفتاح `#inclusive` العام لتمكين التحكم الفردي النقي والمستقل لكل خدمة دون أي تعارض.
+    - **حقل السعر القابل للتعديل**: تزويد كل خدمة إضافية بحقل إدخال سعر مخصص `extra-service-price-input` بزيادات دينار ومحاذاة ممتازة، يعيد حساب حصة المريض ومطالبة الضمان والإجمالي لحظياً بمجرد الكتابة.
+    - **زر الشمول الفردي لكل خدمة**: تفعيل مفتاح الشمول `package-inclusion-switch` المستقل لكل خدمة مع شارات واضحة `[ ✔️ مشمول بالعملية (0 د.ع) ]` أو `[ ✕ غير مشمول (منفصل) ]`.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل اختبارات الإلحاق التلقائي وتعديل السعر والدفع بالأسعار المخصصة بنسبة 100% (6 passed, 27 assertions)، واجتياز اختبارات دفع وتجزئة العمليات ولوحة الصالات (21 passed, 107 assertions).
+
+- **المرحلة 167 (2026-11-05) — حوكمة صلاحيات الأجهزة الطبية وإصلاح انتقال عمليات الصالة المكتملة للأرشيف وإعادة تصميم جدول العمليات بدقة الأدوار (Surgery Master Registry Roles Governance, OT Exit Status Auto-Sync & Medical Devices Route Protection):**
+  * **إصلاح انتقال العمليات المكتملة للأرشيف (`SurgeryController@index`, `OperationTheaterStationController@complete`)**:
+    - تحديث `OperationTheaterStationController::complete()` ليقوم بتحديث حالة العملية إلى `status = 'completed'` وتعيين `end_time = now()` فور انتهاء الصالة وخروج المريض.
+    - تحديث استعلام العمليات النشطة في `SurgeryController@index` لاستبعاد أي حالة اكتملت صالتها تلقائياً.
+    - تحديث استعلام ومؤشرات العمليات المكتملة لتضم كل عملية أتمت الصالة أو اكتملت.
+    - مزامنة السجلات السابقة في قاعدة البيانات لتتحول الحالات التي خرجت من الصالة إلى `completed` وتنتقل فوراً لتبويب المكتملة.
+  * **حوكمة دقيقة للإجراءات والأعمدة بالأدوار (`surgeries/index.blade.php`)**:
+    - إخفاء عمود وفحوصات التشخيص والعلاج تماماً عن موظفي الاستقبال والاستعلامات (`@if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))`).
+    - حصر أزرار الإجراءات في الجدول بالأدوار: زر التعديل بـ `@can('edit surgeries')`، زر الحذف بـ `@can('delete surgeries')`، والطباعة بـ `surgeries.print`.
+    - حصر زر إلغاء العملية داخل صف التفاصيل بكادر العمليات والإدارة وطبيب الحالة (`$canManageSurgery`) وفقط للعمليات النشطة الجارية.
+    - المحافظة على صف تفاصيل الفحوصات المنسدل (`detailsRow`) للأشعة والمختبر والعلاجات بتصميم كروت وألوان متناسقة وعصرية.
+    - تصميم عصري فخم بالكامل (ترويسة تنفيذية، بطاقات مؤشرات KPI دقيقة، وشريط بحث وتصفية ذكي).
+  * **حزم الاختبارات الآلية الشاملة**:
+    - اجتياز اختبارات مصفوفة التبويبات والمحطة السريرية `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` بنسبة 100% (11 passed, 44 assertions).
+    - اجتياز اختبارات لوحة الصالات وقائمة الانتظار `tests/Feature/SurgeryWaitingListFlightBoardTest.php` بنسبة 100% (8 passed, 28 assertions).
+
+- **المرحلة 166 (2026-11-05) — إعادة التصميم العصرية لشاشة قائمة انتظار وتدفق العمليات الجراحية كلوحة تحكم ذكية وبطاقات مؤشرات تفاعلية (Smart OR Flight Board Modern Redesign, Interactive KPI Filters & Clean Stage Progression):**
+  * **مزامنة محطة المقيم ما بعد العملية (`ResidentStationController@index`)**:
+    - تصحيح استعلام مرحلة ما بعد الصالة للمقيم (`postOpSurgeries`) ليتطابق مع التمريض، بحيث ينتقل المريض للمقيم فور اكتمال صالة العمليات (`operationTheaterStation->status === 'completed'`) أو اكتمال التخدير دون اشتراط التخدير حصراً.
+    - استبعاد الحالات التي أتمت الصالة من جدول ما قبل الصالة لدى المقيم لضمان نظافة الطابور.
+  * **ترشيق شاشة قائمة الانتظار (`surgeries/waiting.blade.php`)**:
+    - **اختفاء زر "إنهاء" فور اكتمال الصالة**: فحص `$isOtCompleted` لإخفاء زر إنهاء الصالة الأحمر نهائياً ومنع التكرار اللانهائي، وإظهار شارة خضراء مميزة `[ ✔️ تمت الصالة ]`.
+    - **تحديث شارة الحالة**: تحول الشارة فوراً من `داخل الصالة (جارية)` إلى `[ 🏁 خرج من الصالة (متابعة) ]` وإيقاف عداد وقت الصالة.
+    - **تنظيف عمود الإجراءات**: حذف الأزرار والأيقونات الزائدة وغير الضرورية، والاكتفاء بالزر السريري المباشر `[ 🩺 المحطة السريرية ]` وأزرار المسار الفعلي.
+  * **حزم الاختبارات الآلية الشاملة**:
+    - إنشاء واجتياز اختبار الميزة `tests/Feature/ResidentStationPostOpTest.php` بنجاح 100% (1 passed, 3 assertions).
+    - اجتياز اختبارات شاشة قائمة الانتظار `SurgeryWaitingListFlightBoardTest` بنسبة 100% (8 passed, 28 assertions).
+
+- **المرحلة 164 (2026-11-05) — منظومة صرف التمريض المباشر من عهدة مخزن الطابق والربط التلقائي بغرفة المريض وخصم الرصيد اللحظي (Nursing Floor Sub-Store Direct Patient Dispensing, Auto Floor-Store Inference & Instant Stock Deduction):**
+  * **الاستنتاج التلقائي لمخزن عهدة الطابق (`Surgery::getFloorSubStoreLocation`)**:
+    - قراءة طابق غرفة المريض تلقائياً وربطه بالمخزن الفرعي المطابق له (مثلاً: غرفة 305 ⬅️ الطابق الثالث ⬅️ ردهة الطابق الثالث #24) دون الحاجة لتدخل يدوي من التمريض مما يمنع نهائياً أخطاء اختيار المخازن.
+  * **مايجريشن وتوسيع قاعدة البيانات (`2026_11_05_000001_add_floor_dispense_fields_to_tables.php`)**:
+    - ربط حركات المخزون `stock_movements` بحقل `surgery_id` وحقل `notes`.
+    - ربط علاجات المريض السريرية `surgery_treatments` بحقول الوجبة `batch_id`، وحركة المخزون `stock_movement_id`، والكمية `quantity`.
+  * **محرك الصرف والخصم في الكنترولر (`ClinicalStationController@dispenseFloorItem`)**:
+    - قفل الوجبة مخزنياً `lockForUpdate` والتحقق من تبعيتها لعهدة طابق المريض ورصيدها الكافي.
+    - الخصم الفعلي للرصيد فوراً `StockBatch->decrement('current_qty', $qty)`.
+    - توثيق حركة `StockMovement` بنوع `issue_to_patient` باسم الممرض المباشر.
+    - إضافة العلاج كمنفذ `administered` في طبلة المريض السريرية بتفاصيل الوجبة والكمية والوقت.
+  * **الواجهة التفاعلية لطبلة المريض (`clinical/show.blade.php`)**:
+    - شارة بارزة لعهدة الطابق المعتمدة لغرفة المريض في ترويسة تبويب الأدوية.
+    - زر ونافذة منبثقة (Modal) لصرف الأدوية والمستلزمات مع عرض الرصيد المتاح وتاريخ الصلاحية وتحديث الحد الأقصى للكمية لحظياً.
+    - شارة توثيق العهدة والوجبة بجانب كل مادة مصروفة في جدول العلاجات.
+  * **حزمة الاختبارات الآلية الشاملة (`tests/Feature/NursingFloorDispenseTest.php`)**:
+    - 4 اختبارات ميزة تغطي كافة حالات الصرف والاستنتاج ورفض تجاوز الرصيد أو السحب من طابق خاطئ بنجاح 100% (27 assertions).
+    - استمرار اجتياز كافة اختبارات المحطة السريرية `UnifiedClinicalStationAndTabPermissionsTest` (9 passed, 39 assertions).
+
 - **المرحلة 163 (2026-11-05) — دمج وتفعيل إضافة Understand Anything وتوليد شبكة المعرفة والعلاقات التفاعلية للمشروع (Understand Anything Knowledge Graph & Interactive Dashboard Integration):**
   * **تجهيز وبناء حزمة الإضافة (`Understand Anything`)**:
     - تثبيت بيئة العمل ومكتبات التحليل الـ AST اللغوية (`tree-sitter-php`, `tree-sitter-javascript`, `graphology`, `elkjs`).
@@ -89,6 +210,21 @@
     - إضافة **جولة تعليمية إرشادية بـ 5 مسارات سريرية ومالية (Guided Tour)** تشرح مسارات المريض والتحصيل والعمليات خطوة بخطوة بالرسم التفاعلي.
   * **تشغيل الـ Dashboard التفاعلي المحلي**:
     - تشغيل خادم الـ Dashboard المحلي عبر Vite والتوثيق الآمن بـ Access Token وربطه مع المتصفح.
+
+- **المرحلة 163 (2026-11-04) — استبيان الرقود: الورقة الثانية لخدمات التمريض والمختبر والصيدلية، إفراغ الإيميل في الطباعة، واللوحة المدمجة للنتائج بـ 27 معياراً (Inpatient Survey Page 2 Clinical Services, Blank Print Email & Compact 2-Column Results Dashboard):**
+  * **الورقة الثانية للاستبيان (16 معياراً سريرياً جديداً)**:
+    - مايجريشن قاعدة البيانات `2026_11_04_000002_add_page2_services_to_inpatient_room_surveys_table.php` بإضافة معايير طاقم التمريض (6)، قسم المختبر والتحاليل (5)، قسم الصيدلية (5)، وملاحظات كل قسم، وبيانات المريض والمرافق (الاسم، التوقيع، الهاتف، البريد).
+    - نموذج `InpatientRoomSurvey` والكنترولر: احتساب تلقائي للمعدلات الفرعية لكل قسم (`room_score`, `nursing_score`, `lab_score`, `pharmacy_score`) والتقييم الإجمالي (`overall_score`).
+  * **إفراغ الإيميل في الطباعة والاستبيان**:
+    - تفريغ حقل الإيميل بالكامل في نموذج الطباعة A4 المعتمد `print-a4.blade.php` ليكون سطراً منقطاً فارغاً ومطابقاً للنموذج الورقي الرسمي لمستشفى الكفاءات.
+    - عدم استيراد إيميل المستخدم من جدول `users` وتفريغ القيمة الافتراضية في واجهة الموبايل العامة.
+  * **اللوحة المدمجة للنتائج (Compact 2-Column Dashboard)**:
+    - إعادة تصميم واجهة النتائج المكتملة في المحطة السريرية `clinical/show.blade.php` إلى عمودين متوازنين أنيقين يختصران المساحة الرأسية بنسبة 70% وتلغي السكرول المفرط.
+    - عرض كافة المعايير الـ 27 بأيقونات ملونة، نجوم مصغرة، وشارات تقييم ناصعة وموجزة.
+  * **حزمة الاختبارات الآلية والرفع المباشر**:
+    - اجتياز اختبارات استبيان الرقود بنسبة 100%: `tests/Feature/InpatientRoomSurveyTest.php` (10 passed, 74 assertions).
+    - اجتياز اختبارات المحطة السريرية بنسبة 100%: `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
+    - رفع التحديثات مباشرة إلى الفرع الرئيسي `main` عبر `git push origin main`.
 
 - **المرحلة 162 (2026-11-04) — الربط التلقائي لتصفيات الضمان الصحي للخدج واحتساب فرق مطالبة المستشفى ومصفوفة عمر الحمل بالخزينة والحسابات (NICU Insurance Automatic Settlement, Hospital Claim Margin & Gestational Matrix Treasury Integration):**
   * **محرك الفوترة الحية والاحتساب التلقائي (`NicuBillingService`)**:
@@ -1745,6 +1881,29 @@
     - فحص ظهور المريض المحجوز في الغرفة 302 لممرضة الطابق الثالث مريم.
     - فحص بقاء العملية في مرحلة ما قبل الصالة عند تسجيل الدخول وتحولها إلى `waiting`.
     - فحص انتقال العملية تلقائياً إلى تبويب ما بعد الصالة (المتابعة) عند اكتمال صالة العمليات على `surgeries/waiting` (3 passed, 13 assertions).
+- **المرحلة 166 (2026-11-05) — إعادة التصميم العصرية لشاشة قائمة انتظار وتدفق العمليات الجراحية كلوحة تحكم ذكية وبطاقات مؤشرات تفاعلية (Smart OR Flight Board Modern Redesign, Interactive KPI Filters & Clean Stage Progression)**:
+  * **إعادة تصميم عصرية شاملة لشاشة قائمة انتظار العمليات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+    - **ترويسة تنفيذية فائقة الأناقة (Executive Header)**: أيقونة الصالات المتدرجة مع عنوان ناصع وشارة `OR Flight Board`، ومؤشر للتوقيت المباشر للمركز، وأزرار إجراءات تنفيذية أنيقة (حجز عملية جديدة بتدرج أزرق ملكي، والأرشيف العام، وتحديث فوري).
+    - **شريط تقويم أسبوعي تفاعلي (Apple/Tailwind Segmented Strip)**: كبسولات أيام رشيقة بحدود ناعمة وتأثيرات رفع بصرية، تعرض اليوم والتاريخ وعدد العمليات، مع تمييز اليوم النشط بتدرج كحلي داكن فاخر، ونقطة ذهبية متوهجة لليوم الحالي.
+    - **لوحة مؤشرات سريعة تفاعلية (Interactive KPI Stat Cards)**: 5 بطاقات إحصائية للمسار: (إجمالي عمليات اليوم، مجدولة، بالانتظار - تحضير، داخل الصالة - جارية، ومكتملة - خرجت من الصالة). النقر على أي بطاقة يفلتر جدول العمليات فوراً لإظهار الحالات المطابقة مع تمييز البطاقة النشطة وتحديث عداد العمليات الظاهرة دون إعادة تحميل الصفحة.
+    - **اكتمال العملية وخروجها من الصالة**: فور ضغط "إنهاء"، يتم حفظ `status = 'completed'` و `end_time = now()` في قاعدة البيانات، وتتحول الشارة إلى `[ ✔️ مكتملة (خرجت من الصالة) ]` وشارة الإجراءات `[ ✔️ عملية مكتملة ]`، وينقص عداد الصالة ويزيد عداد المكتملة تلقائياً.
+    - **شريط بحث فوري ذكي**: حقل بحث مدور مع أيقونة وعدّاد حي للحالات المعروضة نسبةً للإجمالي (`عرض X من أصل Y عملية`).
+    - **جدول الصالات الذكي (Master Flight Board Table)**: بطاقة المريض مع الرمز والصورة ورقم الملف، تفاصيل العملية، الصالة المخصصة مع التحديد المباشر وإضافة صالة فورية، الوقت مع مؤقت عد تنازلي حي للعمليات الجارية، وحصر الإجراءات بأزرار تقدم المسار حصراً (`دخول`، `تحويل وبدء`، و `إنهاء` الذي يختفي ويتحول إلى `تمت الصالة` فور انتهاء الصالة).
+  * **حوكمة صلاحية إعدادات تبويبات المحطة السريرية**:
+    - تخصيص الصلاحية الرسمية `manage surgery tab permissions` لإدارة مصفوفة التبويبات السريرية.
+    - إدراج الرابط في القائمة الجانبية فقط لمن يملك الصلاحية وإزالته تماماً من ترويسة قائمة الانتظار للمحافظة على نظافة لوحة العمليات.
+  * **حزم الاختبارات الآلية الشاملة**:
+    - اجتياز اختبارات شاشة قائمة الانتظار `tests/Feature/SurgeryWaitingListFlightBoardTest.php` بنسبة 100% (8 passed, 28 assertions).
+    - اجتياز اختبارات المحطة السريرية ومصفوفة الصلاحيات `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` بنسبة 100% (11 passed, 44 assertions).
+
+- **المرحلة 165 (2026-11-05) — مزامنة انتقال المريض لمحطة المقيم ما بعد الصالة وترشيق أزرار وشارات قائمة انتظار العمليات (Resident Post-Op Lifecycle Sync & Waiting List Complete Button Refinement)**:
+  * مزامنة محطة المقيم مع التمريض فور اكتمال صالة العمليات.
+  * إخفاء زر إنهاء فور اكتمال الصالة وتوقف العداد وتحول الشارة لـ `[ 🏁 خرج من الصالة (متابعة) ]`.
+
+- **المرحلة 164 (2026-11-05) — صرف التمريض المباشر من عهدة مخزن الطابق والربط التلقائي بغرفة المريض (Nursing Floor Sub-Store Direct Patient Dispensing)**:
+  * الاستنتاج التلقائي لمخزن عهدة الطابق من `room->floor` وربطه بالعملية والحركات المخزنية والعلاجات.
+  * اجتياز `NursingFloorDispenseTest` (4 passed, 27 assertions).
+
 - **المرحلة 157 (2026-11-04) — القضاء على التمرير العمودي وهيكلة المحطة السريرية واستبيان الرقود بنظام Fit-to-Screen والتمرير الداخلي المنضبط (Clinical Station Compact Fit-to-Screen Architecture & Zero Whole-Page Scroll)**:
   * **ضغط وتكثيف الترويسة والشريط القيادي السريري (Clinical Executive Strip)**:
     - تقليص ارتفاع شريط بيانات المريض والعملية بنسبة 60% ليصبح شريطاً تنفيذياً رشيقاً موحداً (ارتفاع ~45px فقط) يضم اسم المريض، رقم الملف، العمر والجنس، نوع العملية، الجراح، الصالة/الغرفة، التوقيت، وأزرار تبديل المرحلة (Pre-Op / Post-Op) وشارة الحالة على سطر واحد متناسق.
@@ -1774,6 +1933,107 @@
     - الإبقاء على صلاحية أمين المخزن الرقابية فقط: `الموافقة وصرف المواد` أو `رفض الطلب` مع ذكر السبب لحفظ أثر التدقيق (Audit Trail) ومنع تضارب العهدة الجردية.
   * **حزمة الاختبارات الآلية الشاملة (`tests/Feature/FloorCustodianStockTransferTest.php`)**:
     - توسيع حزمة الاختبارات لتشمل `test_warehouse_manager_cannot_edit_or_delete_sub_store_requests` والتحقق من عدم ظهور الأزرار ورفض محاولات الـ PUT/DELETE بـ 403 (11 passed, 52 assertions).
+
+- **المرحلة 169 (2026-11-05) — معالجة ظهور عمليات محطة الجراح، فك ازدواجية سجلات الأطباء، وتحديث واجهة المحطة السريرية (Surgeon Station Identity Multiplicity Resolution, Direct Action Link & Modern Executive Redesign)**:
+  * **معالجة تصفية وصلاحيات محطة الجراح ([app/Http/Controllers/SurgeonStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+    - إضافة دالة `getSurgeonDoctorIds($user)` لجمع كافة معرّفات الطبيب المرتبطة بحساب المستخدم (بما فيها معرّف الطبيب الأساسي، معرّف الطبيب من `user_id`، ومعرّفات الأطباء المطابقة لنفس الاسم بعد تجريد البادئات `د.` و `دكتور`)؛ مما يعالج جذرياً مشكلة الازدواجية التاريخية للأطباء المستوردين.
+    - تحديث استعلام العمليات في `index()` واستعلام التحقق في `authorizeSurgeon()` لاستخدام `whereIn('doctor_id', $surgeonDoctorIds)`.
+  * **إدراج الأطباء الجراحين في نماذج العمليات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - توسيع استعلام الأطباء في `create()` و `edit()` ليشمل كل طبيب يحمل دور الجراح (`role = 'الجراح' / 'surgeon' / 'جراح'`) بالإضافة إلى النوع والتخصص.
+  * **إعادة تصميم واجهة محطة الجراح وإضافة زر الدخول المباشر ([resources/views/surgery-stations/surgeon/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+    - إضافة زر الإجراء السريري الأساسي `[ 🩺 فتح المحطة ]` (`route('surgeon-station.show', $surgery)`).
+    - إضافة ترويسة تنفيذية فخمة، بطاقات مؤشرات KPI ذكية (إجمالي العمليات، بانتظار المعاينة، قيد المتابعة، ومكتملة ومُعتمدة)، وتنسيق جدول رشيق وحديث.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+    - 3 اختبارات تغطي: ظهور العمليات بعد إتمام الصالة، معالجة ازدواجية حسابات الجراحين، وحماية الصلاحيات بنجاح 100% (`3 passed, 10 assertions`).
+
+- **المرحلة 171 (2026-11-07) — توحيد جدول دفع العمليات الجراحية مطابقةً لواجهة الطلبات الطبية وكبسولات الشمول المنفصلة السداسية الأعمدة (Surgery Cashier Payment Table Modern Redesign & Segmented Action Pills Parity)**:
+  * **إعادة تصميم جدول دفع العمليات الجراحية بستة أعمدة موحدة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+    - مطابقة هيكلية التصميم وتجربة المستخدم لشاشة تسديد الطلبات الطبية (`request-payment-form.blade.php`) بستة أعمدة موحدة: (`# / التحديد`، `البند والخدمة`، `السعر المعتمد`، `تحمل المريض (نقداً)`، `حصة الضمان (ذمة)`، `الإجراء والشمول بالباقة`).
+    - دمج كبسولات التحكم العصرية (iOS/Apple Segmented Control Pills): `[ دفع كامل ]` vs `[ دفع جزء ]` للعملية والغرفة، و `[ 📦 مشمول ]` (أخضر زمردي مع شارة 0 د.ع) vs `[ 💵 منفصل ]` (أزرق ملكي) للمختبر والأشعة والخدمات الإضافية.
+    - المحافظة على التعديل المباشر للأسعار `extra-service-price-input`، مع ربط مستمعي الأحداث لإعادة احتساب وتحديث خانات تحمل المريض ومطالبة الضمان وتذييل الجدول `tfoot` لحظياً.
+    - استدعاء `attachDefaultExtraServices()` تلقائياً في `showSurgeryPaymentForm` للعمليات النشطة لضمان توفر الخدمات الافتراضية للعمليات القديمة، وفك حظر شاشة الدفع إذا وُجدت أي بنود أو خدمات معلقة.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل اختبارات التحقق من بنية الجدول الموحد وكبسولات الشمول والإلحاق الرجعي بنسبة 100% (`8 passed, 47 assertions`)، واستمرار اجتياز كافة اختبارات دفع وتجزئة العمليات والضمان (`15 passed, 98 assertions`).
+
+- **المرحلة 178 (2026-11-07) — تعديل العلامات الحيوية السريرية مباشرة في الجدول العلوي وإلغاء المودل المنبثق نهائياً، مع حوكمة الـ 30 دقيقة والتمرير السلس السريع (Inline Flowsheet Vitals Editing, Modal Removal, Direct Table Sync & 30-Minute Governance Enforcement)**:
+  * **تعديل مباشر وسلس في الجدول العلوي دون فتح نوافذ منبثقة (Zero-Modal Direct Flowsheet Editing)**:
+    - إلغاء المودل المنبثق نهائياً والتخلص من أي مشاكل تنسيق أو قطع في رأس الصفحة.
+    - عند النقر على زر `[ ✏️ تعديل ]` في سجل القراءات التاريخية: تعبئة قيم القراءة فورياً في خانات الجدول العلوي (`grid_bp`, `grid_temp`, `grid_pr`, `grid_rr`, `grid_spo2`, `grid_rbs`, `grid_pain_score`, `grid_gcs`, `grid_crt`) وتفعيلها بتحديد أزرق أنيق.
+    - تمرير الصفحة بسلاسة وتلقائية (`smooth scroll`) نحو جدول العلامات الحيوية والتركيز على خانة ضغط الدم.
+    - إظهار شارة تنبيهية أعلى الجدول توضح توقيت القراءة واسم مسجلها مع زر سريع `[ ✕ إلغاء التعديل ]` لاستعادة القيم الأصلية بنقرة واحدة.
+  * **معالجة الحفظ الموحد عبر زر "حفظ التحديثات السريرية" (`ClinicalStationController@update`)**:
+    - دعم حقل `editing_reading_id` المخفي ضمن النموذج الرئيسي؛ عند الحفظ يتم التحقق الصارم من مهلة الـ 30 دقيقة أو صلاحية الأدمن وتحديث القراءة المحددة فوراً.
+    - إذا كانت القراءة المعدلة هي الأحدث: مزامنة قيم المحطة السريرية العلوية ومحطة التمريض تلقائياً ولحظياً.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
+    - اجتياز كامل الاختبارات بنسبة 100% (`8 passed, 50 assertions`) واستمرار اجتياز كافة اختبارات المحطة وصلاحيات التبويبات (`11 passed, 44 assertions`).
+
+- **المرحلة 177 (2026-11-07) — شارات استقطاع حصة الجراح والضمان وتلخيص الاستقطاعات التلقائي في نموذج دفع العمليات (Surgery Cashier Smart Package Inclusions Badges & Live Doctor Deductions Total Breakdown)**:
+  * **شارات الباقة الذكية في جدول بنود تسديد العمليات**:
+    - إضافة شارات `package-status-badge` التفاعلية لأسطر الغرفة، التحاليل، الأشعة، والخدمات الإضافية.
+    - للمريض النقدي (كاش): شارة واضحة `[ ✂️ استقطاع من حصة الجراح: X د.ع ]` تظهر فور اختيار كبسولة `[ 📦 مشمول ]`.
+    - لمرضى الضمان الصحي: شارة تعاقدية `[ 🛡️ مشمول بعقد الضمان ]`.
+    - للبند المنفصل: شارة رمادية `[ 🪙 منفصل عن العملية ]`.
+  * **سطر التلخيص الإجمالي للاستقطاعات بأسفل جدول الفاتورة (`tfoot`)**:
+    - إضافة سطر ملخص استقطاعات الجراح لصالح المستشفى: `إجمالي استقطاعات الباقة المخصومة من حصة الجراح: [ X د.ع ]` مع شارة توضيحية لنظام المحاسبة.
+  * **تحديث الجافاسكريبت اللحظي (`calculateSelectedAmount()`)**:
+    - حساب مجموع استقطاعات الجراح لحظياً وتحديث نصوص وألوان الشارات وسطر الملخص فورياً عند التبديل بين الكبسولات.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل الاختبارات بنسبة 100% (`13 passed, 89 assertions`).
+
+- **المرحلة 177 (2026-11-07) — حوكمة العلامات الحيوية بالمحطة السريرية: جدول إدخال أفقي بالأعمدة، قفل التعديل بمهلة 30 دقيقة لنفس الحساب، حصر الصلاحية للإدارة، وحجب المنحنيات البيانية عن التمريض (Unified Clinical Station: Horizontal Vitals Flowsheet Grid, 30-Minute Self-Edit Window, Admin Immutability Override & Role-Gated Trend Charts)**:
+  * **تحويل العلامات الحيوية إلى جدول أفقي بالأعمدة (Horizontal Flowsheet Grid)**:
+    - استبدال البطاقات المنفصلة بجدول سريري أفقي متكامل بـ 9 أعمدة: (ضغط الدم BP، الحرارة Temp، النبض PR، التنفس RR، الأكسجين SPo2، سكر الدم RBS، مقياس الألم Pain، مقياس الوعي GCS، امتلاء الشعيرات CRT).
+    - إدخال فوري للقيم داخل خلايا الجدول بتصميم طبي ناعم وسلس، مع عرض الوحدات والمدى الطبيعي المرجعي في ترويسة الأعمدة.
+  * **حوكمة التعديل وقفل السجلات الطبية (30-Minute Immutability Governance)**:
+    - إضافة أعمدة `vitals_recorded_at` و `vitals_recorded_by` في جدول `resident_stations`، وعمود `user_id` في `resident_station_readings`.
+    - قاعدة الـ 30 دقيقة الصارمة: يُسمح بالتعديل حصراً لنفس حساب الموظف الذي أدخل القراءة ولمدة 30 دقيقة فقط من توقيت التسجيل.
+    - انقضاء المهلة أو الدخول من حساب مختلف: تُقفل القراءة تلقائياً (`readonly`) ولا يمكن تعديلها إلا من حساب مدير النظام (`Admin`) حصراً، مدعوماً بحماية صارمة في السيرفر لمنع أي تعديل غير مصرح.
+    - دعم زر [ ➕ تسجيل قراءة دورية جديدة ] لتمكين الكوادر من توثيق قياسات دورية لاحقة دون المساس بالقراءات التاريخية السابقة وبدء عداد جديد لها.
+  * **حجب المنحنيات البيانية عن التمريض**:
+    - حصر ظهور قسم المنحنيات البيانية لتطور العلامات الحيوية (`Chart.js`) للجراح، المقيم، ومدير النظام حصراً، وحجبه كلياً عن طاقم التمريض (`nurse`).
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ClinicalVitalsGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php))**:
+    - كتابة واجتياز 5 اختبارات آلية جديدة تغطي كامل متطلبات الأعمدة، حجب المخططات، حوكمة الـ 30 دقيقة، قفل الحساب، وتجاوز الأدمن بنسبة 100% (`5 passed, 36 assertions`)، واستمرار اجتياز كافة اختبارات المحطة السريرية (`11 passed, 44 assertions`) بإجمالي 16 اختباراً ناجحاً.
+
+- **المرحلة 176 (2026-11-07) — قسم حسابات وتصفية جراحي العمليات: استقطاعات الباقة لصالح المستشفى، كشوفات حسابات الجراحين، وصفحة تفاصيل وسندات صرف مستحقات العمليات (Surgery Doctor Accounts & Package Inclusions Settlement Engine: Granular Inclusions Deduction, Doctor Accounts Index, Itemized Surgery Breakdown & Treasury Payouts)**:
+  * **بنية البيانات وحفظ استقطاعات الباقة المشمولة بالعملية**:
+    - إضافة أعمدة `is_package_included`, `included_deductible_price`, `deduction_bearer` في جداول `surgery_lab_tests`, `surgery_radiology_tests`, `surgery_extra_services`.
+    - إضافة `is_room_package_included`, `room_deduction_bearer` في جدول `surgeries`.
+    - إضافة `doctor_deductions_amount`, `included_package_items` (JSON Snapshot) في جدول `payments`.
+    - تحديث موديلات `SurgeryLabTest`, `SurgeryRadiologyTest`, `SurgeryExtraService`, `Surgery`, `Payment`, و `Doctor` (إضافة علاقة `surgeries()`).
+  * **معالجة الدفع وحساب الاستقطاعات في الكاشير (`CashierController@processSurgeryPayment`)**:
+    - للمرضى النقديين: احتساب قيمة الخدمات المشمولة بالباقة وتحميلها كاستقطاع على حصة الطبيب الجراح (`deduction_bearer = 'doctor'`) لصالح إيراد المستشفى.
+    - لمرضى الضمان الصحي: إدراجها ضمن التغطية العقدية (`deduction_bearer = 'insurance'`).
+    - تسجيل صافي الاستحقاق للجراح تلقائياً في `DoctorDue` بالمعادلة: صافي المستحق = أتعاب الجراحة - استقطاعات الباقة.
+  * **القائمة الجانبية والشاشات الجديدة للحسابات المالية**:
+    - إضافة قسم فرعي: `حسابات جراحي العمليات` ضمن قسم "الحسابات العامة والمالية" في `resources/views/layouts/app.blade.php`.
+    - **شاشة ملخص حسابات الجراحين (`resources/views/cashier/surgeries/doctor-accounts.blade.php`)**: جدول بكافة الجراحين، عدد العمليات، الأتعاب الاسمية، استقطاعات الباقة، صافي المستحق، إجمالي المصروف، والرصيد المتبقي بذمة المستشفى، مع زر [ 👁️ كشف الحساب والتفاصيل ].
+    - **شاشة كشف حساب الجراح وعملياته التفصيلية (`resources/views/cashier/surgeries/doctor-account-details.blade.php`)**: بطاقات مؤشرات علوية، نموذج صرف دفعة / تصفية رصيد للجراح، جدول مفصل بجميع عمليات الجراح مع تفكيك دقيق للخدمات المشمولة بالباقة، وزر صرف وتصفية العملية بشكل فوري.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php))**:
+    - اجتياز كامل اختبارات التحقق من استقطاع الباقة من حصة الجراح نقداً، عرض حسابات الجراحين، كشف الحساب المفصل، والصرف الفعلي بنسبة 100% (`13 passed, 85 assertions`)، واستمرار اجتياز كافة اختبارات الضمان والتمريض (`13 passed, 97 assertions`).
+
+- **المرحلة 175 (2026-11-07) — نظام الكاشير الموحد للعمليات الجراحية: الشمول التام للغرفة بالباقة، الحذف الفوري لتحاليل وأشعة العمليات، والدفع الجزئي العام الإجمالي للمبلغ الكلي (Surgery Cashier Unified Suite: Granular Lab/Radiology Deletion, Room Package Inclusion Toggle & Global Bottom Invoice Split/Partial Payment)**:
+  * **الحذف الفوري للتحاليل والأشعة المعلقة بالعملية**: إضافة مسارات وتوابع `removeSurgeryLabTest()` و `removeSurgeryRadiologyTest()` في الكاشير وحمايتها وتطبيق أزرار الحذف الدائرية الحمراء `delete-surgery-item-btn` مع تأكيد SweetAlert2 فاخر وحذف لحظي من الجدول وإعادة احتساب فوري.
+  * **توحيد كبسولات الشمول بالباقة للغرفة**: استبدال مفاتيح التجزئة المشتتة بكبسولات موحدة: `[ 📦 مشمول بالعملية ]` (حصة المريض 0 د.ع) مقابل `[ 💵 منفصل ]` (احتساب الاستقطاع الاعتيادي أو الضمان)، مع دعم كامل في السيرفر وتحديث المبالغ وإصدار الوصل بما يطابق الشمول.
+  * **بطاقة الدفع الجزئي العام أسفل الفاتورة (Global Partial Payment)**: نقل خيار الدفع الكامل والجزئي إلى بطاقة تحكم موحدة أسفل الجدول: `[ 🟢 دفع كامل للمبلغ المعتمد ]` مقابل `[ 🟡 دفع جزئي (دفعة مقبوضة الآن) ]` مع حقل إدخال المبلغ المقبوض وشارة احتساب دين العملية المتبقي حياً ولحظياً، وتوثيقه في الوصل والعملية وسجل المدفوعات.
+  * **فصل شاشة الانتظار وتقويم العمليات**: تحويل شاشة الانتظار `/surgeries/waiting` إلى شاشة عرض مخصصة لعمليات اليوم فقط مع تنقل يومي سلس `[ السابق / التالي ]`، ونقل وتخصيص التقويم الشهري المدمج إلى سجل العمليات العام `/surgeries`.
+  * **حزمة الاختبارات الآلية الشاملة**: إضافة 3 اختبارات جديدة في `tests/Feature/SurgeryExtraServicesTest.php` واجتياز كافة الاختبارات بنسبة 100% (11 passed, 61 assertions) واستمرار اجتياز كافة اختبارات الضمان وشرائح الإقامة (19 passed, 131 assertions).
+
+- **المرحلة 170 (2026-11-07) — الإلحاق التلقائي لخدمات العمليات (تخطيط قلب، فتح طبلة، خدمات فندقية)، تسعيرها المرن، والتحكم الفردي بالشمول (Auto Surgery Default Services, Inline Editable Pricing & Granular Inclusion)**:
+  * الإلحاق التلقائي لـ 3 خدمات إضافية افتراضية مع كل حجز عملية: (تخطيط قلب 15,000 د.ع، اجور فتح طبلة 10,000 د.ع، خدمات فندقية 30,000 د.ع) عبر `attachDefaultExtraServices` على موديل `Surgery`.
+  * دعم التعديل المباشر للسعر للخدمات الإضافية مع مسار PATCH المخصص في الكاشير.
+  * إلغاء مفتاح الشمول الكلي العام وتمكين الشمول الفردي المستقل لكل خدمة بدون تعارض.
+
+- **المرحلة 168 (2026-11-05) — توحيد طباعة طلبات تحاليل الطوارئ قبل إدخال النتائج وإظهار فحص CBC في أمر العمل مطابقةً لباقي الأقسام (Emergency Lab Request Print & CBC Work Order Requisition Parity)**:
+  * **معالجة طباعة طلب الطوارئ كأمر عمل قبل إدخال النتائج ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
+    - تعريف وضع أمر العمل `$hasWorkOrder` بدقة: عندما يكون الطلب غير مكتمل ولم تُدخل نتائجه بعد وله تحاليل مطلوبة (`!$isCompleted && !$hasActualResults && $requestedLabTestsList->count() > 0`).
+    - تضمين `$hasWorkOrder` في شرط إظهار الصفحة الأولى `@if($hasStandardContent || $hasUrineContent || $hasWorkOrder)` لمنع ظهور الصفحة فارغة/بيضاء نهائياً.
+    - إدراج قسم أمر العمل الموحد بالبنر الأزرق المتقطع وقائمة الفحوصات المطلوبة متبوعة بخط منقط لكتابة النتيجة يدوياً من قبل فني المختبر وشارة `Pending` لكل تحليل مطلوب.
+    - ضمان ظهور فحص صورة الدم الكاملة (CBC) وكافة الفحوصات المعتمدة على المرفقات في أمر العمل دون استبعادها.
+  * **توحيد أزرار إجراءات الطوارئ مع باقي الأقسام ([resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+    - للطلبات المعلقة: زر `[ إدخال النتائج ]` باللون الأزرق وزر `[ 🖨️ طباعة الطلب ]` بـ `btn-outline-dark`.
+    - للطلبات المكتملة: زر `[ معاينة ]` وزر `[ 🖨️ طباعة ]` بالأخضر وزر الواتساب.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
+    - إضافة واجتياز اختبار التحقق من ظهور CBC في أمر العمل بنجاح بنسبة 100% (`11 passed, 69 assertions`).
 
 - **المرحلة 144 (2026-11-03) — نظام ثبات واستمرارية التبويبات والتبويبات الفرعية وموضع التمرير في قسم الخدج (NICU Full Tab, Pill & Scroll Persistence Across All Operations)**:
   * **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php))**:

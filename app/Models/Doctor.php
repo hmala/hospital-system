@@ -99,6 +99,11 @@ class Doctor extends Model
         return $this->hasMany(IncubatorReservation::class);
     }
 
+    public function surgeries()
+    {
+        return $this->hasMany(Surgery::class);
+    }
+
     public function nicuConsultations()
     {
         return $this->hasMany(NicuConsultation::class, 'doctor_id');

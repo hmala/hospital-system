@@ -22,11 +22,15 @@ class SurgeryTreatment extends Model
         'administered_at',
         'admin_notes',
         'administrations',
+        'batch_id',
+        'stock_movement_id',
+        'quantity',
     ];
 
     protected $casts = [
         'administered_at' => 'datetime',
         'administrations' => 'array',
+        'quantity' => 'integer',
     ];
 
     public function surgery()
@@ -37,6 +41,16 @@ class SurgeryTreatment extends Model
     public function administeredBy()
     {
         return $this->belongsTo(User::class, 'administered_by');
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(StockBatch::class, 'batch_id');
+    }
+
+    public function stockMovement()
+    {
+        return $this->belongsTo(StockMovement::class, 'stock_movement_id');
     }
 
     public function logAdministration($userId, $userName, $notes = null)

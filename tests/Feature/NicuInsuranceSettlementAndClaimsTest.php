@@ -12,6 +12,7 @@ use App\Models\NicuServiceLog;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\NicuBillingService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -101,6 +102,8 @@ class NicuInsuranceSettlementAndClaimsTest extends TestCase
      */
     public function test_automatic_stay_days_and_gestational_matrix_calculation(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-11-04 14:00:00'));
+
         // دخول قبل 7 أيام، عمر الحمل 33 أسبوعاً (شريحة 32 إلى < 34 أسبوعاً)
         // أيام 1 إلى 5: 75% ضمان و 25% مريض
         // أيام 6 و 7: 50% ضمان و 50% مريض
@@ -149,6 +152,8 @@ class NicuInsuranceSettlementAndClaimsTest extends TestCase
         $res->refresh();
         $this->assertEquals(855000, (float) $res->insurance_share_amount);
         $this->assertEquals(405000, (float) $res->patient_share_amount);
+
+        Carbon::setTestNow();
     }
 
     /**

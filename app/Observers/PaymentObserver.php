@@ -345,7 +345,7 @@ class PaymentObserver
         $category = 'general_income';
         if ($payment->appointment_id || $payment->payment_type === 'appointment') {
             $category = 'consultation';
-        } elseif ($payment->payment_type && in_array($payment->payment_type, ['lab', 'radiology', 'pharmacy', 'emergency', 'surgery'])) {
+        } elseif ($payment->payment_type && in_array($payment->payment_type, ['lab', 'radiology', 'pharmacy', 'emergency', 'surgery', 'nursing', 'incubator'])) {
             $category = $payment->payment_type;
         }
 

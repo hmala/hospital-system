@@ -19,6 +19,9 @@ class SurgeryExtraService extends Model
         'notes',
         'payment_status',
         'payment_id',
+        'is_package_included',
+        'included_deductible_price',
+        'deduction_bearer',
         'created_by',
     ];
 
@@ -26,6 +29,8 @@ class SurgeryExtraService extends Model
         'price' => 'decimal:2',
         'quantity' => 'integer',
         'total_amount' => 'decimal:2',
+        'is_package_included' => 'boolean',
+        'included_deductible_price' => 'decimal:2',
     ];
 
     public function surgery()

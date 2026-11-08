@@ -79,6 +79,10 @@ Route::get('/lab/results/view/{request}', [\App\Http\Controllers\LabPublicReport
 Route::get('/lab/requests/{request}/attachment', [\App\Http\Controllers\LabStaffController::class, 'attachment'])
     ->name('lab.attachment');
 
+// شاشة عرض قائمة انتظار وتدفق العمليات العامة لشاشات العرض والـ TV (Public OR Flight Board Display Screen)
+Route::get('/surgeries/waiting', [\App\Http\Controllers\SurgeryController::class, 'waitingList'])
+    ->name('surgeries.waiting');
+
 // مسارات شاشات الطابور والاستدعاء (Queue & Calling Display Screens)
 Route::prefix('queue')->name('queue.')->group(function () {
     Route::get('/live', [\App\Http\Controllers\DoctorQueueController::class, 'liveDisplay'])->name('live');
@@ -341,6 +345,8 @@ Route::middleware(['auth'])->group(function () {
     // مسارات فئات ونسب الضمان الصحي الوطني
     Route::prefix('health-insurance-categories')->name('health-insurance-categories.')->group(function () {
         Route::get('/', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'index'])->name('index');
+        Route::put('/stay-tiers/{tier}', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'updateStayTier'])->name('stay-tiers.update');
+        Route::post('/stay-tiers/standard-price', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'updateStandardPrice'])->name('stay-tiers.standard-price');
         Route::put('/{category}', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'update'])->name('update');
         Route::get('/api/all', [\App\Http\Controllers\HealthInsuranceCategoryController::class, 'getCategoriesJson'])->name('api.all');
     });
@@ -368,11 +374,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emergency/payment-status', [\App\Http\Controllers\EmergencyController::class, 'paymentStatus'])->name('emergency.payment.status');
         Route::get('/surgeries', [\App\Http\Controllers\CashierController::class, 'surgeriesIndex'])->name('surgeries.index');
         Route::get('/surgeries/paid', [\App\Http\Controllers\CashierController::class, 'surgeriesPaid'])->name('surgeries.paid');
+        Route::get('/surgeries/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorAccounts'])->name('surgeries.doctor-accounts');
+        Route::get('/surgeries/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorAccount'])->name('surgeries.doctor-account');
+        Route::post('/surgeries/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'surgeryDoctorPayout'])->name('surgeries.doctor-payout');
+        Route::post('/surgeries/doctor-accounts/{doctor}/settle-surgery/{surgery}', [\App\Http\Controllers\CashierController::class, 'settleSingleSurgeryDoctorDue'])->name('surgeries.settle-single-surgery');
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
         Route::post('/surgeries/{surgery}/extra-services', [\App\Http\Controllers\CashierController::class, 'addSurgeryExtraService'])->name('surgeries.extra-services.add');
+        Route::patch('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'updateSurgeryExtraService'])->name('surgeries.extra-services.update');
         Route::delete('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryExtraService'])->name('surgeries.extra-services.remove');
+        Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
+        Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
@@ -667,7 +680,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // إدارة العمليات
-    Route::get('/surgeries/waiting', [SurgeryController::class, 'waitingList'])->name('surgeries.waiting');
     Route::post('/surgeries/{surgery}/check-in', [SurgeryController::class, 'checkIn'])->name('surgeries.check-in');
     Route::get('/surgeries/{surgery}/print', [SurgeryController::class, 'print'])->name('surgeries.print');
     Route::resource('surgeries', SurgeryController::class);
@@ -728,12 +740,16 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/nursing/{surgery}', [\App\Http\Controllers\NursingStationController::class, 'update'])->name('nursing-station.update');
             Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
             Route::post('/nursing/{surgery}/follow-ups', [\App\Http\Controllers\NursingStationController::class, 'storeFollowUp'])->name('nursing-station.follow-ups.store');
+            Route::post('/nursing/{surgery}/room-checkin', [\App\Http\Controllers\NursingStationController::class, 'roomCheckin'])->name('nursing-station.room-checkin');
+            Route::post('/nursing/{surgery}/room-checkout', [\App\Http\Controllers\NursingStationController::class, 'roomCheckout'])->name('nursing-station.room-checkout');
         });
 
         // إعدادات مصفوفة صلاحيات التبويبات السريرية (Tab Permissions Matrix)
-        Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
-        Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
-        Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
+        Route::middleware('can:manage surgery tab permissions')->group(function () {
+            Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
+            Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
+            Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
+        });
 
         // المحطة السريرية الموحدة (Unified Clinical Station)
         Route::get('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'show'])->name('clinical-station.show');
@@ -742,7 +758,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
+        Route::post('/clinical/{surgery}/treatments/dispense-floor-stock', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.treatments.dispense-floor-stock');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
+        Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
+        Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');
 
         // استبيان تقييم غرفة الرقود (Inpatient Room Quality Survey)
         Route::post('/clinical/{surgery}/inpatient-survey', [\App\Http\Controllers\InpatientSurveyController::class, 'storeManual'])->name('inpatient-surveys.manual.store');

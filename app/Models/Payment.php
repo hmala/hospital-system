@@ -37,6 +37,8 @@ class Payment extends Model
         'description',
         'notes',
         'is_inclusive',
+        'doctor_deductions_amount',
+        'included_package_items',
         'paid_at',
         'voided_at',
         'voided_by',
@@ -57,6 +59,8 @@ class Payment extends Model
         'copay_percentage' => 'decimal:2',
         'discount_percentage' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'doctor_deductions_amount' => 'decimal:2',
+        'included_package_items' => 'array',
         'is_inclusive' => 'boolean',
     ];
 
@@ -78,6 +82,7 @@ class Payment extends Model
         'surgery' => 'العمليات الجراحية',
         'emergency' => 'طوارئ وإسعاف',
         'incubator' => 'الخدج والحاضنات (NICU)',
+        'nursing' => 'خدمات تمريضية وسريرية',
         'other' => 'أخرى',
     ];
 
@@ -143,6 +148,14 @@ class Payment extends Model
     public function surgeryExtraServices()
     {
         return $this->hasMany(SurgeryExtraService::class);
+    }
+
+    /**
+     * مستحقات الطبيب المرتبطة بسند القبض
+     */
+    public function doctorDue()
+    {
+        return $this->hasOne(DoctorDue::class);
     }
 
     /**
