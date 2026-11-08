@@ -852,6 +852,13 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/services/{service}', [\App\Http\Controllers\NicuServiceController::class, 'update'])->name('services.update');
         Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
 
+        // إدارة وتصنيفات أنواع حليب وتغذية الخدج
+        Route::get('/milk-types/active-list', [\App\Http\Controllers\NicuMilkTypeController::class, 'getActiveList'])->name('milk-types.active-list');
+        Route::post('/milk-types', [\App\Http\Controllers\NicuMilkTypeController::class, 'store'])->name('milk-types.store');
+        Route::put('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'update'])->name('milk-types.update');
+        Route::delete('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'destroy'])->name('milk-types.destroy');
+        Route::post('/milk-types/{milkType}/toggle', [\App\Http\Controllers\NicuMilkTypeController::class, 'toggle'])->name('milk-types.toggle');
+
         // رادار صالات العمليات والولادة لحضانة الخدج (NICU Delivery & C-Section Operations Radar)
         Route::get('/delivery-radar', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'index'])->name('delivery-radar.index');
         Route::get('/delivery-radar/settings', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'settings'])->name('delivery-radar.settings');

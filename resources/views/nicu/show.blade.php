@@ -690,10 +690,16 @@
                                             <label class="form-label small">نوع الرضاعة:</label>
                                             <input type="text" name="feeding_type" class="form-control form-control-sm" list="quickVitalsFeedingTypes" value="{{ $activeFeedingSched ? $activeFeedingSched->title : 'حليب أم (EBM)' }}">
                                             <datalist id="quickVitalsFeedingTypes">
-                                                <option value="حليب أم (EBM)">
-                                                <option value="حليب خدج صناعي">
-                                                <option value="تغذية وريدية TPN">
-                                                <option value="صيام NPO">
+                                                @if(isset($milkTypes) && $milkTypes->isNotEmpty())
+                                                    @foreach($milkTypes as $mType)
+                                                        <option value="{{ $mType->name }}">{{ $mType->category ? "({$mType->category})" : '' }}</option>
+                                                    @endforeach
+                                                @else
+                                                    <option value="حليب أم (EBM)">
+                                                    <option value="حليب خدج صناعي">
+                                                    <option value="تغذية وريدية TPN">
+                                                    <option value="صيام NPO">
+                                                @endif
                                             </datalist>
                                         </div>
                                         <div class="col-6">
@@ -2799,14 +2805,27 @@
                                             <input type="hidden" name="type" value="feeding">
 
                                             <div class="mb-2">
-                                                <label class="form-label small fw-bold">نوع الرضاعة / التغذية:</label>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-bold mb-0">نوع الرضاعة / التغذية:</label>
+                                                    @canany(['manage nicu services', 'manage nicu care plans'])
+                                                        <a href="{{ route('nicu.services.index') }}#milk-types-tab" target="_blank" class="small text-decoration-none text-muted" title="إدارة وإضافة أنواع الحليب">
+                                                            <i class="fas fa-cog text-warning"></i> <span class="text-xs">إدارة أنواع الحليب</span>
+                                                        </a>
+                                                    @endcanany
+                                                </div>
                                                 <input type="text" name="title" class="form-control form-control-sm" placeholder="مثلاً: حليب أم EBM، حليب سيميلاك نيوشور..." list="quickFeedingTypes" required>
                                                 <datalist id="quickFeedingTypes">
-                                                    <option value="حليب أم طبيعي (EBM)">
-                                                    <option value="حليب خدج صناعي (Pre-term Formula)">
-                                                    <option value="حليب سيميلاك نيوشور (Neosure)">
-                                                    <option value="حليب ببتي جونيور قليل التحسس">
-                                                    <option value="تغذية وريدية كاملة (TPN)">
+                                                    @if(isset($milkTypes) && $milkTypes->isNotEmpty())
+                                                        @foreach($milkTypes as $mType)
+                                                            <option value="{{ $mType->name }}">{{ $mType->category ? "({$mType->category})" : '' }}</option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="حليب أم طبيعي (EBM)">
+                                                        <option value="حليب خدج صناعي (Pre-term Formula)">
+                                                        <option value="حليب سيميلاك نيوشور (Neosure)">
+                                                        <option value="حليب ببتي جونيور قليل التحسس">
+                                                        <option value="تغذية وريدية كاملة (TPN)">
+                                                    @endif
                                                 </datalist>
                                             </div>
 

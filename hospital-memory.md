@@ -78,6 +78,42 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 180 (2026-11-08) — تفكيك وتفصيل صلاحيات الخدج، تخصيص حجز الاستعلامات، ومنظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج (Granular NICU Permissions Matrix, Reception Baby Admission Segregation & Dynamic NICU Milk/Formula Catalog Suite)**:
+  * **تفكيك وتفصيل صلاحيات قسم الخدج والحاضنات (Granular NICU Permissions Matrix)**:
+    - تفكيك الصلاحيات العريضة والمدمجة إلى 14 صلاحية دقيقة ومستقلة:
+      1. `manage nicu services`: إدارة وتسعير باقات وخدمات وحليب الخدج.
+      2. `record nicu vitals`: تسجيل وتوثيق العلامات الحيوية والوزن والرضاعة في الحاضنة.
+      3. `order nicu lab tests`: إصدار طلبات الفحوصات المخبرية وتحاليل الخدج.
+      4. `order nicu radiology`: إصدار طلبات الفحوصات الشعاعية والسونار للخدج.
+      5. `manage nicu prescriptions`: كتابة واعتماد الوصفات والعلاجات الدوائية للطفل.
+      6. `administer nicu medications`: توثيق إعطاء وتطبيق العلاجات في محطة التمريض (سجل MAR).
+      7. `manage nicu consultations`: طلب واعتماد تقارير الاستشارات الطبية للخدج.
+      8. `switch nicu services`: تبديل باقات الرعاية والخدمات اليومية للأطفال.
+      9. `edit nicu clinical profile`: تعديل وتثبيت بيانات الولادة السريرية وعمر الحمل داخل الإضبارة.
+      10. `manage nicu doctor notes`: تدوين وتثبيت ملاحظات وتوجيهات الطبيب الاختصاص.
+      11. `manage nicu care plans`: اعتماد وجدولة خطط الرعاية والتغذية ومواعيد الرضاعة.
+      12. `discharge incubator reservations`: إصدار أمر الخروج الطبي وتصفية إقامة الطفل.
+      13. `view nicu archive`: تصفح أرشيف وسجلات إضبارات الأطفال المخرجين.
+      14. `manage nicu baby cam`: توليد وإدارة روابط بث كاميرا الحاضنة للأهل.
+    - تحديث [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) و [app/Http/Controllers/RoleManagementController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/RoleManagementController.php) بإدراج وتصنيف هذه الصلاحيات بمسمياتها العربية وشاراتها الرسمية.
+  * **حوكمة حجز الاستقبال وعزل الإجراءات السريرية (Reception Booking vs Clinical Segregation)**:
+    - دور الاستعلامات (`receptionist`) محصور بإنشاء وإدارة حجز الحاضنة واستقبال الطفل (`create incubator reservations`, `view incubator reservations`, `manage incubator reservations`) وطباعة أسورة المعصم وكارت الحاضنة الشفاف (`print nicu cards`) وتوليد رابط الكاميرا (`manage nicu baby cam`).
+    - الاستعلامات محظورة وممنوعة تماماً على صعيد السيرفر (403 Forbidden) عن أي إجراء سريري أو تمريضي (توثيق العلامات، طلب التحاليل، الأشعة، كتابة الوصفات، تعديل الملف السريري، أو إخراج الطفل).
+    - توزيع الصلاحيات السريرية لطبيب الخدج (`nicu_doctor`) والتمريضية لممرضة الخدج (`nicu_nurse`) دون استحداث أدوار جديدة والتزاماً بالأدوار الأساسية للمستشفى.
+  * **منظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج (NICU Milk/Formula Dynamic Catalog)**:
+    - جدول ومايجريشن جديد `nicu_milk_types` ([database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php)) وموديل [app/Models/NicuMilkType.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/NicuMilkType.php) مع تصنيفات سريرية وترتيب عرض وملاحظات استخدام وحالة تفعيل.
+    - متحكم [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuMilkTypeController.php) يدعم عمليات CRUD وتبديل التفعيل اللحظي عبر AJAX (`/nicu/milk-types/{id}/toggle`) وجلب القائمة النشطة JSON.
+    - واجهة إدارة موحدة بتبويبات في [resources/views/nicu/services/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/services/index.blade.php) تجمع بين `[ 🏷️ باقات وخدمات الحاضنات والتنفس ]` و `[ 🍼 قائمة وتصنيفات حليب وتغذية الخدج ]` مع بطاقات إحصائيات، جدول متجاوب، ومودالات الإضافة والتعديل.
+    - ربط ديناميكي مباشر داخل إضبارة الخديج [resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php) في داتا ليست الرضاعة السريعة (`quickFeedingTypes`) وتوثيق العلامات الحيوية، مع رابط وصول سريع `[ ⚙️ إدارة أنواع الحليب ]` للمخولين.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php))**:
+    - 5 اختبارات ميزة تغطي حظر الاستعلامات، تمكين أطباء وممرضات الخدج، عمليات أنواع الحليب والتبديل اللحظي، ورندرة الواجهات والتبويبات بنجاح 100% (`5 passed, 38 assertions`).
+
+- **المرحلة 179 (2026-11-08) — قفل إضبارة الخديج عند الخروج للأرشفة والمطالعة فقط، أرشفة سجلات المرضى المخرجين، ونقل عمر الحمل ووزن الطفل لداخل الإضبارة NICU Discharged Baby Chart Lockdown, Medical Archive Segregation & Clinical Birth Profile Relocation**:
+  * قفل سجل وإضبارة الطفل الخديج عند خروجه لوضع المطالعة والأرشفة فقط (`Read-Only Mode`) مع بنر تحذيري وحظر 15 تابعاً سريرياً في السيرفر.
+  * عزل المرضى المخرجين في تبويب "السجلات وأرشفة المرضى" في القائمة وفي الشريط الجانبي.
+  * نقل حقلي عمر الحمل ووزن الطفل من حجز الاستقبال لداخل الإضبارة ببطاقة مقفلة مع حوكمة تأكيد التعديل.
+  * حزمة اختبارات شاملة في [tests/Feature/NicuDischargedChartAndClinicalProfileTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuDischargedChartAndClinicalProfileTest.php) بنجاح 100% (`5 passed, 37 assertions`).
+
 - **المرحلة 174 (2026-11-07) — حظر فتح المحطة السريرية للمقيم قبل استلام المريض في الغرفة، وتطبيق نظام التنبيهات الطبي الشامل SweetAlert2 (Resident Clinical Station Gate & Global Hospital SweetAlert2 & Toastr Modern Styling System):**
   * **حوكمة محطة المقيم السريرية ([app/Http/Controllers/ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
     - قفل زر "عرض وتعديل" في محطة المقيم وتحويله إلى `[ 🔒 بانتظار استلام الغرفة ]` إذا كان المريض مخصصاً لغرفة ولم يسجل ممرض الطابق استلامه الفعلي بعد.

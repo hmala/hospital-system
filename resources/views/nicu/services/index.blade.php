@@ -49,8 +49,11 @@
                     <p class="text-muted mb-0">التحكم في الأسعار اليومية المعتمدة للحاضنات والكبسولات وأجهزة التنفس الاصطناعي والدعم السريري</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createServiceModal">
+                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createServiceModal" id="headerAddServiceBtn">
                         <i class="fas fa-plus-circle me-1"></i> إضافة باقة خدمة جديدة
+                    </button>
+                    <button type="button" class="btn btn-warning shadow-sm text-dark d-none" data-bs-toggle="modal" data-bs-target="#createMilkTypeModal" id="headerAddMilkTypeBtn">
+                        <i class="fas fa-baby me-1"></i> إضافة نوع حليب جديد
                     </button>
                     <a href="{{ route('nicu.index') }}" class="btn btn-outline-secondary shadow-sm">
                         <i class="fas fa-arrow-right me-1"></i> العودة للوحة الحاضنات
@@ -88,8 +91,27 @@
         </div>
     @endif
 
-    <!-- كروت الإحصائيات السريعة -->
-    <div class="row mb-4 g-3">
+    <!-- كبسولات التبديل الرئيسية -->
+    <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="nicuConfigTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active px-4 py-2 fw-bold" id="services-tab" data-bs-toggle="pill" data-bs-target="#services-pane" type="button" role="tab" aria-controls="services-pane" aria-selected="true">
+                <i class="fas fa-tags me-1 text-primary"></i> باقات وخدمات الحاضنات والتنفس
+                <span class="badge bg-primary ms-1 rounded-pill">{{ $services->count() }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-4 py-2 fw-bold" id="milk-types-tab" data-bs-toggle="pill" data-bs-target="#milk-types-pane" type="button" role="tab" aria-controls="milk-types-pane" aria-selected="false">
+                <i class="fas fa-baby me-1 text-warning"></i> قائمة وتصنيفات حليب وتغذية الخدج
+                <span class="badge bg-warning text-dark ms-1 rounded-pill">{{ isset($milkTypes) ? $milkTypes->count() : 0 }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="nicuConfigTabsContent">
+        <!-- تبويب باقات وخدمات الخدج -->
+        <div class="tab-pane fade show active" id="services-pane" role="tabpanel" aria-labelledby="services-tab">
+            <!-- كروت الإحصائيات السريعة -->
+            <div class="row mb-4 g-3">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm bg-primary text-white h-100" style="border-radius: 12px;">
                 <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -351,6 +373,292 @@
         </div>
     </div>
 </div>
+<!-- نهاية تبويب باقات وخدمات الخدج -->
+
+        <!-- تبويب أنواع الحليب والتغذية -->
+        <div class="tab-pane fade" id="milk-types-pane" role="tabpanel" aria-labelledby="milk-types-tab">
+            <!-- كروت الإحصائيات السريعة للحليب -->
+            <div class="row mb-4 g-3">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-warning text-dark h-100" style="border-radius: 12px;">
+                        <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="small opacity-75 d-block mb-1">إجمالي أنواع وتصنيفات الحليب</span>
+                                <h3 class="mb-0 fw-bold">{{ isset($milkTypes) ? $milkTypes->count() : 0 }}</h3>
+                            </div>
+                            <div class="p-3 bg-dark bg-opacity-10 rounded-circle">
+                                <i class="fas fa-baby fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-success text-white h-100" style="border-radius: 12px;">
+                        <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="small opacity-75 d-block mb-1">الأنواع النشطة والمعتمدة</span>
+                                <h3 class="mb-0 fw-bold">{{ isset($milkTypes) ? $milkTypes->where('is_active', true)->count() : 0 }}</h3>
+                            </div>
+                            <div class="p-3 bg-white bg-opacity-20 rounded-circle">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-primary text-white h-100" style="border-radius: 12px;">
+                        <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="small opacity-75 d-block mb-1">حليب خدج صناعي وتركيبات</span>
+                                <h3 class="mb-0 fw-bold">{{ isset($milkTypes) ? $milkTypes->where('category', '!=', 'حليب أم طبيعي')->count() : 0 }}</h3>
+                            </div>
+                            <div class="p-3 bg-white bg-opacity-20 rounded-circle">
+                                <i class="fas fa-prescription-bottle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-info text-white h-100" style="border-radius: 12px;">
+                        <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="small opacity-75 d-block mb-1">حليب الأم الطبيعي (EBM)</span>
+                                <h3 class="mb-0 fw-bold">{{ isset($milkTypes) ? $milkTypes->filter(fn($m) => str_contains($m->name, 'حليب أم') || str_contains((string)$m->category, 'طبيعي'))->count() : 0 }}</h3>
+                            </div>
+                            <div class="p-3 bg-white bg-opacity-20 rounded-circle">
+                                <i class="fas fa-heart fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- بطاقة جدول أنواع وتصنيفات حليب وتغذية الخدج -->
+            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="mb-1 fw-bold text-dark">
+                            <i class="fas fa-baby text-warning me-2"></i>
+                            دليل أنواع وتصنيفات حليب وتغذية الخدج المعتمدة
+                        </h5>
+                        <p class="text-muted small mb-0">تظهر هذه الخيارات تلقائياً للأطباء والممرضين في جداول الرضاعة وإضبارة الطفل</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-warning shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#createMilkTypeModal">
+                            <i class="fas fa-plus-circle me-1"></i> إضافة نوع حليب جديد
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">#</th>
+                                    <th>اسم الحليب / نوع التغذية</th>
+                                    <th>التصنيف السريري</th>
+                                    <th class="text-center" style="width: 100px;">الترتيب</th>
+                                    <th>ملاحظات الاستخدام والحالات المناسبة</th>
+                                    <th class="text-center" style="width: 140px;">حالة التفعيل</th>
+                                    <th class="text-center" style="width: 130px;">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($milkTypes ?? [] as $mIndex => $milkType)
+                                    <tr id="milk-type-row-{{ $milkType->id }}" class="{{ !$milkType->is_active ? 'opacity-75 bg-light' : '' }}">
+                                        <td class="text-center fw-bold text-muted">{{ $mIndex + 1 }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="p-2 bg-warning-subtle text-warning rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                    <i class="fas fa-baby-carriage"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold fs-6 text-dark">{{ $milkType->name }}</div>
+                                                    <small class="text-muted">مُعرّف: #{{ $milkType->id }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if($milkType->category)
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                    {{ $milkType->category }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted small">غير محدد</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center fw-bold text-secondary">
+                                            {{ $milkType->sort_order }}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted d-block" title="{{ $milkType->notes }}">
+                                                {{ $milkType->notes ?: '—' }}
+                                            </small>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input milk-type-toggle-switch" 
+                                                       type="checkbox" 
+                                                       role="switch" 
+                                                       data-milk-type-id="{{ $milkType->id }}"
+                                                       {{ $milkType->is_active ? 'checked' : '' }}>
+                                            </div>
+                                            <div class="small fw-bold status-label-milk-{{ $milkType->id }} {{ $milkType->is_active ? 'text-success' : 'text-danger' }}">
+                                                {{ $milkType->is_active ? 'متاح للاختيار' : 'معطل مؤقتاً' }}
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" 
+                                                        class="btn btn-outline-primary edit-milk-type-btn"
+                                                        data-milk-type="{{ json_encode($milkType) }}"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editMilkTypeModal"
+                                                        title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <form action="{{ route('nicu.milk-types.destroy', $milkType) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا النوع من قائمة الحليب؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline-danger" title="حذف">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="fas fa-baby fa-3x mb-3 text-secondary opacity-50"></i>
+                                            <h5>لا توجد أنواع حليب مسجلة حتى الآن</h5>
+                                            <p class="small">انقر على زر "إضافة نوع حليب جديد" لإضافة أول نوع لقائمة الخدج</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- نهاية تبويب أنواع الحليب -->
+    </div>
+    <!-- نهاية محتوى التبويبات -->
+</div>
+
+<!-- مودال إضافة نوع حليب جديد -->
+<div class="modal fade" id="createMilkTypeModal" tabindex="-1" aria-labelledby="createMilkTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <form action="{{ route('nicu.milk-types.store') }}" method="POST">
+                @csrf
+                <div class="modal-header bg-warning text-dark" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <h5 class="modal-title fw-bold" id="createMilkTypeModalLabel">
+                        <i class="fas fa-baby me-2"></i> إضافة نوع حليب / تغذية خديج جديد
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اسم الحليب أو التركيبة السريرية <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-control-lg" placeholder="مثال: حليب سيميلاك نيوشور (Neosure)..." required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">التصنيف السريري للتغذية</label>
+                        <input type="text" name="category" class="form-control" list="milkCategoriesList" placeholder="مثال: حليب خدج صناعي Pre-term...">
+                        <datalist id="milkCategoriesList">
+                            <option value="حليب أم طبيعي (EBM)">
+                            <option value="حليب خدج صناعي (Pre-term Formula)">
+                            <option value="حليب قليل التحسس (Hypoallergenic)">
+                            <option value="حليب مكثف ومضاد للارتجاع (Anti-Reflux)">
+                            <option value="تغذية وريدية كاملة (TPN)">
+                            <option value="حليب خالي من اللاكتوز (LF)">
+                            <option value="مكمل تغذية خدج (HMF)">
+                        </datalist>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ترتيب العرض في القوائم</label>
+                        <input type="number" name="sort_order" class="form-control" value="0" min="0">
+                        <small class="text-muted">الرقم الأصغر يظهر أولاً في القوائم المنسدلة.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات الاستخدام السريري ودواعي التغذية</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="ملاحظات حول طريقة التحضير، أو الأوزان الموصى بها..."></textarea>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="create_milk_is_active" value="1" checked>
+                            <label class="form-check-label fw-bold text-success" for="create_milk_is_active">تفعيل النوع وجعله متاحاً للاختيار فوراً</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold text-dark">
+                        <i class="fas fa-check-circle me-1"></i> حفظ وإضافة النوع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تعديل نوع حليب -->
+<div class="modal fade" id="editMilkTypeModal" tabindex="-1" aria-labelledby="editMilkTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <form id="editMilkTypeForm" method="POST" action="">
+                @csrf
+                @method('PUT')
+                <div class="modal-header bg-primary text-white" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <h5 class="modal-title fw-bold" id="editMilkTypeModalLabel">
+                        <i class="fas fa-edit me-2"></i> تعديل بيانات نوع الحليب / التغذية
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اسم الحليب أو التركيبة السريرية <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="edit_milk_name" class="form-control form-control-lg" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">التصنيف السريري للتغذية</label>
+                        <input type="text" name="category" id="edit_milk_category" class="form-control" list="milkCategoriesList">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ترتيب العرض</label>
+                        <input type="number" name="sort_order" id="edit_milk_sort_order" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات الاستخدام السريري ودواعي التغذية</label>
+                        <textarea name="notes" id="edit_milk_notes" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="edit_milk_is_active" value="1">
+                            <label class="form-check-label fw-bold" for="edit_milk_is_active">النوع مفعل ومتاح للاختيار</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">
+                        <i class="fas fa-save me-1"></i> حفظ التعديلات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- مودال تعديل باقة الخدمة -->
 <div class="modal fade" id="editServiceModal" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true">
@@ -591,6 +899,105 @@ document.addEventListener('DOMContentLoaded', function () {
                         row.classList.add('opacity-75', 'bg-light');
                         label.className = `small fw-bold status-label-${serviceId} text-danger`;
                         label.textContent = 'معطلة مؤقتاً';
+                    }
+                } else {
+                    alert(data.message || 'حدث خطأ أثناء تحديث الحالة');
+                    toggle.checked = !toggle.checked;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('فشل الاتصال بالخادم');
+                toggle.checked = !toggle.checked;
+            });
+        });
+    });
+
+    // إدارة تبويبات الإعدادات وتحديث أزرار الرأس
+    const headerAddServiceBtn = document.getElementById('headerAddServiceBtn');
+    const headerAddMilkTypeBtn = document.getElementById('headerAddMilkTypeBtn');
+    const servicesTabBtn = document.getElementById('services-tab');
+    const milkTypesTabBtn = document.getElementById('milk-types-tab');
+
+    function syncHeaderButtons(targetTabId) {
+        if (targetTabId === 'milk-types-tab' || targetTabId === 'milk-types-pane') {
+            if (headerAddServiceBtn) headerAddServiceBtn.classList.add('d-none');
+            if (headerAddMilkTypeBtn) headerAddMilkTypeBtn.classList.remove('d-none');
+        } else {
+            if (headerAddServiceBtn) headerAddServiceBtn.classList.remove('d-none');
+            if (headerAddMilkTypeBtn) headerAddMilkTypeBtn.classList.add('d-none');
+        }
+    }
+
+    if (servicesTabBtn && milkTypesTabBtn) {
+        servicesTabBtn.addEventListener('shown.bs.tab', function () {
+            syncHeaderButtons('services-tab');
+            history.replaceState(null, null, '#services-tab');
+        });
+        milkTypesTabBtn.addEventListener('shown.bs.tab', function () {
+            syncHeaderButtons('milk-types-tab');
+            history.replaceState(null, null, '#milk-types-tab');
+        });
+
+        // فحص الهاش عند فتح الصفحة مباشرة
+        if (window.location.hash === '#milk-types-tab' || window.location.hash === '#milk-types-pane') {
+            const milkTabInstance = new bootstrap.Tab(milkTypesTabBtn);
+            milkTabInstance.show();
+            syncHeaderButtons('milk-types-tab');
+        }
+    }
+
+    // تجهيز مودال تعديل نوع الحليب بالبيانات
+    const editMilkForm = document.getElementById('editMilkTypeForm');
+    const editMilkName = document.getElementById('edit_milk_name');
+    const editMilkCategory = document.getElementById('edit_milk_category');
+    const editMilkSortOrder = document.getElementById('edit_milk_sort_order');
+    const editMilkNotes = document.getElementById('edit_milk_notes');
+    const editMilkActive = document.getElementById('edit_milk_is_active');
+
+    document.querySelectorAll('.edit-milk-type-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const milkType = JSON.parse(this.getAttribute('data-milk-type'));
+            if (editMilkForm) {
+                editMilkForm.action = `/nicu/milk-types/${milkType.id}`;
+            }
+            if (editMilkName) editMilkName.value = milkType.name || '';
+            if (editMilkCategory) editMilkCategory.value = milkType.category || '';
+            if (editMilkSortOrder) editMilkSortOrder.value = milkType.sort_order ?? 0;
+            if (editMilkNotes) editMilkNotes.value = milkType.notes || '';
+            if (editMilkActive) editMilkActive.checked = Boolean(milkType.is_active);
+        });
+    });
+
+    // تبديل حالة تفعيل نوع الحليب لحظياً عبر AJAX
+    document.querySelectorAll('.milk-type-toggle-switch').forEach(toggle => {
+        toggle.addEventListener('change', function () {
+            const milkTypeId = this.getAttribute('data-milk-type-id');
+            const row = document.getElementById(`milk-type-row-${milkTypeId}`);
+            const label = document.querySelector(`.status-label-milk-${milkTypeId}`);
+
+            fetch(`/nicu/milk-types/${milkTypeId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_active) {
+                        if (row) row.classList.remove('opacity-75', 'bg-light');
+                        if (label) {
+                            label.className = `small fw-bold status-label-milk-${milkTypeId} text-success`;
+                            label.textContent = 'متاح للاختيار';
+                        }
+                    } else {
+                        if (row) row.classList.add('opacity-75', 'bg-light');
+                        if (label) {
+                            label.className = `small fw-bold status-label-milk-${milkTypeId} text-danger`;
+                            label.textContent = 'معطل مؤقتاً';
+                        }
                     }
                 } else {
                     alert(data.message || 'حدث خطأ أثناء تحديث الحالة');

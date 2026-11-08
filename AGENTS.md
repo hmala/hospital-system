@@ -54,6 +54,38 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 180: تفكيك وتفصيل صلاحيات الخدج، تخصيص حجز الاستعلامات، ومنظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج Granular NICU Permissions Matrix, Reception Baby Admission Segregation & Dynamic NICU Milk/Formula Catalog Suite)
+
+### Done
+- **تفكيك وتفصيل صلاحيات قسم الخدج والحاضنات (Granular NICU Permissions Matrix)**:
+  * تفكيك الصلاحيات العريضة إلى 14 صلاحية دقيقة:
+    1. `manage nicu services`: إدارة وتسعير باقات وخدمات وحليب الخدج.
+    2. `record nicu vitals`: تسجيل وتوثيق العلامات الحيوية والوزن والرضاعة في الحاضنة.
+    3. `order nicu lab tests`: إصدار طلبات الفحوصات المخبرية وتحاليل الخدج.
+    4. `order nicu radiology`: إصدار طلبات الفحوصات الشعاعية والسونار للخدج.
+    5. `manage nicu prescriptions`: كتابة واعتماد الوصفات والعلاجات الدوائية للطفل.
+    6. `administer nicu medications`: توثيق إعطاء وتطبيق العلاجات في محطة التمريض (سجل MAR).
+    7. `manage nicu consultations`: طلب واعتماد تقارير الاستشارات الطبية للخدج.
+    8. `switch nicu services`: تبديل باقات الرعاية والخدمات اليومية للأطفال.
+    9. `edit nicu clinical profile`: تعديل وتثبيت بيانات الولادة السريرية وعمر الحمل داخل الإضبارة.
+    10. `manage nicu doctor notes`: تدوين وتثبيت ملاحظات وتوجيهات الطبيب الاختصاص.
+    11. `manage nicu care plans`: اعتماد وجدولة خطط الرعاية والتغذية ومواعيد الرضاعة.
+    12. `discharge incubator reservations`: إصدار أمر الخروج الطبي وتصفية إقامة الطفل.
+    13. `view nicu archive`: تصفح أرشيف وسجلات إضبارات الأطفال المخرجين.
+    14. `manage nicu baby cam`: توليد وإدارة روابط بث كاميرا الحاضنة للأهل.
+  * تحديث [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) و [app/Http/Controllers/RoleManagementController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/RoleManagementController.php) بإدراج وتصنيف الصلاحيات بأسمائها وشاراتها العربية.
+- **حوكمة حجز الاستقبال وعزل الإجراءات السريرية (Reception Booking vs Clinical Segregation)**:
+  * دور الاستعلامات (`receptionist`) محصور بإنشاء وإدارة حجز الحاضنة واستقبال الطفل (`create incubator reservations`, `view incubator reservations`, `manage incubator reservations`) وطباعة أسورة المعصم وكارت الحاضنة الشفاف (`print nicu cards`) وتوليد رابط الكاميرا (`manage nicu baby cam`).
+  * الاستعلامات محظورة وممنوعة تماماً على صعيد السيرفر (403 Forbidden) عن أي إجراء سريري أو تمريضي (توثيق العلامات، طلب التحاليل، الأشعة، كتابة الوصفات، تعديل الملف السريري، أو إخراج الطفل).
+  * حصر الصلاحيات السريرية بطبيب الخدج (`nicu_doctor`) والتمريضية بممرضة الخدج (`nicu_nurse`) دون استحداث أدوار جديدة والاعتماد التام على الأدوار الأساسية.
+- **منظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج (NICU Milk/Formula Dynamic Catalog)**:
+  * إنشاء جدول ومايجريشن `nicu_milk_types` ([database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php)) وموديل [app/Models/NicuMilkType.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/NicuMilkType.php) يشمل تصنيفات التغذية، ترتيب العرض، وملاحظات الاستخدام السريري.
+  * بناء متحكم [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuMilkTypeController.php) مع دعم عمليات CRUD والتبديل اللحظي عبر AJAX (`/nicu/milk-types/{id}/toggle`) وجلب القائمة النشطة JSON.
+  * تصميم واجهة التبويبات المزدوجة في [resources/views/nicu/services/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/services/index.blade.php) للتنقل السلس بين `[ 🏷️ باقات وخدمات الحاضنات والتنفس ]` و `[ 🍼 قائمة وتصنيفات حليب وتغذية الخدج ]` مع مؤشرات إحصائية وجدول ومودالات الإضافة والتعديل.
+  * ربط قائمة الحليب ديناميكياً داخل إضبارة الطفل [resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php) في داتا ليست الرضاعة السريعة (`quickFeedingTypes`) وتوثيق العلامات الحيوية، مع توفير رابط وصول مباشر `[ ⚙️ إدارة أنواع الحليب ]`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php))**:
+  * 5 اختبارات ميزة مخصصة تغطي: حظر الاستعلامات عن الإجراءات السريرية، تمكين طبيب وممرضة الخدج، دورة حياة إدارة أنواع الحليب والتبديل اللحظي، ورندرة الواجهات والتبويبات بنجاح 100% (`5 passed, 38 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 179: قفل إضبارة الخديج عند الخروج للأرشفة والمطالعة فقط، أرشفة سجلات المرضى المخرجين، ونقل عمر الحمل ووزن الطفل لداخل الإضبارة NICU Discharged Baby Chart Lockdown, Medical Archive Segregation & Clinical Birth Profile Relocation)
 
 ### Done
