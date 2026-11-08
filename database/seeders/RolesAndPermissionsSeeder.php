@@ -241,12 +241,26 @@ class RolesAndPermissionsSeeder extends Seeder
             // صلاحيات عرض المرضى المقيمين
             'view occupancy',
 
-            // صلاحيات الموارد البشرية (HR)
+            // صلاحيات الموارد البشرية والرواتب (HR & Payroll)
             'view hr',
             'view employees',
             'create employees',
             'edit employees',
             'delete employees',
+            'print employee badges',
+            'manage hr documents',
+            'manage hr actions',
+            'view hr payroll',
+            'create hr payroll',
+            'approve hr payroll',
+            'delete hr payroll',
+            'print hr payslips',
+            'manage hr loans',
+            'manage hr absences',
+            'manage hr overtime',
+            'manage hr shifts',
+            'manage hr schedules',
+            'manage hr settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -654,12 +668,26 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // دور مدير الموارد البشرية (HR Manager)
         $hrManagerRole = Role::firstOrCreate(['name' => 'hr_manager']);
-        $hrManagerRole->givePermissionTo([
+        $hrManagerRole->syncPermissions([
             'view hr',
             'view employees',
             'create employees',
             'edit employees',
             'delete employees',
+            'print employee badges',
+            'manage hr documents',
+            'manage hr actions',
+            'view hr payroll',
+            'create hr payroll',
+            'approve hr payroll',
+            'delete hr payroll',
+            'print hr payslips',
+            'manage hr loans',
+            'manage hr absences',
+            'manage hr overtime',
+            'manage hr shifts',
+            'manage hr schedules',
+            'manage hr settings',
             'view departments',
         ]);
 

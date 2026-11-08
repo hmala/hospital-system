@@ -400,6 +400,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/emergency/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'emergencyDoctorPayout'])->name('emergency.doctor-payout');
         Route::get('/statements/export', [\App\Http\Controllers\CashierController::class, 'exportStatements'])->name('statements.export');
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
+        Route::get('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'showNicuPaymentForm'])->name('nicu.payment.form');
         Route::post('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'processNicuPayment'])->name('nicu.payment');
         Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
         Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
@@ -938,9 +939,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employees/documents/{document}/download', [\App\Http\Controllers\HR\HrEmployeeController::class, 'downloadDocument'])->name('employees.documents.download');
         Route::delete('employees/documents/{document}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyDocument'])->name('employees.documents.destroy');
 
-        // ???????? ????????? ??????
+        // سجل العقوبات والمكافآت للموظف
         Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
         Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
+
+        // طباعة باجة وهوية الموظف (ID Badge)
+        Route::get('employees/{employee}/badge', [\App\Http\Controllers\HR\HrEmployeeController::class, 'badge'])->name('employees.badge');
 
         // إدارة الموظفين
         Route::get('employees/{employee}/roster', [\App\Http\Controllers\HR\HrEmployeeController::class, 'roster'])->name('employees.roster');
@@ -950,6 +954,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('action_settings', \App\Http\Controllers\HR\HrActionSettingController::class)->except(['create', 'show', 'edit']);
 
         // نظام الرواتب
+        Route::get('payrolls/slip/{slip}/print', [\App\Http\Controllers\HR\HrPayrollController::class, 'printSlip'])->name('payrolls.slip.print');
         Route::resource('payrolls', \App\Http\Controllers\HR\HrPayrollController::class)->except(['edit', 'update']);
         Route::post('payrolls/{payroll}/approve', [\App\Http\Controllers\HR\HrPayrollController::class, 'approve'])->name('payrolls.approve');
         Route::post('payrolls/slip/{slip}', [\App\Http\Controllers\HR\HrPayrollController::class, 'updateSlip'])->name('payrolls.slip.update');

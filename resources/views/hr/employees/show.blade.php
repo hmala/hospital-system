@@ -11,6 +11,11 @@
             <p class="text-muted small mb-0">كود الموظف: <span class="badge bg-light text-dark border font-monospace">{{ $employee->employee_code }}</span> | المسمى: {{ $employee->job_title }}</p>
         </div>
         <div class="d-flex gap-2">
+            @can('print employee badges')
+                <a href="{{ route('hr.employees.badge', $employee->id) }}" class="btn btn-outline-dark btn-sm shadow-sm" target="_blank">
+                    <i class="fas fa-id-badge me-1"></i> طباعة الباجة (ID Card)
+                </a>
+            @endcan
             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                 <i class="fas fa-print me-1"></i> طباعة الإضبارة
             </button>
@@ -89,10 +94,15 @@
                 <h5 class="fw-bold text-dark mb-1">{{ $employee->full_name }}</h5>
                 <p class="text-primary fw-semibold mb-2">{{ $employee->job_title }}</p>
 
-                <div class="d-flex justify-content-center gap-2 mb-3">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
                     <span class="badge bg-light text-dark border font-monospace fs-6 px-3 py-2">
                         <i class="fas fa-id-badge me-1 text-secondary"></i>{{ $employee->employee_code }}
                     </span>
+                    @can('print employee badges')
+                    <a href="{{ route('hr.employees.badge', $employee->id) }}" class="btn btn-outline-dark btn-sm py-1 px-2" target="_blank" title="طباعة باجة الهوية الرسمية">
+                        <i class="fas fa-print me-1"></i>الباجة
+                    </a>
+                    @endcan
                 </div>
 
                 <div class="d-flex justify-content-center gap-2 mb-3">

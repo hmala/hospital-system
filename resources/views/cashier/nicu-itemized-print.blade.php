@@ -283,9 +283,9 @@
             @endforeach
         @endif
 
-        <!-- 5. الأمانات المسددة -->
+        <!-- 5. الدفعات المسددة -->
         @if($stayDetails['payments']->isNotEmpty())
-            <div class="section-header">5. الأمانات والوصولات النقدية المسددة:</div>
+            <div class="section-header">5. الدفعات والوصولات النقدية المسددة:</div>
             @foreach($stayDetails['payments'] as $pmt)
                 <div class="item-row">
                     <span class="item-name">وصل #{{ $pmt->receipt_number }} ({{ $pmt->paid_at ? $pmt->paid_at->format('m/d') : '' }})</span>
@@ -301,7 +301,7 @@
                 <span style="font-weight: 900;">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
             </div>
             <div class="total-row">
-                <span>مجموع الأمانات المسددة:</span>
+                <span>مجموع المبالغ المسددة:</span>
                 <span style="font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</span>
             </div>
             <div class="total-row grand">
@@ -310,7 +310,7 @@
             </div>
             @if($stayDetails['excess_deposit'] > 0)
                 <div class="total-row" style="color: #0284c7; font-weight: 800; margin-top: 2px;">
-                    <span>فائض أمانات مستحق للأهل:</span>
+                    <span>فائض رسوم مستحق للأهل:</span>
                     <span>+{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
                 </div>
             @endif

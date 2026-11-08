@@ -39,10 +39,10 @@ class NicuPayment extends Model
     public const TYPE_REFUND = 'refund';
 
     public const PAYMENT_TYPES = [
-        self::TYPE_DEPOSIT => 'أمانات وسلفة دخول',
-        self::TYPE_INTERIM => 'دفعة تحت الحساب',
-        self::TYPE_FINAL => 'تسوية نهائية عند التخريج',
-        self::TYPE_REFUND => 'استرجاع فائض أمانات',
+        self::TYPE_DEPOSIT => 'تسديد رسوم الحاضنة',
+        self::TYPE_INTERIM => 'دفعة تسديد',
+        self::TYPE_FINAL => 'تسديد وتصفية نهائية',
+        self::TYPE_REFUND => 'استرجاع فائض الرسوم',
     ];
 
     public const PAYMENT_METHODS = [

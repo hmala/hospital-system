@@ -78,6 +78,58 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 182 (2026-11-08) — إصلاح حفظ تفكيك الرواتب، تفكيك مصفوفة صلاحيات HR، قالب وقسيمة الراتب الفردية وطباعة باجة الموظف الرسمية (HR Payroll Model Fix, Granular Permissions Matrix, Official Employee ID Badge & Individual Payslip Suite)**:
+  * **إصلاح الخلل البرمجي في موديل الرواتب ([app/Models/HrPayroll.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/HrPayroll.php), [database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php))**:
+    - إضافة كافة حقول التفكيك المالي المفقودة إلى `$fillable` و `$casts` في `HrPayroll`:
+      (`overtime_amount`, `absence_deduction`, `loan_deduction`, `social_security_amount`, `tax_amount`, `payment_method`, `is_paid`, `paid_at`).
+    - تصحيح الميغريشن الداعم `2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php` بفحص وإضافة الأعمدة في حال عدم وجودها في البيئات الجديدة والاختبارات الآلية لـ SQLite.
+    - إضافة دوال المساعدة الحسابية `total_earnings` و `total_deductions` وعلاقة `payrollCycle()`.
+  * **تفكيك مصفوفة صلاحيات الموارد البشرية (Granular HR Permissions Matrix & Roles Governance)**:
+    - تفكيك الصلاحيات إلى 19 صلاحية دقيقة ومستقلة:
+      (`view hr`, `view employees`, `create employees`, `edit employees`, `delete employees`, `print employee badges`, `manage hr documents`, `manage hr actions`, `view hr payroll`, `create hr payroll`, `approve hr payroll`, `delete hr payroll`, `print hr payslips`, `manage hr loans`, `manage hr absences`, `manage hr overtime`, `manage hr shifts`, `manage hr schedules`, `manage hr settings`).
+    - تحديث [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) وإسناد كافة الصلاحيات لدور مدير الموارد البشرية `hr_manager` والمدير `admin`.
+    - تحديث [app/Http/Controllers/RoleManagementController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/RoleManagementController.php):
+      * إدراج قسم `hr` ضمن ترتيب موديولات المستشفى `getModuleOrder()`.
+      * تصنيف الصلاحيات وعنونتها بشارات وأسماء عربية واضحة في `getPermissionDefinitions()`.
+      * تصنيف دور `hr_manager` ضمن فئة الإدارة وشارة `مدير الموارد البشرية (HR)`.
+      * عزل صلاحيات الـ HR ضمن مجموعة `permissionGroup('hr')`.
+    - حماية كافة متحكمات الموارد البشرية عبر الـ Middlewares بالصلاحيات الدقيقة (`HrPayrollController`, `HrShiftController`, `HrScheduleController`, `HrLoanController`, `HrAbsenceController`, `HrOvertimeController`, `HrActionSettingController`, `HrSettingsController`, `HrAllowanceController`, `HrEmployeeController`).
+    - تحديث روابط وأقسام الموارد البشرية في القائمة الجانبية [resources/views/layouts/app.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/layouts/app.blade.php) لتتوافق مع الصلاحيات الدقيقة.
+  * **قالب وقسيمة الراتب الفردية للموظف (Individual Employee Payslip Print)**:
+    - بناء واجهة طباعة قسيمة الراتب الفاخرة [resources/views/hr/payrolls/payslip.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/hr/payrolls/payslip.blade.php) والمسار `Route::get('payrolls/slip/{slip}/print')` بالصلاحية `print hr payslips`.
+    - جدول مالي مزدوج: استحقاقات ومكافآت (الأساسي، المخصصات، الإضافي، المكافآت) مقابل استقطاعات وخصومات (الغياب، العقوبات، قسط السلفة، الضمان الاجتماعي، الضريبة).
+    - بطاقة صافي الراتب المستحق بالدينار العراقي وخانات التواقيع الثلاثية (مسؤول الرواتب، المحاسب المالي، ومدير الموارد البشرية).
+    - إضافة زر `[ 🖨️ قسيمة الراتب ]` في جدول شيت الرواتب المركزي [resources/views/hr/payrolls/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/hr/payrolls/show.blade.php).
+  * **طباعة باجة وهوية الموظف الرسمية (Official Staff ID Badge / CR80 PVC Standard)**:
+    - بناء واجهة بطاقة الهوية الرسمية [resources/views/hr/employees/badge.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/hr/employees/badge.blade.php) والمسار `Route::get('employees/{employee}/badge')` بالصلاحية `print employee badges`.
+    - تصميم قياسي مزدوج (وجه أمامي ووجه خلفي):
+      * **الوجه الأمامي:** شريط ألوان الأقسام، الشعار، صورة الموظف، الاسم الكامل، المسمى، كود `EMP-xxxx`، وباركود رقمي visual barcode.
+      * **الوجه الخلفي:** فصيلة الدم، هاتف الطوارئ، الرقم الوطني، رقم ترخيص المهنة للأطباء، تعليمات المستشفى، ومربع الختم الرسمي.
+    - إضافة أزرار طباعة الباجة في سجل الموظفين [resources/views/hr/employees/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/hr/employees/index.blade.php) وإضبارة الموظف [resources/views/hr/employees/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/hr/employees/show.blade.php).
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/HREmployeeTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/HREmployeeTest.php))**:
+    - توسيع الاختبارات لتشمل: اختبار حفظ تفكيك الرواتب في الموديل، اختبار رندرة وطباعة باجة الموظف، واختبار قسيمة الراتب الفردية بنسبة نجاح 100% (`8 passed, 38 assertions`).
+
+- **المرحلة 181 (2026-11-08) — نظام تسديد وتصفية رسوم الخدج والحاضنات الموحد وإلغاء الأمانات والسلف بسلاسة واجهة العمليات الجراحية (NICU Cashier Unified Folio & Payment Suite, Advance Deposit Deprecation & Inpatient Settlement Engine)**:
+  * **إلغاء مصطلحي "الأمانات" و"السلفة" وتوحيد المفهوم المالي تحت "التسديد"**:
+    - حذف مسميات الأمانات والسلف تماماً من الكاشير والواجهات والإيصالات.
+    - توحيد المسميات في [app/Models/NicuPayment.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/NicuPayment.php) والواجهات إلى: (تسديد رسوم الحاضنة، دفعة تسديد، تسديد وتصفية نهائية، واسترجاع فائض الرسوم).
+    - تحديث سندات القبض والإيصالات الحرارية في [resources/views/cashier/nicu-receipt.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu-receipt.blade.php)، [resources/views/cashier/nicu-receipt-print.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu-receipt-print.blade.php)، و [resources/views/cashier/nicu-itemized-print.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php).
+  * **واجهة تسديد رسوم الخدج المستقلة الفاخرة (ستايل العمليات الجراحية الموحد) ([resources/views/cashier/nicu/payment-form.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu/payment-form.blade.php))**:
+    - صفحة تسديد وتصفية عريضة بديلة للمودال القديم.
+    - بطاقتان علويتان: (بيانات الحاضنة، باقة الخدمة الحالية، الطبيب المشرف، تاريخ وساعة الدخول، وعدد الأيام الفندقية والساعات المحسوبة حياً) + (بيانات ولي الأمر، الهاتف، وشارة التغطية كاش أو ضمان وطني).
+    - شريط الأرقام المالية العلوي: إجمالي التكلفة المعتمدة | المسدد سابقاً | المتبقي للتسديد أو فائض مستحق الإرجاع.
+    - كشف البنود السريرية المفصلة: باقات الإقامة والتنفس، الفحوصات المخبرية، الأشعة والسونار، الاستشارات الطبية، الأدوية وتغذية الخدج، وسجل الدفعات المسددة سابقاً مع أزرار المعاينة والطباعة.
+    - صندوق التسديد السفلي الذكي (Smart Payment Dock) بنفس ستايل العمليات: كبسولات `[ 🟢 تسديد كامل المبلغ المتبقي ]` مقابل `[ 🟡 تسديد جزئي (دفعة مقبوضة الآن) ]` مع شارة حية لاحتساب المتبقي واقتراحات سريعة للمبالغ وخيارات نقد/بطاقة.
+    - قسم إرجاع الفائض المالي (Refund) بنقرة واحدة عند وجود مبالغ مسددة بالزيادة كخروج الطفل المبكر.
+  * **تحديث شاشة الكاشير الرئيسية ([resources/views/cashier/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/index.blade.php))**:
+    - بقاء جدول الخدج في مكانه الطبيعي داخل الكاشير.
+    - تحويل زر "قبض دفعة" إلى زر: `[ 💳 تسديد الرسوم ]` ينقل لصفحة التسديد مباشرة، وإزالة المودالات المنبثقة القديمة.
+  * **مسارات وتحكم السيرفر ([routes/web.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/routes/web.php), [app/Http/Controllers/CashierController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/CashierController.php))**:
+    - مسار `GET /cashier/nicu/{reservation}/payment` باسم `cashier.nicu.payment.form`.
+    - تابع `showNicuPaymentForm()` و `processNicuPayment()` لدعم التسديد الكامل والجزئي واسترجاع الفائض وحفظ السندات والعمليات بنزاهة محاسبية كاملة.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuCashierPaymentFormTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuCashierPaymentFormTest.php))**:
+    - 6 اختبارات ميزة مخصصة تغطي كافة مسارات الواجهة والتسديد والإرجاع والصلاحيات بنجاح 100% (`6 passed, 21 assertions`).
+
 - **المرحلة 180 (2026-11-08) — تفكيك وتفصيل صلاحيات الخدج، تخصيص حجز الاستعلامات، ومنظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج (Granular NICU Permissions Matrix, Reception Baby Admission Segregation & Dynamic NICU Milk/Formula Catalog Suite)**:
   * **تفكيك وتفصيل صلاحيات قسم الخدج والحاضنات (Granular NICU Permissions Matrix)**:
     - تفكيك الصلاحيات العريضة والمدمجة إلى 14 صلاحية دقيقة ومستقلة:

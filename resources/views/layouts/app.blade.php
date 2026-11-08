@@ -1865,7 +1865,7 @@
                         @endcanany
 
                         <!-- قسم الموارد البشرية (HR) -->
-                        @canany(['view hr', 'view employees'])
+                        @canany(['view hr', 'view employees', 'view hr payroll', 'manage hr shifts', 'manage hr schedules'])
                         @php
                             $isHrActive = request()->routeIs('hr.*');
                         @endphp
@@ -1875,11 +1875,13 @@
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isHrActive ? 'show' : '' }}" id="hrSection">
+                            @can('view employees')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.employees.index') || request()->routeIs('hr.employees.show') ? 'active' : '' }}" href="{{ route('hr.employees.index') }}">
                                     <i class="fas fa-id-card"></i><span> سجل الموظفين</span>
                                 </a>
                             </li>
+                            @endcan
                             @can('create employees')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.employees.create') ? 'active' : '' }}" href="{{ route('hr.employees.create') }}">
@@ -1887,23 +1889,30 @@
                                 </a>
                             </li>
                             @endcan
+                            @can('manage hr settings')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.settings.*') ? 'active' : '' }}" href="{{ route('hr.settings.index') }}">
                                     <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('manage hr actions')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">
                                     <i class="fas fa-balance-scale"></i><span> لائحة العقوبات والمكافآت</span>
                                 </a>
                             </li>
+                            @endcan
+                            @can('view hr payroll')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.payrolls.*') ? 'active' : '' }}" href="{{ route('hr.payrolls.index') }}">
                                     <i class="fas fa-money-check-alt"></i><span> مسير الرواتب والأجور</span>
                                 </a>
                             </li>
+                            @endcan
 
                             <!-- Submenu: الدوام والخفارات -->
+                            @canany(['manage hr shifts', 'manage hr schedules'])
                             @php
                                 $isAttendanceActive = request()->routeIs('hr.shifts.*') || request()->routeIs('hr.schedules.*');
                             @endphp
@@ -1912,17 +1921,22 @@
                                 <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                             </div>
                             <div class="collapse {{ $isAttendanceActive ? 'show' : '' }} ps-2" id="attendanceSubSection">
+                                @can('manage hr shifts')
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('hr.shifts.*') ? 'active' : '' }}" href="{{ route('hr.shifts.index') }}">
                                         <i class="fas fa-calendar-day"></i><span> إعدادات الشفتات</span>
                                     </a>
                                 </li>
+                                @endcan
+                                @can('manage hr schedules')
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('hr.schedules.*') ? 'active' : '' }}" href="{{ route('hr.schedules.index') }}">
                                         <i class="fas fa-calendar-alt"></i><span> جدول الدوام الأسبوعي</span>
                                     </a>
                                 </li>
+                                @endcan
                             </div>
+                            @endcanany
 
                         </div>
                         @endcanany

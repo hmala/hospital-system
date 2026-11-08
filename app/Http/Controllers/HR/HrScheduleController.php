@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 
 class HrScheduleController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('permission:manage hr schedules');
+    }
+
     public function index(Request $request)
     {
         $departments = \App\Models\Department::all();
