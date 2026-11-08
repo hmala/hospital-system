@@ -13,14 +13,7 @@
             ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($hospitalLogoFile))
             : asset('images/1.jpg');
         
-        // الشعار الرسمي والعلامة المائية للنظام
-        $systemLogoFile = public_path('images/logo.png');
-        if (! file_exists($systemLogoFile)) {
-            $systemLogoFile = public_path('images/logo.jpeg');
-        }
-        $systemLogoSrc = file_exists($systemLogoFile) && filesize($systemLogoFile) > 0
-            ? 'data:image/' . pathinfo($systemLogoFile, PATHINFO_EXTENSION) . ';base64,' . base64_encode(file_get_contents($systemLogoFile))
-            : $hospitalLogoSrc;
+        $watermarkSrc = $hospitalLogoSrc;
 
         $totalInsurance = (float) ($totalInsuranceShare ?? $payments->sum('insurance_share'));
     @endphp
@@ -36,18 +29,18 @@
             position: relative;
         }
 
-        /* Subtle Center Watermark Repeating on All Pages */
+        /* Distinct & Clear Center Watermark Repeating on All Pages */
         .report-watermark {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 520px;
-            height: 520px;
+            width: 480px;
+            height: 480px;
             background-repeat: no-repeat;
             background-position: center center;
             background-size: contain;
-            opacity: 0.045;
+            opacity: 0.15; /* وضوح بارز ومميز في منتصف كل صفحة */
             pointer-events: none;
             z-index: 0;
             -webkit-print-color-adjust: exact !important;
@@ -57,9 +50,14 @@
         .report-content-wrapper {
             position: relative;
             z-index: 1;
+            width: 95%;
+            max-width: 280mm;
+            margin: 0 auto;
+            padding-bottom: 8mm;
         }
 
         .report-header-container {
+            padding-top: 10mm;
             margin-bottom: 12px;
         }
 
@@ -165,11 +163,12 @@
             margin-bottom: 10px;
         }
 
-        /* Fixed Layout Table Architecture */
+        /* Fixed Layout Table Architecture with Transparent Cells for Watermark */
         .table-print {
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
+            background-color: transparent !important;
         }
         .table-print thead {
             display: table-header-group; /* يضمن تكرار عناوين الأعمدة فقط في كل صفحة */
@@ -180,25 +179,36 @@
         .table-print tr {
             page-break-inside: avoid;
             break-inside: avoid;
+            background-color: transparent !important;
         }
         .table-print th.col-header {
             background-color: #f1f5f9 !important;
             color: #1e293b;
             font-weight: 800;
             border: 1px solid #cbd5e1;
-            padding: 7px 4px;
+            padding: 8px 5px;
             text-align: center;
             font-size: 11px;
             white-space: nowrap;
         }
         .table-print td {
-            border: 1px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             padding: 6px 4px;
             text-align: center;
             font-size: 10.5px;
             vertical-align: middle;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            background-color: transparent !important; /* شفاف حتى تظهر العلامة المائية بوضوح */
+        }
+
+        /* صف فراغ علوي شفاف داخل thead يتكرر في كل صفحة لمنع التصاق الجدول بأعلى الورقة */
+        .page-top-spacer-row th {
+            height: 11mm;
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            line-height: 0;
         }
 
         @media print {
@@ -207,10 +217,10 @@
             }
             @page {
                 size: A4 landscape;
-                margin: 0; /* يلغي تلقائياً الرؤوس والتذييلات الافتراضية للمتصفح مثل رابط http://127.0.0.1 والتاريخ في الهوامش */
+                margin: 0 !important; /* يلغي تلقائياً الرؤوس والتذييلات الافتراضية للمتصفح (رابط الموقع والتاريخ) */
             }
             body {
-                padding: 7mm 9mm !important;
+                padding: 0 !important;
                 margin: 0 !important;
                 background-color: #fff !important;
                 -webkit-print-color-adjust: exact !important;
@@ -220,6 +230,9 @@
                 background-color: #f1f5f9 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+            }
+            .table-print td {
+                background-color: transparent !important;
             }
             .document-title-banner {
                 background: #005a9c !important;
@@ -233,7 +246,7 @@
             }
             .report-watermark {
                 display: block !important;
-                opacity: 0.045 !important;
+                opacity: 0.15 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -242,21 +255,21 @@
 </head>
 <body onload="window.print()">
 
-<!-- العلامة المائية للنظام تتكرر في سنتر كل صفحة مطبوعة -->
-<div class="report-watermark" style="background-image: url('{!! $systemLogoSrc !!}');"></div>
+<!-- العلامة المائية للنظام واضحة في سنتر كل صفحة مطبوعة -->
+<div class="report-watermark" style="background-image: url('{!! $watermarkSrc !!}');"></div>
 
-<div class="container-fluid py-2 report-content-wrapper">
+<div class="report-content-wrapper">
     <!-- أزرار التحكم العلوية (تختفي عند الطباعة) -->
     <div class="no-print d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
         <div>
             <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>معاينة طباعة كشف مقبوضات الكاشير</h5>
             <small class="text-muted d-block mt-1">
-                الهدر المعتمد يظهر في ترويسة التقرير، وعناوين الأعمدة تتكرر بانتظام، مع العلامة المائية وحجب رابط المتصفح التلقائي.
+                تم حجب رابط المتصفح التلقائي نهائياً، وضبط تباعد الجدول العلوي، وتوضيح العلامة المائية في منتصف الصفحات.
             </small>
         </div>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-2 rounded-pill small">
-                <i class="fas fa-check-circle me-1"></i> العلامة المائية مفعلة
+                <i class="fas fa-check-circle me-1"></i> العلامة المائية مفعلة (15%)
             </span>
             <button onclick="window.print()" class="btn btn-primary btn-sm px-4 fw-bold">
                 <i class="fas fa-print me-1"></i> طباعة الآن
@@ -345,9 +358,14 @@
         </div>
     </div>
 
-    <!-- جدول الوصولات الرئيسي المنظم بدقة عبر كافة الصفحات -->
+    <!-- جدول الوصولات الرئيسي المنظم بدقة مع حماية التباعد العلوي عبر thead -->
     <table class="table-print mb-4">
         <thead>
+            <!-- صف مسافة علوية شفاف يتكرر في أعلى كل ورقة لمنع الالتصاق بالحافة -->
+            <tr class="page-top-spacer-row">
+                <th colspan="9"></th>
+            </tr>
+
             <!-- عناوين أعمدة الجدول المتكررة بثبات هندسي في أعلى كل صفحة -->
             <tr>
                 <th class="col-header" style="width: 3.5%;">#</th>
