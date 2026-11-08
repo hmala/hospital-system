@@ -807,6 +807,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\NicuController::class, 'index'])->name('index');
         Route::get('/reservations', [\App\Http\Controllers\NicuController::class, 'reservationsIndex'])->name('reservations.index');
         Route::get('/reservations/{reservation}', [\App\Http\Controllers\NicuController::class, 'show'])->name('show');
+        Route::post('/reservations/{reservation}/clinical-profile', [\App\Http\Controllers\NicuController::class, 'updateClinicalProfile'])->name('clinical-profile.update');
         Route::post('/reservations/{reservation}/switch-service', [\App\Http\Controllers\NicuController::class, 'switchService'])->name('switch-service');
         Route::put('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'updateServiceLog'])->name('service-logs.update');
         Route::delete('/reservations/{reservation}/service-logs/{serviceLog}', [\App\Http\Controllers\NicuController::class, 'destroyServiceLog'])->name('service-logs.destroy');

@@ -54,6 +54,29 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 179: قفل إضبارة الخديج عند الخروج للأرشفة والمطالعة فقط، أرشفة سجلات المرضى المخرجين، ونقل عمر الحمل ووزن الطفل لداخل الإضبارة NICU Discharged Baby Chart Lockdown, Medical Archive Segregation & Clinical Birth Profile Relocation)
+
+### Done
+- **قفل سجل وإضبارة الطفل الخديج عند خروجه (Zero-Mutation Discharged Chart Lockdown)**:
+  * تحويل محطة الرعاية السريرية الشاملة (`/nicu/reservations/{reservation}`) عند خروج الطفل (`status === 'discharged'`) إلى وضع المطالعة والأرشفة فقط (`Read-Only Mode`).
+  * إبراز بنر تحذيري تنفيذي فاخر في أعلى الصفحة يوضح تاريخ وتوقيت الخروج، نوع الخروج، وقفل كافة الإجراءات السريرية.
+  * إخفاء نماذج التوثيق والإدخال عبر كامل التبويبات السريرية (العلامات الحيوية، سجل MAR، الاستشارات، المختبر، الأشعة، الوصفات، جداول الرعاية والتغذية، ملاحظات الطبيب الاختصاص، رفع المرفقات، وتبديل الباقات).
+  * توسيع جداول السجلات والنتائج المؤرشفة بعرض الصفحة الكامل (`col-12`) لتقديم واجهة أرشيف سريرية ناصعة ومريحة، مع الحفاظ على إمكانية استعراض التقارير التاريخية، تحميل المرفقات، والطباعة.
+  * حماية السيرفر الصارمة: حظر كافة عمليات الإضافة أو التعديل في [app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php) عبر 15 تابعاً سريرياً وإعادة التوجيه مع رسالة تنبيهية تمنع أي تلاعب.
+- **قائمة السجلات وأرشفة المرضى (Discharged Babies Archive View)**:
+  * في صفحة سجل وإضبارات الخدج ([resources/views/nicu/reservations/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/reservations/index.blade.php)): إضافة كبسولات تنقل علوية تفاعلية (`الأطفال بالحاضنات (الحالات النشطة)`، `السجلات وأرشفة المرضى`، `قيد الانتظار`، و`كافة الإضبارات`).
+  * عزل الأطفال المخرجين تلقائياً ونقلهم إلى تبويب "السجلات وأرشفة المرضى" (`view=archived`) دون إشغال قائمة الحاضنات النشطة.
+  * إضافة رابط وصول مباشر في القائمة الجانبية للنظام (`السجلات وأرشفة المرضى`) تحت قسم وحدة رعاية الأطفال والخدج (NICU) في [resources/views/layouts/app.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/layouts/app.blade.php).
+  * تخصيص زر المعاينة للأطفال المخرجين ليظهر بأيقونة العين كـ "معاينة إضبارة الطفل المؤرشفة (للاطلاع والمطالعة فقط)".
+- **نقل عمر الحمل ووزن الطفل إلى داخل الإضبارة مع حوكمة القفل والتعديل المشروط**:
+  * إزالة حقلي `عمر الحمل (gestational_age)` و`وزن الطفل (birth_weight)` من استمارة حجز الحاضنة وتسجيل الدخول الأولي ([resources/views/incubator_reservations/create.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/incubator_reservations/create.blade.php))، واستبدالهما بتنبيه سريري يوضح تسجيلهما لاحقاً بدقة داخل الإضبارة.
+  * إضافة بطاقة سريرية بارزة "بيانات الولادة وعمر الحمل السريرية" داخل تبويب **"باقة الخدمة والتبديل (12:00 ظهراً)"** في [resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php) تعرض وزن الدخول وعمر الحمل ومستوى الخداجة بتصميم مقفل للحماية (`Locked Mode`).
+  * توفير زر `[ ✏️ تعديل البيانات السريرية ]`؛ عند النقر يظهر تنبيه تأكيد SweetAlert2: *"هل أنت متأكد من تعديل هذه البيانات؟"*، وعند الموافقة يُفتح نموذج التعديل المباشر مع زر حفظ وزر إلغاء دون أي نوافذ منبثقة مشتتة.
+  * عند خروج الطفل: تُقفل بطاقة البيانات السريرية نهائياً ويختفي زر التعديل.
+  * مسار الحفظ (`POST /nicu/reservations/{reservation}/clinical-profile` في [routes/web.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/routes/web.php)) يقوم بتحديث البيانات، مزامنة الوزن الحالي إن لم يسجل، وإعادة احتساب تفاصيل البقاء وشرائح الضمان الصحي تلقائياً عبر `NicuBillingService`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuDischargedChartAndClinicalProfileTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuDischargedChartAndClinicalProfileTest.php))**:
+  * 5 اختبارات ميزة مخصصة تغطي: عزل الحالات النشطة عن المؤرشفة في التبويبات، خلو شاشة التسجيل من الحقلين، التعديل والتثبيت داخل الإضبارة، قفل الواجهة السريرية للطفل المخرج، والحظر الصارم في السيرفر بنسبة نجاح 100% (`5 passed, 37 assertions`)، مع اجتياز كامل حزمة اختبارات الخدج العامة (`66 passed, 541 assertions`).
+
 ## Session log (2026-11-07 — المرحلة 178: تعديل العلامات الحيوية السريرية مباشرة في الجدول العلوي وإلغاء المودل المنبثق نهائياً وتمرير سلس سريع Inline Flowsheet Vitals Editing, Modal Removal, Direct Table Sync & 30-Minute Governance Enforcement)
 
 ### Done

@@ -110,10 +110,67 @@
         </div>
     </div>
 
+    <!-- تبويبات التصفية الرئيسية (الأطفال بالحاضنات vs السجلات وأرشفة المرضى) -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 bg-white rounded-pill shadow-sm border" id="reservationsViewsNav">
+            <li class="nav-item">
+                <a class="nav-link rounded-pill fw-bold px-3 py-2 {{ ($currentView ?? 'active') === 'active' ? 'active bg-success text-white' : 'text-dark' }}" 
+                   href="{{ route('nicu.reservations.index', array_merge(request()->except(['page', 'status']), ['view' => 'active', 'status' => 'admitted'])) }}">
+                    <i class="fas fa-baby me-1"></i>
+                    الأطفال بالحاضنات (الحالات النشطة)
+                    <span class="badge {{ ($currentView ?? 'active') === 'active' ? 'bg-white text-success' : 'bg-success text-white' }} rounded-pill ms-1">
+                        {{ number_format($kpis['admitted']) }}
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded-pill fw-bold px-3 py-2 {{ ($currentView ?? '') === 'archived' ? 'active bg-info text-white' : 'text-dark' }}" 
+                   href="{{ route('nicu.reservations.index', array_merge(request()->except(['page', 'status']), ['view' => 'archived', 'status' => 'discharged'])) }}">
+                    <i class="fas fa-archive me-1"></i>
+                    السجلات وأرشفة المرضى
+                    <span class="badge {{ ($currentView ?? '') === 'archived' ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill ms-1">
+                        {{ number_format($kpis['discharged']) }}
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded-pill fw-bold px-3 py-2 {{ ($currentView ?? '') === 'pending' ? 'active bg-warning text-dark' : 'text-dark' }}" 
+                   href="{{ route('nicu.reservations.index', array_merge(request()->except(['page', 'status']), ['view' => 'pending', 'status' => 'pending'])) }}">
+                    <i class="fas fa-clock me-1"></i>
+                    قيد الانتظار
+                    @if($kpis['pending'] > 0)
+                        <span class="badge {{ ($currentView ?? '') === 'pending' ? 'bg-dark text-warning' : 'bg-warning text-dark' }} rounded-pill ms-1">
+                            {{ number_format($kpis['pending']) }}
+                        </span>
+                    @endif
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded-pill fw-bold px-3 py-2 {{ ($currentView ?? '') === 'all' ? 'active bg-primary text-white' : 'text-dark' }}" 
+                   href="{{ route('nicu.reservations.index', array_merge(request()->except(['page', 'status']), ['view' => 'all'])) }}">
+                    <i class="fas fa-list me-1"></i>
+                    كافة الإضبارات
+                    <span class="badge {{ ($currentView ?? '') === 'all' ? 'bg-white text-primary' : 'bg-secondary' }} rounded-pill ms-1">
+                        {{ number_format($kpis['total']) }}
+                    </span>
+                </a>
+            </li>
+        </ul>
+        @if(($currentView ?? '') === 'archived')
+            <div class="alert alert-info py-2 px-3 mb-0 small border-0 shadow-sm d-flex align-items-center gap-2 rounded-pill">
+                <i class="fas fa-shield-alt text-info"></i>
+                <span><strong>أرشيف السجلات الطبية:</strong> الإضبارات المخرجة مقفلة للحماية ومتاحة للمطالعة والطباعة فقط.</span>
+            </div>
+        @endif
+    </div>
+
     <!-- شريط البحث والفلترة الذكي -->
     <div class="card shadow-sm border-0 mb-4" style="border-radius: 14px;">
         <div class="card-body p-3">
             <form method="GET" action="{{ route('nicu.reservations.index') }}">
+                @if(request('view'))
+                    <input type="hidden" name="view" value="{{ request('view') }}">
+                @endif
                 <div class="row g-2 align-items-end">
                     <div class="col-lg-3 col-md-6">
                         <label class="form-label small fw-bold text-muted mb-1">
@@ -183,8 +240,19 @@
     <div class="card shadow-sm border-0 mb-4" style="border-radius: 14px;">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0 fw-bold text-dark">
-                <i class="fas fa-list me-2 text-primary"></i>
-                قائمة إضبارات وحجوزات الخدج
+                @if(($currentView ?? '') === 'archived')
+                    <i class="fas fa-archive me-2 text-info"></i>
+                    السجلات وأرشفة المرضى (إضبارات الخدج المخرجة)
+                @elseif(($currentView ?? 'active') === 'active')
+                    <i class="fas fa-baby me-2 text-success"></i>
+                    الأطفال بالحاضنات (الحالات النشطة)
+                @elseif(($currentView ?? '') === 'pending')
+                    <i class="fas fa-clock me-2 text-warning"></i>
+                    حجوزات الحاضنات قيد الانتظار
+                @else
+                    <i class="fas fa-list me-2 text-primary"></i>
+                    قائمة إضبارات وحجوزات الخدج الشاملة
+                @endif
                 <span class="badge bg-secondary ms-1 fs-6 fw-normal">{{ $reservations->total() }}</span>
             </h5>
             <small class="text-muted">
@@ -364,10 +432,16 @@
                                     <!-- الإجراءات السريعة -->
                                     <td>
                                         <div class="d-flex justify-content-center gap-1">
-                                            <!-- زر ملف الرعاية السريرية -->
-                                            <a href="{{ route('nicu.show', $reservation) }}" class="btn btn-sm btn-primary shadow-sm" title="محطة الرعاية السريرية للطفل">
-                                                <i class="fas fa-stethoscope"></i>
-                                            </a>
+                                            <!-- زر ملف الرعاية السريرية أو معاينة الأرشيف -->
+                                            @if($isDischarged)
+                                                <a href="{{ route('nicu.show', $reservation) }}" class="btn btn-sm btn-outline-secondary shadow-sm" title="معاينة إضبارة الطفل المؤرشفة (للاطلاع والمطالعة فقط)">
+                                                    <i class="fas fa-eye text-primary"></i>
+                                                </a>
+                                            @else
+                                                <a href="{{ route('nicu.show', $reservation) }}" class="btn btn-sm btn-primary shadow-sm" title="محطة الرعاية السريرية للطفل">
+                                                    <i class="fas fa-stethoscope"></i>
+                                                </a>
+                                            @endif
 
                                             <!-- كشف الحساب التراكمي -->
                                             <a href="{{ route('nicu.statement', $reservation) }}" class="btn btn-sm btn-outline-info" title="كشف الحساب التراكمي الشفاف" target="_blank">

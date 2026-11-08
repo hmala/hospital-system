@@ -1605,8 +1605,13 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index') ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
+                                <a class="nav-link {{ (request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index')) && request('view') !== 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
                                     <i class="fas fa-clipboard-list text-info"></i><span> سجل وإضبارات الخدج</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.reservations.*') && request('view') === 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index', ['view' => 'archived', 'status' => 'discharged']) }}">
+                                    <i class="fas fa-archive text-secondary"></i><span> السجلات وأرشفة المرضى</span>
                                 </a>
                             </li>
                             <li class="nav-item">
