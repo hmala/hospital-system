@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-08 — المرحلة 181: إعادة هندسة وتطوير كشف حساب الطبيب الاستشاري، إظهار سجل الكشفيات وتأكيد الصرف الذكي Consultant Doctor Account Statement Executive Redesign, Consultation Revenues Tab & SweetAlert Payouts Engine)
+
+### Done
+- **تطوير وحدة التحكم واستخراج تفاصيل الكشفيات ([app/Http/Controllers/ConsultantAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php))**:
+  * ربط استعلام كشفيات ومراجعات الطبيب الاستشاري (`ConsultationRevenue`) مع فلاتر البحث باسم المريض ورقم الإيصال وتحديد الفترة التاريخية (`from_date` و `to_date`) ونوع الحركة (`payment` أو `refund`).
+  * احتساب إجمالي مبالغ الكشفيات المقبوضة، إجمالي المسترجع، صافي الإيراد، إجمالي حصة الطبيب، وحصة المستشفى مع ترقيم الصفحات المستقل `rev_page`.
+- **إعادة تصميم وتطوير واجهة كشف الحساب بالكامل ([resources/views/consultant-availability/doctor-account-details.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/consultant-availability/doctor-account-details.blade.php))**:
+  * **ترويسة وهوية الطبيب التنفيذية**: بطاقة بيضاء منحنية راقية تضم أيقونة الطبيب، اسمه الكامل، شارات التخصص والقسم، رقم الهاتف، ومعرف الطبيب، مع أزرار تصدير Excel وطباعة PDF.
+  * **4 بطاقات KPI علوية عصرية**: الرصيد المتبقي للطبيب بذمة المستشفى (أخضر)، إجمالي المستحقات المكتسبة (أزرق)، إجمالي المبالغ المسددة (أخضر زمردي)، وعداد كشفيات المراجعين (موف).
+  * **بطاقة الصرف والتسوية الذكية**: زر فوري `[ كامل الرصيد ]` لتعبئة أقصى رصيد متاح بنقرة واحدة، مع حماية العمليات المالية عبر نافذة تأكيد **SweetAlert2** راقية قبل الصرف الفعلي.
+  * **نظام التبويبات الثلاثي (Nav Pills) المتطور**:
+    1. `[ 📋 سجل كشفيات ومراجعات المرضى ]`: جدول متكامل يعرض رقم الإيصال، التاريخ والوقت، اسم المريض وهاتفه ومعرفه، نوع الخدمة، إجمالي الكشفية، حصة الطبيب البارزة، حصة المستشفى، الكاشير المسؤول، وشارة الحالة.
+    2. `[ 💵 سجل سندات الصرف والتسويات المسددة ]`: أرشيف سندات الصرف، تاريخ الصرف، المحاسب المسؤول، المبلغ، والبيان.
+    3. `[ ⏳ المستحقات المعلقة بانتظار الصرف ]`: كشف الحركات بانتظار التصفية.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/ConsultantDoctorAccountsFiltersTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantDoctorAccountsFiltersTest.php))**:
+  * إضافة اختبار شامل لرندرة الواجهة الجديدة بكامل تبويباتها وكشفياتها، والتحقق من عملية الصرف وتحديث الأرصدة بنجاح 100% (`5 passed, 36 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 180: منظومة البحث والفلترة الذكية والمؤشرات الإحصائية لحسابات الأطباء الاستشاريين Consultant Doctor Accounts Smart Search, Balance Filters, Executive KPIs & Dynamic Pagination)
 
 ### Done

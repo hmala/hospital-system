@@ -1041,25 +1041,48 @@ class ConsultantAvailabilityController extends Controller
 
         $filterType = $request->query('filter_type');
         $payoutSearch = $request->query('payout_search');
+        $revenueSearch = $request->query('revenue_search');
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
-        $query = ConsultationRevenue::with(['appointment.patient.user', 'cashier'])
+        // استعلام كشفيات ومراجعات الطبيب
+        $revenueQuery = ConsultationRevenue::with(['appointment.patient.user', 'patient.user', 'cashier', 'serviceType'])
             ->where('doctor_id', $doctor->id);
 
         if ($filterType === 'payment') {
-            $query->where('movement_type', 'payment');
+            $revenueQuery->where('movement_type', 'payment');
         } elseif ($filterType === 'refund') {
-            $query->where('movement_type', 'refund');
+            $revenueQuery->where('movement_type', 'refund');
         }
 
-        $revenues = $query->orderBy('paid_at', 'desc')->paginate(25);
+        if ($fromDate) {
+            $revenueQuery->whereDate('paid_at', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $revenueQuery->whereDate('paid_at', '<=', $toDate);
+        }
 
-        $totalsQuery = clone $query;
+        if ($revenueSearch) {
+            $searchTerm = trim($revenueSearch);
+            $revenueQuery->where(function ($q) use ($searchTerm) {
+                $q->where('receipt_number', 'like', "%{$searchTerm}%")
+                    ->orWhereHas('patient.user', fn ($sub) => $sub->where('name', 'like', "%{$searchTerm}%"))
+                    ->orWhereHas('appointment.patient.user', fn ($sub) => $sub->where('name', 'like', "%{$searchTerm}%"));
+            });
+        }
+
+        $revenues = $revenueQuery->orderBy('paid_at', 'desc')->paginate(20, ['*'], 'rev_page')->withQueryString();
+
+        // إحصائيات الكشفيات الإجمالية للطبيب
+        $totalsQuery = ConsultationRevenue::where('doctor_id', $doctor->id);
         $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
         $totalRefunded = abs((clone $totalsQuery)->where('total_amount', '<', 0)->sum('total_amount'));
         $netTotal = (clone $totalsQuery)->sum('total_amount');
+        $totalDoctorEarned = (clone $totalsQuery)->sum('doctor_share');
+        $totalHospitalShare = (clone $totalsQuery)->sum('hospital_share');
+        $totalExaminations = (clone $totalsQuery)->where('movement_type', 'payment')->count();
 
+        // استعلام سندات الصرف والتسويات
         $baseDuesQuery = DoctorDue::with('paidBy')
             ->where('doctor_id', $doctor->id)
             ->when($payoutSearch, function ($query) use ($payoutSearch) {
@@ -1074,12 +1097,14 @@ class ConsultantAvailabilityController extends Controller
         $paidDues = (clone $baseDuesQuery)
             ->where('status', 'paid')
             ->orderBy('paid_at', 'desc')
-            ->paginate(10, ['*'], 'paid_page');
+            ->paginate(15, ['*'], 'paid_page')
+            ->withQueryString();
 
         $pendingDues = (clone $baseDuesQuery)
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
-            ->paginate(10, ['*'], 'pending_page');
+            ->paginate(15, ['*'], 'pending_page')
+            ->withQueryString();
 
         return view('consultant-availability.doctor-account-details', compact(
             'doctor',
@@ -1087,10 +1112,14 @@ class ConsultantAvailabilityController extends Controller
             'totalReceived',
             'totalRefunded',
             'netTotal',
+            'totalDoctorEarned',
+            'totalHospitalShare',
+            'totalExaminations',
             'filterType',
             'paidDues',
             'pendingDues',
             'payoutSearch',
+            'revenueSearch',
             'fromDate',
             'toDate'
         ));

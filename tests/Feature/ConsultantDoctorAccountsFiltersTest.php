@@ -165,4 +165,44 @@ class ConsultantDoctorAccountsFiltersTest extends TestCase
         $doctors = $response->viewData('consultantDoctors');
         $this->assertEquals($this->doctorWithBalance->id, $doctors->first()->id);
     }
+
+    public function test_consultant_doctor_account_details_page_renders_with_tabs_and_payout(): void
+    {
+        // 1. Create a consultation revenue for doctorWithBalance
+        \App\Models\ConsultationRevenue::create([
+            'doctor_id' => $this->doctorWithBalance->id,
+            'receipt_number' => 'REC-TEST-999',
+            'payment_method' => 'cash',
+            'payment_type' => 'consultation',
+            'cashier_id' => $this->admin->id,
+            'total_amount' => 25000,
+            'doctor_share' => 15000,
+            'hospital_share' => 10000,
+            'movement_type' => 'payment',
+            'revenue_date' => now()->toDateString(),
+            'paid_at' => now(),
+        ]);
+
+        // 2. Open details page
+        $response = $this->actingAs($this->admin)->get(route('consultant-availability.doctor-account', $this->doctorWithBalance));
+        $response->assertOk();
+        $response->assertSee('كشف حساب الطبيب الاستشاري');
+        $response->assertSee('د. حسام الدين الخزرجي');
+        $response->assertSee('سجل كشفيات ومراجعات المرضى');
+        $response->assertSee('REC-TEST-999');
+        $response->assertSee('سجل سندات الصرف والتسويات');
+
+        // 3. Perform a payout
+        $payoutResponse = $this->actingAs($this->admin)->post(route('consultant-availability.doctor-payout', $this->doctorWithBalance), [
+            'amount' => 250000,
+            'notes' => 'صرف دفعة نقدية تجريبية',
+        ]);
+        $payoutResponse->assertRedirect(route('consultant-availability.doctor-account', $this->doctorWithBalance));
+        $payoutResponse->assertSessionHas('success');
+
+        // Check account balance updated: 750k - 250k = 500k
+        $account = $this->doctorWithBalance->financialAccount()->first();
+        $this->assertEquals(500000.00, (float) $account->balance);
+        $this->assertEquals(500000.00, (float) $account->total_paid);
+    }
 }
