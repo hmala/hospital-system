@@ -85,6 +85,10 @@ class CashierReportPrintTest extends TestCase
         // Total repetition prevention CSS check
         $response->assertSee('display: table-row-group;', false);
 
+        // Watermark and browser header suppression assertions
+        $response->assertSee('report-watermark');
+        $response->assertSee('margin: 0;', false);
+
         // Coverage Column Assertions
         $response->assertSee('نوع التغطية');
         $response->assertSee('REC-CASH-101');

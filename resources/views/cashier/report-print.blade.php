@@ -13,6 +13,15 @@
             ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($hospitalLogoFile))
             : asset('images/1.jpg');
         
+        // الشعار الرسمي والعلامة المائية للنظام
+        $systemLogoFile = public_path('images/logo.png');
+        if (! file_exists($systemLogoFile)) {
+            $systemLogoFile = public_path('images/logo.jpeg');
+        }
+        $systemLogoSrc = file_exists($systemLogoFile) && filesize($systemLogoFile) > 0
+            ? 'data:image/' . pathinfo($systemLogoFile, PATHINFO_EXTENSION) . ';base64,' . base64_encode(file_get_contents($systemLogoFile))
+            : $hospitalLogoSrc;
+
         $totalInsurance = (float) ($totalInsuranceShare ?? $payments->sum('insurance_share'));
     @endphp
     <style>
@@ -24,6 +33,30 @@
             margin: 0;
             padding: 0;
             line-height: 1.4;
+            position: relative;
+        }
+
+        /* Subtle Center Watermark Repeating on All Pages */
+        .report-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 520px;
+            height: 520px;
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: contain;
+            opacity: 0.045;
+            pointer-events: none;
+            z-index: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .report-content-wrapper {
+            position: relative;
+            z-index: 1;
         }
 
         .report-header-container {
@@ -172,42 +205,59 @@
             .no-print {
                 display: none !important;
             }
-            body {
-                padding: 0;
-                margin: 0;
-            }
             @page {
                 size: A4 landscape;
-                margin: 8mm 10mm;
+                margin: 0; /* يلغي تلقائياً الرؤوس والتذييلات الافتراضية للمتصفح مثل رابط http://127.0.0.1 والتاريخ في الهوامش */
+            }
+            body {
+                padding: 7mm 9mm !important;
+                margin: 0 !important;
+                background-color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .table-print th.col-header {
                 background-color: #f1f5f9 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .document-title-banner {
                 background: #005a9c !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .summary-card {
                 background-color: #f8fafc !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .report-watermark {
+                display: block !important;
+                opacity: 0.045 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
         }
     </style>
 </head>
 <body onload="window.print()">
 
-<div class="container-fluid py-2">
+<!-- العلامة المائية للنظام تتكرر في سنتر كل صفحة مطبوعة -->
+<div class="report-watermark" style="background-image: url('{!! $systemLogoSrc !!}');"></div>
+
+<div class="container-fluid py-2 report-content-wrapper">
     <!-- أزرار التحكم العلوية (تختفي عند الطباعة) -->
     <div class="no-print d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
         <div>
             <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>معاينة طباعة كشف مقبوضات الكاشير</h5>
-            <small class="text-muted">الهدر المعتمد يظهر في ترويسة التقرير، وعناوين الأعمدة تتكرر بانتظام وثبات تام عبر كافة الصفحات</small>
+            <small class="text-muted d-block mt-1">
+                الهدر المعتمد يظهر في ترويسة التقرير، وعناوين الأعمدة تتكرر بانتظام، مع العلامة المائية وحجب رابط المتصفح التلقائي.
+            </small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-2 rounded-pill small">
+                <i class="fas fa-check-circle me-1"></i> العلامة المائية مفعلة
+            </span>
             <button onclick="window.print()" class="btn btn-primary btn-sm px-4 fw-bold">
                 <i class="fas fa-print me-1"></i> طباعة الآن
             </button>
@@ -406,6 +456,11 @@
             <p class="fw-bold mb-4">مدير الحسابات / التدقيق</p>
             <p class="text-muted">........................................</p>
         </div>
+    </div>
+
+    <!-- تذييل المستند الرسمي المعتمد للنظام -->
+    <div class="text-center text-muted small mt-3" style="font-size: 9.5px; page-break-inside: avoid; break-inside: avoid;">
+        <span>منظومة مستشفى الكفاءات الأهلي الطبية المعتمدة — كشف مالي رسمي ومطابق محاسبياً صادر إلكترونياً</span>
     </div>
 </div>
 
