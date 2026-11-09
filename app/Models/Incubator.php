@@ -88,7 +88,7 @@ class Incubator extends Model
     public function getTypeNameAttribute(): string
     {
         return match ($this->incubator_type) {
-            self::TYPE_CAPSULE => 'كبسولة علاج ضوئي',
+            self::TYPE_CAPSULE, 'phototherapy' => 'كبسولة علاج ضوئي',
             default => 'حاضنة',
         };
     }
@@ -127,7 +127,7 @@ class Incubator extends Model
     public function getTypeColorAttribute(): string
     {
         return match ($this->incubator_type) {
-            self::TYPE_CAPSULE => 'dark',
+            self::TYPE_CAPSULE, 'phototherapy' => 'dark',
             default => 'primary',
         };
     }
@@ -138,7 +138,7 @@ class Incubator extends Model
     public function getTypeIconAttribute(): string
     {
         return match ($this->incubator_type) {
-            self::TYPE_CAPSULE => 'fa-capsules',
+            self::TYPE_CAPSULE, 'phototherapy' => 'fa-capsules',
             default => 'fa-baby',
         };
     }
@@ -169,10 +169,31 @@ class Incubator extends Model
     }
 
     /**
-     * scope حسب النوع
+     * scope حسب النوع (يدعم حاضنة اعتيادية أو علاج ضوئي/كبسولة)
      */
     public function scopeOfType($query, $type)
     {
+        if ($type === self::TYPE_CAPSULE || $type === 'phototherapy') {
+            return $query->whereIn('incubator_type', [self::TYPE_CAPSULE, 'phototherapy']);
+        }
+
         return $query->where('incubator_type', $type);
+    }
+
+    /**
+     * ترتيب الحاضنات تصاعدياً حسب الرقم الفعلي (الفرز الرقمي الصحيح 1 إلى 16)
+     */
+    public function scopeOrderByNumber($query, string $direction = 'asc')
+    {
+        $dir = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
+        $driver = $query->getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return $query->orderByRaw("CAST(incubator_number AS INTEGER) {$dir}")
+                ->orderBy('incubator_number', $dir);
+        }
+
+        return $query->orderByRaw("CAST(incubator_number AS UNSIGNED) {$dir}")
+            ->orderBy('incubator_number', $dir);
     }
 }

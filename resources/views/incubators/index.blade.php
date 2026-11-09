@@ -127,7 +127,7 @@
                 </div>
                 <div class="tab-pane fade" id="capsule" role="tabpanel">
                     @include('incubators.partials.incubator-grid', [
-                        'incubators' => $incubators->where('incubator_type', 'capsule')
+                        'incubators' => $incubators->filter(fn ($inc) => in_array($inc->incubator_type, [\App\Models\Incubator::TYPE_CAPSULE, 'phototherapy']))
                     ])
                 </div>
             </div>

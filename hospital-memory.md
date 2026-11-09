@@ -78,6 +78,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 183 (2026-11-09) — ضبط الفرز الرقمي المتسلسل للحاضنات (1 إلى 16)، والتكامل التام بين حاضنات العناية وكبسولات العلاج الضوئي (NICU Natural Numerical Sequence Sorting & Dynamic Phototherapy/Capsule Suite)**:
+  * **الفرز الرقمي الصحيح للحاضنات ([app/Models/Incubator.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/Incubator.php))**:
+    - معالجة مشكلة الفرز الأبجدي للنصوص (Lexicographical Sorting) الناتج عن تخزين `incubator_number` كـ `VARCHAR` والذي كان يفرز 10 و 11 مباشرة بعد 1.
+    - إضافة الـ Scope المخصص `scopeOrderByNumber($query, $direction = 'asc')` الداعم لمحركي MySQL (`CAST(incubator_number AS UNSIGNED)`) و SQLite (`CAST(incubator_number AS INTEGER)`).
+  * **تطبيق الفرز الرقمي عبر كافة شاشات ومسارات الحاضنات**:
+    1. لوحة الخدج الرئيسية `/nicu` عبر [app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php).
+    2. واجهة حجز واستقبال الخديج `/incubator-reservations/create` عبر [app/Http/Controllers/IncubatorReservationController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IncubatorReservationController.php) وقوائم الاختيار التفاعلية.
+    3. إدارة الحاضنات `/incubators` عبر [app/Http/Controllers/IncubatorController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IncubatorController.php).
+  * **الحوكمة والتكامل التام لنوعي الحاضنات (حاضنة اعتيادية مقابل كبسولة علاج ضوئي)**:
+    - تحديث `getTypeNameAttribute`, `getTypeColorAttribute`, `getTypeIconAttribute`, و `scopeOfType` لدعم التوافق المزدوج مع نوعي `capsule` و `phototherapy`.
+    - تحديث إحصائيات KPIs التراكمية في شاشة الخدج الرئيسية وشاشة إدارة الحاضنات لتظهر بدقة عدد الحاضنات وعدد كبسولات العلاج الضوئي بشكل مستقل.
+    - تحديث تبويبات شاشة `/incubators` ومرشحات شاشة `/incubator-reservations/create` لفرز وفلترة النوعين بسلاسة مع الحفاظ التام على الأرقام القائمة للمستشفى.
+  * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IncubatorSortingAndTypeTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IncubatorSortingAndTypeTest.php))**:
+    - 4 اختبارات ميزة آلية تغطي: الفرز الرقمي المتسلسل، محاكاة الـ 16 حاضنة في NICU، حجز واستقبال الخديج وفلترة العلاج الضوئي، وتبويبات إدارة الحاضنات بنسبة نجاح 100% (`4 passed, 13 assertions`).
+
 - **المرحلة 182 (2026-11-08) — إصلاح حفظ تفكيك الرواتب، تفكيك مصفوفة صلاحيات HR، قالب وقسيمة الراتب الفردية وطباعة باجة الموظف الرسمية (HR Payroll Model Fix, Granular Permissions Matrix, Official Employee ID Badge & Individual Payslip Suite)**:
   * **إصلاح الخلل البرمجي في موديل الرواتب ([app/Models/HrPayroll.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/HrPayroll.php), [database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php))**:
     - إضافة كافة حقول التفكيك المالي المفقودة إلى `$fillable` و `$casts` في `HrPayroll`:

@@ -90,7 +90,7 @@ class IncubatorReservationController extends Controller
             $incubatorsQuery->ofType($selectedType);
         }
 
-        $incubators = $incubatorsQuery->orderBy('incubator_number')->get();
+        $incubators = $incubatorsQuery->orderByNumber()->get();
         $doctors = Doctor::with('user')->get();
         $departments = Department::where('is_active', true)->get();
         $nicuServices = \App\Models\NicuService::active()->get();

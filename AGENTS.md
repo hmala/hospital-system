@@ -54,6 +54,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-09 — المرحلة 183: ضبط الفرز الرقمي المتسلسل للحاضنات من 1 إلى 16 والتكامل التام بين حاضنات العناية وكبسولات العلاج الضوئي NICU Natural Numerical Sequence Sorting & Dynamic Phototherapy/Capsule Suite)
+
+### Done
+- **الفرز الرقمي الصحيح للحاضنات ([app/Models/Incubator.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/Incubator.php))**:
+  * معالجة مشكلة الفرز الأبجدي للنصوص (Lexicographical Sorting) الناتج عن تخزين `incubator_number` كـ `VARCHAR` والذي كان يفرز الأرقام كـ 1 ثم 10 ثم 11 قبل 2.
+  * إضافة الـ Scope المخصص `scopeOrderByNumber($query, $direction = 'asc')` المتوافق مع محرك MySQL ومحرك SQLite للاختبارات الآلية.
+- **تطبيق الفرز الرقمي المتسلسل عبر كافة شاشات ومسارات الحاضنات**:
+  * شاشة لوحة الخدج الرئيسية `/nicu` عبر [app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php).
+  * شاشة حجز واستقبال الخديج `/incubator-reservations/create` عبر [app/Http/Controllers/IncubatorReservationController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IncubatorReservationController.php) وقوائم الاختيار التفاعلية.
+  * شاشة إدارة الحاضنات `/incubators` عبر [app/Http/Controllers/IncubatorController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IncubatorController.php).
+- **الحوكمة والتكامل التام لنوعي الحاضنات (حاضنة اعتيادية مقابل كبسولة علاج ضوئي)**:
+  * دعم التوافق المزدوج مع نوعي `capsule` و `phototherapy` في `getTypeNameAttribute`, `getTypeColorAttribute`, `getTypeIconAttribute`, و `scopeOfType`.
+  * تحديث إحصائيات KPIs التراكمية في شاشة الخدج الرئيسية وشاشة إدارة الحاضنات لتظهر بدقة عدد الحاضنات وعدد كبسولات العلاج الضوئي بشكل مستقل.
+  * تحديث تبويبات شاشة `/incubators` ومرشحات شاشة `/incubator-reservations/create` لفرز وفلترة النوعين بسلاسة مع الحفاظ التام على أرقام وسجلات الحاضنات القائمة في المستشفى.
+  * مزامنة كبسولات العلاج الضوئي (15 و 16) بقاعدة البيانات وفقاً لـ `IncubatorSeeder`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IncubatorSortingAndTypeTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IncubatorSortingAndTypeTest.php))**:
+  * 4 اختبارات ميزة آلية تغطي: الفرز الرقمي المتسلسل، شاشة NICU ومحاكاة الـ 16 حاضنة، حجز واستقبال الخديج وفلترة العلاج الضوئي، وتبويبات إدارة الحاضنات بنجاح 100% (`4 passed, 13 assertions`).
+
 ## Session log (2026-11-08 — المرحلة 182: إصلاح حفظ تفكيك الرواتب، تفكيك مصفوفة صلاحيات HR، قالب وقسيمة الراتب الفردية وطباعة باجة الموظف الرسمية HR Payroll Model Fix, Granular Permissions Matrix, Official Employee ID Badge & Individual Payslip Suite)
 
 ### Done

@@ -552,20 +552,23 @@ label.incubator-card {
                             <div class="col-12">
                                 <div class="d-flex flex-wrap gap-3" id="incubatorCardGrid">
                                     @forelse($incubators as $inc)
-                                        @php $isAvailable = $inc->status === 'available'; @endphp
+                                        @php
+                                            $isAvailable = $inc->status === 'available';
+                                            $normalizedType = in_array($inc->incubator_type, ['capsule', 'phototherapy']) ? 'capsule' : 'normal';
+                                        @endphp
                                         <input type="radio" 
                                                name="incubator_id" 
                                                id="incubator_{{ $inc->id }}" 
                                                value="{{ $inc->id }}" 
                                                class="d-none incubator-radio"
-                                               data-incubator-type="{{ $inc->incubator_type }}"
+                                               data-incubator-type="{{ $normalizedType }}"
                                                data-available="{{ $isAvailable ? '1' : '0' }}"
                                                {{ old('incubator_id', request('incubator_id')) == $inc->id ? 'checked' : '' }}
                                                {{ $isAvailable ? '' : 'disabled' }}>
 
-                                        <label for="incubator_{{ $inc->id }}" 
+                                         <label for="incubator_{{ $inc->id }}" 
                                                class="card incubator-card shadow-sm"
-                                               data-incubator-type="{{ $inc->incubator_type }}"
+                                               data-incubator-type="{{ $normalizedType }}"
                                                data-available="{{ $isAvailable ? '1' : '0' }}">
                                             <span class="selection-indicator">
                                                 <i class="fas fa-check-circle"></i>
@@ -868,7 +871,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyFilter() {
         const selectedType = typeSelect ? typeSelect.value : '';
         radios.forEach(radio => {
-            const matches = !selectedType || radio.dataset.incubatorType === selectedType;
+            const matches = !selectedType ||
+                radio.dataset.incubatorType === selectedType ||
+                (selectedType === 'capsule' && radio.dataset.incubatorType === 'phototherapy');
             const card = radio.nextElementSibling;
             if (!card) return;
             card.style.display = matches ? '' : 'none';

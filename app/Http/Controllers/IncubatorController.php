@@ -20,7 +20,7 @@ class IncubatorController extends Controller
         }
 
         $incubators = Incubator::with(['room', 'activeReservation.patient.user'])
-            ->orderBy('incubator_number')
+            ->orderByNumber()
             ->get();
 
         // Rooms for incubators (to show counters/indicators per room)
@@ -42,7 +42,7 @@ class IncubatorController extends Controller
             'occupied' => $incubators->where('status', Incubator::STATUS_OCCUPIED)->count(),
             'maintenance' => $incubators->where('status', Incubator::STATUS_MAINTENANCE)->count(),
             'normal' => $incubators->where('incubator_type', Incubator::TYPE_NORMAL)->count(),
-            'capsule' => $incubators->where('incubator_type', Incubator::TYPE_CAPSULE)->count(),
+            'capsule' => $incubators->filter(fn ($inc) => in_array($inc->incubator_type, [Incubator::TYPE_CAPSULE, 'phototherapy']))->count(),
         ];
 
         return view('incubators.index', compact('incubators', 'stats', 'rooms'));

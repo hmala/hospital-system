@@ -88,15 +88,15 @@ class NicuController extends Controller
             },
         ]);
 
-        if ($request->filled('type')) {
-            $query->where('incubator_type', $request->type);
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->ofType($request->type);
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $incubators = $query->orderBy('incubator_number')->get();
+        $incubators = $query->orderByNumber()->get();
 
         // خدمات الخدج النشطة
         $nicuServices = NicuService::active()->get();
@@ -108,7 +108,8 @@ class NicuController extends Controller
             'occupied' => $incubators->where('status', Incubator::STATUS_OCCUPIED)->count(),
             'sterilizing' => $incubators->where('status', Incubator::STATUS_STERILIZING)->count(),
             'maintenance' => $incubators->where('status', Incubator::STATUS_MAINTENANCE)->count(),
-            'capsule' => $incubators->where('incubator_type', Incubator::TYPE_CAPSULE)->count(),
+            'normal' => $incubators->where('incubator_type', Incubator::TYPE_NORMAL)->count(),
+            'capsule' => $incubators->filter(fn ($inc) => in_array($inc->incubator_type, [Incubator::TYPE_CAPSULE, 'phototherapy']))->count(),
         ];
 
         // غرف ردهة الأطفال المرتبطة
