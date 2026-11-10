@@ -54,6 +54,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-10 — المرحلة 187: إعادة هندسة ومطابقة واجهتي حجز وتعديل العمليات الجراحية بنظام بيئة العمل ثنائية الأعمدة والحفظ التلقائي للخدمات الإضافية في دليل المستشفى Surgery Create & Edit Split-Workspace & Auto-Persist Extra Services Catalog)
+
+### Done
+- **الحفظ التلقائي للخدمات الإضافية الجديدة في الدليل المرجعي العام للمستشفى ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * عند كتابة وإضافة أي خدمة إضافية مخصصة جديدة من قبل الكاشير لم تكن معرفة مسبقاً، يتم تلقائياً حفظها في جدول الدليل العام للمستشفى (`hospital_extra_services`) بالاسم والسعر الافتراضي وتصنيفها المحدد (فحوصات وسريرية، فندقية، إدارية، تزيين، غرامات).
+  * ربط معرف الخدمة الجديد `service_id` بسجل العملية `surgery_extra_services` أو الطلب الطبي `visit_extra_services`.
+  * تظهر الخدمة الجديدة تلقائياً وبشكل فوري دائم في القائمة المنسدلة الذكية (Autocomplete) والتصنيف الخاص بها لجميع العمليات والطلبات القادمة دون الحاجة لإعادة كتابتها يدوياً.
+  * تحديث خيار الإضافة الحرة بالقائمة: `إضافة كخدمة جديدة: "..." (✨ سيتم حفظها في دليل الخدمات لتظهر تلقائياً بالمرات القادمة)`.
+  * حل مشكلة المتغيرات غير المعرفة لنسب التحمل `$labCopay`, `$radCopay`, `$ecgCopay` في `CashierController::processSurgeryPayment`.
+- **إزالة بطاقة الاعتماد والملخص الإضافية وإبقاء أزرار الحفظ المباشرة ([resources/views/surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php))**:
+  * حذف بطاقة الملخص المالي الإضافية استجابةً لتوجيه المستخدم.
+  * وضع أزرار الاعتماد والحفظ والإلغاء المباشرة أسفل عمود المعلومات الأيمن بوضوح كامل.
+- **إعادة هندسة وتطوير واجهة تعديل العملية الجراحية بالكامل للمطابقة التامة مع شاشة الحجز ([resources/views/surgeries/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
+  * **شريط هوية المريض التنفيذي العلوي (`#patientExecutiveBanner`)**: يعرض اسم المريض، رقم الملف، العمر، الجنس، الهاتف، بطاقة وشارة الضمان، وأزرار السجل الطبي الشامل وطباعة الإضبارة وشارة تعديل العملية #{{ $surgery->id }}.
+  * **يمين الشاشة (`col-lg-5`)**: كارت موحد يضم مسار التغطية (ضمان أم كاش)، اختيار المريض، الطبيب الجراح، الطبيب المرسل، تاريخ العملية، ومسح/رفع ورقة التحويل بالسكانر، متبوعاً بأزرار الحفظ المباشرة `[ 💾 حفظ وتحديث حجز العملية الجراحية ]` و `[ ❌ إلغاء ]`.
+  * **يسار الشاشة (`col-lg-7`)**: بالأعلى جدول العمليات الجراحية المطلوبة (`#collapseOperations`) مع دعم العمليات المتعددة والإضافية وزر `[ ➕ إضافة عملية أخرى ]`، وبالأسفل كارت اختيار الغرفة والإقامة السريرية (`#collapseRoomStay`) مع تبويبات الطوابق وأزرار الغرف الملونة.
+- **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php), [tests/Feature/SurgeryExtraServicesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryExtraServicesTest.php), [tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php))**:
+  * إضافة واجتياز اختبار حفظ الخدمة بالدليل تلقائياً `test_cashier_adding_new_custom_service_persists_to_hospital_extra_services_catalog` بنجاح 100% (`15 passed, 108 assertions`).
+  * اجتياز اختبار تقسيم واجهة الحجز والتعديل بنجاح 100% (`1 passed, 15 assertions`).
+  * اجتياز كامل اختبارات تقسيم الدفع والضمان والتحملات بنجاح 100% (`7 passed, 51 assertions`).
+  * فحص وتنسيق الكود بـ `vendor/bin/pint --dirty` بنجاح كامل.
+
 ## Session log (2026-11-10 — المرحلة 186: إعادة هندسة وتطوير واجهة إنشاء طلب الاستعلامات بنظام بيئة العمل ثنائية الأعمدة بدون تمرير Inquiry Create Modern Split-Workspace Redesign, Sticky Action Panel & Quick Available Doctor Chips)
 
 ### Done

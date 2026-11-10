@@ -251,6 +251,25 @@ body {
 #surgicalOperationsTable .select2-selection__arrow {
     height: 29px !important;
 }
+
+/* تصميم بيئة العمل ثنائية الأعمدة واللوحة الثابتة */
+.sticky-action-sidebar {
+    position: sticky;
+    top: 15px;
+    z-index: 1020;
+}
+.patient-banner-card {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+}
+.sticky-summary-card {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
 </style>
 @endsection
 
@@ -287,62 +306,90 @@ body {
         </div>
     @endif
 
-    <!-- نموذج العملية المدمج كلياً في كارتين -->
-    <form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">
-        @csrf
-        <input type="hidden" name="visit_id" value="{{ request('visit_id') }}">
+    @php
+        $pInsType = optional($selectedPatient)->insurance_type ?? 'none';
+        $pCardNo = optional($selectedPatient)->insurance_card_no ?: (optional($selectedPatient)->insurance_booklet_number ?: '');
+    @endphp
 
-        <!-- الكارت 1: دمج بيانات المريض، العملية، والفريق الطبي -->
-        <div class="compact-card">
-            <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseSurgeryInfo" aria-expanded="true">
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">1</span>
-                    <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
-                        <i class="fas fa-notes-medical text-primary me-1"></i>
-                        بيانات المريض، العملية، والفريق الطبي
-                    </h6>
+    <!-- شريط هوية المريض التنفيذي العلوي (Patient Executive Banner) -->
+    <div id="patientExecutiveBanner" class="patient-banner-card mb-3 p-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm flex-shrink-0" style="width: 50px; height: 50px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 1.3rem;">
+                    <i class="fas fa-user-injured"></i>
                 </div>
-                <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
-            </div>
-            <div id="collapseSurgeryInfo" class="collapse show">
-                <div class="compact-card-body">
-                    <!-- سطر ملخص المريض المختار -->
-                    <div id="selectedPatientInfo" style="display: none;" class="mb-2">
-                        <div class="bg-light border rounded px-2 py-1 text-dark small d-flex justify-content-between align-items-center" style="font-size:0.82rem;">
-                            <div>
-                                <span class="badge bg-primary me-1"><i class="fas fa-id-card"></i></span>
-                                <strong id="patientNameHeader" class="text-primary me-2">-</strong>
-                                <span class="text-muted me-2">العمر: <b id="patientAge">-</b></span>
-                                <span class="text-muted me-2">الجنس: <b id="patientGender">-</b></span>
-                                <span class="text-muted">الهاتف: <b id="patientPhone" dir="ltr">-</b></span>
-                            </div>
-                            <span class="badge bg-success py-1"><i class="fas fa-check me-1"></i> جاهز</span>
-                        </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="fw-bold text-dark mb-0" id="bannerPatientName">
+                            {{ optional($selectedPatient->user)->name ?? 'يرجى اختيار مريض من القائمة أدناه' }}
+                        </h5>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.75rem;">
+                            <i class="fas fa-folder-open me-1"></i> ملف #<span id="bannerPatientId">{{ $selectedPatient->id ?? '-' }}</span>
+                        </span>
+                        <span id="bannerInsuranceBadge" class="badge {{ $pInsType !== 'none' ? 'bg-success text-white' : 'bg-secondary text-white' }} rounded-pill px-2 py-1" style="font-size: 0.75rem;">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            <span id="bannerInsuranceLabel">{{ $pInsType === 'moi' ? 'ضمان قوى الأمن الداخلي' : ($pInsType === 'hi' ? 'هيئة الضمان الصحي الوطني' : 'حساب خاص (نقدي)') }}</span>
+                        </span>
                     </div>
+                    <div class="d-flex align-items-center gap-3 mt-1 text-muted small flex-wrap" style="font-size: 0.82rem;">
+                        <span><i class="fas fa-birthday-cake text-secondary me-1"></i>العمر: <strong id="bannerPatientAge" class="text-dark">{{ $selectedPatient->age ?? '-' }} سنة</strong></span>
+                        <span><i class="fas fa-venus-mars text-secondary me-1"></i>الجنس: <strong id="bannerPatientGender" class="text-dark">{{ $selectedPatient->gender ?? '-' }}</strong></span>
+                        <span><i class="fas fa-phone text-secondary me-1"></i>الهاتف: <strong id="bannerPatientPhone" class="text-dark" dir="ltr">{{ optional($selectedPatient->user)->phone ?? '-' }}</strong></span>
+                        <span id="bannerCardSpan" style="{{ $pCardNo ? '' : 'display: none;' }}"><i class="fas fa-id-card text-primary me-1"></i>رقم الهوية/الدفتر: <strong id="bannerCardNo" class="text-dark">{{ $pCardNo ?: '-' }}</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap" id="bannerActionsContainer">
+                <a href="{{ $selectedPatient ? route('inquiry.patients.history', $selectedPatient->id) : '#' }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 shadow-xs" id="bannerHistoryBtn" style="font-size: 0.82rem; {{ $selectedPatient ? '' : 'display: none;' }}">
+                    <i class="fas fa-notes-medical me-1"></i> السجل الطبي الشامل
+                </a>
+                <a href="{{ $selectedPatient ? route('inquiry.patients.dossier.print', $selectedPatient->id) : '#' }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 shadow-xs" id="bannerDossierBtn" style="font-size: 0.82rem; {{ $selectedPatient ? '' : 'display: none;' }}">
+                    <i class="fas fa-print me-1"></i> طباعة الإضبارة
+                </a>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill" style="font-size: 0.8rem;">
+                    <i class="fas fa-procedures me-1"></i> محطة حجز العمليات
+                </span>
+            </div>
+        </div>
+    </div>
 
-                    <!-- قسم تحديد نوع تغطية العملية (ضمان أم كاش) -->
-                    <div id="patientInsuranceSection" style="display: none;" class="mb-3">
-                        <div class="p-3 border rounded-3 bg-light border-primary shadow-2xs">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
-                                <span class="badge bg-success px-2 py-1">
-                                    <i class="fas fa-shield-alt me-1"></i>
-                                    <span id="patientInsuranceBadgeLabel">المريض مسجل بالضمان</span>
-                                </span>
-                                <span class="text-muted small" id="patientInsuranceCardSpan">
-                                    <i class="fas fa-id-card me-1 text-primary"></i> رقم الهوية/الدفتر: <b id="patientInsuranceCardNo">-</b>
-                                </span>
-                            </div>
-                            
-                            <div class="row align-items-center g-2">
-                                <div class="col-md-4">
-                                    <span class="fw-bold text-dark small d-block">
+    <!-- تقسيم بيئة العمل ثنائية الأعمدة: يمين المعلومات (5) + يسار العمليات والغرف (7) -->
+    <div class="row g-3">
+        <!-- يمين الشاشة: المعلومات الأساسية، الفريق الطبي، والملخص المالي (col-lg-5) -->
+        <div class="col-lg-5 col-xl-5">
+            <!-- الكارت 1: بيانات المريض والفريق الطبي ومسار التغطية -->
+            <div class="compact-card mb-3">
+                <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseSurgeryInfo" aria-expanded="true">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">1</span>
+                        <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
+                            <i class="fas fa-notes-medical text-primary me-1"></i>
+                            بيانات المريض، الفريق الطبي، والمسار
+                        </h6>
+                    </div>
+                    <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+                </div>
+                <div id="collapseSurgeryInfo" class="collapse show">
+                    <div class="compact-card-body">
+                        <!-- قسم تحديد نوع تغطية العملية (ضمان أم كاش) -->
+                        <div id="patientInsuranceSection" style="{{ ($selectedPatient && $pInsType !== 'none') ? '' : 'display: none;' }}" class="mb-3">
+                            <div class="p-3 border rounded-3 bg-light border-primary shadow-2xs">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
+                                    <span class="badge bg-success px-2 py-1">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        <span id="patientInsuranceBadgeLabel">{{ $selectedPatient ? 'مشمول بالضمان: ' . ($pInsType === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي الوطني') : 'المريض مسجل بالضمان' }}</span>
+                                    </span>
+                                    <span class="text-muted small" id="patientInsuranceCardSpan" style="{{ $pCardNo ? '' : 'display: none;' }}">
+                                        <i class="fas fa-id-card me-1 text-primary"></i> رقم الهوية/الدفتر: <b id="patientInsuranceCardNo">{{ $pCardNo ?: '-' }}</b>
+                                    </span>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <span class="fw-bold text-dark small d-block mb-1">
                                         <i class="fas fa-sliders-h text-primary me-1"></i>
                                         تحديد مسار حجز هذه العملية:
                                     </span>
-                                    <small class="text-muted">اختر هل العملية تتبع الضمان أم تسدد نقدياً</small>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="d-flex flex-wrap gap-3 p-2 bg-white rounded border">
+                                    <div class="d-flex flex-column gap-2 p-2 bg-white rounded border">
                                         <div class="form-check m-0">
                                             <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
                                             <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
@@ -358,16 +405,13 @@ body {
                                             </label>
                                         </div>
                                     </div>
+                                    <small class="text-muted d-block mt-1" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>يعتمد لدى الكاشير عند تسديد الحساب.</small>
                                 </div>
                             </div>
-                            <small class="text-muted d-block mt-2"><i class="fas fa-info-circle me-1"></i>سيتم اعتماد هذا الاختيار لدى الكاشير مباشرة عند تسديد تكاليف العملية.</small>
                         </div>
-                    </div>
 
-                    <!-- السطر 1: البيانات الأساسية (المريض، الجراح، المرسل) -->
-                    <div class="row g-2 mb-2">
                         <!-- المريض -->
-                        <div class="col-md-4">
+                        <div class="mb-3">
                             <label for="patient_id" class="form-label">
                                 المريض <span class="text-danger">*</span>
                             </label>
@@ -390,7 +434,9 @@ body {
                                             'phone' => $patientPhone,
                                             'insurance_type' => $patientInsuranceType,
                                             'insurance_label' => $patientInsuranceLabel,
-                                            'insurance_card_no' => $patientCardNo
+                                            'insurance_card_no' => $patientCardNo,
+                                            'history_url' => route('inquiry.patients.history', $patient->id),
+                                            'dossier_url' => route('inquiry.patients.dossier.print', $patient->id)
                                         ];
                                     @endphp
                                     <option value="{{ $patient->id }}" 
@@ -403,203 +449,97 @@ body {
                             @error('patient_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <!-- الطبيب الجراح -->
-                        <div class="col-md-4">
-                            <label for="doctor_id" class="form-label">
-                                الطبيب الجراح <span class="text-danger">*</span>
-                            </label>
-                            <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
-                                <option value="">اختر الجراح</option>
-                                @foreach($doctors as $doctor)
-                                    @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
-                                    <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
-                                        د. {{ $doctorName }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <!-- الطبيب المرسل -->
-                        <div class="col-md-4">
-                            <label class="form-label">
-                                الطبيب المرسل <span class="text-danger">*</span>
-                            </label>
-                            <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
-                                <option value="">اختر الطبيب المرسل أو اكتب اسماً جديداً</option>
-                                <optgroup label="أطباء المستشفى">
+                        <!-- الأطباء: الجراح + المرسل -->
+                        <div class="row g-2 mb-2">
+                            <!-- الطبيب الجراح -->
+                            <div class="col-md-6">
+                                <label for="doctor_id" class="form-label">
+                                    الطبيب الجراح <span class="text-danger">*</span>
+                                </label>
+                                <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
+                                    <option value="">اختر الجراح</option>
                                     @foreach($doctors as $doctor)
-                                        @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
-                                        <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $referringDoctorName) ? 'selected' : '' }}>
-                                            د. {{ $referringDoctorName ?: 'غير معروف' }}
+                                        @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                        <option value="{{ $doctor->id }}" {{ (old('doctor_id', request('doctor_id')) == $doctor->id) ? 'selected' : '' }}>
+                                            د. {{ $doctorName }}
                                         </option>
                                     @endforeach
-                                </optgroup>
-                                @php
-                                    $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
-                                        ->distinct()
-                                        ->pluck('referring_doctor_name')
-                                        ->filter()
-                                        ->unique()
-                                        ->reject(function($name) use ($doctors) {
-                                            return $doctors->pluck('user.name')->contains($name);
-                                        })
-                                        ->sort();
-                                @endphp
-                                @if($externalDoctors->isNotEmpty())
-                                    <optgroup label="أطباء خارجيين سابقين">
-                                        @foreach($externalDoctors as $externalDoctor)
-                                            <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : '' }}>
-                                                {{ $externalDoctor }}
+                                </select>
+                                @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+
+                            <!-- الطبيب المرسل -->
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    الطبيب المرسل <span class="text-danger">*</span>
+                                </label>
+                                <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
+                                    <option value="">اختر أو اكتب جديد</option>
+                                    <optgroup label="أطباء المستشفى">
+                                        @foreach($doctors as $doctor)
+                                            @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
+                                            <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $referringDoctorName) ? 'selected' : '' }}>
+                                                د. {{ $referringDoctorName ?: 'غير معروف' }}
                                             </option>
                                         @endforeach
                                     </optgroup>
-                                @endif
-                            </select>
-                            @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                        </div>
-                    </div>
-
-                    <!-- السطر 2: تاريخ ومستند العملية -->
-                    <div class="row g-2 mb-3 align-items-center">
-                        <!-- تاريخ العملية -->
-                        <div class="col-md-4">
-                            <label for="scheduled_date" class="form-label">
-                                تاريخ العملية <span class="text-danger">*</span>
-                            </label>
-                            <input type="date" name="scheduled_date" id="scheduled_date" 
-                                   class="form-control @error('scheduled_date') is-invalid @enderror" 
-                                   value="{{ old('scheduled_date', date('Y-m-d')) }}" required>
-                            @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <!-- ورقة التحويل الطبي بالسكانر -->
-                        <div class="col-md-8">
-                            <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / رفع ملف)</label>
-                            <div class="d-flex gap-1" id="referral_letter_container">
-                                <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
-                                    <i class="fas fa-print me-1"></i> مسح بالسكانر
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
-                                    <i class="fas fa-upload me-1"></i> رفع ملف
-                                </button>
-                                <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
-                                <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
+                                    @php
+                                        $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
+                                            ->distinct()
+                                            ->pluck('referring_doctor_name')
+                                            ->filter()
+                                            ->unique()
+                                            ->reject(function($name) use ($doctors) {
+                                                return $doctors->pluck('user.name')->contains($name);
+                                            })
+                                            ->sort();
+                                    @endphp
+                                    @if($externalDoctors->isNotEmpty())
+                                        <optgroup label="أطباء خارجيين سابقين">
+                                            @foreach($externalDoctors as $externalDoctor)
+                                                <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', request('referring_doctor_name')) == $externalDoctor) ? 'selected' : '' }}>
+                                                    {{ $externalDoctor }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                </select>
+                                @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                             </div>
-                            <!-- معاينة الوثيقة الممسوحة -->
-                            <div id="referral_letter_preview" class="mt-2" style="display: none;">
-                                <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
-                                    <span id="preview_text"><i class="fas fa-check-circle me-1"></i> تم مسح/رفع ورقة التحويل بنجاح</span>
-                                    <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
-                                        <i class="fas fa-times me-1"></i> إلغاء
+                        </div>
+
+                        <!-- التاريخ + ورقة التحويل -->
+                        <div class="row g-2 mb-1 align-items-center">
+                            <!-- تاريخ العملية -->
+                            <div class="col-md-5">
+                                <label for="scheduled_date" class="form-label">
+                                    تاريخ العملية <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" name="scheduled_date" id="scheduled_date" 
+                                       class="form-control @error('scheduled_date') is-invalid @enderror" 
+                                       value="{{ old('scheduled_date', date('Y-m-d')) }}" required>
+                                @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+
+                            <!-- ورقة التحويل الطبي بالسكانر -->
+                            <div class="col-md-7">
+                                <label class="form-label text-muted">ورقة التحويل (سكانر / رفع)</label>
+                                <div class="d-flex gap-1" id="referral_letter_container">
+                                    <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
+                                        <i class="fas fa-print me-1"></i> سكانر
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
+                                        <i class="fas fa-upload me-1"></i> رفع
+                                    </button>
+                                    <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
+                                    <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- السطر 3: بطاقة العمليات الجراحية الموحدة بالكامل -->
-                    <div class="card mb-3 border-0 rounded-3 shadow-none overflow-hidden" style="border: 1.5px solid #0284c7 !important; background-color: #f8fafc;">
-                        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.8rem;">
-                                    <i class="fas fa-procedures me-1"></i>العمليات
-                                </span>
-                                <span class="fw-bold text-dark" style="font-size: 0.9rem;">
-                                    جدول العمليات الجراحية المطلوبة
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-muted small">عدد العمليات: <strong id="totalOpsCount" class="text-primary">1</strong></span>
-                                <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover align-middle mb-0" id="surgicalOperationsTable" style="min-width: 860px;">
-                                    <thead>
-                                        <tr class="text-secondary text-center small">
-                                            <th style="width: 100px;">العملية</th>
-                                            <th style="width: 23%;">صنف العملية <span class="text-danger">*</span></th>
-                                            <th style="width: 27%;">نوع العملية <span class="text-danger">*</span></th>
-                                            <th style="width: 160px;">السعر (د.ع) <span class="text-danger">*</span></th>
-                                            <th>ملاحظات / توصيف</th>
-                                            <th style="width: 75px;">إجراء</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="operationsTableBody">
-                                        <!-- العملية (1) - العملية الأولى الأساسية -->
-                                        <tr id="op_row_primary" class="align-middle bg-white">
-                                            <td class="text-center bg-light">
-                                                <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.8rem;">العملية (1)</span>
-                                            </td>
-                                            <td>
-                                                <select name="surgery_category" id="surgery_category" class="form-select form-select-sm op-category-select @error('surgery_category') is-invalid @enderror" required style="width: 100%;">
-                                                    <option value="">-- اختر الصنف --</option>
-                                                    @foreach($categoriesList as $category)
-                                                        <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
-                                                            {{ $category }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                @error('surgery_category') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                            </td>
-                                            <td>
-                                                <select name="surgical_operation_id" id="surgical_operation_id" class="form-select form-select-sm op-name-select @error('surgical_operation_id') is-invalid @enderror" required style="width: 100%;">
-                                                    <option value="">-- اختر العملية --</option>
-                                                    @foreach($surgicalOperations as $operation)
-                                                        <option value="{{ $operation->id }}" 
-                                                                data-category="{{ $operation->category }}"
-                                                                data-fee="{{ $operation->fee }}"
-                                                                {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
-                                                            {{ $operation->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                @error('surgical_operation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                            </td>
-                                            <td>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" 
-                                                           name="custom_surgery_fee" 
-                                                           id="custom_surgery_fee" 
-                                                           class="form-control form-control-sm op-fee-input text-end fw-bold @error('custom_surgery_fee') is-invalid @enderror" 
-                                                           value="{{ old('custom_surgery_fee') }}"
-                                                           placeholder="0"
-                                                           inputmode="numeric"
-                                                           required>
-                                                    <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
-                                                </div>
-                                                @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                            </td>
-                                            <td>
-                                                <input type="text" 
-                                                       name="description" 
-                                                       id="description" 
-                                                       class="form-control form-control-sm" 
-                                                       value="{{ old('description') }}"
-                                                       placeholder="ملاحظات العملية الأولى...">
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="العملية (1) أساسية مطلوبة">
-                                                    <i class="fas fa-lock me-1"></i> أساسية
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- زر الإضافة المباشر أسفل الجدول مع الملخص المالي -->
-                            <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-xs" id="addAnotherOpBtn">
-                                    <i class="fas fa-plus-circle me-1"></i> ➕ إضافة عملية أخرى
-                                </button>
-                                <div class="d-flex align-items-center gap-3">
-                                    <span class="text-muted small">عدد العمليات: <strong id="totalOpsCountBottom" class="text-primary">1</strong></span>
-                                    <div class="d-flex align-items-center">
-                                        <span class="text-dark small me-2 fw-bold">إجمالي سعر العمليات:</span>
-                                        <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 د.ع</span>
+                                <div id="referral_letter_preview" class="mt-2" style="display: none;">
+                                    <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                        <span id="preview_text"><i class="fas fa-check-circle me-1"></i> تم مسح/رفع الوثيقة</span>
+                                        <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
+                                            <i class="fas fa-times me-1"></i> إلغاء
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -607,151 +547,270 @@ body {
                     </div>
                 </div>
             </div>
+
+            <!-- أزرار الحفظ والإجراءات المباشرة -->
+            <div class="d-flex flex-column gap-2 mb-3">
+                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="submitBtn" style="font-size: 1rem; border-radius: 8px;">
+                    <i class="fas fa-save me-1"></i> تأكيد وحجز العملية الجراحية
+                </button>
+                <a href="{{ route('surgeries.index') }}" class="btn btn-outline-danger w-100 btn-sm" style="border-radius: 6px;">
+                    <i class="fas fa-times me-1"></i> إلغاء والعودة لقائمة العمليات
+                </a>
+            </div>
+
+            <div class="alert alert-info py-2 px-3 small border-0 rounded-3 shadow-2xs mb-0" style="font-size: 0.8rem; background: #e0f2fe; color: #0369a1;">
+                <i class="fas fa-lightbulb me-1"></i>
+                <strong>ملاحظة للمسؤول:</strong> بمجرد الحجز، تنتقل الحالة لقوائم المقيم والصالات والتمريض والكاشير.
+            </div>
         </div>
 
-        <!-- الكارت 2: حجز الغرفة والإقامة الإجباري -->
-        <div class="compact-card">
-            <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseRoomStay" aria-expanded="true">
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-warning text-dark rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">2</span>
-                    <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
-                        <i class="fas fa-door-open text-warning me-1"></i>
-                        اختيار الغرفة والإقامة <span class="text-danger">*</span>
-                    </h6>
+        <!-- يسار الشاشة: العمليات الجراحية بالأعلى وتحتها اختيار الغرف (col-lg-7) -->
+        <div class="col-lg-7 col-xl-7">
+            <!-- الكارت 1 (الأعلى): جدول العمليات الجراحية -->
+            <div class="compact-card mb-3">
+                <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseOperations" aria-expanded="true">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">2</span>
+                        <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
+                            <i class="fas fa-procedures text-primary me-1"></i>
+                            جدول العمليات الجراحية المطلوبة
+                        </h6>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">عدد العمليات: <strong id="totalOpsCount" class="text-primary">1</strong></span>
+                        <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
+                        <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <span id="header_room_badge" class="badge bg-light text-muted border" style="font-size:0.75rem;">لم يتم الاختيار</span>
-                    <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+                <div id="collapseOperations" class="collapse show">
+                    <div class="compact-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle mb-0" id="surgicalOperationsTable" style="min-width: 600px;">
+                                <thead>
+                                    <tr class="text-secondary text-center small">
+                                        <th style="width: 85px;">العملية</th>
+                                        <th style="width: 26%;">صنف العملية <span class="text-danger">*</span></th>
+                                        <th style="width: 28%;">نوع العملية <span class="text-danger">*</span></th>
+                                        <th style="width: 140px;">السعر (د.ع) <span class="text-danger">*</span></th>
+                                        <th>ملاحظات</th>
+                                        <th style="width: 65px;">إجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="operationsTableBody">
+                                    <!-- العملية (1) - العملية الأولى الأساسية -->
+                                    <tr id="op_row_primary" class="align-middle bg-white">
+                                        <td class="text-center bg-light">
+                                            <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.8rem;">العملية (1)</span>
+                                        </td>
+                                        <td>
+                                            <select name="surgery_category" id="surgery_category" class="form-select form-select-sm op-category-select @error('surgery_category') is-invalid @enderror" required style="width: 100%;">
+                                                <option value="">-- اختر الصنف --</option>
+                                                @foreach($categoriesList as $category)
+                                                    <option value="{{ $category }}" {{ old('surgery_category') == $category ? 'selected' : '' }}>
+                                                        {{ $category }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error('surgery_category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </td>
+                                        <td>
+                                            <select name="surgical_operation_id" id="surgical_operation_id" class="form-select form-select-sm op-name-select @error('surgical_operation_id') is-invalid @enderror" required style="width: 100%;">
+                                                <option value="">-- اختر العملية --</option>
+                                                @foreach($surgicalOperations as $operation)
+                                                    <option value="{{ $operation->id }}" 
+                                                            data-category="{{ $operation->category }}"
+                                                            data-fee="{{ $operation->fee }}"
+                                                            {{ old('surgical_operation_id') == $operation->id ? 'selected' : '' }}>
+                                                        {{ $operation->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error('surgical_operation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" 
+                                                       name="custom_surgery_fee" 
+                                                       id="custom_surgery_fee" 
+                                                       class="form-control form-control-sm op-fee-input text-end fw-bold @error('custom_surgery_fee') is-invalid @enderror" 
+                                                       value="{{ old('custom_surgery_fee') }}"
+                                                       placeholder="0"
+                                                       inputmode="numeric"
+                                                       required>
+                                                <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                            </div>
+                                            @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </td>
+                                        <td>
+                                            <input type="text" 
+                                                   name="description" 
+                                                   id="description" 
+                                                   class="form-control form-control-sm" 
+                                                   value="{{ old('description') }}"
+                                                   placeholder="ملاحظات...">
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="العملية (1) أساسية مطلوبة">
+                                                <i class="fas fa-lock me-1"></i> أساسية
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- زر الإضافة المباشر أسفل الجدول مع الملخص المالي -->
+                        <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-xs" id="addAnotherOpBtn">
+                                <i class="fas fa-plus-circle me-1"></i> ➕ إضافة عملية أخرى
+                            </button>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="text-muted small">عدد العمليات: <strong id="totalOpsCountBottom" class="text-primary">1</strong></span>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-dark small me-2 fw-bold">إجمالي سعر العمليات:</span>
+                                    <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 د.ع</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div id="collapseRoomStay" class="collapse show">
-                <div class="compact-card-body">
-                    <input type="hidden" name="expected_stay_days" id="expected_stay_days" value="1">
-                    <div class="row g-2 mb-2 align-items-center">
-                        <div class="col-md-9">
-                            <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
-                                <div>
-                                    <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">لم يتم الاختيار</b>
-                                    <span class="mx-2 text-muted">|</span>
-                                    <span class="text-muted">الحالة:</span> <b id="selected_room_status" class="text-success">-</b>
+
+            <!-- الكارت 2 (الأسفل): حجز الغرفة والإقامة الإجباري -->
+            <div class="compact-card mb-3">
+                <div class="compact-card-header" data-bs-toggle="collapse" data-bs-target="#collapseRoomStay" aria-expanded="true">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-warning text-dark rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">3</span>
+                        <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
+                            <i class="fas fa-door-open text-warning me-1"></i>
+                            اختيار الغرفة والإقامة السريرية <span class="text-danger">*</span>
+                        </h6>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="header_room_badge" class="badge bg-light text-muted border" style="font-size:0.75rem;">لم يتم الاختيار</span>
+                        <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
+                    </div>
+                </div>
+                <div id="collapseRoomStay" class="collapse show">
+                    <div class="compact-card-body">
+                        <input type="hidden" name="expected_stay_days" id="expected_stay_days" value="1">
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-md-9">
+                                <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
+                                    <div>
+                                        <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">لم يتم الاختيار</b>
+                                        <span class="mx-2 text-muted">|</span>
+                                        <span class="text-muted">الحالة:</span> <b id="selected_room_status" class="text-success">-</b>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted">أجرة الليلة الأولى (تثبيت الحجز):</span> 
+                                        <b id="room_total_fee" class="badge bg-success fs-6 ms-1">0 د.ع</b>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span class="text-muted">أجرة الليلة الأولى (تثبيت الحجز):</span> 
-                                    <b id="room_total_fee" class="badge bg-success fs-6 ms-1">0 د.ع</b>
+                                <div class="mt-1 text-muted small" style="font-size: 0.76rem;">
+                                    <i class="fas fa-info-circle text-primary me-1"></i>
+                                    <strong>النظام الفندقي:</strong> الليلة الأولى تغطي المريض حتى <strong>12:00 ظهراً</strong> من اليوم التالي. أي ليالٍ إضافية تُحسب تلقائياً عند إجراء الخروج (عادية: مجانية أول ليلة | VIP: 100,000 د.ع | VVIP: 200,000 د.ع).
                                 </div>
                             </div>
-                            <div class="mt-1 text-muted small" style="font-size: 0.76rem;">
-                                <i class="fas fa-info-circle text-primary me-1"></i>
-                                <strong>النظام الفندقي:</strong> الليلة الأولى تغطي المريض حتى <strong>12:00 ظهراً</strong> من اليوم التالي. أي ليالٍ إضافية تُحسب تلقائياً عند إجراء الخروج (عادية: مجانية أول ليلة | VIP: 100,000 د.ع | VVIP: 200,000 د.ع).
-                            </div>
-                        </div>
-                        <div class="col-md-3 text-end" id="clear_room_section" style="display: none;">
-                            <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:38px;">
-                                <i class="fas fa-times me-1"></i> إلغاء اختيار الغرفة
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- دليل ألوان مدمج -->
-                    <div class="d-flex gap-3 py-1 mb-2 small text-muted border-top border-bottom" style="font-size:0.75rem;">
-                        <div><span class="badge bg-success me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> متاحة</div>
-                        <div><span class="badge bg-danger me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> محجوزة</div>
-                        <div><span class="badge bg-warning me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> صيانة</div>
-                        <div><span class="badge bg-warning text-dark me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> VIP</div>
-                    </div>
-
-                    <input type="hidden" name="room_id" id="room_id" value="{{ old('room_id', '') }}">
-
-                    <!-- رسالة خطأ عند عدم اختيار غرفة -->
-                    <div id="room_validation_error" class="alert alert-danger py-1 mb-2 d-none fw-bold" style="border-right: 4px solid #dc3545; font-size:0.82rem;">
-                        <i class="fas fa-exclamation-triangle me-1"></i> يرجى النقر على إحدى الغرف المتاحة (باللون الأخضر) لاختيارها للمريض قبل الحجز.
-                    </div>
-
-                    <!-- تبويبات الطوابق المدمجة لاختيار الغرفة بأقل مساحة -->
-                    @php $roomsByFloor = $rooms->groupBy('floor'); @endphp
-                    @if($roomsByFloor->isNotEmpty())
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <ul class="nav nav-pills gap-1" id="floorPills" role="tablist">
-                            @foreach($roomsByFloor as $floor => $floorRooms)
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link {{ $loop->first ? 'active' : '' }}" 
-                                        id="pills-floor-{{ $loop->index }}-tab" 
-                                        data-bs-toggle="pill" 
-                                        data-bs-target="#pills-floor-{{ $loop->index }}" 
-                                        type="button" role="tab">
-                                    <i class="fas fa-layer-group me-1"></i> {{ $floor ?: 'عام' }}
-                                    <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65rem;">{{ $floorRooms->count() }}</span>
+                            <div class="col-md-3 text-end" id="clear_room_section" style="display: none;">
+                                <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:38px;">
+                                    <i class="fas fa-times me-1"></i> إلغاء اختيار الغرفة
                                 </button>
-                            </li>
-                            @endforeach
-                        </ul>
-                    </div>
+                            </div>
+                        </div>
 
-                    <div class="tab-content" id="floorPillsContent">
-                        @foreach($roomsByFloor as $floor => $floorRooms)
-                        <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="pills-floor-{{ $loop->index }}" role="tabpanel">
-                            <div class="d-flex flex-wrap gap-1 p-1 bg-light rounded border">
-                                @foreach($floorRooms as $room)
-                                @php
-                                    $borderHex = match($room->status) {
-                                        'available'   => '#16a34a',
-                                        'occupied'    => '#dc2626',
-                                        'maintenance' => '#d97706',
-                                        default       => '#64748b'
-                                    };
-                                    $typeBg = $room->room_type === 'vvip' ? 'bg-dark bg-opacity-10 border-dark' : ($room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '');
-                                    $isAvailable = $room->status === 'available';
-                                @endphp
-                                <div class="room-tile room-selectable {{ $typeBg }} {{ !$room->is_active ? 'opacity-50' : '' }}"
-                                     data-room-id="{{ $room->id }}"
-                                     data-room-fee="{{ $room->daily_fee }}"
-                                     data-room-type="{{ $room->room_type }}"
-                                     data-room-number="{{ $room->room_number }}"
-                                     data-available="{{ $isAvailable ? '1' : '0' }}"
-                                     data-status-color="{{ $borderHex }}"
-                                     data-bs-toggle="tooltip"
-                                     title="غرفة {{ $room->room_number }} ({{ $room->room_type_name }}) - {{ number_format($room->daily_fee) }} د.ع"
-                                     style="border-color: {{ $borderHex }}; {{ !$isAvailable ? 'pointer-events:none; opacity:0.45;' : '' }}">
+                        <!-- دليل ألوان مدمج -->
+                        <div class="d-flex gap-3 py-1 mb-2 small text-muted border-top border-bottom" style="font-size:0.75rem;">
+                            <div><span class="badge bg-success me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> متاحة</div>
+                            <div><span class="badge bg-danger me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> محجوزة</div>
+                            <div><span class="badge bg-warning me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> صيانة</div>
+                            <div><span class="badge bg-warning text-dark me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> VIP</div>
+                        </div>
 
-                                    <div class="room-number" style="color: {{ $borderHex }};">{{ $room->room_number }}</div>
-                                    <div class="room-badges">
-                                        @if($room->room_type === 'vvip')
-                                            <span class="badge bg-dark text-white" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VVIP</span>
-                                        @elseif($room->room_type === 'vip')
-                                            <span class="badge bg-warning text-dark" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VIP</span>
+                        <input type="hidden" name="room_id" id="room_id" value="{{ old('room_id', '') }}">
+
+                        <!-- رسالة خطأ عند عدم اختيار غرفة -->
+                        <div id="room_validation_error" class="alert alert-danger py-1 mb-2 d-none fw-bold" style="border-right: 4px solid #dc3545; font-size:0.82rem;">
+                            <i class="fas fa-exclamation-triangle me-1"></i> يرجى النقر على إحدى الغرف المتاحة (باللون الأخضر) لاختيارها للمريض قبل الحجز.
+                        </div>
+
+                        <!-- تبويبات الطوابق المدمجة لاختيار الغرفة بأقل مساحة -->
+                        @php $roomsByFloor = $rooms->groupBy('floor'); @endphp
+                        @if($roomsByFloor->isNotEmpty())
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <ul class="nav nav-pills gap-1" id="floorPills" role="tablist">
+                                @foreach($roomsByFloor as $floor => $floorRooms)
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link {{ $loop->first ? 'active' : '' }}" 
+                                            id="pills-floor-{{ $loop->index }}-tab" 
+                                            data-bs-toggle="pill" 
+                                            data-bs-target="#pills-floor-{{ $loop->index }}" 
+                                            type="button" role="tab">
+                                        <i class="fas fa-layer-group me-1"></i> {{ $floor ?: 'عام' }}
+                                        <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65rem;">{{ $floorRooms->count() }}</span>
+                                    </button>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </div>
+
+                        <div class="tab-content" id="floorPillsContent">
+                            @foreach($roomsByFloor as $floor => $floorRooms)
+                            <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="pills-floor-{{ $loop->index }}" role="tabpanel">
+                                <div class="d-flex flex-wrap gap-1 p-1 bg-light rounded border">
+                                    @foreach($floorRooms as $room)
+                                    @php
+                                        $borderHex = match($room->status) {
+                                            'available'   => '#16a34a',
+                                            'occupied'    => '#dc2626',
+                                            'maintenance' => '#d97706',
+                                            default       => '#64748b'
+                                        };
+                                        $typeBg = $room->room_type === 'vvip' ? 'bg-dark bg-opacity-10 border-dark' : ($room->room_type === 'vip' ? 'bg-warning bg-opacity-10' : '');
+                                        $isAvailable = $room->status === 'available';
+                                    @endphp
+                                    <div class="room-tile room-selectable {{ $typeBg }} {{ !$room->is_active ? 'opacity-50' : '' }}"
+                                         data-room-id="{{ $room->id }}"
+                                         data-room-fee="{{ $room->daily_fee }}"
+                                         data-room-type="{{ $room->room_type }}"
+                                         data-room-number="{{ $room->room_number }}"
+                                         data-available="{{ $isAvailable ? '1' : '0' }}"
+                                         data-status-color="{{ $borderHex }}"
+                                         data-bs-toggle="tooltip"
+                                         title="غرفة {{ $room->room_number }} ({{ $room->room_type_name }}) - {{ number_format($room->daily_fee) }} د.ع"
+                                         style="border-color: {{ $borderHex }}; {{ !$isAvailable ? 'pointer-events:none; opacity:0.45;' : '' }}">
+
+                                        <div class="room-number" style="color: {{ $borderHex }};">{{ $room->room_number }}</div>
+                                        <div class="room-badges">
+                                            @if($room->room_type === 'vvip')
+                                                <span class="badge bg-dark text-white" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VVIP</span>
+                                            @elseif($room->room_type === 'vip')
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.45rem; padding: 1px 2px; line-height:1;">VIP</span>
+                                            @endif
+                                        </div>
+                                        <div class="room-status">
+                                            <span class="status-dot" style="background-color: {{ $borderHex }};"></span>
+                                        </div>
+                                        @if($isAvailable)
+                                        <div class="room-actions" style="display: none;">
+                                            <i class="fas fa-check-circle text-success" style="font-size: 0.7rem;"></i>
+                                        </div>
                                         @endif
                                     </div>
-                                    <div class="room-status">
-                                        <span class="status-dot" style="background-color: {{ $borderHex }};"></span>
-                                    </div>
-                                    @if($isAvailable)
-                                    <div class="room-actions" style="display: none;">
-                                        <i class="fas fa-check-circle text-success" style="font-size: 0.7rem;"></i>
-                                    </div>
-                                    @endif
+                                    @endforeach
                                 </div>
-                                @endforeach
                             </div>
+                            @endforeach
                         </div>
-                        @endforeach
+                        @else
+                        <div class="alert alert-info py-1 small text-center mb-0">لا توجد غرف متاحة</div>
+                        @endif
                     </div>
-                    @else
-                    <div class="alert alert-info py-1 small text-center mb-0">لا توجد غرف متاحة</div>
-                    @endif
                 </div>
             </div>
         </div>
-
-        <!-- زر الحفظ النهائي المدمج -->
-        <div class="d-flex justify-content-between align-items-center p-2 bg-white border rounded shadow-sm mb-4">
-            <a href="{{ route('surgeries.index') }}" class="btn btn-sm btn-outline-danger px-3">
-                <i class="fas fa-times me-1"></i> إلغاء
-            </a>
-            <button type="submit" class="btn btn-sm btn-success px-4 fw-bold" id="submitBtn" style="font-size:0.9rem;">
-                <i class="fas fa-save me-1"></i> تأكيد وحجز العملية الجراحية
-            </button>
-        </div>
-    </form>
+    </div>
+</form>
 </div>
 
 <!-- Modal إضافة طبيب جديد -->
@@ -985,34 +1044,71 @@ document.addEventListener('DOMContentLoaded', function() {
             initOperationSelect2();
         });
 
-        // تفاصيل المريض المختار
+        // تفاصيل المريض المختار وتحديث شريط الهوية واللوحة الثابتة
         $('#patient_id').on('change', function() {
             const selectedOption = $(this).find(':selected');
             const patientData = selectedOption.data('patient');
             
             if (patientData && patientData.name) {
-                $('#patientNameHeader').text(patientData.name);
-                $('#patientAge').text((patientData.age || '-') + ' سنة');
-                $('#patientGender').text(patientData.gender || '-');
-                $('#patientPhone').text(patientData.phone || '-');
-                $('#selectedPatientInfo').slideDown(150);
+                // تحديث شريط هوية المريض التنفيذي العلوي (Executive Banner)
+                $('#bannerPatientName').text(patientData.name);
+                $('#bannerPatientId').text(patientData.id || '-');
+                $('#bannerPatientAge').text((patientData.age || '-') + ' سنة');
+                $('#bannerPatientGender').text(patientData.gender || '-');
+                $('#bannerPatientPhone').text(patientData.phone || '-');
+                
+                if (patientData.history_url) {
+                    $('#bannerHistoryBtn').attr('href', patientData.history_url).show();
+                }
+                if (patientData.dossier_url) {
+                    $('#bannerDossierBtn').attr('href', patientData.dossier_url).show();
+                }
+
+                // تحديث لوحة الملخص المالي الثابتة (Sticky Sidebar)
+                $('#stickyPatientName').text(patientData.name);
 
                 if (patientData.insurance_type && patientData.insurance_type !== 'none') {
-                    $('#patientInsuranceBadgeLabel').text('مشمول بالضمان: ' + patientData.insurance_label);
+                    $('#bannerInsuranceBadge').removeClass('bg-secondary').addClass('bg-success');
+                    $('#bannerInsuranceLabel').text(patientData.insurance_label);
+                    
                     if (patientData.insurance_card_no) {
+                        $('#bannerCardNo').text(patientData.insurance_card_no);
+                        $('#bannerCardSpan').show();
                         $('#patientInsuranceCardNo').text(patientData.insurance_card_no);
                         $('#patientInsuranceCardSpan').show();
                     } else {
+                        $('#bannerCardSpan').hide();
                         $('#patientInsuranceCardSpan').hide();
                     }
+
+                    $('#patientInsuranceBadgeLabel').text('مشمول بالضمان: ' + patientData.insurance_label);
                     $('#patientInsuranceSection').slideDown(150);
+                    $('#surgery_apply_insurance_yes').prop('checked', true);
                 } else {
+                    $('#bannerInsuranceBadge').removeClass('bg-success').addClass('bg-secondary');
+                    $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
+                    $('#bannerCardSpan').hide();
                     $('#patientInsuranceSection').slideUp(100);
+                    $('#surgery_apply_insurance_no').prop('checked', true);
                 }
             } else {
-                $('#selectedPatientInfo').slideUp(100);
+                $('#bannerPatientName').text('يرجى اختيار مريض من القائمة أدناه');
+                $('#bannerPatientId').text('-');
+                $('#bannerPatientAge').text('-');
+                $('#bannerPatientGender').text('-');
+                $('#bannerPatientPhone').text('-');
+                $('#bannerCardSpan').hide();
+                $('#bannerHistoryBtn').hide();
+                $('#bannerDossierBtn').hide();
+                $('#stickyPatientName').text('لم يتم الاختيار بعد');
                 $('#patientInsuranceSection').slideUp(100);
             }
+            updateStickySummary();
+        });
+
+        // مزامنة راديو مسار التغطية مع اللوحة الثابتة
+        $('input[name="apply_insurance"]').on('change', function() {
+            updateStickySummary();
         });
 
         if ($('#patient_id').val()) {
@@ -1095,6 +1191,50 @@ document.addEventListener('DOMContentLoaded', function() {
         const formattedTotal = (primaryFee + additionalTotal).toLocaleString('en-US') + ' د.ع';
         $('#summaryTotalFee').text(formattedTotal);
         $('#summaryTotalFeeBottom').text(formattedTotal);
+        updateStickySummary();
+    }
+
+    // تحديث اللوحة التنفيذية والملخص المالي الثابت
+    function updateStickySummary() {
+        const primaryVal = $('#custom_surgery_fee').val() || '0';
+        const primaryFee = parseInt(primaryVal.replace(/[^0-9]/g, ''), 10) || 0;
+        
+        let additionalTotal = 0;
+        $('.add-op-fee').each(function() {
+            const rowFeeVal = $(this).val() || '0';
+            const rowFee = parseInt(rowFeeVal.replace(/[^0-9]/g, ''), 10) || 0;
+            additionalTotal += rowFee;
+        });
+
+        const totalOps = primaryFee + additionalTotal;
+        const totalOpsCount = 1 + $('#operationsTableBody .additional-op-row').length;
+
+        if ($('#stickyOpsCount').length) $('#stickyOpsCount').text(totalOpsCount);
+        if ($('#stickyOpsFee').length) $('#stickyOpsFee').text(totalOps.toLocaleString('en-US') + ' د.ع');
+
+        let roomFee = 0;
+        if (typeof selectedRoomType !== 'undefined' && selectedRoomType && typeof roomIdInput !== 'undefined' && roomIdInput && roomIdInput.value) {
+            if (selectedRoomType === 'vvip') {
+                roomFee = 200000;
+            } else if (selectedRoomType === 'vip') {
+                roomFee = 100000;
+            } else {
+                roomFee = 0;
+            }
+        }
+
+        const grandTotal = totalOps + roomFee;
+        if ($('#stickyGrandTotal').length) $('#stickyGrandTotal').text(grandTotal.toLocaleString('en-US') + ' د.ع');
+
+        const isInsurance = $('input[name="apply_insurance"]:checked').val() === '1';
+        const selectedPatientData = $('#patient_id').find(':selected').data('patient');
+        const hasInsurance = selectedPatientData?.insurance_type && selectedPatientData?.insurance_type !== 'none';
+        
+        if (hasInsurance && isInsurance) {
+            $('#stickyCoverageBadge').text('🛡️ ضمان صحي').removeClass('bg-secondary text-white').addClass('bg-success text-white');
+        } else {
+            $('#stickyCoverageBadge').text('💵 كاش نقدي').removeClass('bg-success text-white').addClass('bg-secondary text-white');
+        }
     }
 
     function addAdditionalOpRow(selectedOpId = null, initialFee = null, initialNotes = '', selectedCategory = null) {
@@ -1334,6 +1474,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!roomIdInput || !roomIdInput.value) {
             roomTotalFeeEl.textContent = '0 د.ع';
             roomTotalFeeEl.className = 'badge bg-secondary fs-6 ms-1';
+            if ($('#stickyRoomFee').length) $('#stickyRoomFee').text('0 د.ع');
+            updateStickySummary();
             return;
         }
 
@@ -1347,6 +1489,11 @@ document.addEventListener('DOMContentLoaded', function() {
             roomTotalFeeEl.textContent = '0 د.ع (مجانية أول ليلة)';
             roomTotalFeeEl.className = 'badge bg-success text-white fs-6 ms-1';
         }
+
+        if ($('#stickyRoomFee').length) {
+            $('#stickyRoomFee').text(roomTotalFeeEl.textContent);
+        }
+        updateStickySummary();
     }
 
     function selectRoom(tile) {
@@ -1376,6 +1523,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const typeLabel = selectedRoomType === 'vvip' ? ' (💎 VVIP)' : (selectedRoomType === 'vip' ? ' (⭐ VIP)' : ' (عادية)');
         const roomName = 'غرفة ' + tile.dataset.roomNumber + typeLabel;
         if (selectedRoomNameEl) selectedRoomNameEl.textContent = roomName;
+        if ($('#stickyRoomName').length) $('#stickyRoomName').text(roomName);
         if (headerRoomBadge) {
             headerRoomBadge.textContent = roomName;
             headerRoomBadge.className = selectedRoomType === 'vvip' ? 'badge bg-dark text-white' : (selectedRoomType === 'vip' ? 'badge bg-warning text-dark' : 'badge bg-success text-white');
@@ -1410,7 +1558,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             if (roomIdInput) roomIdInput.value = '';
             selectedRoomFee   = 0;
+            selectedRoomType  = '';
             if (selectedRoomNameEl) selectedRoomNameEl.textContent = 'لم يتم الاختيار';
+            if ($('#stickyRoomName').length) $('#stickyRoomName').text('لم يتم الاختيار');
+            if ($('#stickyRoomFee').length) $('#stickyRoomFee').text('0 د.ع');
             if (headerRoomBadge) {
                 headerRoomBadge.textContent = 'لم يتم الاختيار';
                 headerRoomBadge.className = 'badge bg-light text-muted border';
@@ -1508,6 +1659,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // التهيئة الأولية للملخص المالي واللوحة الثابتة
+    updateStickySummary();
 });
 </script>
 @endsection

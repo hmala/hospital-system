@@ -2037,6 +2037,18 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
     - إضافة واجتياز اختبار التحقق من ظهور CBC في أمر العمل بنجاح بنسبة 100% (`11 passed, 69 assertions`).
 
+- **المرحلة 187 (2026-11-10) — إعادة هندسة ومطابقة واجهتي حجز وتعديل العمليات الجراحية بنظام بيئة العمل ثنائية الأعمدة وشريط هوية المريض التنفيذي (Surgery Create & Edit Unified Modern Split-Workspace, Patient Executive Banner & Action Bar Parity)**:
+  * **إزالة لوحة الاعتماد والملخص الإضافية وإبقاء أزرار الحفظ المباشرة ([resources/views/surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php))**:
+    - حذف كارت الملخص المالي الإضافي استجابة لتوجيه المستخدم.
+    - وضع أزرار الاعتماد والحفظ المباشرة أسفل عمود المعلومات الأيمن بوضوح كامل وسلاسة.
+  * **إعادة هندسة وتطوير واجهة تعديل العملية الجراحية بالكامل للمطابقة التامة مع شاشة الحجز ([resources/views/surgeries/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
+    - **شريط هوية المريض التنفيذي العلوي (`#patientExecutiveBanner`)**: يعرض اسم المريض، رقم الملف، العمر، الجنس، الهاتف، بطاقة وشارة الضمان، وأزرار السجل الطبي الشامل وطباعة الإضبارة وشارة تعديل العملية #{{ $surgery->id }}.
+    - **يمين الشاشة (`col-lg-5`)**: كارت موحد يضم مسار التغطية (ضمان أم كاش)، اختيار المريض، الطبيب الجراح، الطبيب المرسل، تاريخ العملية، ومسح/رفع ورقة التحويل بالسكانر، متبوعاً بأزرار الحفظ المباشرة `[ 💾 حفظ وتحديث حجز العملية الجراحية ]` و `[ ❌ إلغاء ]`.
+    - **يسار الشاشة (`col-lg-7`)**: بالأعلى جدول العمليات الجراحية المطلوبة (`#collapseOperations`) مع دعم العمليات المتعددة والإضافية وزر `[ ➕ إضافة عملية أخرى ]`، وبالأسفل كارت اختيار الغرفة والإقامة السريرية (`#collapseRoomStay`) مع تبويبات الطوابق وأزرار الغرف الملونة.
+  * **حزم الاختبارات الآلية الشاملة ([tests/Feature/SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php))**:
+    - إنشاء واجتياز اختبار التحقق من الرندرة لصفحتي الحجز والتعديل مع شريط الهوية التنفيذي وتوزيع الأعمدة بنجاح 100% (`1 passed, 15 assertions`).
+    - فحص وتنسيق الكود بـ `vendor/bin/pint --dirty` بنجاح كامل.
+
 - **المرحلة 186 (2026-11-10) — إعادة هندسة وتطوير واجهة إنشاء طلب الاستعلامات بنظام بيئة العمل ثنائية الأعمدة بدون تمرير (Inquiry Create Modern Split-Workspace Redesign, Sticky Action Panel & Quick Available Doctor Chips)**:
   * **تخطيط بيئة العمل ثنائي الأعمدة المتجاوب ([resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php))**:
     - **يمين الشاشة (`col-lg-7`)**: بطاقات الخدمات الطبية المباشرة بحجم عصري وشارات تفاعلية أنيقة، مع فصل تحويلات الوحدات الخارجية (طوارئ، عمليات، رقود، حاضنة خدج) في قسم مستقل بأيقونات انتقال واضحة لمنع التشتت والخلط مع الخدمات متعددة الاختيار.
@@ -2083,6 +2095,25 @@
     - تعيين `step="any"` و `min="0.01"` للسماح بأي مبلغ صحيح أو عشري ضمن حدود الرصيد المتاح للطبيب.
   * **حزم الاختبارات الآلية الشاملة ([tests/Feature/ConsultantDoctorAccountsFiltersTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ConsultantDoctorAccountsFiltersTest.php))**:
     - تحديث الاختبارات للتأكد من رندرة مدخلات الصرف بخصائص `step="any"` و `min="0.01"` واجتياز الاختبارات بنجاح 100% (`6 passed, 49 assertions`).
+
+- **المرحلة 187 (2026-11-10) — الحفظ التلقائي للخدمات الإضافية الجديدة في دليل المستشفى وتقسيم واجهة حجز العمليات لبيئة عمل ثنائية (Auto-Persist Custom Extra Services to Hospital Catalog & Split Surgery Create Workspace)**:
+  * **محرك الحفظ التلقائي للخدمات الإضافية المخصصة في الدليل المرجعي ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+    - عند قيام الكاشير بكتابة وإضافة أي خدمة إضافية جديدة لم تكن موجودة في الدليل (`hospital_extra_services`)، يتم تلقائياً حفظها في الدليل العام للمستشفى باسمها وسعرها وتصنيفها المحدد وحالتها كخدمة نشطة (`is_active = true`).
+    - ربط المعرف الجديد `service_id` بسجل العملية الجراحية `surgery_extra_services` أو الطلب الطبي `visit_extra_services`.
+    - ظهور الخدمة الجديدة تلقائياً وفورياً في القائمة المنسدلة الذكية (Autocomplete) والتصنيف الخاص بها لجميع العمليات والطلبات القادمة دون الحاجة لإعادة كتابتها يدوياً.
+    - تحديث السعر الافتراضي للخدمة إذا كان مسجلاً بصفر وأدخل الكاشير سعراً معتمداً.
+    - معالجة المتغيرات التحملية الخاصة بـ `$labCopay`, `$radCopay`, `$ecgCopay` في `processSurgeryPayment`.
+  * **تطوير واجهة كاشير العمليات وشاشة الإضافة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+    - إضافة حقل التصنيف الخفي `service_category` لربطه بالفئة النشطة.
+    - تحديث خيار الإضافة المخصصة في القائمة المنسدلة ليوضح حفظ الخدمة بالدليل: `إضافة كخدمة جديدة: "..." (✨ سيتم حفظها في دليل الخدمات لتظهر تلقائياً بالمرات القادمة)`.
+  * **إعادة هندسة واجهة حجز العملية الجراحية ثنائية الأعمدة ([resources/views/surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - تقسيم الشاشة إلى نصفي عمل متوازيين ومتكاملين:
+      * **يمين الشاشة (`col-lg-7`)**: شريط هوية المريض التنفيذي، بيانات العملية، الجراح، الطبيب المرسل، تاريخ العملية، الماسح الضوئي لورقة الإحالة، وجدول العمليات الجراحية متعدد العمليات مع الملخص المالي.
+      * **يسار الشاشة (`col-lg-5`)**: لوحة الإقامة والغرف الفندقية بأزرار الطوابق الميكرو، مع بطاقة الملخص المالي الثابتة (`Sticky Action Sidebar`) التي تعرض إجمالي العمليات، رسوم الغرفة، نوع التغطية (ضمان/كاش)، والإجمالي الكلي مع زر الاعتماد الفوري بمحاذاة النظر.
+  * **حزم الاختبارات الآلية الشاملة**:
+    - اجتياز اختبار `test_cashier_adding_new_custom_service_persists_to_hospital_extra_services_catalog` في `tests/Feature/SurgeryExtraServicesTest.php` بنجاح 100% (`15 passed, 108 assertions`).
+    - اجتياز اختبار `SurgeryCreateModernWorkspaceTest.php` بنجاح 100% (`1 passed, 15 assertions`).
+    - اجتياز اختبار `SurgeryCashierSplitAndInsurancePaymentTest.php` بنجاح 100% (`7 passed, 51 assertions`).
 
 - **المرحلة 183 (2026-11-08) — ترقية طباعة كشف مقبوضات الكاشير، إضافة الهدر المعتمد، منع تكرار المجموع في كل صفحة، وإظهار عمود نوع التغطية (Cashier Report Print Standard Header, Single Table Total Row & Insurance/Cash Coverage Column)**:
   * **الهدر الموحد المعتمد ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
