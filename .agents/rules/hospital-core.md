@@ -1,6 +1,7 @@
 # Hospital Management System - Core Rules & Blueprint (قواعد النظام والمعمارية الأساسية)
 
 ## 1. System Identity & Environment
+- **Canonical Workspace Root**: `C:\get\hospital-system` (All legacy `OneDrive` or `wamp64` local workspace paths are obsolete; always operate inside `C:\get\hospital-system`).
 - **Framework & Language**: Laravel 12 on PHP 8.2.
 - **Frontend Stack**: Vite, Blade, Tailwind CSS, Bootstrap 5, Chart.js v4.
 - **Database**: MySQL/MariaDB (`hospital_pho` locally, `remote_hostinger` for cloud sync).

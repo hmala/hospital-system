@@ -1,6 +1,7 @@
 # Gemini & Antigravity Assistant Directive
 
 ## Mandatory System & Code Standards
+0. **Canonical Workspace Root**: Always operate strictly inside `C:\get\hospital-system` (legacy `OneDrive` and `wamp64` paths are obsolete).
 1. **Always Read Rules First**: Refer to `.agents/rules/hospital-core.md` and `.agents/rules/laravel-boost.md`.
 2. **Zero Hallucination Policy**:
    - Inspect existing models and database schemas before writing any query or Eloquent relation. Never guess column names.
