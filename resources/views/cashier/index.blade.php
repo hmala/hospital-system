@@ -305,6 +305,12 @@
                                                 </button>
                                             </li>
                                             <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-ccu-btn" data-bs-toggle="pill" data-bs-target="#tab-ccu" type="button" role="tab">
+                                                    <i class="fas fa-heartbeat me-1 text-danger"></i> العناية المركزة (CCU)
+                                                    <span class="badge bg-danger ms-1 rounded-pill">{{ $pendingCcuCount ?? 0 }}</span>
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($pendingRefundCount ?? 0) > 0 ? 'text-danger border border-danger' : '' }}" id="tab-refunds-btn" data-bs-toggle="pill" data-bs-target="#tab-refunds" type="button" role="tab">
                                                     <i class="fas fa-undo-alt me-1 text-danger"></i> مستحقات الاسترجاع
                                                     @if(($pendingRefundCount ?? 0) > 0)
@@ -1316,6 +1322,101 @@
                                             @endif
                                         </div>
 
+                                        <!-- تبويب العناية المركزة للكبار (CCU Inpatient Folios) -->
+                                        <div class="tab-pane fade" id="tab-ccu" role="tabpanel">
+                                            @if(isset($ccuAccounts) && count($ccuAccounts) > 0)
+                                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                    <div>
+                                                        <strong class="text-danger"><i class="fas fa-heartbeat me-1"></i> حسابات مرضى العناية المركزة للكبار (CCU / ICU)</strong>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <a href="{{ route('cashier.ccu.statements') }}" class="btn btn-sm btn-outline-primary fw-bold">كشوفات CCU</a>
+                                                        <span class="badge bg-danger fs-7 px-3 py-2">
+                                                            <i class="fas fa-procedures me-1"></i> {{ count($ccuAccounts) }} إضبارة نشطة
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>الإضبارة والمريض</th>
+                                                                <th>السرير والباقة</th>
+                                                                <th>الدخول والأيام</th>
+                                                                <th class="text-end">مستحق على المريض</th>
+                                                                <th class="text-end">المقبوض / الأمانات</th>
+                                                                <th class="text-end">المتبقي / الفائض</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($ccuAccounts as $acc)
+                                                                @php
+                                                                    $adm = $acc['admission'];
+                                                                    $stay = $acc['stay_details'];
+                                                                    $isSettled = ($acc['net_balance'] <= 0 && $acc['excess_deposit'] <= 0);
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">#{{ $adm->id }} — {{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
+                                                                        @if($adm->status === 'discharged')
+                                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.68rem;">خروج معلق مالياً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                                            <i class="fas fa-bed me-1"></i> {{ $adm->bed?->bed_number ?? '#'.$adm->icu_bed_id }}
+                                                                        </span>
+                                                                        <div class="small text-muted mt-1">{{ $stay['active_service']?->name ?? 'تلقائي' }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="small font-monospace">{{ optional($adm->admission_date)->format('Y-m-d') }}</span>
+                                                                        <small class="text-muted d-block">({{ $stay['days_count'] ?? 1 }} يوم)</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }} د.ع</strong>
+                                                                        @if($stay['is_insured'])
+                                                                            <small class="text-info d-block" style="font-size:0.72rem;">بعد حصة الضمان ({{ number_format($stay['insurance_grand_total']) }})</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-success font-monospace">{{ number_format($acc['total_paid'], 0) }} د.ع</strong>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if($acc['excess_deposit'] > 0)
+                                                                            <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1">
+                                                                                فائض: +{{ number_format($acc['excess_deposit'], 0) }} د.ع
+                                                                            </span>
+                                                                        @elseif($isSettled)
+                                                                            <span class="badge bg-success px-2 py-1">خالص (0 د.ع)</span>
+                                                                        @else
+                                                                            <strong class="text-danger fs-6 font-monospace">{{ number_format($acc['net_balance'], 0) }} د.ع</strong>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <div class="btn-group btn-group-sm">
+                                                                            <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-success fw-bold px-2 py-1 shadow-sm">
+                                                                                <i class="fas fa-file-invoice-dollar me-1"></i> تسديد الرسوم
+                                                                            </a>
+                                                                            <a href="{{ route('cashier.ccu.itemized-receipt.print', $adm->id) }}" class="btn btn-outline-info px-2 py-1" target="_blank">
+                                                                                <i class="fas fa-receipt me-1"></i> وصل تفصيلي
+                                                                            </a>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-heartbeat fa-3x text-muted opacity-50 mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد حالات عناية مركزة للكبار نشطة أو معلقة مالياً حالياً.</p>
+                                                </div>
+                                            @endif
+                                        </div>
+
                                         <!-- تبويب مستحقات الاسترجاع (Refunds) -->
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
                                             @php
@@ -1323,7 +1424,8 @@
                                                                || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0)
                                                                || (isset($pendingEmergencyRadRefunds) && $pendingEmergencyRadRefunds->count() > 0)
                                                                || (isset($pendingEmergencyLabRefunds) && $pendingEmergencyLabRefunds->count() > 0)
-                                                               || (isset($nicuRefundAccounts) && count($nicuRefundAccounts) > 0);
+                                                               || (isset($nicuRefundAccounts) && count($nicuRefundAccounts) > 0)
+                                                               || (isset($ccuRefundAccounts) && count($ccuRefundAccounts) > 0);
                                             @endphp
                                             @if($hasAnyRefunds)
                                                 <div class="table-responsive">
@@ -1627,6 +1729,37 @@
                                                                         <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuRefundModal{{ $res->id }}" title="صرف واسترجاع فائض الأمانات">
                                                                             <i class="fas fa-undo-alt me-1 text-danger"></i> إرجاع الأمانات
                                                                         </button>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+
+                                                            {{-- استرجاع فائض أمانات العناية المركزة للكبار (CCU Excess Deposits) --}}
+                                                            @foreach($ccuRefundAccounts ?? [] as $acc)
+                                                                @php
+                                                                    $adm = $acc['admission'];
+                                                                @endphp
+                                                                <tr class="table-warning bg-opacity-10">
+                                                                    <td>
+                                                                        <strong class="text-danger">عناية #{{ $adm->id }}</strong>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">CCU</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-info text-dark">سرير {{ $adm->bed?->bed_number }}</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $acc['stay_details']['active_service']?->name ?? 'العناية المركزة' }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-success-subtle text-success font-monospace">أمانات: {{ number_format($acc['total_paid'], 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td><div class="small text-danger fw-semibold">فائض أمانات عناية مركزة</div></td>
+                                                                    <td class="text-end"><span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} د.ع</span></td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm">
+                                                                            <i class="fas fa-undo-alt me-1 text-danger"></i> صرف الفائض
+                                                                        </a>
                                                                     </td>
                                                                 </tr>
                                                             @endforeach

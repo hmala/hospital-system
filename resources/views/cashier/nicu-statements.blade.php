@@ -160,15 +160,35 @@
                                             </td>
                                             <td>
                                                 <ul class="list-unstyled mb-0 small">
-                                                    <li><i class="fas fa-procedures text-primary me-1"></i>حاضنة: {{ number_format($stay['total_service_cost'], 0) }} د.ع</li>
-                                                    @if($stay['orders_by_type']['lab'] > 0)
-                                                        <li><i class="fas fa-flask text-success me-1"></i>تحاليل: {{ number_format($stay['orders_by_type']['lab'], 0) }} د.ع</li>
+                                                    <li>
+                                                        <i class="fas fa-procedures text-primary me-1"></i>حاضنة: {{ number_format($stay['total_service_cost'], 0) }} د.ع
+                                                        @if($res->is_insured && ($stay['insurance_share_total'] ?? 0) > 0)
+                                                            <small class="text-success d-block ps-3">(ضمان: {{ number_format($stay['insurance_share_total'], 0) }})</small>
+                                                        @endif
+                                                    </li>
+                                                    @if(($stay['total_lab_cost'] ?? 0) > 0)
+                                                        <li>
+                                                            <i class="fas fa-flask text-success me-1"></i>تحاليل: {{ number_format($stay['total_lab_cost'], 0) }} د.ع
+                                                            @if($res->is_insured && ($stay['insurance_lab_share'] ?? 0) > 0)
+                                                                <small class="text-success d-block ps-3">(ضمان: {{ number_format($stay['insurance_lab_share'], 0) }})</small>
+                                                            @endif
+                                                        </li>
                                                     @endif
-                                                    @if($stay['orders_by_type']['radiology'] > 0)
-                                                        <li><i class="fas fa-x-ray text-info me-1"></i>أشعة: {{ number_format($stay['orders_by_type']['radiology'], 0) }} د.ع</li>
+                                                    @if(($stay['total_radiology_cost'] ?? 0) > 0)
+                                                        <li>
+                                                            <i class="fas fa-x-ray text-info me-1"></i>أشعة: {{ number_format($stay['total_radiology_cost'], 0) }} د.ع
+                                                            @if($res->is_insured && ($stay['insurance_radiology_share'] ?? 0) > 0)
+                                                                <small class="text-success d-block ps-3">(ضمان: {{ number_format($stay['insurance_radiology_share'], 0) }})</small>
+                                                            @endif
+                                                        </li>
                                                     @endif
-                                                    @if($stay['orders_by_type']['medication'] > 0 || $stay['total_consultations_cost'] > 0)
-                                                        <li><i class="fas fa-pills text-warning me-1"></i>علاج واستشارات: {{ number_format($stay['orders_by_type']['medication'] + $stay['total_consultations_cost'], 0) }} د.ع</li>
+                                                    @if(($stay['orders_by_type']['medication'] ?? 0) > 0 || ($stay['total_consultations_cost'] ?? 0) > 0)
+                                                        <li>
+                                                            <i class="fas fa-pills text-warning me-1"></i>علاج واستشارات: {{ number_format(($stay['orders_by_type']['medication'] ?? 0) + ($stay['total_consultations_cost'] ?? 0), 0) }} د.ع
+                                                            @if($res->is_insured && ($stay['insurance_consultations_share'] ?? 0) > 0)
+                                                                <small class="text-success d-block ps-3">(ضمان: {{ number_format($stay['insurance_consultations_share'], 0) }})</small>
+                                                            @endif
+                                                        </li>
                                                     @endif
                                                 </ul>
                                             </td>

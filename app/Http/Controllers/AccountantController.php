@@ -575,4 +575,126 @@ class AccountantController extends Controller
             'endDate'
         ));
     }
+
+    /**
+     * التحليلات المحاسبية والضمانية لوحدة العناية المركزة للكبار (CCU / ICU Analytics)
+     */
+    public function ccuAnalytics(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view ccu analytics') && ! $user->can('view accounting')))) {
+            abort(403, 'غير مصرح لك بالوصول إلى تحليلات العناية المركزة');
+        }
+
+        $startDate = $request->input('start_date')
+            ? \Carbon\Carbon::parse($request->input('start_date'))->startOfDay()
+            : \Carbon\Carbon::now()->startOfMonth();
+        $endDate = $request->input('end_date')
+            ? \Carbon\Carbon::parse($request->input('end_date'))->endOfDay()
+            : \Carbon\Carbon::now()->endOfMonth();
+
+        $billingService = app(\App\Services\CcuBillingService::class);
+        $billingService->ensureDefaultsExist();
+
+        $admissions = \App\Models\IcuAdmission::with([
+            'patient.user',
+            'bed',
+            'ccuService',
+            'doctor.user',
+            'ccuServiceLogs.ccuService',
+            'medicalOrders.labTest',
+            'medicalOrders.radiologyType',
+            'ccuConsultations',
+            'ccuPayments',
+        ])
+            ->whereBetween('admission_date', [$startDate, $endDate])
+            ->get();
+
+        $totalCcuCases = $admissions->count();
+        $totalBedsCount = \App\Models\IcuBed::where('is_active', true)->count();
+        $activeBedsCount = \App\Models\IcuBed::where('status', \App\Models\IcuBed::STATUS_OCCUPIED)->count();
+        $occupancyRate = $totalBedsCount > 0 ? round(($activeBedsCount / $totalBedsCount) * 100, 1) : 0;
+
+        $paymentsQ = \App\Models\CcuPayment::where('financial_status', 'paid')
+            ->whereBetween('paid_at', [$startDate, $endDate]);
+
+        $totalPaymentsReceived = (float) (clone $paymentsQ)
+            ->where('payment_type', '!=', \App\Models\CcuPayment::TYPE_REFUND)
+            ->sum('amount');
+
+        $totalPaymentsRefunded = (float) (clone $paymentsQ)
+            ->where('payment_type', \App\Models\CcuPayment::TYPE_REFUND)
+            ->sum('amount');
+
+        $netCcuRevenue = $totalPaymentsReceived - $totalPaymentsRefunded;
+
+        $insuredAdmissions = $admissions->filter(fn ($a) => $a->is_insured);
+        $insuredCasesCount = $insuredAdmissions->count();
+        $cashCasesCount = max(0, $totalCcuCases - $insuredCasesCount);
+
+        $totalInsuranceClaims = 0.0;
+        $totalHiaCollected = 0.0;
+        $totalHiaRemaining = 0.0;
+        $totalPatientShares = 0.0;
+        $totalBundledReferenceValue = 0.0;
+        $tierStats = [];
+
+        foreach ($admissions as $adm) {
+            $d = $billingService->calculateStayDetails($adm);
+            $totalInsuranceClaims += (float) $d['insurance_grand_total'];
+            $totalHiaCollected += (float) $d['hia_collected_amount'];
+            $totalHiaRemaining += (float) $d['hia_remaining_balance'];
+            $totalPatientShares += (float) $d['patient_grand_total'];
+            $totalBundledReferenceValue += (float) $d['bundled_reference_total'];
+
+            foreach ($d['daily_coverage_details'] as $dayRow) {
+                $lbl = $dayRow['tier_label'] ?? 'غير مصنف';
+                if (! isset($tierStats[$lbl])) {
+                    $tierStats[$lbl] = ['label' => $lbl, 'days_count' => 0, 'hia_sum' => 0.0, 'patient_sum' => 0.0];
+                }
+                $tierStats[$lbl]['days_count']++;
+                $tierStats[$lbl]['hia_sum'] += (float) $dayRow['hia_share'];
+                $tierStats[$lbl]['patient_sum'] += (float) $dayRow['patient_share'];
+            }
+        }
+
+        $topServices = \App\Models\CcuServiceLog::whereHas('admission', fn ($q) => $q->whereBetween('admission_date', [$startDate, $endDate]))
+            ->selectRaw('service_name_snapshot, COUNT(*) as uses_count, SUM(total_cost) as total_billed')
+            ->groupBy('service_name_snapshot')
+            ->orderByDesc('total_billed')
+            ->get();
+
+        $doctorsActivity = $admissions->groupBy('doctor_id')->map(function ($group) {
+            $first = $group->first();
+
+            return (object) [
+                'doctor_name' => $first?->doctor?->user?->name ?? 'طبيب مناوب',
+                'cases_count' => $group->count(),
+                'insured_count' => $group->where('is_insured', true)->count(),
+            ];
+        })->sortByDesc('cases_count')->values();
+
+        return view('accountant.ccu.analytics', compact(
+            'topServices',
+            'doctorsActivity',
+            'totalCcuCases',
+            'activeBedsCount',
+            'totalBedsCount',
+            'occupancyRate',
+            'totalPaymentsReceived',
+            'totalPaymentsRefunded',
+            'netCcuRevenue',
+            'insuredCasesCount',
+            'cashCasesCount',
+            'totalInsuranceClaims',
+            'totalHiaCollected',
+            'totalHiaRemaining',
+            'totalPatientShares',
+            'totalBundledReferenceValue',
+            'tierStats',
+            'startDate',
+            'endDate'
+        ));
+    }
 }

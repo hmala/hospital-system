@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\CcuPayment;
 use App\Models\ConsultationRevenue;
 use App\Models\Doctor;
 use App\Models\DoctorDue;
 use App\Models\Emergency;
 use App\Models\HospitalExtraService;
+use App\Models\IcuAdmission;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
 use App\Models\NicuPayment;
@@ -267,11 +269,17 @@ class CashierController extends Controller
         $todayNicuTotal = (float) $todayNicuPayments->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
                         - (float) $todayNicuPayments->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
 
+        $todayCcuPayments = CcuPayment::whereDate('paid_at', $today)->where('financial_status', 'paid')->get();
+        $todayCcuTotal = (float) $todayCcuPayments->where('payment_type', '!=', CcuPayment::TYPE_REFUND)->sum('amount')
+                       - (float) $todayCcuPayments->where('payment_type', CcuPayment::TYPE_REFUND)->sum('amount');
+
         $todayStats = [
-            'total_collected' => $todayPayments->sum('amount') + $todayNicuTotal,
-            'total_payments' => $todayPayments->count() + $todayNicuPayments->count(),
+            'total_collected' => $todayPayments->sum('amount') + $todayNicuTotal + $todayCcuTotal,
+            'total_payments' => $todayPayments->count() + $todayNicuPayments->count() + $todayCcuPayments->count(),
             'today_nicu_total' => $todayNicuTotal,
             'today_nicu_count' => $todayNicuPayments->count(),
+            'today_ccu_total' => $todayCcuTotal,
+            'today_ccu_count' => $todayCcuPayments->count(),
             'pending_appointments_count' => $pendingAppointmentsCount,
             'pending_requests_count' => $pendingRequestsCount,
             'pending_emergency_count' => $pendingEmergencyCount,
@@ -298,11 +306,16 @@ class CashierController extends Controller
         $monthlyNicuPayments = NicuPayment::whereBetween('paid_at', [$monthStart, $monthEnd])->where('financial_status', 'paid')->get();
         $monthlyNicuTotal = (float) $monthlyNicuPayments->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
                           - (float) $monthlyNicuPayments->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
+        $monthlyCcuPayments = CcuPayment::whereBetween('paid_at', [$monthStart, $monthEnd])->where('financial_status', 'paid')->get();
+        $monthlyCcuTotal = (float) $monthlyCcuPayments->where('payment_type', '!=', CcuPayment::TYPE_REFUND)->sum('amount')
+                         - (float) $monthlyCcuPayments->where('payment_type', CcuPayment::TYPE_REFUND)->sum('amount');
 
         $monthlyStats = [
-            'total_revenue' => $monthlyPayments->sum('amount') + $monthlyNicuTotal,
-            'total_payments' => $monthlyPayments->count() + $monthlyNicuPayments->count(),
-            'avg_daily' => ($monthlyPayments->count() + $monthlyNicuPayments->count()) > 0 ? ($monthlyPayments->sum('amount') + $monthlyNicuTotal) / Carbon::now()->daysInMonth : 0,
+            'total_revenue' => $monthlyPayments->sum('amount') + $monthlyNicuTotal + $monthlyCcuTotal,
+            'total_payments' => $monthlyPayments->count() + $monthlyNicuPayments->count() + $monthlyCcuPayments->count(),
+            'avg_daily' => ($monthlyPayments->count() + $monthlyNicuPayments->count() + $monthlyCcuPayments->count()) > 0
+                ? ($monthlyPayments->sum('amount') + $monthlyNicuTotal + $monthlyCcuTotal) / Carbon::now()->daysInMonth
+                : 0,
         ];
 
         // جلب طلبات الفحوصات الطبية الملغاة بعد السداد والمستحقة للاسترجاع (Refunds)
@@ -418,10 +431,57 @@ class CashierController extends Controller
 
         $nicuRefundAccounts = $nicuAccounts->filter(fn ($item) => $item['excess_deposit'] > 0)->values();
         $pendingNicuRefundCount = $nicuRefundAccounts->count();
-        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount;
 
         $pendingNicuCount = $nicuAccounts->count();
         $todayStats['pending_nicu_count'] = $pendingNicuCount;
+
+        // جلب إضبارات وحسابات العناية المركزة للكبار (CCU / ICU Inpatient Folios)
+        $ccuBillingService = app(\App\Services\CcuBillingService::class);
+        $icuAdmissionsQuery = IcuAdmission::with([
+            'patient.user',
+            'bed',
+            'ccuService',
+            'doctor.user',
+            'ccuServiceLogs.ccuService',
+            'medicalOrders.labTest',
+            'medicalOrders.radiologyType',
+            'ccuConsultations',
+            'ccuPayments',
+        ])->whereIn('status', ['active', 'discharged']);
+
+        if ($search) {
+            $icuAdmissionsQuery->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
+                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%")->orWhere('medical_number', 'like', "%{$search}%"));
+            });
+        }
+
+        $ccuAccounts = $icuAdmissionsQuery->orderByDesc('admission_date')->get()->map(function ($adm) use ($ccuBillingService) {
+            $stayDetails = $ccuBillingService->calculateStayDetails($adm);
+
+            return [
+                'admission' => $adm,
+                'stay_details' => $stayDetails,
+                'gross_total' => (float) $stayDetails['patient_grand_total'],
+                'total_paid' => (float) $stayDetails['total_paid'],
+                'net_balance' => (float) $stayDetails['net_balance'],
+                'excess_deposit' => (float) $stayDetails['excess_deposit'],
+            ];
+        })->filter(function ($item) {
+            if ($item['admission']->status === 'active') {
+                return true;
+            }
+
+            return $item['net_balance'] > 0 || $item['excess_deposit'] > 0;
+        })->values();
+
+        $ccuRefundAccounts = $ccuAccounts->filter(fn ($item) => $item['excess_deposit'] > 0)->values();
+        $pendingCcuRefundCount = $ccuRefundAccounts->count();
+        $pendingCcuCount = $ccuAccounts->count();
+        $todayStats['pending_ccu_count'] = $pendingCcuCount;
+
+        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount + $pendingCcuRefundCount;
 
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
@@ -441,6 +501,10 @@ class CashierController extends Controller
             'nicuRefundAccounts',
             'pendingNicuRefundCount',
             'pendingNicuCount',
+            'ccuAccounts',
+            'ccuRefundAccounts',
+            'pendingCcuRefundCount',
+            'pendingCcuCount',
             'todayStats',
             'todayPayments',
             'monthlyStats',

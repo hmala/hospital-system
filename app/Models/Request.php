@@ -9,6 +9,7 @@ class Request extends Model
     protected $fillable = [
         'visit_id',
         'incubator_reservation_id',
+        'icu_admission_id',
         'type',
         'subtype',
         'description',
@@ -149,14 +150,19 @@ class Request extends Model
         return $this->belongsTo(\App\Models\IncubatorReservation::class, 'incubator_reservation_id');
     }
 
+    public function icuAdmission()
+    {
+        return $this->belongsTo(\App\Models\IcuAdmission::class, 'icu_admission_id');
+    }
+
     public function getPatientAttribute()
     {
-        return $this->visit?->patient ?? $this->incubatorReservation?->patient;
+        return $this->visit?->patient ?? $this->incubatorReservation?->patient ?? $this->icuAdmission?->patient;
     }
 
     public function getDoctorAttribute()
     {
-        return $this->visit?->doctor ?? $this->incubatorReservation?->doctor;
+        return $this->visit?->doctor ?? $this->incubatorReservation?->doctor ?? $this->icuAdmission?->doctor;
     }
 
     public function bloodBankRequest()

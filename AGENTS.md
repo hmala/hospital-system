@@ -54,6 +54,122 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-11 — المرحلة 189: منظومة التسعير الديناميكي وشرائح الإقامة للضمان، شمول التحاليل والأشعة بالباقة بنقرة زر، الكاشير والحسابات والمطالبات، ونقل التشخيص الأولي و ICD-10 لداخل إضبارة الطبيب CCU Dynamic Tariffs, Official MOH Brackets, Bundling & Accounting Suite)
+
+### Done
+- **نقل التشخيص السريري الأولي، ICD-10 الثنائي اللغة، ومقياس GCS لداخل إضبارة الطبيب**:
+  * إزالة حقول التشخيص الأولي، ICD-10، و GCS من استمارة استقبال وحجز الاستعلامات (`resources/views/icu/admit.blade.php` و `IcuAdmissionController@store`) وجعلها خاصة بالطبيب داخل إضبارة العناية (`resources/views/icu/show.blade.php`) عبر البحث الحي الثنائي اللغة (`route('doctor.icd10.search')`) ومسار `ccu.admissions.initial-diagnosis.update` (`CcuCareController@updateInitialDiagnosis`).
+- **قاعدة البيانات والنماذج والتحكم الديناميكي للتسعير والشرائح (`2026_11_11_100000_create_ccu_billing_and_tariffs_tables.php`)**:
+  * جداول `ccu_services`, `ccu_stay_brackets`, `ccu_settings`, `ccu_service_logs`, `ccu_payments` وتحديث `icu_admissions`, `icu_medical_orders`, `ccu_consultations` مع بذرة التسعيرات الرسمية `CcuTariffSeeder` وشاشة التحكم الديناميكي `/ccu/services` (`CcuServiceController`).
+  * دعم باقات الضمان (التنفس الصناعي 750,000 د.ع، الأكسجين 500,000 د.ع) وتدرج شرائح الإقامة الرسمية وسقف الـ 30 يوماً السنوية عبر المريض التراكمي، بالإضافة للتسعيرة النقدية المخصصة (باقة شاملة أو سعر سرير منفصل `cash_bed_only_separate` + خدمات مضافة `CcuService::TYPE_ADDON`).
+- **محرك الفوترة وشمول التحاليل/الأشعة/الاستشارات بنقرة زر (`CcuBillingService`)**:
+  * إظهار التحاليل والأشعة والاستشارات المشمولة بالباقة بمبلغ `0` د.ع للمريض مع حفظ `original_price` في `bundled_reference_total` وتبديل فوري بنقرة زر بين `bundled` و `extra` (`cashier.ccu.orders.toggle-billing`, `cashier.ccu.consultations.toggle-billing`).
+- **الكاشير، كشوفات الحسابات، المطالبات، التحليلات، والخزينة (`CcuCashierController`, `AccountantController@ccuAnalytics`, `HealthInsuranceClaimController`, `HospitalTreasuryController`)**:
+  * شاشات تسديد وكشوفات وإيصالات حرارية وتفصيلية (`resources/views/cashier/ccu/*`)، تبويب `#tab-ccu` في الكاشير الموحد، تحليلات العناية `/accountant/ccu-analytics`، تتبع القيمة الأصلية للباقات وتحصيل الضمان والباقي بذمة الضمان (`hia_remaining_balance`) في مطالبات الضمان والخزينة.
+- **التحقق الآلي وتنسيق الكود**:
+  * اجتياز 31 اختباراً (213 تأكيداً) عبر `NicuInsuranceSettlementAndClaimsTest`, `IcuModuleTest`, `CcuClinicalSuiteTest`, `CcuBillingAndCashierTest` مع توافق كامل لـ Laravel Pint.
+
+## Session log (2026-11-10 — المرحلة 188: بناء وتكامل منظومة التوجيهات السريرية المثبتة، جدول الأدوية والمضخات MAR، الاستشارات التخصصية، والمرفقات وتخطيط القلب CCU Clinical Care Suite)
+
+### Done
+- **التوجيهات السريرية المثبتة في رأس الإضبارة (Pinned Clinical Directives)**:
+  * بناء صندوق التوجيهات السريرية المشددة في أعلى ملف المريض ([resources/views/icu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/show.blade.php)) يبرز أوامر الاستشاري العاجلة مع اسم الطبيب والتوقيت وزر تثبيت/إلغاء التثبيت 📌 بنقرة واحدة عبر نموذج ([app/Models/CcuDoctorNote.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/CcuDoctorNote.php)).
+- **جدول إعطاء وجرعات الأدوية ومضخات التسريب الوريدي (MAR Flowsheet)**:
+  * تبويب مخصص `#medicationTabPane` لجدولة الأدوية بالساعة (كل 4، 6، 8، 12، 24 ساعة) ودعم مضخات التسريب الوريدي المستمر (Syringe Pumps) مع معدل الضخ (Infusion Rate) وتحديد مسار الإعطاء (IV, Infusion, IM, NG Tube, Nebulizer, SC).
+  * زر التمريض السريع "توثيق الإعطاء الآن" مع توثيق الممرض وتحديث الموعد القادم آلياً، وشارات التنبيه الذكية (🔴 متأخر Overdue، 🟡 مستحق الآن Due Now، 🟢 القادم Upcoming) عبر نموذج ([app/Models/CcuMedicationSchedule.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/CcuMedicationSchedule.php)).
+- **استشارات الأطباء التخصصية (CCU Consultations Suite)**:
+  * تبويب مخصص `#consultationsTabPane` لطلب الاستشارات السريرية الداخلية (مع اختيار استشاري المستشفى من القائمة) أو الخارجية، وتوثيق الأجور، ورد وتوصيات الاستشاري المعتمدة بنقرة زر عبر نموذج ([app/Models/CcuConsultation.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/CcuConsultation.php)).
+- **أرشيف المرفقات الطبية وتخطيط القلب (ECG & Medical Attachments)**:
+  * تبويب مخصص `#attachmentsTabPane` لرفع وتخزين مستندات وتخطيط القلب ECG والتقارير الطبية والمفراس الخارجي ومعاينتها فورياً عبر نموذج ([app/Models/CcuAttachment.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/CcuAttachment.php)).
+- **المتحكم والمسارات والتحقق الآلي**:
+  * بناء متحكم ([app/Http/Controllers/CcuCareController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/CcuCareController.php)) ومجموعة مسارات `ccu.*` في ([routes/web.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/routes/web.php)).
+  * حزمة اختبارات آلية جديدة شاملة ([tests/Feature/CcuClinicalSuiteTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/CcuClinicalSuiteTest.php)) نجحت بالكامل بنسبة 100% (`6 passed, 47 assertions`) إلى جانب استقرار حزمة ([tests/Feature/IcuModuleTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IcuModuleTest.php)) (`15 passed, 65 assertions`).
+
+## Session log (2026-11-10 — المرحلة 187: تثبيت موضع الشاشة والتبويبات النشطة في إضبارة العناية المركزة، وبناء منظومة حجز تحاليل المختبر والأشعة والتصوير الطبي المتكاملة ICU Dossier Tab & Scroll State Persistence, Fast Lab & Bedside Radiology Suite)
+
+### Done
+- **تثبيت موضع التمرير واستمرارية التبويب النشط ومنع القفز لأعلى الصفحة ([resources/views/icu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuController.php))**:
+  * بناء محرك حفظ واستعادة موضع التمرير اللحظي في `sessionStorage` بمفتاح فريد لكل مريض `icu_scroll_{id}` وتوقيت مرحلي يمنع إعادة القفز لبداية الصفحة عند حفظ المؤشرات الحيوية، ميزان السوائل، أوامر الأطباء، مهام الرعاية، أو إرسال التحاليل والأشعة.
+  * دعم واستمرارية التبويب النشط عبر `_active_tab` ورابط الـ URL Hash وتخزينه في `sessionStorage`، مع إرساله تلقائياً عبر أي نموذج أو زر في الصفحة واستعادته عبر دالة `redirectBackWithActiveState($request, $tab, $fallbackUrl)`.
+- **منظومة حجز تحاليل المختبر السريعة والمتكاملة مع المختبر المركزي ([resources/views/icu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/LabStaffController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * تبويب مخصص `#labTabPane` يشمل بحثاً ذكياً فوري Autocomplete من كتالوج المستشفى، أزرار إدراج سريعة بنقرة واحدة لتحاليل العناية الشائعة (ABG غازات دم شرياني، CBC، Electrolytes شوارد، RFT كلى، LFT كبد، PT/INR تخثر، Troponin، وزرع الدم Blood Culture)، صينية شرائح تفاعلية (Chips Tray)، وتحديد أولوية الفحص (Normal, Urgent, 🚨 STAT).
+  * توليد الطلب المركزي في جدول `requests` بنوع `lab` وربطه بحقل `icu_admission_id`، وتوزيع الفحوصات في جدول `icu_medical_orders` مع مزامنة حالة الإنجاز والنتائج والمدى المرجعي آلياً عند إدخالها من قبل فني المختبر في `LabStaffController`.
+- **منظومة حجز وتصوير الأشعة والسونار المتنقل بجانب السرير ([resources/views/icu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/RadiologyStaffController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * تبويب مخصص `#radiologyTabPane` لحجز الأشعة النقالة Portable CXR، سونار بجانب السرير FAST/Abdomen، إيكو القلب Bedside Echo، ومفراس الدماغ CT Brain مع حقل للملاحظات السريرية ودواعي الفحص.
+  * توليد الطلب المركزي في `requests` بنوع `radiology` وتحديد التصنيف الفرعي تلقائياً، ومزامنة تقرير الطبيب الشعاعي آلياً مع إضبارة العناية عند اعتماده في `RadiologyStaffController`.
+- **المايجريشن والنماذج والعلاقات البرمجية (`database/migrations/2026_11_10_115143_add_icu_admission_id_to_requests_and_enrich_icu_orders.php`, [app/Models/Request.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/Request.php), [app/Models/IcuAdmission.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuAdmission.php), [app/Models/IcuMedicalOrder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuMedicalOrder.php))**:
+  * إضافة حقل `icu_admission_id` إلى جدول `requests`.
+  * إثراء جدول `icu_medical_orders` بحقول الفحوصات والأسعار والمجموعات والنتائج والمرفقات ومسؤول الطلب.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IcuModuleTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * توسيع الاختبارات إلى 15 اختباراً آلياً تشمل اختبارات رندرة تبويبات المختبر والأشعة، حجز التحاليل بأولوية STAT، حجز الأشعة والسونار، وثبات موضع التبويب النشط بنسبة نجاح 100% (`15 passed, 65 assertions`).
+
+## Session log (2026-11-10 — المرحلة 186: ربط وتكامل حجز العناية المركزة في الاستعلامات وزيارات المرضى، وتخصيص استلام المريض الفوري ICU Inquiry Admission Integration, Pre-selected Patient Handoff & Reception Booking Card Suite)
+
+### Done
+- **تكامل شاشة الاستعلامات `inquiry.create` وزيارات المرضى `visits.edit`**:
+  * إضافة بطاقة خدمة "حجز عناية مركزة (ICU)" في شاشة إنشاء طلبات الاستعلامات ([resources/views/inquiry/create.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/inquiry/create.blade.php)) وشاشة الزيارة ([resources/views/visits/edit.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/visits/edit.blade.php)) بنفس الهوية البصرية لبطاقات العمليات والطوارئ والخدج (`fa-heartbeat`, `text-danger`).
+  * تمرير رقم المريض `?patient_id={id}` تلقائياً للرابط `icu.admissions.create`.
+- **تطوير واجهة الاستقبال وحجز سرير العناية ([resources/views/icu/admit.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/admit.blade.php), [app/Http/Controllers/IcuAdmissionController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuAdmissionController.php))**:
+  * استلام فوري للمريض المحول من الاستعلامات مع تنزيل بطاقة بياناته آلياً وإخفاء حقل البحث الأولي مع إمكانية التغيير بنقرة زر.
+  * قراءة حالة الضمان بدقة وإلغاء الافتراض الخاطئ لمسار الضمان لمرضى الكاش غير المشمولين، وإظهار تفاصيل الضمان فقط للمرضى المشمولين فعلياً.
+  * استدعاء علاقة `healthInsuranceCategory` مع `user` في `IcuAdmissionController@create`.
+- **مصفوفة الصلاحيات والحوكمة ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [app/Http/Controllers/InquiryController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/InquiryController.php))**:
+  * إسناد صلاحيتي `view icu radar` و `admit icu patients` لدوري الاستعلامات `receptionist` و `inquiry_staff`.
+  * شمول صلاحيات العناية في مصفوفة السماح لدخول الاستعلامات `InquiryController@create`، مع حماية استدعاءات أدوار السونار والإيكو المفقودة بـ `try/catch`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IcuModuleTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * توسيع الاختبارات إلى 11 اختباراً آلياً تشمل اختبار رندرة بطاقة العناية المركزة في الاستعلامات، واختبار تسكين المريض المحول بـ `patient_id` بنجاح 100% (`11 passed, 43 assertions`).
+
+## Session log (2026-11-10 — المرحلة 185: بناء وحدة العناية المركزة والحرجة المتكاملة: رادار الأسرة الحي، شيت المؤشرات بالساعة، ميزان السوائل، وأوامر الطبيب ورعاية التمريض ICU / CCU Comprehensive Critical Care Suite)
+
+### Done
+- **قاعدة البيانات وهيكلية الجداول (`database/migrations/2026_11_10_095152_create_icu_beds_and_admissions_tables.php`)**:
+  * جدول `icu_beds`: إدارة أسرة العناية (رقم السرير، نوعه: عام / عزل ضغط سالب / عناية قلبية CCU / عناية عصبية Neuro، الغرفة، الطابق، الحالة التشغيلية، السعر اليومي).
+  * جدول `icu_admissions`: سجل دخول وتسكين المريض بالعناية، التشخيص السريري، ICD-10، مقياس الوعي الأولي GCS، جهاز التنفس، العزل، والتأمين.
+  * جدول `icu_vital_signs`: شيت العلامات الحيوية بالساعة (GCS، النبض، الضغط، MAP المحسوب آلياً، SpO2، الحرارة، سكر الدم، إعدادات جهاز التنفس Mode، FiO2، PEEP).
+  * جدول `icu_fluid_balances`: ميزان السوائل بالساعة (الداخل: محاليل، دم، تغذية، علاجات / الخارج: بول، مفارغ جراحية، رايل، مفرزات، واحتساب الصافي Net Balance تلقائياً).
+  * جدول `icu_medical_orders`: أوامر الطبيب الاستشاري السريرية بأولويات (`routine`, `urgent`, `stat`) ومتابعة تنفيذها من الكادر.
+  * جدول `icu_care_schedules`: جدول مهام الرعاية التمريضية بالساعة (تقليب، سحب مفرزات، تفريغ كيس البول).
+- **النماذج والعلاقات البرمجية ([app/Models/IcuBed.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuBed.php), [app/Models/IcuAdmission.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuAdmission.php), [app/Models/IcuVitalSign.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuVitalSign.php), [app/Models/IcuFluidBalance.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuFluidBalance.php), [app/Models/IcuMedicalOrder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuMedicalOrder.php), [app/Models/IcuCareSchedule.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/IcuCareSchedule.php))**:
+  * الفرز الرقمي المتسلسل للأسرة `scopeOrderByNumber()`.
+  * شارات وأنماط الأنواع والحالات (`type_badge_class`, `status_badge_class`, `gcs_badge_class`).
+  * محرك الاحتساب التلقائي لصافي السوائل والضغط الشرياني الوسطي MAP.
+  * إضافة تصنيف `'icu' => 'إيراد العناية المركزة (ICU)'` في [app/Models/FinancialTransaction.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/FinancialTransaction.php).
+- **المتحكمات والمسارات البرمجية ([app/Http/Controllers/IcuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/IcuAdmissionController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuAdmissionController.php), [app/Http/Controllers/IcuBedController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/IcuBedController.php))**:
+  * رادار العناية الحية (`/icu`): إحصائيات KPI الحية للأسرة وأجهزة التنفس، شبكة الكروت التفاعلية مع تنبيهات مستوى الوعي GCS.
+  * إضبارة مريض العناية (`/icu/admissions/{id}`): شيت الفلوشيت بالساعة، ميزان السوائل In/Out، أوامر الطبيب، وتخريج المريض وتحويل السرير للتعقيم.
+  * تسجيل الدخول وحجز السرير (`/icu/admissions/create`): تسكين المريض، تحديد السرير والطبيب والتشخيص الأولي.
+  * إدارة وتوزيع الأسرة (`/icu/beds`): متابعة التعقيم والصيانة وإضافة أسرّة جديدة.
+- **واجهات المستخدم والقائمة الجانبية ([resources/views/icu/radar.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/radar.blade.php), [resources/views/icu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/show.blade.php), [resources/views/icu/admit.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/admit.blade.php), [resources/views/icu/beds/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/icu/beds/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تصميم عصري متناسق مع شاشات الخدج والعمليات، إبراز حالات الأسرة بالألوان، وإدراج قسم العناية المركزة في القائمة الجانبية بشارة عدد المرضى الراقدين.
+- **الصلاحيات وحزمة الاختبارات الآلية الشاملة ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [tests/Feature/IcuModuleTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * 8 صلاحيات دقيقة وأدوار `icu_doctor` و `icu_nurse`.
+  * 7 اختبارات ميزة آلية تغطي الدخول، الرادار، العلامات، السوائل، الأوامر، والتخريج بنسبة نجاح 100% (`7 passed, 30 assertions`).
+
+## Session log (2026-11-10 — المرحلة 184: منظومة تسوية وتفكيك الضمان الصحي الشاملة للخدج: المختبر والأشعة والاستشارات والحاضنة بالتوازي وفق الفئة E NICU Comprehensive Insurance Settlement & Co-payment Engine)
+
+### Done
+- **تفكيك وحساب تسوية الضمان للخدج وفق الفئة E ([app/Services/NicuBillingService.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Services/NicuBillingService.php))**:
+  * اعتماد الفئة E رسمياً لكافة الخدج المشمولين بالضمان (`is_insured`):
+    - الفحوصات المخبرية (`lab`): مساهمة الضمان 75% وتحمل المريض 25% للفحوصات المشمولة بالضمان (`is_hi_active`).
+    - الفحوصات الإشعاعية (`radiology`): مساهمة الضمان 75% وتحمل المريض 25% للفحوصات المشمولة.
+    - استشارات الأطباء (`consultations`): الاستشارات الداخلية مشمولة بنسبة 90% ضمان و 10% مريض، والاستشارات الخارجية غير مشمولة (100% كاش على المريض).
+    - الفحوصات والخدمات غير المشمولة: 100% كاش على المريض و 0% على الضمان مع بيان شارة صريحة.
+    - أجور الحاضنة اليومية: احتسابها وفق الفئة E ومصفوفة عمر الحمل الرسمية للوزارة.
+  * تجميع المجاميع الكبرى: `insurance_grand_total` (إجمالي مطالبة الضمان = حاضنة + مختبر + أشعة + استشارات داخلية)، و `patient_grand_total` (حصة المريض المستحقة)، وتحديث الحجز تلقائياً في قاعدة البيانات.
+- **تحديث كشف الحساب التراكمي للخدج ([resources/views/nicu/statement.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/statement.blade.php))**:
+  * إضافة أعمدة التغطية المعتمدة ومساهمة الضمان وتحمل المريض كاش في جدول الاستشارات (Section 2) وجدول الفحوصات المخبرية والأشعة (Section 3).
+  * إضافة سطور مجاميع مفككة للمختبر والأشعة والاستشارات.
+  * تفكيك بطاقة الخلاصة المالية النهائية لتبين بدقة مساهمات الضمان وحصص المريض في الحاضنة والمختبر والأشعة والاستشارات، وإجمالي مطالبة الضمان، وحصة المريض، والمسدد، والفائض المستحق للإرجاع إن وجد.
+- **تحديث واجهة تسديد الكاشير الموحدة للخدج ([resources/views/cashier/nicu/payment-form.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu/payment-form.blade.php))**:
+  * قراءة وتحديث أرقام شريط الموقف المالي العلوي وصندوق التسديد الذكي لحساب المتبقي الحقيقي للدفع دون مطالبة ولي الأمر بأي مبالغ يغطيها الضمان.
+  * إضافة أعمدة وشارات التغطية ومساهمات الضمان وتحمل المريض في جداول التحاليل والأشعة والاستشارات مع سطر المجاميع المفككة لكل قسم.
+- **تحديث شيت كشوفات ومطالبات الضمان للخدج ([resources/views/cashier/nicu-statements.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu-statements.blade.php))**:
+  * تحديث عمود تفصيل البنود لإبراز مساهمة الضمان بالحاضنة والمختبر والأشعة والاستشارات، ومطابقة مطالبة الضمان الشاملة.
+- **تحديث وصل التسوية والخدمات التفصيلي الحراري/A4 ([resources/views/cashier/nicu-itemized-print.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php))**:
+  * إدراج تفكيك نسب ومبالغ الضمان والمريض تحت كل تحليل وفحص أشعة واستشارة، وتحديث صندوق الموقف المالي الشامل.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuInsuranceSettlementAndClaimsTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuInsuranceSettlementAndClaimsTest.php))**:
+  * 5 اختبارات ميزة آلية تغطي: الاحتساب التلقائي لأيام الرقود، مصفوفة عمر الحمل، انعكاس المطالبات في الخزينة المركزية، كشوفات الكاشير، وتفكيك مساهمة الضمان والمريض في التحاليل والاستشارات وشاشتي الكشف والكاشير بنجاح 100% (`5 passed, 35 assertions`).
+
 ## Session log (2026-11-09 — المرحلة 183: ضبط الفرز الرقمي المتسلسل للحاضنات من 1 إلى 16 والتكامل التام بين حاضنات العناية وكبسولات العلاج الضوئي NICU Natural Numerical Sequence Sorting & Dynamic Phototherapy/Capsule Suite)
 
 ### Done

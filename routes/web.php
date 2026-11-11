@@ -410,6 +410,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/nicu/doctor-accounts', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccounts'])->name('nicu.doctor-accounts');
         Route::get('/nicu/doctor-accounts/{doctor}', [\App\Http\Controllers\CashierController::class, 'nicuDoctorAccount'])->name('nicu.doctor-account');
         Route::post('/nicu/doctor-accounts/{doctor}/payout', [\App\Http\Controllers\CashierController::class, 'nicuDoctorPayout'])->name('nicu.doctor-payout');
+
+        // حسابات وكاشير العناية المركزة للكبار (CCU Cashier & Claims)
+        Route::get('/ccu/financial-movements', [\App\Http\Controllers\CcuCashierController::class, 'financialMovements'])->name('ccu.financial-movements');
+        Route::get('/ccu/statements', [\App\Http\Controllers\CcuCashierController::class, 'statements'])->name('ccu.statements');
+        Route::get('/ccu/receipt/{ccuPayment}', [\App\Http\Controllers\CcuCashierController::class, 'showReceipt'])->name('ccu.receipt');
+        Route::get('/ccu/receipt/{ccuPayment}/print', [\App\Http\Controllers\CcuCashierController::class, 'printReceipt'])->name('ccu.receipt.print');
+        Route::post('/ccu/orders/{order}/toggle-billing', [\App\Http\Controllers\CcuCashierController::class, 'toggleOrderBilling'])->name('ccu.orders.toggle-billing');
+        Route::post('/ccu/consultations/{consultation}/toggle-billing', [\App\Http\Controllers\CcuCashierController::class, 'toggleConsultationBilling'])->name('ccu.consultations.toggle-billing');
+        Route::get('/ccu/{admission}/payment', [\App\Http\Controllers\CcuCashierController::class, 'showPaymentForm'])->name('ccu.payment.form');
+        Route::post('/ccu/{admission}/payment', [\App\Http\Controllers\CcuCashierController::class, 'processPayment'])->name('ccu.payment');
+        Route::get('/ccu/{admission}/itemized-receipt/print', [\App\Http\Controllers\CcuCashierController::class, 'printItemizedReceipt'])->name('ccu.itemized-receipt.print');
+        Route::post('/ccu/{admission}/hia-collection', [\App\Http\Controllers\CcuCashierController::class, 'updateHiaCollection'])->name('ccu.hia-collection');
     });
 
     // مسارات مراجعة أسعار العمليات للمحاسب
@@ -866,6 +878,80 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
     });
 
+    // وحدة العناية المركزة (ICU Module)
+    Route::prefix('icu')->name('icu.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\IcuController::class, 'index'])->name('index');
+        Route::get('/search-patients', [\App\Http\Controllers\IcuAdmissionController::class, 'searchPatients'])->name('search-patients');
+        Route::get('/admissions/create', [\App\Http\Controllers\IcuAdmissionController::class, 'create'])->name('admissions.create');
+        Route::post('/admissions', [\App\Http\Controllers\IcuAdmissionController::class, 'store'])->name('admissions.store');
+        Route::get('/admissions/{admission}', [\App\Http\Controllers\IcuController::class, 'show'])->name('show');
+        Route::post('/admissions/{admission}/discharge', [\App\Http\Controllers\IcuAdmissionController::class, 'discharge'])->name('admissions.discharge');
+        Route::post('/admissions/{admission}/transfer-bed', [\App\Http\Controllers\IcuAdmissionController::class, 'transferBed'])->name('admissions.transfer-bed');
+
+        // تسجيل العلامات الحيوية ومعايير العناية
+        Route::post('/admissions/{admission}/vitals', [\App\Http\Controllers\IcuController::class, 'storeVitals'])->name('vitals.store');
+
+        // تسجيل ميزان السوائل
+        Route::post('/admissions/{admission}/fluid-balance', [\App\Http\Controllers\IcuController::class, 'storeFluidBalance'])->name('fluid-balance.store');
+
+        // أوامر الطبيب
+        Route::post('/admissions/{admission}/orders', [\App\Http\Controllers\IcuController::class, 'storeMedicalOrder'])->name('orders.store');
+        Route::patch('/orders/{order}/complete', [\App\Http\Controllers\IcuController::class, 'completeMedicalOrder'])->name('orders.complete');
+
+        // طلب تحاليل وفحوصات المختبر
+        Route::post('/admissions/{admission}/lab-orders', [\App\Http\Controllers\IcuController::class, 'storeLabOrder'])->name('lab-orders.store');
+
+        // طلب فحوصات الأشعة والتصوير
+        Route::post('/admissions/{admission}/radiology-orders', [\App\Http\Controllers\IcuController::class, 'storeRadiologyOrder'])->name('radiology-orders.store');
+
+        // جدول رعاية التمريض
+        Route::post('/admissions/{admission}/care-schedules', [\App\Http\Controllers\IcuController::class, 'storeCareSchedule'])->name('care-schedules.store');
+        Route::patch('/care-schedules/{schedule}/toggle', [\App\Http\Controllers\IcuController::class, 'toggleCareSchedule'])->name('care-schedules.toggle');
+
+        // إدارة أسرة العناية
+        Route::get('/beds', [\App\Http\Controllers\IcuBedController::class, 'index'])->name('beds.index');
+        Route::post('/beds', [\App\Http\Controllers\IcuBedController::class, 'store'])->name('beds.store');
+        Route::post('/beds/{bed}/sterilized', [\App\Http\Controllers\IcuBedController::class, 'markSterilized'])->name('beds.sterilized');
+        Route::patch('/beds/{bed}/status', [\App\Http\Controllers\IcuBedController::class, 'toggleStatus'])->name('beds.status');
+    });
+
+    // ======= مسارات العناية المركزة والحرجة السريرية (CCU Clinical Suite) =======
+    Route::prefix('ccu')->name('ccu.')->group(function () {
+        // توجيهات أطباء الاختصاص وتثبيت التوجيه الفعال في رأس الملف
+        Route::post('/admissions/{admission}/doctor-notes', [\App\Http\Controllers\CcuCareController::class, 'storeDoctorNote'])->name('doctor-notes.store');
+        Route::post('/doctor-notes/{note}/toggle-pin', [\App\Http\Controllers\CcuCareController::class, 'toggleDoctorNotePin'])->name('doctor-notes.toggle-pin');
+        Route::delete('/doctor-notes/{note}', [\App\Http\Controllers\CcuCareController::class, 'destroyDoctorNote'])->name('doctor-notes.destroy');
+
+        // جدول إعطاء وجرعات الأدوية ومضخات التسريب المستمر (MAR)
+        Route::post('/admissions/{admission}/medication-schedules', [\App\Http\Controllers\CcuCareController::class, 'storeMedicationSchedule'])->name('medication-schedules.store');
+        Route::post('/medication-schedules/{schedule}/administer-quick', [\App\Http\Controllers\CcuCareController::class, 'administerMedicationQuick'])->name('medication-schedules.administer-quick');
+        Route::post('/medication-schedules/{schedule}/toggle', [\App\Http\Controllers\CcuCareController::class, 'toggleMedicationSchedule'])->name('medication-schedules.toggle');
+        Route::delete('/medication-schedules/{schedule}', [\App\Http\Controllers\CcuCareController::class, 'destroyMedicationSchedule'])->name('medication-schedules.destroy');
+
+        // استشارات الأطباء التخصصية
+        Route::post('/admissions/{admission}/consultations', [\App\Http\Controllers\CcuCareController::class, 'storeConsultation'])->name('consultations.store');
+        Route::post('/consultations/{consultation}/respond', [\App\Http\Controllers\CcuCareController::class, 'respondConsultation'])->name('consultations.respond');
+
+        // المرفقات والتقارير الطبية وتخطيط القلب
+        Route::post('/admissions/{admission}/attachments', [\App\Http\Controllers\CcuCareController::class, 'storeAttachment'])->name('attachments.store');
+        Route::delete('/attachments/{attachment}', [\App\Http\Controllers\CcuCareController::class, 'destroyAttachment'])->name('attachments.destroy');
+
+        // التشخيص الأولي وتبديل الباقات والخدمات الإضافية داخل طبلة الطبيب
+        Route::post('/admissions/{admission}/initial-diagnosis', [\App\Http\Controllers\CcuCareController::class, 'updateInitialDiagnosis'])->name('admissions.initial-diagnosis.update');
+        Route::post('/admissions/{admission}/switch-service', [\App\Http\Controllers\CcuCareController::class, 'switchService'])->name('admissions.switch-service');
+        Route::post('/admissions/{admission}/addon-service', [\App\Http\Controllers\CcuCareController::class, 'addCustomService'])->name('admissions.addon-service');
+
+        // لوحة التحكم الداينمك بالأسعار والشرائح والضوابط (CCU Tariffs, Brackets & Settings)
+        Route::get('/services', [\App\Http\Controllers\CcuServiceController::class, 'index'])->name('services.index');
+        Route::post('/services', [\App\Http\Controllers\CcuServiceController::class, 'store'])->name('services.store');
+        Route::put('/services/{service}', [\App\Http\Controllers\CcuServiceController::class, 'update'])->name('services.update');
+        Route::post('/services/{service}/toggle', [\App\Http\Controllers\CcuServiceController::class, 'toggle'])->name('services.toggle');
+        Route::post('/brackets', [\App\Http\Controllers\CcuServiceController::class, 'storeBracket'])->name('brackets.store');
+        Route::put('/brackets/{bracket}', [\App\Http\Controllers\CcuServiceController::class, 'updateBracket'])->name('brackets.update');
+        Route::delete('/brackets/{bracket}', [\App\Http\Controllers\CcuServiceController::class, 'destroyBracket'])->name('brackets.destroy');
+        Route::post('/settings', [\App\Http\Controllers\CcuServiceController::class, 'updateSettings'])->name('settings.update');
+    });
+
     // إدارة أجور العمليات الجراحية
     Route::prefix('surgical-operations')->name('surgical-operations.')->group(function () {
         Route::get('/', [\App\Http\Controllers\SurgicalOperationController::class, 'index'])->name('index');
@@ -931,6 +1017,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/accountant/emergency-analytics', [\App\Http\Controllers\AccountantController::class, 'emergencyAnalytics'])->name('accountant.emergency.analytics');
     Route::get('/accountant/diagnostic-analytics', [\App\Http\Controllers\AccountantController::class, 'diagnosticAnalytics'])->name('accountant.diagnostics.analytics');
     Route::get('/accountant/nicu-analytics', [\App\Http\Controllers\AccountantController::class, 'nicuAnalytics'])->name('accountant.nicu.analytics');
+    Route::get('/accountant/ccu-analytics', [\App\Http\Controllers\AccountantController::class, 'ccuAnalytics'])->name('accountant.ccu.analytics');
 
     // إدارة الموارد البشرية (HR Management)
     Route::prefix('hr')->name('hr.')->middleware(['permission:view hr'])->group(function () {

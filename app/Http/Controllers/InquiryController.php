@@ -101,6 +101,8 @@ class InquiryController extends Controller
                 $user->can('create surgeries') ||
                 $user->can('create bed reservations') ||
                 $user->can('create incubator reservations') ||
+                $user->can('admit icu patients') ||
+                $user->can('view icu radar') ||
                 $user->can('inquiry.create.checkup') ||
                 $user->can('inquiry.create.radiology.general') ||
                 $user->can('inquiry.create.radiology.ultrasound') ||
@@ -231,11 +233,19 @@ class InquiryController extends Controller
         })->get();
 
         if ($ultrasoundStaff->isEmpty()) {
-            $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+            try {
+                $ultrasoundStaff = User::role('radiology_ultrasound')->get();
+            } catch (\Throwable $e) {
+                $ultrasoundStaff = collect();
+            }
         }
 
         // جلب موظفي الإيكو من جدول المستخدمين حسب الدور
-        $echoStaff = User::role('radiology_echo')->get();
+        try {
+            $echoStaff = User::role('radiology_echo')->get();
+        } catch (\Throwable $e) {
+            $echoStaff = collect();
+        }
 
         // قيود خاصة بدور موظف الاستعلامات الاستشارية
         // السلوك القديم: كان يسمح له فقط بالكشف الطبي

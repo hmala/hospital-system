@@ -741,6 +741,75 @@
         </div>
         @endif
     </div>
+
+    <!-- قسم مطالبات العناية المركزة للكبار (CCU / ICU Claims & Remaining Balance) -->
+    @if(isset($ccuClaimsSummary) && $ccuClaimsSummary['claims_count'] > 0)
+    <div class="card border-0 shadow-sm rounded-4 mt-4 bg-white overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold text-danger mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>
+                    مطالبات العناية المركزة للكبار (CCU / ICU) — القيمة الأصلية والباقي بذمة الضمان
+                </h5>
+                <small class="text-muted">تظهر القيمة الأصلية للفحوصات المشمولة بالباقة (التي تظهر 0 على المريض) إضافةً لصافي مطالبة الضمان والرصيد المتبقي للتحصيل.</small>
+            </div>
+            <div class="d-flex gap-2 small flex-wrap">
+                <span class="badge bg-info-subtle text-dark border border-info-subtle px-3 py-2 font-monospace">
+                    أصل المشمول بالباقة: {{ number_format($ccuClaimsSummary['total_bundled_reference']) }} د.ع
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 font-monospace">
+                    صافي المطالبة: {{ number_format($ccuClaimsSummary['total_insurance_share']) }} د.ع
+                </span>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 font-monospace">
+                    الباقي بذمة الضمان: {{ number_format($ccuClaimsSummary['total_remaining_balance']) }} د.ع
+                </span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center small">
+                <thead class="table-light">
+                    <tr>
+                        <th>الإضبارة والمريض</th>
+                        <th>الباقة والأيام</th>
+                        <th>القيمة الأصلية للفحوصات المشمولة</th>
+                        <th>حصة المريض</th>
+                        <th>مطالبة الضمان الفعلية</th>
+                        <th>المُحصّل من الضمان</th>
+                        <th>الباقي بذمة الضمان</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ccuClaimsSummary['items'] as $item)
+                        @php
+                            $adm = $item['admission'];
+                            $d = $item['details'];
+                        @endphp
+                        <tr>
+                            <td class="text-start">
+                                <div class="fw-bold">#{{ $adm->id }} — {{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                <small class="text-muted">فئة {{ $d['policy_category'] }} • {{ optional($adm->admission_date)->format('Y-m-d') }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-dark">{{ $d['active_service']?->name ?? 'العناية المركزة' }}</span>
+                                <div class="small text-muted">{{ $d['days_count'] }} يوم (السنوي {{ $d['total_annual_days_with_current'] }}/{{ $d['annual_max_days'] }})</div>
+                            </td>
+                            <td class="font-monospace text-info fw-bold">{{ number_format($d['bundled_reference_total']) }} د.ع</td>
+                            <td class="font-monospace">{{ number_format($d['patient_grand_total']) }} د.ع</td>
+                            <td class="font-monospace text-success fw-bold">{{ number_format($d['insurance_grand_total']) }} د.ع</td>
+                            <td class="font-monospace">{{ number_format($d['hia_collected_amount']) }} د.ع</td>
+                            <td class="font-monospace text-danger fw-bold">{{ number_format($d['hia_remaining_balance']) }} د.ع</td>
+                            <td class="text-nowrap">
+                                <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-sm btn-outline-primary py-0 px-2">التفصيل والتحصيل</a>
+                                <a href="{{ route('cashier.ccu.itemized-receipt.print', $adm->id) }}" target="_blank" class="btn btn-sm btn-outline-dark py-0 px-2">طباعة المطالبة</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 </div>
 
 <style>

@@ -676,6 +676,20 @@ class LabStaffController extends Controller
                     ]);
             }
 
+            if ($request->icu_admission_id) {
+                \App\Models\IcuMedicalOrder::where('order_group_id', 'REQ-'.$request->id)
+                    ->orWhere(function ($q) use ($request) {
+                        $q->where('icu_admission_id', $request->icu_admission_id)
+                            ->where('order_type', 'lab')
+                            ->where('status', '!=', 'completed');
+                    })
+                    ->update([
+                        'status' => 'completed',
+                        'completed_at' => now(),
+                        'completed_by' => auth()->id(),
+                    ]);
+            }
+
             try {
                 app(\App\Services\TelegramService::class)->sendResultsReady($request);
             } catch (\Throwable $te) {

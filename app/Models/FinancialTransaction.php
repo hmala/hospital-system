@@ -38,6 +38,7 @@ class FinancialTransaction extends Model
         'radiology' => 'إيراد الأشعة والتصوير',
         'surgery' => 'إيراد العمليات الجراحية',
         'nicu' => 'إيراد الخدج والحاضنات (NICU)',
+        'icu' => 'إيراد العناية المركزة (ICU)',
         'general_income' => 'إيرادات وتحصيلات عامة',
 
         // المصروفات والمسترجعات (Outflows)

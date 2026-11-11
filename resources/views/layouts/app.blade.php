@@ -1154,9 +1154,11 @@
                                                  request()->routeIs('cashier.nicu.statements') ||
                                                  request()->routeIs('cashier.nicu.doctor-accounts') ||
                                                  request()->routeIs('cashier.nicu.doctor-account');
+                            $isCcuAccountsActive = request()->routeIs('accountant.ccu.analytics') ||
+                                                request()->routeIs('cashier.ccu.*');
                             $isSurgeryAccountsActive = request()->routeIs('cashier.surgeries.doctor-accounts*');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive;
+                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive || $isCcuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1325,6 +1327,37 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.nicu.doctor-accounts') || request()->routeIs('cashier.nicu.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.nicu.doctor-accounts') }}">
                                     <i class="fas fa-wallet text-info"></i><span> حسابات أطباء الخدج</span>
+                                </a>
+                            </li>
+                            @endcan
+                        </div>
+                        @endcanany
+
+                        <!-- القسم الفرعي: العناية المركزة للكبار (CCU) -->
+                        @canany(['view ccu analytics', 'view ccu financial movements', 'view ccu statements', 'manage ccu services'])
+                        <div class="sidebar-section-title {{ $isCcuAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#ccuAccountingSubSection" aria-expanded="{{ $isCcuAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
+                            <span><i class="fas fa-heartbeat me-1"></i> حسابات العناية المركزة (CCU)</span>
+                            <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="collapse {{ $isCcuAccountsActive ? 'show' : '' }} ps-2" id="ccuAccountingSubSection">
+                            @can('view ccu analytics')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('accountant.ccu.analytics') ? 'active' : '' }}" href="{{ route('accountant.ccu.analytics') }}">
+                                    <i class="fas fa-chart-pie text-danger"></i><span> تحليلات وإحصاءات CCU</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view ccu financial movements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.ccu.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.ccu.financial-movements') }}">
+                                    <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية لـ CCU</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view ccu statements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.ccu.statements') ? 'active' : '' }}" href="{{ route('cashier.ccu.statements') }}">
+                                    <i class="fas fa-file-invoice-dollar text-danger"></i><span> كشوفات ومطالبات CCU</span>
                                 </a>
                             </li>
                             @endcan
@@ -1624,6 +1657,56 @@
                                     <i class="fas fa-tags text-warning"></i><span> تسعير وباقات خدمات الخدج</span>
                                 </a>
                             </li>
+                        </div>
+                        @endcanany
+
+                        <!-- وحدة العناية المركزة (ICU / CCU) -->
+                        @canany(['view icu radar', 'manage icu beds', 'admit icu patients'])
+                        @php
+                            $isIcuActive = request()->routeIs('icu.*') || request()->routeIs('ccu.services.*');
+                            $occupiedIcuCount = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('icu_beds')) {
+                                $occupiedIcuCount = \App\Models\IcuBed::where('status', 'occupied')->count();
+                            }
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isIcuActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#icuSection" aria-expanded="{{ $isIcuActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-heartbeat text-danger"></i> العناية المركزة (ICU)</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isIcuActive ? 'show' : '' }}" id="icuSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('icu.index') ? 'active' : '' }}" href="{{ route('icu.index') }}">
+                                    <i class="fas fa-satellite-dish text-danger"></i><span> رادار العناية الحية</span>
+                                    @if($occupiedIcuCount > 0)
+                                        <span class="badge bg-danger ms-auto">{{ $occupiedIcuCount }} راقد</span>
+                                    @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('icu.admissions.create') ? 'active' : '' }}" href="{{ route('icu.admissions.create') }}">
+                                    <i class="fas fa-user-plus text-success"></i><span> دخول وتسكين مريض</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('icu.beds.*') ? 'active' : '' }}" href="{{ route('icu.beds.index') }}">
+                                    <i class="fas fa-bed text-primary"></i><span> إدارة وتوزيع الأسرة</span>
+                                </a>
+                            </li>
+                            @can('manage ccu services')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('ccu.services.*') ? 'active' : '' }}" href="{{ route('ccu.services.index') }}">
+                                    <i class="fas fa-sliders-h text-warning"></i><span> أسعار وشرائح العناية (CCU)</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view ccu statements')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('cashier.ccu.statements') ? 'active' : '' }}" href="{{ route('cashier.ccu.statements') }}">
+                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> كشوفات وحسابات CCU</span>
+                                </a>
+                            </li>
+                            @endcan
                         </div>
                         @endcanany
 

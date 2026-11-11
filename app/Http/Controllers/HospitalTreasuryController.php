@@ -166,8 +166,19 @@ class HospitalTreasuryController extends Controller
         $nicuClaimsAmount = (float) $nicuClaimsQuery->sum('insurance_share_amount');
         $nicuClaimsCount = (int) (clone $nicuClaimsQuery)->where('insurance_share_amount', '>', 0)->count();
 
-        $periodInsuranceClaims = $paymentClaimsAmount + $nicuClaimsAmount;
-        $periodInsuranceClaimsCount = $paymentClaimsCount + $nicuClaimsCount;
+        // مطالبات وتصفيات العناية المركزة للكبار (CCU / ICU) المشمولة بالضمان
+        $icuClaimsQuery = \App\Models\IcuAdmission::where('is_insured', true);
+        if ($request->filled('from_date')) {
+            $icuClaimsQuery->whereDate('admission_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $icuClaimsQuery->whereDate('admission_date', '<=', $request->to_date);
+        }
+        $icuClaimsAmount = (float) $icuClaimsQuery->sum('insurance_share_amount');
+        $icuClaimsCount = (int) (clone $icuClaimsQuery)->where('insurance_share_amount', '>', 0)->count();
+
+        $periodInsuranceClaims = $paymentClaimsAmount + $nicuClaimsAmount + $icuClaimsAmount;
+        $periodInsuranceClaimsCount = $paymentClaimsCount + $nicuClaimsCount + $icuClaimsCount;
 
         // مستحقات الأطباء المعلقة (التزامات غير مدفوعة حتى الآن)
         $pendingDuesQuery = DoctorDue::where('status', 'pending');
@@ -282,6 +293,14 @@ class HospitalTreasuryController extends Controller
                 'text_class' => 'text-info',
                 'border_class' => 'border-info-subtle',
             ],
+            'icu' => [
+                'name' => 'العناية المركزة للكبار (CCU / ICU)',
+                'icon' => 'fa-heartbeat',
+                'color' => '#e11d48', // Crimson Rose
+                'bg_class' => 'bg-danger-subtle',
+                'text_class' => 'text-danger',
+                'border_class' => 'border-danger-subtle',
+            ],
             'general_income' => [
                 'name' => 'إيرادات وتحصيلات عامة',
                 'icon' => 'fa-coins',
@@ -395,6 +414,30 @@ class HospitalTreasuryController extends Controller
                     $nicuResQ->whereDate('admission_date', '<=', $request->to_date);
                 }
                 $insuranceClaims = (float) $nicuResQ->sum('insurance_share_amount');
+                $accrualGross = $cashGross + $insuranceClaims;
+                $costs = 0;
+                $net = $accrualGross;
+            } elseif ($catKey === 'icu') {
+                $ccuPayQ = \App\Models\CcuPayment::where('financial_status', 'paid');
+                if ($request->filled('from_date')) {
+                    $ccuPayQ->whereDate('paid_at', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $ccuPayQ->whereDate('paid_at', '<=', $request->to_date);
+                }
+                $count = (int) $ccuPayQ->count();
+                $received = (float) (clone $ccuPayQ)->where('payment_type', '!=', \App\Models\CcuPayment::TYPE_REFUND)->sum('amount');
+                $refunded = (float) (clone $ccuPayQ)->where('payment_type', \App\Models\CcuPayment::TYPE_REFUND)->sum('amount');
+                $cashGross = max(0.0, $received - $refunded);
+
+                $icuAdmQ = \App\Models\IcuAdmission::where('is_insured', true);
+                if ($request->filled('from_date')) {
+                    $icuAdmQ->whereDate('admission_date', '>=', $request->from_date);
+                }
+                if ($request->filled('to_date')) {
+                    $icuAdmQ->whereDate('admission_date', '<=', $request->to_date);
+                }
+                $insuranceClaims = (float) $icuAdmQ->sum('insurance_share_amount');
                 $accrualGross = $cashGross + $insuranceClaims;
                 $costs = 0;
                 $net = $accrualGross;

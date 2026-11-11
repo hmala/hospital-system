@@ -377,7 +377,12 @@
                                                 <th>اسم التحليل</th>
                                                 <th>تاريخ الطلب</th>
                                                 <th>الحالة السريرية</th>
-                                                <th class="text-end pe-3">التكلفة</th>
+                                                <th class="text-end">السعر الكامل</th>
+                                                @if($isInsured)
+                                                    <th class="text-center">حالة التغطية</th>
+                                                    <th class="text-end text-success">مساهمة الضمان</th>
+                                                    <th class="text-end pe-3 text-primary">تحمل المريض (كاش)</th>
+                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -396,10 +401,34 @@
                                                             <span class="badge bg-warning-subtle text-warning border border-warning-subtle">قيد الفحص</span>
                                                         @endif
                                                     </td>
-                                                    <td class="font-monospace text-end pe-3 fw-bold">{{ number_format((float)$order->price, 0) }} د.ع</td>
+                                                    <td class="font-monospace text-end fw-bold">{{ number_format((float)$order->price, 0) }} د.ع</td>
+                                                    @if($isInsured)
+                                                        <td class="text-center">
+                                                            <span class="badge {{ $order->coverage_badge_class ?? 'bg-secondary' }}">
+                                                                {{ $order->coverage_status_text ?? 'نقدي' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="font-monospace text-end fw-bold text-success">
+                                                            {{ number_format((float)($order->insurance_share ?? 0), 0) }} د.ع
+                                                        </td>
+                                                        <td class="font-monospace text-end pe-3 fw-bold text-primary">
+                                                            {{ number_format((float)($order->patient_share ?? $order->price), 0) }} د.ع
+                                                        </td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                         </tbody>
+                                        @if($isInsured)
+                                            <tfoot class="table-light small">
+                                                <tr class="fw-bold">
+                                                    <td colspan="3" class="text-end">مجموع أجور المختبر:</td>
+                                                    <td class="text-end font-monospace">{{ number_format($stayDetails['total_lab_cost'] ?? 0, 0) }} د.ع</td>
+                                                    <td>-</td>
+                                                    <td class="text-end font-monospace text-success">{{ number_format($stayDetails['insurance_lab_share'] ?? 0, 0) }} د.ع</td>
+                                                    <td class="text-end pe-3 font-monospace text-primary">{{ number_format($stayDetails['patient_lab_share'] ?? 0, 0) }} د.ع</td>
+                                                </tr>
+                                            </tfoot>
+                                        @endif
                                     </table>
                                 </div>
                             @endif
@@ -416,7 +445,12 @@
                                                 <th>نوع الفحص</th>
                                                 <th>تاريخ الطلب</th>
                                                 <th>الحالة السريرية</th>
-                                                <th class="text-end pe-3">التكلفة</th>
+                                                <th class="text-end">السعر الكامل</th>
+                                                @if($isInsured)
+                                                    <th class="text-center">حالة التغطية</th>
+                                                    <th class="text-end text-success">مساهمة الضمان</th>
+                                                    <th class="text-end pe-3 text-primary">تحمل المريض (كاش)</th>
+                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -435,10 +469,34 @@
                                                             <span class="badge bg-warning-subtle text-warning border border-warning-subtle">قيد الإجراء</span>
                                                         @endif
                                                     </td>
-                                                    <td class="font-monospace text-end pe-3 fw-bold">{{ number_format((float)$order->price, 0) }} د.ع</td>
+                                                    <td class="font-monospace text-end fw-bold">{{ number_format((float)$order->price, 0) }} د.ع</td>
+                                                    @if($isInsured)
+                                                        <td class="text-center">
+                                                            <span class="badge {{ $order->coverage_badge_class ?? 'bg-secondary' }}">
+                                                                {{ $order->coverage_status_text ?? 'نقدي' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="font-monospace text-end fw-bold text-success">
+                                                            {{ number_format((float)($order->insurance_share ?? 0), 0) }} د.ع
+                                                        </td>
+                                                        <td class="font-monospace text-end pe-3 fw-bold text-primary">
+                                                            {{ number_format((float)($order->patient_share ?? $order->price), 0) }} د.ع
+                                                        </td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                         </tbody>
+                                        @if($isInsured)
+                                            <tfoot class="table-light small">
+                                                <tr class="fw-bold">
+                                                    <td colspan="3" class="text-end">مجموع أجور الأشعة:</td>
+                                                    <td class="text-end font-monospace">{{ number_format($stayDetails['total_radiology_cost'] ?? 0, 0) }} د.ع</td>
+                                                    <td>-</td>
+                                                    <td class="text-end font-monospace text-success">{{ number_format($stayDetails['insurance_radiology_share'] ?? 0, 0) }} د.ع</td>
+                                                    <td class="text-end pe-3 font-monospace text-primary">{{ number_format($stayDetails['patient_radiology_share'] ?? 0, 0) }} د.ع</td>
+                                                </tr>
+                                            </tfoot>
+                                        @endif
                                     </table>
                                 </div>
                             @endif
@@ -455,7 +513,12 @@
                                                 <th>الطبيب المستشار</th>
                                                 <th>الاختصاص الطبي</th>
                                                 <th>الحالة</th>
-                                                <th class="text-end pe-3">الأجور المقررة</th>
+                                                <th class="text-end">الأجرة</th>
+                                                @if($isInsured)
+                                                    <th class="text-center">حالة التغطية</th>
+                                                    <th class="text-end text-success">مساهمة الضمان</th>
+                                                    <th class="text-end pe-3 text-primary">تحمل المريض (كاش)</th>
+                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -472,10 +535,34 @@
                                                             <span class="badge bg-warning-subtle text-warning border border-warning-subtle">مطلوب</span>
                                                         @endif
                                                     </td>
-                                                    <td class="font-monospace text-end pe-3 fw-bold">{{ number_format((float)$cons->fee, 0) }} د.ع</td>
+                                                    <td class="font-monospace text-end fw-bold">{{ number_format((float)$cons->fee, 0) }} د.ع</td>
+                                                    @if($isInsured)
+                                                        <td class="text-center">
+                                                            <span class="badge {{ $cons->coverage_badge_class ?? 'bg-secondary' }}">
+                                                                {{ $cons->coverage_status_text ?? 'نقدي' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="font-monospace text-end fw-bold text-success">
+                                                            {{ number_format((float)($cons->insurance_share ?? 0), 0) }} د.ع
+                                                        </td>
+                                                        <td class="font-monospace text-end pe-3 fw-bold text-primary">
+                                                            {{ number_format((float)($cons->patient_share ?? $cons->fee), 0) }} د.ع
+                                                        </td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                         </tbody>
+                                        @if($isInsured)
+                                            <tfoot class="table-light small">
+                                                <tr class="fw-bold">
+                                                    <td colspan="3" class="text-end">مجموع أجور الاستشارات:</td>
+                                                    <td class="text-end font-monospace">{{ number_format($stayDetails['total_consultations_cost'] ?? 0, 0) }} د.ع</td>
+                                                    <td>-</td>
+                                                    <td class="text-end font-monospace text-success">{{ number_format($stayDetails['insurance_consultations_share'] ?? 0, 0) }} د.ع</td>
+                                                    <td class="text-end pe-3 font-monospace text-primary">{{ number_format($stayDetails['patient_consultations_share'] ?? 0, 0) }} د.ع</td>
+                                                </tr>
+                                            </tfoot>
+                                        @endif
                                     </table>
                                 </div>
                             @endif

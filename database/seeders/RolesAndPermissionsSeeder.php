@@ -76,6 +76,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nicu financial movements',  // عرض الحركات والقيود المالية للخدج
             'view nicu statements',           // عرض كشوفات حسابات الخدج
             'view nicu doctor accounts',      // عرض وصرف حسابات أطباء الخدج
+            'view ccu analytics',             // عرض تحليلات وإحصاءات العناية المركزة CCU
+            'view ccu financial movements',   // عرض الحركات والقيود المالية للعناية المركزة CCU
+            'view ccu statements',            // عرض كشوفات حسابات ومطالبات العناية المركزة CCU
+            'manage ccu services',            // إدارة أسعار وباقات وشرائح العناية المركزة الداينمك
+            'switch ccu services',            // تبديل باقة الرعاية والخدمة أثناء الرقود في CCU
+            'edit ccu diagnosis',             // تحديد وتعديل التشخيص الأولي والوعي GCS بالطبلة
 
             // صلاحيات الزيارات
             'view visits',
@@ -122,6 +128,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage nicu delivery radar settings',
             'manage nicu clinical',
             'manage nicu nursing',
+
+            // صلاحيات وحدة العناية المركزة (ICU)
+            'view icu radar',
+            'manage icu beds',
+            'admit icu patients',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu medical orders',
+            'manage icu care plans',
+            'discharge icu patients',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -334,6 +350,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage incubator reservations',
             'print nicu cards',
             'manage nicu baby cam',
+            // صلاحيات استعلامات وحجز العناية المركزة (ICU)
+            'view icu radar',
+            'admit icu patients',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -394,6 +413,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nicu financial movements',
             'view nicu statements',
             'view nicu doctor accounts',
+            'view ccu analytics',
+            'view ccu financial movements',
+            'view ccu statements',
+            'manage ccu services',
             'manage doctor commissions',
             'view patients',
             'review surgery prices',
@@ -603,6 +626,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view appointments',
             'view departments',
             'view doctors',
+            'view icu radar',
+            'admit icu patients',
         ]);
 
         // دور موظف عام (Staff)
@@ -664,6 +689,32 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage nicu baby cam',
             'view patients',
             'manage nicu nursing',
+        ]);
+
+        // دور طبيب العناية المركزة (ICU Doctor)
+        $icuDoctorRole = Role::firstOrCreate(['name' => 'icu_doctor']);
+        $icuDoctorRole->givePermissionTo([
+            'view icu radar',
+            'manage icu beds',
+            'admit icu patients',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu medical orders',
+            'manage icu care plans',
+            'discharge icu patients',
+            'switch ccu services',
+            'edit ccu diagnosis',
+            'view patients',
+        ]);
+
+        // دور تمريض العناية المركزة (ICU Nurse)
+        $icuNurseRole = Role::firstOrCreate(['name' => 'icu_nurse']);
+        $icuNurseRole->givePermissionTo([
+            'view icu radar',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu care plans',
+            'view patients',
         ]);
 
         // دور مدير الموارد البشرية (HR Manager)
