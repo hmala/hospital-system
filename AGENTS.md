@@ -54,6 +54,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-11 — المرحلة 188: إضافة خيار خروج "خرج متوفي" (`deceased`) في محطة الطوارئ وسجل الحالات والتقرير الطبي والتحقق Emergency Deceased Discharge Option, Reports & Financial Clearance Parity)
+
+### Done
+- **الكنترولر ومنطق الخروج ([app/Http/Controllers/EmergencyController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إضافة `deceased` لقواعد التحقق في `EmergencyController::discharge` بنفس شرط إبراء الذمة المالية (`getUnpaidAmount()`) المطبق على بقية أنواع الخروج.
+  * ضبط الوجهة الافتراضية (`خرج متوفي`) والتوصيات الافتراضية (`توثيق حالة الوفاة واستكمال الإجراءات الرسمية`) وشارة التسمية (`خرج متوفي`) بدلاً من التوصية الافتراضية الخاصة بالعيادة الخارجية.
+- **الواجهات وسجل الحالات والتقارير ([resources/views/emergency/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/show.blade.php), [resources/views/emergency/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/index.blade.php), [resources/views/emergency/medical-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/medical-report.blade.php), [resources/views/emergency/verify-report.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/emergency/verify-report.blade.php))**:
+  * إضافة زر `خرج متوفي` داخل قائمة تسجيل الخروج في محطة كشف الطوارئ (`emergency.show`) مع رسالة تأكيد وشارة حالة داكنة مميزة بعد التسجيل.
+  * دعم شارة وتمييز صفوف حالات `deceased` في سجل الطوارئ (`emergency.index`) والتقرير الطبي للطوارئ وصفحة التحقق عبر رمز QR.
+- **الاختبارات الآلية ([tests/Feature/EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php))**:
+  * إضافة اختبار `test_emergency_discharge_deceased_workflow_and_renders_across_views` والتحقق من منع `deceased` عند وجود مستحقات غير مدفوعة، واجتياز حزمة اختبارات الطوارئ بالكامل (`25 passed, 139 assertions`).
+
 ## Session log (2026-11-10 — المرحلة 187: إعادة هندسة ومطابقة واجهتي حجز وتعديل العمليات الجراحية بنظام بيئة العمل ثنائية الأعمدة والحفظ التلقائي للخدمات الإضافية في دليل المستشفى Surgery Create & Edit Split-Workspace & Auto-Persist Extra Services Catalog)
 
 ### Done

@@ -175,7 +175,7 @@
                             </thead>
                             <tbody>
                                 @forelse($emergencies as $emergency)
-                                <tr class="{{ $emergency->status === 'discharged' ? ($emergency->discharge_type === 'against_medical_advice' ? 'table-secondary opacity-75' : ($emergency->discharge_type === 'transferred_to_consultation' ? 'table-info table-opacity-25' : 'table-light')) : ($emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '')))) }}">
+                                <tr class="{{ $emergency->status === 'discharged' ? ($emergency->discharge_type === 'against_medical_advice' || $emergency->discharge_type === 'deceased' ? 'table-secondary opacity-75' : ($emergency->discharge_type === 'transferred_to_consultation' ? 'table-info table-opacity-25' : 'table-light')) : ($emergency->payment_status == 'paid' ? 'table-success' : ($emergency->payment_status == 'pending' ? 'table-danger' : ($emergency->priority == 'critical' ? 'table-danger' : ($emergency->priority == 'high' ? 'table-warning' : '')))) }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
@@ -254,6 +254,10 @@
                                                 @elseif($emergency->discharge_type === 'transferred_to_consultation')
                                                     <span class="badge bg-info text-dark px-2 py-1 shadow-sm fw-bold" title="تحويل للاستشارية">
                                                         <i class="fas fa-clinic-medical me-1"></i> تحويل للاستشارية
+                                                    </span>
+                                                @elseif($emergency->discharge_type === 'deceased')
+                                                    <span class="badge bg-dark text-white px-2 py-1 shadow-sm fw-bold" title="خرج متوفي">
+                                                        <i class="fas fa-heart-broken me-1 text-danger"></i> خرج متوفي
                                                     </span>
                                                 @else
                                                     <span class="badge bg-secondary text-white px-2 py-1 shadow-sm">

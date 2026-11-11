@@ -636,6 +636,8 @@
     if (empty($dischargeDestination)) {
         if ($emergency->discharge_type === 'transferred_to_consultation') {
             $dischargeDestination = 'تحويل للاستشارية';
+        } elseif ($emergency->discharge_type === 'deceased') {
+            $dischargeDestination = 'خرج متوفي';
         } elseif ($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery') {
             $dischargeDestination = 'صالة العمليات الجراحية';
         } elseif ($emergency->requires_admission || $emergency->status === 'transferred_to_admission') {
@@ -652,6 +654,8 @@
         $dischargeStatusBadge = 'خروج على مسؤولية المريض أو ذويه';
     } elseif ($emergency->discharge_type === 'transferred_to_consultation') {
         $dischargeStatusBadge = 'تحويل رسمي للعيادات الاستشارية';
+    } elseif ($emergency->discharge_type === 'deceased') {
+        $dischargeStatusBadge = 'خرج متوفي (تم تسجيل الوفاة في الطوارئ)';
     } elseif ($emergency->status !== 'discharged') {
         $dischargeStatusBadge = 'الحالة تحت المتابعة والعلاج';
     }

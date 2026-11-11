@@ -260,6 +260,8 @@
                         <span style="color: #b45309; font-weight: 800;">خروج على مسؤولية المريض</span>
                     @elseif($emergency->discharge_type === 'transferred_to_consultation')
                         <span style="color: #0369a1; font-weight: 800;">تحويل للعيادات الاستشارية</span>
+                    @elseif($emergency->discharge_type === 'deceased')
+                        <span style="color: #1e293b; font-weight: 800;">خرج متوفي</span>
                     @elseif($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery')
                         <span style="color: #b91c1c; font-weight: 800;">تحويل لصالة العمليات</span>
                     @elseif($emergency->requires_admission || $emergency->status === 'transferred_to_admission')
