@@ -76,6 +76,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nicu financial movements',  // عرض الحركات والقيود المالية للخدج
             'view nicu statements',           // عرض كشوفات حسابات الخدج
             'view nicu doctor accounts',      // عرض وصرف حسابات أطباء الخدج
+            'view ccu analytics',             // عرض تحليلات وإحصاءات العناية المركزة CCU
+            'view ccu financial movements',   // عرض الحركات والقيود المالية للعناية المركزة CCU
+            'view ccu statements',            // عرض كشوفات حسابات ومطالبات العناية المركزة CCU
+            'manage ccu services',            // إدارة أسعار وباقات وشرائح العناية المركزة الداينمك
+            'switch ccu services',            // تبديل باقة الرعاية والخدمة أثناء الرقود في CCU
+            'edit ccu diagnosis',             // تحديد وتعديل التشخيص الأولي والوعي GCS بالطبلة
 
             // صلاحيات الزيارات
             'view visits',
@@ -97,17 +103,41 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage rooms',
             'view bed reservations',
             'create bed reservations',
+            // صلاحيات قسم الخدج والحاضنات (NICU)
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
-            'manage nicu clinical',
-            'manage nicu nursing',
+            'manage nicu services',
+            'manage nicu incubators',
+            'order nicu lab tests',
+            'order nicu radiology',
+            'manage nicu prescriptions',
+            'manage nicu consultations',
+            'switch nicu services',
+            'edit nicu clinical profile',
+            'record nicu vitals',
+            'administer nicu medications',
             'manage nicu care plans',
             'manage nicu doctor notes',
             'manage nicu attachments',
+            'view nicu archive',
             'discharge incubator reservations',
+            'manage nicu baby cam',
+            'print nicu cards',
             'view nicu delivery radar',
             'manage nicu delivery radar settings',
+            'manage nicu clinical',
+            'manage nicu nursing',
+
+            // صلاحيات وحدة العناية المركزة (ICU)
+            'view icu radar',
+            'manage icu beds',
+            'admit icu patients',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu medical orders',
+            'manage icu care plans',
+            'discharge icu patients',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -227,12 +257,26 @@ class RolesAndPermissionsSeeder extends Seeder
             // صلاحيات عرض المرضى المقيمين
             'view occupancy',
 
-            // صلاحيات الموارد البشرية (HR)
+            // صلاحيات الموارد البشرية والرواتب (HR & Payroll)
             'view hr',
             'view employees',
             'create employees',
             'edit employees',
             'delete employees',
+            'print employee badges',
+            'manage hr documents',
+            'manage hr actions',
+            'view hr payroll',
+            'create hr payroll',
+            'approve hr payroll',
+            'delete hr payroll',
+            'print hr payslips',
+            'manage hr loans',
+            'manage hr absences',
+            'manage hr overtime',
+            'manage hr shifts',
+            'manage hr schedules',
+            'manage hr settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -300,17 +344,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage rooms',
             'view bed reservations',
             'create bed reservations',
+            // صلاحيات حجز واستقبال الخدج (الاستعلامات)
             'view incubator reservations',
             'create incubator reservations',
             'manage incubator reservations',
-            'manage nicu clinical',
-            'manage nicu nursing',
-            'manage nicu care plans',
-            'manage nicu doctor notes',
-            'manage nicu attachments',
-            'discharge incubator reservations',
-            'view nicu delivery radar',
-            'manage nicu delivery radar settings',
+            'print nicu cards',
+            'manage nicu baby cam',
+            // صلاحيات استعلامات وحجز العناية المركزة (ICU)
+            'view icu radar',
+            'admit icu patients',
             'view resident station',
             'view operation theater station',
             'view surgeon station',
@@ -371,6 +413,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nicu financial movements',
             'view nicu statements',
             'view nicu doctor accounts',
+            'view ccu analytics',
+            'view ccu financial movements',
+            'view ccu statements',
+            'manage ccu services',
             'manage doctor commissions',
             'view patients',
             'review surgery prices',
@@ -580,6 +626,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view appointments',
             'view departments',
             'view doctors',
+            'view icu radar',
+            'admit icu patients',
         ]);
 
         // دور موظف عام (Staff)
@@ -605,41 +653,92 @@ class RolesAndPermissionsSeeder extends Seeder
         $nicuDoctorRole = Role::firstOrCreate(['name' => 'nicu_doctor']);
         $nicuDoctorRole->givePermissionTo([
             'view incubator reservations',
-            'create incubator reservations',
-            'manage incubator reservations',
-            'manage nicu clinical',
-            'manage nicu care plans',
+            'order nicu lab tests',
+            'order nicu radiology',
+            'manage nicu prescriptions',
+            'manage nicu consultations',
+            'switch nicu services',
+            'edit nicu clinical profile',
             'manage nicu doctor notes',
-            'manage nicu attachments',
+            'manage nicu care plans',
             'discharge incubator reservations',
             'view nicu delivery radar',
-            'manage nicu delivery radar settings',
+            'view nicu archive',
+            'manage nicu attachments',
+            'print nicu cards',
+            'manage nicu baby cam',
             'view patients',
             'view lab test groups',
             'create lab test groups',
             'edit lab test groups',
             'delete lab test groups',
+            'manage nicu clinical',
         ]);
 
         // دور تمريض الخدج (NICU Nurse)
         $nicuNurseRole = Role::firstOrCreate(['name' => 'nicu_nurse']);
         $nicuNurseRole->givePermissionTo([
             'view incubator reservations',
-            'manage nicu nursing',
+            'record nicu vitals',
+            'administer nicu medications',
             'manage nicu care plans',
-            'manage nicu attachments',
             'view nicu delivery radar',
+            'view nicu archive',
+            'manage nicu attachments',
+            'print nicu cards',
+            'manage nicu baby cam',
+            'view patients',
+            'manage nicu nursing',
+        ]);
+
+        // دور طبيب العناية المركزة (ICU Doctor)
+        $icuDoctorRole = Role::firstOrCreate(['name' => 'icu_doctor']);
+        $icuDoctorRole->givePermissionTo([
+            'view icu radar',
+            'manage icu beds',
+            'admit icu patients',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu medical orders',
+            'manage icu care plans',
+            'discharge icu patients',
+            'switch ccu services',
+            'edit ccu diagnosis',
+            'view patients',
+        ]);
+
+        // دور تمريض العناية المركزة (ICU Nurse)
+        $icuNurseRole = Role::firstOrCreate(['name' => 'icu_nurse']);
+        $icuNurseRole->givePermissionTo([
+            'view icu radar',
+            'record icu vitals',
+            'record icu fluid balance',
+            'manage icu care plans',
             'view patients',
         ]);
 
         // دور مدير الموارد البشرية (HR Manager)
         $hrManagerRole = Role::firstOrCreate(['name' => 'hr_manager']);
-        $hrManagerRole->givePermissionTo([
+        $hrManagerRole->syncPermissions([
             'view hr',
             'view employees',
             'create employees',
             'edit employees',
             'delete employees',
+            'print employee badges',
+            'manage hr documents',
+            'manage hr actions',
+            'view hr payroll',
+            'create hr payroll',
+            'approve hr payroll',
+            'delete hr payroll',
+            'print hr payslips',
+            'manage hr loans',
+            'manage hr absences',
+            'manage hr overtime',
+            'manage hr shifts',
+            'manage hr schedules',
+            'manage hr settings',
             'view departments',
         ]);
 

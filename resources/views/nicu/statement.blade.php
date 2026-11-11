@@ -178,6 +178,11 @@
                             <th>الطبيب والتخصص</th>
                             <th>موضوع الفحص</th>
                             <th class="text-end">الأجرة</th>
+                            @if($stayDetails['is_insured'])
+                                <th class="text-center">حالة التغطية</th>
+                                <th class="text-end table-success text-success">مساهمة الضمان</th>
+                                <th class="text-end table-warning text-dark">تحمل المريض (كاش)</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -190,12 +195,30 @@
                                 </td>
                                 <td>{{ $con->doctor_display_name }} ({{ $con->specialty }})</td>
                                 <td class="small">{{ $con->reason }}</td>
-                                <td class="text-end fw-bold text-success">{{ number_format($con->fee) }} د.ع</td>
+                                <td class="text-end fw-bold">{{ number_format($con->fee) }} د.ع</td>
+                                @if($stayDetails['is_insured'])
+                                    <td class="text-center">
+                                        <span class="badge {{ $con->coverage_badge_class ?? 'bg-secondary' }}">
+                                            {{ $con->coverage_status_text ?? 'نقدي' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ number_format($con->insurance_share ?? 0) }} د.ع
+                                    </td>
+                                    <td class="text-end fw-bold text-primary">
+                                        {{ number_format($con->patient_share ?? $con->fee) }} د.ع
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                         <tr class="table-light">
                             <td colspan="3" class="fw-bold text-end">مجموع أجور الاستشارات:</td>
-                            <td class="text-end fw-bold text-success">{{ number_format($stayDetails['total_consultations_cost']) }} د.ع</td>
+                            <td class="text-end fw-bold">{{ number_format($stayDetails['total_consultations_cost']) }} د.ع</td>
+                            @if($stayDetails['is_insured'])
+                                <td class="text-center fw-bold small text-muted">-</td>
+                                <td class="text-end fw-bold text-success fs-6">{{ number_format($stayDetails['insurance_consultations_share'] ?? 0) }} د.ع</td>
+                                <td class="text-end fw-bold text-primary fs-6">{{ number_format($stayDetails['patient_consultations_share'] ?? $stayDetails['total_consultations_cost']) }} د.ع</td>
+                            @endif
                         </tr>
                     </tbody>
                 </table>
@@ -213,6 +236,11 @@
                             <th>اسم الفحص أو العلاج</th>
                             <th>الحالة والنتيجة</th>
                             <th class="text-end">السعر</th>
+                            @if($stayDetails['is_insured'])
+                                <th class="text-center">حالة التغطية</th>
+                                <th class="text-end table-success text-success">مساهمة الضمان</th>
+                                <th class="text-end table-warning text-dark">تحمل المريض (كاش)</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -225,21 +253,60 @@
                                 </td>
                                 <td class="fw-bold">{{ $ord->item_name }}</td>
                                 <td class="small text-muted">{{ $ord->result ?? 'تم التنفيذ' }}</td>
-                                <td class="text-end fw-bold text-success">{{ number_format($ord->price) }} د.ع</td>
+                                <td class="text-end fw-bold">{{ number_format($ord->price) }} د.ع</td>
+                                @if($stayDetails['is_insured'])
+                                    <td class="text-center">
+                                        <span class="badge {{ $ord->coverage_badge_class ?? 'bg-secondary' }}">
+                                            {{ $ord->coverage_status_text ?? 'نقدي' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ number_format($ord->insurance_share ?? 0) }} د.ع
+                                    </td>
+                                    <td class="text-end fw-bold text-primary">
+                                        {{ number_format($ord->patient_share ?? $ord->price) }} د.ع
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
-                        <tr class="table-light">
-                            <td colspan="3" class="fw-bold text-end">مجموع الفحوصات والعلاجات:</td>
-                            <td class="text-end fw-bold text-success">{{ number_format($stayDetails['total_orders_cost']) }} د.ع</td>
+
+                        @if($stayDetails['is_insured'] && ($stayDetails['total_lab_cost'] ?? 0) > 0)
+                            <tr class="table-light border-top">
+                                <td colspan="3" class="fw-bold text-end text-dark small"><i class="fas fa-vial text-primary me-1"></i> مجموع الفحوصات المخبرية (Labs):</td>
+                                <td class="text-end fw-bold small">{{ number_format($stayDetails['total_lab_cost']) }} د.ع</td>
+                                <td class="text-center small text-muted">-</td>
+                                <td class="text-end fw-bold text-success small">{{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} د.ع</td>
+                                <td class="text-end fw-bold text-primary small">{{ number_format($stayDetails['patient_lab_share'] ?? 0) }} د.ع</td>
+                            </tr>
+                        @endif
+
+                        @if($stayDetails['is_insured'] && ($stayDetails['total_radiology_cost'] ?? 0) > 0)
+                            <tr class="table-light">
+                                <td colspan="3" class="fw-bold text-end text-dark small"><i class="fas fa-radiation text-info me-1"></i> مجموع الفحوصات الإشعاعية (Radiology):</td>
+                                <td class="text-end fw-bold small">{{ number_format($stayDetails['total_radiology_cost']) }} د.ع</td>
+                                <td class="text-center small text-muted">-</td>
+                                <td class="text-end fw-bold text-success small">{{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} د.ع</td>
+                                <td class="text-end fw-bold text-primary small">{{ number_format($stayDetails['patient_radiology_share'] ?? 0) }} د.ع</td>
+                            </tr>
+                        @endif
+
+                        <tr class="table-light border-top border-2">
+                            <td colspan="3" class="fw-bold text-end">مجموع الفحوصات والعلاجات الكاملة:</td>
+                            <td class="text-end fw-bold fs-6">{{ number_format($stayDetails['total_orders_cost']) }} د.ع</td>
+                            @if($stayDetails['is_insured'])
+                                <td class="text-center fw-bold small text-muted">-</td>
+                                <td class="text-end fw-bold text-success fs-6">{{ number_format($stayDetails['insurance_orders_share'] ?? 0) }} د.ع</td>
+                                <td class="text-end fw-bold text-primary fs-6">{{ number_format($stayDetails['patient_orders_share'] ?? $stayDetails['total_orders_cost']) }} د.ع</td>
+                            @endif
                         </tr>
                     </tbody>
                 </table>
             </div>
         @endif
 
-        <!-- 4. جدول الأمانات والمدفوعات المسددة في الصندوق -->
+        <!-- 4. سجل المدفوعات والتسديد في الصندوق -->
         @if(isset($stayDetails['payments']) && $stayDetails['payments']->isNotEmpty())
-            <h5 class="fw-bold text-success mb-2">4. سجل الأمانات والمدفوعات المسددة في الصندوق (Advance Deposits & Payments)</h5>
+            <h5 class="fw-bold text-success mb-2">4. سجل التسديد والمدفوعات في الصندوق (Payments & Settlements)</h5>
             <div class="table-responsive mb-4">
                 <table class="table table-bordered align-middle">
                     <thead class="table-success bg-opacity-10">
@@ -268,7 +335,7 @@
                             </tr>
                         @endforeach
                         <tr class="table-light">
-                            <td colspan="4" class="fw-bold text-end text-success">صافي الأمانات المسددة بعد التسوية والاسترجاع:</td>
+                            <td colspan="4" class="fw-bold text-end text-success">صافي المبالغ المسددة بعد التسوية والاسترجاع:</td>
                             <td class="text-end fw-bold text-success fs-6">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
                         </tr>
                     </tbody>
@@ -278,60 +345,122 @@
 
         <!-- الخلاصة المالية النهائية -->
         <div class="row justify-content-end mb-4">
-            <div class="col-md-6">
-                <div class="border rounded p-3 bg-light">
-                    <div class="d-flex justify-content-between mb-2">
+            <div class="col-md-7">
+                <div class="border rounded p-3 bg-light shadow-2xs">
+                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                        <i class="fas fa-file-invoice-dollar text-primary me-1"></i> الخلاصة المالية الشاملة للفاتورة والتسوية
+                    </h6>
+
+                    <!-- 1. أجور الحاضنة -->
+                    <div class="d-flex justify-content-between mb-1">
                         <span class="text-muted">مجموع الإقامة بالحاضنة:</span>
                         <strong>{{ number_format($stayDetails['total_service_cost']) }} د.ع</strong>
                     </div>
                     @if($stayDetails['is_insured'])
-                        <div class="d-flex justify-content-between mb-2 small text-success">
-                            <span><i class="fas fa-shield-alt me-1"></i> مساهمة الضمان بالحاضنة:</span>
-                            <strong>{{ number_format($stayDetails['insurance_share_total']) }} د.ع</strong>
+                        <div class="d-flex justify-content-between mb-2 small ps-3">
+                            <span class="text-success"><i class="fas fa-shield-alt me-1"></i> مساهمة الضمان بالحاضنة:</span>
+                            <span class="text-success fw-bold">{{ number_format($stayDetails['insurance_share_total']) }} د.ع</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2 small text-primary">
-                            <span><i class="fas fa-user me-1"></i> مساهمة المريض بالحاضنة:</span>
-                            <strong>{{ number_format($stayDetails['patient_share_total']) }} د.ع</strong>
+                        <div class="d-flex justify-content-between mb-2 small ps-3">
+                            <span class="text-primary"><i class="fas fa-user me-1"></i> مساهمة المريض بالحاضنة:</span>
+                            <span class="text-primary fw-bold">{{ number_format($stayDetails['patient_share_total']) }} د.ع</span>
                         </div>
                     @endif
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">مجموع الاستشارات الطبية:</span>
-                        <strong>{{ number_format($stayDetails['total_consultations_cost']) }} د.ع</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">مجموع المختبر والأشعة والأدوية:</span>
-                        <strong>{{ number_format($stayDetails['total_orders_cost']) }} د.ع</strong>
-                    </div>
+
+                    <!-- 2. المختبر -->
+                    @if(($stayDetails['total_lab_cost'] ?? 0) > 0)
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">مجموع الفحوصات المخبرية:</span>
+                            <strong>{{ number_format($stayDetails['total_lab_cost']) }} د.ع</strong>
+                        </div>
+                        @if($stayDetails['is_insured'])
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-success"><i class="fas fa-shield-alt me-1"></i> مساهمة الضمان بالمختبر:</span>
+                                <span class="text-success fw-bold">{{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} د.ع</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-primary"><i class="fas fa-user me-1"></i> مساهمة المريض بالمختبر:</span>
+                                <span class="text-primary fw-bold">{{ number_format($stayDetails['patient_lab_share'] ?? 0) }} د.ع</span>
+                            </div>
+                        @endif
+                    @endif
+
+                    <!-- 3. الأشعة -->
+                    @if(($stayDetails['total_radiology_cost'] ?? 0) > 0)
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">مجموع الفحوصات الإشعاعية:</span>
+                            <strong>{{ number_format($stayDetails['total_radiology_cost']) }} د.ع</strong>
+                        </div>
+                        @if($stayDetails['is_insured'])
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-success"><i class="fas fa-shield-alt me-1"></i> مساهمة الضمان بالأشعة:</span>
+                                <span class="text-success fw-bold">{{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} د.ع</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-primary"><i class="fas fa-user me-1"></i> مساهمة المريض بالأشعة:</span>
+                                <span class="text-primary fw-bold">{{ number_format($stayDetails['patient_radiology_share'] ?? 0) }} د.ع</span>
+                            </div>
+                        @endif
+                    @endif
+
+                    <!-- 4. الاستشارات -->
+                    @if(($stayDetails['total_consultations_cost'] ?? 0) > 0)
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">مجموع الاستشارات الطبية:</span>
+                            <strong>{{ number_format($stayDetails['total_consultations_cost']) }} د.ع</strong>
+                        </div>
+                        @if($stayDetails['is_insured'])
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-success"><i class="fas fa-shield-alt me-1"></i> مساهمة الضمان بالاستشارات:</span>
+                                <span class="text-success fw-bold">{{ number_format($stayDetails['insurance_consultations_share'] ?? 0) }} د.ع</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-primary"><i class="fas fa-user me-1"></i> مساهمة المريض بالاستشارات:</span>
+                                <span class="text-primary fw-bold">{{ number_format($stayDetails['patient_consultations_share'] ?? 0) }} د.ع</span>
+                            </div>
+                        @endif
+                    @endif
+
                     <hr class="my-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fs-6 fw-bold text-muted">إجمالي الفاتورة الكاملة:</span>
+                        <span class="fs-6 fw-bold text-muted">إجمالي الفاتورة الكاملة (Grand Total):</span>
                         <span class="fs-5 fw-bold text-dark">{{ number_format($stayDetails['grand_total']) }} د.ع</span>
                     </div>
+
                     @if($stayDetails['is_insured'])
-                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-success bg-opacity-10 rounded">
-                            <span class="fw-bold text-success"><i class="fas fa-file-invoice me-1"></i> مطالبة هيئة الضمان الصحي:</span>
-                            <span class="fs-5 fw-bold text-success">{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-success bg-opacity-10 rounded border border-success border-opacity-25">
+                            <div>
+                                <span class="fw-bold text-success d-block"><i class="fas fa-file-invoice me-1"></i> إجمالي مطالبة هيئة الضمان الصحي:</span>
+                                <small class="text-muted">(حاضنة {{ number_format($stayDetails['insurance_share_total']) }} + مختبر {{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} + أشعة {{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} + استشارات {{ number_format($stayDetails['insurance_consultations_share'] ?? 0) }})</small>
+                            </div>
+                            <span class="fs-5 fw-bold text-success font-monospace">{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</span>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center p-2 bg-primary bg-opacity-10 rounded mb-2">
-                            <span class="fw-bold text-primary"><i class="fas fa-user me-1"></i> حصة المريض الإجمالية:</span>
-                            <span class="fs-5 fw-bold text-primary">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-primary bg-opacity-10 rounded border border-primary border-opacity-25 mb-2">
+                            <div>
+                                <span class="fw-bold text-primary d-block"><i class="fas fa-user me-1"></i> إجمالي حصة المريض المستحقة (كاش):</span>
+                                <small class="text-muted">(تحمل الحاضنة والمختبر والأشعة والاستشارات والبنود غير المشمولة)</small>
+                            </div>
+                            <span class="fs-5 fw-bold text-primary font-monospace">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
                         </div>
                     @endif
                     
                     <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded border">
-                        <span class="fw-bold text-success"><i class="fas fa-money-bill-wave me-1"></i> إجمالي المسدد (أمانات وسلف):</span>
-                        <span class="fs-5 fw-bold text-success">{{ number_format($stayDetails['total_paid'] ?? 0) }} د.ع</span>
+                        <span class="fw-bold text-success"><i class="fas fa-money-bill-wave me-1"></i> إجمالي المسدد في الصندوق:</span>
+                        <span class="fs-5 fw-bold text-success font-monospace">{{ number_format($stayDetails['total_paid'] ?? 0) }} د.ع</span>
                     </div>
 
                     @if(($stayDetails['excess_deposit'] ?? 0) > 0)
                         <div class="d-flex justify-content-between align-items-center p-2 bg-info bg-opacity-10 rounded border border-info">
-                            <span class="fs-5 fw-bold text-info"><i class="fas fa-undo-alt me-1"></i> فائض أمانات مستحق للإرجاع:</span>
-                            <span class="fs-4 fw-bold text-info">{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
+                            <div>
+                                <span class="fs-5 fw-bold text-info d-block"><i class="fas fa-undo-alt me-1"></i> فائض مسدد مستحق للإرجاع (Refund):</span>
+                                <small class="text-muted">المبلغ المسدد يزيد عن حصة المريض بعد احتساب تغطية الضمان</small>
+                            </div>
+                            <span class="fs-4 fw-bold text-info font-monospace">{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
                         </div>
                     @else
                         <div class="d-flex justify-content-between align-items-center p-2 bg-danger bg-opacity-10 rounded border border-danger">
                             <span class="fs-5 fw-bold text-danger"><i class="fas fa-balance-scale me-1"></i> الصافي المستحق للدفع بالصندوق:</span>
-                            <span class="fs-4 fw-bold text-danger">{{ number_format($stayDetails['net_balance'] ?? 0) }} د.ع</span>
+                            <span class="fs-4 fw-bold text-danger font-monospace">{{ number_format($stayDetails['net_balance'] ?? 0) }} د.ع</span>
                         </div>
                     @endif
                 </div>

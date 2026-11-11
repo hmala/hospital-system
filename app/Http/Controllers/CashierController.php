@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\CcuPayment;
 use App\Models\ConsultationRevenue;
 use App\Models\Doctor;
 use App\Models\DoctorDue;
 use App\Models\Emergency;
 use App\Models\HospitalExtraService;
+use App\Models\IcuAdmission;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
 use App\Models\NicuPayment;
@@ -267,11 +269,17 @@ class CashierController extends Controller
         $todayNicuTotal = (float) $todayNicuPayments->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
                         - (float) $todayNicuPayments->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
 
+        $todayCcuPayments = CcuPayment::whereDate('paid_at', $today)->where('financial_status', 'paid')->get();
+        $todayCcuTotal = (float) $todayCcuPayments->where('payment_type', '!=', CcuPayment::TYPE_REFUND)->sum('amount')
+                       - (float) $todayCcuPayments->where('payment_type', CcuPayment::TYPE_REFUND)->sum('amount');
+
         $todayStats = [
-            'total_collected' => $todayPayments->sum('amount') + $todayNicuTotal,
-            'total_payments' => $todayPayments->count() + $todayNicuPayments->count(),
+            'total_collected' => $todayPayments->sum('amount') + $todayNicuTotal + $todayCcuTotal,
+            'total_payments' => $todayPayments->count() + $todayNicuPayments->count() + $todayCcuPayments->count(),
             'today_nicu_total' => $todayNicuTotal,
             'today_nicu_count' => $todayNicuPayments->count(),
+            'today_ccu_total' => $todayCcuTotal,
+            'today_ccu_count' => $todayCcuPayments->count(),
             'pending_appointments_count' => $pendingAppointmentsCount,
             'pending_requests_count' => $pendingRequestsCount,
             'pending_emergency_count' => $pendingEmergencyCount,
@@ -298,11 +306,16 @@ class CashierController extends Controller
         $monthlyNicuPayments = NicuPayment::whereBetween('paid_at', [$monthStart, $monthEnd])->where('financial_status', 'paid')->get();
         $monthlyNicuTotal = (float) $monthlyNicuPayments->where('payment_type', '!=', NicuPayment::TYPE_REFUND)->sum('amount')
                           - (float) $monthlyNicuPayments->where('payment_type', NicuPayment::TYPE_REFUND)->sum('amount');
+        $monthlyCcuPayments = CcuPayment::whereBetween('paid_at', [$monthStart, $monthEnd])->where('financial_status', 'paid')->get();
+        $monthlyCcuTotal = (float) $monthlyCcuPayments->where('payment_type', '!=', CcuPayment::TYPE_REFUND)->sum('amount')
+                         - (float) $monthlyCcuPayments->where('payment_type', CcuPayment::TYPE_REFUND)->sum('amount');
 
         $monthlyStats = [
-            'total_revenue' => $monthlyPayments->sum('amount') + $monthlyNicuTotal,
-            'total_payments' => $monthlyPayments->count() + $monthlyNicuPayments->count(),
-            'avg_daily' => ($monthlyPayments->count() + $monthlyNicuPayments->count()) > 0 ? ($monthlyPayments->sum('amount') + $monthlyNicuTotal) / Carbon::now()->daysInMonth : 0,
+            'total_revenue' => $monthlyPayments->sum('amount') + $monthlyNicuTotal + $monthlyCcuTotal,
+            'total_payments' => $monthlyPayments->count() + $monthlyNicuPayments->count() + $monthlyCcuPayments->count(),
+            'avg_daily' => ($monthlyPayments->count() + $monthlyNicuPayments->count() + $monthlyCcuPayments->count()) > 0
+                ? ($monthlyPayments->sum('amount') + $monthlyNicuTotal + $monthlyCcuTotal) / Carbon::now()->daysInMonth
+                : 0,
         ];
 
         // جلب طلبات الفحوصات الطبية الملغاة بعد السداد والمستحقة للاسترجاع (Refunds)
@@ -418,10 +431,57 @@ class CashierController extends Controller
 
         $nicuRefundAccounts = $nicuAccounts->filter(fn ($item) => $item['excess_deposit'] > 0)->values();
         $pendingNicuRefundCount = $nicuRefundAccounts->count();
-        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount;
 
         $pendingNicuCount = $nicuAccounts->count();
         $todayStats['pending_nicu_count'] = $pendingNicuCount;
+
+        // جلب إضبارات وحسابات العناية المركزة للكبار (CCU / ICU Inpatient Folios)
+        $ccuBillingService = app(\App\Services\CcuBillingService::class);
+        $icuAdmissionsQuery = IcuAdmission::with([
+            'patient.user',
+            'bed',
+            'ccuService',
+            'doctor.user',
+            'ccuServiceLogs.ccuService',
+            'medicalOrders.labTest',
+            'medicalOrders.radiologyType',
+            'ccuConsultations',
+            'ccuPayments',
+        ])->whereIn('status', ['active', 'discharged']);
+
+        if ($search) {
+            $icuAdmissionsQuery->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
+                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%")->orWhere('medical_number', 'like', "%{$search}%"));
+            });
+        }
+
+        $ccuAccounts = $icuAdmissionsQuery->orderByDesc('admission_date')->get()->map(function ($adm) use ($ccuBillingService) {
+            $stayDetails = $ccuBillingService->calculateStayDetails($adm);
+
+            return [
+                'admission' => $adm,
+                'stay_details' => $stayDetails,
+                'gross_total' => (float) $stayDetails['patient_grand_total'],
+                'total_paid' => (float) $stayDetails['total_paid'],
+                'net_balance' => (float) $stayDetails['net_balance'],
+                'excess_deposit' => (float) $stayDetails['excess_deposit'],
+            ];
+        })->filter(function ($item) {
+            if ($item['admission']->status === 'active') {
+                return true;
+            }
+
+            return $item['net_balance'] > 0 || $item['excess_deposit'] > 0;
+        })->values();
+
+        $ccuRefundAccounts = $ccuAccounts->filter(fn ($item) => $item['excess_deposit'] > 0)->values();
+        $pendingCcuRefundCount = $ccuRefundAccounts->count();
+        $pendingCcuCount = $ccuAccounts->count();
+        $todayStats['pending_ccu_count'] = $pendingCcuCount;
+
+        $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount + $pendingCcuRefundCount;
 
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
@@ -441,6 +501,10 @@ class CashierController extends Controller
             'nicuRefundAccounts',
             'pendingNicuRefundCount',
             'pendingNicuCount',
+            'ccuAccounts',
+            'ccuRefundAccounts',
+            'pendingCcuRefundCount',
+            'pendingCcuCount',
             'todayStats',
             'todayPayments',
             'monthlyStats',
@@ -717,12 +781,46 @@ class CashierController extends Controller
     /**
      * معالجة استلام دفعة أو أمانة تحت الحساب أو صرف استرجاع فائض أمانات لحاضنة الخدج
      */
+    /**
+     * عرض شاشة تسديد وتصفية رسوم الخدج والحاضنات (ستايل العمليات الجراحية الموحد)
+     */
+    public function showNicuPaymentForm(IncubatorReservation $reservation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments') && ! $user->can('process refunds')))) {
+            abort(403, 'غير مصرح لك بالوصول لشاشة تسديد رسوم الخدج');
+        }
+
+        $reservation->load([
+            'incubator',
+            'nicuService',
+            'doctor.user',
+            'patient.user',
+            'patient.healthInsuranceCategory',
+            'serviceLogs.nicuService',
+            'consultations.internalDoctor.user',
+            'medicalOrders.labTest',
+            'medicalOrders.radiologyType',
+            'payments.cashier',
+        ]);
+
+        $billingService = app(\App\Services\NicuBillingService::class);
+        $stayDetails = $billingService->calculateStayDetails($reservation);
+
+        return view('cashier.nicu.payment-form', compact('reservation', 'stayDetails'));
+    }
+
     public function processNicuPayment(Request $request, IncubatorReservation $reservation)
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments') && ! $user->can('process refunds')))) {
             abort(403, 'غير مصرح لك باستلام الدفعات أو صرف الاسترجاعات');
+        }
+
+        if ($request->input('payment_mode') === 'partial' && $request->filled('custom_paid_amount')) {
+            $request->merge(['amount' => $request->input('custom_paid_amount')]);
         }
 
         $request->validate([
@@ -734,29 +832,37 @@ class CashierController extends Controller
         ]);
 
         $amount = (float) $request->amount;
-        $paymentType = $request->payment_type ?: NicuPayment::TYPE_DEPOSIT;
+        $paymentType = $request->payment_type ?: NicuPayment::TYPE_INTERIM;
 
-        // التحقق الدقيق الحصري لحالة استرجاع فائض الأمانات
+        // التحقق الدقيق الحصري لحالة استرجاع فائض الرسوم
         if ($paymentType === NicuPayment::TYPE_REFUND) {
             $billingService = app(\App\Services\NicuBillingService::class);
             $stayDetails = $billingService->calculateStayDetails($reservation);
             $excessDeposit = (float) $stayDetails['excess_deposit'];
 
             if ($excessDeposit <= 0) {
-                return redirect()->back()->with('error', 'لا يوجد أي فائض أمانات متبقي للاسترجاع في حساب هذه الحاضنة.');
+                return redirect()->back()->with('error', 'لا يوجد أي فائض رسوم متبقي للاسترجاع في حساب هذه الحاضنة.');
             }
 
             if ($amount > $excessDeposit) {
-                return redirect()->back()->with('error', 'المبلغ المطلوب استرجاعه ('.number_format($amount).' د.ع) يتجاوز الحد الأقصى لفائض الأمانات المتوفر ('.number_format($excessDeposit).' د.ع).');
+                return redirect()->back()->with('error', 'المبلغ المطلوب استرجاعه ('.number_format($amount).' د.ع) يتجاوز الحد الأقصى لفائض الرسوم المتوفر ('.number_format($excessDeposit).' د.ع).');
+            }
+        } else {
+            // فحص تحديد نوع التسديد إذا كان نهائياً
+            $billingService = app(\App\Services\NicuBillingService::class);
+            $stayDetails = $billingService->calculateStayDetails($reservation);
+            $netBalance = (float) $stayDetails['net_balance'];
+            if ($reservation->status === 'discharged' || $amount >= $netBalance) {
+                $paymentType = NicuPayment::TYPE_FINAL;
             }
         }
 
         $receiptNumber = NicuPayment::generateReceiptNumber();
         $babyTitle = $reservation->baby_name ?: ('طفل '.($reservation->patient?->name ?? ''));
-        $typeLabel = NicuPayment::PAYMENT_TYPES[$paymentType] ?? 'دفعة حاضنة';
+        $typeLabel = NicuPayment::PAYMENT_TYPES[$paymentType] ?? 'تسديد رسوم الحاضنة';
 
         $defaultDesc = ($paymentType === NicuPayment::TYPE_REFUND)
-            ? "صرف استرجاع فائض أمانات لحاضنة الخدج #{$reservation->id} - {$babyTitle}"
+            ? "صرف استرجاع فائض الرسوم لحاضنة الخدج #{$reservation->id} - {$babyTitle}"
             : "{$typeLabel} لحاضنة الخدج #{$reservation->id} - {$babyTitle}";
         $desc = $request->payment_purpose ?: ($request->notes ?: $defaultDesc);
 
@@ -792,7 +898,7 @@ class CashierController extends Controller
 
         $actionName = ($paymentType === NicuPayment::TYPE_REFUND) ? 'nicu_refund_processed' : 'nicu_payment_received';
         $logDesc = ($paymentType === NicuPayment::TYPE_REFUND)
-            ? "صرف واسترجاع فائض أمانات لحاضنة الخدج #{$reservation->id} بمبلغ ".number_format($amount)." د.ع برقم سند {$receiptNumber}"
+            ? "صرف واسترجاع فائض رسوم لحاضنة الخدج #{$reservation->id} بمبلغ ".number_format($amount)." د.ع برقم سند {$receiptNumber}"
             : "استلام {$typeLabel} لحاضنة الخدج #{$reservation->id} بمبلغ ".number_format($amount)." د.ع برقم وصل {$receiptNumber}";
 
         \App\Services\UserActivityLogger::log(
@@ -805,7 +911,7 @@ class CashierController extends Controller
 
         $successMsg = ($paymentType === NicuPayment::TYPE_REFUND)
             ? 'تم صرف واسترجاع مبلغ '.number_format($amount)." د.ع بنجاح لوالد الطفل برقم سند استرجاع: {$receiptNumber}"
-            : 'تم استلام مبلغ '.number_format($amount)." د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}";
+            : 'تم تسديد مبلغ '.number_format($amount)." د.ع بنجاح لحاضنة الخدج برقم إيصال: {$receiptNumber}";
 
         return redirect()->route('cashier.nicu.receipt', $payment->id)
             ->with('success', $successMsg);

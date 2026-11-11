@@ -14,6 +14,16 @@ use Illuminate\Http\Request;
 
 class HrPayrollController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('permission:view hr payroll')->only(['index', 'show']);
+        $this->middleware('permission:create hr payroll')->only(['create', 'store', 'updateSlip']);
+        $this->middleware('permission:approve hr payroll')->only(['approve']);
+        $this->middleware('permission:delete hr payroll')->only(['destroy']);
+        $this->middleware('permission:print hr payslips')->only(['printSlip']);
+    }
+
     // قائمة دورات الرواتب
     public function index()
     {
@@ -265,5 +275,16 @@ class HrPayrollController extends Controller
         $payroll->delete();
 
         return redirect()->route('hr.payrolls.index')->with('success', 'تم حذف مسودة مسير الرواتب بنجاح وإعادة جميع الاستحقاقات والخصومات لحالة الانتظار.');
+    }
+
+    /**
+     * طباعة قسيمة الراتب الفردية للموظف (Payslip)
+     */
+    public function printSlip(HrPayroll $slip)
+    {
+        $slip->load(['employee.department', 'cycle', 'payrollCycle']);
+        $hospital = \App\Models\Hospital::first();
+
+        return view('hr.payrolls.payslip', compact('slip', 'hospital'));
     }
 }

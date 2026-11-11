@@ -247,7 +247,14 @@
             <div class="section-header">2. التحاليل المخبرية ({{ $labs->count() }} فحص):</div>
             @foreach($labs as $lab)
                 <div class="item-row">
-                    <span class="item-name">• {{ $lab->item_name }}</span>
+                    <span class="item-name">
+                        • {{ $lab->item_name }}
+                        @if($stayDetails['is_insured'] && ($lab->is_covered ?? false))
+                            <small style="font-size: 9.5px; color: #166534; display: block;">(ضمان 75%: {{ number_format($lab->insurance_share) }} | مريض: {{ number_format($lab->patient_share) }})</small>
+                        @elseif($stayDetails['is_insured'])
+                            <small style="font-size: 9.5px; color: #475569; display: block;">(غير مشمول - كاش 100%)</small>
+                        @endif
+                    </span>
                     <span class="item-price">{{ number_format($lab->price) }} د.ع</span>
                 </div>
             @endforeach
@@ -255,6 +262,12 @@
                 <span>مجموع المختبر:</span>
                 <span>{{ number_format($labs->sum('price')) }} د.ع</span>
             </div>
+            @if($stayDetails['is_insured'] && ($stayDetails['total_lab_cost'] ?? 0) > 0)
+                <div class="item-row" style="font-size: 10px; color: #166534;">
+                    <span>حصة الضمان بالمختبر:</span>
+                    <span>{{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} د.ع</span>
+                </div>
+            @endif
         @endif
 
         <!-- 3. الفحوصات الإشعاعية والسونار -->
@@ -262,7 +275,14 @@
             <div class="section-header">3. الأشعة والسونار والإيكو ({{ $rads->count() }} فحص):</div>
             @foreach($rads as $rad)
                 <div class="item-row">
-                    <span class="item-name">• {{ $rad->item_name }}</span>
+                    <span class="item-name">
+                        • {{ $rad->item_name }}
+                        @if($stayDetails['is_insured'] && ($rad->is_covered ?? false))
+                            <small style="font-size: 9.5px; color: #0284c7; display: block;">(ضمان 75%: {{ number_format($rad->insurance_share) }} | مريض: {{ number_format($rad->patient_share) }})</small>
+                        @elseif($stayDetails['is_insured'])
+                            <small style="font-size: 9.5px; color: #475569; display: block;">(غير مشمول - كاش 100%)</small>
+                        @endif
+                    </span>
                     <span class="item-price">{{ number_format($rad->price) }} د.ع</span>
                 </div>
             @endforeach
@@ -270,6 +290,12 @@
                 <span>مجموع الأشعة والسونار:</span>
                 <span>{{ number_format($rads->sum('price')) }} د.ع</span>
             </div>
+            @if($stayDetails['is_insured'] && ($stayDetails['total_radiology_cost'] ?? 0) > 0)
+                <div class="item-row" style="font-size: 10px; color: #0284c7;">
+                    <span>حصة الضمان بالأشعة:</span>
+                    <span>{{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} د.ع</span>
+                </div>
+            @endif
         @endif
 
         <!-- 4. الاستشارات إن وجدت -->
@@ -277,15 +303,22 @@
             <div class="section-header">4. استشارات الأطباء:</div>
             @foreach($stayDetails['consultations'] as $con)
                 <div class="item-row">
-                    <span class="item-name">• {{ $con->doctor_display_name }} ({{ $con->specialty }})</span>
+                    <span class="item-name">
+                        • {{ $con->doctor_display_name }} ({{ $con->specialty }})
+                        @if($stayDetails['is_insured'] && ($con->is_covered ?? false))
+                            <small style="font-size: 9.5px; color: #166534; display: block;">(داخلية - ضمان 90%: {{ number_format($con->insurance_share) }} | مريض: {{ number_format($con->patient_share) }})</small>
+                        @elseif($stayDetails['is_insured'])
+                            <small style="font-size: 9.5px; color: #475569; display: block;">(خارجية - كاش 100%)</small>
+                        @endif
+                    </span>
                     <span class="item-price">{{ number_format($con->fee) }} د.ع</span>
                 </div>
             @endforeach
         @endif
 
-        <!-- 5. الأمانات المسددة -->
+        <!-- 5. الدفعات المسددة -->
         @if($stayDetails['payments']->isNotEmpty())
-            <div class="section-header">5. الأمانات والوصولات النقدية المسددة:</div>
+            <div class="section-header">5. الدفعات والوصولات النقدية المسددة:</div>
             @foreach($stayDetails['payments'] as $pmt)
                 <div class="item-row">
                     <span class="item-name">وصل #{{ $pmt->receipt_number }} ({{ $pmt->paid_at ? $pmt->paid_at->format('m/d') : '' }})</span>
@@ -297,11 +330,21 @@
         <!-- صندوق الموقف المالي الختامي -->
         <div class="total-box">
             <div class="total-row">
-                <span>إجمالي الفاتورة المترتبة:</span>
-                <span style="font-weight: 900;">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                <span>إجمالي الفاتورة الكاملة:</span>
+                <span style="font-weight: 900;">{{ number_format($stayDetails['grand_total']) }} د.ع</span>
             </div>
+            @if($stayDetails['is_insured'])
+                <div class="total-row" style="color: #166534; font-weight: 800;">
+                    <span>مطالبة هيئة الضمان الصحي:</span>
+                    <span>{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</span>
+                </div>
+                <div class="total-row" style="color: #1d4ed8; font-weight: 800;">
+                    <span>حصة المريض المستحقة:</span>
+                    <span>{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                </div>
+            @endif
             <div class="total-row">
-                <span>مجموع الأمانات المسددة:</span>
+                <span>مجموع المبالغ المسددة:</span>
                 <span style="font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</span>
             </div>
             <div class="total-row grand">
@@ -310,7 +353,7 @@
             </div>
             @if($stayDetails['excess_deposit'] > 0)
                 <div class="total-row" style="color: #0284c7; font-weight: 800; margin-top: 2px;">
-                    <span>فائض أمانات مستحق للأهل:</span>
+                    <span>فائض رسوم مستحق للأهل (إرجاع):</span>
                     <span>+{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
                 </div>
             @endif

@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class HrAllowanceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('permission:edit employees');
+    }
+
     public function store(Request $request, HrEmployee $employee)
     {
         $request->validate([

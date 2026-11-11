@@ -266,10 +266,14 @@
 
                 {{-- القسم الثاني: تحويلات الوحدات المستقلة (انتقال لنموذج آخر) --}}
                 @php
+                    $canAdmitIcu = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) ||
+                                   auth()->user()->can('admit icu patients') ||
+                                   auth()->user()->can('view icu radar');
                     $hasAnyExternalPermission = auth()->user()->can('create emergencies') || 
                                                 auth()->user()->can('create surgeries') || 
                                                 auth()->user()->can('create bed reservations') || 
-                                                auth()->user()->can('create incubator reservations');
+                                                auth()->user()->can('create incubator reservations') ||
+                                                $canAdmitIcu;
                 @endphp
 
                 @if($hasAnyExternalPermission)
@@ -366,6 +370,27 @@
                                     </a>
                                 </div>
                             @endcan
+
+                            @if($canAdmitIcu)
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('icu.admissions.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white border-danger border-opacity-25">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-2">
+                                                        <i class="fas fa-heartbeat"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">حجز عناية مركزة (ICU)</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">تسكين سرير عناية حرجة أو قلبية CCU</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endif

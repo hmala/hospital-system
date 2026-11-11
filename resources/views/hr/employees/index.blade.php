@@ -272,6 +272,11 @@
                                         <a href="{{ route('hr.employees.show', $emp->id) }}" class="btn btn-outline-info" title="عرض الإضبارة الكاملة">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        @can('print employee badges')
+                                            <a href="{{ route('hr.employees.badge', $emp->id) }}" class="btn btn-outline-dark" title="طباعة باجة الهوية الرسمية" target="_blank">
+                                                <i class="fas fa-id-badge"></i>
+                                            </a>
+                                        @endcan
                                         @can('edit employees')
                                             <a href="{{ route('hr.employees.edit', $emp->id) }}" class="btn btn-outline-primary" title="تعديل البيانات">
                                                 <i class="fas fa-edit"></i>

@@ -63,6 +63,7 @@
                         <th colspan="5" class="bg-danger bg-opacity-10 text-danger border-danger">الاستقطاعات والخصومات (-)</th>
                         <th rowspan="2" class="align-middle bg-primary bg-opacity-10 text-primary border-primary">الصافي للدفع</th>
                         <th rowspan="2" class="align-middle bg-light">طريقة الدفع</th>
+                        <th rowspan="2" class="align-middle bg-light" style="width: 110px;">قسيمة الراتب</th>
                     </tr>
                     <tr>
                         <th class="bg-success bg-opacity-10 text-success border-success">المخصصات الثابتة</th>
@@ -113,6 +114,15 @@
                             @if($slip->payment_method === 'bank') <span class="badge bg-primary">بنك</span>
                             @else <span class="badge bg-success">كاش</span>
                             @endif
+                        </td>
+                        <td>
+                            @can('print hr payslips')
+                                <a href="{{ route('hr.payrolls.slip.print', $slip->id) }}" class="btn btn-sm btn-outline-primary py-1 px-2" target="_blank" title="طباعة قسيمة الراتب الفردية">
+                                    <i class="fas fa-print me-1"></i>قسيمة الراتب
+                                </a>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endcan
                         </td>
                     </tr>
                     @endforeach

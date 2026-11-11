@@ -7,6 +7,9 @@ use App\Models\Doctor;
 use App\Models\Hospital;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
+use App\Models\LabTest;
+use App\Models\NicuConsultation;
+use App\Models\NicuMedicalOrder;
 use App\Models\NicuService;
 use App\Models\NicuServiceLog;
 use App\Models\Patient;
@@ -251,5 +254,133 @@ class NicuInsuranceSettlementAndClaimsTest extends TestCase
         $response->assertSee('تصفيات ومطالبات الضمان الصحي للخدج وفق مصفوفة عمر الحمل الوزارية');
         $response->assertSee('< 28 أسبوعاً (خداجة شديدة - تغطية مستمرة)');
         $response->assertSee(number_format(450000));
+    }
+
+    /**
+     * اختبار تفكيك مساهمة الضمان وحصة المريض للفحوصات المخبرية والاستشارات في كشف الحساب وشاشة الكاشير
+     */
+    public function test_nicu_statement_and_payment_form_breakdown_insurance_for_labs_and_consultations(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-05 14:00:00'));
+
+        $admissionDate = now()->subDays(1)->setTime(10, 0);
+        $res = IncubatorReservation::create([
+            'patient_id' => $this->patient->id,
+            'baby_name' => 'خديج علي',
+            'incubator_id' => $this->incubator->id,
+            'nicu_service_id' => $this->service->id,
+            'doctor_id' => $this->doctor->id,
+            'admission_date' => $admissionDate->toDateString(),
+            'admission_time' => '10:00:00',
+            'status' => 'admitted',
+            'insurance_type' => 'hi',
+            'policy_category' => 'E',
+            'gestational_age' => '35 أسبوعاً',
+        ]);
+
+        NicuServiceLog::create([
+            'reservation_id' => $res->id,
+            'nicu_service_id' => $this->service->id,
+            'daily_fee' => 100000,
+            'start_time' => $admissionDate,
+            'end_time' => null,
+            'days_count' => 1,
+            'total_cost' => 100000,
+        ]);
+
+        // 1. فحص مخبري مشمول بالضمان (سعر الضمان 10,000 د.ع)
+        $coveredLab = LabTest::create([
+            'name' => 'تحليل دم كامل CBC',
+            'code' => 'CBC-N1',
+            'price' => 25000,
+            'hi_price' => 10000,
+            'is_hi_active' => true,
+            'is_active' => true,
+        ]);
+
+        NicuMedicalOrder::create([
+            'reservation_id' => $res->id,
+            'order_type' => 'lab',
+            'item_name' => $coveredLab->name,
+            'lab_test_id' => $coveredLab->id,
+            'price' => 10000,
+            'status' => 'completed',
+            'ordered_by' => $this->admin->id,
+            'ordered_at' => now(),
+        ]);
+
+        // 2. فحص مخبري غير مشمول بالضمان (سعر كاش 50,000 د.ع)
+        $uncoveredLab = LabTest::create([
+            'name' => 'تحليل جيني غير مشمول',
+            'code' => 'GEN-N1',
+            'price' => 50000,
+            'hi_price' => 0,
+            'is_hi_active' => false,
+            'is_active' => true,
+        ]);
+
+        NicuMedicalOrder::create([
+            'reservation_id' => $res->id,
+            'order_type' => 'lab',
+            'item_name' => $uncoveredLab->name,
+            'lab_test_id' => $uncoveredLab->id,
+            'price' => 50000,
+            'status' => 'completed',
+            'ordered_by' => $this->admin->id,
+            'ordered_at' => now(),
+        ]);
+
+        // 3. استشارة داخلية (أجور 20,000 د.ع مشمولة 90% ضمان و 10% مريض)
+        NicuConsultation::create([
+            'reservation_id' => $res->id,
+            'consultation_type' => 'internal',
+            'internal_doctor_id' => $this->doctor->id,
+            'specialty' => 'أطفال',
+            'reason' => 'متابعة تنفس',
+            'fee' => 20000,
+            'status' => 'completed',
+            'requested_by' => $this->admin->id,
+        ]);
+
+        $billingService = app(NicuBillingService::class);
+        $stay = $billingService->calculateStayDetails($res);
+
+        // التحقق الحسابي:
+        // الحاضنة: 100,000 (ضمان 75% = 75,000 | مريض 25% = 25,000)
+        // فحص 1 (CBC): 10,000 (ضمان 75% = 7,500 | مريض 25% = 2,500)
+        // فحص 2 (جينات): 50,000 (ضمان 0% = 0 | مريض 100% = 50,000)
+        // استشارة داخلية: 20,000 (ضمان 90% = 18,000 | مريض 10% = 2,000)
+        // إجمالي الفاتورة: 100,000 + 60,000 + 20,000 = 180,000 د.ع
+        // إجمالي مطالبة الضمان: 75,000 + 7,500 + 18,000 = 100,500 د.ع
+        // إجمالي حصة المريض: 25,000 + 2,500 + 50,000 + 2,000 = 79,500 د.ع
+        $this->assertEquals(180000, $stay['grand_total']);
+        $this->assertEquals(100500, $stay['insurance_grand_total']);
+        $this->assertEquals(79500, $stay['patient_grand_total']);
+        $this->assertEquals(7500, $stay['insurance_lab_share']);
+        $this->assertEquals(52500, $stay['patient_lab_share']);
+        $this->assertEquals(18000, $stay['insurance_consultations_share']);
+        $this->assertEquals(2000, $stay['patient_consultations_share']);
+
+        // التحقق من ظهور التفكيك في صفحة كشف الحساب
+        $statementView = $this->actingAs($this->admin)->get(route('nicu.statement', $res));
+        $statementView->assertStatus(200);
+        $statementView->assertSee('مشمول بالضمان (75%)');
+        $statementView->assertSee('غير مشمول (كاش 100%)');
+        $statementView->assertSee('مشمولة بالضمان (90%)');
+        $statementView->assertSee(number_format(100500)); // إجمالي مطالبة هيئة الضمان
+        $statementView->assertSee(number_format(79500));  // إجمالي حصة المريض
+
+        // التحقق من ظهور التفكيك في شاشة تسديد الكاشير
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view cashier', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'process payments', 'guard_name' => 'web']);
+        $this->admin->givePermissionTo(['view cashier', 'process payments']);
+
+        $paymentFormView = $this->actingAs($this->admin)->get(route('cashier.nicu.payment.form', $res));
+        $paymentFormView->assertStatus(200);
+        $paymentFormView->assertSee('مشمول بالضمان (75%)');
+        $paymentFormView->assertSee('غير مشمول (كاش 100%)');
+        $paymentFormView->assertSee(number_format(79500)); // حصة المريض المعتمدة في شريط الموقف المالي
+
+        Carbon::setTestNow();
     }
 }

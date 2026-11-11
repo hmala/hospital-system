@@ -138,6 +138,51 @@ class HealthInsuranceClaimController extends Controller
 
         $paymentTypes = Payment::PAYMENT_TYPES;
 
+        // جلب مطالبات العناية المركزة للكبار (CCU / ICU) مع القيمة الأصلية للفحوصات المشمولة والباقي بذمة الضمان
+        $ccuAdmissionsQ = \App\Models\IcuAdmission::with([
+            'patient.user',
+            'patient.healthInsuranceCategory',
+            'bed',
+            'ccuService',
+            'ccuServiceLogs.ccuService',
+            'medicalOrders.labTest',
+            'medicalOrders.radiologyType',
+            'ccuConsultations',
+            'ccuPayments',
+        ])->where('is_insured', true);
+
+        if ($request->filled('from_date')) {
+            $ccuAdmissionsQ->whereDate('admission_date', '>=', $request->input('from_date'));
+        }
+        if ($request->filled('to_date')) {
+            $ccuAdmissionsQ->whereDate('admission_date', '<=', $request->input('to_date'));
+        }
+        if ($request->filled('search')) {
+            $s = trim($request->input('search'));
+            $ccuAdmissionsQ->whereHas('patient', function ($pq) use ($s) {
+                $pq->where('national_id', 'like', "%{$s}%")
+                    ->orWhereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"));
+            });
+        }
+
+        $ccuBillingService = app(\App\Services\CcuBillingService::class);
+        $ccuClaimsList = $ccuAdmissionsQ->orderByDesc('admission_date')->get()->map(function ($adm) use ($ccuBillingService) {
+            return [
+                'admission' => $adm,
+                'details' => $ccuBillingService->calculateStayDetails($adm),
+            ];
+        })->values();
+
+        $ccuClaimsSummary = [
+            'claims_count' => $ccuClaimsList->count(),
+            'total_insurance_share' => $ccuClaimsList->sum(fn ($c) => $c['details']['insurance_grand_total']),
+            'total_patient_share' => $ccuClaimsList->sum(fn ($c) => $c['details']['patient_grand_total']),
+            'total_bundled_reference' => $ccuClaimsList->sum(fn ($c) => $c['details']['bundled_reference_total']),
+            'total_collected' => $ccuClaimsList->sum(fn ($c) => $c['details']['hia_collected_amount']),
+            'total_remaining_balance' => $ccuClaimsList->sum(fn ($c) => $c['details']['hia_remaining_balance']),
+            'items' => $ccuClaimsList,
+        ];
+
         return view('insurance.claims.index', compact(
             'claims',
             'patientsPaginated',
@@ -149,7 +194,8 @@ class HealthInsuranceClaimController extends Controller
             'categoryBreakdown',
             'categories',
             'doctors',
-            'paymentTypes'
+            'paymentTypes',
+            'ccuClaimsSummary'
         ));
     }
 

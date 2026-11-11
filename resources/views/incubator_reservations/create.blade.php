@@ -552,20 +552,23 @@ label.incubator-card {
                             <div class="col-12">
                                 <div class="d-flex flex-wrap gap-3" id="incubatorCardGrid">
                                     @forelse($incubators as $inc)
-                                        @php $isAvailable = $inc->status === 'available'; @endphp
+                                        @php
+                                            $isAvailable = $inc->status === 'available';
+                                            $normalizedType = in_array($inc->incubator_type, ['capsule', 'phototherapy']) ? 'capsule' : 'normal';
+                                        @endphp
                                         <input type="radio" 
                                                name="incubator_id" 
                                                id="incubator_{{ $inc->id }}" 
                                                value="{{ $inc->id }}" 
                                                class="d-none incubator-radio"
-                                               data-incubator-type="{{ $inc->incubator_type }}"
+                                               data-incubator-type="{{ $normalizedType }}"
                                                data-available="{{ $isAvailable ? '1' : '0' }}"
                                                {{ old('incubator_id', request('incubator_id')) == $inc->id ? 'checked' : '' }}
                                                {{ $isAvailable ? '' : 'disabled' }}>
 
-                                        <label for="incubator_{{ $inc->id }}" 
+                                         <label for="incubator_{{ $inc->id }}" 
                                                class="card incubator-card shadow-sm"
-                                               data-incubator-type="{{ $inc->incubator_type }}"
+                                               data-incubator-type="{{ $normalizedType }}"
                                                data-available="{{ $isAvailable ? '1' : '0' }}">
                                             <span class="selection-indicator">
                                                 <i class="fas fa-check-circle"></i>
@@ -657,33 +660,20 @@ label.incubator-card {
                                 @enderror
                             </div>
 
-                            <div class="col-md-4 mb-3">
-                                <label for="birth_weight" class="form-label fw-bold">وزن الدخول (بالجرام)</label>
-                                <input type="number" name="birth_weight" id="birth_weight" class="form-control" placeholder="مثال: 1500" value="{{ old('birth_weight') }}">
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="gestational_age" class="form-label fw-bold">
-                                    عمر الحمل (بالأسابيع) <span class="text-danger">*</span>
-                                </label>
-                                <select name="gestational_age" id="gestational_age" class="form-select" required>
-                                    <option value="">-- اختر عمر الحمل --</option>
-                                    <option value="أقل من 28 أسبوع" {{ old('gestational_age') == 'أقل من 28 أسبوع' ? 'selected' : '' }}>أقل من 28 أسبوعاً (&lt;28 - شديد الخداجة)</option>
-                                    @for($w = 28; $w <= 40; $w++)
-                                        <option value="{{ $w }} أسبوع" {{ old('gestational_age') == ($w . ' أسبوع') ? 'selected' : '' }}>
-                                            {{ $w }} أسبوعاً {{ $w >= 37 ? '(كامل النمو)' : ($w >= 34 ? '(خداجة متأخرة)' : ($w >= 32 ? '(خداجة متوسطة)' : '(خداجة مبكرة)')) }}
-                                        </option>
-                                    @endfor
-                                </select>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="admission_source" class="form-label fw-bold">مصدر الحالة</label>
                                 <select name="admission_source" id="admission_source" class="form-select">
                                     <option value="internal" {{ old('admission_source') == 'internal' ? 'selected' : '' }}>ولادة طبيعية / داخلية (IN)</option>
                                     <option value="c_section" {{ old('admission_source') == 'c_section' ? 'selected' : '' }}>صالة عمليات قيصرية</option>
                                     <option value="external" {{ old('admission_source') == 'external' ? 'selected' : '' }}>محال من خارج المستشفى (OUT)</option>
                                 </select>
+                            </div>
+
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-light border py-2 px-3 small text-muted d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-info-circle text-primary"></i>
+                                    <span><strong>ملاحظة سريرية:</strong> تم نقل تسجيل <strong>(عمر الحمل ووزن الطفل)</strong> ليتم توثيقهما وتثبيتهما بدقة من داخل إضبارة الطفل السريرية بمحطة رعاية الخدج.</span>
+                                </div>
                             </div>
                         </div>
 
@@ -881,7 +871,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyFilter() {
         const selectedType = typeSelect ? typeSelect.value : '';
         radios.forEach(radio => {
-            const matches = !selectedType || radio.dataset.incubatorType === selectedType;
+            const matches = !selectedType ||
+                radio.dataset.incubatorType === selectedType ||
+                (selectedType === 'capsule' && radio.dataset.incubatorType === 'phototherapy');
             const card = radio.nextElementSibling;
             if (!card) return;
             card.style.display = matches ? '' : 'none';
@@ -1267,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tierPreviewAlert.className = 'alert alert-info py-2 px-3 mb-0 small';
 
         if (!weeks) {
-            tierPreviewText.innerHTML = '<strong>تغطية الضمان (الفئة E - الأطفال دون سن الخامسة):</strong> يرجى اختيار عمر الحمل بالأسابيع لمعاينة شرائح التحمل المعتمدة وزارياً.';
+            tierPreviewText.innerHTML = '<strong>تغطية الضمان (الفئة E - الأطفال دون سن الخامسة):</strong> يتم توثيق عمر الحمل بدقة داخل إضبارة الطفل بمحطة الرعاية لتطبيق شرائح التحمل المعتمدة وزارياً تلقائياً.';
             return;
         }
 

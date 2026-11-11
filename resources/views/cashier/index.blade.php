@@ -305,6 +305,12 @@
                                                 </button>
                                             </li>
                                             <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-ccu-btn" data-bs-toggle="pill" data-bs-target="#tab-ccu" type="button" role="tab">
+                                                    <i class="fas fa-heartbeat me-1 text-danger"></i> العناية المركزة (CCU)
+                                                    <span class="badge bg-danger ms-1 rounded-pill">{{ $pendingCcuCount ?? 0 }}</span>
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($pendingRefundCount ?? 0) > 0 ? 'text-danger border border-danger' : '' }}" id="tab-refunds-btn" data-bs-toggle="pill" data-bs-target="#tab-refunds" type="button" role="tab">
                                                     <i class="fas fa-undo-alt me-1 text-danger"></i> مستحقات الاسترجاع
                                                     @if(($pendingRefundCount ?? 0) > 0)
@@ -1203,7 +1209,7 @@
                                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                                                     <div>
                                                         <strong class="text-dark"><i class="fas fa-baby text-primary me-1"></i> الحسابات المالية الموحدة للحاضنات والخدج</strong>
-                                                        <span class="text-muted small d-block">نظام القيد المالي الديناميكي: تُجمع تلقائياً كافة أجور الإقامة، الفحوصات المخبرية، والأشعة، مع خصم الأمانات المسددة مسبقاً.</span>
+                                                        <span class="text-muted small d-block">نظام القيد المالي الموحد: تُجمع تلقائياً كافة أجور الإقامة، الفحوصات المخبرية، والأشعة، مع احتساب المبالغ المسددة سابقاً والتسديد المباشر.</span>
                                                     </div>
                                                     <span class="badge bg-primary fs-7 px-3 py-2">
                                                         <i class="fas fa-user-clock me-1"></i> {{ count($nicuAccounts) }} حاضنة نشطة
@@ -1219,8 +1225,8 @@
                                                                 <th>الحاضنة والباقة</th>
                                                                 <th>تاريخ الدخول</th>
                                                                 <th class="text-end">إجمالي الفاتورة</th>
-                                                                <th class="text-end">المسدد (أمانات)</th>
-                                                                <th class="text-end">الرصيد المتبقي</th>
+                                                                <th class="text-end">المسدد سابقاً</th>
+                                                                <th class="text-end">المتبقي / الفائض</th>
                                                                 <th class="text-center">الإجراء المالي</th>
                                                             </tr>
                                                         </thead>
@@ -1288,13 +1294,13 @@
                                                                     <td class="text-center">
                                                                         <div class="btn-group btn-group-sm">
                                                                             @if($acc['excess_deposit'] > 0)
-                                                                                <button type="button" class="btn btn-warning text-dark fw-bold px-2 py-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuRefundModal{{ $res->id }}" title="صرف واسترجاع فائض الأمانات للمريض">
-                                                                                    <i class="fas fa-undo-alt me-1 text-danger"></i> إرجاع الأمانات
-                                                                                </button>
+                                                                                <a href="{{ route('cashier.nicu.payment.form', $res->id) }}#refund_section" class="btn btn-warning text-dark fw-bold px-2 py-1 shadow-sm" title="صرف واسترجاع فائض الرسوم للمريض">
+                                                                                    <i class="fas fa-undo-alt me-1 text-danger"></i> إرجاع الفائض
+                                                                                </a>
                                                                             @endif
-                                                                            <button type="button" class="btn btn-success fw-bold px-2 py-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuDepositModal{{ $res->id }}" title="قبض سلفة أو تسديد">
-                                                                                <i class="fas fa-hand-holding-usd me-1"></i> قبض دفعة
-                                                                            </button>
+                                                                            <a href="{{ route('cashier.nicu.payment.form', $res->id) }}" class="btn btn-success fw-bold px-2 py-1 shadow-sm" title="تسديد رسوم الحاضنة">
+                                                                                <i class="fas fa-file-invoice-dollar me-1"></i> تسديد الرسوم
+                                                                            </a>
                                                                             <a href="{{ route('cashier.nicu.itemized-receipt.print', $res->id) }}" class="btn btn-outline-info px-2 py-1" target="_blank" title="طباعة كشف حراري تفصيلي بالتحاليل والأشعة">
                                                                                 <i class="fas fa-receipt me-1"></i> وصل تفصيلي
                                                                             </a>
@@ -1316,6 +1322,101 @@
                                             @endif
                                         </div>
 
+                                        <!-- تبويب العناية المركزة للكبار (CCU Inpatient Folios) -->
+                                        <div class="tab-pane fade" id="tab-ccu" role="tabpanel">
+                                            @if(isset($ccuAccounts) && count($ccuAccounts) > 0)
+                                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                    <div>
+                                                        <strong class="text-danger"><i class="fas fa-heartbeat me-1"></i> حسابات مرضى العناية المركزة للكبار (CCU / ICU)</strong>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <a href="{{ route('cashier.ccu.statements') }}" class="btn btn-sm btn-outline-primary fw-bold">كشوفات CCU</a>
+                                                        <span class="badge bg-danger fs-7 px-3 py-2">
+                                                            <i class="fas fa-procedures me-1"></i> {{ count($ccuAccounts) }} إضبارة نشطة
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>الإضبارة والمريض</th>
+                                                                <th>السرير والباقة</th>
+                                                                <th>الدخول والأيام</th>
+                                                                <th class="text-end">مستحق على المريض</th>
+                                                                <th class="text-end">المقبوض / الأمانات</th>
+                                                                <th class="text-end">المتبقي / الفائض</th>
+                                                                <th class="text-center">الإجراء</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($ccuAccounts as $acc)
+                                                                @php
+                                                                    $adm = $acc['admission'];
+                                                                    $stay = $acc['stay_details'];
+                                                                    $isSettled = ($acc['net_balance'] <= 0 && $acc['excess_deposit'] <= 0);
+                                                                @endphp
+                                                                <tr>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">#{{ $adm->id }} — {{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
+                                                                        @if($adm->status === 'discharged')
+                                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.68rem;">خروج معلق مالياً</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                                            <i class="fas fa-bed me-1"></i> {{ $adm->bed?->bed_number ?? '#'.$adm->icu_bed_id }}
+                                                                        </span>
+                                                                        <div class="small text-muted mt-1">{{ $stay['active_service']?->name ?? 'تلقائي' }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="small font-monospace">{{ optional($adm->admission_date)->format('Y-m-d') }}</span>
+                                                                        <small class="text-muted d-block">({{ $stay['days_count'] ?? 1 }} يوم)</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }} د.ع</strong>
+                                                                        @if($stay['is_insured'])
+                                                                            <small class="text-info d-block" style="font-size:0.72rem;">بعد حصة الضمان ({{ number_format($stay['insurance_grand_total']) }})</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <strong class="text-success font-monospace">{{ number_format($acc['total_paid'], 0) }} د.ع</strong>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if($acc['excess_deposit'] > 0)
+                                                                            <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1">
+                                                                                فائض: +{{ number_format($acc['excess_deposit'], 0) }} د.ع
+                                                                            </span>
+                                                                        @elseif($isSettled)
+                                                                            <span class="badge bg-success px-2 py-1">خالص (0 د.ع)</span>
+                                                                        @else
+                                                                            <strong class="text-danger fs-6 font-monospace">{{ number_format($acc['net_balance'], 0) }} د.ع</strong>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <div class="btn-group btn-group-sm">
+                                                                            <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-success fw-bold px-2 py-1 shadow-sm">
+                                                                                <i class="fas fa-file-invoice-dollar me-1"></i> تسديد الرسوم
+                                                                            </a>
+                                                                            <a href="{{ route('cashier.ccu.itemized-receipt.print', $adm->id) }}" class="btn btn-outline-info px-2 py-1" target="_blank">
+                                                                                <i class="fas fa-receipt me-1"></i> وصل تفصيلي
+                                                                            </a>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-heartbeat fa-3x text-muted opacity-50 mb-3"></i>
+                                                    <p class="text-muted mb-0">لا توجد حالات عناية مركزة للكبار نشطة أو معلقة مالياً حالياً.</p>
+                                                </div>
+                                            @endif
+                                        </div>
+
                                         <!-- تبويب مستحقات الاسترجاع (Refunds) -->
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">
                                             @php
@@ -1323,7 +1424,8 @@
                                                                || (isset($pendingEmergencyRefunds) && $pendingEmergencyRefunds->count() > 0)
                                                                || (isset($pendingEmergencyRadRefunds) && $pendingEmergencyRadRefunds->count() > 0)
                                                                || (isset($pendingEmergencyLabRefunds) && $pendingEmergencyLabRefunds->count() > 0)
-                                                               || (isset($nicuRefundAccounts) && count($nicuRefundAccounts) > 0);
+                                                               || (isset($nicuRefundAccounts) && count($nicuRefundAccounts) > 0)
+                                                               || (isset($ccuRefundAccounts) && count($ccuRefundAccounts) > 0);
                                             @endphp
                                             @if($hasAnyRefunds)
                                                 <div class="table-responsive">
@@ -1630,6 +1732,37 @@
                                                                     </td>
                                                                 </tr>
                                                             @endforeach
+
+                                                            {{-- استرجاع فائض أمانات العناية المركزة للكبار (CCU Excess Deposits) --}}
+                                                            @foreach($ccuRefundAccounts ?? [] as $acc)
+                                                                @php
+                                                                    $adm = $acc['admission'];
+                                                                @endphp
+                                                                <tr class="table-warning bg-opacity-10">
+                                                                    <td>
+                                                                        <strong class="text-danger">عناية #{{ $adm->id }}</strong>
+                                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">CCU</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-info text-dark">سرير {{ $adm->bed?->bed_number }}</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $acc['stay_details']['active_service']?->name ?? 'العناية المركزة' }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-success-subtle text-success font-monospace">أمانات: {{ number_format($acc['total_paid'], 0) }} د.ع</span>
+                                                                    </td>
+                                                                    <td><div class="small text-danger fw-semibold">فائض أمانات عناية مركزة</div></td>
+                                                                    <td class="text-end"><span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} د.ع</span></td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm">
+                                                                            <i class="fas fa-undo-alt me-1 text-danger"></i> صرف الفائض
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
                                                         </tbody>
                                                     </table>
                                                 </div>
@@ -1721,198 +1854,6 @@
         </div>
     </div>
 </div>
-
-<!-- مودالات قبض دفعات وأمانات الخدج والحاضنات (NICU Deposit Modals) -->
-@if(isset($nicuAccounts) && count($nicuAccounts) > 0)
-    @foreach($nicuAccounts as $acc)
-        @php
-            $res = $acc['reservation'];
-            $stay = $acc['stay_details'];
-            $babyName = $res->baby_name ?: 'طفل ' . ($res->patient?->name ?? 'غير محدد');
-            $parentName = $res->patient?->name ?? 'غير محدد';
-            $defaultAmount = $acc['net_balance'] > 0 ? $acc['net_balance'] : 50000;
-        @endphp
-        <div class="modal fade" id="nicuDepositModal{{ $res->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                    <div class="modal-header bg-success text-white p-3">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-white text-success rounded-circle p-2 me-2 shadow-xs d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                                <i class="fas fa-hand-holding-usd"></i>
-                            </div>
-                            <div>
-                                <h5 class="modal-title fw-bold mb-0">استلام دفعة / سلفة لحاضنة الخدج</h5>
-                                <small class="text-white-50">قيد مالي تراكمي وإصدار وصل رسمي</small>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ route('cashier.nicu.payment', $res) }}" method="POST">
-                        @csrf
-                        <div class="modal-body p-4 text-end bg-light">
-                            <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong class="text-dark fs-6">{{ $babyName }}</strong>
-                                    <span class="badge bg-primary">حاضنة #{{ $res->incubator?->name ?? $res->incubator_id }}</span>
-                                </div>
-                                <div class="small text-muted mb-2">المسؤول: {{ $parentName }} • ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</div>
-                                <div class="row g-2 text-center pt-2 border-top">
-                                    <div class="col-4">
-                                        <small class="text-muted d-block">إجمالي الحساب</small>
-                                        <span class="fw-bold text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }}</span>
-                                    </div>
-                                    <div class="col-4">
-                                        <small class="text-muted d-block">المسدد (أمانات)</small>
-                                        <span class="fw-bold text-success font-monospace">{{ number_format($acc['total_paid'], 0) }}</span>
-                                    </div>
-                                    <div class="col-4">
-                                        <small class="text-muted d-block">الرصيد المتبقي</small>
-                                        <span class="fw-bold {{ $acc['net_balance'] > 0 ? 'text-danger' : 'text-success' }} font-monospace">{{ number_format($acc['net_balance'], 0) }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark small">المبلغ المستلم نقداً (IQD) <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" name="amount" class="form-control form-control-lg fw-bold font-monospace text-success text-center" value="{{ $defaultAmount }}" min="1" step="any" required>
-                                    <span class="input-group-text fw-bold">د.ع</span>
-                                </div>
-                                <div class="d-flex gap-1 mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '25000'">25,000</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '50000'">50,000</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '100000'">100,000</button>
-                                    @if($acc['net_balance'] > 0)
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '{{ $acc['net_balance'] }}'">كامل المتبقي ({{ number_format($acc['net_balance'], 0) }})</button>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark small">طريقة الدفع</label>
-                                <select name="payment_method" class="form-select">
-                                    <option value="cash" selected>💵 نقداً (Cash)</option>
-                                    <option value="card">💳 بطاقة إلكترونية / POS</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark small">نوع الحركة المالية / السند</label>
-                                <select name="payment_type" class="form-select">
-                                    <option value="deposit" selected>أمانات وسلفة دخول (Advance Deposit)</option>
-                                    <option value="interim">دفعة تحت الحساب أثناء الرقود (Interim Payment)</option>
-                                    <option value="final_settlement">تسديد نهائي وتصفية حساب (Final Settlement)</option>
-                                    @if($acc['excess_deposit'] > 0)
-                                        <option value="refund">↩️ صرف استرجاع فائض أمانات (Refund)</option>
-                                    @endif
-                                </select>
-                            </div>
-
-                            <div class="mb-2">
-                                <label class="form-label fw-bold text-dark small">ملاحظات إضافية (اختياري)</label>
-                                <input type="text" name="notes" class="form-control" placeholder="مثال: دفعة من والد الطفل / استلام مع الدخول">
-                            </div>
-                        </div>
-                        <div class="modal-footer bg-white justify-content-between p-3">
-                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
-                            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm">
-                                <i class="fas fa-check-circle me-1"></i> تأكيد القبض وطباعة الوصل
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        {{-- مودال صرف واسترجاع فائض أمانات الخدج --}}
-        @if($acc['excess_deposit'] > 0)
-            <div class="modal fade" id="nicuRefundModal{{ $res->id }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                        <div class="modal-header bg-warning text-dark p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-white text-warning rounded-circle p-2 me-2 shadow-xs d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                                    <i class="fas fa-undo-alt text-dark fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="modal-title fw-bold mb-0">صرف واسترجاع فائض أمانات حاضنة الخدج</h5>
-                                    <small class="text-dark-50">إشعار مدين / صرف مالي وطباعة سند استرجاع رسمي</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <form action="{{ route('cashier.nicu.payment', $res) }}" method="POST" onsubmit="var btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'fas fa-spinner fa-spin me-1\'></i> جاري الصرف...';">
-                            @csrf
-                            <input type="hidden" name="payment_type" value="refund">
-                            <div class="modal-body p-4 text-end bg-light">
-                                <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong class="text-dark fs-6">{{ $babyName }}</strong>
-                                        <span class="badge bg-primary">حاضنة #{{ $res->incubator?->name ?? $res->incubator_id }}</span>
-                                    </div>
-                                    <div class="small text-muted mb-2">المسؤول: {{ $parentName }} • ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</div>
-                                    <div class="row g-2 text-center pt-2 border-top">
-                                        <div class="col-4">
-                                            <small class="text-muted d-block">إجمالي الفاتورة</small>
-                                            <span class="fw-bold text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }}</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <small class="text-muted d-block">المسدد (أمانات)</small>
-                                            <span class="fw-bold text-success font-monospace">{{ number_format($acc['total_paid'], 0) }}</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <small class="text-muted d-block">فائض الأمانات</small>
-                                            <span class="fw-bold text-danger font-monospace fs-6">+{{ number_format($acc['excess_deposit'], 0) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="alert alert-warning border-warning border-opacity-50 py-2 px-3 small d-flex align-items-center mb-3">
-                                    <i class="fas fa-info-circle me-2 fs-5 text-warning"></i>
-                                    <div>
-                                        يوجد فائض أمانات مسددة بذمة المستشفى بمبلغ <strong class="text-danger">{{ number_format($acc['excess_deposit'], 0) }} د.ع</strong> مستحق الصرف والإرجاع للمريض فوراً.
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold text-dark small">المبلغ المراد صرفه واسترجاعه للمريض (IQD) <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" name="amount" class="form-control form-control-lg fw-bold font-monospace text-danger text-center" value="{{ $acc['excess_deposit'] }}" min="1" max="{{ $acc['excess_deposit'] }}" step="any" required>
-                                        <span class="input-group-text fw-bold">د.ع</span>
-                                    </div>
-                                    <div class="d-flex gap-1 mt-2">
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="this.closest('.modal-body').querySelector('input[name=amount]').value = '{{ $acc['excess_deposit'] }}'">
-                                            صرف كامل الفائض ({{ number_format($acc['excess_deposit'], 0) }} د.ع)
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold text-dark small">طريقة صرف الاسترجاع</label>
-                                    <select name="payment_method" class="form-select">
-                                        <option value="cash" selected>💵 نقداً من صندوق الكاشير (Cash)</option>
-                                        <option value="card">💳 تحويل إلكتروني / بطاقة</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-2">
-                                    <label class="form-label fw-bold text-dark small">ملاحظات وسبب الصرف</label>
-                                    <input type="text" name="notes" class="form-control" value="صرف واسترجاع فائض أمانات لحساب الطفل {{ $babyName }} بعد تصفية الحساب" placeholder="سبب الصرف أو الشخص المستلم">
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-white justify-content-between p-3">
-                                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
-                                <button type="submit" class="btn btn-warning text-dark fw-bold px-4 shadow-sm">
-                                    <i class="fas fa-undo-alt me-1 text-danger"></i> تأكيد صرف واسترجاع المبلغ وطباعة السند
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        @endif
-    @endforeach
-@endif
 
 @endsection
 

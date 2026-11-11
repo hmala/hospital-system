@@ -271,6 +271,31 @@
                     </div>
                 </a>
             </div>
+
+            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('admit icu patients') || auth()->user()->can('view icu radar'))
+                <!-- بطاقة حجز عناية مركزة (ICU / CCU) -->
+                <div class="col-md-6 col-lg-3">
+                    <a href="{{ route('icu.admissions.create', ['patient_id' => $visit->patient_id]) }}" class="text-decoration-none">
+                        <div class="card h-100 shadow-sm request-card icu-card border border-danger border-opacity-25" style="cursor: pointer;">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-heartbeat fa-4x text-danger"></i>
+                                </div>
+                                <h5 class="card-title text-dark fw-bold">حجز عناية مركزة (ICU)</h5>
+                                <p class="card-text text-muted small">
+                                    تسكين وحجز سرير عناية حرجة، عزل، أو عناية قلبية CCU
+                                </p>
+                                <div class="mt-2">
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        انتقال لنموذج الحجز
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            @endif
         </div>
 
         <!-- نموذج التفاصيل -->

@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class HrOvertimeController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('permission:manage hr overtime');
+    }
+
     public function store(Request $request, HrEmployee $employee)
     {
         $request->validate([

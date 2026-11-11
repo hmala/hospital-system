@@ -17,10 +17,13 @@ class HrEmployeeController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:view employees')->only(['index', 'show', 'downloadDocument']);
-        $this->middleware('permission:create employees')->only(['create', 'store', 'uploadDocument']);
+        $this->middleware('permission:view employees')->only(['index', 'show', 'roster']);
+        $this->middleware('permission:create employees')->only(['create', 'store']);
         $this->middleware('permission:edit employees')->only(['edit', 'update']);
-        $this->middleware('permission:delete employees')->only(['destroy', 'destroyDocument']);
+        $this->middleware('permission:delete employees')->only(['destroy']);
+        $this->middleware('permission:manage hr documents')->only(['uploadDocument', 'downloadDocument', 'destroyDocument']);
+        $this->middleware('permission:manage hr actions')->only(['storeAction', 'destroyAction']);
+        $this->middleware('permission:print employee badges')->only(['badge']);
     }
 
     /**
@@ -367,19 +370,19 @@ class HrEmployeeController extends Controller
 
         $setting = \App\Models\HrActionSetting::findOrFail($request->hr_action_setting_id);
 
-        // ???? ?????? ??????
+        // احتساب الأثر المالي
         $financial_amount = 0;
         if ($setting->effect_type == 'amount') {
             $financial_amount = $setting->effect_value;
         } elseif ($setting->effect_type == 'days') {
-            // ????? ?????? = ?????? ??????? / 30
+            // يومية الموظف = الراتب الأساسي / 30
             $dayValue = $employee->basic_salary / 30;
             $financial_amount = $dayValue * $setting->effect_value;
         } elseif ($setting->effect_type == 'percentage') {
             $financial_amount = $employee->basic_salary * ($setting->effect_value / 100);
         }
 
-        // ??? ???? ?????? ?????? ???? ???????
+        // جعل قيمة العقوبة سالبة لخصمها من الراتب
         if ($setting->category == 'penalty' && $financial_amount > 0) {
             $financial_amount = -$financial_amount;
         }
@@ -396,17 +399,28 @@ class HrEmployeeController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return redirect()->route('hr.employees.show', $employee->id)->with('success', '?? ????? ??????? (?????/??????) ?????.');
+        return redirect()->route('hr.employees.show', $employee->id)->with('success', 'تم تسجيل الإجراء (العقوبة/المكافأة) بنجاح.');
     }
 
     public function destroyAction(\App\Models\HrEmployeeAction $action)
     {
         if ($action->status == 'processed') {
-            return back()->with('error', '?? ???? ??? ????? ?? ?????? ?????? ?? ???????.');
+            return back()->with('error', 'لا يمكن حذف إجراء تم ترحيله بالفعل في مسير الرواتب.');
         }
         $action->delete();
 
-        return back()->with('success', '?? ??? ??????? ?????.');
+        return back()->with('success', 'تم حذف الإجراء بنجاح.');
+    }
+
+    /**
+     * طباعة باجة وهوية الموظف الرسمية
+     */
+    public function badge(HrEmployee $employee)
+    {
+        $employee->load(['department', 'user']);
+        $hospital = \App\Models\Hospital::first();
+
+        return view('hr.employees.badge', compact('employee', 'hospital'));
     }
 
     public function destroyDocument(HrEmployeeDocument $document)

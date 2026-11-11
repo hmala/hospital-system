@@ -46,7 +46,7 @@ class NicuBillingService
 
         $isInsured = $reservation->is_insured;
         $gestationalWeeks = $reservation->gestational_weeks;
-        $policyCategory = $reservation->policy_category ?? 'E';
+        $policyCategory = $isInsured ? 'E' : ($reservation->policy_category ?? 'E');
 
         $serviceBreakdown = [];
         $totalServiceCost = 0.0;
@@ -185,42 +185,170 @@ class NicuBillingService
             ];
         }
 
-        // استشارات الأطباء
+        // استشارات الأطباء التخصصية
         $consultations = $reservation->consultations()->where('status', '!=', 'cancelled')->get();
-        $totalConsultationsCost = (float) $consultations->sum('fee');
+        $totalConsultationsCost = 0.0;
+        $totalPatientConsultationsShare = 0.0;
+        $totalInsuranceConsultationsShare = 0.0;
 
-        // طلبات الفحوصات والأشعة والأدوية
-        $medicalOrders = $reservation->medicalOrders()->where('status', '!=', 'cancelled')->get();
-        $totalOrdersCost = (float) $medicalOrders->sum('price');
+        foreach ($consultations as $con) {
+            $fee = (float) $con->fee;
+            $totalConsultationsCost += $fee;
+
+            if ($isInsured && $con->consultation_type === 'internal') {
+                // استشارة داخلية: مشمولة بالضمان وفق الفئة E (10% مريض / 90% ضمان)
+                $patShare = round($fee * 0.10, 2);
+                $insShare = round($fee * 0.90, 2);
+                $isCovered = true;
+                $covPercent = 90.0;
+                $statusText = 'مشمولة بالضمان (90%)';
+                $badgeClass = 'bg-success text-white';
+            } else {
+                // استشارة خارجية أو غير مضمون: 100% كاش على المريض
+                $patShare = $fee;
+                $insShare = 0.0;
+                $isCovered = false;
+                $covPercent = 0.0;
+                $statusText = $isInsured ? 'خارجية - غير مشمولة (كاش 100%)' : 'نقدي (كاش)';
+                $badgeClass = $isInsured ? 'bg-secondary text-white' : 'bg-light text-dark border';
+            }
+
+            $con->is_covered = $isCovered;
+            $con->coverage_percentage = $covPercent;
+            $con->coverage_status_text = $statusText;
+            $con->coverage_badge_class = $badgeClass;
+            $con->insurance_share = $insShare;
+            $con->patient_share = $patShare;
+
+            $totalPatientConsultationsShare += $patShare;
+            $totalInsuranceConsultationsShare += $insShare;
+        }
+
+        // طلبات الفحوصات المخبرية والأشعة والأدوية
+        $medicalOrders = $reservation->medicalOrders()
+            ->where('status', '!=', 'cancelled')
+            ->with(['labTest', 'radiologyType'])
+            ->get();
+
+        $totalOrdersCost = 0.0;
+        $totalPatientOrdersShare = 0.0;
+        $totalInsuranceOrdersShare = 0.0;
+
+        $totalLabCost = 0.0;
+        $insuranceLabShare = 0.0;
+        $patientLabShare = 0.0;
+
+        $totalRadCost = 0.0;
+        $insuranceRadShare = 0.0;
+        $patientRadShare = 0.0;
+
+        $totalMedCost = 0.0;
+        $insuranceMedShare = 0.0;
+        $patientMedShare = 0.0;
+
+        foreach ($medicalOrders as $ord) {
+            $price = (float) $ord->price;
+            $isCovered = false;
+            $covPercent = 0.0;
+            $insShare = 0.0;
+            $patShare = $price;
+            $statusText = 'غير مشمول (كاش 100%)';
+            $badgeClass = 'bg-secondary text-white';
+
+            if ($isInsured) {
+                if ($ord->order_type === 'lab') {
+                    // فحص مختبر: إذا كان مشمولاً وفعالاً بالضمان
+                    $test = $ord->labTest;
+                    if ($test && $test->is_hi_active && (float) $test->hi_price > 0) {
+                        $isCovered = true;
+                        $covPercent = 75.0; // فئة E استقطاع 25% مريض / 75% ضمان
+                        $approvedPrice = (float) $test->hi_price;
+                        $insShare = round($approvedPrice * 0.75, 2);
+                        $patShare = round($approvedPrice * 0.25, 2);
+                        $statusText = 'مشمول بالضمان (75%)';
+                        $badgeClass = 'bg-success text-white';
+                    }
+                } elseif ($ord->order_type === 'radiology') {
+                    // فحص أشعة وسونار: إذا كان مشمولاً وفعالاً بالضمان
+                    $rad = $ord->radiologyType;
+                    if ($rad && $rad->is_hi_active && (float) $rad->hi_price > 0) {
+                        $isCovered = true;
+                        $covPercent = 75.0; // فئة E استقطاع 25% مريض / 75% ضمان
+                        $approvedPrice = (float) $rad->hi_price;
+                        $insShare = round($approvedPrice * 0.75, 2);
+                        $patShare = round($approvedPrice * 0.25, 2);
+                        $statusText = 'مشمول بالضمان (75%)';
+                        $badgeClass = 'bg-info text-white';
+                    }
+                }
+            } else {
+                $statusText = 'نقدي (كاش)';
+                $badgeClass = 'bg-light text-dark border';
+            }
+
+            $ord->is_covered = $isCovered;
+            $ord->coverage_percentage = $covPercent;
+            $ord->coverage_status_text = $statusText;
+            $ord->coverage_badge_class = $badgeClass;
+            $ord->insurance_share = $insShare;
+            $ord->patient_share = $patShare;
+
+            $totalOrdersCost += $price;
+            $totalInsuranceOrdersShare += $insShare;
+            $totalPatientOrdersShare += $patShare;
+
+            if ($ord->order_type === 'lab') {
+                $totalLabCost += $price;
+                $insuranceLabShare += $insShare;
+                $patientLabShare += $patShare;
+            } elseif ($ord->order_type === 'radiology') {
+                $totalRadCost += $price;
+                $insuranceRadShare += $insShare;
+                $patientRadShare += $patShare;
+            } else {
+                $totalMedCost += $price;
+                $insuranceMedShare += $insShare;
+                $patientMedShare += $patShare;
+            }
+        }
 
         $ordersByType = [
-            'lab' => (float) $medicalOrders->where('order_type', 'lab')->sum('price'),
-            'radiology' => (float) $medicalOrders->where('order_type', 'radiology')->sum('price'),
-            'medication' => (float) $medicalOrders->where('order_type', 'medication')->sum('price'),
+            'lab' => $totalLabCost,
+            'radiology' => $totalRadCost,
+            'medication' => $totalMedCost,
         ];
 
         $grandTotal = $totalServiceCost + $totalConsultationsCost + $totalOrdersCost;
 
-        $patientGrandTotal = $isInsured
-            ? ($totalPatientServiceShare + $totalConsultationsCost + $totalOrdersCost)
-            : $grandTotal;
-
         $insuranceGrandTotal = $isInsured
-            ? $totalInsuranceServiceShare
+            ? ($totalInsuranceServiceShare + $totalInsuranceOrdersShare + $totalInsuranceConsultationsShare)
             : 0.0;
 
-        // تحديث الحجز إذا كان تأميناً
+        $patientGrandTotal = $isInsured
+            ? ($totalPatientServiceShare + $totalPatientOrdersShare + $totalPatientConsultationsShare)
+            : $grandTotal;
+
+        // تحديث الحجز إذا كان تأميناً بالمبالغ التراكمية الشاملة
         if ($isInsured) {
             $reservation->updateQuietly([
-                'patient_share_amount' => $totalPatientServiceShare,
-                'insurance_share_amount' => $totalInsuranceServiceShare,
+                'patient_share_amount' => $patientGrandTotal,
+                'insurance_share_amount' => $insuranceGrandTotal,
                 'coverage_summary' => [
                     'insurance_type' => $reservation->insurance_type,
                     'policy_category' => $policyCategory,
                     'gestational_weeks' => $gestationalWeeks,
                     'total_service_cost' => $totalServiceCost,
-                    'patient_share' => $totalPatientServiceShare,
-                    'insurance_share' => $totalInsuranceServiceShare,
+                    'patient_service_share' => $totalPatientServiceShare,
+                    'insurance_service_share' => $totalInsuranceServiceShare,
+                    'total_lab_cost' => $totalLabCost,
+                    'patient_lab_share' => $patientLabShare,
+                    'insurance_lab_share' => $insuranceLabShare,
+                    'total_radiology_cost' => $totalRadCost,
+                    'patient_radiology_share' => $patientRadShare,
+                    'insurance_radiology_share' => $insuranceRadShare,
+                    'total_consultations_cost' => $totalConsultationsCost,
+                    'patient_consultations_share' => $totalPatientConsultationsShare,
+                    'insurance_consultations_share' => $totalInsuranceConsultationsShare,
                     'daily_details' => $dailyCoverageDetails,
                 ],
             ]);
@@ -252,8 +380,18 @@ class NicuBillingService
             'service_breakdown' => $serviceBreakdown,
             'daily_coverage_details' => $dailyCoverageDetails,
             'total_consultations_cost' => $totalConsultationsCost,
+            'patient_consultations_share' => $totalPatientConsultationsShare,
+            'insurance_consultations_share' => $totalInsuranceConsultationsShare,
             'consultations' => $consultations,
             'total_orders_cost' => $totalOrdersCost,
+            'patient_orders_share' => $totalPatientOrdersShare,
+            'insurance_orders_share' => $totalInsuranceOrdersShare,
+            'total_lab_cost' => $totalLabCost,
+            'patient_lab_share' => $patientLabShare,
+            'insurance_lab_share' => $insuranceLabShare,
+            'total_radiology_cost' => $totalRadCost,
+            'patient_radiology_share' => $patientRadShare,
+            'insurance_radiology_share' => $insuranceRadShare,
             'orders_by_type' => $ordersByType,
             'medical_orders' => $medicalOrders,
             'grand_total' => $grandTotal,

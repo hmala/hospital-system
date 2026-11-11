@@ -8,10 +8,10 @@
             <h4 class="fw-bold mb-1 text-dark">
                 @if($nicuPayment->payment_type === 'refund')
                     <i class="fas fa-undo text-warning me-2"></i>
-                    سند استرجاع فائض أمانات حاضنة الخدج
+                    سند استرجاع فائض رسوم حاضنة الخدج
                 @else
                     <i class="fas fa-receipt text-success me-2"></i>
-                    سند قبض رسمي - أمانات الخدج والحاضنات (NICU)
+                    سند قبض رسمي - رسوم الخدج والحاضنات (NICU)
                 @endif
             </h4>
             <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $nicuPayment->receipt_number }}</strong></span>
@@ -158,7 +158,7 @@
                                             <td class="text-end fw-bold fs-6">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</td>
                                         </tr>
                                         <tr class="table-success text-success">
-                                            <td class="fw-bold">إجمالي الأمانات والدفعات المسددة (شاملاً هذا الوصل):</td>
+                                            <td class="fw-bold">إجمالي المبالغ المسددة (شاملاً هذا الوصل):</td>
                                             <td class="text-end fw-bold fs-6">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
                                         </tr>
                                         <tr class="{{ $stayDetails['net_balance'] > 0 ? 'table-warning text-dark' : 'table-light text-muted' }}">
@@ -167,7 +167,7 @@
                                         </tr>
                                         @if($stayDetails['excess_deposit'] > 0)
                                             <tr class="table-info text-dark">
-                                                <td class="fw-bold">فائض أمانات مستحق للأهل (رصيد دائن):</td>
+                                                <td class="fw-bold">فائض رسوم مستحق للأهل (رصيد دائن):</td>
                                                 <td class="text-end fw-bold fs-6 text-success">+{{ number_format($stayDetails['excess_deposit']) }} د.ع</td>
                                             </tr>
                                         @endif

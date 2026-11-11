@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 
 class HrActionSettingController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('permission:manage hr actions');
+    }
+
     public function index()
     {
         $settings = HrActionSetting::orderBy('category')->orderBy('id', 'desc')->get();

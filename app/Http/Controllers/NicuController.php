@@ -13,6 +13,7 @@ use App\Models\NicuConsultation;
 use App\Models\NicuDoctorNote;
 use App\Models\NicuMedicalOrder;
 use App\Models\NicuMedicationAdministration;
+use App\Models\NicuMilkType;
 use App\Models\NicuService;
 use App\Models\NicuServiceLog;
 use App\Models\NicuVital;
@@ -35,6 +36,31 @@ class NicuController extends Controller
     public function __construct(NicuBillingService $billingService)
     {
         $this->billingService = $billingService;
+    }
+
+    /**
+     * التحقق من الصلاحيات السريرية للخدج مع مراعاة الأدوار والإدارة
+     */
+    protected function authorizeNicuAction(array $permissions, array $roles = []): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(403, 'غير مصرح لك بالوصول.');
+        }
+
+        if ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin'])) {
+            return;
+        }
+
+        if ($user->hasAnyPermission($permissions)) {
+            return;
+        }
+
+        if (! empty($roles) && $user->hasRole($roles)) {
+            return;
+        }
+
+        abort(403, 'ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء في قسم الخدج.');
     }
 
     /**
@@ -62,15 +88,15 @@ class NicuController extends Controller
             },
         ]);
 
-        if ($request->filled('type')) {
-            $query->where('incubator_type', $request->type);
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->ofType($request->type);
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $incubators = $query->orderBy('incubator_number')->get();
+        $incubators = $query->orderByNumber()->get();
 
         // خدمات الخدج النشطة
         $nicuServices = NicuService::active()->get();
@@ -82,7 +108,8 @@ class NicuController extends Controller
             'occupied' => $incubators->where('status', Incubator::STATUS_OCCUPIED)->count(),
             'sterilizing' => $incubators->where('status', Incubator::STATUS_STERILIZING)->count(),
             'maintenance' => $incubators->where('status', Incubator::STATUS_MAINTENANCE)->count(),
-            'capsule' => $incubators->where('incubator_type', Incubator::TYPE_CAPSULE)->count(),
+            'normal' => $incubators->where('incubator_type', Incubator::TYPE_NORMAL)->count(),
+            'capsule' => $incubators->filter(fn ($inc) => in_array($inc->incubator_type, [Incubator::TYPE_CAPSULE, 'phototherapy']))->count(),
         ];
 
         // غرف ردهة الأطفال المرتبطة
@@ -138,9 +165,40 @@ class NicuController extends Controller
             });
         }
 
-        // فلترة الحالة (Status Filter)
+        // تبويب العرض النشط أو المؤرشف أو قيد الانتظار أو الشامل
+        $currentView = $request->input('view');
+        if (! $currentView) {
+            if ($request->filled('status')) {
+                $currentView = match ($request->status) {
+                    IncubatorReservation::STATUS_ADMITTED => 'active',
+                    IncubatorReservation::STATUS_DISCHARGED => 'archived',
+                    IncubatorReservation::STATUS_PENDING => 'pending',
+                    default => 'all',
+                };
+            } elseif ($request->filled('search')) {
+                $currentView = 'all';
+            } else {
+                $currentView = 'active';
+            }
+        }
+
+        if ($currentView === 'archived' && ! $isAdmin) {
+            if (! $user->can('view nicu archive') && ! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])) {
+                abort(403, 'غير مصرح لك بالوصول لأرشيف وسجلات الخدج المخرجين');
+            }
+        }
+
+        // تطبيق فلترة الحالة أو الفلترة الافتراضية للتبويب
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
+        } elseif (! $request->filled('status')) {
+            if ($currentView === 'active') {
+                $query->where('status', IncubatorReservation::STATUS_ADMITTED);
+            } elseif ($currentView === 'archived') {
+                $query->where('status', IncubatorReservation::STATUS_DISCHARGED);
+            } elseif ($currentView === 'pending') {
+                $query->where('status', IncubatorReservation::STATUS_PENDING);
+            }
         }
 
         // فلترة باقة الخدمة (Service Filter)
@@ -184,7 +242,7 @@ class NicuController extends Controller
 
         $services = NicuService::active()->orderBy('name')->get();
 
-        return view('nicu.reservations.index', compact('reservations', 'kpis', 'services'));
+        return view('nicu.reservations.index', compact('reservations', 'kpis', 'services', 'currentView'));
     }
 
     /**
@@ -258,6 +316,8 @@ class NicuController extends Controller
             }
         }
 
+        $milkTypes = NicuMilkType::active()->get();
+
         return view('nicu.show', compact(
             'reservation',
             'stayDetails',
@@ -266,7 +326,8 @@ class NicuController extends Controller
             'labTests',
             'labTestGroups',
             'radiologyTypes',
-            'medicines'
+            'medicines',
+            'milkTypes'
         ));
     }
 
@@ -292,10 +353,48 @@ class NicuController extends Controller
     }
 
     /**
+     * حفظ وتثبيت وتعديل البيانات السريرية للولادة (عمر الحمل ووزن الدخول)
+     */
+    public function updateClinicalProfile(Request $request, IncubatorReservation $reservation)
+    {
+        $this->authorizeNicuAction(['edit nicu clinical profile', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'servicePane')
+                ->with('error', '⛔ تم تسجيل الخروج الطبي للطفل وأرشفة إضبارته. لا يمكن تعديل بيانات الولادة وعمر الحمل.');
+        }
+
+        $validated = $request->validate([
+            'birth_weight' => 'nullable|integer|min:300|max:10000',
+            'gestational_age' => 'nullable|string|max:50',
+        ]);
+
+        if (empty($reservation->current_weight) && ! empty($validated['birth_weight'])) {
+            $validated['current_weight'] = $validated['birth_weight'];
+        }
+
+        $reservation->update($validated);
+
+        if ($reservation->is_insured) {
+            $this->billingService->calculateStayDetails($reservation);
+        }
+
+        return $this->redirectBackWithActiveState($request, 'servicePane')
+            ->with('success', 'تم حفظ وتثبيت البيانات السريرية للطفل (عمر الحمل ووزن الدخول) بنجاح.');
+    }
+
+    /**
      * تبديل الخدمة السريرية للطفل عند 12:00 ظهراً
      */
     public function switchService(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['switch nicu services', 'manage nicu services', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'servicePane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن تبديل الباقة السريرية.');
+        }
+
         $request->validate([
             'nicu_service_id' => 'required|exists:nicu_services,id',
             'reason' => 'nullable|string|max:500',
@@ -312,6 +411,13 @@ class NicuController extends Controller
      */
     public function updateServiceLog(Request $request, IncubatorReservation $reservation, NicuServiceLog $serviceLog)
     {
+        $this->authorizeNicuAction(['switch nicu services', 'manage nicu services', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'servicePane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن تعديل باقات الخدمة.');
+        }
+
         if ($serviceLog->reservation_id !== $reservation->id) {
             abort(403, 'السجل لا ينتمي لهذا الحجز');
         }
@@ -344,6 +450,13 @@ class NicuController extends Controller
      */
     public function destroyServiceLog(IncubatorReservation $reservation, NicuServiceLog $serviceLog)
     {
+        $this->authorizeNicuAction(['switch nicu services', 'manage nicu services', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState(null, 'servicePane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن حذف أو تعديل باقات الخدمة.');
+        }
+
         if ($serviceLog->reservation_id !== $reservation->id) {
             abort(403, 'السجل لا ينتمي لهذا الحجز');
         }
@@ -373,6 +486,13 @@ class NicuController extends Controller
      */
     public function storeVitals(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['record nicu vitals', 'manage nicu nursing'], ['nicu_nurse', 'nurse']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'vitalsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن توثيق علامات حيوية جديدة.');
+        }
+
         $validated = $request->validate([
             'temperature' => 'nullable|numeric|between:30,45',
             'incubator_temperature' => 'nullable|numeric|between:25,42',
@@ -419,6 +539,13 @@ class NicuController extends Controller
      */
     public function storeConsultation(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['manage nicu consultations', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'consultationsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن طلب استشارة طبية.');
+        }
+
         $validated = $request->validate([
             'consultation_type' => 'required|in:internal,external',
             'doctor_id' => 'nullable|required_if:consultation_type,internal|exists:doctors,id',
@@ -450,6 +577,8 @@ class NicuController extends Controller
      */
     public function completeConsultation(Request $request, NicuConsultation $consultation)
     {
+        $this->authorizeNicuAction(['manage nicu consultations', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
         $validated = $request->validate([
             'findings' => 'required|string',
             'recommendations' => 'nullable|string',
@@ -470,6 +599,13 @@ class NicuController extends Controller
      */
     public function storeMedicalOrder(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['order nicu lab tests', 'order nicu radiology', 'manage nicu prescriptions', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'vitalsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن طلب إجراءات طبية.');
+        }
+
         $validated = $request->validate([
             'order_type' => 'required|in:lab,radiology,medication',
             'item_name' => 'required|string|max:255',
@@ -501,6 +637,7 @@ class NicuController extends Controller
      */
     public function completeMedicalOrder(Request $request, NicuMedicalOrder $order)
     {
+        $this->authorizeNicuAction(['order nicu lab tests', 'order nicu radiology', 'manage nicu prescriptions', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
         $validated = $request->validate([
             'result' => 'required|string',
             'unit' => 'nullable|string|max:50',
@@ -537,6 +674,13 @@ class NicuController extends Controller
      */
     public function storeLabOrder(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['order nicu lab tests', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'labPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن طلب تحاليل مخبرية.');
+        }
+
         $request->validate([
             'tests' => 'nullable|array',
             'tests.*' => 'string',
@@ -657,6 +801,13 @@ class NicuController extends Controller
      */
     public function storeRadiologyOrder(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['order nicu radiology', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'radiologyPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن طلب فحوصات أشعة.');
+        }
+
         $request->validate([
             'radiology_types' => 'nullable|array',
             'radiology_types.*' => 'string',
@@ -784,6 +935,13 @@ class NicuController extends Controller
      */
     public function storePrescription(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['manage nicu prescriptions', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'prescriptionsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن إضافة وصفات علاجية.');
+        }
+
         $request->validate([
             'medications' => 'nullable|array',
             'medications.*.name' => 'required_with:medications|string|max:255',
@@ -866,6 +1024,13 @@ class NicuController extends Controller
      */
     public function storeMedicationAdministration(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['administer nicu medications', 'manage nicu nursing'], ['nicu_nurse', 'nurse']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'vitalsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن توثيق إعطاء جرعات علاجية.');
+        }
+
         $validated = $request->validate([
             'medication_name' => 'required|string|max:255',
             'route' => 'required|string|max:50',
@@ -931,6 +1096,13 @@ class NicuController extends Controller
      */
     public function storeCareSchedule(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['manage nicu care plans', 'manage nicu clinical', 'manage nicu nursing'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'careSchedulesPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن إضافة خطط رعاية جديدة.');
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:feeding,medication',
             'title' => 'required|string|max:255',
@@ -974,6 +1146,13 @@ class NicuController extends Controller
      */
     public function storeCareSchedulesBatch(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['manage nicu care plans', 'manage nicu clinical', 'manage nicu nursing'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'careSchedulesPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن إضافة خطط رعاية جديدة.');
+        }
+
         $request->validate([
             'schedules' => 'required|array|min:1',
             'schedules.*.type' => 'required|in:feeding,medication',
@@ -1018,6 +1197,8 @@ class NicuController extends Controller
      */
     public function toggleCareSchedule(NicuCareSchedule $schedule)
     {
+        $this->authorizeNicuAction(['manage nicu care plans', 'manage nicu clinical', 'manage nicu nursing'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
         $schedule->update([
             'is_active' => ! $schedule->is_active,
         ]);
@@ -1032,6 +1213,8 @@ class NicuController extends Controller
      */
     public function destroyCareSchedule(NicuCareSchedule $schedule)
     {
+        $this->authorizeNicuAction(['manage nicu care plans', 'manage nicu clinical', 'manage nicu nursing'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
         $schedule->delete();
 
         return $this->redirectBackWithActiveState(null, 'careSchedulesPane')->with('success', 'تم حذف التوصية من الخطة العلاجية بنجاح.');
@@ -1042,6 +1225,13 @@ class NicuController extends Controller
      */
     public function administerCareScheduleQuick(Request $request, NicuCareSchedule $schedule)
     {
+        $this->authorizeNicuAction(['administer nicu medications', 'manage nicu care plans', 'record nicu vitals', 'manage nicu nursing'], ['nicu_nurse', 'nurse']);
+        $reservation = $schedule->reservation;
+        if ($reservation && $reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'careSchedulesPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن توثيق أو إعطاء جرعات ورضعات.');
+        }
+
         $now = now();
 
         if ($schedule->type === 'medication') {
@@ -1083,6 +1273,8 @@ class NicuController extends Controller
      */
     public function discharge(Request $request, IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['discharge incubator reservations', 'manage nicu clinical'], ['nicu_doctor', 'doctor']);
+
         $request->validate([
             'discharge_type' => 'required|in:improved,step_down,transferred_out,dama,expired',
             'discharge_notes' => 'nullable|string|max:1000',
@@ -1125,6 +1317,8 @@ class NicuController extends Controller
      */
     public function generateBabyCamToken(IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['manage nicu baby cam', 'manage incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
         $token = Str::random(32);
         $reservation->update([
             'camera_token' => $token,
@@ -1180,6 +1374,8 @@ class NicuController extends Controller
      */
     public function wristbandPrint(IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
         $reservation->load(['patient.user', 'incubator', 'doctor.user']);
 
         return view('nicu.print.wristband', compact('reservation'));
@@ -1190,6 +1386,8 @@ class NicuController extends Controller
      */
     public function cribCardPrint(IncubatorReservation $reservation)
     {
+        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+
         $reservation->load(['patient.user', 'incubator.room', 'nicuService', 'doctor.user']);
 
         return view('nicu.print.crib_card', compact('reservation'));
@@ -1200,10 +1398,15 @@ class NicuController extends Controller
      */
     public function storeAttachment(Request $request, IncubatorReservation $reservation)
     {
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'attachmentsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن رفع مستندات ومرفقات جديدة.');
+        }
+
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->hasRole(['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك برفع مرفقات بالخدج');
         }
 
@@ -1261,7 +1464,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['nicu_doctor', 'doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu attachments') && ! $user->hasRole(['nicu_doctor', 'doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بحذف مرفقات الخدج');
         }
 
@@ -1279,10 +1482,15 @@ class NicuController extends Controller
      */
     public function storeDoctorNote(Request $request, IncubatorReservation $reservation)
     {
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'careSchedulesPane', 'pill-doctor-note')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن إضافة ملاحظات أو توجيهات جديدة.');
+        }
+
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بتدوين ملاحظات الطبيب الاختصاص');
         }
 
@@ -1314,7 +1522,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بتعديل حالة الملاحظة');
         }
 
@@ -1331,7 +1539,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->can('manage incubator reservations') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu doctor notes') && ! $user->hasRole(['doctor', 'nicu_doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بحذف ملاحظة الطبيب');
         }
 

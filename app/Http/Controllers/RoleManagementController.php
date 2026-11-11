@@ -73,7 +73,7 @@ class RoleManagementController extends Controller
                 'icon' => 'pills',
                 'color' => 'primary',
             ],
-            'admin', 'admin-hsop', 'hospital_admin', 'staff' => [
+            'admin', 'admin-hsop', 'hospital_admin', 'staff', 'hr_manager' => [
                 'key' => 'admin_system',
                 'name' => 'الإدارة والأنظمة العامة',
                 'icon' => 'crown',
@@ -117,6 +117,7 @@ class RoleManagementController extends Controller
             'thaman' => ['label' => 'هيئة الضمان الصحي', 'icon' => 'shield-alt', 'color' => 'info'],
             'gh&est' => ['label' => 'كادر الجراحة والاستشارية', 'icon' => 'hospital', 'color' => 'dark'],
             'staff' => ['label' => 'كادر إداري عام', 'icon' => 'user', 'color' => 'dark'],
+            'hr_manager' => ['label' => 'مدير الموارد البشرية (HR)', 'icon' => 'user-tie', 'color' => 'primary'],
             default => [
                 'label' => ucwords(str_replace(['_', '-'], ' ', $roleName)),
                 'icon' => 'user-shield',
@@ -172,12 +173,27 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage incubator reservations', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu incubators', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'order nicu lab tests', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'order nicu radiology', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu prescriptions', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu consultations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'switch nicu services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit nicu clinical profile', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'record nicu vitals', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'administer nicu medications', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu care plans', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view nicu archive', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu baby cam', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'print nicu cards', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view nicu delivery radar', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu delivery radar settings', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
@@ -249,12 +265,27 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'view incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'create incubator reservations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage incubator reservations', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu incubators', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'order nicu lab tests', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'order nicu radiology', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu prescriptions', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu consultations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'switch nicu services', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'edit nicu clinical profile', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'record nicu vitals', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'administer nicu medications', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu care plans', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu doctor notes', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu attachments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view nicu archive', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'discharge incubator reservations', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu baby cam', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'print nicu cards', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view nicu delivery radar', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu delivery radar settings', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
@@ -425,6 +456,12 @@ class RoleManagementController extends Controller
                 'icon' => 'fa-baby',
                 'color' => 'pink',
                 'description' => 'مراقبة الحاضنات، الأوامر السريرية، محطة التمريض، خطة الرعاية، ملاحظات الاختصاص، والأرشيف',
+            ],
+            'hr' => [
+                'name' => 'الموارد البشرية والرواتب (HR)',
+                'icon' => 'fa-users-cog',
+                'color' => 'primary',
+                'description' => 'سجل وإضبارة الموظفين، مسير الرواتب والأجور، جدول الشفتات والخفارات، والسلف والعقوبات',
             ],
             'whatsapp' => [
                 'name' => 'خدمات ومراسلات الواتساب (WhatsApp)',
@@ -626,19 +663,60 @@ class RoleManagementController extends Controller
 
             // 👶 11. قسم الخدج والحاضنات (NICU)
             'view incubator reservations' => ['label' => 'عرض لوحة وحاضنات قسم الخدج (NICU)', 'action' => 'عرض', 'badge' => 'info'],
-            'create incubator reservations' => ['label' => 'تسجيل وقبول وتسكين طفل جديد بالحاضنة', 'action' => 'إضافة', 'badge' => 'success'],
-            'manage incubator reservations' => ['label' => 'إدارة شاملة لملف الحاضنة وتعديل البيانات', 'action' => 'إدارة', 'badge' => 'primary'],
-            'manage nicu clinical' => ['label' => 'إصدار ومتابعة الأوامر السريرية (تحاليل، أشعة، وصفات، استشارات)', 'action' => 'سريري', 'badge' => 'primary'],
-            'manage nicu nursing' => ['label' => 'محطة التمريض (العلامات الحيوية، الوزن، وسجل إعطاء العلاج MAR)', 'action' => 'تمريض', 'badge' => 'success'],
-            'manage nicu care plans' => ['label' => 'إدارة وتعديل خطة الرعاية وجداول مواعيد الرضاعة والعلاج', 'action' => 'توصيات', 'badge' => 'warning'],
+            'create incubator reservations' => ['label' => 'تسجيل وقبول وتسكين طفل جديد بالحاضنة (الاستعلامات)', 'action' => 'إضافة', 'badge' => 'success'],
+            'manage incubator reservations' => ['label' => 'إدارة شاملة لملف حجز الحاضنة والبيانات الإدارية', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage nicu services' => ['label' => 'إعدادات وتسعير باقات وخدمات وحليب الخدج (NICU)', 'action' => 'إعدادات', 'badge' => 'warning'],
+            'manage nicu incubators' => ['label' => 'إدارة أجهزة الحاضنات والغرف وحالة التطهير', 'action' => 'أجهزة', 'badge' => 'secondary'],
+            'order nicu lab tests' => ['label' => 'طلب وإرسال الفحوصات والتحاليل المخبرية للطفل', 'action' => 'مختبر', 'badge' => 'primary'],
+            'order nicu radiology' => ['label' => 'طلب فحوصات الأشعة والسونار للطفل', 'action' => 'أشعة', 'badge' => 'info'],
+            'manage nicu prescriptions' => ['label' => 'كتابة وإصدار وتعديل الوصفات الطبية والروشتة الإلكترونية', 'action' => 'وصفات', 'badge' => 'success'],
+            'manage nicu consultations' => ['label' => 'طلب ومتابعة الاستشارات الطبية السريرية بين الأقسام', 'action' => 'استشارات', 'badge' => 'primary'],
+            'switch nicu services' => ['label' => 'تبديل باقة الخدمة السريرية للطفل وتعديل سجل الباقات', 'action' => 'باقات', 'badge' => 'warning'],
+            'edit nicu clinical profile' => ['label' => 'تعديل وتثبيت بيانات الولادة وعمر الحمل السريرية', 'action' => 'سريري', 'badge' => 'danger'],
+            'record nicu vitals' => ['label' => 'توثيق العلامات الحيوية والحرارة وقراءات النمو اليومي', 'action' => 'علامات', 'badge' => 'success'],
+            'administer nicu medications' => ['label' => 'توثيق سجل إعطاء الجرعات الدوائية للمريض (MAR)', 'action' => 'تمريض', 'badge' => 'teal'],
+            'manage nicu care plans' => ['label' => 'إدارة وتعديل خطة الرعاية ومواعيد الرضاعة وتوثيقها', 'action' => 'رعاية', 'badge' => 'warning'],
             'manage nicu doctor notes' => ['label' => 'تدوين واعتماد وتثبيت ملاحظات وتوجيهات الطبيب الاختصاص', 'action' => 'طبيب', 'badge' => 'danger'],
-            'manage nicu attachments' => ['label' => 'رفع واستعراض وأرشفة وحذف مرفقات ومستندات الطفل', 'action' => 'أرشيف', 'badge' => 'teal'],
-            'discharge incubator reservations' => ['label' => 'إجراء الخروج السريري وتطهير الحاضنة', 'action' => 'خروج', 'badge' => 'danger'],
+            'manage nicu attachments' => ['label' => 'رفع واستعراض وأرشفة وحذف مرفقات ومستندات الطفل', 'action' => 'أرشيف', 'badge' => 'secondary'],
+            'view nicu archive' => ['label' => 'عرض والوصول إلى سجلات وإضبارات الخدج المؤرشفة للمخرجين', 'action' => 'أرشيف', 'badge' => 'info'],
+            'discharge incubator reservations' => ['label' => 'قرار وإجراء الخروج السريري وتطهير الحاضنة', 'action' => 'خروج', 'badge' => 'danger'],
+            'manage nicu baby cam' => ['label' => 'توليد ومشاركة روابط كاميرا البث المباشر مع الأهل', 'action' => 'كاميرا', 'badge' => 'pink'],
+            'print nicu cards' => ['label' => 'طباعة أسورة المعصم وكارت الحاضنة التعريفي الرسمي', 'action' => 'طباعة', 'badge' => 'dark'],
+            'view nicu delivery radar' => ['label' => 'مراقبة رادار الولادات والعمليات القيصرية المجدولة', 'action' => 'رادار', 'badge' => 'danger'],
+            'manage nicu delivery radar settings' => ['label' => 'التحكم بإعدادات وتفعيل رادار الولادات', 'action' => 'إعدادات', 'badge' => 'warning'],
+            'manage nicu clinical' => ['label' => 'إصدار ومتابعة الأوامر السريرية العامة', 'action' => 'سريري', 'badge' => 'primary'],
+            'manage nicu nursing' => ['label' => 'إجراءات التمريض العامة للخدج', 'action' => 'تمريض', 'badge' => 'success'],
+
+            // 👥 12. الموارد البشرية والرواتب (HR)
+            'view hr' => ['label' => 'دخول لوحة وقسم الموارد البشرية (HR)', 'action' => 'عرض', 'badge' => 'primary'],
+            'view employees' => ['label' => 'استعراض سجل وإضبارات الموظفين', 'action' => 'عرض', 'badge' => 'info'],
+            'create employees' => ['label' => 'إضافة موظف جديد لبيانات المستشفى', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit employees' => ['label' => 'تعديل بيانات وإعدادات رواتب الموظفين', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete employees' => ['label' => 'حذف أو أرشفة ملف موظف', 'action' => 'حذف', 'badge' => 'danger'],
+            'print employee badges' => ['label' => 'طباعة باجة وبطاقة التعريف للموظف (ID Badge)', 'action' => 'طباعة', 'badge' => 'primary'],
+            'manage hr documents' => ['label' => 'رفع وإدارة وحذف المستمسكات الرسمية للموظف', 'action' => 'إدارة', 'badge' => 'info'],
+            'manage hr actions' => ['label' => 'تسجيل وإلغاء العقوبات والمكافآت والإنذارات', 'action' => 'إدارة', 'badge' => 'warning'],
+            'view hr payroll' => ['label' => 'استعراض شيتات وسجلات الرواتب والأجور', 'action' => 'عرض', 'badge' => 'info'],
+            'create hr payroll' => ['label' => 'توليد مسير رواتب شهري جديد وتعديل المسودات', 'action' => 'توليد', 'badge' => 'success'],
+            'approve hr payroll' => ['label' => 'الاعتماد النهائي لمسير الرواتب وترحيله للحسابات', 'action' => 'اعتماد', 'badge' => 'success'],
+            'delete hr payroll' => ['label' => 'حذف مسودة مسير الرواتب وإعادة الاستحقاقات', 'action' => 'حذف', 'badge' => 'danger'],
+            'print hr payslips' => ['label' => 'طباعة قسائم الرواتب الفردية والشيت المركزي', 'action' => 'طباعة', 'badge' => 'primary'],
+            'manage hr loans' => ['label' => 'تسجيل وإلغاء السلف المالية للموظفين', 'action' => 'إدارة', 'badge' => 'warning'],
+            'manage hr absences' => ['label' => 'توثيق الغيابات والتأخيرات والانصراف المبكر', 'action' => 'إدارة', 'badge' => 'danger'],
+            'manage hr overtime' => ['label' => 'توثيق واحتساب ساعات ومبالغ العمل الإضافي', 'action' => 'إدارة', 'badge' => 'success'],
+            'manage hr shifts' => ['label' => 'إدارة وتحديد أنواع الشفتات وأوقاتها', 'action' => 'إدارة', 'badge' => 'info'],
+            'manage hr schedules' => ['label' => 'بناء وتعديل وتبادل جداول الروستر الأسبوعي', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage hr settings' => ['label' => 'إدارة حقول الإدخال الإجبارية وقوائم HR المنسدلة', 'action' => 'إعدادات', 'badge' => 'dark'],
         ];
     }
 
     public function permissionGroup(string $permissionName): string
     {
+        // 0. HR & Payroll
+        if (str_contains($permissionName, 'hr') || str_contains($permissionName, 'employee') || str_contains($permissionName, 'payroll') || str_contains($permissionName, 'shift') || str_contains($permissionName, 'schedule') || str_contains($permissionName, 'payslip') || $permissionName === 'manage hr settings') {
+            return 'hr';
+        }
+
         // 0. NICU Services
         if (str_contains($permissionName, 'incubator') || str_contains($permissionName, 'nicu')) {
             return 'nicu';

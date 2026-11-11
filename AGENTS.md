@@ -54,6 +54,15 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-11 — دمج تحديثات فرع `hr` (وحدة العناية المركزة والقلبية ICU/CCU، تسوية الخدج NICU، وصلاحيات وقسائم HR) في الفرع الرئيسي `main` مع الإبقاء على مسار العمل المحلي WAMP HR-to-Main Full Feature Merge Preserving Local Rules)
+
+### Done
+- **الدمج الآمن لتحديثات `origin/hr` على `main` (`c:\wamp64\www\hospital-system`)**:
+  * دمج كافة التحديثات والميزات من فرع `hr` (حتى الكوميت `b2966c1`) مع استبعاد تعديلات مسار القواعد (`C:\get\hospital-system`) وقاعدة الرفع إلى `hr` فقط، للإبقاء التام على بيئة العمل المحلية في `c:\wamp64\www\hospital-system` وقواعد الرفع المباشر إلى `main`.
+  * الحفاظ الكامل على خيار خروج **`خرج متوفي` (`deceased`)** في الطوارئ (`bf16ef7`) وإعادة تصميم شاشة الاستعلامات ثنائية الأعمدة متكاملةً مع بطاقة **`حجز عناية مركزة (ICU)`** في [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php).
+  * تشغيل المايجريشنات الـ 5 الجديدة (`nicu_milk_types`, `icu_beds`, `icu_admissions`, `ccu_services`, `ccu_stay_brackets`, `ccu_settings`, إلخ) وبذور `IcuBedSeeder`, `CcuTariffSeeder`, `RolesAndPermissionsSeeder` وتحديث كاش الصلاحيات بنجاح على قاعدة البيانات المحلية `hospital_pho`.
+  * التحقق الآلي الشامل: اجتياز 21 حزمة اختبارية بإجمالي `168 passed, 1,186 assertions` عبر محاور `ICU/CCU`, `NICU`, `HR`, `Emergency`, `Inquiry`, `Surgery`, `Cashier`, `Consultants` ومطابقة `Laravel Pint` لجميع الملفات المتأثرة (`71 files`).
+
 ## Session log (2026-11-11 — المرحلة 188: إضافة خيار خروج "خرج متوفي" (`deceased`) في محطة الطوارئ وسجل الحالات والتقرير الطبي والتحقق Emergency Deceased Discharge Option, Reports & Financial Clearance Parity)
 
 ### Done
@@ -65,6 +74,274 @@ Consult these files before making changes or proposing fixes:
   * دعم شارة وتمييز صفوف حالات `deceased` في سجل الطوارئ (`emergency.index`) والتقرير الطبي للطوارئ وصفحة التحقق عبر رمز QR.
 - **الاختبارات الآلية ([tests/Feature/EmergencyWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php))**:
   * إضافة اختبار `test_emergency_discharge_deceased_workflow_and_renders_across_views` والتحقق من منع `deceased` عند وجود مستحقات غير مدفوعة، واجتياز حزمة اختبارات الطوارئ بالكامل (`25 passed, 139 assertions`).
+
+## Session log (2026-11-11 — المرحلة 189: منظومة التسعير الديناميكي وشرائح الإقامة للضمان، شمول التحاليل والأشعة بالباقة بنقرة زر، الكاشير والحسابات والمطالبات، ونقل التشخيص الأولي و ICD-10 لداخل إضبارة الطبيب CCU Dynamic Tariffs, Official MOH Brackets, Bundling & Accounting Suite)
+
+### Done
+- **نقل التشخيص السريري الأولي، ICD-10 الثنائي اللغة، ومقياس GCS لداخل إضبارة الطبيب**:
+  * إزالة حقول التشخيص الأولي، ICD-10، و GCS من استمارة استقبال وحجز الاستعلامات (`resources/views/icu/admit.blade.php` و `IcuAdmissionController@store`) وجعلها خاصة بالطبيب داخل إضبارة العناية (`resources/views/icu/show.blade.php`) عبر البحث الحي الثنائي اللغة (`route('doctor.icd10.search')`) ومسار `ccu.admissions.initial-diagnosis.update` (`CcuCareController@updateInitialDiagnosis`).
+- **قاعدة البيانات والنماذج والتحكم الديناميكي للتسعير والشرائح (`2026_11_11_100000_create_ccu_billing_and_tariffs_tables.php`)**:
+  * جداول `ccu_services`, `ccu_stay_brackets`, `ccu_settings`, `ccu_service_logs`, `ccu_payments` وتحديث `icu_admissions`, `icu_medical_orders`, `ccu_consultations` مع بذرة التسعيرات الرسمية `CcuTariffSeeder` وشاشة التحكم الديناميكي `/ccu/services` (`CcuServiceController`).
+  * دعم باقات الضمان (التنفس الصناعي 750,000 د.ع، الأكسجين 500,000 د.ع) وتدرج شرائح الإقامة الرسمية وسقف الـ 30 يوماً السنوية عبر المريض التراكمي، بالإضافة للتسعيرة النقدية المخصصة (باقة شاملة أو سعر سرير منفصل `cash_bed_only_separate` + خدمات مضافة `CcuService::TYPE_ADDON`).
+- **محرك الفوترة وشمول التحاليل/الأشعة/الاستشارات بنقرة زر (`CcuBillingService`)**:
+  * إظهار التحاليل والأشعة والاستشارات المشمولة بالباقة بمبلغ `0` د.ع للمريض مع حفظ `original_price` في `bundled_reference_total` وتبديل فوري بنقرة زر بين `bundled` و `extra` (`cashier.ccu.orders.toggle-billing`, `cashier.ccu.consultations.toggle-billing`).
+- **الكاشير، كشوفات الحسابات، المطالبات، التحليلات، والخزينة (`CcuCashierController`, `AccountantController@ccuAnalytics`, `HealthInsuranceClaimController`, `HospitalTreasuryController`)**:
+  * شاشات تسديد وكشوفات وإيصالات حرارية وتفصيلية (`resources/views/cashier/ccu/*`)، تبويب `#tab-ccu` في الكاشير الموحد، تحليلات العناية `/accountant/ccu-analytics`، تتبع القيمة الأصلية للباقات وتحصيل الضمان والباقي بذمة الضمان (`hia_remaining_balance`) في مطالبات الضمان والخزينة.
+- **التحقق الآلي وتنسيق الكود**:
+  * اجتياز 31 اختباراً (213 تأكيداً) عبر `NicuInsuranceSettlementAndClaimsTest`, `IcuModuleTest`, `CcuClinicalSuiteTest`, `CcuBillingAndCashierTest` مع توافق كامل لـ Laravel Pint.
+
+## Session log (2026-11-10 — المرحلة 188: بناء وتكامل منظومة التوجيهات السريرية المثبتة، جدول الأدوية والمضخات MAR، الاستشارات التخصصية، والمرفقات وتخطيط القلب CCU Clinical Care Suite)
+
+### Done
+- **التوجيهات السريرية المثبتة في رأس الإضبارة (Pinned Clinical Directives)**:
+  * بناء صندوق التوجيهات السريرية المشددة في أعلى ملف المريض ([resources/views/icu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/show.blade.php)) يبرز أوامر الاستشاري العاجلة مع اسم الطبيب والتوقيت وزر تثبيت/إلغاء التثبيت 📌 بنقرة واحدة عبر نموذج ([app/Models/CcuDoctorNote.php](file:///c:/wamp64/www/hospital-system/app/Models/CcuDoctorNote.php)).
+- **جدول إعطاء وجرعات الأدوية ومضخات التسريب الوريدي (MAR Flowsheet)**:
+  * تبويب مخصص `#medicationTabPane` لجدولة الأدوية بالساعة (كل 4، 6، 8، 12، 24 ساعة) ودعم مضخات التسريب الوريدي المستمر (Syringe Pumps) مع معدل الضخ (Infusion Rate) وتحديد مسار الإعطاء (IV, Infusion, IM, NG Tube, Nebulizer, SC).
+  * زر التمريض السريع "توثيق الإعطاء الآن" مع توثيق الممرض وتحديث الموعد القادم آلياً، وشارات التنبيه الذكية (🔴 متأخر Overdue، 🟡 مستحق الآن Due Now، 🟢 القادم Upcoming) عبر نموذج ([app/Models/CcuMedicationSchedule.php](file:///c:/wamp64/www/hospital-system/app/Models/CcuMedicationSchedule.php)).
+- **استشارات الأطباء التخصصية (CCU Consultations Suite)**:
+  * تبويب مخصص `#consultationsTabPane` لطلب الاستشارات السريرية الداخلية (مع اختيار استشاري المستشفى من القائمة) أو الخارجية، وتوثيق الأجور، ورد وتوصيات الاستشاري المعتمدة بنقرة زر عبر نموذج ([app/Models/CcuConsultation.php](file:///c:/wamp64/www/hospital-system/app/Models/CcuConsultation.php)).
+- **أرشيف المرفقات الطبية وتخطيط القلب (ECG & Medical Attachments)**:
+  * تبويب مخصص `#attachmentsTabPane` لرفع وتخزين مستندات وتخطيط القلب ECG والتقارير الطبية والمفراس الخارجي ومعاينتها فورياً عبر نموذج ([app/Models/CcuAttachment.php](file:///c:/wamp64/www/hospital-system/app/Models/CcuAttachment.php)).
+- **المتحكم والمسارات والتحقق الآلي**:
+  * بناء متحكم ([app/Http/Controllers/CcuCareController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CcuCareController.php)) ومجموعة مسارات `ccu.*` في ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php)).
+  * حزمة اختبارات آلية جديدة شاملة ([tests/Feature/CcuClinicalSuiteTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CcuClinicalSuiteTest.php)) نجحت بالكامل بنسبة 100% (`6 passed, 47 assertions`) إلى جانب استقرار حزمة ([tests/Feature/IcuModuleTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/IcuModuleTest.php)) (`15 passed, 65 assertions`).
+
+## Session log (2026-11-10 — المرحلة 187: تثبيت موضع الشاشة والتبويبات النشطة في إضبارة العناية المركزة، وبناء منظومة حجز تحاليل المختبر والأشعة والتصوير الطبي المتكاملة ICU Dossier Tab & Scroll State Persistence, Fast Lab & Bedside Radiology Suite)
+
+### Done
+- **تثبيت موضع التمرير واستمرارية التبويب النشط ومنع القفز لأعلى الصفحة ([resources/views/icu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuController.php))**:
+  * بناء محرك حفظ واستعادة موضع التمرير اللحظي في `sessionStorage` بمفتاح فريد لكل مريض `icu_scroll_{id}` وتوقيت مرحلي يمنع إعادة القفز لبداية الصفحة عند حفظ المؤشرات الحيوية، ميزان السوائل، أوامر الأطباء، مهام الرعاية، أو إرسال التحاليل والأشعة.
+  * دعم واستمرارية التبويب النشط عبر `_active_tab` ورابط الـ URL Hash وتخزينه في `sessionStorage`، مع إرساله تلقائياً عبر أي نموذج أو زر في الصفحة واستعادته عبر دالة `redirectBackWithActiveState($request, $tab, $fallbackUrl)`.
+- **منظومة حجز تحاليل المختبر السريعة والمتكاملة مع المختبر المركزي ([resources/views/icu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/LabStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/LabStaffController.php))**:
+  * تبويب مخصص `#labTabPane` يشمل بحثاً ذكياً فوري Autocomplete من كتالوج المستشفى، أزرار إدراج سريعة بنقرة واحدة لتحاليل العناية الشائعة (ABG غازات دم شرياني، CBC، Electrolytes شوارد، RFT كلى، LFT كبد، PT/INR تخثر، Troponin، وزرع الدم Blood Culture)، صينية شرائح تفاعلية (Chips Tray)، وتحديد أولوية الفحص (Normal, Urgent, 🚨 STAT).
+  * توليد الطلب المركزي في جدول `requests` بنوع `lab` وربطه بحقل `icu_admission_id`، وتوزيع الفحوصات في جدول `icu_medical_orders` مع مزامنة حالة الإنجاز والنتائج والمدى المرجعي آلياً عند إدخالها من قبل فني المختبر في `LabStaffController`.
+- **منظومة حجز وتصوير الأشعة والسونار المتنقل بجانب السرير ([resources/views/icu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/show.blade.php), [app/Http/Controllers/IcuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * تبويب مخصص `#radiologyTabPane` لحجز الأشعة النقالة Portable CXR، سونار بجانب السرير FAST/Abdomen، إيكو القلب Bedside Echo، ومفراس الدماغ CT Brain مع حقل للملاحظات السريرية ودواعي الفحص.
+  * توليد الطلب المركزي في `requests` بنوع `radiology` وتحديد التصنيف الفرعي تلقائياً، ومزامنة تقرير الطبيب الشعاعي آلياً مع إضبارة العناية عند اعتماده في `RadiologyStaffController`.
+- **المايجريشن والنماذج والعلاقات البرمجية (`database/migrations/2026_11_10_115143_add_icu_admission_id_to_requests_and_enrich_icu_orders.php`, [app/Models/Request.php](file:///c:/wamp64/www/hospital-system/app/Models/Request.php), [app/Models/IcuAdmission.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuAdmission.php), [app/Models/IcuMedicalOrder.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuMedicalOrder.php))**:
+  * إضافة حقل `icu_admission_id` إلى جدول `requests`.
+  * إثراء جدول `icu_medical_orders` بحقول الفحوصات والأسعار والمجموعات والنتائج والمرفقات ومسؤول الطلب.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IcuModuleTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * توسيع الاختبارات إلى 15 اختباراً آلياً تشمل اختبارات رندرة تبويبات المختبر والأشعة، حجز التحاليل بأولوية STAT، حجز الأشعة والسونار، وثبات موضع التبويب النشط بنسبة نجاح 100% (`15 passed, 65 assertions`).
+
+## Session log (2026-11-10 — المرحلة 186: ربط وتكامل حجز العناية المركزة في الاستعلامات وزيارات المرضى، وتخصيص استلام المريض الفوري ICU Inquiry Admission Integration, Pre-selected Patient Handoff & Reception Booking Card Suite)
+
+### Done
+- **تكامل شاشة الاستعلامات `inquiry.create` وزيارات المرضى `visits.edit`**:
+  * إضافة بطاقة خدمة "حجز عناية مركزة (ICU)" في شاشة إنشاء طلبات الاستعلامات ([resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php)) وشاشة الزيارة ([resources/views/visits/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/visits/edit.blade.php)) بنفس الهوية البصرية لبطاقات العمليات والطوارئ والخدج (`fa-heartbeat`, `text-danger`).
+  * تمرير رقم المريض `?patient_id={id}` تلقائياً للرابط `icu.admissions.create`.
+- **تطوير واجهة الاستقبال وحجز سرير العناية ([resources/views/icu/admit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/admit.blade.php), [app/Http/Controllers/IcuAdmissionController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuAdmissionController.php))**:
+  * استلام فوري للمريض المحول من الاستعلامات مع تنزيل بطاقة بياناته آلياً وإخفاء حقل البحث الأولي مع إمكانية التغيير بنقرة زر.
+  * قراءة حالة الضمان بدقة وإلغاء الافتراض الخاطئ لمسار الضمان لمرضى الكاش غير المشمولين، وإظهار تفاصيل الضمان فقط للمرضى المشمولين فعلياً.
+  * استدعاء علاقة `healthInsuranceCategory` مع `user` في `IcuAdmissionController@create`.
+- **مصفوفة الصلاحيات والحوكمة ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php))**:
+  * إسناد صلاحيتي `view icu radar` و `admit icu patients` لدوري الاستعلامات `receptionist` و `inquiry_staff`.
+  * شمول صلاحيات العناية في مصفوفة السماح لدخول الاستعلامات `InquiryController@create`، مع حماية استدعاءات أدوار السونار والإيكو المفقودة بـ `try/catch`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IcuModuleTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * توسيع الاختبارات إلى 11 اختباراً آلياً تشمل اختبار رندرة بطاقة العناية المركزة في الاستعلامات، واختبار تسكين المريض المحول بـ `patient_id` بنجاح 100% (`11 passed, 43 assertions`).
+
+## Session log (2026-11-10 — المرحلة 185: بناء وحدة العناية المركزة والحرجة المتكاملة: رادار الأسرة الحي، شيت المؤشرات بالساعة، ميزان السوائل، وأوامر الطبيب ورعاية التمريض ICU / CCU Comprehensive Critical Care Suite)
+
+### Done
+- **قاعدة البيانات وهيكلية الجداول (`database/migrations/2026_11_10_095152_create_icu_beds_and_admissions_tables.php`)**:
+  * جدول `icu_beds`: إدارة أسرة العناية (رقم السرير، نوعه: عام / عزل ضغط سالب / عناية قلبية CCU / عناية عصبية Neuro، الغرفة، الطابق، الحالة التشغيلية، السعر اليومي).
+  * جدول `icu_admissions`: سجل دخول وتسكين المريض بالعناية، التشخيص السريري، ICD-10، مقياس الوعي الأولي GCS، جهاز التنفس، العزل، والتأمين.
+  * جدول `icu_vital_signs`: شيت العلامات الحيوية بالساعة (GCS، النبض، الضغط، MAP المحسوب آلياً، SpO2، الحرارة، سكر الدم، إعدادات جهاز التنفس Mode، FiO2، PEEP).
+  * جدول `icu_fluid_balances`: ميزان السوائل بالساعة (الداخل: محاليل، دم، تغذية، علاجات / الخارج: بول، مفارغ جراحية، رايل، مفرزات، واحتساب الصافي Net Balance تلقائياً).
+  * جدول `icu_medical_orders`: أوامر الطبيب الاستشاري السريرية بأولويات (`routine`, `urgent`, `stat`) ومتابعة تنفيذها من الكادر.
+  * جدول `icu_care_schedules`: جدول مهام الرعاية التمريضية بالساعة (تقليب، سحب مفرزات، تفريغ كيس البول).
+- **النماذج والعلاقات البرمجية ([app/Models/IcuBed.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuBed.php), [app/Models/IcuAdmission.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuAdmission.php), [app/Models/IcuVitalSign.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuVitalSign.php), [app/Models/IcuFluidBalance.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuFluidBalance.php), [app/Models/IcuMedicalOrder.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuMedicalOrder.php), [app/Models/IcuCareSchedule.php](file:///c:/wamp64/www/hospital-system/app/Models/IcuCareSchedule.php))**:
+  * الفرز الرقمي المتسلسل للأسرة `scopeOrderByNumber()`.
+  * شارات وأنماط الأنواع والحالات (`type_badge_class`, `status_badge_class`, `gcs_badge_class`).
+  * محرك الاحتساب التلقائي لصافي السوائل والضغط الشرياني الوسطي MAP.
+  * إضافة تصنيف `'icu' => 'إيراد العناية المركزة (ICU)'` في [app/Models/FinancialTransaction.php](file:///c:/wamp64/www/hospital-system/app/Models/FinancialTransaction.php).
+- **المتحكمات والمسارات البرمجية ([app/Http/Controllers/IcuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuController.php), [app/Http/Controllers/IcuAdmissionController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuAdmissionController.php), [app/Http/Controllers/IcuBedController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IcuBedController.php))**:
+  * رادار العناية الحية (`/icu`): إحصائيات KPI الحية للأسرة وأجهزة التنفس، شبكة الكروت التفاعلية مع تنبيهات مستوى الوعي GCS.
+  * إضبارة مريض العناية (`/icu/admissions/{id}`): شيت الفلوشيت بالساعة، ميزان السوائل In/Out، أوامر الطبيب، وتخريج المريض وتحويل السرير للتعقيم.
+  * تسجيل الدخول وحجز السرير (`/icu/admissions/create`): تسكين المريض، تحديد السرير والطبيب والتشخيص الأولي.
+  * إدارة وتوزيع الأسرة (`/icu/beds`): متابعة التعقيم والصيانة وإضافة أسرّة جديدة.
+- **واجهات المستخدم والقائمة الجانبية ([resources/views/icu/radar.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/radar.blade.php), [resources/views/icu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/show.blade.php), [resources/views/icu/admit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/admit.blade.php), [resources/views/icu/beds/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/icu/beds/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تصميم عصري متناسق مع شاشات الخدج والعمليات، إبراز حالات الأسرة بالألوان، وإدراج قسم العناية المركزة في القائمة الجانبية بشارة عدد المرضى الراقدين.
+- **الصلاحيات وحزمة الاختبارات الآلية الشاملة ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [tests/Feature/IcuModuleTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/IcuModuleTest.php))**:
+  * 8 صلاحيات دقيقة وأدوار `icu_doctor` و `icu_nurse`.
+  * 7 اختبارات ميزة آلية تغطي الدخول، الرادار، العلامات، السوائل، الأوامر، والتخريج بنسبة نجاح 100% (`7 passed, 30 assertions`).
+
+## Session log (2026-11-10 — المرحلة 184: منظومة تسوية وتفكيك الضمان الصحي الشاملة للخدج: المختبر والأشعة والاستشارات والحاضنة بالتوازي وفق الفئة E NICU Comprehensive Insurance Settlement & Co-payment Engine)
+
+### Done
+- **تفكيك وحساب تسوية الضمان للخدج وفق الفئة E ([app/Services/NicuBillingService.php](file:///c:/wamp64/www/hospital-system/app/Services/NicuBillingService.php))**:
+  * اعتماد الفئة E رسمياً لكافة الخدج المشمولين بالضمان (`is_insured`):
+    - الفحوصات المخبرية (`lab`): مساهمة الضمان 75% وتحمل المريض 25% للفحوصات المشمولة بالضمان (`is_hi_active`).
+    - الفحوصات الإشعاعية (`radiology`): مساهمة الضمان 75% وتحمل المريض 25% للفحوصات المشمولة.
+    - استشارات الأطباء (`consultations`): الاستشارات الداخلية مشمولة بنسبة 90% ضمان و 10% مريض، والاستشارات الخارجية غير مشمولة (100% كاش على المريض).
+    - الفحوصات والخدمات غير المشمولة: 100% كاش على المريض و 0% على الضمان مع بيان شارة صريحة.
+    - أجور الحاضنة اليومية: احتسابها وفق الفئة E ومصفوفة عمر الحمل الرسمية للوزارة.
+  * تجميع المجاميع الكبرى: `insurance_grand_total` (إجمالي مطالبة الضمان = حاضنة + مختبر + أشعة + استشارات داخلية)، و `patient_grand_total` (حصة المريض المستحقة)، وتحديث الحجز تلقائياً في قاعدة البيانات.
+- **تحديث كشف الحساب التراكمي للخدج ([resources/views/nicu/statement.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/statement.blade.php))**:
+  * إضافة أعمدة التغطية المعتمدة ومساهمة الضمان وتحمل المريض كاش في جدول الاستشارات (Section 2) وجدول الفحوصات المخبرية والأشعة (Section 3).
+  * إضافة سطور مجاميع مفككة للمختبر والأشعة والاستشارات.
+  * تفكيك بطاقة الخلاصة المالية النهائية لتبين بدقة مساهمات الضمان وحصص المريض في الحاضنة والمختبر والأشعة والاستشارات، وإجمالي مطالبة الضمان، وحصة المريض، والمسدد، والفائض المستحق للإرجاع إن وجد.
+- **تحديث واجهة تسديد الكاشير الموحدة للخدج ([resources/views/cashier/nicu/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu/payment-form.blade.php))**:
+  * قراءة وتحديث أرقام شريط الموقف المالي العلوي وصندوق التسديد الذكي لحساب المتبقي الحقيقي للدفع دون مطالبة ولي الأمر بأي مبالغ يغطيها الضمان.
+  * إضافة أعمدة وشارات التغطية ومساهمات الضمان وتحمل المريض في جداول التحاليل والأشعة والاستشارات مع سطر المجاميع المفككة لكل قسم.
+- **تحديث شيت كشوفات ومطالبات الضمان للخدج ([resources/views/cashier/nicu-statements.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-statements.blade.php))**:
+  * تحديث عمود تفصيل البنود لإبراز مساهمة الضمان بالحاضنة والمختبر والأشعة والاستشارات، ومطابقة مطالبة الضمان الشاملة.
+- **تحديث وصل التسوية والخدمات التفصيلي الحراري/A4 ([resources/views/cashier/nicu-itemized-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php))**:
+  * إدراج تفكيك نسب ومبالغ الضمان والمريض تحت كل تحليل وفحص أشعة واستشارة، وتحديث صندوق الموقف المالي الشامل.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuInsuranceSettlementAndClaimsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuInsuranceSettlementAndClaimsTest.php))**:
+  * 5 اختبارات ميزة آلية تغطي: الاحتساب التلقائي لأيام الرقود، مصفوفة عمر الحمل، انعكاس المطالبات في الخزينة المركزية، كشوفات الكاشير، وتفكيك مساهمة الضمان والمريض في التحاليل والاستشارات وشاشتي الكشف والكاشير بنجاح 100% (`5 passed, 35 assertions`).
+
+## Session log (2026-11-09 — المرحلة 183: ضبط الفرز الرقمي المتسلسل للحاضنات من 1 إلى 16 والتكامل التام بين حاضنات العناية وكبسولات العلاج الضوئي NICU Natural Numerical Sequence Sorting & Dynamic Phototherapy/Capsule Suite)
+
+### Done
+- **الفرز الرقمي الصحيح للحاضنات ([app/Models/Incubator.php](file:///c:/wamp64/www/hospital-system/app/Models/Incubator.php))**:
+  * معالجة مشكلة الفرز الأبجدي للنصوص (Lexicographical Sorting) الناتج عن تخزين `incubator_number` كـ `VARCHAR` والذي كان يفرز الأرقام كـ 1 ثم 10 ثم 11 قبل 2.
+  * إضافة الـ Scope المخصص `scopeOrderByNumber($query, $direction = 'asc')` المتوافق مع محرك MySQL ومحرك SQLite للاختبارات الآلية.
+- **تطبيق الفرز الرقمي المتسلسل عبر كافة شاشات ومسارات الحاضنات**:
+  * شاشة لوحة الخدج الرئيسية `/nicu` عبر [app/Http/Controllers/NicuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuController.php).
+  * شاشة حجز واستقبال الخديج `/incubator-reservations/create` عبر [app/Http/Controllers/IncubatorReservationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IncubatorReservationController.php) وقوائم الاختيار التفاعلية.
+  * شاشة إدارة الحاضنات `/incubators` عبر [app/Http/Controllers/IncubatorController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/IncubatorController.php).
+- **الحوكمة والتكامل التام لنوعي الحاضنات (حاضنة اعتيادية مقابل كبسولة علاج ضوئي)**:
+  * دعم التوافق المزدوج مع نوعي `capsule` و `phototherapy` في `getTypeNameAttribute`, `getTypeColorAttribute`, `getTypeIconAttribute`, و `scopeOfType`.
+  * تحديث إحصائيات KPIs التراكمية في شاشة الخدج الرئيسية وشاشة إدارة الحاضنات لتظهر بدقة عدد الحاضنات وعدد كبسولات العلاج الضوئي بشكل مستقل.
+  * تحديث تبويبات شاشة `/incubators` ومرشحات شاشة `/incubator-reservations/create` لفرز وفلترة النوعين بسلاسة مع الحفاظ التام على أرقام وسجلات الحاضنات القائمة في المستشفى.
+  * مزامنة كبسولات العلاج الضوئي (15 و 16) بقاعدة البيانات وفقاً لـ `IncubatorSeeder`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/IncubatorSortingAndTypeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/IncubatorSortingAndTypeTest.php))**:
+  * 4 اختبارات ميزة آلية تغطي: الفرز الرقمي المتسلسل، شاشة NICU ومحاكاة الـ 16 حاضنة، حجز واستقبال الخديج وفلترة العلاج الضوئي، وتبويبات إدارة الحاضنات بنجاح 100% (`4 passed, 13 assertions`).
+
+## Session log (2026-11-08 — المرحلة 182: إصلاح حفظ تفكيك الرواتب، تفكيك مصفوفة صلاحيات HR، قالب وقسيمة الراتب الفردية وطباعة باجة الموظف الرسمية HR Payroll Model Fix, Granular Permissions Matrix, Official Employee ID Badge & Individual Payslip Suite)
+
+### Done
+- **إصلاح الخلل البرمجي في موديل الرواتب ([app/Models/HrPayroll.php](file:///c:/wamp64/www/hospital-system/app/Models/HrPayroll.php), [database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_10_06_054330_add_new_fields_to_hr_payrolls_table.php))**:
+  * إضافة حقول التفكيك المالي المفقودة إلى `$fillable` و `$casts` في موديل `HrPayroll`: (`overtime_amount`, `absence_deduction`, `loan_deduction`, `social_security_amount`, `tax_amount`, `payment_method`, `is_paid`, `paid_at`).
+  * تصحيح ميغريشن الرواتب الداعم ليقوم بفحص وإضافة الأعمدة في حال عدم وجودها لمنع أخطاء بيئات النشر والاختبارات الآلية في SQLite.
+  * إضافة دوال المساعدة الحسابية `total_earnings` و `total_deductions` وعلاقة `payrollCycle()`.
+- **تفكيك مصفوفة صلاحيات الموارد البشرية وحوكمة الأدوار (Granular HR Permissions Matrix & Roles Governance)**:
+  * تفكيك الصلاحيات العريضة إلى 19 صلاحية دقيقة ومستقلة:
+    1. `view hr`: دخول لوحة وقسم الموارد البشرية.
+    2. `view employees`: استعراض سجل وإضبارات الموظفين.
+    3. `create employees`: إضافة موظف جديد لبيانات المستشفى.
+    4. `edit employees`: تعديل بيانات وإعدادات رواتب الموظفين.
+    5. `delete employees`: حذف أو أرشفة ملف موظف.
+    6. `print employee badges`: طباعة باجة وبطاقة التعريف للموظف (ID Badge).
+    7. `manage hr documents`: رفع وإدارة وحذف المستمسكات الرسمية للموظف.
+    8. `manage hr actions`: تسجيل وإلغاء العقوبات والمكافآت والإنذارات.
+    9. `view hr payroll`: استعراض شيتات وسجلات الرواتب والأجور.
+    10. `create hr payroll`: توليد مسير رواتب شهري جديد وتعديل المسودات.
+    11. `approve hr payroll`: الاعتماد النهائي لمسير الرواتب وترحيله للحسابات.
+    12. `delete hr payroll`: حذف مسودة مسير الرواتب وإعادة الاستحقاقات.
+    13. `print hr payslips`: طباعة قسائم الرواتب الفردية والشيت المركزي.
+    14. `manage hr loans`: تسجيل وإلغاء السلف المالية للموظفين.
+    15. `manage hr absences`: توثيق الغيابات والتأخيرات والانصراف المبكر.
+    16. `manage hr overtime`: توثيق واحتساب ساعات ومبالغ العمل الإضافي.
+    17. `manage hr shifts`: إدارة وتحديد أنواع الشفتات وأوقاتها.
+    18. `manage hr schedules`: بناء وتعديل وتبادل جداول الروستر الأسبوعي.
+    19. `manage hr settings`: إدارة حقول الإدخال الإجبارية وقوائم HR المنسدلة.
+  * تحديث [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) وإسناد كافة الصلاحيات لدور مدير الموارد البشرية `hr_manager` والمدير `admin`.
+  * تحديث [app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php) بإدراج قسم `hr` بالترتيب العام، ترجمة الصلاحيات بالشارات، وتصنيف دور `hr_manager`.
+  * حماية كافة متحكمات الموارد البشرية عبر الميدلوير بالصلاحيات الدقيقة وتحديث القائمة الجانبية في [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php).
+- **قالب وقسيمة الراتب الفردية للموظف (Individual Employee Payslip Print)**:
+  * بناء شاشة طباعة قسيمة الراتب [resources/views/hr/payrolls/payslip.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/hr/payrolls/payslip.blade.php) ومسار `Route::get('payrolls/slip/{slip}/print')`.
+  * جدول مالي مزدوج يفكك الاستحقاقات (الأساسي، المخصصات، الإضافي، المكافآت) مقابل الاستقطاعات (الغياب، العقوبات، السلف، الضمان، الضريبة)، وبطاقة صافي الراتب، ومساحة التواقيع الرسمية الثلاثية.
+  * إضافة زر `[ 🖨️ قسيمة الراتب ]` في شيت الرواتب المركزي [resources/views/hr/payrolls/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/hr/payrolls/show.blade.php).
+- **طباعة باجة وهوية الموظف الرسمية (Official Staff ID Badge / CR80 PVC Standard)**:
+  * بناء قالب بطاقة الهوية [resources/views/hr/employees/badge.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/hr/employees/badge.blade.php) ومسار `Route::get('employees/{employee}/badge')` بالصلاحية `print employee badges`.
+  * بطاقة مزدوجة (وجه أمامي وخلفي) بألوان الأقسام، الشعار، الصورة، كود الموظف، باركود مرئي، فصيلة الدم، هاتف الطوارئ، ترخيص المهنة، ومربع الختم الرسمي.
+  * إضافة أزرار الطباعة في جدول الموظفين [resources/views/hr/employees/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/hr/employees/index.blade.php) والإضبارة [resources/views/hr/employees/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/hr/employees/show.blade.php).
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/HREmployeeTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * اجتياز كامل الاختبارات بنسبة نجاح 100% (`8 passed, 38 assertions`).
+
+## Session log (2026-11-08 — المرحلة 181: نظام تسديد وتصفية رسوم الخدج والحاضنات الموحد وإلغاء الأمانات والسلف بسلاسة واجهة العمليات الجراحية NICU Cashier Unified Folio & Payment Suite, Advance Deposit Deprecation & Inpatient Settlement Engine)
+
+### Done
+- **إلغاء مصطلحي "الأمانات" و"السلفة" وتوحيد المفهوم المالي تحت "التسديد" (Advance Deposit & Sulfa Deprecation)**:
+  * إلغاء مسميات الأمانات والسلف نهائياً من كافة الواجهات، والإيصالات الحرارية، وسندات القبض، وجداول الكاشير.
+  * توحيد المفاهيم المحاسبية في [app/Models/NicuPayment.php](file:///c:/wamp64/www/hospital-system/app/Models/NicuPayment.php) والواجهات إلى: "تسديد رسوم الحاضنة"، "دفعة تسديد"، "تسديد وتصفية نهائية"، و"استرجاع فائض الرسوم".
+  * تحديث صياغة السندات في [resources/views/cashier/nicu-receipt.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-receipt.blade.php)، [resources/views/cashier/nicu-receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-receipt-print.blade.php)، و [resources/views/cashier/nicu-itemized-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php).
+- **واجهة تسديد رسوم الخدج المستقلة الفاخرة (ستايل العمليات الجراحية الموحد) ([resources/views/cashier/nicu/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/nicu/payment-form.blade.php))**:
+  * بناء واجهة تسديد متكاملة وعريضة بديلة للمودال القديم الضيق:
+    1. **بطاقة الحاضنة والإقامة**: اسم الطفل، رقم الحاضنة، باقة الخدمة الحالية، الطبيب المشرف، تاريخ وساعة الدخول، وعدد الأيام الفندقية وساعات الرقود المحسوبة حياً وفق نقطة 12:00 ظهراً وسماحية الـ 6 ساعات.
+    2. **بطاقة ولي الأمر والتغطية المالية**: اسم المسؤول، رقم الملف، الهاتف، وشارة التغطية: `[ 🛡️ الضمان الصحي الوطني ]` (الفئة، عمر الحمل، ونسبة وتكلفة الضمان) أو `[ 💵 دفع نقدي كامل ]`.
+    3. **شريط الأرقام المالية العلوي**: إجمالي التكلفة المعتمدة | المسدد سابقاً | المتبقي للتسديد أو فائض مستحق الإرجاع.
+    4. **كشف البنود والخدمات السريرية المفصلة**:
+       - جدول باقات الحاضنة اليومية والتنفس مع بيان حصة المريض والضمان.
+       - جدول الفحوصات والتحاليل المخبرية للطفل وحالتها وتكلفتها.
+       - جدول الفحوصات الإشعاعية والسونار وتكلفتها.
+       - جدول استشارات الأطباء التخصصية وأتعابها.
+       - جدول الأدوية وحليب وتغذية الخدج المستهلكة.
+       - جدول سجل الدفعات المسددة سابقاً مع أزرار معاينة وطباعة الوصل لكل دفعة.
+    5. **صندوق التسديد السفلي الذكي (Smart Payment Dock)**:
+       - كبسولات التحكم المزدوجة Segmented Pills:
+         * `[ 🟢 تسديد كامل المبلغ المتبقي ]` (تعبئة تلقائية للمبلغ المتبقي).
+         * `[ 🟡 تسديد جزئي (دفعة مقبوضة الآن) ]` مع حقل إدخال المبلغ المقبوض وشارة احتساب المتبقي حياً ولحظياً، وأزرار اقتراح مبالغ سريعة (25k, 50k, 100k, 250k).
+       - اختيار طريقة الدفع: نقداً (Cash) أو بطاقة إلكترونية (Card).
+       - حقل الملاحظات وزر تأكيد التسديد الفاخر مع مؤشر تحميل لمنع التكرار.
+    6. **قسم إرجاع الفائض المالي (Refund Section)**:
+       - يظهر تلقائياً بوضوح عند وجود مبالغ مسددة تزيد عن التكلفة (كالخروج المبكر) لصرف الفائض وطباعة سند صرف واسترجاع رسمي بنقرة واحدة.
+- **تحديث شاشة الكاشير الرئيسية وحذف المودالات القديمة ([resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * الإبقاء على تبويب الخدج في مكانه الطبيعي داخل الكاشير مع تحويل زر "قبض دفعة" المنبثق إلى زر مباشر: `[ 💳 تسديد الرسوم ]` ينقل الكاشير فوراً لصفحة التسديد الشاملة.
+  * حذف المودالات المنبثقة القديمة (`#nicuDepositModal` و `#nicuRefundModal`) نهائياً لتنظيف الصفحة وخفتها.
+- **مسارات وتحكم السيرفر ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * مسار جديد: `GET /cashier/nicu/{reservation}/payment` باسم `cashier.nicu.payment.form`.
+  * تابع `showNicuPaymentForm()` لتحميل كافة العلاقات السريرية والمالية عبر [`NicuBillingService`](file:///c:/wamp64/www/hospital-system/app/Services/NicuBillingService.php).
+  * تحديث `processNicuPayment()` لدعم التسديد الكامل والجزئي (دمج `custom_paid_amount`)، والتحقق من التصفية والاسترجاع، وتوثيق السندات المالية وسجل النشاطات بمسميات التسديد الصريحة.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuCashierPaymentFormTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuCashierPaymentFormTest.php))**:
+  * 6 اختبارات ميزة مخصصة تغطي: رندرة واجهة تسديد الخدج الجديدة بستايل العمليات، ربط جدول الكاشير، التسديد الكامل، التسديد الجزئي، إرجاع الفائض، وحظر غير المخولين بنجاح 100% (`6 passed, 21 assertions`).
+
+## Session log (2026-11-08 — المرحلة 180: تفكيك وتفصيل صلاحيات الخدج، تخصيص حجز الاستعلامات، ومنظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج Granular NICU Permissions Matrix, Reception Baby Admission Segregation & Dynamic NICU Milk/Formula Catalog Suite)
+
+### Done
+- **تفكيك وتفصيل صلاحيات قسم الخدج والحاضنات (Granular NICU Permissions Matrix)**:
+  * تفكيك الصلاحيات العريضة إلى 14 صلاحية دقيقة:
+    1. `manage nicu services`: إدارة وتسعير باقات وخدمات وحليب الخدج.
+    2. `record nicu vitals`: تسجيل وتوثيق العلامات الحيوية والوزن والرضاعة في الحاضنة.
+    3. `order nicu lab tests`: إصدار طلبات الفحوصات المخبرية وتحاليل الخدج.
+    4. `order nicu radiology`: إصدار طلبات الفحوصات الشعاعية والسونار للخدج.
+    5. `manage nicu prescriptions`: كتابة واعتماد الوصفات والعلاجات الدوائية للطفل.
+    6. `administer nicu medications`: توثيق إعطاء وتطبيق العلاجات في محطة التمريض (سجل MAR).
+    7. `manage nicu consultations`: طلب واعتماد تقارير الاستشارات الطبية للخدج.
+    8. `switch nicu services`: تبديل باقات الرعاية والخدمات اليومية للأطفال.
+    9. `edit nicu clinical profile`: تعديل وتثبيت بيانات الولادة السريرية وعمر الحمل داخل الإضبارة.
+    10. `manage nicu doctor notes`: تدوين وتثبيت ملاحظات وتوجيهات الطبيب الاختصاص.
+    11. `manage nicu care plans`: اعتماد وجدولة خطط الرعاية والتغذية ومواعيد الرضاعة.
+    12. `discharge incubator reservations`: إصدار أمر الخروج الطبي وتصفية إقامة الطفل.
+    13. `view nicu archive`: تصفح أرشيف وسجلات إضبارات الأطفال المخرجين.
+    14. `manage nicu baby cam`: توليد وإدارة روابط بث كاميرا الحاضنة للأهل.
+  * تحديث [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php) و [app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php) بإدراج وتصنيف الصلاحيات بأسمائها وشاراتها العربية.
+- **حوكمة حجز الاستقبال وعزل الإجراءات السريرية (Reception Booking vs Clinical Segregation)**:
+  * دور الاستعلامات (`receptionist`) محصور بإنشاء وإدارة حجز الحاضنة واستقبال الطفل (`create incubator reservations`, `view incubator reservations`, `manage incubator reservations`) وطباعة أسورة المعصم وكارت الحاضنة الشفاف (`print nicu cards`) وتوليد رابط الكاميرا (`manage nicu baby cam`).
+  * الاستعلامات محظورة وممنوعة تماماً على صعيد السيرفر (403 Forbidden) عن أي إجراء سريري أو تمريضي (توثيق العلامات، طلب التحاليل، الأشعة، كتابة الوصفات، تعديل الملف السريري، أو إخراج الطفل).
+  * حصر الصلاحيات السريرية بطبيب الخدج (`nicu_doctor`) والتمريضية بممرضة الخدج (`nicu_nurse`) دون استحداث أدوار جديدة والاعتماد التام على الأدوار الأساسية.
+- **منظومة إدارة أنواع وتصنيفات حليب وتغذية الخدج (NICU Milk/Formula Dynamic Catalog)**:
+  * إنشاء جدول ومايجريشن `nicu_milk_types` ([database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_08_102500_create_nicu_milk_types_table.php)) وموديل [app/Models/NicuMilkType.php](file:///c:/wamp64/www/hospital-system/app/Models/NicuMilkType.php) يشمل تصنيفات التغذية، ترتيب العرض، وملاحظات الاستخدام السريري.
+  * بناء متحكم [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuMilkTypeController.php) مع دعم عمليات CRUD والتبديل اللحظي عبر AJAX (`/nicu/milk-types/{id}/toggle`) وجلب القائمة النشطة JSON.
+  * تصميم واجهة التبويبات المزدوجة في [resources/views/nicu/services/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/services/index.blade.php) للتنقل السلس بين `[ 🏷️ باقات وخدمات الحاضنات والتنفس ]` و `[ 🍼 قائمة وتصنيفات حليب وتغذية الخدج ]` مع مؤشرات إحصائية وجدول ومودالات الإضافة والتعديل.
+  * ربط قائمة الحليب ديناميكياً داخل إضبارة الطفل [resources/views/nicu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/show.blade.php) في داتا ليست الرضاعة السريعة (`quickFeedingTypes`) وتوثيق العلامات الحيوية، مع توفير رابط وصول مباشر `[ ⚙️ إدارة أنواع الحليب ]`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php))**:
+  * 5 اختبارات ميزة مخصصة تغطي: حظر الاستعلامات عن الإجراءات السريرية، تمكين طبيب وممرضة الخدج، دورة حياة إدارة أنواع الحليب والتبديل اللحظي، ورندرة الواجهات والتبويبات بنجاح 100% (`5 passed, 38 assertions`).
+
+## Session log (2026-11-08 — المرحلة 179: قفل إضبارة الخديج عند الخروج للأرشفة والمطالعة فقط، أرشفة سجلات المرضى المخرجين، ونقل عمر الحمل ووزن الطفل لداخل الإضبارة NICU Discharged Baby Chart Lockdown, Medical Archive Segregation & Clinical Birth Profile Relocation)
+
+### Done
+- **قفل سجل وإضبارة الطفل الخديج عند خروجه (Zero-Mutation Discharged Chart Lockdown)**:
+  * تحويل محطة الرعاية السريرية الشاملة (`/nicu/reservations/{reservation}`) عند خروج الطفل (`status === 'discharged'`) إلى وضع المطالعة والأرشفة فقط (`Read-Only Mode`).
+  * إبراز بنر تحذيري تنفيذي فاخر في أعلى الصفحة يوضح تاريخ وتوقيت الخروج، نوع الخروج، وقفل كافة الإجراءات السريرية.
+  * إخفاء نماذج التوثيق والإدخال عبر كامل التبويبات السريرية (العلامات الحيوية، سجل MAR، الاستشارات، المختبر، الأشعة، الوصفات، جداول الرعاية والتغذية، ملاحظات الطبيب الاختصاص، رفع المرفقات، وتبديل الباقات).
+  * توسيع جداول السجلات والنتائج المؤرشفة بعرض الصفحة الكامل (`col-12`) لتقديم واجهة أرشيف سريرية ناصعة ومريحة، مع الحفاظ على إمكانية استعراض التقارير التاريخية، تحميل المرفقات، والطباعة.
+  * حماية السيرفر الصارمة: حظر كافة عمليات الإضافة أو التعديل في [app/Http/Controllers/NicuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuController.php) عبر 15 تابعاً سريرياً وإعادة التوجيه مع رسالة تنبيهية تمنع أي تلاعب.
+- **قائمة السجلات وأرشفة المرضى (Discharged Babies Archive View)**:
+  * في صفحة سجل وإضبارات الخدج ([resources/views/nicu/reservations/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/reservations/index.blade.php)): إضافة كبسولات تنقل علوية تفاعلية (`الأطفال بالحاضنات (الحالات النشطة)`، `السجلات وأرشفة المرضى`، `قيد الانتظار`، و`كافة الإضبارات`).
+  * عزل الأطفال المخرجين تلقائياً ونقلهم إلى تبويب "السجلات وأرشفة المرضى" (`view=archived`) دون إشغال قائمة الحاضنات النشطة.
+  * إضافة رابط وصول مباشر في القائمة الجانبية للنظام (`السجلات وأرشفة المرضى`) تحت قسم وحدة رعاية الأطفال والخدج (NICU) في [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php).
+  * تخصيص زر المعاينة للأطفال المخرجين ليظهر بأيقونة العين كـ "معاينة إضبارة الطفل المؤرشفة (للاطلاع والمطالعة فقط)".
+- **نقل عمر الحمل ووزن الطفل إلى داخل الإضبارة مع حوكمة القفل والتعديل المشروط**:
+  * إزالة حقلي `عمر الحمل (gestational_age)` و`وزن الطفل (birth_weight)` من استمارة حجز الحاضنة وتسجيل الدخول الأولي ([resources/views/incubator_reservations/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/incubator_reservations/create.blade.php))، واستبدالهما بتنبيه سريري يوضح تسجيلهما لاحقاً بدقة داخل الإضبارة.
+  * إضافة بطاقة سريرية بارزة "بيانات الولادة وعمر الحمل السريرية" داخل تبويب **"باقة الخدمة والتبديل (12:00 ظهراً)"** في [resources/views/nicu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/show.blade.php) تعرض وزن الدخول وعمر الحمل ومستوى الخداجة بتصميم مقفل للحماية (`Locked Mode`).
+  * توفير زر `[ ✏️ تعديل البيانات السريرية ]`؛ عند النقر يظهر تنبيه تأكيد SweetAlert2: *"هل أنت متأكد من تعديل هذه البيانات؟"*، وعند الموافقة يُفتح نموذج التعديل المباشر مع زر حفظ وزر إلغاء دون أي نوافذ منبثقة مشتتة.
+  * عند خروج الطفل: تُقفل بطاقة البيانات السريرية نهائياً ويختفي زر التعديل.
+  * مسار الحفظ (`POST /nicu/reservations/{reservation}/clinical-profile` في [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php)) يقوم بتحديث البيانات، مزامنة الوزن الحالي إن لم يسجل، وإعادة احتساب تفاصيل البقاء وشرائح الضمان الصحي تلقائياً عبر `NicuBillingService`.
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuDischargedChartAndClinicalProfileTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuDischargedChartAndClinicalProfileTest.php))**:
+  * 5 اختبارات ميزة مخصصة تغطي: عزل الحالات النشطة عن المؤرشفة في التبويبات، خلو شاشة التسجيل من الحقلين، التعديل والتثبيت داخل الإضبارة، قفل الواجهة السريرية للطفل المخرج، والحظر الصارم في السيرفر بنسبة نجاح 100% (`5 passed, 37 assertions`)، مع اجتياز كامل حزمة اختبارات الخدج العامة (`66 passed, 541 assertions`).
 
 ## Session log (2026-11-10 — المرحلة 187: إعادة هندسة ومطابقة واجهتي حجز وتعديل العمليات الجراحية بنظام بيئة العمل ثنائية الأعمدة والحفظ التلقائي للخدمات الإضافية في دليل المستشفى Surgery Create & Edit Split-Workspace & Auto-Persist Extra Services Catalog)
 
@@ -536,6 +813,20 @@ Consult these files before making changes or proposing fixes:
   * إنشاء واجتياز اختبار الميزة بنسبة 100% (4 passed, 27 assertions).
   * استمرار اجتياز كافة اختبارات المحطة السريرية السابقة `tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php` (9 passed, 39 assertions).
 
+## Session log (2026-11-05 — المرحلة 163: دمج وتفعيل إضافة Understand Anything وتوليد شبكة المعرفة والعلاقات التفاعلية للمشروع Understand Anything Knowledge Graph & Interactive Dashboard Integration)
+
+### Done
+- **تجهيز وبناء حزمة الإضافة (`Understand Anything`)**:
+  * تثبيت بيئة العمل ومكتبات التحليل الـ AST اللغوية (`tree-sitter-php`, `tree-sitter-javascript`, `graphology`, `elkjs`).
+  * بناء الحزمة الأساسية `@understand-anything/core` بنجاح وتجهيز بيئة الـ Dashboard المبنية على Vite 6 و React 19 و @xyflow/react.
+- **توليد شبكة المعرفة والعلاقات التفاعلية (`.ua/knowledge-graph.json`)**:
+  * إنشاء محرك التوليد الآلي المستدام `scripts/build_ua_graph.mjs` لفحص الـ Models, Controllers, Services, والـ Routes.
+  * استخراج **221 مكوناً وعقدة (Nodes)** و **983 علاقة وارتباط حقيقي (Edges)** تشمل استدعاءات الـ Controllers، علاقات الـ Eloquent (`hasMany`, `belongsTo`, `belongsToMany`)، والمسارات الحية.
+  * تقسيم النظام إلى **7 طبقات معمارية (Layers)** واضحة باللغة العربية (الاستشارية، الكاشير والخزينة، المحطات التشخيصية، الرقود والعمليات، الحاضنات والخدج، المخازن والصيدلية، والبنية التحتية).
+  * إضافة **جولة تعليمية إرشادية بـ 5 مسارات سريرية ومالية (Guided Tour)** تشرح مسارات المريض والتحصيل والعمليات خطوة بخطوة بالرسم التفاعلي.
+- **تشغيل الـ Dashboard التفاعلي المحلي**:
+  * تشغيل خادم الـ Dashboard المحلي عبر Vite والتوثيق الآمن بـ Access Token وربطه مع المتصفح.
+
 ## Session log (2026-11-04 — المرحلة 163: الورقة الثانية للاستبيان (تمريض، مختبر، صيدلية)، إفراغ الإيميل في الطباعة، واللوحة المدمجة للنتائج بـ 27 معياراً Inpatient Survey Page 2 Clinical Services, Blank Print Email & Compact 2-Column Results Dashboard)
 
 ### Done
@@ -947,37 +1238,37 @@ Consult these files before making changes or proposing fixes:
 ## Session log (2026-11-03 — المرحلة 144: نظام ثبات واستمرارية التبويبات والتبويبات الفرعية وموضع التمرير في شاشات ونماذج قسم الخدج NICU Complete Tab, Sub-Pill & Scroll Position State Persistence Across All Clinical Forms)
 
 ### Done
-- **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/show.blade.php))**:
+- **الثبات الكامل للتبويبات الرئيسية والفرعية ([resources/views/nicu/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/show.blade.php))**:
   * ربط كافة التبويبات السريرية الـ 9 (`servicePane`, `vitalsPane`, `growthPane`, `careSchedulesPane`, `consultationsPane`, `labPane`, `radiologyPane`, `prescriptionsPane`, `attachmentsPane`) والتبويبات الفرعية الـ 3 (`pill-feeding`, `pill-medication`, `pill-doctor-note`) ديناميكياً بمتغيرات الجلسة والطلب `$currentActiveTab` و `$currentActivePill`.
   * حقن تلقائي لحظي لمدخلات `_active_tab` و `_active_pill` داخل أي نموذج أو زر يتم النقر عليه أو إرساله في الصفحة.
   * مزامنة التبويب النشط مع الـ URL Hash والـ LocalStorage/SessionStorage.
 - **تثبيت موضع التمرير ومنع القفز لأعلى الصفحة (Scroll Position Restoration)**:
   * حفظ موضع التمرير اللحظي في `sessionStorage` عند إرسال أي فورم أو النقر على أي زر حفظ، واستعادته بدقة وتوقيت مرحلي عند اكتمال تحميل الصفحة ليبقى المستخدم في ذات الموضع بدقة تامة.
   * تعميم آلية حفظ التمرير أيضاً على لوحة إشغال الحاضنات (`nicu/index.blade.php`) وشاشة تسعير وباقات الخدمات (`nicu/services/index.blade.php`).
-- **كنترولر الخدج ([app/Http/Controllers/NicuController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuController.php))**:
+- **كنترولر الخدج ([app/Http/Controllers/NicuController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuController.php))**:
   * إضافة دالة المساعدة المركزية `redirectBackWithActiveState` وتعميمها عبر كافة دوال الخدج (توثيق العلامات الحيوية، جداول الرعاية، الملاحظات الطبية، الاستشارات، طلبات المختبر والأشعة، الوصفات، إدارة العلاج MAR، المرفقات، وتبديل الباقات)، لتمرير التبويب والتبويب الفرعي تلقائياً في الجلسة `session(['active_tab' => ..., 'active_pill' => ...])`.
-- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
   * 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
 
 ## Session log (2026-11-03 — المرحلة 143: إنشاء وتعميم رادار صالات العمليات والولادة المتوقعة لقسم الخدج NICU Delivery & C-Section Operations Radar مع التحكم الديناميكي بأنواع العمليات وإبراز الصالات)
 
 ### Done
-- **قاعدة البيانات ونموذج العمليات ([database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php), [app/Models/SurgicalOperation.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Models/SurgicalOperation.php))**:
+- **قاعدة البيانات ونموذج العمليات ([database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_03_084643_add_show_in_nicu_radar_to_surgical_operations_table.php), [app/Models/SurgicalOperation.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalOperation.php))**:
   * إضافة حقل `show_in_nicu_radar` بجدول `surgical_operations` لتمكين التحكم الديناميكي الكامل بالعمليات المشمولة برادار الخدج.
   * تفعيل العمليات القيصرية والولادية الافتراضية تلقائياً في قاعدة البيانات.
   * تحديث `$fillable` و `$casts` وإضافة نطاق `scopeNicuRadar`.
-- **شاشة رادار صالات العمليات والولادة ([app/Http/Controllers/NicuDeliveryRadarController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/NicuDeliveryRadarController.php), [resources/views/nicu/delivery-radar.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/delivery-radar.blade.php))**:
+- **شاشة رادار صالات العمليات والولادة ([app/Http/Controllers/NicuDeliveryRadarController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NicuDeliveryRadarController.php), [resources/views/nicu/delivery-radar.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/delivery-radar.blade.php))**:
   * واجهة مراقبة سريرية وإنذار مبكر لحظي لكادر الخدج لمتابعة العمليات المتوقعة والجارية في الصالات والاستعداد المسبق دون أي أزرار حجز تجنباً للتضارب مع الاستعلامات.
   * **إبراز صالة العمليات (`Operation Theater`)**: شارة بارزة ومميزة `[ 🚪 صالة العمليات: اسم الصالة ]`، مع شارة تحذيرية صفراء `[ ⚠️ بانتظار تحديد الصالة ]` في حال عدم التعيين.
   * شريط أيام أسبوعي تفاعلي للتنقل المباشر، وتحديث لحظي لعدد الحالات المجدولة، بالانتظار، الجارية الآن بالصالات (مع نبض أحمر تحذيري)، والمنتهية.
   * محرك بحث وفلترة لحظي بالجافاسكريبت بالاسم أو الصالة أو الطبيب أو نوع العملية.
-- **واجهة التحكم الديناميكية بأنواع العمليات ([resources/views/nicu/delivery-radar-settings.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/delivery-radar-settings.blade.php), [app/Http/Controllers/SurgicalOperationController.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/app/Http/Controllers/SurgicalOperationController.php))**:
+- **واجهة التحكم الديناميكية بأنواع العمليات ([resources/views/nicu/delivery-radar-settings.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/delivery-radar-settings.blade.php), [app/Http/Controllers/SurgicalOperationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalOperationController.php))**:
   * واجهة إعدادات مخصصة للأدمن والمشرفين لإدارة وتفعيل/استبعاد أي عملية جراحية بالرادار بنقرة واحدة عبر AJAX Switch مع إشعار فوري (Toast).
   * **العزل البصري التام (ربط خفي بدون تشويش على شاشات العمليات)**: حصر إدارة الرادار بالكامل داخل قسم الخدج وعزل شاشات العمليات الجراحية العامة (`create`, `edit`, `index`) من أي أزرار أو حقول أو شارات تخص الخدج.
-- **الصلاحيات والقوائم ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [resources/views/layouts/app.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/layouts/app.blade.php), [resources/views/nicu/index.blade.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/resources/views/nicu/index.blade.php))**:
+- **الصلاحيات والقوائم ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php), [resources/views/nicu/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nicu/index.blade.php))**:
   * إضافة الصلاحيات: `view nicu delivery radar` (للأدمن وطبيب وتمريض الخدج)، و `manage nicu delivery radar settings` (للأدمن والمشرفين).
   * إدراج رابط الرادار في القائمة الجانبية لقسم الخدج، وزر وصول مباشر في لوحة الخدج الرئيسية.
-- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuDeliveryRadarTest.php](file:///c:/Users/monee/OneDrive/Documents/GitHub/hospital-system/hospital-system/tests/Feature/NicuDeliveryRadarTest.php))**:
+- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuDeliveryRadarTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuDeliveryRadarTest.php))**:
   * تغطية شاملة لمنع غير المصرح لهم، عرض العمليات المشمولة بصالاتها وعزل غير المشمولة، فتح الإعدادات، وتبديل الحالة بالـ AJAX (5 passed, 22 assertions بنجاح 100%).
 
 ## Session log (2026-11-02 — المرحلة 142: إنشاء وتعميم تبويب الحسابات المتكامل لقسم الخدج والحاضنات NICU Accounting & Analytics Module ضمن الحسابات العامة والمالية)

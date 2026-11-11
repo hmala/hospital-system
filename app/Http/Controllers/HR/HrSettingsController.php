@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\HR;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\HrFieldRequirement;
 use App\Models\HrLookupOption;
-use App\Models\Department;
 use Illuminate\Http\Request;
 
 class HrSettingsController extends Controller
@@ -13,7 +13,7 @@ class HrSettingsController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:view hr');
+        $this->middleware('permission:manage hr settings');
     }
 
     /**
@@ -41,7 +41,7 @@ class HrSettingsController extends Controller
 
         foreach ($allFields as $field) {
             $field->update([
-                'is_required' => in_array($field->field_key, $requiredFields)
+                'is_required' => in_array($field->field_key, $requiredFields),
             ]);
         }
 
@@ -122,10 +122,11 @@ class HrSettingsController extends Controller
     public function toggleLookupOption(HrLookupOption $option)
     {
         $option->update([
-            'is_active' => !$option->is_active
+            'is_active' => ! $option->is_active,
         ]);
 
         $statusText = $option->is_active ? 'تفعيل' : 'تعطيل';
+
         return redirect()->route('hr.settings.index')
             ->with('success', "تم {$statusText} الخيار '{$option->name}' بنجاح.");
     }

@@ -207,4 +207,122 @@ class HREmployeeTest extends TestCase
         $this->actingAs($admin)->delete(route('hr.settings.destroy-option', $opt->id));
         $this->assertDatabaseMissing('hr_lookup_options', ['id' => $opt->id]);
     }
+
+    public function test_hr_payroll_model_saves_breakdown_fields_correctly()
+    {
+        $employee = HrEmployee::create([
+            'employee_code' => 'EMP-PAY-01',
+            'full_name' => 'محمد فاضل',
+            'gender' => 'male',
+            'phone' => '07702222222',
+            'staff_type' => 'administrative',
+            'job_title' => 'محاسب',
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 1200000,
+            'status' => 'active',
+        ]);
+
+        $cycle = \App\Models\HrPayrollCycle::create([
+            'cycle_month' => '2026-11',
+            'start_date' => '2026-11-01',
+            'end_date' => '2026-11-30',
+            'status' => 'draft',
+        ]);
+
+        $slip = \App\Models\HrPayroll::create([
+            'hr_payroll_cycle_id' => $cycle->id,
+            'hr_employee_id' => $employee->id,
+            'basic_salary' => 1200000,
+            'allowances' => 100000,
+            'overtime_amount' => 50000,
+            'bonuses_amount' => 30000,
+            'penalties_amount' => 20000,
+            'absence_deduction' => 40000,
+            'loan_deduction' => 50000,
+            'social_security_amount' => 60000,
+            'tax_amount' => 10000,
+            'net_salary' => 1150000,
+            'payment_method' => 'bank',
+            'status' => 'pending',
+        ]);
+
+        $fresh = $slip->fresh();
+        $this->assertEquals(50000, $fresh->overtime_amount);
+        $this->assertEquals(40000, $fresh->absence_deduction);
+        $this->assertEquals(50000, $fresh->loan_deduction);
+        $this->assertEquals(60000, $fresh->social_security_amount);
+        $this->assertEquals(10000, $fresh->tax_amount);
+        $this->assertEquals('bank', $fresh->payment_method);
+        $this->assertEquals(1380000, $fresh->total_earnings); // 1200000 + 100000 + 50000 + 30000
+        $this->assertEquals(180000, $fresh->total_deductions); // 20000 + 40000 + 50000 + 60000 + 10000
+    }
+
+    public function test_user_can_view_employee_badge_with_permission()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $employee = HrEmployee::create([
+            'employee_code' => 'EMP-BDG-01',
+            'full_name' => 'د. حسام العمري',
+            'gender' => 'male',
+            'phone' => '07703333333',
+            'staff_type' => 'medical',
+            'job_title' => 'طبيب باطنية',
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 2000000,
+            'status' => 'active',
+            'blood_group' => 'O+',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('hr.employees.badge', $employee->id));
+        $response->assertStatus(200);
+        $response->assertSee('EMP-BDG-01');
+        $response->assertSee('د. حسام العمري');
+        $response->assertSee('طبيب باطنية');
+    }
+
+    public function test_user_can_view_individual_payslip_with_permission()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $employee = HrEmployee::create([
+            'employee_code' => 'EMP-SLP-01',
+            'full_name' => 'مروة عبد الكريم',
+            'gender' => 'female',
+            'phone' => '07704444444',
+            'staff_type' => 'nursing',
+            'job_title' => 'ممرضة جامعية',
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 900000,
+            'status' => 'active',
+        ]);
+
+        $cycle = \App\Models\HrPayrollCycle::create([
+            'cycle_month' => '2026-11',
+            'start_date' => '2026-11-01',
+            'end_date' => '2026-11-30',
+            'status' => 'draft',
+        ]);
+
+        $slip = \App\Models\HrPayroll::create([
+            'hr_payroll_cycle_id' => $cycle->id,
+            'hr_employee_id' => $employee->id,
+            'basic_salary' => 900000,
+            'allowances' => 50000,
+            'net_salary' => 950000,
+            'payment_method' => 'cash',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('hr.payrolls.slip.print', $slip->id));
+        $response->assertStatus(200);
+        $response->assertSee('قسيمة راتب الموظف');
+        $response->assertSee('مروة عبد الكريم');
+        $response->assertSee(number_format(950000));
+    }
 }

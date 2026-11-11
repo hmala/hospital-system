@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NicuMilkType;
 use App\Models\NicuService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -9,19 +10,28 @@ use Illuminate\Support\Facades\Auth;
 class NicuServiceController extends Controller
 {
     /**
-     * عرض قائمة خدمات وباقات الخدج وأسعارها اليومية
+     * التحقق من صلاحية إدارة وتسعير خدمات وباقات الخدج
      */
-    public function index()
+    protected function authorizeManage(): void
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage incubator reservations'))) {
-            abort(403, 'غير مصرح لك بإدارة أسعار وخدمات الخدج');
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu services') && ! $user->can('manage incubator reservations')))) {
+            abort(403, 'غير مصرح لك بإدارة أسعار وباقات وخدمات الخدج');
         }
+    }
+
+    /**
+     * عرض قائمة خدمات وباقات الخدج وأسعارها اليومية وأنواع الحليب
+     */
+    public function index()
+    {
+        $this->authorizeManage();
 
         $services = NicuService::withCount('reservations')->orderBy('id')->get();
+        $milkTypes = NicuMilkType::orderBy('sort_order')->orderBy('name')->get();
 
-        return view('nicu.services.index', compact('services'));
+        return view('nicu.services.index', compact('services', 'milkTypes'));
     }
 
     /**
@@ -29,11 +39,7 @@ class NicuServiceController extends Controller
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage incubator reservations'))) {
-            abort(403, 'غير مصرح لك بإضافة خدمة خدج');
-        }
+        $this->authorizeManage();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -59,11 +65,7 @@ class NicuServiceController extends Controller
      */
     public function update(Request $request, NicuService $service)
     {
-        $user = Auth::user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage incubator reservations'))) {
-            abort(403, 'غير مصرح لك بتعديل أسعار خدمات الخدج');
-        }
+        $this->authorizeManage();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -90,7 +92,7 @@ class NicuServiceController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('manage incubator reservations'))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu services') && ! $user->can('manage incubator reservations')))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك'], 403);
         }
 

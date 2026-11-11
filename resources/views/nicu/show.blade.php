@@ -3,6 +3,9 @@
 @section('title', 'ملف رعاية الخديج - ' . $reservation->baby_name)
 
 @section('content')
+@php
+    $isDischarged = $reservation->status === 'discharged';
+@endphp
 <div class="container-fluid py-3">
     <!-- رأس ملف الطفل -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px; background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
@@ -98,11 +101,49 @@
                         <button type="button" class="btn btn-sm btn-danger shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#dischargeModal">
                             <i class="fas fa-sign-out-alt me-1"></i> أمر الخروج الطبي وتصفية الحساب
                         </button>
+                    @elseif($isDischarged)
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark fw-bold px-3 py-2 shadow-xs">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                تم تسجيل الخروج الطبي ({{ $reservation->discharge_date ? $reservation->discharge_date->format('Y-m-d') : 'مؤرشف' }})
+                            </span>
+                            <a href="{{ route('nicu.reservations.index', ['view' => 'archived', 'status' => 'discharged']) }}" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm">
+                                <i class="fas fa-archive me-1"></i> السجلات وأرشفة المرضى
+                            </a>
+                        </div>
                     @endif
                 </div>
             </div>
         </div>
     </div>
+
+    @if($isDischarged)
+        <!-- تنبيه الإضبارة المؤرشفة والمغلقة للمطالعة فقط -->
+        <div class="alert alert-warning border-2 border-warning shadow-sm d-flex align-items-center gap-3 p-3 mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+            <div class="p-3 bg-warning bg-opacity-25 rounded-circle text-warning-emphasis">
+                <i class="fas fa-lock fa-2x"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h5 class="fw-bold text-dark mb-0">إضبارة سريرية مؤرشفة ومغلقة (تم تسجيل الخروج الطبي)</h5>
+                    <span class="badge bg-secondary">أرشيف السجلات الطبية</span>
+                    @if($reservation->discharge_type)
+                        <span class="badge bg-info text-dark">{{ $reservation->discharge_type_name }}</span>
+                    @endif
+                </div>
+                <p class="mb-0 text-muted small">
+                    تم تسجيل الخروج الطبي للطفل بتاريخ <strong>{{ $reservation->discharge_date ? $reservation->discharge_date->format('Y-m-d') : '—' }}</strong>
+                    الساعة <strong>{{ $reservation->discharge_time ? (is_string($reservation->discharge_time) ? $reservation->discharge_time : $reservation->discharge_time->format('h:i A')) : '—' }}</strong>.
+                    الإضبارة مغلقة ومتاحة <strong>للاطلاع والمطالعة والطباعة فقط</strong>، ولا يمكن إرسال تحاليل مخبرية أو طلبات أشعة أو توثيق علامات حيوية وأدوية جديدة.
+                </p>
+            </div>
+            <div>
+                <a href="{{ route('nicu.reservations.index', ['view' => 'archived', 'status' => 'discharged']) }}" class="btn btn-outline-dark btn-sm shadow-sm fw-bold">
+                    <i class="fas fa-archive me-1"></i> السجلات وأرشفة المرضى
+                </a>
+            </div>
+        </div>
+    @endif
 
     <!-- التنبيهات -->
     @if(session('success'))
@@ -255,6 +296,134 @@
                 
                 <!-- تبويب 1: باقة الخدمة والتبديل اليومي -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'servicePane' ? 'show active' : '' }}" id="servicePane">
+                    
+                    <!-- بطاقة بيانات الولادة وعمر الحمل السريرية (عمر الحمل ووزن الدخول) -->
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; border-right: 4px solid #0d6efd !important;">
+                        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded-circle fs-6">
+                                    <i class="fas fa-baby"></i>
+                                </span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">بيانات الولادة وعمر الحمل السريرية</h5>
+                                    <small class="text-muted">توثيق عمر الحمل ووزن الدخول المعتمد للرعاية السريرية وتطبيق مصفوفة الضمان</small>
+                                </div>
+                            </div>
+                            @if($isDischarged)
+                                <span class="badge bg-secondary px-3 py-2">
+                                    <i class="fas fa-lock me-1"></i> إضبارة مؤرشفة ومقفلة (للاطلاع فقط)
+                                </span>
+                            @elseif($reservation->gestational_age || $reservation->birth_weight)
+                                <button type="button" class="btn btn-sm btn-outline-warning fw-bold px-3 shadow-xs" id="btnEditClinicalProfile" onclick="confirmEditClinicalProfile()">
+                                    <i class="fas fa-edit me-1"></i> تعديل البيانات السريرية
+                                </button>
+                            @endif
+                        </div>
+                        <div class="card-body pt-0 pb-3">
+                            @php
+                                $hasClinicalData = !empty($reservation->gestational_age) || !empty($reservation->birth_weight);
+                            @endphp
+
+                            <!-- 1. شاشة العرض المقفلة للبيانات -->
+                            <div id="clinicalProfileDisplayCard" class="{{ $hasClinicalData ? '' : 'd-none' }}">
+                                <div class="row g-3 align-items-center bg-light p-3 rounded-3 border">
+                                    <div class="col-md-5">
+                                        <span class="small text-muted d-block mb-1"><i class="fas fa-weight-hanging text-primary me-1"></i> وزن الدخول (الولادة):</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h4 class="mb-0 fw-bold text-dark">
+                                                {{ $reservation->birth_weight ? number_format($reservation->birth_weight) . ' جرام' : 'غير مسجل' }}
+                                            </h4>
+                                            @if($reservation->current_weight && $reservation->current_weight != $reservation->birth_weight)
+                                                <span class="badge bg-light text-muted border small">الوزن الحالي: {{ number_format($reservation->current_weight) }} جم</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <span class="small text-muted d-block mb-1"><i class="fas fa-baby text-info me-1"></i> عمر الحمل المعتمد:</span>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <h4 class="mb-0 fw-bold text-primary">
+                                                {{ $reservation->gestational_age ?: 'غير مسجل' }}
+                                            </h4>
+                                            @if($reservation->gestational_weeks)
+                                                <span class="badge bg-primary text-white">
+                                                    {{ $reservation->gestational_weeks >= 37 ? 'كامل النمو' : ($reservation->gestational_weeks >= 34 ? 'خداجة متأخرة' : ($reservation->gestational_weeks >= 32 ? 'خداجة متوسطة' : 'خداجة مبكرة')) }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 text-md-end">
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 small">
+                                            <i class="fas fa-lock me-1"></i> مقفلة للحماية
+                                        </span>
+                                    </div>
+                                </div>
+
+                                @if($reservation->is_insured)
+                                    <div class="mt-2 p-2 bg-info bg-opacity-10 rounded border border-info small text-info-emphasis d-flex align-items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i>
+                                        <span><strong>تطبيق شرائح الضمان:</strong> {{ $reservation->gestational_weeks ? 'مربوط آلياً بمصفوفة الضمان المعتمدة لعمر (' . $reservation->gestational_weeks . ' أسبوعاً)' : 'يرجى تسجيل عمر الحمل لتفعيل شرائح التحمل المعتمدة' }}.</span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- 2. نموذج الإدخال والتعديل (يظهر مباشرة إن لم تكن هناك بيانات، أو عند النقر على تعديل مع التأكيد) -->
+                            @if(! $isDischarged)
+                                <div id="clinicalProfileEditForm" class="{{ $hasClinicalData ? 'd-none' : '' }} mt-2">
+                                    <form action="{{ route('nicu.clinical-profile.update', $reservation) }}" method="POST">
+                                        @csrf
+                                        <div class="p-3 bg-white rounded-3 border border-warning shadow-xs">
+                                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                                <h6 class="fw-bold text-warning-emphasis mb-0">
+                                                    <i class="fas fa-edit me-1"></i>
+                                                    {{ $hasClinicalData ? 'تعديل البيانات السريرية (عمر الحمل ووزن الدخول)' : 'توثيق وتثبيت البيانات السريرية الأولى للطفل' }}
+                                                </h6>
+                                                @if($hasClinicalData)
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditClinicalProfile()">
+                                                        <i class="fas fa-times me-1"></i> إلغاء
+                                                    </button>
+                                                @endif
+                                            </div>
+
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label for="input_birth_weight" class="form-label small fw-bold">
+                                                        <i class="fas fa-weight-hanging text-primary me-1"></i> وزن الدخول (بالجرام):
+                                                    </label>
+                                                    <input type="number" name="birth_weight" id="input_birth_weight" class="form-control" placeholder="مثال: 1500" value="{{ old('birth_weight', $reservation->birth_weight) }}" min="300" max="10000">
+                                                    <small class="text-muted" style="font-size: 11px;">الوزن المعتمد عند لحظة استقبال الرضيع بالحاضنة</small>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <label for="input_gestational_age" class="form-label small fw-bold">
+                                                        <i class="fas fa-baby text-info me-1"></i> عمر الحمل (بالأسابيع):
+                                                    </label>
+                                                    <select name="gestational_age" id="input_gestational_age" class="form-select">
+                                                        <option value="">-- اختر عمر الحمل --</option>
+                                                        <option value="أقل من 28 أسبوع" {{ old('gestational_age', $reservation->gestational_age) == 'أقل من 28 أسبوع' ? 'selected' : '' }}>أقل من 28 أسبوعاً (&lt;28 - شديد الخداجة)</option>
+                                                        @for($w = 28; $w <= 40; $w++)
+                                                            <option value="{{ $w }} أسبوع" {{ old('gestational_age', $reservation->gestational_age) == ($w . ' أسبوع') ? 'selected' : '' }}>
+                                                                {{ $w }} أسبوعاً {{ $w >= 37 ? '(كامل النمو)' : ($w >= 34 ? '(خداجة متأخرة)' : ($w >= 32 ? '(خداجة متوسطة)' : '(خداجة مبكرة)')) }}
+                                                            </option>
+                                                        @endfor
+                                                    </select>
+                                                    <small class="text-muted" style="font-size: 11px;">محدد أساسي لمعادلة نمو الطفل وشرائح تغطية الضمان الصحي</small>
+                                                </div>
+
+                                                <div class="col-12 text-end pt-2">
+                                                    @if($hasClinicalData)
+                                                        <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEditClinicalProfile()">إلغاء</button>
+                                                    @endif
+                                                    <button type="submit" class="btn btn-primary fw-bold shadow-sm px-4">
+                                                        <i class="fas fa-save me-1"></i> حفظ وتثبيت البيانات
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                     <div class="row g-4">
                         <div class="col-lg-5">
                             <div class="card border-0 bg-light p-4 rounded-3 h-100">
@@ -373,14 +542,14 @@
                                                 <td class="small text-muted">{{ optional($log->switchedByUser)->name ?? 'النظام' }}</td>
                                                 <td>
                                                     <div class="d-flex justify-content-center gap-1">
-                                                        @if($isActive)
+                                                        @if($isActive && ! $isDischarged)
                                                             <!-- زر تعديل الباقة النشطة -->
                                                             <button type="button" class="btn btn-sm btn-outline-primary" title="تعديل الباقة الحالية" data-bs-toggle="modal" data-bs-target="#editServiceLogModal{{ $log->id }}">
                                                                 <i class="fas fa-edit"></i>
                                                             </button>
                                                         @endif
 
-                                                        @if($reservation->serviceLogs->count() > 1 && $isActive)
+                                                        @if($reservation->serviceLogs->count() > 1 && $isActive && ! $isDischarged)
                                                             <!-- زر تراجع وحذف التبديل -->
                                                             <form action="{{ route('nicu.service-logs.destroy', [$reservation, $log]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا التبديل والتراجع عنه للباقة السابقة؟');">
                                                                 @csrf
@@ -393,7 +562,7 @@
                                                     </div>
 
                                                     <!-- Modal تعديل السجل المفتوح -->
-                                                    @if($isActive)
+                                                    @if($isActive && ! $isDischarged)
                                                         <div class="modal fade text-start" id="editServiceLogModal{{ $log->id }}" tabindex="-1" aria-hidden="true">
                                                             <div class="modal-dialog modal-dialog-centered">
                                                                 <div class="modal-content border-0 shadow">
@@ -452,6 +621,7 @@
                 <!-- تبويب 2: محطة التمريض (العلامات والوزن والرضاعة) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'vitalsPane' ? 'show active' : '' }}" id="vitalsPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- نموذج إضافة قراءة جديدة -->
                         <div class="col-lg-4">
                             <div class="card border-0 bg-light p-3 rounded-3">
@@ -520,10 +690,16 @@
                                             <label class="form-label small">نوع الرضاعة:</label>
                                             <input type="text" name="feeding_type" class="form-control form-control-sm" list="quickVitalsFeedingTypes" value="{{ $activeFeedingSched ? $activeFeedingSched->title : 'حليب أم (EBM)' }}">
                                             <datalist id="quickVitalsFeedingTypes">
-                                                <option value="حليب أم (EBM)">
-                                                <option value="حليب خدج صناعي">
-                                                <option value="تغذية وريدية TPN">
-                                                <option value="صيام NPO">
+                                                @if(isset($milkTypes) && $milkTypes->isNotEmpty())
+                                                    @foreach($milkTypes as $mType)
+                                                        <option value="{{ $mType->name }}">{{ $mType->category ? "({$mType->category})" : '' }}</option>
+                                                    @endforeach
+                                                @else
+                                                    <option value="حليب أم (EBM)">
+                                                    <option value="حليب خدج صناعي">
+                                                    <option value="تغذية وريدية TPN">
+                                                    <option value="صيام NPO">
+                                                @endif
                                             </datalist>
                                         </div>
                                         <div class="col-6">
@@ -544,8 +720,17 @@
                             </div>
                         </div>
 
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>سجل العلامات الحيوية مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. سجل القراءات والمخططات السريرية السابقة متاح للمطالعة والتدقيق فقط.</span>
+                                </div>
+                            </div>
+                        @endif
+
                         <!-- جدول السجلات السريرية والتمريضية -->
-                        <div class="col-lg-8">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-8' }}">
                             <h6 class="fw-bold text-dark mb-3">
                                 <i class="fas fa-table me-1 text-primary"></i>
                                 سجل العلامات الحيوية والوزن والرضاعة
@@ -594,6 +779,7 @@
 
                     <!-- قسم سجل إعطاء وتطبيق العلاج التمريضي (MAR) -->
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- نموذج توثيق إعطاء الجرعة -->
                         <div class="col-lg-4">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
@@ -692,8 +878,17 @@
                             </div>
                         </div>
 
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>سجل إعطاء الأدوية (MAR) مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. سجل الجرعات المطبقة سابقاً متاح للمطالعة والتدقيق فقط.</span>
+                                </div>
+                            </div>
+                        @endif
+
                         <!-- جدول سجل إعطاء الأدوية MAR -->
-                        <div class="col-lg-8">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-8' }}">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h6 class="fw-bold text-dark mb-0">
                                     <i class="fas fa-history text-danger me-1"></i>
@@ -960,6 +1155,7 @@
                 <!-- تبويب 3: استشارات الأطباء (داخلي / خارجي) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'consultationsPane' ? 'show active' : '' }}" id="consultationsPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <div class="col-lg-4">
                             <div class="card border-0 bg-light p-3 rounded-3">
                                 <h6 class="fw-bold text-dark mb-3">
@@ -1053,7 +1249,16 @@
                             </div>
                         </div>
 
-                        <div class="col-lg-8">
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>طلب الاستشارات الطبية مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. تقارير وفحوصات الاستشارات الطبية السابقة معروضة أدناه.</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-8' }}">
                             <h6 class="fw-bold text-dark mb-3">
                                 <i class="fas fa-clipboard-check text-success me-1"></i>
                                 سجل استشارات الأطباء التخصصية
@@ -1146,6 +1351,7 @@
                 <!-- تبويب 4: التحاليل والفحوصات المخبرية (Lab Workstation) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'labPane' ? 'show active' : '' }}" id="labPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- عمود تقديم طلب التحاليل المخبرية بنمط الطبيب الاستشاري -->
                         <div class="col-xl-6 col-lg-12">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
@@ -1394,9 +1600,17 @@
                                 </form>
                             </div>
                         </div>
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>طلب التحاليل المخبرية مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. نتائج التحاليل السابقة وإيصالاتها وتقارير الطباعة متاحة أدناه.</span>
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- سجل ومتابعة طلبات المختبر والتحاليل بنمط محطة الطبيب -->
-                        <div class="col-xl-6 col-lg-12">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-xl-6 col-lg-12' }}">
                             @php
                                 $labRequests = $reservation->medicalRequests->where('type', 'lab')->sortByDesc('id');
                                 $legacyLabOrders = $reservation->medicalOrders->where('order_type', 'lab')->filter(function($o) {
@@ -1742,6 +1956,7 @@
                 <!-- تبويب 5: الفحوصات الشعاعية والتصوير والسونار (Radiology Workstation) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'radiologyPane' ? 'show active' : '' }}" id="radiologyPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- عمود تقديم طلب الأشعة والسونار بنمط الطبيب الاستشاري -->
                         <div class="col-xl-6 col-lg-12">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
@@ -2019,9 +2234,17 @@
                                 </form>
                             </div>
                         </div>
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>طلب فحوصات الأشعة مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. تقارير الأشعة والتصوير السابقة متاحة أدناه.</span>
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- عمود عرض ومتابعة تقارير الأشعة والسونار بنمط محطة الطبيب -->
-                        <div class="col-xl-6 col-lg-12">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-xl-6 col-lg-12' }}">
                             @php
                                 $radRequests = $reservation->medicalRequests->where('type', 'radiology')->sortByDesc('id');
                                 $legacyRadOrders = $reservation->medicalOrders->where('order_type', 'radiology')->filter(function($o) {
@@ -2361,6 +2584,7 @@
                 <!-- تبويب 6: الوصفة والعلاج الدوائي (E-Prescriptions & Clinical RX) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'prescriptionsPane' ? 'show active' : '' }}" id="prescriptionsPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- عمود إنشاء وصياغة الوصفة الطبية -->
                         <div class="col-lg-5">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
@@ -2455,9 +2679,17 @@
                                 </form>
                             </div>
                         </div>
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>صرف وتعديل الوصفات مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. الوصفات الدوائية السابقة معروضة أدناه مع إمكانية طباعتها.</span>
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- جدول الأدوية الموصوفة للطفل -->
-                        <div class="col-lg-7">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-7' }}">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h6 class="fw-bold text-dark mb-0">
                                     <i class="fas fa-pills text-success me-1"></i>
@@ -2524,6 +2756,7 @@
                 <!-- تبويب 7: التوصيات وخطة الرعاية وجداول المواعيد (Care Plan & Schedules) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'careSchedulesPane' ? 'show active' : '' }}" id="careSchedulesPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- نموذج إضافة التوصيات -->
                         <div class="col-lg-5">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs mb-3">
@@ -2572,14 +2805,27 @@
                                             <input type="hidden" name="type" value="feeding">
 
                                             <div class="mb-2">
-                                                <label class="form-label small fw-bold">نوع الرضاعة / التغذية:</label>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-bold mb-0">نوع الرضاعة / التغذية:</label>
+                                                    @canany(['manage nicu services', 'manage nicu care plans'])
+                                                        <a href="{{ route('nicu.services.index') }}#milk-types-tab" target="_blank" class="small text-decoration-none text-muted" title="إدارة وإضافة أنواع الحليب">
+                                                            <i class="fas fa-cog text-warning"></i> <span class="text-xs">إدارة أنواع الحليب</span>
+                                                        </a>
+                                                    @endcanany
+                                                </div>
                                                 <input type="text" name="title" class="form-control form-control-sm" placeholder="مثلاً: حليب أم EBM، حليب سيميلاك نيوشور..." list="quickFeedingTypes" required>
                                                 <datalist id="quickFeedingTypes">
-                                                    <option value="حليب أم طبيعي (EBM)">
-                                                    <option value="حليب خدج صناعي (Pre-term Formula)">
-                                                    <option value="حليب سيميلاك نيوشور (Neosure)">
-                                                    <option value="حليب ببتي جونيور قليل التحسس">
-                                                    <option value="تغذية وريدية كاملة (TPN)">
+                                                    @if(isset($milkTypes) && $milkTypes->isNotEmpty())
+                                                        @foreach($milkTypes as $mType)
+                                                            <option value="{{ $mType->name }}">{{ $mType->category ? "({$mType->category})" : '' }}</option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="حليب أم طبيعي (EBM)">
+                                                        <option value="حليب خدج صناعي (Pre-term Formula)">
+                                                        <option value="حليب سيميلاك نيوشور (Neosure)">
+                                                        <option value="حليب ببتي جونيور قليل التحسس">
+                                                        <option value="تغذية وريدية كاملة (TPN)">
+                                                    @endif
                                                 </datalist>
                                             </div>
 
@@ -2738,9 +2984,17 @@
                                 </div>
                             </div>
                         </div>
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>توصيات وملاحظات الرعاية مقفلة:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. جداول الرعاية والتوجيهات السابقة متاحة للمطالعة فقط.</span>
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- جدول وقائمة التوصيات وجداول الرعاية الحالية -->
-                        <div class="col-lg-7">
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-7' }}">
                             <!-- قسم ملاحظات الطبيب الاختصاص السريرية -->
                             <div class="card border-0 bg-white shadow-xs rounded-3 p-3 mb-3 border border-danger-subtle">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -2766,6 +3020,7 @@
                                                 </div>
                                                 <p class="text-dark small mb-0">{{ $dNote->content }}</p>
                                             </div>
+                                            @if(! $isDischarged)
                                             <div class="d-flex align-items-center gap-1">
                                                 <form action="{{ route('nicu.doctor-notes.toggle-pin', $dNote) }}" method="POST" class="d-inline">
                                                     @csrf
@@ -2781,6 +3036,7 @@
                                                     </button>
                                                 </form>
                                             </div>
+                                            @endif
                                         </div>
                                     @empty
                                         <p class="text-muted small mb-0 text-center py-2">لا توجد ملاحظات اختصاص مسجلة حتى الآن.</p>
@@ -2860,6 +3116,7 @@
                                                 @endif
                                             </small>
 
+                                            @if(! $isDischarged)
                                             <div class="d-flex gap-1 align-items-center">
                                                 @if($sched->is_active)
                                                     <form action="{{ route('nicu.care-schedules.administer-quick', $sched) }}" method="POST" class="d-inline">
@@ -2885,6 +3142,7 @@
                                                     </button>
                                                 </form>
                                             </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -2902,6 +3160,7 @@
                 <!-- تبويب الأرشيف والمرفقات الطبية للطفل (NICU Patient Attachments) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'attachmentsPane' ? 'show active' : '' }}" id="attachmentsPane">
                     <div class="row g-4">
+                        @if(! $isDischarged)
                         <!-- نموذج رفع مستند جديد -->
                         <div class="col-lg-4">
                             <div class="card border-0 bg-light p-3 rounded-3 shadow-xs mb-3">
@@ -2955,7 +3214,16 @@
                         </div>
 
                         <!-- جدول وقائمة المستندات والمرفقات المؤرشفة -->
-                        <div class="col-lg-8">
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>رفع المرفقات مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية. المستندات المرفقة السابقة متاحة للمعاينة والتحميل أدناه.</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-8' }}">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h6 class="fw-bold text-dark mb-0">
                                     <i class="fas fa-folder-open text-primary me-1"></i>
@@ -3008,6 +3276,7 @@
                                                 <a href="{{ route('nicu.attachments.download', $att) }}" class="btn btn-sm btn-outline-success py-1 px-2.5" title="تحميل الملف">
                                                     <i class="fas fa-download me-1"></i> تحميل
                                                 </a>
+                                                @if(! $isDischarged)
                                                 <form action="{{ route('nicu.attachments.destroy', $att) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المستند المرفق نهائياً؟');">
                                                     @csrf
                                                     @method('DELETE')
@@ -3015,6 +3284,7 @@
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 </form>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -4519,6 +4789,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// دوال إدارة وتأكيد تعديل البيانات السريرية (عمر الحمل ووزن الطفل)
+function confirmEditClinicalProfile() {
+    const doEdit = () => {
+        const displayCard = document.getElementById('clinicalProfileDisplayCard');
+        const editForm = document.getElementById('clinicalProfileEditForm');
+        if (displayCard) displayCard.classList.add('d-none');
+        if (editForm) {
+            editForm.classList.remove('d-none');
+            const inputWeight = document.getElementById('input_birth_weight');
+            if (inputWeight) inputWeight.focus();
+        }
+    };
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'هل أنت متأكد من تعديل هذه البيانات؟',
+            text: 'يؤثر تعديل عمر الحمل ووزن الطفل على الحسابات السريرية، جرعات الأدوية، وشرائح تغطية الضمان الصحي للطفل.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e0a800',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-edit me-1"></i> نعم، أريد التعديل',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                doEdit();
+            }
+        });
+    } else {
+        if (confirm('هل أنت متأكد من تعديل هذه البيانات؟')) {
+            doEdit();
+        }
+    }
+}
+
+function cancelEditClinicalProfile() {
+    const displayCard = document.getElementById('clinicalProfileDisplayCard');
+    const editForm = document.getElementById('clinicalProfileEditForm');
+    if (displayCard) displayCard.classList.remove('d-none');
+    if (editForm) editForm.classList.add('d-none');
+}
 </script>
 @endpush
 @endsection

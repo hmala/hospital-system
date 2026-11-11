@@ -1,0 +1,18 @@
+# .understandignore for hospital-system
+vendor/
+node_modules/
+public/build/
+public/storage/
+storage/
+docs/
+specs/
+tests/
+scripts/
+graphify-out/
+scratch/
+*.sql
+*.pyc
+.env*
+.phpunit*
+.vscode/
+.idea/

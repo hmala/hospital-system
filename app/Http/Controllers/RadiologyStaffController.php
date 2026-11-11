@@ -1106,6 +1106,22 @@ class RadiologyStaffController extends Controller
                     ]);
             }
 
+            // Sync with IcuMedicalOrder if exists
+            if ($request->icu_admission_id) {
+                \App\Models\IcuMedicalOrder::where('order_group_id', 'REQ-'.$request->id)
+                    ->orWhere(function ($q) use ($request) {
+                        $q->where('icu_admission_id', $request->icu_admission_id)
+                            ->where('order_type', 'radiology')
+                            ->where('status', '!=', 'completed');
+                    })
+                    ->update([
+                        'status' => $newStatus,
+                        'result' => $findings.($impression ? "\nالانطباع: ".$impression : ''),
+                        'completed_at' => $newStatus === 'completed' ? now() : null,
+                        'completed_by' => $user->id,
+                    ]);
+            }
+
             // Sync with RadiologyRequest if exists
             if ($request->visit_id) {
                 $radReq = \App\Models\RadiologyRequest::where('visit_id', $request->visit_id)->first();

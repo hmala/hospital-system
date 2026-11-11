@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إيصال قبض أمانات الخدج - {{ $nicuPayment->receipt_number }}</title>
+    <title>إيصال تسديد رسوم الخدج - {{ $nicuPayment->receipt_number }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -235,9 +235,9 @@
             <div class="ar-title">مستشفى الكفاءات التخصصي</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
             @if($nicuPayment->payment_type === 'refund')
-                <div class="sub-title">سند صرف واسترجاع أمانات - قسم الخدج (NICU)</div>
+                <div class="sub-title">سند صرف واسترجاع رسوم - قسم الخدج (NICU)</div>
             @else
-                <div class="sub-title">سند قبض أمانات - قسم الخدج والحاضنات (NICU)</div>
+                <div class="sub-title">سند تسديد رسوم - قسم الخدج والحاضنات (NICU)</div>
             @endif
         </div>
 
@@ -305,12 +305,12 @@
                     <td style="text-align: left;">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</td>
                 </tr>
                 <tr>
-                    <td>صافي الأمانات بعد التسوية:</td>
+                    <td>إجمالي المسدد حتى الآن:</td>
                     <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
                 </tr>
                 @if(($stayDetails['excess_deposit'] ?? 0) > 0)
                     <tr>
-                        <td>فائض أمانات متبقي للأهل:</td>
+                        <td>فائض رسوم متبقي للأهل:</td>
                         <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['excess_deposit']) }} د.ع</td>
                     </tr>
                 @endif
