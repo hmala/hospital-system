@@ -113,7 +113,7 @@
                                             <td>{{ $earnedCases->firstItem() + $loop->index }}</td>
                                             <td>{{ $case->created_at->format('Y-m-d H:i') }}</td>
                                             <td>
-                                                <div class="fw-bold">{{ $case->patient->user->name ?? 'غير معروف' }}</div>
+                                                <div class="fw-bold">{{ $case->patient?->user?->name ?? $case->emergencyPatient?->name ?? 'غير معروف' }}</div>
                                             </td>
                                             <td><code>{{ optional($case->payment)->receipt_number ?? '---' }}</code></td>
                                             <td class="fw-bold text-success">{{ number_format($case->doctor_follow_up_fee, 0) }} د.ع</td>

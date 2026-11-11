@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Appointment.php
 
 namespace App\Models;
@@ -6,10 +7,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use App\Models\Payment;
-use App\Models\DoctorDue;
-use App\Models\DoctorFinancialAccount;
-use Carbon\Carbon;
 
 class Appointment extends Model
 {
@@ -17,7 +14,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'patient_id',
-        'doctor_id', 
+        'doctor_id',
         'department_id',
         'emergency_id',
         'appointment_date',
@@ -40,7 +37,7 @@ class Appointment extends Model
         'cancelled_at',
         'printed_at',
         'print_count',
-        'telegram_chat_id'
+        'telegram_chat_id',
     ];
 
     // أسباب الزيارة المحددة
@@ -56,7 +53,7 @@ class Appointment extends Model
         'فحص نسائي' => 'فحص نسائي',
         'فحص أطفال' => 'فحص أطفال',
         'لقاح' => 'لقاح',
-        'أخرى' => 'أخرى'
+        'أخرى' => 'أخرى',
     ];
 
     protected $casts = [
@@ -67,7 +64,7 @@ class Appointment extends Model
         'called_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
-        'cancelled_at' => 'datetime'
+        'cancelled_at' => 'datetime',
     ];
 
     // العلاقات
@@ -115,7 +112,7 @@ class Appointment extends Model
     public function scopeUpcoming($query)
     {
         return $query->whereDate('appointment_date', '>=', today())
-                    ->whereIn('status', ['scheduled', 'confirmed', 'calling']);
+            ->whereIn('status', ['scheduled', 'confirmed', 'calling']);
     }
 
     public function scopeCompleted($query)
@@ -136,9 +133,9 @@ class Appointment extends Model
             'confirmed' => 'في الانتظار',
             'calling' => 'يتم الاستدعاء',
             'in_consultation' => 'بالداخل (قيد الكشف)',
-            'completed' => 'مكتمل', 
+            'completed' => 'مكتمل',
             'cancelled' => 'ملغى',
-            'no_show' => 'لم يحضر'
+            'no_show' => 'لم يحضر',
         ];
 
         return $statuses[$this->status] ?? $this->status;
@@ -153,7 +150,7 @@ class Appointment extends Model
             'in_consultation' => 'success',
             'completed' => 'success',
             'cancelled' => 'danger',
-            'no_show' => 'secondary'
+            'no_show' => 'secondary',
         ];
 
         return $colors[$this->status] ?? 'secondary';
@@ -177,7 +174,8 @@ class Appointment extends Model
     public function canBeCancelled()
     {
         $visitCompleted = $this->visit && ($this->visit->status === 'completed' || $this->visit->is_completed);
-        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed', 'calling']) && !$visitCompleted;
+
+        return $this->isUpcoming() && in_array($this->status, ['scheduled', 'confirmed', 'calling']) && ! $visitCompleted;
     }
 
     protected function cancellationSourceLabel($user)
@@ -187,19 +185,19 @@ class Appointment extends Model
         }
 
         if ($user->hasRole('doctor')) {
-            return 'الطبيب ' . $user->name;
+            return 'الطبيب '.$user->name;
         }
 
         if ($user->hasRole('receptionist')) {
-            return 'موظف الاستقبال ' . $user->name;
+            return 'موظف الاستقبال '.$user->name;
         }
 
         if ($user->hasRole('consultation_receptionist')) {
-            return 'موظف استعلامات الاستشارية ' . $user->name;
+            return 'موظف استعلامات الاستشارية '.$user->name;
         }
 
         if ($user->hasRole('cashier')) {
-            return 'الكاشير ' . $user->name;
+            return 'الكاشير '.$user->name;
         }
 
         return $user->name;
@@ -210,7 +208,7 @@ class Appointment extends Model
     {
         $this->update([
             'status' => 'confirmed',
-            'confirmed_at' => now()
+            'confirmed_at' => now(),
         ]);
     }
 
@@ -218,7 +216,7 @@ class Appointment extends Model
     {
         $this->update([
             'status' => 'completed',
-            'completed_at' => now()
+            'completed_at' => now(),
         ]);
     }
 
@@ -234,7 +232,7 @@ class Appointment extends Model
                 ->first();
 
             // إذا لم يتم العثور عليها بالـ appointment_id، تحقق من العلاقة المباشرة payment بشرط أن تكون دفعة كشفية موجبة
-            if (!$consultationPayment && $this->payment && $this->payment->payment_type === 'appointment' && $this->payment->amount > 0) {
+            if (! $consultationPayment && $this->payment && $this->payment->payment_type === 'appointment' && $this->payment->amount > 0) {
                 $consultationPayment = $this->payment;
             }
 
@@ -246,7 +244,7 @@ class Appointment extends Model
                     Payment::create([
                         'appointment_id' => $this->id,
                         'patient_id' => $this->patient_id,
-                        'cashier_id' => auth()->id(),
+                        'cashier_id' => $consultationPayment?->cashier_id ?? auth()->id(),
                         'receipt_number' => Payment::generateReceiptNumber(),
                         'amount' => $refundAmount,
                         'total_amount' => $consultationPayment ? -abs($consultationPayment->total_amount > 0 ? $consultationPayment->total_amount : $consultationPayment->amount) : $refundAmount,
@@ -255,9 +253,9 @@ class Appointment extends Model
                         'insurance_type' => $consultationPayment ? $consultationPayment->insurance_type : null,
                         'payment_method' => $paymentMethod,
                         'payment_type' => 'appointment',
-                        'description' => 'استرجاع دفعة كشفية موعد #' . $this->id,
+                        'description' => 'استرجاع دفعة كشفية موعد #'.$this->id,
                         'notes' => 'تم استرجاع الكشفية بعد إلغاء الموعد',
-                        'paid_at' => now()
+                        'paid_at' => now(),
                     ]);
 
                     $this->update(['payment_status' => 'refunded']);
@@ -273,7 +271,7 @@ class Appointment extends Model
             if ($consultationPayment) {
                 DoctorDue::where('payment_id', $consultationPayment->id)
                     ->delete();
-                DoctorDue::where('notes', 'like', '%دفعة رقم ' . $consultationPayment->receipt_number . '%')
+                DoctorDue::where('notes', 'like', '%دفعة رقم '.$consultationPayment->receipt_number.'%')
                     ->delete();
 
                 if ($this->doctor_id) {
@@ -281,7 +279,7 @@ class Appointment extends Model
                     $account = DoctorFinancialAccount::where('doctor_id', $this->doctor_id)->first();
                     if ($account) {
                         $account->total_earned = $totalEarned;
-                        $account->balance = round($totalEarned - (float)($account->total_paid ?? 0), 2);
+                        $account->balance = round($totalEarned - (float) ($account->total_paid ?? 0), 2);
                         $account->save();
                     }
                 }
@@ -289,7 +287,7 @@ class Appointment extends Model
         }
 
         // إلغاء الزيارة والطلبات الطبية غير المكتملة وغير المسددة المرتبطة بالموعد إن وجدت
-        if ($this->visit && $this->visit->status !== 'completed' && !$this->visit->is_completed) {
+        if ($this->visit && $this->visit->status !== 'completed' && ! $this->visit->is_completed) {
             $this->visit->update(['status' => 'cancelled']);
             // إلغاء الطلبات غير المسددة فقط؛ الطلبات المسددة تبقى سارية أو تسترجع رسمياً عبر الكاشير
             \App\Models\Request::where('visit_id', $this->visit->id)
@@ -301,7 +299,7 @@ class Appointment extends Model
                 ->where('payment_status', 'paid')
                 ->exists();
 
-            if (!$paidRadRequestExists) {
+            if (! $paidRadRequestExists) {
                 \App\Models\RadiologyRequest::where('visit_id', $this->visit->id)
                     ->where('status', '!=', 'completed')
                     ->update(['status' => 'cancelled']);
@@ -312,7 +310,7 @@ class Appointment extends Model
             'status' => 'cancelled',
             'cancellation_reason' => $reason,
             'cancelled_by' => $this->cancellationSourceLabel(auth()->user()),
-            'cancelled_at' => now()
+            'cancelled_at' => now(),
         ]);
     }
 }

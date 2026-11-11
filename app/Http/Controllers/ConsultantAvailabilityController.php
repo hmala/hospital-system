@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\DoctorDue;
 use App\Models\DoctorFinancialAccount;
 use App\Models\FinancialTransaction;
+use App\Services\TafqeetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -951,16 +952,82 @@ class ConsultantAvailabilityController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى حسابات الأطباء');
         }
 
-        $consultantDoctors = Doctor::with(['user', 'department', 'financialAccount'])
-            ->join('users', 'doctors.user_id', '=', 'users.id')
-            ->where('doctors.type', 'consultant')
-            ->where('doctors.is_active', true)
-            ->orderBy('doctors.specialization')
-            ->orderBy('users.name')
-            ->select('doctors.*')
-            ->get();
+        $search = $request->query('search');
+        $balanceStatus = $request->query('balance_status');
+        $sortBy = $request->query('sort_by', 'balance_desc');
 
-        return view('consultant-availability.doctor-accounts', compact('consultantDoctors'));
+        $query = Doctor::with(['user', 'department', 'financialAccount'])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('doctor_financial_accounts', 'doctors.id', '=', 'doctor_financial_accounts.doctor_id')
+            ->where('doctors.type', 'consultant')
+            ->where('doctors.is_active', true);
+
+        // فلترة بالبحث النصي (الاسم، التخصص، الهاتف)
+        if ($request->filled('search')) {
+            $searchTerm = trim($search);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('users.name', 'like', "%{$searchTerm}%")
+                    ->orWhere('doctors.specialization', 'like', "%{$searchTerm}%")
+                    ->orWhere('users.phone', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // فلترة بحالة الرصيد (له رصيد مستحق بذمة المستشفى أم حسابه مصفى)
+        if ($request->filled('balance_status')) {
+            if ($balanceStatus === 'with_balance') {
+                $query->where('doctor_financial_accounts.balance', '>', 0);
+            } elseif ($balanceStatus === 'zero_balance') {
+                $query->where(function ($q) {
+                    $q->whereNull('doctor_financial_accounts.balance')
+                        ->orWhere('doctor_financial_accounts.balance', '<=', 0);
+                });
+            }
+        }
+
+        // الترتيب
+        switch ($sortBy) {
+            case 'name_asc':
+                $query->orderBy('users.name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('users.name', 'desc');
+                break;
+            case 'earned_desc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.total_earned, 0) DESC');
+                break;
+            case 'paid_desc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.total_paid, 0) DESC');
+                break;
+            case 'last_paid':
+                $query->orderByRaw('doctor_financial_accounts.last_paid_at DESC');
+                break;
+            case 'balance_asc':
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.balance, 0) ASC');
+                break;
+            case 'balance_desc':
+            default:
+                $query->orderByRaw('COALESCE(doctor_financial_accounts.balance, 0) DESC');
+                break;
+        }
+
+        $consultantDoctors = $query->select('doctors.*')
+            ->paginate(20)
+            ->withQueryString();
+
+        // إحصائيات المؤشرات الإجمالية
+        $allConsultantAccounts = DoctorFinancialAccount::whereHas('doctor', function ($q) {
+            $q->where('type', 'consultant')->where('is_active', true);
+        });
+
+        $stats = [
+            'total_doctors' => Doctor::where('type', 'consultant')->where('is_active', true)->count(),
+            'doctors_with_balance' => (clone $allConsultantAccounts)->where('balance', '>', 0)->count(),
+            'total_balance' => (float) (clone $allConsultantAccounts)->sum('balance'),
+            'total_earned' => (float) (clone $allConsultantAccounts)->sum('total_earned'),
+            'total_paid' => (float) (clone $allConsultantAccounts)->sum('total_paid'),
+        ];
+
+        return view('consultant-availability.doctor-accounts', compact('consultantDoctors', 'stats', 'search', 'balanceStatus', 'sortBy'));
     }
 
     public function doctorAccount(Request $request, Doctor $doctor)
@@ -975,25 +1042,96 @@ class ConsultantAvailabilityController extends Controller
 
         $filterType = $request->query('filter_type');
         $payoutSearch = $request->query('payout_search');
+        $revenueSearch = $request->query('revenue_search');
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
-        $query = ConsultationRevenue::with(['appointment.patient.user', 'cashier'])
+        // استعلام كشفيات ومراجعات الطبيب
+        $revenueQuery = ConsultationRevenue::with(['appointment.patient.user', 'patient.user', 'cashier', 'serviceType', 'doctorDue'])
             ->where('doctor_id', $doctor->id);
 
-        if ($filterType === 'payment') {
-            $query->where('movement_type', 'payment');
+        if ($filterType === 'pending') {
+            $revenueQuery->where('movement_type', 'payment')
+                ->where(function ($q) {
+                    $q->whereDoesntHave('doctorDue')
+                        ->orWhereHas('doctorDue', fn ($dq) => $dq->where('status', '!=', 'paid'));
+                });
+        } elseif ($filterType === 'paid') {
+            $revenueQuery->whereHas('doctorDue', fn ($dq) => $dq->where('status', 'paid'));
         } elseif ($filterType === 'refund') {
-            $query->where('movement_type', 'refund');
+            $revenueQuery->where('movement_type', 'refund');
+        } elseif ($filterType === 'payment') {
+            $revenueQuery->where('movement_type', 'payment');
         }
 
-        $revenues = $query->orderBy('paid_at', 'desc')->paginate(25);
+        if ($fromDate) {
+            $revenueQuery->where(function ($q) use ($fromDate) {
+                $q->whereDate('revenue_date', '>=', $fromDate)
+                    ->orWhereDate('paid_at', '>=', $fromDate);
+            });
+        }
+        if ($toDate) {
+            $revenueQuery->where(function ($q) use ($toDate) {
+                $q->whereDate('revenue_date', '<=', $toDate)
+                    ->orWhereDate('paid_at', '<=', $toDate);
+            });
+        }
 
-        $totalsQuery = clone $query;
+        if ($revenueSearch) {
+            $searchTerm = trim($revenueSearch);
+            $revenueQuery->where(function ($q) use ($searchTerm) {
+                $q->where('receipt_number', 'like', "%{$searchTerm}%")
+                    ->orWhereHas('patient.user', fn ($sub) => $sub->where('name', 'like', "%{$searchTerm}%"))
+                    ->orWhereHas('appointment.patient.user', fn ($sub) => $sub->where('name', 'like', "%{$searchTerm}%"));
+            });
+        }
+
+        $revenues = $revenueQuery->orderBy('paid_at', 'desc')->paginate(20, ['*'], 'rev_page')->withQueryString();
+
+        // إحصائيات البحث والفلترة المحددة للكشفيات
+        $hasRevenueFilter = ! empty($fromDate) || ! empty($toDate) || ! empty($revenueSearch) || ! empty($filterType);
+        $filteredTotalAmount = (float) (clone $revenueQuery)->sum('total_amount');
+        $filteredDoctorShare = (float) (clone $revenueQuery)->sum('doctor_share');
+        $filteredHospitalShare = (float) (clone $revenueQuery)->sum('hospital_share');
+        $filteredCount = (clone $revenueQuery)->count();
+
+        // حساب مستحقات الكشفيات غير المقبوضة فقط (Pending) المتبقية للصرف
+        $filteredPendingDoctorShare = (float) (clone $revenueQuery)
+            ->where('movement_type', 'payment')
+            ->where(function ($q) {
+                $q->whereDoesntHave('doctorDue')
+                    ->orWhereHas('doctorDue', fn ($dq) => $dq->where('status', '!=', 'paid'));
+            })
+            ->sum('doctor_share');
+
+        $availableBalance = (float) (optional($doctor->financialAccount)->balance ?? 0);
+        $suggestedPayoutAmount = $hasRevenueFilter
+            ? min($availableBalance, max(0.0, $filteredPendingDoctorShare))
+            : $availableBalance;
+
+        $suggestedPayoutNotes = '';
+        if ($fromDate && $toDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب للفترة من {$fromDate} إلى {$toDate}";
+        } elseif ($fromDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب من تاريخ {$fromDate}";
+        } elseif ($toDate) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات الطبيب لغاية تاريخ {$toDate}";
+        } elseif ($revenueSearch) {
+            $suggestedPayoutNotes = "صرف مستحقات كشفيات محددة حسب البحث ({$revenueSearch})";
+        } elseif ($hasRevenueFilter) {
+            $suggestedPayoutNotes = 'صرف مستحقات كشفيات الطبيب حسب الفلترة المحددة';
+        }
+
+        // إحصائيات الكشفيات الإجمالية للطبيب
+        $totalsQuery = ConsultationRevenue::where('doctor_id', $doctor->id);
         $totalReceived = (clone $totalsQuery)->where('total_amount', '>=', 0)->sum('total_amount');
         $totalRefunded = abs((clone $totalsQuery)->where('total_amount', '<', 0)->sum('total_amount'));
         $netTotal = (clone $totalsQuery)->sum('total_amount');
+        $totalDoctorEarned = (clone $totalsQuery)->sum('doctor_share');
+        $totalHospitalShare = (clone $totalsQuery)->sum('hospital_share');
+        $totalExaminations = (clone $totalsQuery)->where('movement_type', 'payment')->count();
 
+        // استعلام سندات الصرف والتسويات
         $baseDuesQuery = DoctorDue::with('paidBy')
             ->where('doctor_id', $doctor->id)
             ->when($payoutSearch, function ($query) use ($payoutSearch) {
@@ -1008,12 +1146,34 @@ class ConsultantAvailabilityController extends Controller
         $paidDues = (clone $baseDuesQuery)
             ->where('status', 'paid')
             ->orderBy('paid_at', 'desc')
-            ->paginate(10, ['*'], 'paid_page');
+            ->paginate(15, ['*'], 'paid_page')
+            ->withQueryString();
 
         $pendingDues = (clone $baseDuesQuery)
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
-            ->paginate(10, ['*'], 'pending_page');
+            ->paginate(15, ['*'], 'pending_page')
+            ->withQueryString();
+
+        // استعلام سندات الصرف الرسمية من الخزينة
+        $payoutTransactions = FinancialTransaction::with('performer')
+            ->where('related_type', Doctor::class)
+            ->where('related_id', $doctor->id)
+            ->whereIn('category', ['doctor_payout', 'doctor_payout_reversal'])
+            ->when($payoutSearch, function ($query) use ($payoutSearch) {
+                $query->where(function ($sub) use ($payoutSearch) {
+                    $sub->where('voucher_number', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('notes', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('description', 'like', '%'.$payoutSearch.'%')
+                        ->orWhere('amount', 'like', '%'.$payoutSearch.'%');
+                });
+            })
+            ->when($fromDate, fn ($query) => $query->whereDate('performed_at', '>=', $fromDate))
+            ->when($toDate, fn ($query) => $query->whereDate('performed_at', '<=', $toDate))
+            ->orderByDesc('performed_at')
+            ->orderByDesc('id')
+            ->paginate(15, ['*'], 'tx_page')
+            ->withQueryString();
 
         return view('consultant-availability.doctor-account-details', compact(
             'doctor',
@@ -1021,12 +1181,25 @@ class ConsultantAvailabilityController extends Controller
             'totalReceived',
             'totalRefunded',
             'netTotal',
+            'totalDoctorEarned',
+            'totalHospitalShare',
+            'totalExaminations',
             'filterType',
             'paidDues',
             'pendingDues',
+            'payoutTransactions',
             'payoutSearch',
+            'revenueSearch',
             'fromDate',
-            'toDate'
+            'toDate',
+            'hasRevenueFilter',
+            'filteredTotalAmount',
+            'filteredDoctorShare',
+            'filteredHospitalShare',
+            'filteredCount',
+            'availableBalance',
+            'suggestedPayoutAmount',
+            'suggestedPayoutNotes'
         ));
     }
 
@@ -1044,6 +1217,7 @@ class ConsultantAvailabilityController extends Controller
         ]);
 
         $amount = round($request->input('amount'), 2);
+        $notes = $request->input('notes');
 
         $account = DoctorFinancialAccount::firstOrCreate(
             ['doctor_id' => $doctor->id],
@@ -1064,6 +1238,7 @@ class ConsultantAvailabilityController extends Controller
         $account->save();
 
         $remaining = $amount;
+        $voucherNumber = 'EXP-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
         $pendingDues = DoctorDue::where('doctor_id', $doctor->id)
             ->where('status', 'pending')
             ->orderBy('created_at')
@@ -1080,6 +1255,7 @@ class ConsultantAvailabilityController extends Controller
                     'status' => 'paid',
                     'paid_by_id' => auth()->id(),
                     'paid_at' => now(),
+                    'notes' => trim(($due->notes ?? '')." [سند: {$voucherNumber}]"),
                 ]);
             } else {
                 $due->amount = round($due->amount - $remaining, 2);
@@ -1089,7 +1265,7 @@ class ConsultantAvailabilityController extends Controller
                     'doctor_id' => $doctor->id,
                     'amount' => $remaining,
                     'status' => 'paid',
-                    'notes' => 'صرف جزئي لمستحقات الطبيب',
+                    'notes' => trim(($notes ?: 'صرف جزئي لمستحقات الطبيب')." [سند: {$voucherNumber}]"),
                     'paid_by_id' => auth()->id(),
                     'paid_at' => now(),
                 ]);
@@ -1103,14 +1279,13 @@ class ConsultantAvailabilityController extends Controller
                 'doctor_id' => $doctor->id,
                 'amount' => $remaining,
                 'status' => 'paid',
-                'notes' => 'صرف للطبيب دون وجود مستحقات سابقة',
+                'notes' => trim(($notes ?: 'صرف للطبيب دون وجود مستحقات سابقة')." [سند: {$voucherNumber}]"),
                 'paid_by_id' => auth()->id(),
                 'paid_at' => now(),
             ]);
         }
 
-        $voucherNumber = 'EXP-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
-        FinancialTransaction::create([
+        $transaction = FinancialTransaction::create([
             'transaction_type' => 'expense',
             'voucher_type' => 'outflow',
             'category' => 'doctor_payout',
@@ -1120,14 +1295,181 @@ class ConsultantAvailabilityController extends Controller
             'amount' => $amount,
             'currency' => 'IQD',
             'payment_method' => 'cash',
-            'description' => 'صرف مستحقات للطبيب '.optional($doctor->user)->name,
+            'description' => $notes ?: ('صرف مستحقات للطبيب '.optional($doctor->user)->name),
             'notes' => 'سند صرف نقدي - حسابات الاستشارية',
             'performed_by_id' => auth()->id(),
             'performed_at' => now(),
         ]);
 
         return redirect()->route('consultant-availability.doctor-account', $doctor)
-            ->with('success', 'تم تسجيل صرف للطبيب بنجاح.');
+            ->with('success', 'تم تسجيل سند صرف للطبيب بنجاح بمبلغ '.number_format($amount, 0)." د.ع برقم سند [{$voucherNumber}].")
+            ->with('new_payout_tx_id', $transaction->id)
+            ->with('new_payout_voucher', $voucherNumber)
+            ->with('new_payout_amount', $amount);
+    }
+
+    /**
+     * طباعة سند صرف مستحقات الطبيب الرسمي
+     */
+    public function printDoctorPayout(Request $request, $id)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('view doctor profits')))) {
+            abort(403, 'غير مصرح لك بطباعة سندات الصرف');
+        }
+
+        $transaction = FinancialTransaction::with('performer')
+            ->where(function ($q) use ($id) {
+                $q->where('id', $id)
+                    ->orWhere('voucher_number', $id);
+            })
+            ->first();
+
+        if (! $transaction) {
+            $due = DoctorDue::with(['doctor.user', 'paidBy'])->find($id);
+            if ($due) {
+                $doctor = $due->doctor;
+                $amountWords = TafqeetService::inArabic($due->amount);
+                $transaction = new FinancialTransaction([
+                    'voucher_number' => 'DUE-DOC-'.$due->id,
+                    'amount' => $due->amount,
+                    'category' => 'doctor_payout',
+                    'voucher_type' => 'outflow',
+                    'description' => $due->notes ?: ('صرف مستحقات للطبيب '.optional($doctor->user)->name),
+                    'notes' => 'سند صرف من مستحقات الطبيب',
+                    'performed_at' => $due->paid_at ?: $due->created_at,
+                ]);
+                $transaction->setRelation('performer', $due->paidBy);
+
+                return view('consultant-availability.doctor-payout-print', compact('transaction', 'doctor', 'amountWords'));
+            }
+            abort(404, 'سند الصرف المطلوب غير موجود');
+        }
+
+        $doctor = Doctor::with(['user', 'department'])->find($transaction->related_id);
+        if (! $doctor) {
+            abort(404, 'بيانات الطبيب المرتبطة بهذا السند غير موجودة');
+        }
+
+        $amountWords = TafqeetService::inArabic($transaction->amount);
+
+        return view('consultant-availability.doctor-payout-print', compact('transaction', 'doctor', 'amountWords'));
+    }
+
+    /**
+     * استرجاع أو إلغاء سند صرف كلياً أو جزئياً وإعادة الرصيد للطبيب
+     */
+    public function reverseDoctorPayout(Request $request, $id)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view doctor accounts') && ! $user->can('void payment receipt')))) {
+            abort(403, 'غير مصرح لك بإلغاء أو استرجاع سندات الصرف');
+        }
+
+        $request->validate([
+            'reversal_reason' => 'required|string|max:1000',
+        ]);
+
+        $transaction = FinancialTransaction::where(function ($q) use ($id) {
+            $q->where('id', $id)
+                ->orWhere('voucher_number', $id);
+        })->firstOrFail();
+
+        $doctor = Doctor::with(['user', 'financialAccount'])->findOrFail($transaction->related_id);
+
+        $alreadyRefunded = FinancialTransaction::where('related_type', Doctor::class)
+            ->where('related_id', $doctor->id)
+            ->where('category', 'doctor_payout_reversal')
+            ->where('description', 'like', '%'.$transaction->voucher_number.'%')
+            ->exists();
+
+        if ($alreadyRefunded) {
+            return redirect()->back()->with('error', 'تم استرجاع وإلغاء هذا السند مسبقاً بالكامل.');
+        }
+
+        $refundAmount = (float) $transaction->amount;
+
+        DB::beginTransaction();
+        try {
+            // 1. إعادة كامل الرصيد المالي لحساب الطبيب
+            $account = DoctorFinancialAccount::firstOrCreate(
+                ['doctor_id' => $doctor->id],
+                ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+            );
+            $account->balance = round($account->balance + $refundAmount, 2);
+            $account->total_paid = round(max(0, $account->total_paid - $refundAmount), 2);
+            $account->save();
+
+            // 2. إعادة كافة المستحقات المسددة بهذا السند إلى حالة غير مقبوضة (pending)
+            $duesToRestore = DoctorDue::where('doctor_id', $doctor->id)
+                ->where('status', 'paid')
+                ->where(function ($q) use ($transaction) {
+                    $q->where('notes', 'like', '%'.$transaction->voucher_number.'%')
+                        ->orWhereBetween('paid_at', [
+                            $transaction->performed_at->copy()->subMinutes(15),
+                            $transaction->performed_at->copy()->addMinutes(15),
+                        ]);
+                })
+                ->get();
+
+            $remainingRestore = $refundAmount;
+            foreach ($duesToRestore as $due) {
+                if ($remainingRestore <= 0) {
+                    break;
+                }
+                $remainingRestore = round($remainingRestore - $due->amount, 2);
+                $due->update([
+                    'status' => 'pending',
+                    'paid_by_id' => null,
+                    'paid_at' => null,
+                    'notes' => trim(str_replace("[سند: {$transaction->voucher_number}]", '', (string) $due->notes)),
+                ]);
+            }
+
+            if ($remainingRestore > 0) {
+                DoctorDue::create([
+                    'doctor_id' => $doctor->id,
+                    'amount' => $remainingRestore,
+                    'status' => 'pending',
+                    'notes' => 'مستحقات معادة من إلغاء سند '.$transaction->voucher_number,
+                ]);
+            }
+
+            // 3. تسجيل حركة القيد العكسي في الخزينة
+            $refVoucher = 'REF-DOC-'.now()->format('ymd').'-'.rand(1000, 9999);
+            $revTx = FinancialTransaction::create([
+                'transaction_type' => 'other',
+                'voucher_type' => 'inflow',
+                'category' => 'doctor_payout_reversal',
+                'voucher_number' => $refVoucher,
+                'related_type' => Doctor::class,
+                'related_id' => $doctor->id,
+                'amount' => $refundAmount,
+                'currency' => 'IQD',
+                'payment_method' => 'cash',
+                'description' => 'استرجاع كلي وإلغاء سند الصرف ['.$transaction->voucher_number.'] للطبيب '.optional($doctor->user)->name,
+                'notes' => 'سبب الإلغاء: '.$request->input('reversal_reason'),
+                'performed_by_id' => auth()->id(),
+                'performed_at' => now(),
+            ]);
+
+            $transaction->notes = trim(($transaction->notes ?? '').' | [تم استرجاع وإلغاء السند بالكامل بتاريخ '.now()->format('Y-m-d H:i').' بسند '.$refVoucher.' - السبب: '.$request->input('reversal_reason').']');
+            $transaction->save();
+
+            DB::commit();
+
+            return redirect()->route('consultant-availability.doctor-account', $doctor)
+                ->with('success', "تم بنجاح إلغاء واسترجاع سند الصرف [{$transaction->voucher_number}] بالكامل بمبلغ ".number_format($refundAmount, 0).' د.ع، وعادت كافة الوصولات التابعة له إلى حالة (غير مقبوضة).')
+                ->with('new_payout_tx_id', $revTx->id)
+                ->with('new_payout_voucher', $refVoucher)
+                ->with('new_payout_amount', $refundAmount);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء استرجاع السند: '.$e->getMessage());
+        }
     }
 
     /**

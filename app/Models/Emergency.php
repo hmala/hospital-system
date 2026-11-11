@@ -375,4 +375,14 @@ class Emergency extends Model
     {
         return $this->hasOne(BedReservation::class, 'patient_id', 'patient_id')->latestOfMany();
     }
+
+    /**
+     * اسم المريض سواء كان مريضاً دائماً أو مسجلاً كطوارئ سريع
+     */
+    public function getPatientNameAttribute(): string
+    {
+        return $this->patient?->user?->name
+            ?? $this->emergencyPatient?->name
+            ?? 'غير معروف';
+    }
 }

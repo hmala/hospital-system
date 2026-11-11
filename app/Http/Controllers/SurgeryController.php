@@ -180,7 +180,12 @@ class SurgeryController extends Controller
         $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
 
-        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations'));
+        $selectedPatient = null;
+        if (request('patient_id')) {
+            $selectedPatient = Patient::with('user')->find(request('patient_id'));
+        }
+
+        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient'));
     }
 
     public function store(Request $request)

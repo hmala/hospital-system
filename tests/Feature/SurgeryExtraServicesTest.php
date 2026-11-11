@@ -111,6 +111,65 @@ class SurgeryExtraServicesTest extends TestCase
         ]);
     }
 
+    public function test_cashier_adding_new_custom_service_persists_to_hospital_extra_services_catalog(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية جراحية تجريبية',
+            'surgery_fee' => 450000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '11:00:00',
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'insurance_type' => 'none',
+        ]);
+
+        $customServiceName = 'خدمة فندقية فاخرة خاصة '.uniqid();
+
+        // التأكد من عدم وجود الخدمة مسبقاً في الدليل المرجعي
+        $this->assertDatabaseMissing('hospital_extra_services', [
+            'name' => $customServiceName,
+        ]);
+
+        $response = $this->actingAs($this->cashier)->post(route('cashier.surgeries.extra-services.add', $surgery), [
+            'service_name' => $customServiceName,
+            'service_price' => 45000,
+            'service_quantity' => 1,
+            'service_category' => 'accommodation',
+            'service_notes' => 'خدمة مضافة خصيصاً للمريض',
+        ]);
+
+        $response->assertRedirect(route('cashier.surgeries.payment.form', $surgery));
+        $response->assertSessionHas('success');
+
+        // التحقق من حفظ الخدمة في الدليل المرجعي العام للمستشفى hospital_extra_services
+        $this->assertDatabaseHas('hospital_extra_services', [
+            'name' => $customServiceName,
+            'category' => 'accommodation',
+            'default_price' => 45000.00,
+            'is_active' => 1,
+        ]);
+
+        $catalogService = \App\Models\HospitalExtraService::where('name', $customServiceName)->first();
+        $this->assertNotNull($catalogService);
+
+        // التحقق من ربط المعرف في surgery_extra_services
+        $this->assertDatabaseHas('surgery_extra_services', [
+            'surgery_id' => $surgery->id,
+            'service_id' => $catalogService->id,
+            'name' => $customServiceName,
+            'price' => 45000.00,
+        ]);
+
+        // التحقق من ظهور الخدمة تلقائياً في صفحة الدفع للعملية القادمة
+        $getRes = $this->actingAs($this->cashier)->get(route('cashier.surgeries.payment.form', $surgery));
+        $getRes->assertOk();
+        $getRes->assertSee($customServiceName);
+    }
+
     public function test_cashier_can_delete_pending_extra_service(): void
     {
         $surgery = Surgery::create([

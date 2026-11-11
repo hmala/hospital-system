@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Payment;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -48,6 +46,11 @@ class ConsultationRevenue extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function doctorDue()
+    {
+        return $this->hasOne(DoctorDue::class, 'payment_id', 'payment_id');
+    }
+
     public function appointment()
     {
         return $this->belongsTo(Appointment::class);
@@ -86,6 +89,7 @@ class ConsultationRevenue extends Model
         if ($this->payment) {
             return (float) $this->payment->amount;
         }
+
         return (float) $this->total_amount;
     }
 
@@ -95,13 +99,14 @@ class ConsultationRevenue extends Model
     public function getIsInsuranceAttribute(): bool
     {
         if ($this->payment) {
-            if (in_array($this->payment->insurance_type, ['hi', 'moi']) || (float)$this->payment->insurance_share > 0) {
+            if (in_array($this->payment->insurance_type, ['hi', 'moi']) || (float) $this->payment->insurance_share > 0) {
                 return true;
             }
         }
         if ($this->appointment && in_array($this->appointment->insurance_type, ['hi', 'moi'])) {
             return true;
         }
+
         return false;
     }
 
@@ -110,9 +115,10 @@ class ConsultationRevenue extends Model
      */
     public function getInsuranceShareAmountAttribute(): float
     {
-        if ($this->payment && (float)$this->payment->insurance_share > 0) {
+        if ($this->payment && (float) $this->payment->insurance_share > 0) {
             return (float) $this->payment->insurance_share;
         }
+
         return 0.0;
     }
 
@@ -129,6 +135,7 @@ class ConsultationRevenue extends Model
         } elseif ($this->is_insurance) {
             return 'مشمول بالضمان';
         }
+
         return 'نقداً (كاش)';
     }
 
@@ -141,6 +148,7 @@ class ConsultationRevenue extends Model
             return in_array($this->appointment->payment_status, ['refunded', 'cancelled'])
                 || $this->appointment->status === 'cancelled';
         }
+
         return false;
     }
 }

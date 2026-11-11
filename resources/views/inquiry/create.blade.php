@@ -1,41 +1,47 @@
-@extends('layouts.app')
+   @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
+<div class="container-fluid py-3">
+
+    {{-- 1. ترويسة الصفحة والتنقل السريع --}}
+    <div class="row mb-3">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                    <h2>
-                        <i class="fas fa-hospital-user me-2"></i>
-                        إنشاء طلب جديد - الاستعلامات
+                    <h2 class="h4 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded-3">
+                            <i class="fas fa-hospital-user"></i>
+                        </span>
+                        <span>إنشاء طلب جديد — قسم الاستعلامات والاستقبال</span>
                     </h2>
-                    <p class="text-muted">اختر نوع الخدمة المطلوبة للمريض</p>
+                    <p class="text-muted small mb-0">تحديد الخدمات والعيادات الطبية، التحويلات المباشرة، وتثبيت التغطية المالية</p>
                 </div>
-                <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    العودة
-                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ route('inquiry.search') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+                        <i class="fas fa-arrow-left me-1"></i> العودة للبحث
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
+    {{-- رسائل النجاح والتنبيهات العامة --}}
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm p-3 mb-3" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-check-circle fs-5"></i>
+                <div>{{ session('success') }}</div>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         <script>
-            // بعد عرض رسالة النجاح، إعادة تعيين الحالة حتى يمكن إنشاء طلب جديد بسهولة
             document.addEventListener('DOMContentLoaded', function() {
-                // تأخير قصير للسماح بعرض الرسالة قبل المسح
                 setTimeout(() => {
-                    // إلغاء تحديد البطاقات
                     document.querySelectorAll('.request-card').forEach(card => card.classList.remove('selected'));
-                    // إخفاء قسم التفاصيل
                     const details = document.getElementById('requestDetails');
+                    const emptyDetails = document.getElementById('emptyRequestDetails');
                     if (details) details.style.display = 'none';
-                    // مسح الأنواع المختارة
+                    if (emptyDetails) emptyDetails.style.display = 'block';
                     selectedTypes.clear();
                     updateFormFields();
                 }, 500);
@@ -43,398 +49,424 @@
         </script>
     @endif
 
-    <!-- معلومات المريض -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-circle me-2"></i>
-                        بيانات المريض
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <strong>الاسم:</strong>
-                            <p class="text-muted mb-1">{{ optional($patient->user)->name ?? 'غير معروف' }}</p>
-                        </div>
-                        <div class="col-md-2">
-                            <strong>العمر:</strong>
-                            <p class="text-muted mb-1">{{ $patient->age }} سنة</p>
-                        </div>
-                        <div class="col-md-2">
-                            <strong>الجنس:</strong>
-                            <p class="text-muted mb-1">
-                                @if(optional($patient->user)->gender == 'male')
-                                    <i class="fas fa-mars text-primary"></i> ذكر
-                                @elseif(optional($patient->user)->gender == 'female')
-                                    <i class="fas fa-venus text-danger"></i> أنثى
-                                @else
-                                    غير محدد
-                                @endif
-                            </p>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>رقم الهاتف:</strong>
-                            <p class="text-muted mb-1">{{ optional($patient->user)->phone ?? 'غير متوفر' }}</p>
-                        </div>
-                        <div class="col-md-2">
-                            <strong>العنوان:</strong>
-                            <p class="text-muted mb-1">{{ optional($patient->user)->address ?? 'غير متوفر' }}</p>
-                        </div>
-                    </div>
+    {{-- 2. شريط هوية وبيانات المريض الموحد (Executive Patient Strip) --}}
+    @php
+        $isInsured = $patient->insurance_type && $patient->insurance_type !== 'none';
+        $missingInsuranceFields = $isInsured ? $patient->getMissingInsuranceFields() : [];
+        $isInsuranceLocked = count($missingInsuranceFields) > 0;
+    @endphp
 
-                    @php
-                        $isInsured = $patient->insurance_type && $patient->insurance_type !== 'none';
-                        $missingInsuranceFields = $isInsured ? $patient->getMissingInsuranceFields() : [];
-                        $isInsuranceLocked = count($missingInsuranceFields) > 0;
-                    @endphp
-
-                    @if($isInsured)
-                        <div class="row mt-2 pt-2 border-top">
-                            <div class="col-12">
-                                <div class="d-flex align-items-center flex-wrap gap-2">
-                                    <span class="badge bg-success fs-7">
-                                        <i class="fas fa-shield-alt me-1"></i>
-                                        مشمول بالضمان:
-                                        @if($patient->insurance_type === 'moi')
-                                            ضمان قوى الأمن الداخلي (وزارة الداخلية)
-                                        @elseif($patient->insurance_type === 'hi')
-                                            هيئة الضمان الصحي الوطني
-                                        @endif
-                                    </span>
-                                    @if($patient->insurance_type === 'hi' && $patient->healthInsuranceCategory)
-                                        <span class="badge bg-info text-dark fs-7">
-                                            <i class="fas fa-layer-group me-1"></i>
-                                            الفئة {{ $patient->healthInsuranceCategory->code }} - {{ $patient->healthInsuranceCategory->name }}
-                                        </span>
-                                        @if($patient->healthInsuranceCategory->requires_thermal_stamp)
-                                            <span class="badge bg-danger fs-7">
-                                                <i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)
-                                            </span>
-                                        @endif
-                                    @endif
-                                    @if($patient->insurance_card_no || $patient->insurance_booklet_number)
-                                        <span class="badge bg-secondary fs-7">
-                                            <i class="fas fa-id-card me-1"></i>
-                                            رقم الهوية / الدفتر: {{ $patient->insurance_card_no ?: $patient->insurance_booklet_number }}
-                                        </span>
-                                    @endif
-                                    @if(!$isInsuranceLocked)
-                                        <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>بيانات الضمان مكتملة ومدققة ✓</small>
-                                    @endif
-                                </div>
-
-                                @if($isInsuranceLocked)
-                                    <div class="alert alert-danger border-2 border-danger rounded-3 shadow-sm p-3 mt-3 mb-1">
-                                        <div class="d-flex align-items-start gap-3">
-                                            <div class="rounded-circle bg-danger text-white p-2 text-center d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
-                                                <i class="fas fa-lock fs-5"></i>
-                                            </div>
-                                            <div>
-                                                <strong class="text-danger fs-6 d-block">
-                                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                                    قفل حجز الضمان الصحي 🔒: بيانات المريض غير مكتملة لدى شعبة الضمان
-                                                </strong>
-                                                <div class="text-dark small mt-1">
-                                                    لا يمكن حجز هذا المريض تحت مظلة الضمان الصحي لوجود نواقص في الملف:
-                                                    <span class="badge bg-danger text-white fw-bold fs-7 ms-1">
-                                                        {{ implode(' • ', $missingInsuranceFields) }}
-                                                    </span>
-                                                </div>
-                                                <div class="text-secondary small mt-2 pt-2 border-top border-danger border-opacity-25">
-                                                    <i class="fas fa-arrow-circle-left text-danger me-1"></i>
-                                                    <strong>التوجيه الإداري لموظف الاستعلامات:</strong> يرجى توجيه المريض إلى <strong>[ مكتب تسجيل المرضى وشعبة الضمان الصحي ]</strong> لإكمال وتدقيق بياناته وتفعيل حسابه أولاً، أو اختيار خيار <strong>(حجز نقدي كاش)</strong> أدناه للمتابعة فوراً على نفقته الخاصة.
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
+    <div class="card border-0 rounded-4 shadow-sm bg-white mb-4 p-3 border">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            {{-- تفاصيل المريض --}}
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 52px; height: 52px;">
+                    @if(optional($patient->user)->gender == 'female')
+                        <i class="fas fa-user-circle fa-2x text-danger"></i>
                     @else
-                        <div class="row mt-2 pt-2 border-top">
-                            <div class="col-12">
-                                <span class="badge bg-light text-secondary border">
-                                    <i class="fas fa-money-bill-wave me-1"></i> دفع نقدي مباشر (بدون ضمان)
-                                </span>
-                            </div>
-                        </div>
+                        <i class="fas fa-user-circle fa-2x text-primary"></i>
                     @endif
                 </div>
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <h5 class="fw-bold text-dark mb-0">{{ optional($patient->user)->name ?? 'غير معروف' }}</h5>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border font-monospace px-2 py-0.5 rounded-pill">
+                            ملف #{{ $patient->id }}
+                        </span>
+
+                        @if($isInsured)
+                            @if($isInsuranceLocked)
+                                <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill">
+                                    <i class="fas fa-lock me-1"></i> مقفل 🔒 (نواقص بملف الضمان)
+                                </span>
+                            @else
+                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    مشمول: {{ $patient->insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي الوطني' }}
+                                    {{ ($patient->insurance_type === 'hi' && $patient->healthInsuranceCategory) ? ('- الفئة ' . $patient->healthInsuranceCategory->code) : '' }}
+                                    ✓
+                                </span>
+                            @endif
+                        @else
+                            <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill">
+                                <i class="fas fa-money-bill-wave me-1"></i> دفع نقدي مباشر (بدون ضمان)
+                            </span>
+                        @endif
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-x-3 gap-y-1 text-muted small">
+                        <span><i class="fas fa-birthday-cake me-1 text-secondary"></i>{{ $patient->age }} سنة</span>
+                        <span>•</span>
+                        <span>
+                            @if(optional($patient->user)->gender == 'male')
+                                <i class="fas fa-mars text-primary me-1"></i> ذكر
+                            @elseif(optional($patient->user)->gender == 'female')
+                                <i class="fas fa-venus text-danger me-1"></i> أنثى
+                            @else
+                                غير محدد
+                            @endif
+                        </span>
+                        <span>•</span>
+                        <span><i class="fas fa-phone me-1 text-secondary"></i>{{ optional($patient->user)->phone ?? 'بدون هاتف' }}</span>
+                        <span>•</span>
+                        <span><i class="fas fa-map-marker-alt me-1 text-secondary"></i>{{ optional($patient->user)->address ?? 'العنوان غير مدخل' }}</span>
+                        @if($patient->insurance_card_no || $patient->insurance_booklet_number)
+                            <span>•</span>
+                            <span class="font-monospace"><i class="fas fa-id-card me-1 text-secondary"></i>{{ $patient->insurance_card_no ?: $patient->insurance_booklet_number }}</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- اختصارات سجل المريض وتعديله --}}
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('inquiry.patients.history', $patient->id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" title="عرض السجل الطبي الشامل">
+                    <i class="fas fa-file-medical me-1"></i> السجل الطبي
+                </a>
+                <a href="{{ route('patients.edit', $patient->id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm" title="تعديل بيانات المريض">
+                    <i class="fas fa-user-edit me-1"></i> تعديل الملف
+                </a>
+                <a href="{{ route('inquiry.patients.dossier.print', $patient->id) }}" target="_blank" class="btn btn-outline-dark btn-sm rounded-pill px-3 shadow-sm" title="طباعة الإضبارة">
+                    <i class="fas fa-print me-1"></i> الإضبارة
+                </a>
             </div>
         </div>
+
+        {{-- تنبيه موحد وواضح لنواقص الضمان الصحي (بدون تكرار) --}}
+        @if($isInsured && $isInsuranceLocked)
+            <div class="alert alert-danger border-2 border-danger rounded-4 shadow-sm p-3 mt-3 mb-0">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-start gap-2.5">
+                        <div class="rounded-circle bg-danger text-white p-2 text-center d-flex align-items-center justify-content-center shrink-0" style="width: 38px; height: 38px;">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div>
+                            <strong class="text-danger d-block mb-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                قفل حجز الضمان الصحي: بيانات المريض الأساسية غير مكتملة لدى شعبة الضمان
+                            </strong>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <span class="small text-dark">النواقص الإلزامية:</span>
+                                @foreach($missingInsuranceFields as $fKey => $fTitle)
+                                    <span class="badge bg-danger text-white py-1 px-2 rounded-pill shadow-sm">
+                                        <i class="fas fa-times-circle me-1"></i> {{ $fTitle }}
+                                    </span>
+                                @endforeach
+                            </div>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-arrow-circle-left text-danger me-1"></i>
+                                يمكنك المتابعة الفورية باختيار <strong>(حجز نقدي كاش)</strong> من اللوحة الجانبية، أو توجيه المريض لشعبة الضمان.
+                            </small>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 py-2 fw-bold shadow-sm" id="btnNotifyInsurance" onclick="sendInsuranceIncompleteAlert({{ $patient->id }})">
+                            <i class="fas fa-bell me-1"></i>
+                            <span id="btnNotifyInsuranceText">إرسال تنبيه عاجل لشعبة الضمان والتسجيل</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
-    <!-- أنواع الطلبات -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h4 class="mb-3">
-                <i class="fas fa-list-check me-2"></i>
-                اختر نوع الخدمة المطلوبة
-                <small class="text-muted d-block mt-1">انقر على البطاقات لاختيار الخدمات (يمكن اختيار أكثر من خدمة)</small>
-            </h4>
-        </div>
-    </div>
-
+    {{-- 3. النموذج وبيئة العمل ثنائية الأعمدة (Split Responsive Workspace) --}}
     <form action="{{ route('inquiry.store') }}" method="POST" id="requestForm">
         @csrf
         <input type="hidden" name="patient_id" value="{{ $patient->id }}">
         <input type="hidden" name="confirm_duplicate_booking" id="confirm_duplicate_booking" value="{{ old('confirm_duplicate_booking', 0) }}">
-        <div id="requestTypesContainer">
-            <!-- سيتم إضافة حقول request_type[] هنا عبر JavaScript -->
-        </div>
+        <div id="requestTypesContainer"></div>
         <input type="hidden" name="radiology_category" id="radiology_category" value="{{ old('radiology_category', 'radiology') }}">
 
+        {{-- تنبيه رصد حجز نشط مسبقاً --}}
         @if(session('duplicate_booking_warning'))
             @php $dupWarn = session('duplicate_booking_warning'); @endphp
-            <div class="alert alert-warning border-warning shadow-sm rounded-3 p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="alert alert-warning border-warning shadow-sm rounded-4 p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-3">
                     <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
                     <div>
                         <strong class="fs-6 d-block text-dark">⚠️ تنبيه: تم رصد حجز نشط مسبقاً للمريض اليوم!</strong>
-                        <span class="text-muted">{{ $dupWarn['message'] ?? 'المريض لديه حجز نشط اليوم بالفعل.' }}</span>
+                        <span class="text-muted small">{{ $dupWarn['message'] ?? 'المريض لديه حجز نشط اليوم بالفعل.' }}</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-warning fw-bold px-3 py-2 text-nowrap" onclick="confirmAndResubmitDuplicate()">
+                <button type="button" class="btn btn-warning fw-bold px-3 py-2 rounded-pill text-nowrap" onclick="confirmAndResubmitDuplicate()">
                     <i class="fas fa-check-circle me-1"></i> تأكيد الحجز الإضافي الآن
                 </button>
             </div>
         @endif
 
-        <div class="row g-4 mb-4">
-            @foreach($requestTypes as $type => $config)
-                @php
-                    // إخفاء بطاقة الأشعة إذا لم يكن لدى المستخدم أي صلاحيات للأشعة
-                    if ($type === 'radiology' && !$radiologyPermissions['general'] && !$radiologyPermissions['ultrasound'] && !$radiologyPermissions['mri'] && !$radiologyPermissions['echo']) {
-                        continue;
-                    }
-                @endphp
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 shadow-sm request-card" data-type="{{ $type }}" onclick="toggleRequestType('{{ $type }}')">
-                        <div class="card-body text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas {{ $config['icon'] }} fa-4x text-{{ $config['color'] }}"></i>
-                            </div>
-                            <h5 class="card-title">{{ $config['label'] }}</h5>
-                            <p class="card-text text-muted small">
-                                @switch($type)
-                                    @case('lab')
-                                        فحوصات مخبرية وتحاليل الدم والبول
-                                        @break
-                                    @case('radiology')
-                                        أشعة عادية، مقطعية، وتصوير بالرنين
-                                        @break
-                                    @case('pharmacy')
-                                        صرف أدوية ومستلزمات طبية
-                                        @break
-                                    @case('checkup')
-                                        حجز موعد للطبيب والاستشارة الطبية
-                                        @break
-                                    @case('blood_bank')
-                                        طلب كروس ماتش أو تحضير وحدات دم
-                                        @break
-                                    @default
-                                        خدمة طبية
-                                @endswitch
-                            </p>
-                            <div class="departments-list small text-muted" style="display: none;">
-                                @if($config['departments']->count() > 0)
-                                    <strong>الأقسام المتاحة:</strong>
-                                    <ul class="list-unstyled mt-2">
-                                        @foreach($config['departments'] as $dept)
-                                            <li><i class="fas fa-check-circle text-success"></i> {{ $dept->name }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-danger">لا توجد أقسام متاحة</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                            <span class="badge bg-{{ $config['color'] }}">محدد</span>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
+        <div class="row g-4 align-items-start">
+            {{-- العمود الأيمن (7 أعمدة): بطاقات الخدمات والتحويلات --}}
+            <div class="col-12 col-lg-7">
 
-            @can('create emergencies')
-                <!-- بطاقة حجز طوارئ / طوارئ الضمان -->
-                <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id'), 'return_to' => 'inquiry']) }}" class="text-decoration-none">
-                        <div class="card h-100 shadow-sm request-card emergency-card border border-danger border-opacity-25" style="cursor: pointer;">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-ambulance fa-4x text-danger"></i>
-                                </div>
-                                <h5 class="card-title text-dark fw-bold">حجز طوارئ / طوارئ الضمان</h5>
-                                <p class="card-text text-muted small">
-                                    حجز تذكرة طوارئ أو قبول إحالة تمريض وضمان صحي
-                                </p>
-                                <div class="mt-2">
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الطوارئ
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            @endcan
-
-            @can('create surgeries')
-                <!-- بطاقة حجز عملية جراحية -->
-                <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('surgeries.create', [
-                        'patient_id' => $patient->id,
-                        'visit_id' => $visit->id ?? null,
-                        'doctor_id' => $visit->doctor_id ?? null,
-                        'department_id' => $visit->department_id ?? null
-                    ]) }}" class="text-decoration-none">
-                        <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-procedures fa-4x text-danger"></i>
-                                </div>
-                                <h5 class="card-title text-dark">حجز عملية جراحية</h5>
-                                <p class="card-text text-muted small">
-                                    حجز موعد لإجراء عملية جراحية
-                                </p>
-                                <div class="mt-2">
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الحجز
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            @endcan
-
-            @can('create bed reservations')
-                <!-- بطاقة رقود مبدئي -->
-                <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('bed-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
-                        <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-bed fa-4x text-info"></i>
-                                </div>
-                                <h5 class="card-title text-dark">حجز رقود مبدئي</h5>
-                                <p class="card-text text-muted small">
-                                    احجز سريراً للإقامة أو التحضير للعملية
-                                </p>
-                                <div class="mt-2">
-                                    <span class="badge bg-info">
-                                        <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الحجز
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            @endcan
-
-            @can('create incubator reservations')
-                <!-- بطاقة حجز حاضنة خدج -->
-                <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('incubator-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
-                        <div class="card h-100 shadow-sm request-card surgery-card" style="cursor: pointer;">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-baby fa-4x text-pink"></i>
-                                </div>
-                                <h5 class="card-title text-dark">حجز حاضنة خدج</h5>
-                                <p class="card-text text-muted small">
-                                    حجز واستقبال مولود بالحاضنة (مرتبط بالأم أو المسؤول)
-                                </p>
-                                <div class="mt-2">
-                                    <span class="badge" style="background-color: #e91e63; color: white;">
-                                        <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الحجز
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            @endcan
-
-            @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('admit icu patients') || auth()->user()->can('view icu radar'))
-                <!-- بطاقة حجز عناية مركزة (ICU / CCU) -->
-                <div class="col-md-6 col-lg-3">
-                    <a href="{{ route('icu.admissions.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
-                        <div class="card h-100 shadow-sm request-card icu-card border border-danger border-opacity-25" style="cursor: pointer;">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-heartbeat fa-4x text-danger"></i>
-                                </div>
-                                <h5 class="card-title text-dark fw-bold">حجز عناية مركزة (ICU)</h5>
-                                <p class="card-text text-muted small">
-                                    تسكين وحجز سرير عناية حرجة، عزل، أو عناية قلبية CCU
-                                </p>
-                                <div class="mt-2">
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الحجز
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            @endif
-        </div>
-
-        <!-- نموذج التفاصيل -->
-        <div id="requestDetails" style="display: none;">
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-secondary text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-edit me-2"></i>
-                                تفاصيل الطلب
+                {{-- القسم الأول: الخدمات المباشرة (تحديد متعدد) --}}
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <span class="badge bg-primary rounded-circle p-1" style="width: 22px; height: 22px; font-size: 11px;">1</span>
+                                <span>الخدمات الطبية المباشرة</span>
                             </h5>
+                            <p class="text-muted small mb-0">انقر لاختيار خدمة أو دمج أكثر من خدمة في طلب واحد</p>
                         </div>
-                        <div class="card-body">
-                            <!-- حقول عامة - تظهر للكشف الطبي والصيدلية فقط -->
-                            <div id="generalFields" style="display: none;">
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <label for="description" class="form-label">
-                                            <i class="fas fa-comment-medical me-1"></i>
-                                            وصف الحالة / التفاصيل <span class="text-danger general-required">*</span>
-                                        </label>
-                                        <textarea class="form-control @error('description') is-invalid @enderror" 
-                                                  id="description" 
-                                                  name="description" 
-                                                  rows="4" 
-                                                  placeholder="اكتب وصفاً تفصيلياً للحالة أو الخدمة المطلوبة...">{{ old('description') }}</textarea>
-                                        @error('description')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-bold" id="selectedCountBadge">
+                            محدد: <span id="selectedServicesCountBadge">0</span>
+                        </span>
+                    </div>
+
+                    <div class="row g-3">
+                        @foreach($requestTypes as $type => $config)
+                            @php
+                                if ($type === 'radiology' && !$radiologyPermissions['general'] && !$radiologyPermissions['ultrasound'] && !$radiologyPermissions['mri'] && !$radiologyPermissions['echo']) {
+                                    continue;
+                                }
+                            @endphp
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <div class="card h-100 request-card p-3 position-relative" data-type="{{ $type }}" onclick="toggleRequestType('{{ $type }}')">
+                                    {{-- شارة التحديد الخضراء العلوية --}}
+                                    <span class="position-absolute top-0 end-0 m-2 badge rounded-circle p-1 check-badge bg-primary text-white shadow-sm" style="display: none; width: 22px; height: 22px; align-items: center; justify-content: center;">
+                                        <i class="fas fa-check" style="font-size: 11px;"></i>
+                                    </span>
+
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <div class="rounded-3 p-2.5 text-center d-flex align-items-center justify-content-center shrink-0" 
+                                             style="width: 44px; height: 44px; background-color: rgba(var(--bs-{{ $config['color'] }}-rgb, 13, 110, 253), 0.12); color: var(--bs-{{ $config['color'] }});">
+                                            <i class="fas {{ $config['icon'] }} fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">{{ $config['label'] }}</h6>
+                                            <small class="text-muted d-block" style="font-size: 11px;">
+                                                @switch($type)
+                                                    @case('checkup')
+                                                        استشارة وتحديد الطبيب
+                                                        @break
+                                                    @case('lab')
+                                                        تحاليل وفحوصات مخبرية
+                                                        @break
+                                                    @case('radiology')
+                                                        أشعة • سونار • إيكو • رنين
+                                                        @break
+                                                    @case('pharmacy')
+                                                        صرف علاج ومستلزمات
+                                                        @break
+                                                    @case('blood_bank')
+                                                        كروس ماتش ووحدات دم
+                                                        @break
+                                                    @default
+                                                        خدمة طبية مباشرة
+                                                @endswitch
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        @endforeach
+                    </div>
+                </div>
 
-                            <!-- حقول خاصة بالكشف الطبي -->
-                            <div id="checkupFields" style="display: none;">
-                                <div class="row">
+                {{-- القسم الثاني: تحويلات الوحدات المستقلة (انتقال لنموذج آخر) --}}
+                @php
+                    $canAdmitIcu = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) ||
+                                   auth()->user()->can('admit icu patients') ||
+                                   auth()->user()->can('view icu radar');
+                    $hasAnyExternalPermission = auth()->user()->can('create emergencies') || 
+                                                auth()->user()->can('create surgeries') || 
+                                                auth()->user()->can('create bed reservations') || 
+                                                auth()->user()->can('create incubator reservations') ||
+                                                $canAdmitIcu;
+                @endphp
+
+                @if($hasAnyExternalPermission)
+                    <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                        <div class="mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary rounded-circle p-1" style="width: 22px; height: 22px; font-size: 11px;">2</span>
+                                <span>تحويلات وحجوزات الأقسام التخصصية</span>
+                            </h5>
+                            <p class="text-muted small mb-0">روابط سريعة تفتح نموذج الحجز المباشر في تلك الأقسام</p>
+                        </div>
+
+                        <div class="row g-2.5">
+                            @can('create emergencies')
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('emergency.create', ['patient_id' => $patient->id, 'from_referral_id' => request('referral_id') ?? request('from_referral_id'), 'return_to' => 'inquiry']) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-2">
+                                                        <i class="fas fa-ambulance"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">حجز طوارئ</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">تذكرة / ضمان</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endcan
+
+                            @can('create surgeries')
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('surgeries.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-2">
+                                                        <i class="fas fa-procedures"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">عملية جراحية</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">حجز صالة</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endcan
+
+                            @can('create bed reservations')
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('bed-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-info bg-opacity-10 text-info p-2 rounded-2">
+                                                        <i class="fas fa-bed"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">رقود مبدئي</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">حجز سرير</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endcan
+
+                            @can('create incubator reservations')
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('incubator-reservations.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge p-2 rounded-2" style="background-color: #fce4ec; color: #e91e63;">
+                                                        <i class="fas fa-baby"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">حجز حاضنة خدج</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">حجز واستقبال مولود بالحاضنة (مرتبط بالأم أو المسؤول)</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endcan
+
+                            @if($canAdmitIcu)
+                                <div class="col-12 col-sm-6 col-md-3">
+                                    <a href="{{ route('icu.admissions.create', ['patient_id' => $patient->id]) }}" class="text-decoration-none">
+                                        <div class="card p-2.5 rounded-3 ext-nav-card h-100 bg-white border-danger border-opacity-25">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-2">
+                                                        <i class="fas fa-heartbeat"></i>
+                                                    </span>
+                                                    <div>
+                                                        <strong class="text-dark d-block small">حجز عناية مركزة (ICU)</strong>
+                                                        <span class="text-muted" style="font-size: 10px;">تسكين سرير عناية حرجة أو قلبية CCU</span>
+                                                    </div>
+                                                </div>
+                                                <i class="fas fa-external-link-alt text-muted small"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            {{-- العمود الأيسر (5 أعمدة): لوحة التفاصيل والاعتماد الثابتة (Sticky Workspace) --}}
+            <div class="col-12 col-lg-5">
+                <div class="sticky-workspace-panel">
+
+                    {{-- الحالة الفارغة قبل اختيار أي خدمة --}}
+                    <div id="emptyRequestDetails" class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center">
+                        <div class="mb-3">
+                            <span class="rounded-circle bg-primary bg-opacity-10 text-primary p-3 d-inline-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                                <i class="fas fa-hand-pointer fa-2x"></i>
+                            </span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">اختر إحدى الخدمات الطبية من القائمة</h6>
+                        <p class="text-muted small mb-0">ستظهر تفاصيل الخدمة وخيارات الطبيب والدفع فوراً في هذه اللوحة دون الحاجة للتمرير.</p>
+                    </div>
+
+                    {{-- لوحة التفاصيل عند التحديد --}}
+                    <div id="requestDetails" style="display: none;">
+                        <div class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+                            <div class="card-header bg-primary text-white p-3 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                    <i class="fas fa-edit"></i>
+                                    <span>تفاصيل واعتماد الطلب</span>
+                                </h6>
+                                <span class="badge bg-white text-primary rounded-pill px-2.5 py-1" id="activeServiceTitleBadge">
+                                    طلب جديد
+                                </span>
+                            </div>
+
+                            <div class="card-body p-3.5 space-y-3">
+
+                                {{-- حقول خاصة بالكشف الطبي --}}
+                                <div id="checkupFields" style="display: none;" class="mb-3 p-3 rounded-3 bg-light border">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label for="doctor_search_input" class="form-label fw-bold mb-0 text-dark small">
+                                            <i class="fas fa-user-md me-1 text-primary"></i> الطبيب الاستشاري <span class="text-danger">*</span>
+                                        </label>
+                                        @php
+                                            $todayAvailableDocs = $doctors->where('is_available_today', true);
+                                        @endphp
+                                        @if($todayAvailableDocs->count() > 0)
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 11px;">
+                                                <i class="fas fa-check-circle me-1"></i> {{ $todayAvailableDocs->count() }} أطباء متوفرون اليوم
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    {{-- أزرار سريعة للأطباء المتواجدين اليوم (Quick Selection Chips) --}}
+                                    @if($todayAvailableDocs->count() > 0)
+                                        <div class="mb-2">
+                                            <div class="text-muted small mb-1" style="font-size: 11px;">اختيار سريع للمتواجدين اليوم:</div>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach($todayAvailableDocs->take(5) as $avDoc)
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-white border rounded-pill px-2.5 py-0.5 text-nowrap quick-doc-btn" 
+                                                            style="font-size: 11px; background: #fff;"
+                                                            onclick="selectQuickDoctor({{ $avDoc->id }}, '{{ addslashes('د. ' . (optional($avDoc->user)->name ?? 'طبيب') . ' - ' . ($avDoc->specialization ?? '')) }}', '{{ addslashes(optional($avDoc->department)->name ?? '') }}')">
+                                                        <i class="fas fa-circle text-success me-1" style="font-size: 7px;"></i>
+                                                        د. {{ optional($avDoc->user)->name }} ({{ $avDoc->specialization }})
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     @php
                                         $selectedDoctor = old('doctor_id') ? $doctors->firstWhere('id', old('doctor_id')) : null;
                                         $selectedDoctorName = $selectedDoctor ? ('د. ' . (optional($selectedDoctor->user)->name ?? 'طبيب') . ' - ' . ($selectedDoctor->specialization ?? '')) : '';
                                         $selectedDoctorDept = $selectedDoctor ? optional($selectedDoctor->department)->name : '';
                                     @endphp
-                                    <div class="col-md-6 mb-3 position-relative">
-                                        <label for="doctor_search_input" class="form-label fw-bold">
-                                            <i class="fas fa-user-md me-1 text-primary"></i>
-                                            الطبيب الاستشاري <span class="text-danger">*</span>
-                                        </label>
+
+                                    <div class="position-relative mb-2">
                                         <div class="input-group">
                                             <span class="input-group-text bg-white border-end-0 text-primary">
                                                 <i class="fas fa-search"></i>
@@ -451,54 +483,51 @@
                                         </div>
                                         <input type="hidden" id="doctor_id" name="doctor_id" value="{{ old('doctor_id') }}">
 
-                                        <!-- قائمة الاقتراحات الذكية: تظهر بعد كتابة أول حرف -->
+                                        {{-- قائمة الاقتراحات الذكية --}}
                                         <div id="doctor_suggestions" 
                                              class="position-absolute w-100 bg-white shadow-lg rounded-3 border mt-1" 
-                                             style="display: none; max-height: 280px; overflow-y: auto; z-index: 1055; left: 0;">
+                                             style="display: none; max-height: 250px; overflow-y: auto; z-index: 1055; left: 0;">
                                         </div>
-
-                                        <!-- بطاقة تأكيد اختيار الطبيب -->
-                                        <div id="selectedDoctorBox" class="mt-2 p-2 rounded-2 bg-light border border-success border-opacity-25 align-items-center justify-content-between" style="{{ $selectedDoctor ? 'display: flex;' : 'display: none;' }}">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-user-check text-success fs-5"></i>
-                                                <div>
-                                                    <strong class="text-success d-block" id="selectedDoctorNameText">{{ $selectedDoctorName }}</strong>
-                                                    <small class="text-muted" id="selectedDoctorDeptText">{{ $selectedDoctorDept ? 'العيادة: ' . $selectedDoctorDept : '' }}</small>
-                                                </div>
-                                            </div>
-                                            <span class="badge bg-success rounded-pill px-2 py-1">محدد</span>
-                                        </div>
-
-                                        <!-- تنبيه فوري لمنع تكرار الحجز لنفس الطبيب في نفس اليوم -->
-                                        <div id="duplicateDoctorWarningBox" class="mt-2 p-3 rounded-3 bg-danger bg-opacity-10 border border-danger shadow-sm" style="display: none;">
-                                            <div class="d-flex align-items-start gap-2">
-                                                <i class="fas fa-ban text-danger fs-3 mt-1"></i>
-                                                <div class="flex-grow-1">
-                                                    <strong class="text-danger d-block mb-1" id="duplicateDoctorTitle">⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً</strong>
-                                                    <p class="text-dark small mb-2 fw-semibold" id="duplicateDoctorMessage"></p>
-                                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                                        <span class="badge bg-danger text-white" id="duplicateDoctorQueueBadge">تسلسل: #0</span>
-                                                        <span class="badge bg-secondary text-white" id="duplicateDoctorStatusBadge">الحالة</span>
-                                                        <span class="badge bg-dark text-white" id="duplicateDoctorPayBadge">الدفع</span>
-                                                    </div>
-                                                    <div class="alert alert-danger p-2 mb-0 small fw-bold">
-                                                        <i class="fas fa-times-circle me-1"></i> يُمنع قطع حجز إضافي لنفس المريض في نفس اليوم! المريض مسجل بالفعل ويدخل للعيادة مباشرة لمتابعة الفحوصات أو المراجعة. (تم تعطيل الحفظ تلقائياً).
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        @error('doctor_id')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                        @enderror
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="appointment_date" class="form-label">
-                                            <i class="fas fa-calendar me-1"></i>
-                                            تاريخ الموعد
+
+                                    {{-- بطاقة تأكيد اختيار الطبيب --}}
+                                    <div id="selectedDoctorBox" class="p-2 rounded-3 bg-white border border-success border-opacity-25 align-items-center justify-content-between mb-2" style="{{ $selectedDoctor ? 'display: flex;' : 'display: none;' }}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-user-check text-success fs-5"></i>
+                                            <div>
+                                                <strong class="text-success d-block small" id="selectedDoctorNameText">{{ $selectedDoctorName }}</strong>
+                                                <small class="text-muted" id="selectedDoctorDeptText" style="font-size: 11px;">{{ $selectedDoctorDept ? 'العيادة: ' . $selectedDoctorDept : '' }}</small>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-success rounded-pill px-2 py-0.5" style="font-size: 10px;">محدد</span>
+                                    </div>
+
+                                    {{-- تنبيه فوري لمنع تكرار الحجز لنفس الطبيب في نفس اليوم --}}
+                                    <div id="duplicateDoctorWarningBox" class="p-2.5 rounded-3 bg-danger bg-opacity-10 border border-danger shadow-sm mb-2" style="display: none;">
+                                        <div class="d-flex align-items-start gap-2">
+                                            <i class="fas fa-ban text-danger fs-4 mt-1"></i>
+                                            <div class="flex-grow-1">
+                                                <strong class="text-danger d-block small mb-1" id="duplicateDoctorTitle">⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً</strong>
+                                                <p class="text-dark small mb-1 fw-semibold" id="duplicateDoctorMessage" style="font-size: 11px;"></p>
+                                                <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
+                                                    <span class="badge bg-danger text-white" id="duplicateDoctorQueueBadge" style="font-size: 10px;">تسلسل: #0</span>
+                                                    <span class="badge bg-secondary text-white" id="duplicateDoctorStatusBadge" style="font-size: 10px;">الحالة</span>
+                                                    <span class="badge bg-dark text-white" id="duplicateDoctorPayBadge" style="font-size: 10px;">الدفع</span>
+                                                </div>
+                                                <div class="alert alert-danger p-1.5 mb-0 small" style="font-size: 11px;">
+                                                    <i class="fas fa-times-circle me-1"></i> المريض مسجل اليوم بالفعل لدى الطبيب ويدخل مباشرة للمراجعة.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- تاريخ الموعد --}}
+                                    <div>
+                                        <label for="appointment_date" class="form-label small fw-bold mb-1">
+                                            <i class="fas fa-calendar-alt me-1 text-primary"></i> تاريخ الموعد
                                         </label>
                                         <input type="date" 
-                                               class="form-control @error('appointment_date') is-invalid @enderror" 
+                                               class="form-control form-control-sm rounded-3 @error('appointment_date') is-invalid @enderror" 
                                                id="appointment_date" 
                                                name="appointment_date"
                                                value="{{ old('appointment_date', date('Y-m-d')) }}"
@@ -508,382 +537,202 @@
                                         @enderror
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- حقول خاصة بالتحاليل -->
-                            <div id="labFields" style="display: none;">
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب تحويل عام للمختبر. 
-                                            سيقوم موظف المختبر لاحقاً بتحديد التحاليل المطلوبة بالتفصيل قبل الدفع.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- حقول خاصة بالأشعة -->
-                            <div id="radiologyFields" style="display: none;">
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب تحويل عام لقسم الأشعة. 
-                                            سيقوم موظف الأشعة لاحقاً بتحديد أنواع الأشعة المطلوبة بالتفصيل قبل الدفع.
-                                        </div>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label fw-bold">نوع الأشعة</label>
-                                        <div class="btn-group" role="group" aria-label="خيارات الأشعة">
-                                            @if($radiologyPermissions['general'])
-                                                <button type="button" class="btn btn-outline-secondary radiology-category-btn" data-category="radiology">أشعة عامة</button>
-                                            @endif
-                                            @if($radiologyPermissions['ultrasound'])
-                                                <button type="button" class="btn btn-outline-secondary radiology-category-btn" data-category="ultrasound">سونار</button>
-                                            @endif
-                                            @if($radiologyPermissions['mri'])
-                                                <button type="button" class="btn btn-outline-secondary radiology-category-btn" data-category="mri">رنين مغناطيسي</button>
-                                            @endif
-                                            @if($radiologyPermissions['echo'])
-                                                <button type="button" class="btn btn-outline-secondary radiology-category-btn" data-category="echo">إيكو</button>
-                                            @endif
-                                        </div>
-                                        <div class="form-text">اختر فئة الأشعة المناسبة لهذا الطلب.</div>
-                                        @if(!$radiologyPermissions['general'] && !$radiologyPermissions['ultrasound'] && !$radiologyPermissions['mri'] && !$radiologyPermissions['echo'])
-                                            <div class="alert alert-warning mt-2">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                ليس لديك صلاحية لحجز أي نوع من الأشعة. يرجى التواصل مع المدير لمنحك الصلاحيات المناسبة.
-                                            </div>
+                                {{-- حقول خاصة بالأشعة والتصوير --}}
+                                <div id="radiologyFields" style="display: none;" class="mb-3 p-3 rounded-3 bg-light border">
+                                    <label class="form-label fw-bold small text-dark d-block mb-1.5">
+                                        <i class="fas fa-x-ray me-1 text-primary"></i> نوع فئة الأشعة
+                                    </label>
+                                    <div class="btn-group w-100 mb-2" role="group" aria-label="خيارات الأشعة">
+                                        @if($radiologyPermissions['general'])
+                                            <button type="button" class="btn btn-sm btn-outline-secondary radiology-category-btn" data-category="radiology">أشعة عامة</button>
+                                        @endif
+                                        @if($radiologyPermissions['ultrasound'])
+                                            <button type="button" class="btn btn-sm btn-outline-secondary radiology-category-btn" data-category="ultrasound">سونار</button>
+                                        @endif
+                                        @if($radiologyPermissions['mri'])
+                                            <button type="button" class="btn btn-sm btn-outline-secondary radiology-category-btn" data-category="mri">رنين</button>
+                                        @endif
+                                        @if($radiologyPermissions['echo'])
+                                            <button type="button" class="btn btn-sm btn-outline-secondary radiology-category-btn" data-category="echo">إيكو</button>
                                         @endif
                                     </div>
-                                    
-                                    <!-- حقول خاصة بالسونار -->
-                                    <div class="col-12 mb-3" id="ultrasoundDetailsContainer" style="display: none;">
-                                        <div class="card border-primary shadow-sm">
-                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                                <span><i class="fas fa-wave-square me-2"></i>تفاصيل وتحديد نوع فحص السونار</span>
-                                                <span class="badge bg-light text-primary fw-bold"><i class="fas fa-cash-register me-1"></i>دفع مسبق في الكاشير</span>
+
+                                    {{-- تفاصيل السونار المباشر --}}
+                                    <div id="ultrasoundDetailsContainer" style="display: none;" class="mt-2 p-2.5 bg-white border border-primary border-opacity-25 rounded-3">
+                                        <div class="mb-2 position-relative">
+                                            <label for="ultrasound_search_input" class="form-label fw-bold small mb-1">نوع فحص السونار <span class="text-danger">*</span></label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-primary"></i></span>
+                                                <input type="text" 
+                                                       class="form-control border-start-0" 
+                                                       id="ultrasound_search_input" 
+                                                       placeholder="ابحث عن نوع السونار..." 
+                                                       autocomplete="off">
+                                                <button class="btn btn-outline-secondary" type="button" id="clearUltrasoundSearch" style="display: none;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
                                             </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-7 mb-3 position-relative">
-                                                        <label for="ultrasound_search_input" class="form-label fw-bold">نوع فحص السونار <span class="text-danger">*</span></label>
-                                                        <div class="input-group">
-                                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-primary"></i></span>
-                                                            <input type="text" 
-                                                                   class="form-control border-start-0" 
-                                                                   id="ultrasound_search_input" 
-                                                                   placeholder="ابحث عن نوع السونار (اكتب حرفاً للبدء)..." 
-                                                                   autocomplete="off"
-                                                                   value="">
-                                                            <button class="btn btn-outline-secondary" type="button" id="clearUltrasoundSearch" style="display: none;" title="مسح">
-                                                                <i class="fas fa-times"></i>
-                                                            </button>
-                                                        </div>
-                                                        <input type="hidden" id="ultrasound_type_id" name="ultrasound_type_id" value="{{ old('ultrasound_type_id') }}">
+                                            <input type="hidden" id="ultrasound_type_id" name="ultrasound_type_id" value="{{ old('ultrasound_type_id') }}">
+                                            <div id="ultrasound_suggestions" class="position-absolute w-100 bg-white shadow-lg rounded-3 border mt-1" style="display: none; max-height: 220px; overflow-y: auto; z-index: 1050; left: 0;"></div>
+                                        </div>
 
-                                                        <!-- قائمة الاقتراحات المنسدلة: لا تظهر أي نتائج إلا بعد إدخال أول حرف -->
-                                                        <div id="ultrasound_suggestions" 
-                                                             class="position-absolute w-100 bg-white shadow-lg rounded-3 border mt-1" 
-                                                             style="display: none; max-height: 260px; overflow-y: auto; z-index: 1050; left: 0;">
-                                                        </div>
+                                        <div class="mb-2">
+                                            <label for="ultrasound_staff_id" class="form-label fw-bold small mb-1">أخصائي / موظف السونار <span class="text-danger">*</span></label>
+                                            <select class="form-select form-select-sm" id="ultrasound_staff_id" name="ultrasound_staff_id">
+                                                <option value="">اختر الموظف...</option>
+                                                @foreach($ultrasoundStaff as $staff)
+                                                    <option value="{{ $staff->id }}" {{ old('ultrasound_staff_id') == $staff->id ? 'selected' : '' }}>
+                                                        {{ $staff->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-                                                        @error('ultrasound_type_id')
-                                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </div>
-                                                    <div class="col-md-5 mb-3">
-                                                        <label for="ultrasound_staff_id" class="form-label fw-bold">أخصائي / موظف السونار <span class="text-danger">*</span></label>
-                                                        <select class="form-select" id="ultrasound_staff_id" name="ultrasound_staff_id">
-                                                            <option value="">اختر الموظف...</option>
-                                                            @foreach($ultrasoundStaff as $staff)
-                                                                <option value="{{ $staff->id }}" {{ old('ultrasound_staff_id') == $staff->id ? 'selected' : '' }}>
-                                                                    {{ $staff->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('ultrasound_staff_id')
-                                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </div>
+                                        <div id="ultrasoundPriceBox" style="display: none;" class="p-2 bg-light border border-primary border-opacity-25 rounded d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">السعر المعتمد: <strong class="text-primary" id="ultrasoundPriceText">0 د.ع</strong></span>
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-receipt me-1"></i>دفع مسبق بالكاشير</span>
+                                        </div>
 
-                                                    <!-- شريط معاينة السعر المعتمد -->
-                                                    <div class="col-12 mb-3" id="ultrasoundPriceBox" style="display: none;">
-                                                        <div class="p-2 px-3 bg-light border border-primary border-opacity-25 rounded d-flex justify-content-between align-items-center">
-                                                            <div>
-                                                                <i class="fas fa-tag text-primary me-2"></i>
-                                                                <span class="text-muted small">سعر فحص السونار المعتمد:</span>
-                                                                <strong class="text-primary fs-6 me-2" id="ultrasoundPriceText">0 د.ع</strong>
-                                                            </div>
-                                                            <span class="badge bg-warning text-dark"><i class="fas fa-receipt me-1"></i>جاهز للدفع في الكاشير فور تأكيد الحجز</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- تنبيه فوري لوجود حجز سونار نشط اليوم لم يكتمل بعد -->
-                                                    <div class="col-12 mb-3" id="duplicateUltrasoundWarningBox" style="display: none;">
-                                                        <div class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning shadow-sm d-flex align-items-start gap-2">
-                                                            <i class="fas fa-exclamation-triangle text-warning fs-4 mt-1"></i>
-                                                            <div class="flex-grow-1">
-                                                                <strong class="text-dark d-block mb-1">⚠️ تنبيه: يوجد حجز فحص سونار نشط اليوم لم يكتمل بعد</strong>
-                                                                <p class="text-muted small mb-2" id="duplicateUltrasoundMessage"></p>
-                                                                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                                                    <span class="badge bg-warning text-dark" id="duplicateUltrasoundQueueBadge">تسلسل: -</span>
-                                                                    <span class="badge bg-info text-dark" id="duplicateUltrasoundStatusBadge">الحالة</span>
-                                                                    <span class="badge bg-secondary" id="duplicateUltrasoundPayBadge">الدفع</span>
-                                                                </div>
-                                                                <div class="small text-danger fw-bold">
-                                                                    <i class="fas fa-info-circle me-1"></i> سيتطلب النظام تأكيد رغبتك بإنشاء حجز فحص سونار إضافي جديد لنفس اليوم عند الحفظ.
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="alert alert-info mb-0 py-2">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    <small>سيتم إرسال الطلب فوراً إلى الكاشير لدفع الأجور، ولا يُسمح بدخول المريض لغرفة السونار إلا بعد إتمام الدفع.</small>
-                                                </div>
-                                            </div>
+                                        <div id="duplicateUltrasoundWarningBox" style="display: none;" class="p-2 rounded bg-warning bg-opacity-10 border border-warning small mb-2">
+                                            <strong class="text-dark d-block">⚠️ تنبيه: يوجد حجز فحص سونار نشط اليوم لم يكتمل بعد</strong>
+                                            <span id="duplicateUltrasoundMessage" class="text-muted d-block" style="font-size: 11px;"></span>
                                         </div>
                                     </div>
-                                    
-                                    <!-- حقول خاصة بالإيكو -->
-                                    <div class="col-12 mb-3" id="echoDetailsContainer" style="display: none;">
-                                        <div class="card border-info">
-                                            <div class="card-header bg-info text-white">
-                                                <i class="fas fa-heartbeat me-2"></i>تفاصيل الإيكو
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-3">
-                                                        <label for="echo_type_id" class="form-label fw-bold">نوع الإيكو <span class="text-danger">*</span></label>
-                                                        <select class="form-select" id="echo_type_id" name="echo_type_id">
-                                                            <option value="">اختر نوع الإيكو...</option>
-                                                            @foreach($radiologyTypes->where('subcategory', 'إيكو') as $type)
-                                                                <option value="{{ $type->id }}" {{ old('echo_type_id') == $type->id ? 'selected' : '' }}>
-                                                                    {{ $type->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('echo_type_id')
-                                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </div>
-                                                    <div class="col-md-6 mb-3">
-                                                        <label for="echo_staff_id" class="form-label fw-bold">الموظف المسؤول <span class="text-danger">*</span></label>
-                                                        <select class="form-select" id="echo_staff_id" name="echo_staff_id">
-                                                            <option value="">اختر الموظف...</option>
-                                                            @foreach($echoStaff as $staff)
-                                                                <option value="{{ $staff->id }}" {{ old('echo_staff_id') == $staff->id ? 'selected' : '' }}>
-                                                                    {{ $staff->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('echo_staff_id')
-                                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </div>
-                                                </div>
-                                                <div class="alert alert-info mb-0">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    <small>يجب تحديد نوع الإيكو والموظف المسؤول قبل إنشاء الطلب</small>
-                                                </div>
-                                            </div>
+
+                                    {{-- تفاصيل الإيكو المباشر --}}
+                                    <div id="echoDetailsContainer" style="display: none;" class="mt-2 p-2.5 bg-white border border-info border-opacity-25 rounded-3">
+                                        <div class="mb-2">
+                                            <label for="echo_type_id" class="form-label fw-bold small mb-1">نوع الإيكو <span class="text-danger">*</span></label>
+                                            <select class="form-select form-select-sm" id="echo_type_id" name="echo_type_id">
+                                                <option value="">اختر نوع الإيكو...</option>
+                                                @foreach($radiologyTypes->where('subcategory', 'إيكو') as $type)
+                                                    <option value="{{ $type->id }}" {{ old('echo_type_id') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label for="echo_staff_id" class="form-label fw-bold small mb-1">الموظف المسؤول <span class="text-danger">*</span></label>
+                                            <select class="form-select form-select-sm" id="echo_staff_id" name="echo_staff_id">
+                                                <option value="">اختر الموظف...</option>
+                                                @foreach($echoStaff as $staff)
+                                                    <option value="{{ $staff->id }}" {{ old('echo_staff_id') == $staff->id ? 'selected' : '' }}>{{ $staff->name }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
+                                {{-- حقول المختبر --}}
+                                <div id="labFields" style="display: none;" class="mb-3">
+                                    <div class="alert alert-info py-2 px-3 rounded-3 small mb-0">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>المختبر:</strong> سيتم فتح طلب تحويل عام، ويقوم موظف المختبر بتحديد التحاليل وتفاصيلها قبل الدفع.
+                                    </div>
+                                </div>
 
-                            @if($isInsured)
-                            <div class="row mt-3" id="insuranceCoverageSection">
-                                <div class="col-12">
-                                    <div class="p-3 border rounded-3 {{ $isInsuranceLocked ? 'bg-danger-subtle bg-opacity-25 border-danger border-opacity-50' : 'bg-light' }}">
-                                        <label class="form-label fw-bold d-flex align-items-center gap-2 mb-3 fs-6">
-                                            <i class="fas fa-shield-alt text-primary"></i>
-                                            نوع تغطية الحجز للمريض:
+                                {{-- حقول عامة / صيدلية --}}
+                                <div id="generalFields" style="display: none;" class="mb-3">
+                                    <label for="description" class="form-label fw-bold small">
+                                        <i class="fas fa-comment-medical me-1 text-primary"></i> وصف الحالة / الأدوية المطلوبة <span class="text-danger general-required">*</span>
+                                    </label>
+                                    <textarea class="form-control form-control-sm rounded-3 @error('description') is-invalid @enderror" 
+                                              id="description" 
+                                              name="description" 
+                                              rows="3" 
+                                              placeholder="اكتب تفاصيل الخدمة أو الأدوية المطلوبة...">{{ old('description') }}</textarea>
+                                </div>
+
+                                {{-- اختيار نوع التغطية المالية (ضمان صحي أو كاش) --}}
+                                @if($isInsured)
+                                    <div class="mb-3" id="insuranceCoverageSection">
+                                        <label class="form-label fw-bold small text-dark d-block mb-1.5">
+                                            <i class="fas fa-shield-alt text-primary me-1"></i> نوع التغطية المالية للحجز:
                                         </label>
-
-                                        <!-- بطاقات الاختيار التفاعلية (Interactive Selectable Cards) -->
-                                        <div class="row g-3">
-                                            <!-- بطاقة الضمان الصحي -->
-                                            <div class="col-md-6">
-                                                <div class="card h-100 p-3 rounded-3 border-2 transition-all position-relative {{ $isInsuranceLocked ? 'border-danger-subtle bg-danger-subtle bg-opacity-25 opacity-75' : (old('apply_insurance', '1') == '1' ? 'border-success bg-white shadow-sm' : 'border-light-subtle bg-white') }}" 
+                                        <div class="row g-2">
+                                            {{-- خيار الضمان --}}
+                                            <div class="col-6">
+                                                <div class="card p-2 rounded-3 border-2 transition-all position-relative h-100 {{ $isInsuranceLocked ? 'border-danger-subtle bg-danger-subtle bg-opacity-25 opacity-75' : (old('apply_insurance', '1') == '1' ? 'border-success bg-white shadow-sm' : 'border-light-subtle bg-white') }}" 
                                                      id="cardInsuranceYes"
                                                      style="{{ $isInsuranceLocked ? 'cursor: not-allowed;' : 'cursor: pointer;' }}"
                                                      onclick="{{ $isInsuranceLocked ? 'return false;' : 'selectInsuranceMode(1)' }}">
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <div class="p-2 rounded-circle {{ $isInsuranceLocked ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }} fs-5">
-                                                                <i class="fas {{ $isInsuranceLocked ? 'fa-lock' : 'fa-shield-alt' }}"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="fw-bold mb-0 {{ $isInsuranceLocked ? 'text-danger' : 'text-dark' }}">
-                                                                    حجز تحت مظلة الضمان الصحي
-                                                                </h6>
-                                                                <small class="text-muted">
-                                                                    {{ $patient->insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : 'هيئة الضمان الصحي' }}
-                                                                </small>
-                                                            </div>
-                                                        </div>
+                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                        <strong class="small {{ $isInsuranceLocked ? 'text-danger' : 'text-dark' }}" style="font-size: 11px;">
+                                                            <i class="fas {{ $isInsuranceLocked ? 'fa-lock text-danger' : 'fa-shield-alt text-success' }} me-1"></i> ضمان صحي
+                                                        </strong>
                                                         <input class="form-check-input mt-0" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" 
                                                             {{ $isInsuranceLocked ? 'disabled' : (old('apply_insurance', '1') == '1' ? 'checked' : '') }}
-                                                            onchange="selectInsuranceMode(1)"
-                                                            style="transform: scale(1.3); cursor: pointer;">
+                                                            onchange="selectInsuranceMode(1)">
                                                     </div>
-                                                    <p class="text-muted small mb-2">
-                                                        يتم احتساب نسبة التحمل المقررة نقداً وتغطية المبلغ المتبقي عبر هيئة الضمان.
-                                                    </p>
+                                                    <span class="text-muted d-block" style="font-size: 10px;">احتساب نسبة التحمل</span>
                                                     @if($isInsuranceLocked)
-                                                        <div class="mt-auto">
-                                                            <span class="badge bg-danger text-white py-1 px-2 fs-8">
-                                                                <i class="fas fa-lock me-1"></i> مقفل 🔒 (نواقص بملف الضمان)
-                                                            </span>
-                                                        </div>
+                                                        <span class="badge bg-danger text-white mt-1 py-0.5 px-1.5" style="font-size: 9px;">مقفل 🔒 (نواقص بملف الضمان)</span>
                                                     @endif
                                                 </div>
                                             </div>
 
-                                            <!-- بطاقة الدفع النقدي (كاش) -->
-                                            <div class="col-md-6">
-                                                <div class="card h-100 p-3 rounded-3 border-2 transition-all position-relative {{ ($isInsuranceLocked || old('apply_insurance') === '0') ? 'border-primary bg-white shadow-sm' : 'border-light-subtle bg-white' }}" 
+                                            {{-- خيار الكاش --}}
+                                            <div class="col-6">
+                                                <div class="card p-2 rounded-3 border-2 transition-all position-relative h-100 {{ ($isInsuranceLocked || old('apply_insurance') === '0') ? 'border-primary bg-white shadow-sm' : 'border-light-subtle bg-white' }}" 
                                                      id="cardInsuranceNo"
                                                      style="cursor: pointer;"
                                                      onclick="selectInsuranceMode(0)">
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <div class="p-2 rounded-circle bg-primary-subtle text-primary fs-5">
-                                                                <i class="fas fa-money-bill-wave"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="fw-bold mb-0 text-dark">
-                                                                    حجز نقدي خاص (كاش)
-                                                                </h6>
-                                                                <small class="text-muted">
-                                                                    دفع كامل الأجور نقدياً دون استهلاك رصيد الضمان
-                                                                </small>
-                                                            </div>
-                                                        </div>
+                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                        <strong class="text-dark small" style="font-size: 11px;">
+                                                            <i class="fas fa-money-bill-wave text-primary me-1"></i> حجز نقدي (كاش)
+                                                        </strong>
                                                         <input class="form-check-input mt-0" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" 
                                                             {{ ($isInsuranceLocked || old('apply_insurance') === '0') ? 'checked' : '' }}
-                                                            onchange="selectInsuranceMode(0)"
-                                                            style="transform: scale(1.3); cursor: pointer;">
+                                                            onchange="selectInsuranceMode(0)">
                                                     </div>
-                                                    <p class="text-muted small mb-2">
-                                                        دفع كامل أجور الكشفية أو الخدمة مباشرة في الكاشير دون ربطها بحساب أو شروط الضمان.
-                                                    </p>
+                                                    <span class="text-muted d-block" style="font-size: 10px;">سداد كامل الأجور نقدياً</span>
                                                     @if($isInsuranceLocked)
-                                                        <div class="mt-auto">
-                                                            <span class="badge bg-success text-white py-1 px-2 fs-8">
-                                                                <i class="fas fa-check-circle me-1"></i> متاح للمتابعة الفورية
-                                                            </span>
-                                                        </div>
+                                                        <span class="badge bg-success text-white mt-1 py-0.5 px-1.5" style="font-size: 9px;">متاح للمتابعة فوراً ✓</span>
                                                     @endif
                                                 </div>
                                             </div>
                                         </div>
-
-                                        @if($isInsuranceLocked)
-                                            <!-- تنبيه بارز ومفصل ومكتوب بوضوح تام لموظف الاستقبال -->
-                                            <div class="alert alert-danger border-2 border-danger rounded-3 p-3 mt-3 shadow-sm mb-0">
-                                                <div class="d-flex align-items-start gap-3">
-                                                    <div class="text-danger fs-2 lh-1 mt-1">
-                                                        <i class="fas fa-shield-virus"></i>
-                                                    </div>
-                                                    <div class="flex-grow-1">
-                                                        <h6 class="fw-bold text-danger mb-2 fs-6">
-                                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                                            تنبيه هام: تم قفل الحجز بنظام الضمان الصحي لوجود نواقص بملف المريض
-                                                        </h6>
-                                                        <p class="mb-2 text-dark small" style="line-height: 1.7;">
-                                                            لا يمكن إصدار الحجز تحت مظلة الضمان الصحي حالياً؛ لأن ملف المريض تنقصه البيانات الإلزامية التالية:
-                                                        </p>
-                                                        <div class="d-flex flex-wrap gap-2 mb-3">
-                                                            @foreach($missingInsuranceFields as $fKey => $fTitle)
-                                                                <span class="badge bg-danger text-white fs-7 py-2 px-3 shadow-sm">
-                                                                    <i class="fas fa-times-circle me-1"></i> {{ $fTitle }}
-                                                                </span>
-                                                            @endforeach
-                                                        </div>
-                                                        <div class="p-3 bg-white border border-danger-subtle rounded-3">
-                                                            <strong class="text-dark d-block mb-1 small">
-                                                                <i class="fas fa-user-check text-success me-1"></i> التوجيه الإداري لموظف الاستعلامات:
-                                                            </strong>
-                                                            <ul class="mb-0 ps-3 small text-secondary" style="line-height: 1.8;">
-                                                                <li><strong>للمتابعة الفورية للمريض الآن:</strong> استخدم خيار <strong>(حجز نقدي كاش)</strong> المفعّل بالأزرق أعلاه للمتابعة وسداد الكشفية نقداً في الكاشير.</li>
-                                                                <li><strong>للاستفادة من الضمان الصحي:</strong> اطلب من المريض التوجه أولاً إلى <strong>(مكتب التسجيل والضمان)</strong> لإكمال وتدقيق بياناته ثم العودة للحجز.</li>
-                                                            </ul>
-                                                            <div class="mt-3 pt-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                                                <div class="text-muted small">
-                                                                    <i class="fas fa-paper-plane text-danger me-1"></i>
-                                                                    <span>توجيه المريض: يمكنك تنبيه موظف الضمان والتسجيل رقمياً الآن لإكمال النواقص فور وصوله:</span>
-                                                                </div>
-                                                                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 py-2 fw-bold shadow-sm" id="btnNotifyInsurance" onclick="sendInsuranceIncompleteAlert({{ $patient->id }})">
-                                                                    <i class="fas fa-bell me-1"></i>
-                                                                    <span id="btnNotifyInsuranceText">إرسال تنبيه عاجل لمكتب الضمان والتسجيل</span>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @else
-                                            <small class="text-muted d-block mt-2">
-                                                <i class="fas fa-info-circle me-1 text-primary"></i>
-                                                سيظهر نوع الحجز المختار تلقائياً في شاشة الكاشير لتطبيق السعر والخصم المناسبين فوراً.
-                                            </small>
-                                        @endif
                                     </div>
-                                </div>
-                            </div>
-                            @endif
+                                @endif
 
-                            <div class="row mt-3">
-                                <div class="col-12" id="autoReferContainer">
-                                    <div class="form-check">
-                                        <input class="form-check-input" 
-                                               type="checkbox" 
-                                               value="1" 
-                                               id="autoRefer" 
-                                               name="auto_refer"
-                                               {{ old('auto_refer') ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="autoRefer">
-                                            <strong>التحويل التلقائي</strong> - الانتقال مباشرة لصفحة التحويل بعد إنشاء الطلب
+                                {{-- التحويل التلقائي --}}
+                                <div class="mb-3" id="autoReferContainer" style="display: none;">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" value="1" id="autoRefer" name="auto_refer" {{ old('auto_refer') ? 'checked' : '' }}>
+                                        <label class="form-check-label small text-muted" for="autoRefer">
+                                            التحويل التلقائي المباشر لصفحة القسم بعد الحفظ
                                         </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="row mt-4">
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
-                                        <i class="fas fa-check-circle me-2"></i>
-                                        <span id="submitBtnText">إنشاء الطلب</span>
+                                {{-- زر الاعتماد والحفظ --}}
+                                <div class="pt-2">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow-sm" id="submitBtn">
+                                        <i class="fas fa-check-circle me-1.5"></i>
+                                        <span id="submitBtnText">اعتماد وإنشاء الطلب</span>
                                     </button>
                                 </div>
+
+                                {{-- ملخص مسار المعالجة --}}
+                                <div class="alert alert-light border rounded-3 p-2.5 mt-2 mb-0" id="infoAlert">
+                                    <div class="small text-muted" id="infoList" style="font-size: 11px; line-height: 1.6;">
+                                        <i class="fas fa-info-circle text-primary me-1"></i>
+                                        <span>سيتم تسجيل الطلب وإرساله إلى شاشات الاستقبال والكاشير للمتابعة.</span>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
 
-                    <!-- ملخص العملية -->
-                    <div class="alert alert-info mt-3" role="alert" id="infoAlert">
-                        <h6 class="alert-heading">
-                            <i class="fas fa-info-circle me-2"></i>
-                            ملاحظة
-                        </h6>
-                        <ul class="mb-0" id="infoList">
-                            <li>سيتم إنشاء طلب جديد في قسم الاستعلامات</li>
-                            <li>يمكنك بعد ذلك تحويل المريض للقسم المناسب</li>
-                            <li>أو اختر "التحويل التلقائي" للانتقال مباشرة</li>
-                        </ul>
-                    </div>
                 </div>
             </div>
+        </div>
     </form>
 </div>
 
 @push('modals')
-    <!-- نافذة تأكيد الحجز الإضافي المكرر (Duplicate Booking Confirmation Modal) -->
+    {{-- نافذة تأكيد الحجز الإضافي المكرر --}}
     <div class="modal fade" id="confirmDuplicateModal" tabindex="-1" aria-labelledby="confirmDuplicateModalLabel" aria-hidden="true" style="z-index: 10999;">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -909,10 +758,10 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-3">
-                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i> تراجع وإلغاء
                     </button>
-                    <button type="button" class="btn btn-warning fw-bold px-4" id="btnConfirmDuplicate">
+                    <button type="button" class="btn btn-warning fw-bold rounded-pill px-4" id="btnConfirmDuplicate">
                         <i class="fas fa-check-circle me-1"></i> نعم، تأكيد الحجز الإضافي
                     </button>
                 </div>
@@ -924,57 +773,45 @@
 <style>
 .request-card {
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+    transition: all 0.22s ease-in-out;
+    border: 2px solid rgba(226, 232, 240, 0.9) !important;
+    background-color: #ffffff;
+    border-radius: 1rem !important;
 }
-
 .request-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-3px);
+    border-color: rgba(13, 110, 253, 0.35) !important;
+    box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.08) !important;
 }
-
 .request-card.selected {
-    border-color: #0d6efd;
-    background-color: #e3f2fd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    border-color: #0d6efd !important;
+    background-color: #f0f7ff !important;
+    box-shadow: 0 0.5rem 1.25rem rgba(13, 110, 253, 0.15) !important;
 }
-
-.request-card.selected .card-footer {
-    display: block !important;
+.ext-nav-card {
+    transition: all 0.2s ease;
+    border: 1px solid rgba(226, 232, 240, 0.9);
 }
-
-.request-card.selected .departments-list {
-    display: block !important;
+.ext-nav-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(100, 116, 139, 0.35);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
 }
-
-.surgery-card:hover {
-    border-color: #dc3545;
-    background-color: #fff5f5;
+.sticky-workspace-panel {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 1rem;
+    z-index: 10;
 }
-
-.surgery-card:hover .fa-procedures {
-    transform: scale(1.1);
-    transition: transform 0.3s ease;
-}
-
 .radiology-category-btn.active {
-    background-color: #0d6efd;
-    color: #ffffff;
-    border-color: #0d6efd;
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    border-color: #0d6efd !important;
 }
-
-.radiology-category-btn:hover {
-    border-color: #0d6efd;
-}
-
-/* لون خاص لأيقونة حاضنة الخدج */
-.text-pink {
-    color: #e91e63 !important;
-}
-
-.surgery-card:hover .fa-baby {
-    transform: scale(1.1);
-    transition: transform 0.3s ease;
+.quick-doc-btn:hover {
+    background-color: #e8f5e9 !important;
+    border-color: #4caf50 !important;
+    color: #2e7d32 !important;
 }
 </style>
 
@@ -1004,13 +841,56 @@ let activeBookingState = {
     ultrasound: null
 };
 
+const serviceLabels = {
+    checkup: 'كشف طبي',
+    lab: 'تحاليل مخبرية',
+    radiology: 'أشعة وتصوير',
+    pharmacy: 'صيدلية',
+    blood_bank: 'مصرف الدم'
+};
+
+function showValidationError(message, title = 'تنبيه') {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'warning',
+            title: title,
+            html: message.replace(/\n/g, '<br>'),
+            confirmButtonText: 'حسناً',
+            customClass: { confirmButton: 'btn btn-primary rounded-pill px-4' }
+        });
+    } else {
+        alert(message);
+    }
+}
+
+function selectQuickDoctor(id, fullName, dept) {
+    const doctorHiddenId = document.getElementById('doctor_id');
+    const doctorSearchInput = document.getElementById('doctor_search_input');
+    const doctorClearBtn = document.getElementById('clearDoctorSearchBtn');
+    const selectedDoctorBox = document.getElementById('selectedDoctorBox');
+    const selectedDoctorNameText = document.getElementById('selectedDoctorNameText');
+    const selectedDoctorDeptText = document.getElementById('selectedDoctorDeptText');
+
+    if (doctorHiddenId) doctorHiddenId.value = id;
+    if (doctorSearchInput) doctorSearchInput.value = fullName;
+    if (doctorClearBtn) doctorClearBtn.style.display = 'block';
+
+    if (selectedDoctorBox) {
+        if (selectedDoctorNameText) selectedDoctorNameText.textContent = fullName;
+        if (selectedDoctorDeptText) selectedDoctorDeptText.textContent = dept ? 'العيادة: ' + dept : '';
+        selectedDoctorBox.style.display = 'flex';
+    }
+
+    checkDoctorActiveBooking(id);
+}
+
 function disableSubmitButton() {
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) {
         submitBtn.disabled = true;
         const submitBtnText = document.getElementById('submitBtnText');
         if (submitBtnText) {
-            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> جاري المعالجة والحفظ...';
+            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> جاري الحفظ والاعتماد...';
         }
     }
 }
@@ -1021,7 +901,7 @@ function enableSubmitButton() {
         submitBtn.disabled = false;
         const submitBtnText = document.getElementById('submitBtnText');
         if (submitBtnText) {
-            submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+            submitBtnText.innerHTML = '<i class="fas fa-check-circle me-1.5"></i>' + (submitBtnText.dataset.originalText || 'اعتماد وإنشاء الطلب');
         }
     }
 }
@@ -1080,7 +960,7 @@ function checkDoctorActiveBooking(doctorId) {
         if (submitBtn && submitBtn.dataset.blockedByDuplicate === '1') {
             submitBtn.disabled = false;
             submitBtn.dataset.blockedByDuplicate = '0';
-            if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+            if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-1.5"></i>' + (submitBtnText.dataset.originalText || 'اعتماد وإنشاء الطلب');
         }
         return;
     }
@@ -1104,7 +984,7 @@ function checkDoctorActiveBooking(doctorId) {
                 if (submitBtn && selectedTypes.has('checkup')) {
                     submitBtn.disabled = true;
                     submitBtn.dataset.blockedByDuplicate = '1';
-                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-ban me-2"></i> محظور: مسجل اليوم بالفعل لدى الطبيب';
+                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-ban me-1.5"></i> محظور: مسجل اليوم بالفعل لدى الطبيب';
                 }
             } else {
                 activeBookingState.checkup = null;
@@ -1112,7 +992,7 @@ function checkDoctorActiveBooking(doctorId) {
                 if (submitBtn && submitBtn.dataset.blockedByDuplicate === '1') {
                     submitBtn.disabled = false;
                     submitBtn.dataset.blockedByDuplicate = '0';
-                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + (submitBtnText.dataset.originalText || 'إنشاء الطلب');
+                    if (submitBtnText) submitBtnText.innerHTML = '<i class="fas fa-check-circle me-1.5"></i>' + (submitBtnText.dataset.originalText || 'اعتماد وإنشاء الطلب');
                 }
             }
         })
@@ -1186,7 +1066,6 @@ function setRadiologyCategory(category) {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
     
-    // إظهار/إخفاء قسم السونار
     const ultrasoundDetailsContainer = document.getElementById('ultrasoundDetailsContainer');
     if (ultrasoundDetailsContainer) {
         if (category === 'ultrasound') {
@@ -1217,20 +1096,16 @@ function setRadiologyCategory(category) {
         }
     }
     
-    // إظهار/إخفاء قسم الإيكو
     const echoDetailsContainer = document.getElementById('echoDetailsContainer');
     if (echoDetailsContainer) {
         if (category === 'echo') {
             echoDetailsContainer.style.display = 'block';
-            // جعل حقول الإيكو مطلوبة
             document.getElementById('echo_type_id').required = true;
             document.getElementById('echo_staff_id').required = true;
         } else {
             echoDetailsContainer.style.display = 'none';
-            // إلغاء جعل حقول الإيكو مطلوبة
             document.getElementById('echo_type_id').required = false;
             document.getElementById('echo_staff_id').required = false;
-            // مسح القيم
             document.getElementById('echo_type_id').value = '';
             document.getElementById('echo_staff_id').value = '';
         }
@@ -1243,7 +1118,6 @@ function updateInsuranceVisibility() {
     const insuranceRow = document.getElementById('insuranceCoverageSection');
     if (!insuranceRow) return;
 
-    // السونار المباشر من الاستعلامات حجز عادي نقدي فقط (إخفاء خيار الضمان بالكامل)
     const isDirectUltrasound = selectedTypes.has('radiology') && (selectedRadiologyCategory === 'ultrasound');
     if (isDirectUltrasound) {
         insuranceRow.style.display = 'none';
@@ -1296,7 +1170,7 @@ function sendInsuranceIncompleteAlert(patientId) {
 
     btn.disabled = true;
     const originalText = textSpan ? textSpan.innerHTML : btn.innerHTML;
-    if (textSpan) textSpan.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري إرسال التنبيه الرقمي...';
+    if (textSpan) textSpan.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري إرسال التنبيه...';
 
     fetch('{{ route("inquiry.notify-insurance-incomplete") }}', {
         method: 'POST',
@@ -1312,7 +1186,7 @@ function sendInsuranceIncompleteAlert(patientId) {
         if (data.success) {
             btn.classList.remove('btn-danger');
             btn.classList.add('btn-success');
-            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم إرسال التنبيه لشعبة الضمان والتسجيل بنجاح ✓';
+            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم إرسال التنبيه بنجاح ✓';
             
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
@@ -1320,7 +1194,7 @@ function sendInsuranceIncompleteAlert(patientId) {
                     title: 'تم إرسال التنبيه العاجل بنجاح!',
                     text: data.message,
                     confirmButtonText: 'حسناً',
-                    customClass: { confirmButton: 'btn btn-primary' }
+                    customClass: { confirmButton: 'btn btn-primary rounded-pill px-4' }
                 });
             } else {
                 alert(data.message);
@@ -1328,14 +1202,14 @@ function sendInsuranceIncompleteAlert(patientId) {
         } else {
             btn.disabled = false;
             if (textSpan) textSpan.innerHTML = originalText;
-            alert(data.message || 'حدث خطأ أثناء إرسال التنبيه');
+            showValidationError(data.message || 'حدث خطأ أثناء إرسال التنبيه');
         }
     })
     .catch(err => {
         console.error(err);
         btn.disabled = false;
         if (textSpan) textSpan.innerHTML = originalText;
-        alert('تعذر الاتصال بالخادم لإرسال التنبيه، يرجى إعادة المحاولة.');
+        showValidationError('تعذر الاتصال بالخادم لإرسال التنبيه، يرجى إعادة المحاولة.');
     });
 }
 
@@ -1348,29 +1222,33 @@ function updateRadiologyCategoryInfo() {
 
 function toggleRequestType(type) {
     const card = document.querySelector(`.request-card[data-type="${type}"]`);
+    if (!card) return;
     
+    const checkBadge = card.querySelector('.check-badge');
     if (selectedTypes.has(type)) {
-        // إلغاء التحديد
         selectedTypes.delete(type);
         card.classList.remove('selected');
-        console.log('تم إلغاء اختيار:', type);
+        if (checkBadge) checkBadge.style.display = 'none';
     } else {
-        // إضافة التحديد
         selectedTypes.add(type);
         card.classList.add('selected');
-        console.log('تم اختيار:', type);
+        if (checkBadge) checkBadge.style.display = 'inline-flex';
     }
     
-    // تحديث حقول النموذج
     updateFormFields();
     
-    // عرض/إخفاء نموذج التفاصيل
     const details = document.getElementById('requestDetails');
+    const emptyDetails = document.getElementById('emptyRequestDetails');
+    const countBadge = document.getElementById('selectedServicesCountBadge');
+    if (countBadge) countBadge.textContent = selectedTypes.size;
+
     if (selectedTypes.size > 0) {
-        details.style.display = 'block';
+        if (emptyDetails) emptyDetails.style.display = 'none';
+        if (details) details.style.display = 'block';
         updateDetailsForm();
     } else {
-        details.style.display = 'none';
+        if (details) details.style.display = 'none';
+        if (emptyDetails) emptyDetails.style.display = 'block';
     }
 
     if (selectedTypes.has('checkup')) {
@@ -1410,159 +1288,116 @@ function updateDetailsForm() {
     const autoReferContainer = document.getElementById('autoReferContainer');
     const submitBtnText = document.getElementById('submitBtnText');
     const infoList = document.getElementById('infoList');
+    const activeServiceTitleBadge = document.getElementById('activeServiceTitleBadge');
     
-    // إخفاء جميع الحقول الخاصة أولاً
-    checkupFields.style.display = 'none';
-    labFields.style.display = 'none';
-    radiologyFields.style.display = 'none';
-    generalFields.style.display = 'none';
-    autoReferContainer.style.display = 'none';
+    if (checkupFields) checkupFields.style.display = 'none';
+    if (labFields) labFields.style.display = 'none';
+    if (radiologyFields) radiologyFields.style.display = 'none';
+    if (generalFields) generalFields.style.display = 'none';
+    if (autoReferContainer) autoReferContainer.style.display = 'none';
     
-    // إظهار الحقول حسب الأنواع المحددة
     if (selectedTypes.has('checkup')) {
-        checkupFields.style.display = 'block';
+        if (checkupFields) checkupFields.style.display = 'block';
     }
     
     if (selectedTypes.has('lab')) {
-        labFields.style.display = 'block';
-        autoReferContainer.style.display = 'block';
+        if (labFields) labFields.style.display = 'block';
+        if (autoReferContainer) autoReferContainer.style.display = 'block';
     }
     
     if (selectedTypes.has('radiology')) {
-        radiologyFields.style.display = 'block';
-        autoReferContainer.style.display = 'block';
+        if (radiologyFields) radiologyFields.style.display = 'block';
+        if (autoReferContainer) autoReferContainer.style.display = 'block';
         updateRadiologyCategoryInfo();
     }
     
     if (selectedTypes.has('pharmacy')) {
-        generalFields.style.display = 'block';
-        autoReferContainer.style.display = 'block';
-    }
-    
-    if (selectedTypes.has('emergency')) {
-        // حقول الطوارئ
-        document.getElementById('emergencyFields').style.display = 'block';
+        if (generalFields) generalFields.style.display = 'block';
+        if (autoReferContainer) autoReferContainer.style.display = 'block';
     }
 
-    // تحديث نص الزر والملاحظات
+    const typeNames = Array.from(selectedTypes).map(t => serviceLabels[t] || t);
+    if (activeServiceTitleBadge) {
+        activeServiceTitleBadge.textContent = typeNames.join(' + ') || 'طلب جديد';
+    }
+    
     if (selectedTypes.size === 1) {
         const type = Array.from(selectedTypes)[0];
         if (type === 'checkup') {
-            submitBtnText.textContent = 'حجز موعد';
-            infoList.innerHTML = `
-                <li>سيتم حجز موعد للمريض مع الطبيب المحدد</li>
-                <li>يمكن تحديد تاريخ الموعد أو اختيار اليوم</li>
-                <li>سيتم إنشاء موعد في نظام المواعيد</li>
-            `;
+            submitBtnText.textContent = 'اعتماد وحجز الكشفية';
+            infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إصدار تذكرة كشفية للطبيب المختار مع تسلسل الدور في العيادة.`;
         } else if (type === 'lab') {
-            submitBtnText.textContent = 'طلب تحاليل';
-            infoList.innerHTML = `
-                <li>سيتم إنشاء طلب تحاليل للمريض</li>
-                <li>المريض يذهب للكاشير لدفع الأجور</li>
-                <li>بعد الدفع، يتوجه للمختبر لإجراء التحاليل</li>
-            `;
+            submitBtnText.textContent = 'اعتماد طلب التحاليل';
+            infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء طلب تحويل لقسم المختبر وتوجيه المريض للكاشير.`;
         } else if (type === 'radiology') {
             const category = selectedRadiologyCategory || 'radiology';
             if (category === 'echo') {
-                submitBtnText.textContent = 'طلب إيكو';
-                infoList.innerHTML = `
-                    <li>سيتم إنشاء طلب إيكو للمريض</li>
-                    <li>المريض يذهب للكاشير لدفع الأجور</li>
-                    <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء الإيكو</li>
-                `;
+                submitBtnText.textContent = 'اعتماد طلب الإيكو';
+                infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء طلب فحص الإيكو وتوجيهه لقسم الأشعة.`;
             } else if (category === 'ultrasound') {
-                submitBtnText.textContent = 'طلب سونار';
-                infoList.innerHTML = `
-                    <li>سيتم إنشاء طلب سونار للمريض</li>
-                    <li>المريض يذهب للكاشير لدفع الأجور</li>
-                    <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء السونار</li>
-                `;
+                submitBtnText.textContent = 'اعتماد طلب السونار';
+                infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء طلب فحص السونار المعتمد وتسجيله للدفع المسبق بالكاشير.`;
             } else if (category === 'mri') {
-                submitBtnText.textContent = 'طلب رنين مغناطيسي';
-                infoList.innerHTML = `
-                    <li>سيتم إنشاء طلب رنين مغناطيسي للمريض</li>
-                    <li>المريض يذهب للكاشير لدفع الأجور</li>
-                    <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء الرنين</li>
-                `;
+                submitBtnText.textContent = 'اعتماد طلب الرنين';
+                infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء طلب تصوير بالرنين المغناطيسي.`;
             } else {
-                submitBtnText.textContent = 'طلب أشعة';
-                infoList.innerHTML = `
-                    <li>سيتم إنشاء طلب أشعة للمريض</li>
-                    <li>المريض يذهب للكاشير لدفع الأجور</li>
-                    <li>بعد الدفع، يتوجه لقسم الأشعة لإجراء التصوير</li>
-                `;
+                submitBtnText.textContent = 'اعتماد طلب الأشعة';
+                infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء طلب أشعة عامة وتوجيهه للكاشير وقسم الأشعة.`;
             }
         } else if (type === 'blood_bank') {
-            submitBtnText.textContent = 'طلب مصرف الدم';
-            infoList.innerHTML = `
-                <li>سيتم إنشاء طلب مصرف الدم للمريض</li>
-                <li>المريض يذهب للكاشير لدفع الرسوم أولاً ثم ينتقل إلى مصرف الدم</li>
-                <li>سيتم حفظ بيانات الكروس ماتش ونتيجة التوافق</li>
-            `;
+            submitBtnText.textContent = 'اعتماد طلب مصرف الدم';
+            infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم تسجيل طلب كروس ماتش / وحدات دم وإرسال البيانات لمصرف الدم.`;
         } else {
-            submitBtnText.textContent = 'إنشاء الطلب';
-            infoList.innerHTML = `
-                <li>سيتم إنشاء طلب جديد في قسم الاستعلامات</li>
-                <li>يمكنك بعد ذلك تحويل المريض للقسم المناسب</li>
-                <li>أو اختر "التحويل التلقائي" للانتقال مباشرة</li>
-            `;
+            submitBtnText.textContent = 'اعتماد وإنشاء الطلب';
+            infoList.innerHTML = `<i class="fas fa-check text-success me-1"></i> سيتم إنشاء الطلب وتوجيهه للأقسام المعنية.`;
         }
     } else {
-        submitBtnText.textContent = `إنشاء ${selectedTypes.size} طلبات`;
-        infoList.innerHTML = `
-            <li>سيتم إنشاء ${selectedTypes.size} طلبات مختلفة للمريض</li>
-            <li>كل طلب سيتم معالجته حسب نوعه</li>
-            <li>المريض سيحتاج للدفع لكل خدمة على حدة</li>
-        `;
+        submitBtnText.textContent = `اعتماد وإنشاء ${selectedTypes.size} طلبات`;
+        infoList.innerHTML = `<i class="fas fa-layer-group text-primary me-1"></i> سيتم إنشاء ${selectedTypes.size} طلبات مدمجة ومستقلة لهذا المريض دفعة واحدة.`;
     }
     
-    // التمرير السلس للنموذج
-    setTimeout(() => {
-        document.getElementById('requestDetails').scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-        });
-    }, 100);
+    // التمرير السلس فقط في الشاشات الصغيرة (Mobile)
+    if (window.innerWidth < 992) {
+        setTimeout(() => {
+            const reqDet = document.getElementById('requestDetails');
+            if (reqDet) reqDet.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
 }
-
-
 
 // التحقق قبل الإرسال
 document.getElementById('requestForm').addEventListener('submit', function(e) {
-    // التحقق من قفل الضمان عند وجود نواقص بالبيانات
     const isInsuranceLocked = {{ $isInsuranceLocked ? 'true' : 'false' }};
     const selectedInsuranceOption = document.querySelector('input[name="apply_insurance"]:checked')?.value;
     if (isInsuranceLocked && selectedInsuranceOption === '1') {
         e.preventDefault();
-        alert('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية (رقم الضمان، البطاقة الموحدة، الهاتف، الجنس، أو المواليد).\nيرجى توجيه المريض لموظف التسجيل والضمان لإكمال النواقص أو اختيار (حجز نقدي كاش).');
+        showValidationError('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية.\nيرجى توجيه المريض لموظف التسجيل والضمان لإكمال النواقص أو اختيار (حجز نقدي كاش).', '⛔ قفل الضمان الصحي');
         return false;
     }
 
     if (selectedTypes.size === 0) {
         e.preventDefault();
-        alert('يرجى اختيار نوع الخدمة أولاً');
+        showValidationError('يرجى اختيار نوع الخدمة الطبية المطلوبة أولاً من القائمة.', 'تنبيه');
         return false;
     }
     
-    // التحقق من وصف الحالة للخدمات التي تحتاجها
     if (selectedTypes.has('pharmacy')) {
         const description = document.getElementById('description').value.trim();
         if (!description) {
             e.preventDefault();
-            alert('يرجى كتابة وصف للحالة');
+            showValidationError('يرجى كتابة وصف أو أسماء الأدوية المطلوبة للصيدلية.', 'بيانات ناقصة');
             document.getElementById('description').focus();
             return false;
         }
     }
     
-    // إذا كان كشف طبي، التحقق من الطبيب وتاريخ الموعد
     if (selectedTypes.has('checkup')) {
         const doctorId = document.getElementById('doctor_id').value;
         const appointmentDate = document.getElementById('appointment_date').value;
         
         if (!doctorId) {
             e.preventDefault();
-            alert('يرجى البحث واختيار الطبيب الاستشاري');
+            showValidationError('يرجى اختيار الطبيب الاستشاري من قائمة المتواجدين أو بالبحث.', 'تحديد الطبيب');
             const searchInput = document.getElementById('doctor_search_input');
             if (searchInput) searchInput.focus();
             return false;
@@ -1570,60 +1405,45 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         
         if (!appointmentDate) {
             e.preventDefault();
-            alert('يرجى اختيار تاريخ الموعد');
+            showValidationError('يرجى تحديد تاريخ موعد الكشفية.', 'تاريخ الموعد');
             document.getElementById('appointment_date').focus();
             return false;
         }
     }
     
-    // التحقق من حقول الطوارئ إذا تم اختيارها
-    if (selectedTypes.has('emergency')) {
-        const priority = document.getElementById('emergency_priority').value;
-        const type = document.getElementById('emergency_type').value;
-        const symptoms = document.getElementById('emergency_symptoms').value.trim();
-        
-        if (!priority || !type || !symptoms) {
-            e.preventDefault();
-            alert('يرجى ملء جميع حقول الطوارئ');
-            return false;
-        }
-    }
-    
-    // التحقق من حقول السونار إذا تم اختيارها
     if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'ultrasound') {
         const ultrasoundTypeId = document.getElementById('ultrasound_type_id').value;
         const ultrasoundStaffId = document.getElementById('ultrasound_staff_id').value;
         
         if (!ultrasoundTypeId) {
             e.preventDefault();
-            alert('يرجى اختيار نوع فحص السونار');
-            document.getElementById('ultrasound_type_id').focus();
+            showValidationError('يرجى اختيار نوع فحص السونار المطلوب.', 'فحص السونار');
+            document.getElementById('ultrasound_search_input').focus();
             return false;
         }
 
         if (!ultrasoundStaffId) {
             e.preventDefault();
-            alert('يرجى اختيار الموظف المسؤول عن السونار');
+            showValidationError('يرجى اختيار أخصائي أو موظف السونار المسؤول.', 'أخصائي السونار');
             document.getElementById('ultrasound_staff_id').focus();
             return false;
         }
     }
     
-    // التحقق من حقول الإيكو إذا تم اختيارها
     if (selectedTypes.has('radiology') && selectedRadiologyCategory === 'echo') {
         const echoTypeId = document.getElementById('echo_type_id').value;
         const echoStaffId = document.getElementById('echo_staff_id').value;
         
         if (!echoTypeId) {
             e.preventDefault();
-            alert('يرجى اختيار نوع الإيكو');
+            showValidationError('يرجى اختيار نوع فحص الإيكو.', 'فحص الإيكو');
             document.getElementById('echo_type_id').focus();
             return false;
         }
         
         if (!echoStaffId) {
             e.preventDefault();
-            alert('يرجى اختيار الموظف المسؤول عن الإيكو');
+            showValidationError('يرجى اختيار الموظف المسؤول عن الإيكو.', 'موظف الإيكو');
             document.getElementById('echo_staff_id').focus();
             return false;
         }
@@ -1642,7 +1462,7 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         if (typeof window.hidePageLoader === 'function') window.hidePageLoader(true);
         enableSubmitButton();
-        alert('⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً!\n\nالمريض لديه كشفية مسجلة اليوم بالفعل لدى هذا الطبيب.\nلا داعي لقطع حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة.');
+        showValidationError('⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً!\n\nالمريض لديه كشفية مسجلة اليوم بالفعل لدى هذا الطبيب، ويدخل للعيادة مباشرة للمتابعة دون حجز جديد.', 'حظر التكرار');
         return false;
     }
 
@@ -1672,7 +1492,6 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         }
     }
 
-    // تعطيل زر الإرسال لتفادي النقر المزدوج عند الحفظ
     disableSubmitButton();
 });
 
@@ -1682,7 +1501,7 @@ if (btnConfirmDuplicate) {
         const isInsuranceLocked = {{ $isInsuranceLocked ? 'true' : 'false' }};
         const selectedInsuranceOption = document.querySelector('input[name="apply_insurance"]:checked')?.value;
         if (isInsuranceLocked && selectedInsuranceOption === '1') {
-            alert('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية.\nيرجى توجيه المريض لموظف التسجيل والضمان أو اختيار (حجز نقدي كاش).');
+            showValidationError('لا يمكن إتمام الحجز تحت مظلة الضمان لوجود نواقص ببيانات المريض الأساسية.\nيرجى توجيه المريض لموظف التسجيل والضمان أو اختيار (حجز نقدي كاش).');
             return;
         }
 
@@ -1720,22 +1539,8 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// تحديث عداد التحاليل المختارة
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('lab-test-checkbox')) {
-        const checkedCount = document.querySelectorAll('.lab-test-checkbox:checked').length;
-        const counter = document.getElementById('labSelectedCount');
-        if (checkedCount > 0) {
-            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> تم اختيار ${checkedCount} تحليل`;
-        } else {
-            counter.innerHTML = '';
-        }
-    }
-});
-
-// وظيفة البحث الذكي في أنواع السونار (لا تقترح إلا بعد كتابة أول حرف)
+// وظيفة البحث في السونار
 const sonarTypes = @json($radiologyTypes->filter(fn($t) => $t->subcategory === 'سونار' || $t->main_category === 'سونار')->values());
-
 const sonarSearchInput = document.getElementById('ultrasound_search_input');
 const sonarHiddenId = document.getElementById('ultrasound_type_id');
 const sonarSuggestions = document.getElementById('ultrasound_suggestions');
@@ -1754,7 +1559,6 @@ function escapeSonarHtml(text) {
 }
 
 if (sonarSearchInput && sonarSuggestions) {
-    // 1. لا تظهر أي نتائج إلا بعد إدخال أول حرف (>= 1)
     sonarSearchInput.addEventListener('input', function() {
         const query = this.value.trim().toLowerCase();
 
@@ -1769,7 +1573,6 @@ if (sonarSearchInput && sonarSuggestions) {
 
         sonarClearBtn.style.display = 'block';
 
-        // البحث بالاسم أو الرمز
         const matches = sonarTypes.filter(t => {
             const name = (t.name || '').toLowerCase();
             const code = (t.code || '').toLowerCase();
@@ -1809,7 +1612,6 @@ if (sonarSearchInput && sonarSuggestions) {
         sonarSuggestions.style.display = 'block';
     });
 
-    // 2. اختيار الفحص عند الضغط عليه
     sonarSuggestions.addEventListener('click', function(e) {
         const btn = e.target.closest('.sonar-suggestion-item');
         if (!btn) return;
@@ -1827,7 +1629,6 @@ if (sonarSearchInput && sonarSuggestions) {
         sonarPriceBox.style.display = 'block';
     });
 
-    // 3. مسح البحث
     sonarClearBtn.addEventListener('click', function() {
         sonarSearchInput.value = '';
         sonarHiddenId.value = '';
@@ -1837,14 +1638,12 @@ if (sonarSearchInput && sonarSuggestions) {
         sonarSearchInput.focus();
     });
 
-    // 4. إغلاق القائمة عند النقر في الخارج
     document.addEventListener('click', function(e) {
         if (!sonarSearchInput.contains(e.target) && !sonarSuggestions.contains(e.target)) {
             sonarSuggestions.style.display = 'none';
         }
     });
 
-    // 5. استعادة القيمة السابقة عند وجود old('ultrasound_type_id')
     if (sonarHiddenId.value) {
         const oldType = sonarTypes.find(t => t.id == sonarHiddenId.value);
         if (oldType) {
@@ -1856,9 +1655,8 @@ if (sonarSearchInput && sonarSuggestions) {
     }
 }
 
-// وظيفة البحث الذكي في قائمة الأطباء الاستشاريين (Autocomplete / Typeahead)
+// وظيفة البحث الذكي في الأطباء
 const consultantDoctorsList = @json($doctorsJson ?? []);
-
 const doctorSearchInput = document.getElementById('doctor_search_input');
 const doctorHiddenId = document.getElementById('doctor_id');
 const doctorSuggestions = document.getElementById('doctor_suggestions');
@@ -1878,7 +1676,6 @@ function escapeDoctorHtml(text) {
 }
 
 if (doctorSearchInput && doctorSuggestions) {
-    // 1. إظهار النتائج التنبؤية فور كتابة أول حرف (>= 1)
     doctorSearchInput.addEventListener('input', function() {
         const query = this.value.trim().toLowerCase();
 
@@ -1893,7 +1690,6 @@ if (doctorSearchInput && doctorSuggestions) {
 
         doctorClearBtn.style.display = 'block';
 
-        // مطابقة ذكية بالاسم، الاسم الصافي، التخصص، أو اسم العيادة
         const matches = consultantDoctorsList.filter(d => {
             const name = (d.name || '').toLowerCase();
             const rawName = (d.raw_name || '').toLowerCase();
@@ -1915,8 +1711,8 @@ if (doctorSearchInput && doctorSuggestions) {
         let html = '<div class="list-group list-group-flush">';
         matches.forEach(d => {
             const availBadge = d.is_available 
-                ? '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="fas fa-check-circle me-1"></i>متوفر اليوم</span>'
-                : '<span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1"><i class="fas fa-times-circle me-1"></i>غير متاح اليوم</span>';
+                ? '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>متوفر اليوم</span>'
+                : '<span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-0.5" style="font-size: 10px;"><i class="fas fa-times-circle me-1"></i>غير متاح</span>';
 
             html += `
                 <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 doctor-suggestion-item" 
@@ -1926,8 +1722,8 @@ if (doctorSearchInput && doctorSuggestions) {
                         data-dept="${escapeDoctorHtml(d.department_name)}"
                         data-available="${d.is_available ? '1' : '0'}">
                     <div>
-                        <strong class="text-dark d-block"><i class="fas fa-user-md me-1 text-primary"></i>${escapeDoctorHtml(d.name)}</strong>
-                        <small class="text-muted"><i class="fas fa-stethoscope me-1"></i>${escapeDoctorHtml(d.specialization)} ${d.department_name ? '• ' + escapeDoctorHtml(d.department_name) : ''}</small>
+                        <strong class="text-dark d-block small"><i class="fas fa-user-md me-1 text-primary"></i>${escapeDoctorHtml(d.name)}</strong>
+                        <small class="text-muted" style="font-size: 11px;"><i class="fas fa-stethoscope me-1"></i>${escapeDoctorHtml(d.specialization)} ${d.department_name ? '• ' + escapeDoctorHtml(d.department_name) : ''}</small>
                     </div>
                     <div>
                         ${availBadge}
@@ -1940,7 +1736,6 @@ if (doctorSearchInput && doctorSuggestions) {
         doctorSuggestions.style.display = 'block';
     });
 
-    // 2. اختيار الطبيب عند النقر على المقترح
     doctorSuggestions.addEventListener('click', function(e) {
         const btn = e.target.closest('.doctor-suggestion-item');
         if (!btn) return;
@@ -1964,7 +1759,6 @@ if (doctorSearchInput && doctorSuggestions) {
         checkDoctorActiveBooking(id);
     });
 
-    // 3. مسح اختيار الطبيب
     doctorClearBtn.addEventListener('click', function() {
         doctorSearchInput.value = '';
         doctorHiddenId.value = '';
@@ -1976,14 +1770,12 @@ if (doctorSearchInput && doctorSuggestions) {
         doctorSearchInput.focus();
     });
 
-    // 4. إغلاق القائمة عند النقر خارجها
     document.addEventListener('click', function(e) {
         if (!doctorSearchInput.contains(e.target) && !doctorSuggestions.contains(e.target)) {
             doctorSuggestions.style.display = 'none';
         }
     });
 
-    // 5. استعادة القيمة في حال وجود old('doctor_id')
     if (doctorHiddenId.value && !doctorSearchInput.value) {
         const oldDoc = consultantDoctorsList.find(d => d.id == doctorHiddenId.value);
         if (oldDoc) {
@@ -1999,46 +1791,6 @@ if (doctorSearchInput && doctorSuggestions) {
     }
 }
 
-// وظيفة البحث في التحاليل
-const labSearchInput = document.getElementById('labSearchInput');
-const clearLabSearch = document.getElementById('clearLabSearch');
-
-if (labSearchInput) {
-    labSearchInput.addEventListener('input', function() {
-        const searchTerm = this.value.trim().toLowerCase();
-        const labItems = document.querySelectorAll('#labTestsContainer .form-check');
-        const labCategories = document.querySelectorAll('#labTestsContainer > div');
-        
-        labItems.forEach(item => {
-            const label = item.querySelector('label');
-            const text = label ? label.textContent.toLowerCase() : '';
-            
-            if (text.includes(searchTerm) || searchTerm === '') {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-        
-        // إخفاء/إظهار الفئات الفارغة
-        labCategories.forEach(category => {
-            const visibleItems = category.querySelectorAll('.form-check:not([style*="display: none"])');
-            if (visibleItems.length === 0 && searchTerm !== '') {
-                category.style.display = 'none';
-            } else {
-                category.style.display = '';
-            }
-        });
-    });
-    
-    clearLabSearch.addEventListener('click', function() {
-        labSearchInput.value = '';
-        labSearchInput.dispatchEvent(new Event('input'));
-        labSearchInput.focus();
-    });
-}
-
-// تشغيل التحقق من حالة خيار الضمان واستعادة الأنواع السابقة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     updateInsuranceVisibility();
 
@@ -2067,8 +1819,4 @@ document.addEventListener('DOMContentLoaded', function() {
     @endif
 });
 </script>
-
-<style>
-
-</style>
 @endsection

@@ -116,8 +116,8 @@
                                             <td>{{ $paginatedStatements->firstItem() + $loop->index }}</td>
                                             <td>{{ $item['payment']->paid_at ? $item['payment']->paid_at->format('Y-m-d H:i') : '-' }}</td>
                                             <td>
-                                                <div class="fw-bold">{{ optional(optional($item['payment']->emergency)->patient->user)->name ?? optional($item['payment']->patient->user)->name ?? 'غير معروف' }}</div>
-                                                <small class="text-muted">ID: #{{ $item['payment']->patient_id }}</small>
+                                                <div class="fw-bold">{{ $item['payment']->emergency?->patient?->user?->name ?? $item['payment']->emergency?->emergencyPatient?->name ?? $item['payment']->patient?->user?->name ?? 'غير معروف' }}</div>
+                                                <small class="text-muted">ID: #{{ $item['payment']->patient_id ?? $item['payment']->emergency?->patient_id ?? $item['payment']->emergency?->emergency_patient_id ?? '-' }}</small>
                                             </td>
                                             <td class="text-primary">{{ number_format($item['services_sum'], 0) }}</td>
                                             <td class="text-success">{{ number_format($item['labs_sum'], 0) }}</td>

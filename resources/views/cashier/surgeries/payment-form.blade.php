@@ -59,6 +59,85 @@
         color: #ffffff !important;
         box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
     }
+
+    /* Extra Services Smart Autocomplete (ICD-10 Style) */
+    .extra-service-autocomplete-wrapper {
+        position: relative;
+        overflow: visible !important;
+    }
+    .extra-services-autocomplete-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        left: 0;
+        width: 100% !important;
+        min-width: 340px;
+        z-index: 1065 !important;
+        max-height: 380px;
+        overflow-y: auto;
+        background: #ffffff !important;
+        border: 2px solid #f59e0b !important;
+        border-radius: 12px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(245, 158, 11, 0.15) !important;
+    }
+    .extra-service-dropdown-header {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border-bottom: 1px solid #fde68a;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #92400e;
+    }
+    .extra-service-item {
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: right;
+        background: #ffffff;
+    }
+    .extra-service-item:hover, .extra-service-item.active {
+        background-color: #fffbeb !important;
+        border-right: 4px solid #f59e0b;
+    }
+    .extra-service-item:last-child {
+        border-bottom: none;
+    }
+    .extra-service-price-badge {
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.85rem;
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        padding: 2px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+    .extra-service-cat-badge {
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .extra-service-custom-option {
+        background-color: #f8fafc;
+        border-top: 2px dashed #f59e0b;
+        font-weight: 700;
+        color: #b45309;
+        padding: 10px 14px;
+    }
+    .extra-service-custom-option:hover {
+        background-color: #fef3c7 !important;
+    }
+    .price-flash-highlight {
+        animation: priceFlash 1.2s ease-out;
+    }
+    @keyframes priceFlash {
+        0% { background-color: #d1fae5; border-color: #10b981; }
+        100% { background-color: #ffffff; border-color: #dee2e6; }
+    }
 </style>
 @php
     $isCancelled = $surgery->status === 'cancelled';
@@ -475,44 +554,78 @@
                     @endif
 
                     @if(!$isCancelled)
-                    <!-- صندوق إضافة الخدمات الإضافية والفندقية (مرافق، تزيين، تخطيط، طبلة، غرامات...) -->
-                    <div class="card border border-warning border-opacity-50 rounded-3 mb-4 shadow-2xs" style="background: linear-gradient(to bottom, #fffdf8, #fff);">
-                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <!-- صندوق إضافة الخدمات الإضافية والفندقية الذكي (مستوحى من محرك ICD-10) -->
+                    <div class="card border border-warning border-opacity-50 rounded-4 mb-4 shadow-sm bg-white overflow-visible position-relative" style="z-index: 1050;">
+                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2.5 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                                <i class="fas fa-concierge-bell text-warning fs-5"></i>
-                                إضافة خدمات إضافية وفندقية للعملية الجراحية (تخطيط قلب، مرافق، تزيين، طبلة، غرامات...)
+                                <span class="badge bg-warning text-dark p-2 rounded-circle">
+                                    <i class="fas fa-concierge-bell"></i>
+                                </span>
+                                <span>إضافة خدمات إضافية وفندقية للعملية الجراحية (تخطيط قلب، مرافق، تزيين، طبلة، غرامات...)</span>
                             </h6>
-                            <span class="badge bg-warning text-dark border border-warning small">
-                                <i class="fas fa-edit me-1"></i>الكاشير يحدد ويعدل السعر مباشرة
+                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
+                                <i class="fas fa-magic me-1"></i> تصنيف ذكي وبحث فوري مثل ICD-10
                             </span>
                         </div>
                         <div class="card-body p-3">
+                            <!-- شرائح التصفية السريعة للفئات -->
+                            <div class="d-flex flex-wrap align-items-center gap-1.5 mb-2.5">
+                                <span class="small text-muted fw-bold me-1"><i class="fas fa-filter me-1 text-warning"></i> تصنيف سريع:</span>
+                                <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-2.5 py-0.5 extra-cat-filter-btn active" data-category="all" style="font-size: 11px;">
+                                    الكل ({{ $availableExtraServices->count() }})
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="medical" style="font-size: 11px;">
+                                    <i class="fas fa-heartbeat text-danger me-1"></i> فحوصات وسريرية
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="accommodation" style="font-size: 11px;">
+                                    <i class="fas fa-bed text-primary me-1"></i> فندقية ومرافق
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="administrative" style="font-size: 11px;">
+                                    <i class="fas fa-file-invoice text-info me-1"></i> إدارية وطبلة
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="decorating" style="font-size: 11px;">
+                                    <i class="fas fa-ribbon me-1" style="color: #e91e63;"></i> تزيين الغرف
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="fine" style="font-size: 11px;">
+                                    <i class="fas fa-exclamation-triangle text-danger me-1"></i> غرامات ومخالفات
+                                </button>
+                            </div>
+
                             <form action="{{ route('cashier.surgeries.extra-services.add', $surgery) }}" method="POST" id="addExtraServiceForm">
                                 @csrf
                                 <div class="row g-2 align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="form-label small text-muted mb-1 fw-bold">اسم الخدمة الإضافية *</label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-light text-warning"><i class="fas fa-tags"></i></span>
-                                            <input type="text" class="form-control form-control-sm fw-bold" id="service_name_input" name="service_name" placeholder="اختر من المقترحات أو اكتب خدمة مخصصة..." list="extra_services_catalog_list" required autocomplete="off">
-                                            <datalist id="extra_services_catalog_list">
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted mb-1 fw-bold">اسم الخدمة الإضافية (ابحث أو اختر أو اكتب خدمة جديدة) *</label>
+                                        <div class="position-relative extra-service-autocomplete-wrapper">
+                                            <div class="input-group input-group-sm shadow-xs">
+                                                <span class="input-group-text bg-white border-warning text-warning"><i class="fas fa-search" id="extra-service-search-icon"></i></span>
+                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" placeholder="انقر لاختيار خدمة أو اكتب للبحث الذكي..." required autocomplete="off">
+                                                <button type="button" class="btn btn-outline-secondary px-2 d-none" id="btn-clear-extra-service" title="مسح">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <datalist id="extra_services_catalog_list" style="display: none;">
                                                 @foreach($availableExtraServices as $asrv)
-                                                    <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}">
+                                                    <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}" data-category="{{ $asrv->category ?? 'general' }}">
                                                         {{ $asrv->name }} (افتراضي: {{ number_format($asrv->default_price, 0) }} د.ع)
                                                     </option>
                                                 @endforeach
                                             </datalist>
                                             <input type="hidden" name="service_id" id="service_id_hidden">
+                                            <input type="hidden" name="service_category" id="service_category_hidden" value="general">
+
+                                            <!-- القائمة المنسدلة الذكية للخدمات الإضافية -->
+                                            <div id="extra_services_dropdown" class="extra-services-autocomplete-dropdown shadow-lg d-none"></div>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small text-muted mb-1 fw-bold">السعر المعتمد للوحدة (IQD) *</label>
-                                        <div class="input-group input-group-sm">
+                                        <div class="input-group input-group-sm shadow-xs">
                                             <span class="input-group-text bg-light text-success fw-bold">IQD</span>
-                                            <input type="number" class="form-control form-control-sm fw-bold text-success" id="service_price_input" name="service_price" min="0" step="1000" placeholder="0" required>
+                                            <input type="number" class="form-control form-control-sm fw-bold text-success fs-6" id="service_price_input" name="service_price" min="0" step="any" placeholder="0" required>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
                                         <label class="form-label small text-muted mb-1 fw-bold">الكمية</label>
                                         <input type="number" class="form-control form-control-sm text-center fw-bold" id="service_qty_input" name="service_quantity" min="1" value="1">
                                     </div>
@@ -521,10 +634,25 @@
                                         <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="ملاحظة أو تفصيل...">
                                     </div>
                                     <div class="col-md-1">
-                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs" id="btnAddExtraService">
                                             <i class="fas fa-plus me-1"></i> إضافة
                                         </button>
                                     </div>
+                                </div>
+
+                                <!-- بطاقة تأكيد الخدمة المختارة النشطة -->
+                                <div id="selected_extra_service_card" class="mt-2.5 p-2 px-3 rounded-3 border bg-warning bg-opacity-10 border-warning border-opacity-25 d-flex align-items-center justify-content-between d-none">
+                                    <div class="d-flex align-items-center gap-2.5">
+                                        <span class="badge bg-warning text-dark font-monospace px-2.5 py-1" id="selected_extra_cat_badge">خدمة إضافية</span>
+                                        <div>
+                                            <strong class="text-dark small d-block" id="selected_extra_name_text">اسم الخدمة</strong>
+                                            <span class="text-muted small" style="font-size: 11px;">السعر المعتمد بالدليل: <strong class="text-success" id="selected_extra_price_text">0 د.ع</strong></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 d-flex align-items-center gap-1" id="btn_change_extra_service">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span style="font-size: 11px;">تغيير أو اختيار خدمة أخرى</span>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -2356,30 +2484,266 @@ document.addEventListener('DOMContentLoaded', function() {
         selectAllExtraServices.addEventListener('change', toggleExtraServices);
     }
 
-    // التعبئة التلقائية لسعر الخدمة الإضافية من الكتالوج
+    // =========================================================================
+    // محرك البحث والفرز الذكي للخدمات الإضافية (مستوحى من محرك ICD-10)
+    // =========================================================================
+    @php
+        $extraServicesCatalogJson = $availableExtraServices->map(function($s) {
+            return [
+                'id' => $s->id,
+                'name' => $s->name,
+                'category' => $s->category ?? 'general',
+                'price' => (float)$s->default_price,
+                'formatted_price' => number_format($s->default_price, 0),
+            ];
+        })->values();
+    @endphp
+
+    const extraServicesCatalog = @json($extraServicesCatalogJson);
+    const extraCategoryMap = {
+        medical: { name: 'فحوصات وسريرية', icon: 'fa-heartbeat', textClass: 'text-danger', badgeClass: 'bg-danger-subtle text-danger border border-danger border-opacity-25' },
+        accommodation: { name: 'فندقية ومرافقين', icon: 'fa-bed', textClass: 'text-primary', badgeClass: 'bg-primary-subtle text-primary border border-primary border-opacity-25' },
+        administrative: { name: 'إدارية وطبلة', icon: 'fa-file-invoice', textClass: 'text-info', badgeClass: 'bg-info-subtle text-info border border-info border-opacity-25' },
+        decorating: { name: 'تزيين الغرف', icon: 'fa-ribbon', textClass: 'text-pink', badgeClass: 'bg-pink-subtle text-pink border border-pink border-opacity-25' },
+        fine: { name: 'غرامات ومخالفات', icon: 'fa-exclamation-triangle', textClass: 'text-danger', badgeClass: 'bg-warning-subtle text-dark border border-warning' },
+        general: { name: 'خدمات عامة', icon: 'fa-tag', textClass: 'text-secondary', badgeClass: 'bg-light text-secondary border' },
+    };
+
+    let currentExtraCategory = 'all';
     const serviceNameInput = document.getElementById('service_name_input');
     const servicePriceInput = document.getElementById('service_price_input');
     const serviceIdHidden = document.getElementById('service_id_hidden');
-    const catalogOptions = document.querySelectorAll('#extra_services_catalog_list option');
+    const serviceCategoryHidden = document.getElementById('service_category_hidden');
+    const extraDropdown = document.getElementById('extra_services_dropdown');
+    const clearExtraBtn = document.getElementById('btn-clear-extra-service');
+    const selectedExtraCard = document.getElementById('selected_extra_service_card');
+    const selectedExtraNameText = document.getElementById('selected_extra_name_text');
+    const selectedExtraCatBadge = document.getElementById('selected_extra_cat_badge');
+    const selectedExtraPriceText = document.getElementById('selected_extra_price_text');
+    const btnChangeExtra = document.getElementById('btn_change_extra_service');
+    const extraWrapper = document.querySelector('.extra-service-autocomplete-wrapper');
 
-    if (serviceNameInput) {
-        const updatePriceFromCatalog = function() {
-            const val = serviceNameInput.value.trim().toLowerCase();
-            let matched = false;
-            catalogOptions.forEach(opt => {
-                if (opt.value.trim().toLowerCase() === val) {
-                    if (servicePriceInput) servicePriceInput.value = opt.getAttribute('data-price') || 0;
-                    if (serviceIdHidden) serviceIdHidden.value = opt.getAttribute('data-id') || '';
-                    matched = true;
-                }
+    function escapeExtraHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function renderExtraServicesDropdown(query = '') {
+        if (!extraDropdown) return;
+        const q = (query || '').trim().toLowerCase();
+
+        // تصفية حسب الفئة المختارة وحسب نص البحث
+        let matches = extraServicesCatalog.filter(item => {
+            const matchesCat = (currentExtraCategory === 'all') || (item.category === currentExtraCategory);
+            if (!matchesCat) return false;
+            if (!q) return true;
+            const name = (item.name || '').toLowerCase();
+            const catName = (extraCategoryMap[item.category]?.name || '').toLowerCase();
+            return name.includes(q) || catName.includes(q);
+        });
+
+        let html = '';
+        const catTitle = currentExtraCategory === 'all' ? 'جميع الخدمات' : (extraCategoryMap[currentExtraCategory]?.name || 'الخدمات');
+        html += `
+            <div class="extra-service-dropdown-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-1"></i> دليل الخدمات: <strong>${escapeExtraHtml(catTitle)}</strong></span>
+                <span class="badge bg-warning text-dark border border-warning" style="font-size: 10px;">${matches.length} خدمة</span>
+            </div>
+        `;
+
+        if (matches.length > 0) {
+            html += '<div class="list-group list-group-flush">';
+            matches.forEach(item => {
+                const catMeta = extraCategoryMap[item.category] || extraCategoryMap.general;
+                html += `
+                    <div class="extra-service-item d-flex align-items-center justify-content-between" 
+                         data-id="${item.id}" 
+                         data-name="${escapeExtraHtml(item.name)}" 
+                         data-price="${item.price}" 
+                         data-formatted-price="${item.formatted_price}"
+                         data-category="${item.category}">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge ${catMeta.badgeClass} extra-service-cat-badge">
+                                <i class="fas ${catMeta.icon} me-1"></i>${catMeta.name}
+                            </span>
+                            <strong class="text-dark extra-service-name">${escapeExtraHtml(item.name)}</strong>
+                        </div>
+                        <span class="extra-service-price-badge">
+                            ${item.formatted_price} د.ع
+                        </span>
+                    </div>
+                `;
             });
-            if (!matched && serviceIdHidden) {
-                serviceIdHidden.value = '';
-            }
-        };
+            html += '</div>';
+        } else {
+            html += `
+                <div class="p-3 text-center text-muted small">
+                    <i class="fas fa-search me-1"></i> لا توجد خدمات مطابقة في هذه الفئة
+                </div>
+            `;
+        }
 
-        serviceNameInput.addEventListener('input', updatePriceFromCatalog);
-        serviceNameInput.addEventListener('change', updatePriceFromCatalog);
+        // خيار إضافة خدمة مخصصة جديدة وحفظها تلقائياً بالدليل (Custom Option مثل ICD-10)
+        if (q.length > 0) {
+            const activeCatName = currentExtraCategory !== 'all' ? (extraCategoryMap[currentExtraCategory]?.name || 'عام') : 'عام';
+            html += `
+                <div class="extra-service-item extra-service-custom-option d-flex align-items-center justify-content-between" 
+                     data-custom="1" 
+                     data-name="${escapeExtraHtml(query)}">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-plus-circle text-warning fs-6"></i>
+                        <div>
+                            <span class="d-block fw-bold text-dark">إضافة كخدمة جديدة: <strong>"${escapeExtraHtml(query)}"</strong></span>
+                            <small class="text-muted" style="font-size: 10px;">✨ سيتم حفظها في دليل الخدمات (${escapeExtraHtml(activeCatName)}) لتظهر تلقائياً بالمرات القادمة</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-warning text-dark border border-warning" style="font-size: 10px;">حفظ في الدليل</span>
+                </div>
+            `;
+        }
+
+        extraDropdown.innerHTML = html;
+        extraDropdown.classList.remove('d-none');
+    }
+
+    function selectExtraServiceItem(id, name, price, formattedPrice, category) {
+        if (serviceNameInput) serviceNameInput.value = name;
+        if (serviceIdHidden) serviceIdHidden.value = id || '';
+        if (servicePriceInput) {
+            servicePriceInput.value = price;
+            servicePriceInput.classList.remove('price-flash-highlight');
+            void servicePriceInput.offsetWidth; // trigger reflow
+            servicePriceInput.classList.add('price-flash-highlight');
+        }
+
+        if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+        if (extraDropdown) extraDropdown.classList.add('d-none');
+
+        if (selectedExtraCard && id) {
+            const catMeta = extraCategoryMap[category] || extraCategoryMap.general;
+            if (selectedExtraNameText) selectedExtraNameText.textContent = name;
+            if (selectedExtraCatBadge) {
+                selectedExtraCatBadge.textContent = catMeta.name;
+                selectedExtraCatBadge.className = 'badge font-monospace px-2.5 py-1 ' + catMeta.badgeClass;
+            }
+            if (selectedExtraPriceText) selectedExtraPriceText.textContent = (formattedPrice || price) + ' د.ع';
+            selectedExtraCard.classList.remove('d-none');
+        }
+    }
+
+    if (serviceNameInput && extraDropdown) {
+        // 1. فتح القائمة عند التركيز أو النقر
+        serviceNameInput.addEventListener('focus', function() {
+            renderExtraServicesDropdown(this.value.trim());
+        });
+
+        serviceNameInput.addEventListener('click', function() {
+            renderExtraServicesDropdown(this.value.trim());
+        });
+
+        // 2. تصفية القائمة عند الكتابة
+        serviceNameInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val.length > 0) {
+                if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+            } else {
+                if (clearExtraBtn) clearExtraBtn.classList.add('d-none');
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+            }
+            renderExtraServicesDropdown(val);
+        });
+
+        // 3. النقر على عنصر من القائمة المنسدلة
+        extraDropdown.addEventListener('click', function(e) {
+            const item = e.target.closest('.extra-service-item');
+            if (!item) return;
+
+            if (item.dataset.custom === '1') {
+                const customName = item.dataset.name;
+                if (serviceNameInput) serviceNameInput.value = customName;
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+                if (extraDropdown) extraDropdown.classList.add('d-none');
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                if (servicePriceInput) {
+                    servicePriceInput.focus();
+                    servicePriceInput.select();
+                }
+                return;
+            }
+
+            selectExtraServiceItem(
+                item.dataset.id,
+                item.dataset.name,
+                parseFloat(item.dataset.price) || 0,
+                item.dataset.formattedPrice,
+                item.dataset.category
+            );
+        });
+
+        // 4. أزرار شرائح الفلترة السريعة
+        document.querySelectorAll('.extra-cat-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.extra-cat-filter-btn').forEach(b => {
+                    b.classList.remove('btn-warning', 'active', 'fw-bold');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-warning', 'active', 'fw-bold');
+
+                currentExtraCategory = this.dataset.category || 'all';
+                if (serviceCategoryHidden) {
+                    serviceCategoryHidden.value = (currentExtraCategory !== 'all') ? currentExtraCategory : 'general';
+                }
+                renderExtraServicesDropdown(serviceNameInput.value.trim());
+                serviceNameInput.focus();
+            });
+        });
+
+        // 5. زر المسح (X)
+        if (clearExtraBtn) {
+            clearExtraBtn.addEventListener('click', function() {
+                serviceNameInput.value = '';
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (servicePriceInput) servicePriceInput.value = '';
+                clearExtraBtn.classList.add('d-none');
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                serviceNameInput.focus();
+                renderExtraServicesDropdown('');
+            });
+        }
+
+        // 6. زر تغيير الخدمة من بطاقة التأكيد
+        if (btnChangeExtra) {
+            btnChangeExtra.addEventListener('click', function(e) {
+                e.preventDefault();
+                serviceNameInput.value = '';
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                serviceNameInput.focus();
+                renderExtraServicesDropdown('');
+            });
+        }
+
+        // 7. إغلاق القائمة عند النقر في الخارج
+        document.addEventListener('click', function(e) {
+            if (extraWrapper && !extraWrapper.contains(e.target) && !e.target.closest('.extra-cat-filter-btn')) {
+                extraDropdown.classList.add('d-none');
+            }
+        });
+
+        // 8. دعم أزرار لوحة المفاتيح (Escape)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !extraDropdown.classList.contains('d-none')) {
+                extraDropdown.classList.add('d-none');
+            }
+        });
     }
 
     // تأكيد وحذف العناصر المعلقة (تحاليل، أشعة، خدمات إضافية)

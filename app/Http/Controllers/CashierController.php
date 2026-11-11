@@ -2171,12 +2171,42 @@ class CashierController extends Controller
         $qty = max(1, (int) ($validated['service_quantity'] ?? 1));
         $price = (float) $validated['service_price'];
         $total = $price * $qty;
+        $name = trim($validated['service_name']);
+        $serviceId = $validated['service_id'] ?? null;
+
+        // التحقق من الدليل المرجعي للخدمات الإضافية وحفظ الخدمة الجديدة تلقائياً لتظهر مستقبلاً
+        if ($serviceId) {
+            $catalogService = HospitalExtraService::find($serviceId);
+            if ($catalogService && (float) $catalogService->default_price == 0 && $price > 0) {
+                $catalogService->update(['default_price' => $price]);
+            }
+        } else {
+            $catalogService = HospitalExtraService::where('name', $name)->first();
+            if ($catalogService) {
+                $serviceId = $catalogService->id;
+                if ((float) $catalogService->default_price == 0 && $price > 0) {
+                    $catalogService->update(['default_price' => $price]);
+                }
+            } else {
+                $category = $httpRequest->input('service_category', 'general');
+                if (! in_array($category, ['medical', 'accommodation', 'administrative', 'decorating', 'fine', 'general'])) {
+                    $category = 'general';
+                }
+                $catalogService = HospitalExtraService::create([
+                    'name' => $name,
+                    'category' => $category,
+                    'default_price' => $price,
+                    'is_active' => true,
+                ]);
+                $serviceId = $catalogService->id;
+            }
+        }
 
         VisitExtraService::create([
             'visit_id' => $request->visit_id,
             'request_id' => $request->id,
-            'service_id' => $validated['service_id'] ?? null,
-            'name' => trim($validated['service_name']),
+            'service_id' => $serviceId,
+            'name' => $name,
             'price' => $price,
             'quantity' => $qty,
             'total_amount' => $total,
@@ -2618,7 +2648,14 @@ class CashierController extends Controller
         });
 
         $cashiers = $canViewAllCashiers
-            ? \App\Models\User::whereIn('id', \App\Models\Payment::select('cashier_id')->distinct())->orderBy('name')->get()
+            ? \App\Models\User::where(function ($q) {
+                $q->whereHas('roles', function ($rq) {
+                    $rq->whereIn('name', ['cashier', 'casshieradmin']);
+                })->orWhereIn('role', ['cashier', 'casshieradmin']);
+            })
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
             : collect();
 
         // إذا كان الطلب طباعة
@@ -3444,9 +3481,38 @@ class CashierController extends Controller
         $qty = max(1, (int) $request->input('service_quantity', 1));
         $price = (float) $request->input('service_price', 0);
         $name = trim($request->input('service_name'));
+        $serviceId = $request->input('service_id');
+
+        // التحقق من الدليل المرجعي للخدمات الإضافية وحفظ الخدمة الجديدة تلقائياً لتظهر مستقبلاً
+        if ($serviceId) {
+            $catalogService = HospitalExtraService::find($serviceId);
+            if ($catalogService && (float) $catalogService->default_price == 0 && $price > 0) {
+                $catalogService->update(['default_price' => $price]);
+            }
+        } else {
+            $catalogService = HospitalExtraService::where('name', $name)->first();
+            if ($catalogService) {
+                $serviceId = $catalogService->id;
+                if ((float) $catalogService->default_price == 0 && $price > 0) {
+                    $catalogService->update(['default_price' => $price]);
+                }
+            } else {
+                $category = $request->input('service_category', 'general');
+                if (! in_array($category, ['medical', 'accommodation', 'administrative', 'decorating', 'fine', 'general'])) {
+                    $category = 'general';
+                }
+                $catalogService = HospitalExtraService::create([
+                    'name' => $name,
+                    'category' => $category,
+                    'default_price' => $price,
+                    'is_active' => true,
+                ]);
+                $serviceId = $catalogService->id;
+            }
+        }
 
         $surgery->extraServices()->create([
-            'service_id' => $request->input('service_id'),
+            'service_id' => $serviceId,
             'name' => $name,
             'price' => $price,
             'quantity' => $qty,
@@ -3457,7 +3523,7 @@ class CashierController extends Controller
         ]);
 
         return redirect()->route('cashier.surgeries.payment.form', $surgery)
-            ->with('success', 'تمت إضافة خدمة "'.$name.'" بنجاح بمبلغ '.number_format($price * $qty, 0).' د.ع');
+            ->with('success', 'تمت إضافة خدمة "'.$name.'" بنجاح وحفظها في دليل الخدمات بمبلغ '.number_format($price * $qty, 0).' د.ع');
     }
 
     /**
@@ -3715,6 +3781,9 @@ class CashierController extends Controller
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
             $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            $labCopay = $patient ? (float) $patient->getCopayPercentageFor('lab') : $surgeryCopay;
+            $radCopay = $patient ? (float) $patient->getCopayPercentageFor('radiology') : $surgeryCopay;
+            $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $surgeryCopay;
 
             $surgeryApproved = 0.0;
             $surgeryPatientShare = 0.0;
@@ -4767,7 +4836,7 @@ class CashierController extends Controller
         $toDate = $request->query('to_date');
         $paymentMethod = $request->query('payment_method');
 
-        $query = Payment::with(['emergency.patient.user', 'cashier'])
+        $query = Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'patient.user', 'cashier'])
             ->where('payment_type', 'emergency')
             ->whereNotNull('paid_at');
 
@@ -4815,7 +4884,7 @@ class CashierController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
-        $query = \App\Models\Payment::with(['emergency.patient.user', 'cashier'])
+        $query = \App\Models\Payment::with(['emergency.patient.user', 'emergency.emergencyPatient', 'patient.user', 'cashier'])
             ->where('payment_type', 'emergency')
             ->whereNotNull('paid_at');
 
@@ -5196,7 +5265,7 @@ class CashierController extends Controller
             abort(404, 'الطبيب غير موجود');
         }
 
-        $emergencies = \App\Models\Emergency::with(['patient.user'])
+        $emergencies = \App\Models\Emergency::with(['patient.user', 'emergencyPatient'])
             ->where('doctor_id', $doctorId)
             ->when($fromDate, function ($q) use ($fromDate) {
                 $q->whereDate('created_at', '>=', $fromDate);
@@ -5226,7 +5295,7 @@ class CashierController extends Controller
                     }
                 }
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
                     'amount' => $caseSum,
@@ -5263,7 +5332,7 @@ class CashierController extends Controller
                     }
                 }
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => implode(', ', $items),
                     'amount' => $caseSum,
@@ -5282,7 +5351,7 @@ class CashierController extends Controller
                 $items = $surgery ? $surgery->surgery_type : 'تحويل للعمليات (قيد الانتظار)';
 
                 $details[] = (object) [
-                    'patient_name' => optional($em->patient->user)->name ?? 'غير معروف',
+                    'patient_name' => $em->patient?->user?->name ?? $em->emergencyPatient?->name ?? 'غير معروف',
                     'date' => $em->created_at->format('Y-m-d H:i'),
                     'items' => $items,
                     'amount' => $caseSum,
@@ -5367,7 +5436,7 @@ class CashierController extends Controller
 
         $doctor->load(['user', 'department']);
 
-        $earnedCases = \App\Models\Emergency::with(['patient.user', 'followUpPayment'])
+        $earnedCases = \App\Models\Emergency::with(['patient.user', 'emergencyPatient', 'followUpPayment'])
             ->where('doctor_id', $doctor->id)
             ->whereNotNull('follow_up_payment_id')
             ->whereHas('followUpPayment', function ($q) {

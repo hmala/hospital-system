@@ -123,8 +123,8 @@
                                             <td>{{ $payments->firstItem() + $loop->index }}</td>
                                             <td>{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '-' }}</td>
                                             <td>
-                                                <div class="fw-bold">{{ optional(optional($payment->emergency)->patient->user)->name ?? optional($payment->patient->user)->name ?? 'غير معروف' }}</div>
-                                                <small class="text-muted">ID: #{{ $payment->patient_id }}</small>
+                                                <div class="fw-bold">{{ $payment->emergency?->patient?->user?->name ?? $payment->emergency?->emergencyPatient?->name ?? $payment->patient?->user?->name ?? 'غير معروف' }}</div>
+                                                <small class="text-muted">ID: #{{ $payment->patient_id ?? $payment->emergency?->patient_id ?? $payment->emergency?->emergency_patient_id ?? '-' }}</small>
                                             </td>
                                             <td>
                                                 @if($payment->emergency)
