@@ -769,13 +769,15 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // المحطة السريرية الموحدة (Unified Clinical Station)
+        Route::get('/clinical/medicines/search', [\App\Http\Controllers\ClinicalStationController::class, 'searchMedicines'])->name('clinical-station.medicines.search');
         Route::get('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'show'])->name('clinical-station.show');
         Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
         Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
+        Route::post('/clinical/treatments/{treatment}/toggle-dose', [\App\Http\Controllers\ClinicalStationController::class, 'toggleTreatmentDose'])->name('clinical-station.treatments.toggle-dose');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
-        Route::post('/clinical/{surgery}/treatments/dispense-floor-stock', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.treatments.dispense-floor-stock');
+        Route::post('/clinical/{surgery}/supplies/dispense', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.supplies.dispense');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
         Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
         Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');

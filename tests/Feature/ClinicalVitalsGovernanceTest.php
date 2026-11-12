@@ -116,9 +116,14 @@ class ClinicalVitalsGovernanceTest extends TestCase
         $response->assertSee('التنفس');
         $response->assertSee('الأكسجين');
         $response->assertSee('سكر الدم');
-        $response->assertSee('مقياس الألم');
-        $response->assertSee('مقياس الوعي');
-        $response->assertSee('امتلاء الشعيرات');
+        $response->assertSee('السوائل الداخلة');
+        $response->assertSee('السوائل الخارجة');
+        $response->assertSee('صافي السوائل');
+        $response->assertSee('براز');
+        $response->assertDontSee('مقياس الألم');
+        $response->assertDontSee('مقياس الوعي');
+        $response->assertDontSee('امتلاء الشعيرات');
+        $response->assertDontSee('pain_score');
     }
 
     public function test_trend_charts_are_hidden_from_nurse_and_shown_to_resident_and_admin(): void

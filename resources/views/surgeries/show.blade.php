@@ -338,9 +338,6 @@
                                     <button class="nav-link text-end" id="v-pills-treatments-tab" data-bs-toggle="pill" data-bs-target="#v-pills-treatments" type="button" role="tab">
                                         جدول العلاجات<i class="fas fa-pills ms-2"></i>
                                     </button>
-                                    <button class="nav-link text-end" id="v-pills-fluids-tab" data-bs-toggle="pill" data-bs-target="#v-pills-fluids" type="button" role="tab">
-                                        مكونات السوائل المطلوبة<i class="fas fa-tint ms-2"></i>
-                                    </button>
                                     <button class="nav-link text-end" id="v-pills-followups-tab" data-bs-toggle="pill" data-bs-target="#v-pills-followups" type="button" role="tab">
                                         المتابعات<i class="fas fa-clipboard-list ms-2"></i>
                                     </button>
@@ -1100,89 +1097,7 @@
                                         @endif
                                     </div>
 
-                                    <!-- 5. Required Fluids Tab -->
-                                    <div class="tab-pane fade" id="v-pills-fluids" role="tabpanel">
-                                        <h6 class="border-bottom pb-2 mb-3 fw-bold text-primary">
-                                            <i class="fas fa-tint me-2"></i>مكونات السوائل المطلوبة للمراقبة
-                                        </h6>
-                                        @php
-                                            $requiredFluids = $surgery->surgeonStation?->required_fluids ?? [];
-                                            $canEdit = auth()->user()->hasRole(['admin', 'surgery_staff', 'doctor', 'الجراح']) || 
-                                                auth()->user()->hasPermissionTo('edit surgeries') ||
-                                                (auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id);
-                                        @endphp
-                                        @if($canEdit)
-                                        <form action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <div class="card border-0 shadow-sm">
-                                                <div class="card-body p-4">
-                                                    <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i>اختر مكونات السوائل المطلوبة لمراقبة المريض حسب نوع العملية:</p>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <div class="card border border-primary-subtle bg-primary bg-opacity-5 h-100">
-                                                                <div class="card-header bg-transparent border-bottom border-primary-subtle py-2">
-                                                                    <h6 class="fw-bold text-primary mb-0"><i class="fas fa-arrow-alt-circle-down me-1"></i>المدخلات (Intake)</h6>
-                                                                </div>
-                                                                <div class="card-body">
-                                                                    @foreach([
-                                                                        ['intake_iv_fluids', 'fa-syringe', 'primary', 'السوائل الوريدية (IV Fluids)'],
-                                                                        ['intake_oral', 'fa-cup', 'success', 'الفموي (Oral)'],
-                                                                        ['intake_blood', 'fa-tint', 'danger', 'الدم (Blood)'],
-                                                                    ] as $f)
-                                                                    <label class="d-flex align-items-center gap-2 py-2 cursor-pointer" style="cursor:pointer;">
-                                                                        <input type="checkbox" name="required_fluids[]" value="{{ $f[0] }}" class="form-check-input mt-0"
-                                                                            {{ in_array($f[0], $requiredFluids) ? 'checked' : '' }}>
-                                                                        <i class="fas {{ $f[1] }} text-{{ $f[2] }}"></i>
-                                                                        <span>{{ $f[3] }}</span>
-                                                                    </label>
-                                                                    @endforeach
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <div class="card border border-warning-subtle bg-warning bg-opacity-5 h-100">
-                                                                <div class="card-header bg-transparent border-bottom border-warning-subtle py-2">
-                                                                    <h6 class="fw-bold text-warning-emphasis mb-0"><i class="fas fa-arrow-alt-circle-up me-1"></i>المخرجات (Output)</h6>
-                                                                </div>
-                                                                <div class="card-body">
-                                                                    @foreach([
-                                                                        ['output_urine', 'fa-toilet', 'warning', 'البول (Urine)'],
-                                                                        ['output_drain', 'fa-tube', 'info', 'التصريف (Drain)'],
-                                                                        ['output_gtube_ng', 'fa-stomach', 'secondary', 'أنبوب المعدة (NG Tube)'],
-                                                                        ['output_vomiting', 'fa-vomit', 'danger', 'القيء (Vomiting)'],
-                                                                        ['output_stool', 'fa-poo', 'secondary', 'البراز (Stool)'],
-                                                                    ] as $f)
-                                                                    <label class="d-flex align-items-center gap-2 py-2 cursor-pointer" style="cursor:pointer;">
-                                                                        <input type="checkbox" name="required_fluids[]" value="{{ $f[0] }}" class="form-check-input mt-0"
-                                                                            {{ in_array($f[0], $requiredFluids) ? 'checked' : '' }}>
-                                                                        <i class="fas {{ $f[1] }} text-{{ $f[2] }}"></i>
-                                                                        <span>{{ $f[3] }}</span>
-                                                                    </label>
-                                                                    @endforeach
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mt-4">
-                                                        <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="fas fa-save me-1"></i>حفظ</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                        @else
-                                        <div class="d-flex flex-wrap gap-2">
-                                            @php $fluidLabels = ['intake_iv_fluids'=>'السوائل الوريدية','intake_oral'=>'الفموي','intake_blood'=>'الدم','output_urine'=>'البول','output_drain'=>'التصريف','output_gtube_ng'=>'أنبوب المعدة','output_vomiting'=>'القيء','output_stool'=>'البراز']; @endphp
-                                            @forelse($requiredFluids as $f)
-                                                <span class="badge bg-info bg-opacity-10 text-dark border border-info-subtle px-3 py-2">{{ $fluidLabels[$f] ?? $f }}</span>
-                                            @empty
-                                                <div class="alert alert-info mb-0">لم يحدد الجراح مكونات السوائل المطلوبة بعد.</div>
-                                            @endforelse
-                                        </div>
-                                        @endif
-                                    </div>
-
-                                    <!-- 6. Follow-Ups Tab -->
+                                    <!-- 5. Follow-Ups Tab -->
                                     <div class="tab-pane fade" id="v-pills-followups" role="tabpanel">
                                         <h6 class="border-bottom pb-2 mb-3 fw-bold text-primary">
                                             <i class="fas fa-clipboard-list me-2"></i>سجل المتابعات

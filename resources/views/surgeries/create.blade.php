@@ -311,6 +311,11 @@ body {
         $pCardNo = optional($selectedPatient)->insurance_card_no ?: (optional($selectedPatient)->insurance_booklet_number ?: '');
     @endphp
 
+    <!-- نموذج حجز العملية الجراحية -->
+    <form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">
+        @csrf
+        <input type="hidden" name="visit_id" value="{{ request('visit_id') }}">
+
     <!-- شريط هوية المريض التنفيذي العلوي (Patient Executive Banner) -->
     <div id="patientExecutiveBanner" class="patient-banner-card mb-3 p-3">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -321,7 +326,7 @@ body {
                 <div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <h5 class="fw-bold text-dark mb-0" id="bannerPatientName">
-                            {{ optional($selectedPatient->user)->name ?? 'يرجى اختيار مريض من القائمة أدناه' }}
+                            {{ $selectedPatient?->user?->name ?? 'يرجى اختيار مريض من القائمة أدناه' }}
                         </h5>
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.75rem;">
                             <i class="fas fa-folder-open me-1"></i> ملف #<span id="bannerPatientId">{{ $selectedPatient->id ?? '-' }}</span>
@@ -332,9 +337,9 @@ body {
                         </span>
                     </div>
                     <div class="d-flex align-items-center gap-3 mt-1 text-muted small flex-wrap" style="font-size: 0.82rem;">
-                        <span><i class="fas fa-birthday-cake text-secondary me-1"></i>العمر: <strong id="bannerPatientAge" class="text-dark">{{ $selectedPatient->age ?? '-' }} سنة</strong></span>
-                        <span><i class="fas fa-venus-mars text-secondary me-1"></i>الجنس: <strong id="bannerPatientGender" class="text-dark">{{ $selectedPatient->gender ?? '-' }}</strong></span>
-                        <span><i class="fas fa-phone text-secondary me-1"></i>الهاتف: <strong id="bannerPatientPhone" class="text-dark" dir="ltr">{{ optional($selectedPatient->user)->phone ?? '-' }}</strong></span>
+                        <span><i class="fas fa-birthday-cake text-secondary me-1"></i>العمر: <strong id="bannerPatientAge" class="text-dark">{{ $selectedPatient?->age ?? '-' }} سنة</strong></span>
+                        <span><i class="fas fa-venus-mars text-secondary me-1"></i>الجنس: <strong id="bannerPatientGender" class="text-dark">{{ $selectedPatient?->gender ?? '-' }}</strong></span>
+                        <span><i class="fas fa-phone text-secondary me-1"></i>الهاتف: <strong id="bannerPatientPhone" class="text-dark" dir="ltr">{{ $selectedPatient?->user?->phone ?? '-' }}</strong></span>
                         <span id="bannerCardSpan" style="{{ $pCardNo ? '' : 'display: none;' }}"><i class="fas fa-id-card text-primary me-1"></i>رقم الهوية/الدفتر: <strong id="bannerCardNo" class="text-dark">{{ $pCardNo ?: '-' }}</strong></span>
                     </div>
                 </div>
@@ -868,6 +873,19 @@ body {
 @endphp
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // مراجع وحالة اختيار الغرفة (تُعرف أولاً لتجنب أخطاء التهيئة المبكرة عند وجود مريض محدد)
+    const roomIdInput = document.getElementById('room_id');
+    const stayDaysInput = document.getElementById('expected_stay_days');
+    const roomTotalFeeEl = document.getElementById('room_total_fee');
+    const selectedRoomNameEl = document.getElementById('selected_room_name');
+    const clearRoomSection = document.getElementById('clear_room_section');
+    const clearRoomBtn = document.getElementById('clear_room_btn');
+    const headerRoomBadge = document.getElementById('header_room_badge');
+    const roomValidationError = document.getElementById('room_validation_error');
+    const floorPillsContent = document.getElementById('floorPillsContent');
+    let selectedRoomFee = 0;
+    let selectedRoomType = '';
+
     // قائمة جميع العمليات والأصناف المتاحة بالنظام
     const allCategories = {!! json_encode($categoriesList) !!};
     const allOperations = {!! json_encode($opsData) !!};
@@ -1012,8 +1030,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // فلترة وترتيب العمليات الجراحية أبجدياً
+        const initialOldOpId = @json(old('surgical_operation_id', ''));
+
         function initOperationSelect2() {
             const selectedCategory = $('#surgery_category').val();
+            const currentOpVal = $('#surgical_operation_id').val() || initialOldOpId;
             $('#surgical_operation_id option:not(:first)').remove();
             
             allOperations.forEach(function(op) {
@@ -1023,6 +1044,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         .text(op.text)
                         .attr('data-category', op.category)
                         .attr('data-fee', op.fee);
+                    if (currentOpVal && String(op.id) === String(currentOpVal)) {
+                        $option.attr('selected', 'selected');
+                    }
                     $('#surgical_operation_id').append($option);
                 }
             });
@@ -1034,6 +1058,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder: 'اختر نوع العملية',
                 allowClear: true
             });
+
+            if (currentOpVal && $('#surgical_operation_id option[value="' + currentOpVal + '"]').length) {
+                $('#surgical_operation_id').val(String(currentOpVal)).trigger('change.select2');
+            }
         }
 
         initOperationSelect2();
@@ -1392,16 +1420,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // نظام اختيار الغرفة المدمج والتحقق
-    const roomIdInput = document.getElementById('room_id');
-    const stayDaysInput = document.getElementById('expected_stay_days');
-    const roomTotalFeeEl = document.getElementById('room_total_fee');
-    const selectedRoomNameEl = document.getElementById('selected_room_name');
-    const clearRoomSection = document.getElementById('clear_room_section');
-    const clearRoomBtn = document.getElementById('clear_room_btn');
-    const headerRoomBadge = document.getElementById('header_room_badge');
-    const roomValidationError = document.getElementById('room_validation_error');
-    const floorPillsContent = document.getElementById('floorPillsContent');
-    let selectedRoomFee = 0;
 
     function validateRoomSelection() {
         const val = roomIdInput ? roomIdInput.value : '';
@@ -1466,8 +1484,6 @@ document.addEventListener('DOMContentLoaded', function() {
         t.dataset.origBorder = t.dataset.statusColor || t.style.borderColor || '#dee2e6';
         t.dataset.origWidth  = '2px';
     });
-
-    let selectedRoomType = '';
 
     function calculateRoomFee() {
         if (!roomTotalFeeEl) return;
@@ -1542,6 +1558,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.room-selectable').forEach(tile => {
         tile.addEventListener('click', function() { selectRoom(this); });
     });
+
+    if (roomIdInput && roomIdInput.value) {
+        const initialRoomTile = document.querySelector('.room-selectable[data-room-id="' + roomIdInput.value + '"]');
+        if (initialRoomTile && initialRoomTile.dataset.available === '1') {
+            selectRoom(initialRoomTile);
+        }
+    }
 
     if (stayDaysInput) {
         stayDaysInput.addEventListener('input', calculateRoomFee);

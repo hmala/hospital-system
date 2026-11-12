@@ -13,9 +13,10 @@
 
         .vital-grid-input {
             border-radius: 8px;
-            font-size: 0.95rem;
-            padding: 6px 4px;
-            background-color: #f8fafc;
+            font-size: 0.88rem;
+            padding: 5px 4px;
+            min-width: 60px;
+            background-color: #ffffff;
             border: 1px solid #cbd5e1;
             transition: all 0.2s ease-in-out;
         }
@@ -23,6 +24,22 @@
             background-color: #ffffff;
             border-color: #2563eb;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        .fluid-grid-input {
+            border-radius: 8px;
+            font-size: 0.85rem;
+            padding: 5px 3px;
+            min-width: 58px;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s ease-in-out;
+        }
+        .fluid-grid-input:not([readonly]):focus {
+            background-color: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+        #vitalsGridTable th, #vitalsGridTable td {
+            vertical-align: middle;
         }
 
         /* Ultra-Modern Clinical Executive Header */
@@ -338,6 +355,192 @@
             padding: 14px 18px;
             margin-bottom: 12px;
         }
+
+        /* Compact Organized Clinical History Tab */
+        .history-section-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .history-section-card.history-past {
+            background: #ffffff;
+        }
+        .history-field-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            height: 100%;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .history-field-card:focus-within {
+            border-color: #93c5fd;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+        }
+        .history-allergy-card {
+            background: #fff5f5;
+            border-color: #fecaca;
+        }
+        .history-allergy-card:focus-within {
+            border-color: #f87171;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+        }
+        .history-compact-textarea {
+            font-size: 0.86rem;
+            line-height: 1.45;
+            min-height: 54px;
+            padding: 6px 9px;
+            resize: vertical;
+        }
+        .history-quick-chip {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            line-height: 1.35;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .history-quick-chip:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .history-quick-chip.chip-danger {
+            border-color: #fca5a5;
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+        .history-quick-chip.chip-danger:hover {
+            background: #fee2e2;
+        }
+        .plan-phase-active {
+            border-color: #93c5fd;
+            background: #f8fbff;
+        }
+        .plan-phase-active-post {
+            border-color: #86efac;
+            background: #f6fef9;
+        }
+
+        /* MAR Medication Schedule & Dose Checkboxes */
+        .mar-dose-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .mar-day-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px;
+        }
+        .mar-day-label {
+            font-size: 0.69rem;
+            font-weight: 800;
+            color: #475569;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 2px 6px;
+            min-width: 70px;
+            text-align: center;
+        }
+        .mar-dose-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            font-size: 0.74rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            min-width: 102px;
+        }
+        .mar-dose-chip:hover:not(.mar-dose-locked) {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+        .mar-dose-chip.mar-dose-checked {
+            background: #f0fdf4;
+            border-color: #86efac;
+            color: #166534;
+        }
+        .mar-dose-chip.mar-dose-overdue {
+            background: #fff7ed;
+            border-color: #fdba74;
+            border-style: dashed;
+        }
+        .mar-dose-chip.mar-dose-due {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+        .mar-dose-chip.mar-dose-locked {
+            cursor: default;
+            opacity: 0.92;
+        }
+        .mar-dose-chip .form-check-input {
+            margin: 0;
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+        .mar-dose-chip .form-check-input:checked {
+            background-color: #16a34a;
+            border-color: #15803d;
+        }
+        .mar-dose-meta {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.15;
+            text-align: start;
+        }
+        .mar-dose-time {
+            font-weight: 700;
+            font-size: 0.73rem;
+        }
+        .mar-dose-stamp {
+            font-size: 0.65rem;
+            color: #15803d;
+            font-weight: 600;
+        }
+        .mar-autocomplete-wrap {
+            position: relative;
+        }
+        .mar-suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: 0;
+            z-index: 1055;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.14);
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 3px;
+        }
+        .mar-suggestion-item {
+            padding: 8px 11px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            text-align: start;
+            transition: background 0.12s ease;
+        }
+        .mar-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .mar-suggestion-item:hover {
+            background: #eff6ff;
+        }
     </style>
 
     {{-- Breadcrumb & Quick Actions --}}
@@ -497,11 +700,11 @@
     @php
         $shortTabLabels = [
             'history' => 'السيرة',
-            'vitals' => 'العلامات',
+            'vitals' => 'العلامات والسوائل',
             'plan' => 'الخطة',
             'follow_up' => 'المتابعة',
             'treatments' => 'الأدوية',
-            'fluids' => 'السوائل',
+            'supplies' => 'المستلزمات',
             'nursing_care' => 'التمريض',
             'inpatient_survey' => 'الاستبيان ⭐',
             'tests' => 'الفحوصات',
@@ -543,23 +746,28 @@
     @else
         <div class="pane-card mb-4">
             {{-- Tab Pane Header --}}
-            <div class="pane-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2.5">
-                        <i class="{{ $currentTabMeta['icon'] }} fa-lg"></i>
+            @php
+                $isCompactFormTab = in_array($activeTab, ['history', 'plan']);
+            @endphp
+            <div class="pane-header d-flex flex-wrap align-items-center justify-content-between gap-2 {{ $isCompactFormTab ? 'py-2.5 px-3' : '' }}">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary {{ $isCompactFormTab ? 'p-2' : 'p-2.5' }}">
+                        <i class="{{ $currentTabMeta['icon'] }} {{ $isCompactFormTab ? '' : 'fa-lg' }}"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark">{{ $currentTabMeta['label'] }}</h5>
-                        <p class="text-muted small mb-0">{{ $currentTabMeta['description'] }}</p>
+                        <h5 class="mb-0 fw-bold text-dark {{ $isCompactFormTab ? 'fs-6' : '' }}">{{ $currentTabMeta['label'] }}</h5>
+                        @if(!$isCompactFormTab)
+                            <p class="text-muted small mb-0">{{ $currentTabMeta['description'] }}</p>
+                        @endif
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     @if($canWriteCurrentTab)
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold small">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold small">
                             <i class="fas fa-edit me-1"></i> إدخال وتعديل متاح بحسابك
                         </span>
                     @else
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold small">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-bold small">
                             <i class="fas fa-eye me-1"></i> وضع القراءة والاطلاع فقط
                         </span>
                     @endif
@@ -573,56 +781,129 @@
                 <input type="hidden" name="phase" value="{{ $currentPhase }}">
                 <input type="hidden" name="active_tab" value="{{ $activeTab }}">
 
-                <div class="p-4">
+                <div class="{{ $isCompactFormTab ? 'p-3' : 'p-4' }}">
                     {{-- =============================================================== --}}
                     {{-- TAB 1: HISTORY (السيرة المرضية) --}}
                     {{-- =============================================================== --}}
                     @if($activeTab === 'history')
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-comment-medical text-primary me-1"></i> الشكوى الرئيسية (Chief Complaint):</label>
-                                <textarea name="chief_complaint" class="form-control rounded-3" rows="2" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="الشكوى والأعراض التي يشكو منها المريض...">{{ $station?->chief_complaint }}</textarea>
+                        <div id="clinicalHistoryGrid" class="d-flex flex-column gap-2.5">
+                            {{-- Section 1: Present Illness (2 balanced columns) --}}
+                            <div class="history-section-card">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small fw-bold text-primary">
+                                        <i class="fas fa-stethoscope me-1"></i> القصة والشكوى الحالية (Present Illness)
+                                    </span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6 col-lg-5">
+                                        <div class="history-field-card">
+                                            <label class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
+                                                <i class="fas fa-comment-medical text-primary"></i>
+                                                <span>الشكوى الرئيسية</span>
+                                                <span class="text-muted fw-normal" style="font-size: 0.72rem;">(Chief Complaint)</span>
+                                            </label>
+                                            <textarea name="chief_complaint" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="الشكوى والأعراض التي يشكو منها المريض...">{{ $station?->chief_complaint }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-lg-7">
+                                        <div class="history-field-card">
+                                            <label class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
+                                                <i class="fas fa-notes-medical text-info"></i>
+                                                <span>تاريخ المرض الحالي</span>
+                                                <span class="text-muted fw-normal" style="font-size: 0.72rem;">(HPI)</span>
+                                            </label>
+                                            <textarea name="history_present_illness" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="التدرج الزمني وتفاصيل الحالة المرضية الحالية...">{{ $station?->history_present_illness }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-notes-medical text-info me-1"></i> تفاصيل وتاريخ المرض الحالي (History of Present Illness):</label>
-                                <textarea name="history_present_illness" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="التدرج الزمني وتفاصيل الحالة المرضية الحالية...">{{ $station?->history_present_illness }}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-heartbeat text-danger me-1"></i> التاريخ المرضي السابق (Past Medical Hx):</label>
-                                <textarea name="past_medical_hx" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="أمراض مزمنة، ضغط، سكري، ربو، قلب...">{{ $station?->past_medical_hx }}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-cut text-warning me-1"></i> التاريخ الجراحي السابق (Past Surgical Hx):</label>
-                                <textarea name="past_surgical_hx" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="عمليات سابقة، مضاعفات التخدير...">{{ $station?->past_surgical_hx }}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-pills text-success me-1"></i> التاريخ الدوائي (Drug Hx):</label>
-                                <textarea name="drug_hx" class="form-control rounded-3" rows="2" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="الأدوية التي يتناولها بانتظام...">{{ $station?->drug_hx }}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger"><i class="fas fa-exclamation-triangle me-1"></i> التحسس الدوائي والغذائي (Allergies):</label>
-                                <textarea name="drug_allergy" class="form-control rounded-3 border-danger-subtle bg-danger bg-opacity-10" rows="2" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="حساسية البنسلين، أدوية محددة...">{{ $station?->drug_allergy }}</textarea>
+
+                            {{-- Section 2: Past History, Medications & Allergies (4 columns on xl, 2x2 on tablet) --}}
+                            <div class="history-section-card history-past">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small fw-bold text-secondary">
+                                        <i class="fas fa-history me-1"></i> السوابق الطبية والأدوية والتحسس (Past Hx &amp; Allergies)
+                                    </span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="history-field-card">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-heartbeat text-danger me-1"></i> التاريخ المرضي السابق
+                                                </label>
+                                                @if($canWriteCurrentTab)
+                                                    <button type="button" class="history-quick-chip" onclick="fillHistoryQuickText('past_medical_hx', 'لا يوجد')">لا يوجد</button>
+                                                @endif
+                                            </div>
+                                            <textarea name="past_medical_hx" id="hist_past_medical_hx" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="ضغط، سكري، ربو، أمراض مزمنة...">{{ $station?->past_medical_hx }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="history-field-card">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-cut text-warning me-1"></i> التاريخ الجراحي السابق
+                                                </label>
+                                                @if($canWriteCurrentTab)
+                                                    <button type="button" class="history-quick-chip" onclick="fillHistoryQuickText('past_surgical_hx', 'لا يوجد')">لا يوجد</button>
+                                                @endif
+                                            </div>
+                                            <textarea name="past_surgical_hx" id="hist_past_surgical_hx" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="عمليات سابقة، مضاعفات تخدير...">{{ $station?->past_surgical_hx }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="history-field-card">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-pills text-success me-1"></i> التاريخ الدوائي
+                                                </label>
+                                                @if($canWriteCurrentTab)
+                                                    <button type="button" class="history-quick-chip" onclick="fillHistoryQuickText('drug_hx', 'لا يوجد')">لا يوجد</button>
+                                                @endif
+                                            </div>
+                                            <textarea name="drug_hx" id="hist_drug_hx" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="الأدوية التي يتناولها بانتظام...">{{ $station?->drug_hx }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="history-field-card history-allergy-card">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-danger small mb-0">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> التحسس الدوائي والغذائي
+                                                </label>
+                                                @if($canWriteCurrentTab)
+                                                    <button type="button" class="history-quick-chip chip-danger" onclick="fillHistoryQuickText('drug_allergy', 'لا توجد حساسية معروفة (NKDA)')">NKDA</button>
+                                                @endif
+                                            </div>
+                                            <textarea name="drug_allergy" id="hist_drug_allergy" class="form-control history-compact-textarea rounded-2 border-danger-subtle bg-white" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="حساسية البنسلين، أدوية أو أغذية...">{{ $station?->drug_allergy }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                     {{-- =============================================================== --}}
-                    {{-- TAB 2: VITALS & PHYSICAL EXAM (العلامات الحيوية والفحص السريري) --}}
+                    {{-- TAB 2: VITALS, EXAM & FLUIDS (جدول موحد للعلامات الحيوية والسوائل) --}}
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'vitals')
                         @php
                             $canActuallyEditVitals = $canWriteCurrentTab && ($canEditVitals ?? true);
+                            $canEditFluidsFlag = ! empty($canEditFluids);
                             $hasRecordedVitals = !empty($station?->vitals_recorded_at);
                             $recordedTime = $station?->vitals_recorded_at;
                             if ($recordedTime) {
@@ -635,80 +916,59 @@
                             $recordedByName = $station?->vitalsRecordedBy?->name ?? 'طاقم الرعاية';
                         @endphp
 
-                        {{-- Hidden Input for New Routine Reading Action & Editing Historical Reading --}}
-                        <input type="hidden" name="is_new_reading" id="isNewReadingInput" value="0">
+                        {{-- Default Mode: Row 1 starts empty in New Reading mode (is_new_reading = 1), switches to 0 only when editing a saved row below --}}
+                        <input type="hidden" name="is_new_reading" id="isNewReadingInput" value="1">
                         <input type="hidden" name="editing_reading_id" id="editingReadingId" value="">
 
-                        {{-- Governance & 30-Minute Lock Status Banner --}}
-                        @if(!$hasRecordedVitals)
-                            <div class="alert alert-info py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #e0f2fe; color: #0369a1;">
-                                <div class="small fw-bold">
-                                    <i class="fas fa-info-circle me-1 text-primary"></i> لم يتم تسجيل علامات حيوية لهذه العملية بعد. يمكنك إدخال القراءة الأولى لبدء المتابعة واحتساب مهلة التعديل (30 دقيقة).
+                        {{-- Compact Flowsheet Guidance & Governance Banner --}}
+                        @if($readings->isEmpty())
+                            <div class="alert alert-info py-2 px-3 rounded-4 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 border-0 shadow-sm" style="background: #e0f2fe; color: #0369a1;">
+                                <div class="small fw-semibold">
+                                    <i class="fas fa-info-circle me-1 text-primary"></i> لم يتم تسجيل أي قراءات لهذه العملية بعد. أدخل القراءة الأولى في الصف العلوي للجدول الموحد ثم اضغط حفظ لتُدرج مباشرة في السجل.
                                 </div>
                             </div>
-                        @elseif($canActuallyEditVitals)
-                            @if(!empty($isAdmin))
-                                <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #eef2ff; color: #3730a3;">
-                                    <div class="small">
-                                        <i class="fas fa-user-shield me-1 text-primary"></i> <strong>صلاحية مدير النظام (Admin):</strong> التعديل والتصحيح متاح لك دائماً. (آخر تسجيل: <strong>{{ $recordedByName }}</strong> في {{ $recordedTime->format('Y-m-d h:i A') }}).
-                                    </div>
-                                    @if($canWriteCurrentTab)
-                                        <button type="button" class="btn btn-sm btn-outline-primary bg-white fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
-                                            <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
-                                        </button>
-                                    @endif
-                                </div>
-                            @else
-                                <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #ecfdf5; color: #065f46;">
-                                    <div class="small">
-                                        <i class="fas fa-check-circle me-1 text-success"></i> <strong>متاح للتعديل:</strong> مسجلة بواسطة <strong>{{ $recordedByName }}</strong> في الساعة <strong>{{ $recordedTime->format('h:i A') }}</strong> — متبقي <strong>{{ $minutesLeft }} دقيقة</strong> على قفل التعديل التلقائي.
-                                    </div>
-                                    @if($canWriteCurrentTab)
-                                        <button type="button" class="btn btn-sm btn-outline-success bg-white fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
-                                            <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
-                                        </button>
-                                    @endif
-                                </div>
-                            @endif
                         @else
-                            <div class="alert py-2.5 px-3 rounded-4 d-flex align-items-center justify-content-between mb-3 border-0 shadow-sm" style="background: #fef2f2; color: #991b1b;">
+                            <div class="alert py-2 px-3 rounded-4 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 border-0 shadow-sm" style="background: #f8fafc; border: 1px solid #e2e8f0 !important; color: #334155;">
                                 <div class="small">
-                                    <i class="fas fa-lock me-1 text-danger"></i> <strong>القراءة الحالية مقفلة:</strong>
-                                    @if($minutesLeft <= 0)
-                                        مضى أكثر من 30 دقيقة على تسجيلها (في {{ $recordedTime->format('Y-m-d h:i A') }}). لا يمكن التعديل إلا بواسطة مدير النظام (Admin) حصراً.
-                                    @else
-                                        تم تسجيلها بواسطة موظف آخر ({{ $recordedByName }}). لا يحق تعديلها إلا لنفس الحساب أو لمدير النظام.
+                                    <i class="fas fa-clipboard-list me-1 text-primary"></i>
+                                    <strong>آلية الجدول الموحد:</strong> الصف الأول مخصص لإدخال قراءة دورية جديدة مباشرة، وتظهر النتائج المسجلة أدناه مرتبة من الأحدث للأقدم (تعديل أو حذف أي قراءة متاح لمسجّلها خلال 30 دقيقة أو لمدير النظام).
+                                    @if($hasRecordedVitals)
+                                        <span class="text-muted ms-2">| آخر تسجيل علامات: <strong>{{ $recordedByName }}</strong> ({{ $recordedTime->format('h:i A') }})</span>
                                     @endif
                                 </div>
-                                @if($canWriteCurrentTab)
-                                    <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-3" onclick="enableNewReadingMode()">
-                                        <i class="fas fa-plus-circle me-1"></i> تسجيل قراءة دورية جديدة
-                                    </button>
-                                @endif
                             </div>
                         @endif
 
-                        {{-- Horizontal Vital Signs Flowsheet Grid Table --}}
+                        {{-- Unified Vital Signs & Fluid Balance Flowsheet + History Table --}}
                         <div class="card rounded-4 border shadow-sm mb-4 overflow-hidden" id="vitalsFlowsheetCard">
-                            <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between border-bottom">
-                                <h6 class="mb-0 fw-bold text-dark">
-                                    <i class="fas fa-heartbeat text-danger me-2"></i> جدول العلامات الحيوية السريرية (Vital Signs Flowsheet)
-                                </h6>
-                                @if($hasRecordedVitals)
-                                    <span class="badge bg-white text-secondary border small">
-                                        آخر تسجيل: {{ $recordedTime->format('h:i A') }} ({{ $recordedByName }})
-                                    </span>
-                                @endif
+                            <div class="card-header bg-light py-2.5 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <h6 class="mb-0 fw-bold text-dark">
+                                        <i class="fas fa-heartbeat text-danger me-1"></i> جدول العلامات الحيوية السريرية وميزان السوائل (Intake & Output)
+                                    </h6>
+                                    <span class="badge bg-white text-secondary border small">{{ $readings->count() }} قراءة مسجلة</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    @if($canEditFluidsFlag)
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold small">
+                                            <i class="fas fa-user-nurse me-1"></i> السوائل: متاح للإدخال والتعديل (التمريض / الإدارة)
+                                        </span>
+                                    @else
+                                        <span class="badge bg-warning bg-opacity-15 text-dark border border-warning-subtle px-3 py-1.5 rounded-pill fw-semibold small">
+                                            <i class="fas fa-eye me-1 text-warning"></i> السوائل: للقراءة فقط — التعديل متاح لكادر التمريض والأدمن فقط
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
 
-                            {{-- Dynamic Banner for Editing Reading inline in the top form --}}
-                            <div id="editingReadingAlert" class="p-2.5 px-3 bg-primary bg-opacity-10 border-bottom border-primary-subtle d-flex align-items-center justify-content-between flex-wrap gap-2" style="display: none;">
+                            {{-- Dynamic Banner when Editing a Historical Reading in Row 1 --}}
+                            <div id="editingReadingAlert" class="p-2.5 px-3 bg-primary bg-opacity-10 border-bottom border-primary-subtle align-items-center justify-content-between flex-wrap gap-2" style="display: none;">
                                 <div class="small text-primary-emphasis fw-bold">
                                     <i class="fas fa-pen-square me-1 fa-lg text-primary"></i>
-                                    <span>أنت الآن تقوم بتعديل قراءة سابقة مسجلة في: </span>
+                                    <span>أنت الآن تقوم بتعديل القراءة المسجلة في: </span>
                                     <span id="editingReadingTimestamp" class="badge bg-white text-dark border border-primary-subtle px-2 py-1 mx-1"></span>
                                     <span>بواسطة: <span id="editingReadingUser" class="text-dark fw-bold"></span></span>
-                                    <span class="text-muted fw-normal d-block mt-0.5" style="font-size: 0.78rem;">عدّل القيم في خانات الجدول أدناه ثم اضغط "حفظ التحديثات السريرية" لحفظها مباشرة، أو اضغط إلغاء التعديل.</span>
+                                    <span class="text-muted fw-normal d-block mt-0.5" style="font-size: 0.78rem;">عدّل القيم في الصف الأول أدناه ثم اضغط "حفظ" لتحديث القراءة، أو اضغط "إلغاء التعديل" للعودة لإدخال قراءة جديدة.</span>
                                 </div>
                                 <button type="button" class="btn btn-sm btn-outline-danger bg-white rounded-pill px-3 fw-bold" onclick="cancelEditingReading()">
                                     <i class="fas fa-times me-1"></i> إلغاء التعديل
@@ -716,104 +976,361 @@
                             </div>
 
                             <div class="table-responsive">
-                                <table class="table table-bordered align-middle text-center mb-0" id="vitalsGridTable" style="min-width: 950px;">
-                                    <thead class="table-light text-secondary small align-middle">
+                                <table class="table table-bordered table-hover align-middle text-center mb-0 small" id="vitalsGridTable" style="min-width: 1380px;">
+                                    <thead class="align-middle small">
+                                        {{-- Group Header Row --}}
                                         <tr>
-                                            <th style="width: 12%;">
-                                                <div class="fw-bold text-danger"><i class="fas fa-tachometer-alt me-1"></i> ضغط الدم</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">BP (mmHg)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">120/80</span>
+                                            <th rowspan="2" class="bg-light text-dark fw-bold" style="min-width: 122px;">
+                                                <i class="far fa-clock me-1 text-secondary"></i> الوقت / المسجل
                                             </th>
-                                            <th style="width: 10%;">
-                                                <div class="fw-bold text-warning-emphasis"><i class="fas fa-thermometer-half me-1"></i> الحرارة</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">Temp (°C)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">36.5 - 37.5</span>
+                                            <th colspan="6" class="bg-danger bg-opacity-10 text-danger fw-bold border-bottom">
+                                                <i class="fas fa-heartbeat me-1"></i> العلامات الحيوية (Vital Signs)
                                             </th>
-                                            <th style="width: 10%;">
-                                                <div class="fw-bold text-danger"><i class="fas fa-heart me-1"></i> النبض</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">PR (bpm)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">60 - 100</span>
+                                            <th colspan="3" class="bg-primary bg-opacity-10 text-primary fw-bold border-bottom">
+                                                <i class="fas fa-arrow-alt-circle-down me-1"></i> السوائل الداخلة - Intake (ml)
                                             </th>
-                                            <th style="width: 10%;">
-                                                <div class="fw-bold text-primary"><i class="fas fa-lungs me-1"></i> التنفس</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">RR (/min)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">12 - 20</span>
+                                            <th colspan="5" class="bg-warning bg-opacity-15 text-dark fw-bold border-bottom">
+                                                <i class="fas fa-arrow-alt-circle-up me-1 text-danger"></i> السوائل الخارجة - Output (ml)
                                             </th>
-                                            <th style="width: 10%;">
-                                                <div class="fw-bold text-success"><i class="fas fa-wind me-1"></i> الأكسجين</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">SPo2 (%)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">95 - 100%</span>
+                                            <th rowspan="2" class="bg-info bg-opacity-10 text-dark fw-bold" style="min-width: 105px;">
+                                                <i class="fas fa-balance-scale me-1 text-info"></i> صافي السوائل
+                                                <div class="text-muted fw-normal" style="font-size: 0.68rem;">Balance (ml)</div>
                                             </th>
-                                            <th style="width: 12%;">
-                                                <div class="fw-bold text-secondary"><i class="fas fa-tint me-1"></i> سكر الدم</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">RBS (mg/dL)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">70 - 140</span>
+                                            <th rowspan="2" class="bg-light text-dark fw-bold" style="min-width: 112px;">
+                                                الإجراءات
                                             </th>
-                                            <th style="width: 12%;">
-                                                <div class="fw-bold text-secondary"><i class="fas fa-bolt me-1"></i> مقياس الألم</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">Pain (0 - 10)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">0 / 10</span>
+                                        </tr>
+                                        {{-- Column Sub-Headers --}}
+                                        <tr class="table-light text-secondary">
+                                            <th style="min-width: 82px;">
+                                                <div class="fw-bold text-danger">ضغط الدم</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">BP (120/80)</div>
                                             </th>
-                                            <th style="width: 12%;">
-                                                <div class="fw-bold text-secondary"><i class="fas fa-brain me-1"></i> مقياس الوعي</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">GCS (15)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">15/15</span>
+                                            <th style="min-width: 68px;">
+                                                <div class="fw-bold text-warning-emphasis">الحرارة</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Temp (°C)</div>
                                             </th>
-                                            <th style="width: 12%;">
-                                                <div class="fw-bold text-secondary"><i class="fas fa-stopwatch me-1"></i> امتلاء الشعيرات</div>
-                                                <div class="text-muted" style="font-size: 0.72rem;">CRT (sec)</div>
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.65rem;">&lt; 2 sec</span>
+                                            <th style="min-width: 66px;">
+                                                <div class="fw-bold text-danger">النبض</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">PR (bpm)</div>
+                                            </th>
+                                            <th style="min-width: 64px;">
+                                                <div class="fw-bold text-primary">التنفس</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">RR (/min)</div>
+                                            </th>
+                                            <th style="min-width: 66px;">
+                                                <div class="fw-bold text-success">الأكسجين</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">SpO2 (%)</div>
+                                            </th>
+                                            <th style="min-width: 68px;">
+                                                <div class="fw-bold text-secondary">سكر الدم</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">RBS</div>
+                                            </th>
+                                            <th class="bg-primary bg-opacity-5" style="min-width: 68px;">
+                                                <div class="fw-bold text-primary">وريدية</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">IV Fluids</div>
+                                            </th>
+                                            <th class="bg-primary bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-primary">فموي</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Oral</div>
+                                            </th>
+                                            <th class="bg-primary bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-primary">دم</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Blood</div>
+                                            </th>
+                                            <th class="bg-warning bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-danger">بول</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Urine</div>
+                                            </th>
+                                            <th class="bg-warning bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-danger">درنقة</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Drain</div>
+                                            </th>
+                                            <th class="bg-warning bg-opacity-5" style="min-width: 68px;">
+                                                <div class="fw-bold text-danger">أنبوب معدة</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">NG Tube</div>
+                                            </th>
+                                            <th class="bg-warning bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-danger">قيء</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Vomiting</div>
+                                            </th>
+                                            <th class="bg-warning bg-opacity-5" style="min-width: 62px;">
+                                                <div class="fw-bold text-danger">براز</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">Stool</div>
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="bg-white">
-                                            <td class="p-2">
-                                                <input type="text" name="bp" id="grid_bp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="120/80" value="{{ $station?->bp }}" data-original="{{ $station?->bp }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="temp" id="grid_temp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-warning-emphasis {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="37.0" value="{{ $station?->temp }}" data-original="{{ $station?->temp }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="pr" id="grid_pr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="75" value="{{ $station?->pr }}" data-original="{{ $station?->pr }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="rr" id="grid_rr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-primary {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="16" value="{{ $station?->rr }}" data-original="{{ $station?->rr }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="spo2" id="grid_spo2" class="form-control form-control-sm text-center fw-bold vital-grid-input text-success {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="98" value="{{ $station?->spo2 }}" data-original="{{ $station?->spo2 }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="rbs" id="grid_rbs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="110" value="{{ $station?->rbs }}" data-original="{{ $station?->rbs }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="pain_score" id="grid_pain_score" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="0 - 10" value="{{ $station?->pain_score }}" data-original="{{ $station?->pain_score }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="gcs" id="grid_gcs" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="15/15" value="{{ $station?->gcs }}" data-original="{{ $station?->gcs }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                            <td class="p-2">
-                                                <input type="text" name="crt" id="grid_crt" class="form-control form-control-sm text-center fw-bold vital-grid-input {{ empty($canActuallyEditVitals) ? 'bg-light' : '' }}" placeholder="< 2 sec" value="{{ $station?->crt }}" data-original="{{ $station?->crt }}" data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}" {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}>
-                                            </td>
-                                        </tr>
+                                        {{-- ROW 1: Single Horizontal Entry / Edit Row --}}
+                                        @if($canWriteCurrentTab)
+                                            <tr id="vitalsInputRow" class="table-success bg-opacity-10">
+                                                <td class="p-1.5 text-center" id="row1ModeCell">
+                                                    <span class="badge bg-success text-white rounded-pill px-2 py-1 d-inline-block">
+                                                        <i class="fas fa-plus-circle me-1"></i> قراءة جديدة
+                                                    </span>
+                                                    <div class="text-muted mt-1" style="font-size: 0.66rem;">أدخل القيم أفقياً</div>
+                                                </td>
+                                                {{-- 6 Vital Inputs --}}
+                                                <td class="p-1">
+                                                    <input type="text" name="bp" id="grid_bp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger" placeholder="120/80" value="{{ old('bp') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                <td class="p-1">
+                                                    <input type="text" name="temp" id="grid_temp" class="form-control form-control-sm text-center fw-bold vital-grid-input text-warning-emphasis" placeholder="37.0" value="{{ old('temp') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                <td class="p-1">
+                                                    <input type="text" name="pr" id="grid_pr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-danger" placeholder="75" value="{{ old('pr') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                <td class="p-1">
+                                                    <input type="text" name="rr" id="grid_rr" class="form-control form-control-sm text-center fw-bold vital-grid-input text-primary" placeholder="16" value="{{ old('rr') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                <td class="p-1">
+                                                    <input type="text" name="spo2" id="grid_spo2" class="form-control form-control-sm text-center fw-bold vital-grid-input text-success" placeholder="98" value="{{ old('spo2') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                <td class="p-1">
+                                                    <input type="text" name="rbs" id="grid_rbs" class="form-control form-control-sm text-center fw-bold vital-grid-input" placeholder="110" value="{{ old('rbs') }}" data-original="" data-original-readonly="0">
+                                                </td>
+                                                {{-- 3 Intake Fluid Inputs (Nurse & Admin Only) --}}
+                                                <td class="p-1 bg-primary bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="intake_iv_fluids" id="grid_intake_iv_fluids"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('intake_iv_fluids') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'السوائل الوريدية (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-primary bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="intake_oral" id="grid_intake_oral"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('intake_oral') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'السوائل الفموية (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-primary bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="intake_blood" id="grid_intake_blood"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('intake_blood') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'الدم ومشتقاته (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                {{-- 5 Output Fluid Inputs (Nurse & Admin Only) --}}
+                                                <td class="p-1 bg-warning bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="output_urine" id="grid_output_urine"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('output_urine') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'إدرار البول (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-warning bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="output_drain" id="grid_output_drain"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('output_drain') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'الدرنقة / المفجر (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-warning bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="output_gtube_ng" id="grid_output_gtube_ng"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('output_gtube_ng') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'أنبوب المعدة NG (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-warning bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="output_vomiting" id="grid_output_vomiting"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('output_vomiting') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'القيء (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                <td class="p-1 bg-warning bg-opacity-5">
+                                                    <input type="number" step="0.01" min="0" name="output_stool" id="grid_output_stool"
+                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                           value="{{ $canEditFluidsFlag ? old('output_stool') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'البراز (ml)' }}"
+                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                </td>
+                                                {{-- Live Balance Preview Cell --}}
+                                                <td class="p-1.5">
+                                                    <div id="fluidBalanceSummaryBox" class="rounded-2 border px-1.5 py-1 bg-light border-secondary-subtle">
+                                                        <div id="fluidNetBalanceDisplay" class="fw-bold small text-secondary">--</div>
+                                                        <div class="text-muted text-nowrap" style="font-size: 0.65rem;">
+                                                            د:<span id="fluidTotalIntakeDisplay">0</span> | خ:<span id="fluidTotalOutputDisplay">0</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {{-- Row 1 Inline Save / Cancel Buttons --}}
+                                                <td class="p-1.5">
+                                                    <div class="d-flex flex-column gap-1 align-items-center">
+                                                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 fw-bold shadow-xs text-nowrap w-100" id="row1SaveBtn">
+                                                            <i class="fas fa-save me-1"></i> حفظ
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0.5 fw-bold text-nowrap w-100 d-none" id="row1CancelEditBtn" onclick="cancelEditingReading()">
+                                                            <i class="fas fa-times me-1"></i> إلغاء
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endif
+
+                                        {{-- ROWS 2..N: Recorded Historical Readings Directly Underneath (Newest First) --}}
+                                        @forelse($readings as $r)
+                                            @php
+                                                $canManageThisReading = $canWriteCurrentTab && (
+                                                    !empty($isAdmin) || (
+                                                        auth()->check() && (
+                                                            (int)$r->user_id === (int)auth()->id() || (empty($r->user_id) && $r->resident_id === auth()->user()->doctor?->id)
+                                                        ) && now()->lte($r->created_at->copy()->addMinutes(30))
+                                                    )
+                                                );
+                                                $rIntake = (float) ($r->intake_iv_fluids ?? 0) + (float) ($r->intake_oral ?? 0) + (float) ($r->intake_blood ?? 0);
+                                                $rOutput = (float) ($r->output_urine ?? 0) + (float) ($r->output_drain ?? 0) + (float) ($r->output_gtube_ng ?? 0) + (float) ($r->output_vomiting ?? 0) + (float) ($r->output_stool ?? 0);
+                                            @endphp
+                                            <tr class="bg-white">
+                                                <td class="p-1.5 text-center">
+                                                    <div class="fw-bold text-dark text-nowrap" style="font-size: 0.78rem;">{{ $r->created_at->format('h:i A') }}</div>
+                                                    <div class="text-muted text-nowrap" style="font-size: 0.68rem;">{{ $r->created_at->format('Y-m-d') }}</div>
+                                                    <div class="text-primary fw-semibold text-truncate mx-auto" style="font-size: 0.72rem; max-width: 112px;" title="{{ $r->user?->name ?? $r->resident?->user?->name ?? 'طاقم الرعاية' }}">
+                                                        {{ $r->user?->name ?? $r->resident?->user?->name ?? 'طاقم الرعاية' }}
+                                                    </div>
+                                                </td>
+                                                {{-- 6 Recorded Vitals --}}
+                                                <td>
+                                                    @if($r->bp)
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border">{{ $r->bp }}</span>
+                                                    @else
+                                                        <span class="text-muted">--</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $r->temp ? $r->temp . '°' : '--' }}</td>
+                                                <td>{{ $r->pr ?: '--' }}</td>
+                                                <td>{{ $r->rr ?: '--' }}</td>
+                                                <td>
+                                                    @if($r->spo2)
+                                                        <span class="badge bg-success bg-opacity-10 text-success border">{{ $r->spo2 }}%</span>
+                                                    @else
+                                                        <span class="text-muted">--</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $r->rbs ?: '--' }}</td>
+                                                {{-- 3 Recorded Intake Fluids --}}
+                                                <td class="bg-primary bg-opacity-5 fw-semibold text-primary">
+                                                    {{ !is_null($r->intake_iv_fluids) ? (float) $r->intake_iv_fluids : '--' }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-5 fw-semibold text-primary">
+                                                    {{ !is_null($r->intake_oral) ? (float) $r->intake_oral : '--' }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-5 fw-semibold text-primary">
+                                                    {{ !is_null($r->intake_blood) ? (float) $r->intake_blood : '--' }}
+                                                </td>
+                                                {{-- 5 Recorded Output Fluids --}}
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
+                                                    {{ !is_null($r->output_urine) ? (float) $r->output_urine : '--' }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
+                                                    {{ !is_null($r->output_drain) ? (float) $r->output_drain : '--' }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
+                                                    {{ !is_null($r->output_gtube_ng) ? (float) $r->output_gtube_ng : '--' }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
+                                                    {{ !is_null($r->output_vomiting) ? (float) $r->output_vomiting : '--' }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
+                                                    {{ !is_null($r->output_stool) ? (float) $r->output_stool : '--' }}
+                                                </td>
+                                                {{-- Recorded Net Balance --}}
+                                                <td class="p-1.5">
+                                                    @if(!is_null($r->fluid_balance))
+                                                        <span class="badge {{ $r->fluid_balance >= 0 ? 'bg-success bg-opacity-15 text-success border border-success-subtle' : 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' }}">
+                                                            {{ $r->fluid_balance > 0 ? '+' . (float) $r->fluid_balance : (float) $r->fluid_balance }} ml
+                                                        </span>
+                                                        <div class="text-muted text-nowrap mt-0.5" style="font-size: 0.65rem;">
+                                                            د:{{ (float) $rIntake }} | خ:{{ (float) $rOutput }}
+                                                        </div>
+                                                    @else
+                                                        <span class="text-muted">--</span>
+                                                    @endif
+                                                </td>
+                                                {{-- Recorded Row Actions --}}
+                                                <td>
+                                                    @if($canManageThisReading)
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill edit-reading-btn fw-bold text-nowrap"
+                                                                    title="تعديل هذه القراءة"
+                                                                    onclick='loadReadingIntoTopForm(@json($r))'>
+                                                                <i class="fas fa-pen small me-1"></i> تعديل
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill delete-reading-btn"
+                                                                    title="حذف القراءة"
+                                                                    onclick='confirmDeleteReading("{{ route('clinical-station.readings.delete', $r->id) }}")'>
+                                                                <i class="fas fa-trash small"></i>
+                                                            </button>
+                                                        </div>
+                                                    @else
+                                                        <span class="badge bg-light text-muted border" title="مقفل (مضى أكثر من 30 دقيقة أو مسجل بحساب آخر)">
+                                                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i> مقفل
+                                                        </span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="17" class="text-muted py-3">لم يتم تسجيل قراءات سابقة حتى الآن.</td>
+                                            </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        {{-- Clinical Examination --}}
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-dark"><i class="fas fa-stethoscope text-primary me-1"></i> ملاحظات الفحص السريري (Clinical Examination):</label>
-                            <textarea name="clinical_examination" class="form-control rounded-3" rows="3" 
-                                      data-original="{{ $station?->clinical_examination }}"
-                                      data-original-readonly="{{ empty($canActuallyEditVitals) ? '1' : '0' }}"
-                                      {{ empty($canActuallyEditVitals) ? 'readonly' : '' }}
-                                      placeholder="ملاحظات الفحص العام وفحص الأجهزة الحيوية...">{{ $station?->clinical_examination }}</textarea>
-                        </div>
+                        {{-- Clinical Examination (Doctors, Residents, Surgeons & Admin only — Hidden from Nurses) --}}
+                        @if(!empty($canManageClinicalExam))
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">
+                                    <i class="fas fa-stethoscope text-primary me-1"></i> ملاحظات الفحص السريري (Clinical Examination):
+                                    <small class="text-muted fw-normal ms-1">(تُحفظ عبر زر "حفظ" في الصف الأول للجدول أعلاه)</small>
+                                </label>
+                                <textarea name="clinical_examination" class="form-control rounded-3" rows="3"
+                                          data-original="{{ $station?->clinical_examination }}"
+                                          data-original-readonly="{{ !$canWriteCurrentTab ? '1' : '0' }}"
+                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                          placeholder="ملاحظات الفحص العام وفحص الأجهزة الحيوية...">{{ $station?->clinical_examination }}</textarea>
+                            </div>
+                        @endif
 
                         {{-- Trend Charts Section (Visible only to Surgeon, Resident, and Admin - Hidden from Nurses) --}}
                         @if(!empty($canViewVitalsCharts))
-                            <div class="card rounded-4 border p-3 mb-4">
+                            <div class="card rounded-4 border p-3 mb-2">
                                 <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
                                     <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i> المنحنيات البيانية لتطور العلامات الحيوية</h6>
                                     <span class="badge bg-light text-secondary border small">{{ $readingsAsc->count() }} قراءة مسجلة</span>
@@ -838,76 +1355,6 @@
                                 </div>
                             </div>
                         @endif
-
-                        {{-- Readings Log Table --}}
-                        <div class="card rounded-4 border overflow-hidden">
-                            <div class="card-header bg-light py-2 px-3 fw-bold small text-dark d-flex align-items-center justify-content-between">
-                                <span><i class="fas fa-history text-secondary me-1"></i> سجل القراءات التاريخية للمريض</span>
-                                <span class="text-muted" style="font-size: 0.75rem;">مرتبة من الأحدث للأقدم</span>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover mb-0 align-middle text-center small">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>الوقت والتاريخ</th>
-                                            <th>الضغط</th>
-                                            <th>الحرارة</th>
-                                            <th>النبض</th>
-                                            <th>التنفس</th>
-                                            <th>الأكسجين</th>
-                                            <th>السكر</th>
-                                            <th>المسجل</th>
-                                            <th style="width: 110px;">الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($readings as $r)
-                                            @php
-                                                $canManageThisReading = !empty($isAdmin) || (
-                                                    auth()->check() && (
-                                                        (int)$r->user_id === (int)auth()->id() || (empty($r->user_id) && $r->resident_id === auth()->user()->doctor?->id)
-                                                    ) && now()->lte($r->created_at->copy()->addMinutes(30))
-                                                );
-                                            @endphp
-                                            <tr>
-                                                <td class="text-muted">{{ $r->created_at->format('Y-m-d h:i A') }}</td>
-                                                <td><span class="badge bg-danger bg-opacity-10 text-danger border">{{ $r->bp ?: '--' }}</span></td>
-                                                <td>{{ $r->temp ? $r->temp . '°C' : '--' }}</td>
-                                                <td>{{ $r->pr ? $r->pr . ' bpm' : '--' }}</td>
-                                                <td>{{ $r->rr ?: '--' }}</td>
-                                                <td><span class="badge bg-success bg-opacity-10 text-success border">{{ $r->spo2 ? $r->spo2 . '%' : '--' }}</span></td>
-                                                <td>{{ $r->rbs ?: '--' }}</td>
-                                                <td class="text-secondary">{{ $r->user?->name ?? $r->resident?->user?->name ?? 'طاقم الرعاية' }}</td>
-                                                <td>
-                                                    @if($canManageThisReading)
-                                                        <div class="d-flex align-items-center justify-content-center gap-1">
-                                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2.5 rounded-pill edit-reading-btn fw-bold" 
-                                                                    title="تعديل القراءة بالأعلى"
-                                                                    onclick='loadReadingIntoTopForm(@json($r))'>
-                                                                <i class="fas fa-pen small me-1"></i> تعديل
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill delete-reading-btn" 
-                                                                    title="حذف القراءة"
-                                                                    onclick='confirmDeleteReading("{{ route('clinical-station.readings.delete', $r->id) }}")'>
-                                                                <i class="fas fa-trash small"></i>
-                                                            </button>
-                                                        </div>
-                                                    @else
-                                                        <span class="badge bg-light text-muted border" title="مقفل (مضى أكثر من 30 دقيقة أو مسجل بحساب آخر)">
-                                                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i> مقفل
-                                                        </span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="9" class="text-muted py-3">لم يتم تسجيل قراءات أرشيفية سابقة حتى الآن.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
 
                     {{-- =============================================================== --}}
                     {{-- TAB 3: LAB & RADIOLOGY TESTS (الفحوصات والمختبر والأشعة) --}}
@@ -981,24 +1428,124 @@
                     {{-- TAB 4: MEDICAL PLAN (الخطة الطبية وتوصيات الجراحة) --}}
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'plan')
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-clipboard-check text-primary me-1"></i> الخطة الطبية وتوصيات ما قبل الجراحة (Pre-Op Plan):</label>
-                                <textarea name="notes" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="تعليمات الصيام، نقل الدم، تجهيز الصالة...">{{ $station?->notes }}</textarea>
+                        @php
+                            $surgeonSt = $surgery->surgeonStation;
+                            $protocolLabels = [
+                                'standard' => 'قياسي (علامات حيوية)',
+                                'fluid_monitoring' => 'مراقبة السوائل والعلامات',
+                                'intensive' => 'مكثف (عناية ومراقبة دقيقة)',
+                            ];
+                            $hasSurgeonSummary = $surgeonSt && (
+                                !empty($surgeonSt->treatment_plan) ||
+                                !empty($surgeonSt->notes) ||
+                                (!empty($surgeonSt->monitoring_protocol) && $surgeonSt->monitoring_protocol !== 'standard')
+                            );
+                        @endphp
+
+                        <div id="clinicalPlanGrid" class="d-flex flex-column gap-2.5">
+                            @if($hasSurgeonSummary)
+                                <div class="alert alert-light border border-primary-subtle rounded-3 py-2 px-3 mb-0 d-flex flex-wrap align-items-center gap-2 small shadow-xs" style="background: #f0f7ff;">
+                                    <span class="fw-bold text-primary">
+                                        <i class="fas fa-user-md me-1"></i> خلاصة توصية الجراح:
+                                    </span>
+                                    @if(!empty($surgeonSt->monitoring_protocol))
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill">
+                                            البروتوكول: {{ $protocolLabels[$surgeonSt->monitoring_protocol] ?? $surgeonSt->monitoring_protocol }}
+                                        </span>
+                                    @endif
+                                    @if(!empty($surgeonSt->treatment_plan))
+                                        <span class="badge bg-white text-dark border rounded-pill fw-normal text-truncate" style="max-width: 340px;" title="{{ $surgeonSt->treatment_plan }}">
+                                            <strong>الخطة:</strong> {{ $surgeonSt->treatment_plan }}
+                                        </span>
+                                    @endif
+                                    @if(!empty($surgeonSt->notes))
+                                        <span class="badge bg-white text-secondary border rounded-pill fw-normal text-truncate" style="max-width: 320px;" title="{{ $surgeonSt->notes }}">
+                                            <strong>ملاحظات:</strong> {{ $surgeonSt->notes }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
+
+                            {{-- Section 1: Pre-Op & Post-Op Surgical Instructions (2 balanced columns) --}}
+                            <div class="history-section-card">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small fw-bold text-primary">
+                                        <i class="fas fa-procedures me-1"></i> التوصيات الجراحية حسب المرحلة (Pre-Op &amp; Post-Op)
+                                    </span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="history-field-card {{ $currentPhase === 'pre_op' ? 'plan-phase-active' : '' }}">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-clipboard-check text-primary me-1"></i> توصيات ما قبل الجراحة
+                                                    <span class="text-muted fw-normal" style="font-size: 0.72rem;">(Pre-Op Plan)</span>
+                                                </label>
+                                                @if($currentPhase === 'pre_op')
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill" style="font-size: 0.66rem;">المرحلة الحالية</span>
+                                                @endif
+                                            </div>
+                                            <textarea name="notes" id="plan_notes" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="تعليمات الصيام، تحضير الدم، تجهيز الصالة...">{{ $station?->notes }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="history-field-card {{ $currentPhase === 'post_op' ? 'plan-phase-active-post' : '' }}">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-notes-medical text-success me-1"></i> توصيات ما بعد الجراحة
+                                                    <span class="text-muted fw-normal" style="font-size: 0.72rem;">(Post-Op)</span>
+                                                </label>
+                                                @if($currentPhase === 'post_op')
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill" style="font-size: 0.66rem;">المرحلة الحالية</span>
+                                                @endif
+                                            </div>
+                                            <textarea name="post_op_notes" id="plan_post_op_notes" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="العناية بالجرح، المسكنات، وقت بدء السوائل...">{{ $station?->post_op_notes }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-procedures text-success me-1"></i> توصيات وملاحظات ما بعد الجراحة (Post-Op Instructions):</label>
-                                <textarea name="post_op_notes" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="العناية بالجرح، المسكنات، وقت بدء السوائل...">{{ $station?->post_op_notes }}</textarea>
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-stethoscope text-info me-1"></i> مراجعة الأجهزة الحيوية (Review of Systems):</label>
-                                <textarea name="review_of_other_systems" class="form-control rounded-3" rows="3" 
-                                          {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                          placeholder="الصدر، البطن، الجهاز العصبي، الجهاز البولي...">{{ $station?->review_of_other_systems }}</textarea>
+
+                            {{-- Section 2: General Treatment Plan & Review of Systems (2 balanced columns) --}}
+                            <div class="history-section-card history-past">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small fw-bold text-secondary">
+                                        <i class="fas fa-stethoscope me-1"></i> الخطة العلاجية ومراجعة الأجهزة الحيوية (Plan &amp; ROS)
+                                    </span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="history-field-card">
+                                            <label class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
+                                                <i class="fas fa-file-medical text-warning"></i>
+                                                <span>الخطة العلاجية العامة</span>
+                                                <span class="text-muted fw-normal" style="font-size: 0.72rem;">(Treatment Plan)</span>
+                                            </label>
+                                            <textarea name="treatment_plan" id="plan_treatment_plan" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="خطة العلاج والمتابعة، الاستشارات المطلوبة، التحضير للخروج...">{{ $station?->treatment_plan }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="history-field-card">
+                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                <label class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-heartbeat text-info me-1"></i> مراجعة الأجهزة الحيوية
+                                                    <span class="text-muted fw-normal" style="font-size: 0.72rem;">(ROS)</span>
+                                                </label>
+                                                @if($canWriteCurrentTab)
+                                                    <button type="button" class="history-quick-chip" onclick="fillHistoryQuickText('review_of_other_systems', 'سليمة ولا توجد ملاحظات (NAD)')">سليمة NAD</button>
+                                                @endif
+                                            </div>
+                                            <textarea name="review_of_other_systems" id="plan_review_of_other_systems" class="form-control history-compact-textarea rounded-2" rows="2"
+                                                      {{ !$canWriteCurrentTab ? 'readonly' : '' }}
+                                                      placeholder="الصدر، البطن، الجهاز العصبي، الجهاز البولي...">{{ $station?->review_of_other_systems }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1007,6 +1554,12 @@
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'treatments')
                         {{-- Handled below outside standard form to support administer actions --}}
+
+                    {{-- =============================================================== --}}
+                    {{-- TAB 5B: MEDICAL SUPPLIES (المستلزمات الطبية) --}}
+                    {{-- =============================================================== --}}
+                    @elseif($activeTab === 'supplies')
+                        {{-- Handled below outside standard form to support direct floor stock dispense --}}
                     
                     {{-- =============================================================== --}}
                     {{-- TAB 6: FOLLOW UP SHEET (سجل المتابعة اليومي) --}}
@@ -1015,86 +1568,7 @@
                         {{-- Handled below outside standard form to support multi-entries --}}
 
                     {{-- =============================================================== --}}
-                    {{-- TAB 7: FLUIDS (رصد السوائل Intake & Output) --}}
-                    {{-- =============================================================== --}}
-                    @elseif($activeTab === 'fluids')
-                        <div class="row g-4">
-                            {{-- Intake Column --}}
-                            <div class="col-md-6">
-                                <div class="card rounded-3 border h-100 p-3 bg-light bg-opacity-50">
-                                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                                        <i class="fas fa-arrow-alt-circle-down me-1"></i> السوائل الداخلة (Intake)
-                                    </h6>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold">مغذي وسوائل وريدية (IV Fluids) - ml:</label>
-                                        <input type="number" name="intake_iv_fluids" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->intake_iv_fluids }}" placeholder="0">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold">سوائل عن طريق الفم (Oral Fluids) - ml:</label>
-                                        <input type="number" name="intake_oral" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->intake_oral }}" placeholder="0">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-semibold">نقل دم ومشتقاته (Blood Products) - ml:</label>
-                                        <input type="number" name="intake_blood" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->intake_blood }}" placeholder="0">
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Output Column --}}
-                            <div class="col-md-6">
-                                <div class="card rounded-3 border h-100 p-3 bg-light bg-opacity-50">
-                                    <h6 class="fw-bold text-danger border-bottom pb-2 mb-3">
-                                        <i class="fas fa-arrow-alt-circle-up me-1"></i> السوائل الخارجة (Output)
-                                    </h6>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold">إدرار البول (Urine) - ml:</label>
-                                        <input type="number" name="output_urine" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->output_urine }}" placeholder="0">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold">المفجر الجراحي (Drain) - ml:</label>
-                                        <input type="number" name="output_drain" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->output_drain }}" placeholder="0">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold">أنبوب المعدة (NG Tube) - ml:</label>
-                                        <input type="number" name="output_gtube_ng" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->output_gtube_ng }}" placeholder="0">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold">القيء (Vomiting) - ml:</label>
-                                        <input type="number" name="output_vomiting" class="form-control form-control-sm" 
-                                               {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                               value="{{ $station?->output_vomiting }}" placeholder="0">
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Net Fluid Balance Banner --}}
-                            <div class="col-12">
-                                @php
-                                    $net = $station?->fluid_balance;
-                                @endphp
-                                <div class="card rounded-3 border p-3 text-center {{ $net >= 0 ? 'bg-success bg-opacity-10 border-success-subtle' : 'bg-danger bg-opacity-10 border-danger-subtle' }}">
-                                    <span class="small fw-bold text-secondary">صافي ميزان السوائل المسجل (Net Fluid Balance):</span>
-                                    <h3 class="fw-bold mb-0 {{ $net >= 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $net !== null ? ($net > 0 ? '+' . $net : $net) . ' ml' : 'لم يُحتسب بعد' }}
-                                    </h3>
-                                </div>
-                            </div>
-                        </div>
-
-                    {{-- =============================================================== --}}
-                    {{-- TAB 8: NURSING CARE & NOTES (الرعاية التمريضية والتخريج) --}}
+                    {{-- TAB 7: NURSING CARE & NOTES (الرعاية التمريضية والتخريج) --}}
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'nursing_care')
                         <div class="row g-3">
@@ -1129,9 +1603,9 @@
                     @endif
                 </div>
 
-                {{-- Action Footer for direct update forms --}}
-                @if(!in_array($activeTab, ['treatments', 'follow_up', 'inpatient_survey', 'tests']) && $canWriteCurrentTab)
-                    <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between">
+                {{-- Action Footer for direct update forms (excluded from vitals since Row 1 has the unified Save button) --}}
+                @if(!in_array($activeTab, ['vitals', 'treatments', 'supplies', 'follow_up', 'inpatient_survey', 'tests']) && $canWriteCurrentTab)
+                    <div class="{{ $isCompactFormTab ? 'py-2 px-3' : 'p-3' }} bg-light border-top d-flex align-items-center justify-content-between">
                         <span class="text-muted small">
                             <i class="fas fa-info-circle text-info me-1"></i> المحطة السريرية تحفظ البيانات فورياً وتزامنها مع ملف المريض وقسم التمريض.
                         </span>
@@ -1749,104 +2223,373 @@
             @endif
 
             {{-- =============================================================== --}}
-            {{-- SPECIAL SUB-VIEW FOR TREATMENTS TAB --}}
+            {{-- SPECIAL SUB-VIEW FOR TREATMENTS TAB (الأدوية وجدول الإعطاء MAR) --}}
             {{-- =============================================================== --}}
             @if($activeTab === 'treatments')
                 <div class="p-4">
-                    {{-- Prescribed Medications Table --}}
-                    <div class="card rounded-3 border mb-4">
+                    {{-- Live MAR Feedback Banner --}}
+                    <div id="marToastAlert" class="alert alert-dismissible rounded-3 border-0 shadow-sm d-none align-items-center mb-3 py-2 px-3 small" role="alert">
+                        <i id="marToastIcon" class="fas fa-check-circle me-2"></i>
+                        <div id="marToastMessage" class="fw-semibold"></div>
+                        <button type="button" class="btn-close btn-sm ms-auto" onclick="document.getElementById('marToastAlert').classList.add('d-none')"></button>
+                    </div>
+
+                    @if($errors->any())
+                        <div class="alert alert-danger rounded-3 border-0 shadow-xs py-2 px-3 small mb-3">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            {{ $errors->first() }}
+                        </div>
+                    @endif
+
+                    {{-- Form to prescribe new medication from Pharmacy Catalog or free text (Resident / Doctor / Surgeon / Admin only) --}}
+                    @if($canPrescribeTreatments)
+                        <div class="card rounded-3 border mb-4 bg-light bg-opacity-50 shadow-xs">
+                            <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-prescription text-primary me-2"></i> إضافة أمر دوائي (اختيار من الصيدلية أو كتابة حرة + تحديد التكرار والمدة)
+                                </h6>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
+                                    <i class="fas fa-user-md me-1"></i> صلاحية الطبيب / المقيم
+                                </span>
+                            </div>
+                            <div class="card-body p-3">
+                                <form action="{{ route('clinical-station.treatments.store', $surgery) }}" method="POST" id="prescribeMedicationForm">
+                                    @csrf
+                                    <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                    <input type="hidden" name="medicine_id" id="medPrescriptionMedicineId" value="{{ old('medicine_id') }}">
+
+                                    <div class="row g-2 align-items-end mb-2">
+                                        <div class="col-lg-5 col-md-12">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <label class="form-label small fw-bold text-dark mb-0">اسم الدواء (من دليل الصيدلية أو كتابة مباشرة): <span class="text-danger">*</span></label>
+                                                <span id="medCatalogLinkedBadge" class="badge bg-success bg-opacity-10 text-success border border-success-subtle d-none" style="font-size: 0.68rem;">
+                                                    <i class="fas fa-pills me-1"></i> مرتبط بالصيدلية
+                                                    <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" onclick="clearSelectedPharmacyMedicine()" title="إلغاء الربط"></button>
+                                                </span>
+                                            </div>
+                                            <div class="mar-autocomplete-wrap">
+                                                <input type="text"
+                                                       name="description"
+                                                       id="medPrescriptionSearchInput"
+                                                       class="form-control form-control-sm rounded-2"
+                                                       value="{{ old('description') }}"
+                                                       autocomplete="off"
+                                                       required
+                                                       data-search-url="{{ route('clinical-station.medicines.search') }}"
+                                                       placeholder="ابحث باسم الدواء في الصيدلية أو اكتب اسماً مباشرة (مثال: Ceftriaxone 1g)...">
+                                                <div id="medPrescriptionSuggestions" class="mar-suggestions-dropdown"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-4 col-6">
+                                            <label class="form-label small fw-bold text-dark mb-1">الجرعة:</label>
+                                            <input type="text" name="dosage" id="medPrescriptionDosageInput" class="form-control form-control-sm rounded-2" value="{{ old('dosage') }}" placeholder="مثال: 1g / 1 vial">
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-4 col-6">
+                                            <label class="form-label small fw-bold text-dark mb-1">طريقة الإعطاء:</label>
+                                            <select name="route" id="medPrescriptionRouteSelect" class="form-select form-select-sm rounded-2">
+                                                <option value="">-- اختر --</option>
+                                                <option value="IV" @selected(old('route') === 'IV')>وريدي (IV)</option>
+                                                <option value="Infusion" @selected(old('route') === 'Infusion')>تسريب وريدي (Infusion)</option>
+                                                <option value="IM" @selected(old('route') === 'IM')>عضلي (IM)</option>
+                                                <option value="Oral" @selected(old('route') === 'Oral')>فموي (Oral)</option>
+                                                <option value="SC" @selected(old('route') === 'SC')>تحت الجلد (SC)</option>
+                                                <option value="Nebulizer" @selected(old('route') === 'Nebulizer')>تبخير (Nebulizer)</option>
+                                                <option value="Topical" @selected(old('route') === 'Topical')>موضعي (Topical)</option>
+                                                <option value="Drops" @selected(old('route') === 'Drops')>قطرة (Drops)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-4">
+                                            <label class="form-label small fw-semibold text-dark mb-1">وقت البدء:</label>
+                                            <input type="datetime-local" name="start_at" id="medStartAtInput" class="form-control form-control-sm rounded-2" value="{{ old('start_at', now()->format('Y-m-d\TH:i')) }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-lg-3 col-md-4">
+                                            <label class="form-label small fw-bold text-dark mb-1">التكرار:</label>
+                                            <select name="frequency_preset" id="medFrequencyPreset" class="form-select form-select-sm rounded-2" onchange="updateMarSchedulePreview()">
+                                                @foreach(\App\Models\SurgeryTreatment::FREQUENCY_PRESETS as $presetKey => $presetMeta)
+                                                    <option value="{{ $presetKey }}"
+                                                            data-mode="{{ $presetMeta['mode'] }}"
+                                                            data-interval="{{ $presetMeta['interval_hours'] ?? '' }}"
+                                                            @selected(old('frequency_preset', 'q8h') === $presetKey)>
+                                                        {{ $presetMeta['label'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-4" id="medCustomTimingWrapper">
+                                            <label class="form-label small fw-semibold text-dark mb-1">وصف التوقيت (اختياري):</label>
+                                            <input type="text" name="timing" id="medCustomTimingInput" class="form-control form-control-sm rounded-2" value="{{ old('timing') }}" placeholder="مثل: كل 8 ساعات بعد الأكل">
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-4" id="medDurationWrapper">
+                                            <label class="form-label small fw-bold text-dark mb-1">المدة:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="duration_value" id="medDurationValue" class="form-control rounded-start-2" min="1" max="365" value="{{ old('duration_value', 1) }}" oninput="updateMarSchedulePreview()">
+                                                <select name="duration_unit" id="medDurationUnit" class="form-select rounded-end-2" onchange="updateMarSchedulePreview()" style="max-width: 95px;">
+                                                    <option value="days" @selected(old('duration_unit', 'days') === 'days')>أيام</option>
+                                                    <option value="hours" @selected(old('duration_unit') === 'hours')>ساعات</option>
+                                                    <option value="weeks" @selected(old('duration_unit') === 'weeks')>أسابيع</option>
+                                                    <option value="doses" @selected(old('duration_unit') === 'doses')>جرعات</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-12">
+                                            <div class="d-flex flex-column gap-1">
+                                                <div id="medSchedulePreviewBadge" class="badge bg-info bg-opacity-10 text-info border border-info-subtle py-1 px-2 text-wrap" style="font-size: 0.71rem;">
+                                                    سيتم توليد 3 مربعات تنفيذ
+                                                </div>
+                                                <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100 fw-bold shadow-xs">
+                                                    <i class="fas fa-plus-circle me-1"></i> إضافة الدواء وتوليد الجدول
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 mt-1">
+                                            <input type="text" name="admin_notes" class="form-control form-control-sm rounded-2" value="{{ old('admin_notes') }}" placeholder="ملاحظات الطبيب أو إرشادات الإعطاء للتمريض (اختياري)...">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Prescribed Medications & MAR Checkbox Grid --}}
+                    <div class="card rounded-3 border">
                         <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-pills text-warning me-2"></i> جدول الأدوية والعلاجات الموصوفة</h6>
-                                <span class="badge bg-primary rounded-pill">{{ $treatments->count() }} دواء</span>
-                                @if(isset($floorLocation) && $floorLocation)
-                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning-subtle" title="المخزن المعتمد لغرفة المريض">
-                                        <i class="fas fa-warehouse text-warning me-1"></i> عهدة: {{ $floorLocation->name }} ({{ $surgery->room?->room_number ? 'غرفة ' . $surgery->room->room_number : 'طابق ' . ($surgery->room?->floor ?? '--') }})
+                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-pills text-warning me-2"></i> جدول الأدوية وجدول الإعطاء (MAR)</h6>
+                                <span class="badge bg-primary rounded-pill">{{ $medicationTreatments->count() }} دواء</span>
+                                @if($canConfirmTreatmentDoses && !$canPrescribeTreatments)
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">
+                                        <i class="fas fa-check-square me-1"></i> دور التمريض: تأشير التنفيذ وتأكيد الصرف لكل جرعة
+                                    </span>
+                                @elseif($canPrescribeTreatments && !$canConfirmTreatmentDoses)
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
+                                        <i class="fas fa-eye me-1"></i> متابعة تأشيرات التمريض على جدول الجرعات (للاطلاع فقط)
+                                    </span>
+                                @elseif($canConfirmTreatmentDoses && $canPrescribeTreatments)
+                                    <span class="badge bg-dark bg-opacity-10 text-dark border">
+                                        <i class="fas fa-shield-alt me-1"></i> تحكم كامل بالوصف وتأشير الجرعات
                                     </span>
                                 @endif
                             </div>
-                            @if($canWriteCurrentTab && isset($floorLocation) && $floorLocation)
-                                <button type="button" class="btn btn-sm btn-warning rounded-pill px-3 py-1 fw-bold text-dark shadow-xs" data-bs-toggle="modal" data-bs-target="#dispenseFloorStockModal">
-                                    <i class="fas fa-box-open me-1"></i> صرف علاج / مستلزم من عهدة الطابق
-                                </button>
-                            @endif
+                            <div class="text-muted small">
+                                <i class="fas fa-warehouse text-secondary me-1"></i> مصدر الأدوية: الصيدلية المركزية للمستشفى
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle text-center small">
+                            <table class="table table-hover mb-0 align-middle text-center small" id="marTreatmentsTable">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>#</th>
-                                        <th class="text-start">اسم الدواء والعلاج</th>
-                                        <th>الجرعة</th>
-                                        <th>التوقيت والتكرار</th>
-                                        <th>المدة</th>
-                                        <th>الحالة</th>
-                                        <th>آخر إعطاء</th>
-                                        @if($canWriteCurrentTab)
-                                            <th>الإجراء التمريضي</th>
+                                        <th style="width: 40px;">#</th>
+                                        <th class="text-start" style="min-width: 210px;">اسم الدواء والجرعة</th>
+                                        <th style="min-width: 155px;">التكرار والمدة والإنجاز</th>
+                                        <th class="text-start" style="min-width: 340px;">جدول أوقات التكرار وتأكيد الصرف</th>
+                                        @if($canPrescribeTreatments)
+                                            <th style="width: 60px;">حذف</th>
                                         @endif
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($treatments as $idx => $t)
-                                        <tr>
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td class="text-start fw-bold text-dark">
-                                                {{ $t->description }}
+                                    @forelse($medicationTreatments as $idx => $t)
+                                        @php
+                                            $freq = $t->resolveEffectiveFrequency();
+                                            $slots = $t->getDoseSlots(auth()->user(), !empty($isAdmin));
+                                            $expectedCount = $t->expected_doses_count;
+                                            $adminCount = $t->administered_count;
+                                            $progressPercent = ($expectedCount && $expectedCount > 0)
+                                                ? min(100, (int) round(($adminCount / $expectedCount) * 100))
+                                                : null;
+                                            $isCompleted = ($expectedCount !== null && $adminCount >= $expectedCount);
+                                            $slotsByDay = collect($slots)->groupBy('day_number');
+                                        @endphp
+                                        <tr data-treatment-row="{{ $t->id }}">
+                                            <td class="fw-bold text-muted">{{ $idx + 1 }}</td>
+                                            <td class="text-start">
+                                                <div class="fw-bold text-dark d-flex align-items-center gap-1 flex-wrap">
+                                                    <span>{{ $t->description }}</span>
+                                                    @if($t->medicine_id)
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle" style="font-size: 0.65rem;">
+                                                            <i class="fas fa-capsules me-1"></i> صيدلية
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.65rem;">
+                                                            وصف سريري
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                                    @if($t->dosage)
+                                                        <span class="badge bg-light text-dark border">{{ $t->dosage }}</span>
+                                                    @endif
+                                                    @if($t->route)
+                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">{{ $t->route }}</span>
+                                                    @endif
+                                                    @if($t->prescribedBy)
+                                                        <span class="text-muted" style="font-size: 0.7rem;">
+                                                            <i class="fas fa-user-md me-1"></i>{{ $t->prescribedBy->name }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                @if($t->admin_notes)
+                                                    <div class="text-muted mt-1" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-info-circle text-info me-1"></i>{{ $t->admin_notes }}
+                                                    </div>
+                                                @endif
+
                                                 @if($t->batch)
                                                     <div class="mt-1">
-                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle" style="font-size: 0.72rem;">
-                                                            <i class="fas fa-boxes me-1"></i> عهدة: {{ $t->batch->location?->name ?? 'مخزن الطابق' }}
-                                                            @if($t->batch->manufacturer_lot_number) | Lot: {{ $t->batch->manufacturer_lot_number }} @endif
-                                                            @if($t->batch->expiry_date) | نفاد: {{ $t->batch->expiry_date->format('Y-m') }} @endif
+                                                        <span class="badge bg-light text-secondary border" style="font-size: 0.68rem;">
+                                                            سجل قديم ({{ $t->batch->location?->name ?? 'عهدة' }})
                                                         </span>
                                                     </div>
                                                 @endif
                                             </td>
-                                            <td><span class="badge bg-light text-dark border">{{ $t->dosage ?: 'حسب الإرشاد' }}</span></td>
-                                            <td>{{ $t->timing ?: '--' }}</td>
-                                            <td>{{ $t->duration_value ? $t->duration_value . ' ' . $t->duration_unit : '--' }}</td>
+
                                             <td>
-                                                @if($t->status === 'administered')
-                                                    <span class="badge bg-success bg-opacity-25 text-success border border-success-subtle">تم الإعطاء</span>
-                                                @else
-                                                    <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning-subtle">قيد الانتظار</span>
-                                                @endif
+                                                <div class="fw-semibold text-dark">{{ $t->timing ?: 'حسب الإرشاد' }}</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">
+                                                    المدة: <span class="fw-bold text-dark">{{ $t->duration_label }}</span>
+                                                </div>
+                                                <div class="mt-1">
+                                                    @if($t->status === 'cancelled')
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">ملغى</span>
+                                                    @elseif($t->is_prn)
+                                                        <span id="marProgressBadge_{{ $t->id }}" class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
+                                                            عند اللزوم — {{ $adminCount }} جرعة
+                                                        </span>
+                                                    @else
+                                                        <span id="marProgressBadge_{{ $t->id }}" class="badge {{ $isCompleted ? 'bg-success text-white' : ($adminCount > 0 ? 'bg-primary bg-opacity-10 text-primary border border-primary-subtle' : 'bg-warning bg-opacity-20 text-warning-emphasis border border-warning-subtle') }}">
+                                                            {{ $adminCount }} / {{ $expectedCount }} {{ $isCompleted ? 'مكتمل ✓' : ($adminCount > 0 ? 'قيد الإعطاء' : 'قيد الانتظار') }}
+                                                        </span>
+                                                        <div class="progress mt-1 mx-auto" style="height: 5px; max-width: 110px;">
+                                                            <div id="marProgressBar_{{ $t->id }}"
+                                                                 class="progress-bar {{ $isCompleted ? 'bg-success' : 'bg-primary' }}"
+                                                                 role="progressbar"
+                                                                 style="width: {{ $progressPercent ?? 0 }}%;"
+                                                                 aria-valuenow="{{ $progressPercent ?? 0 }}"
+                                                                 aria-valuemin="0"
+                                                                 aria-valuemax="100"></div>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </td>
-                                            <td class="text-muted" style="font-size: 0.75rem;">
-                                                @if($t->administered_at)
-                                                    {{ $t->administered_at->format('h:i A') }} ({{ $t->administeredBy?->name ?? 'تمريض' }})
-                                                @else
-                                                    --
-                                                @endif
-                                            </td>
-                                            @if($canWriteCurrentTab)
-                                                <td>
-                                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                                        @if($t->status !== 'administered')
-                                                            <form action="{{ route('clinical-station.treatments.administer', $t) }}" method="POST">
-                                                                @csrf
-                                                                <input type="hidden" name="status" value="administered">
-                                                                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 py-1 fw-bold" title="تسجيل إعطاء الجرعة">
-                                                                    <i class="fas fa-check me-1"></i> تم الإعطاء
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                        <form action="{{ route('clinical-station.treatments.delete', $t) }}" method="POST" onsubmit="return confirm('هل تريد حذف هذا الدواء؟');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" title="حذف الدواء">
-                                                                <i class="fas fa-trash-alt"></i>
+
+                                            <td class="text-start">
+                                                @if($t->status === 'cancelled')
+                                                    <span class="text-muted small"><i class="fas fa-ban me-1"></i> تم إيقاف هذا الأمر الدوائي</span>
+                                                @elseif($t->is_prn)
+                                                    <div class="d-flex flex-wrap align-items-center gap-2" id="marPrnList_{{ $t->id }}">
+                                                        @foreach($slots as $slot)
+                                                            <label class="mar-dose-chip mar-dose-checked {{ (!$canConfirmTreatmentDoses || !$slot['can_undo']) ? 'mar-dose-locked' : '' }}"
+                                                                   title="{{ $slot['administered_by_name'] }} — {{ $slot['administered_at_label'] }}">
+                                                                <input type="checkbox"
+                                                                       class="form-check-input mar-dose-checkbox"
+                                                                       data-treatment-id="{{ $t->id }}"
+                                                                       data-slot-index="{{ $slot['slot_index'] }}"
+                                                                       data-url="{{ route('clinical-station.treatments.toggle-dose', $t) }}"
+                                                                       data-dose-number="{{ $slot['dose_number'] }}"
+                                                                       data-scheduled-label="{{ $slot['administered_at_label'] }}"
+                                                                       data-is-prn="1"
+                                                                       checked
+                                                                       onchange="window.handleMarCheckboxToggle(this)"
+                                                                       @disabled(!$canConfirmTreatmentDoses || !$slot['can_undo'])>
+                                                                <span class="mar-dose-meta">
+                                                                    <span class="mar-dose-time">ج{{ $slot['dose_number'] }} • {{ $slot['administered_at_label'] }}</span>
+                                                                    <span class="mar-dose-stamp">✓ {{ $slot['administered_by_name'] }}</span>
+                                                                </span>
+                                                            </label>
+                                                        @endforeach
+
+                                                        @if($canConfirmTreatmentDoses)
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold"
+                                                                    data-treatment-id="{{ $t->id }}"
+                                                                    data-url="{{ route('clinical-station.treatments.toggle-dose', $t) }}"
+                                                                    onclick="window.addPrnDoseConfirmation(this)">
+                                                                <i class="fas fa-plus me-1"></i> تأشير صرف جرعة عند اللزوم
                                                             </button>
-                                                        </form>
+                                                        @elseif(empty($slots))
+                                                            <span class="text-muted small">بانتظار تأشير التمريض عند اللزوم</span>
+                                                        @endif
                                                     </div>
+                                                @else
+                                                    <div class="mar-dose-grid">
+                                                        @foreach($slotsByDay as $dayNum => $daySlots)
+                                                            <div class="mar-day-row">
+                                                                @if($slotsByDay->count() > 1)
+                                                                    <span class="mar-day-label">اليوم {{ $dayNum }} ({{ $daySlots->first()['scheduled_date_label'] }})</span>
+                                                                @endif
+                                                                @foreach($daySlots as $slot)
+                                                                    @php
+                                                                        $locked = !$canConfirmTreatmentDoses || ($slot['is_checked'] && !$slot['can_undo']);
+                                                                        $chipClass = $slot['is_checked']
+                                                                            ? 'mar-dose-checked'
+                                                                            : ($slot['is_overdue'] ? 'mar-dose-overdue' : ($slot['is_due'] ? 'mar-dose-due' : ''));
+                                                                        if ($locked) {
+                                                                            $chipClass .= ' mar-dose-locked';
+                                                                        }
+                                                                    @endphp
+                                                                    <label class="mar-dose-chip {{ $chipClass }}"
+                                                                           id="marChip_{{ $t->id }}_{{ $slot['slot_index'] }}"
+                                                                           title="{{ $slot['is_checked'] ? ('صُرف الساعة '.$slot['administered_at_label'].' بواسطة '.($slot['administered_by_name'] ?? 'التمريض')) : ('موعد الجرعة '.$slot['dose_number'].': '.$slot['scheduled_time_label']) }}">
+                                                                        <input type="checkbox"
+                                                                               class="form-check-input mar-dose-checkbox"
+                                                                               data-treatment-id="{{ $t->id }}"
+                                                                               data-slot-index="{{ $slot['slot_index'] }}"
+                                                                               data-url="{{ route('clinical-station.treatments.toggle-dose', $t) }}"
+                                                                               data-dose-number="{{ $slot['dose_number'] }}"
+                                                                               data-scheduled-label="{{ $slot['scheduled_time_label'] }}"
+                                                                               data-is-due="{{ $slot['is_due'] ? '1' : '0' }}"
+                                                                               data-is-overdue="{{ $slot['is_overdue'] ? '1' : '0' }}"
+                                                                               onchange="window.handleMarCheckboxToggle(this)"
+                                                                               @checked($slot['is_checked'])
+                                                                               @disabled($locked)>
+                                                                        <span class="mar-dose-meta">
+                                                                            <span class="mar-dose-time">ج{{ $slot['dose_number'] }} • {{ $slot['scheduled_time_label'] }}</span>
+                                                                            <span class="mar-dose-stamp" id="marStamp_{{ $t->id }}_{{ $slot['slot_index'] }}">
+                                                                                @if($slot['is_checked'])
+                                                                                    ✓ {{ $slot['administered_at_label'] }} • {{ $slot['administered_by_name'] ?? 'تمريض' }}
+                                                                                @elseif($slot['is_overdue'])
+                                                                                    <span class="text-warning-emphasis">مستحقة الآن</span>
+                                                                                @endif
+                                                                            </span>
+                                                                        </span>
+                                                                    </label>
+                                                                @endforeach
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </td>
+
+                                            @if($canPrescribeTreatments)
+                                                <td>
+                                                    <form action="{{ route('clinical-station.treatments.delete', $t) }}" method="POST" onsubmit="return confirm('هل تريد حذف هذا الأمر الدوائي من جدول المريض؟');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" title="حذف الدواء">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </form>
                                                 </td>
                                             @endif
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="{{ $canWriteCurrentTab ? '8' : '7' }}" class="text-muted py-4">
-                                                لا توجد علاجات أو أدوية موصوفة مسبقاً لهذه العملية.
+                                            <td colspan="{{ $canPrescribeTreatments ? '5' : '4' }}" class="text-muted py-4">
+                                                <i class="fas fa-prescription-bottle fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                                لا توجد أوامر دوائية مسجلة لهذا المريض حتى الآن.
                                             </td>
                                         </tr>
                                     @endforelse
@@ -1854,124 +2597,516 @@
                             </table>
                         </div>
                     </div>
+                </div>
 
-                    {{-- Form to prescribe new medication (if write allowed) --}}
-                    @if($canWriteCurrentTab)
-                        <div class="card rounded-3 border bg-light bg-opacity-50 p-3">
-                            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-plus-circle text-success me-1"></i> إضافة دواء أو أمر علاجي جديد</h6>
-                            <form action="{{ route('clinical-station.treatments.store', $surgery) }}" method="POST">
-                                @csrf
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="form-label small fw-semibold">اسم الدواء والشكل الصيدلاني:</label>
-                                        <input type="text" name="description" class="form-control form-control-sm rounded-2" required placeholder="مثال: Ceftriaxone 1g IV">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label small fw-semibold">الجرعة:</label>
-                                        <input type="text" name="dosage" class="form-control form-control-sm rounded-2" placeholder="مثال: 1 vial">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-semibold">التوقيت والتكرار:</label>
-                                        <input type="text" name="timing" class="form-control form-control-sm rounded-2" placeholder="مثال: كل 12 ساعة">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100 fw-bold">
-                                            <i class="fas fa-plus me-1"></i> حفظ وإضافة للعلاجات
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    @endif
+                <script>
+                    (function () {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
-                    {{-- Modal: Dispense from Floor Sub-Store --}}
-                    @if($canWriteCurrentTab && isset($floorLocation) && $floorLocation)
-                        <div class="modal fade" id="dispenseFloorStockModal" tabindex="-1" aria-labelledby="dispenseFloorStockModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content rounded-3 shadow border-0">
-                                    <div class="modal-header bg-warning bg-opacity-10 border-bottom py-2.5 px-3">
-                                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="dispenseFloorStockModalLabel">
-                                            <i class="fas fa-box-open text-warning"></i> صرف علاج / مستلزم من عهدة الطابق
-                                        </h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <form action="{{ route('clinical-station.treatments.dispense-floor-stock', $surgery) }}" method="POST">
-                                        @csrf
-                                        <div class="modal-body p-3">
-                                            <div class="alert alert-warning p-2 mb-3 d-flex align-items-center gap-2 small border border-warning-subtle" role="alert">
-                                                <i class="fas fa-info-circle text-warning fs-5"></i>
-                                                <div>
-                                                    يتم الصرف والخصم التلقائي من <strong>{{ $floorLocation->name }}</strong> لغرفة المريض ({{ $surgery->room?->room_number ?? '--' }} - {{ $surgery->room?->floor ?? '--' }}).
-                                                </div>
-                                            </div>
+                        function escapeHtml(str) {
+                            return String(str ?? '')
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#039;');
+                        }
 
-                                            <div class="mb-3">
-                                                <label class="form-label small fw-bold text-dark">اختر المادة / الوجبة من عهدة الطابق: <span class="text-danger">*</span></label>
-                                                @if(isset($floorStockBatches) && $floorStockBatches->isNotEmpty())
-                                                    <select name="batch_id" id="dispense_batch_id" class="form-select form-select-sm rounded-2" required onchange="updateDispenseMaxQty(this)">
-                                                        <option value="" disabled selected>-- اختر الدواء أو المستلزم المتوفر في الطابق --</option>
-                                                        @foreach($floorStockBatches as $b)
-                                                            <option value="{{ $b->id }}" data-max="{{ $b->current_qty }}" data-unit="{{ $b->product?->unit ?? 'جرعة/قطعة' }}">
-                                                                {{ $b->product?->name }} [المتوفر: {{ $b->current_qty }} {{ $b->product?->unit ?? 'قطعة' }}] (Lot: {{ $b->manufacturer_lot_number ?: $b->internal_barcode }} - نفاد: {{ $b->expiry_date?->format('Y-m') }})
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                @else
-                                                    <div class="alert alert-secondary py-2 px-3 small mb-0">
-                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i> لا توجد وجبات متوفرة برصيد موجب حالياً في مخزن هذا الطابق ({{ $floorLocation->name }}).
-                                                    </div>
-                                                @endif
-                                            </div>
+                        function showMarToast(message, isSuccess = true) {
+                            const box = document.getElementById('marToastAlert');
+                            const msgEl = document.getElementById('marToastMessage');
+                            const iconEl = document.getElementById('marToastIcon');
+                            if (!box || !msgEl || !iconEl) return;
 
-                                            <div class="row g-2 mb-3">
-                                                <div class="col-6">
-                                                    <label class="form-label small fw-bold text-dark">الكمية المصروفة: <span class="text-danger">*</span></label>
-                                                    <div class="input-group input-group-sm">
-                                                        <input type="number" name="quantity" id="dispense_qty" class="form-control rounded-start-2" min="1" value="1" required>
-                                                        <span class="input-group-text rounded-end-2 small" id="dispense_unit_label">قطعة</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label small fw-semibold text-dark">طريقة الإعطاء / التوقيت:</label>
-                                                    <input type="text" name="timing" class="form-control form-control-sm rounded-2" placeholder="مثال: فوري IV / تضميد">
-                                                </div>
-                                            </div>
+                            box.classList.remove('d-none', 'alert-success', 'alert-danger');
+                            box.classList.add('d-flex', isSuccess ? 'alert-success' : 'alert-danger');
+                            iconEl.className = isSuccess ? 'fas fa-check-circle me-2' : 'fas fa-exclamation-triangle me-2';
+                            msgEl.textContent = message;
+                        }
 
-                                            <div class="mb-2">
-                                                <label class="form-label small fw-semibold text-dark">ملاحظات التمريض:</label>
-                                                <input type="text" name="admin_notes" class="form-control form-control-sm rounded-2" placeholder="أي تعليمات أو ملاحظات إضافية...">
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer bg-light py-2 px-3">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
-                                            @if(isset($floorStockBatches) && $floorStockBatches->isNotEmpty())
-                                                <button type="submit" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold text-dark shadow-xs">
-                                                    <i class="fas fa-check-circle me-1"></i> تأكيد الصرف والخصم من الطابق
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                        function updateProgressRow(treatmentId, data) {
+                            const badge = document.getElementById('marProgressBadge_' + treatmentId);
+                            const bar = document.getElementById('marProgressBar_' + treatmentId);
 
-                        <script>
-                            function updateDispenseMaxQty(select) {
-                                const option = select.options[select.selectedIndex];
-                                const max = option.getAttribute('data-max');
-                                const unit = option.getAttribute('data-unit') || 'قطعة';
-                                const qtyInput = document.getElementById('dispense_qty');
-                                const unitLabel = document.getElementById('dispense_unit_label');
-                                if (max && qtyInput) {
-                                    qtyInput.max = max;
-                                }
-                                if (unitLabel) {
-                                    unitLabel.textContent = unit;
+                            if (badge) {
+                                if (data.is_prn) {
+                                    badge.className = 'badge bg-info bg-opacity-10 text-info border border-info-subtle';
+                                    badge.textContent = 'عند اللزوم — ' + (data.administered_count ?? 0) + ' جرعة';
+                                } else {
+                                    const expected = data.expected_doses_count ?? 1;
+                                    const count = data.administered_count ?? 0;
+                                    const completed = count >= expected;
+                                    if (completed) {
+                                        badge.className = 'badge bg-success text-white';
+                                        badge.textContent = count + ' / ' + expected + ' مكتمل ✓';
+                                    } else if (count > 0) {
+                                        badge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary-subtle';
+                                        badge.textContent = count + ' / ' + expected + ' قيد الإعطاء';
+                                    } else {
+                                        badge.className = 'badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning-subtle';
+                                        badge.textContent = count + ' / ' + expected + ' قيد الانتظار';
+                                    }
                                 }
                             }
-                        </script>
+
+                            if (bar && data.progress_percent !== null && data.progress_percent !== undefined) {
+                                bar.style.width = data.progress_percent + '%';
+                                bar.setAttribute('aria-valuenow', data.progress_percent);
+                                if (data.progress_percent >= 100) {
+                                    bar.classList.remove('bg-primary');
+                                    bar.classList.add('bg-success');
+                                } else {
+                                    bar.classList.remove('bg-success');
+                                    bar.classList.add('bg-primary');
+                                }
+                            }
+                        }
+
+                        window.handleMarCheckboxToggle = async function (checkbox) {
+                            const treatmentId = checkbox.getAttribute('data-treatment-id');
+                            const slotIndex = parseInt(checkbox.getAttribute('data-slot-index'), 10);
+                            const url = checkbox.getAttribute('data-url');
+                            const isPrn = checkbox.getAttribute('data-is-prn') === '1';
+                            const desiredChecked = checkbox.checked;
+
+                            checkbox.disabled = true;
+
+                            try {
+                                const res = await fetch(url, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken
+                                    },
+                                    body: JSON.stringify({
+                                        slot_index: isNaN(slotIndex) ? null : slotIndex,
+                                        checked: desiredChecked ? 1 : 0
+                                    })
+                                });
+
+                                const data = await res.json();
+                                if (!res.ok || !data.ok) {
+                                    checkbox.checked = !desiredChecked;
+                                    checkbox.disabled = false;
+                                    showMarToast(data.message || 'تعذر تحديث حالة الجرعة.', false);
+                                    return;
+                                }
+
+                                checkbox.checked = !!data.checked;
+                                checkbox.disabled = false;
+
+                                if (isPrn && !data.checked) {
+                                    const label = checkbox.closest('label.mar-dose-chip');
+                                    if (label) label.remove();
+                                } else {
+                                    const chip = document.getElementById('marChip_' + treatmentId + '_' + slotIndex);
+                                    const stamp = document.getElementById('marStamp_' + treatmentId + '_' + slotIndex);
+                                    if (chip) {
+                                        chip.classList.remove('mar-dose-checked', 'mar-dose-overdue', 'mar-dose-due');
+                                        if (data.checked) {
+                                            chip.classList.add('mar-dose-checked');
+                                        } else if (checkbox.getAttribute('data-is-overdue') === '1') {
+                                            chip.classList.add('mar-dose-overdue');
+                                        } else if (checkbox.getAttribute('data-is-due') === '1') {
+                                            chip.classList.add('mar-dose-due');
+                                        }
+                                    }
+                                    if (stamp) {
+                                        if (data.checked) {
+                                            stamp.textContent = '✓ ' + (data.administered_at_label || '') + ' • ' + (data.administered_by_name || 'تمريض');
+                                        } else if (checkbox.getAttribute('data-is-overdue') === '1') {
+                                            stamp.innerHTML = '<span class="text-warning-emphasis">مستحقة الآن</span>';
+                                        } else {
+                                            stamp.textContent = '';
+                                        }
+                                    }
+                                }
+
+                                updateProgressRow(treatmentId, data);
+                                showMarToast(data.message || 'تم تحديث حالة الجرعة بنجاح.', true);
+                            } catch (e) {
+                                checkbox.checked = !desiredChecked;
+                                checkbox.disabled = false;
+                                showMarToast('حدث خطأ في الاتصال بالخادم أثناء تحديث الجرعة.', false);
+                            }
+                        };
+
+                        window.addPrnDoseConfirmation = async function (btn) {
+                            const treatmentId = btn.getAttribute('data-treatment-id');
+                            const url = btn.getAttribute('data-url');
+                            btn.disabled = true;
+
+                            try {
+                                const res = await fetch(url, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken
+                                    },
+                                    body: JSON.stringify({
+                                        slot_index: null,
+                                        checked: 1
+                                    })
+                                });
+                                const data = await res.json();
+                                btn.disabled = false;
+
+                                if (!res.ok || !data.ok) {
+                                    showMarToast(data.message || 'تعذر توثيق الجرعة.', false);
+                                    return;
+                                }
+
+                                const container = document.getElementById('marPrnList_' + treatmentId);
+                                if (container) {
+                                    const label = document.createElement('label');
+                                    label.className = 'mar-dose-chip mar-dose-checked';
+                                    const doseNum = data.administered_count || 1;
+                                    const timeLabel = escapeHtml(data.administered_at_label || '');
+                                    const nurseName = escapeHtml(data.administered_by_name || 'تمريض');
+                                    const safeUrl = escapeHtml(url);
+                                    const slotIdx = parseInt(data.slot_index ?? 0, 10);
+
+                                    label.innerHTML =
+                                        '<input type="checkbox" class="form-check-input mar-dose-checkbox" ' +
+                                        'data-treatment-id="' + escapeHtml(treatmentId) + '" ' +
+                                        'data-slot-index="' + slotIdx + '" ' +
+                                        'data-url="' + safeUrl + '" ' +
+                                        'data-is-prn="1" checked onchange="window.handleMarCheckboxToggle(this)">' +
+                                        '<span class="mar-dose-meta">' +
+                                        '<span class="mar-dose-time">ج' + doseNum + ' • ' + timeLabel + '</span>' +
+                                        '<span class="mar-dose-stamp">✓ ' + nurseName + '</span>' +
+                                        '</span>';
+                                    container.insertBefore(label, btn);
+                                }
+
+                                updateProgressRow(treatmentId, data);
+                                showMarToast(data.message || 'تم تسجيل الجرعة الإضافية بنجاح.', true);
+                            } catch (e) {
+                                btn.disabled = false;
+                                showMarToast('حدث خطأ في الاتصال بالخادم أثناء توثيق الجرعة.', false);
+                            }
+                        };
+
+                        // Live schedule dose count calculator in Prescribe form
+                        window.updateMarSchedulePreview = function () {
+                            const presetEl = document.getElementById('medFrequencyPreset');
+                            const durValEl = document.getElementById('medDurationValue');
+                            const durUnitEl = document.getElementById('medDurationUnit');
+                            const durWrapEl = document.getElementById('medDurationWrapper');
+                            const previewEl = document.getElementById('medSchedulePreviewBadge');
+                            if (!presetEl || !previewEl) return;
+
+                            const selectedOpt = presetEl.options[presetEl.selectedIndex];
+                            const mode = selectedOpt ? selectedOpt.getAttribute('data-mode') : 'scheduled';
+                            const interval = parseInt(selectedOpt?.getAttribute('data-interval') || '24', 10) || 24;
+
+                            if (mode === 'prn') {
+                                if (durWrapEl) durWrapEl.classList.add('opacity-50');
+                                previewEl.textContent = 'يتم التأشير يدوياً عند اللزوم (PRN)';
+                                return;
+                            }
+                            if (durWrapEl) durWrapEl.classList.remove('opacity-50');
+
+                            if (mode === 'stat') {
+                                previewEl.textContent = 'سيتم توليد مربع تأشير لجرعة واحدة فورية';
+                                return;
+                            }
+
+                            const durVal = Math.max(1, parseInt(durValEl?.value || '1', 10) || 1);
+                            const durUnit = durUnitEl?.value || 'days';
+                            let doses = 1;
+                            if (durUnit === 'doses') {
+                                doses = Math.min(60, durVal);
+                            } else if (durUnit === 'hours') {
+                                doses = Math.min(60, Math.max(1, Math.ceil(durVal / interval)));
+                            } else if (durUnit === 'weeks') {
+                                doses = Math.min(60, Math.max(1, Math.floor((durVal * 7 * 24) / interval)));
+                            } else {
+                                doses = Math.min(60, Math.max(1, Math.floor((durVal * 24) / interval)));
+                            }
+
+                            previewEl.textContent = 'سيتم توليد ' + doses + ' مربعات تأشير (جرعات)';
+                        };
+
+                        window.clearSelectedPharmacyMedicine = function () {
+                            const hiddenId = document.getElementById('medPrescriptionMedicineId');
+                            const badge = document.getElementById('medCatalogLinkedBadge');
+                            if (hiddenId) hiddenId.value = '';
+                            if (badge) badge.classList.add('d-none');
+                        };
+
+                        // Pharmacy catalog live autocomplete
+                        const searchInp = document.getElementById('medPrescriptionSearchInput');
+                        const dropdown = document.getElementById('medPrescriptionSuggestions');
+                        const hiddenMedId = document.getElementById('medPrescriptionMedicineId');
+                        const linkedBadge = document.getElementById('medCatalogLinkedBadge');
+                        const routeSelect = document.getElementById('medPrescriptionRouteSelect');
+                        let searchTimer = null;
+
+                        async function fetchMedicines(query) {
+                            if (!searchInp || !dropdown) return;
+                            const baseUrl = searchInp.getAttribute('data-search-url');
+                            try {
+                                const res = await fetch(baseUrl + '?q=' + encodeURIComponent(query), {
+                                    headers: { 'Accept': 'application/json' }
+                                });
+                                const data = await res.json();
+                                const items = data.medicines || [];
+                                if (!items.length) {
+                                    dropdown.innerHTML = '<div class="p-2 text-muted small text-center">لا توجد نتائج مطابقة في الصيدلية — يمكنك اعتماد النص المكتوب مباشرة كوصف سريري.</div>';
+                                    dropdown.style.display = 'block';
+                                    return;
+                                }
+
+                                dropdown.innerHTML = items.map(function (m) {
+                                    const fullLabel = [m.name, m.strength, m.dosage_form ? '(' + m.dosage_form + ')' : ''].filter(Boolean).join(' ');
+                                    const stockBadge = m.total_stock > 0
+                                        ? '<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle" style="font-size:0.68rem;">متوفر: ' + m.total_stock + ' ' + escapeHtml(m.main_unit || 'علبة') + '</span>'
+                                        : '<span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size:0.68rem;">الرصيد: 0</span>';
+                                    return '<div class="mar-suggestion-item" data-id="' + m.id + '" data-label="' + escapeHtml(fullLabel) + '" data-form="' + escapeHtml(m.dosage_form || '') + '">' +
+                                        '<div class="d-flex justify-content-between align-items-center gap-2">' +
+                                        '<div class="fw-bold text-dark small">' + escapeHtml(fullLabel) + '</div>' +
+                                        stockBadge +
+                                        '</div>' +
+                                        (m.generic_name ? '<div class="text-muted" style="font-size:0.71rem;">الاسم العلمي: ' + escapeHtml(m.generic_name) + '</div>' : '') +
+                                        '</div>';
+                                }).join('');
+
+                                dropdown.querySelectorAll('.mar-suggestion-item').forEach(function (el) {
+                                    el.addEventListener('click', function () {
+                                        searchInp.value = el.getAttribute('data-label') || '';
+                                        if (hiddenMedId) hiddenMedId.value = el.getAttribute('data-id') || '';
+                                        if (linkedBadge) linkedBadge.classList.remove('d-none');
+
+                                        const form = (el.getAttribute('data-form') || '').toLowerCase();
+                                        if (routeSelect && !routeSelect.value) {
+                                            if (form.includes('vial') || form.includes('iv') || form.includes('infusion')) {
+                                                routeSelect.value = 'IV';
+                                            } else if (form.includes('amp')) {
+                                                routeSelect.value = 'IV';
+                                            } else if (form.includes('tab') || form.includes('cap') || form.includes('syrup')) {
+                                                routeSelect.value = 'Oral';
+                                            }
+                                        }
+                                        dropdown.style.display = 'none';
+                                    });
+                                });
+
+                                dropdown.style.display = 'block';
+                            } catch (e) {
+                                dropdown.style.display = 'none';
+                            }
+                        }
+
+                        if (searchInp && dropdown) {
+                            searchInp.addEventListener('input', function () {
+                                // Clear pharmacy linkage when user manually edits text
+                                if (hiddenMedId && hiddenMedId.value) {
+                                    window.clearSelectedPharmacyMedicine();
+                                }
+                                clearTimeout(searchTimer);
+                                const val = searchInp.value.trim();
+                                searchTimer = setTimeout(function () {
+                                    fetchMedicines(val);
+                                }, 180);
+                            });
+
+                            searchInp.addEventListener('focus', function () {
+                                if (dropdown.innerHTML.trim() === '') {
+                                    fetchMedicines(searchInp.value.trim());
+                                } else {
+                                    dropdown.style.display = 'block';
+                                }
+                            });
+
+                            document.addEventListener('click', function (ev) {
+                                if (!searchInp.contains(ev.target) && !dropdown.contains(ev.target)) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        window.updateMarSchedulePreview();
+                    })();
+                </script>
+            @endif
+
+            {{-- =============================================================== --}}
+            {{-- SPECIAL SUB-VIEW FOR SUPPLIES TAB (المستلزمات الطبية فقط) --}}
+            {{-- =============================================================== --}}
+            @if($activeTab === 'supplies')
+                <div class="p-4">
+                    {{-- Direct Dispense Supply Card (if write permission) --}}
+                    @if($canWriteCurrentTab)
+                        <div class="card rounded-3 border mb-4 bg-light bg-opacity-50">
+                            <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-box-open text-info me-2"></i> صرف مستلزم طبي من عهدة الطابق
+                                </h6>
+                                @if(isset($floorLocation) && $floorLocation)
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
+                                        <i class="fas fa-warehouse me-1"></i> عهدة: {{ $floorLocation->name }} ({{ $surgery->room?->room_number ? 'غرفة ' . $surgery->room->room_number : 'طابق ' . ($surgery->room?->floor ?? '--') }})
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="card-body p-3">
+                                @if(!isset($floorLocation) || !$floorLocation)
+                                    <div class="alert alert-warning mb-0 py-2 px-3 small">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> لم يتم العثور على مخزن فرعي مرتبط بطابق غرفة هذا المريض، لذا يتعذر صرف المستلزمات مباشرة من عهدة الطابق.
+                                    </div>
+                                @elseif(isset($floorSupplyBatches) && $floorSupplyBatches->isNotEmpty())
+                                    <form action="{{ route('clinical-station.supplies.dispense', $surgery) }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="expected_type" value="supply">
+                                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-lg-4 col-md-6">
+                                                <label class="form-label small fw-bold text-dark mb-1">اختر المستلزم الطبي: <span class="text-danger">*</span></label>
+                                                <select name="batch_id" id="sup_dispense_batch_id" class="form-select form-select-sm rounded-2" required onchange="updateDispenseMaxQty(this, 'sup_dispense_qty', 'sup_dispense_unit_label')">
+                                                    <option value="" disabled selected>-- اختر المستلزم المتوفر في عهدة الطابق --</option>
+                                                    @foreach($floorSupplyBatches as $b)
+                                                        <option value="{{ $b->id }}" data-max="{{ $b->current_qty }}" data-unit="{{ $b->product?->unit ?? 'قطعة' }}">
+                                                            [{{ $b->product?->category ?: 'مستلزم' }}] {{ $b->product?->name }} — المتوفر: {{ $b->current_qty }} {{ $b->product?->unit ?? 'قطعة' }} ({{ $b->manufacturer_lot_number ?: $b->internal_barcode ?: '#'.$b->id }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-lg-2 col-md-3 col-6">
+                                                <label class="form-label small fw-bold text-dark mb-1">الكمية: <span class="text-danger">*</span></label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" name="quantity" id="sup_dispense_qty" class="form-control rounded-start-2" min="1" value="1" required>
+                                                    <span class="input-group-text rounded-end-2 small" id="sup_dispense_unit_label">قطعة</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-2 col-md-3 col-6">
+                                                <label class="form-label small fw-semibold text-dark mb-1">سبب / مكان الاستخدام:</label>
+                                                <input type="text" name="timing" class="form-control form-control-sm rounded-2" placeholder="مثال: تضميد / كانيولا / قسطرة">
+                                            </div>
+                                            <div class="col-lg-2 col-md-6">
+                                                <label class="form-label small fw-semibold text-dark mb-1">ملاحظات:</label>
+                                                <input type="text" name="admin_notes" class="form-control form-control-sm rounded-2" placeholder="ملاحظة إضافية...">
+                                            </div>
+                                            <div class="col-lg-2 col-md-6">
+                                                <button type="submit" class="btn btn-info text-white btn-sm rounded-pill w-100 fw-bold shadow-xs">
+                                                    <i class="fas fa-check-circle me-1"></i> صرف وتوثيق
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                @else
+                                    <div class="alert alert-secondary mb-0 py-2 px-3 small">
+                                        <i class="fas fa-info-circle text-secondary me-1"></i> لا توجد مستلزمات طبية برصيد موجب حالياً في مخزن هذا الطابق ({{ $floorLocation->name }}).
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
                     @endif
+
+                    {{-- Dispensed Supplies Table --}}
+                    <div class="card rounded-3 border">
+                        <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-boxes text-info me-2"></i> سجل المستلزمات الطبية المصروفة للمريض</h6>
+                                <span class="badge bg-info text-white rounded-pill">{{ $supplyTreatments->count() }} مستلزم</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle text-center small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th class="text-start">اسم المستلزم وتفاصيل الوجبة</th>
+                                        <th>التصنيف</th>
+                                        <th>الكمية المصروفة</th>
+                                        <th>بيان الاستخدام والملاحظات</th>
+                                        <th>وقت الصرف والكادر</th>
+                                        @if($canWriteCurrentTab)
+                                            <th>إجراء</th>
+                                        @endif
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($supplyTreatments as $idx => $sup)
+                                        <tr>
+                                            <td>{{ $idx + 1 }}</td>
+                                            <td class="text-start fw-bold text-dark">
+                                                {{ $sup->description }}
+                                                @if($sup->batch)
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-warehouse me-1"></i> عهدة: {{ $sup->batch->location?->name ?? 'مخزن الطابق' }}
+                                                            @if($sup->batch->manufacturer_lot_number) | Lot: {{ $sup->batch->manufacturer_lot_number }} @endif
+                                                            @if($sup->batch->expiry_date) | نفاد: {{ $sup->batch->expiry_date->format('Y-m') }} @endif
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-secondary border">{{ $sup->batch?->product?->category ?: 'مستلزمات' }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info bg-opacity-10 text-dark border border-info-subtle fw-bold">{{ $sup->dosage ?: (($sup->quantity ?? 1) . ' قطعة') }}</span>
+                                            </td>
+                                            <td class="text-start">
+                                                <div class="text-dark">{{ $sup->timing ?: 'صرف مستلزم' }}</div>
+                                                @if($sup->admin_notes)
+                                                    <small class="text-muted d-block">{{ $sup->admin_notes }}</small>
+                                                @endif
+                                            </td>
+                                            <td class="text-muted" style="font-size: 0.75rem;">
+                                                @if($sup->administered_at)
+                                                    {{ $sup->administered_at->format('Y-m-d h:i A') }}
+                                                    <div class="text-dark fw-semibold">{{ $sup->administeredBy?->name ?? 'كادر التمريض' }}</div>
+                                                @else
+                                                    {{ $sup->created_at?->format('Y-m-d h:i A') ?? '--' }}
+                                                @endif
+                                            </td>
+                                            @if($canWriteCurrentTab)
+                                                <td>
+                                                    <form action="{{ route('clinical-station.treatments.delete', $sup) }}" method="POST" onsubmit="return confirm('هل تريد حذف سجل هذا المستلزم؟');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" title="حذف السجل">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            @endif
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="{{ $canWriteCurrentTab ? '7' : '6' }}" class="text-muted py-4">
+                                                لا توجد مستلزمات طبية مصروفة لهذه العملية حتى الآن.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
+            @endif
+
+            @if($activeTab === 'supplies')
+                <script>
+                    window.updateDispenseMaxQty = function(select, qtyInputId = 'sup_dispense_qty', unitLabelId = 'sup_dispense_unit_label') {
+                        const option = select.options[select.selectedIndex];
+                        if (!option) return;
+                        const max = option.getAttribute('data-max');
+                        const unit = option.getAttribute('data-unit') || 'قطعة';
+                        const qtyInput = document.getElementById(qtyInputId);
+                        const unitLabel = document.getElementById(unitLabelId);
+                        if (max && qtyInput) {
+                            qtyInput.max = max;
+                        }
+                        if (unitLabel) {
+                            unitLabel.textContent = unit;
+                        }
+                    };
+                </script>
             @endif
 
             {{-- =============================================================== --}}
@@ -2040,28 +3175,6 @@
                     @endforelse
                 </div>
             @endif
-
-            {{-- Complete Station Phase Button --}}
-            <div class="p-3 bg-white border-top d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small">المرحلة الحالية: <strong>{{ $currentPhase === 'pre_op' ? 'ما قبل العملية' : 'ما بعد العملية' }}</strong></span>
-                </div>
-                <div>
-                    <form action="{{ route('clinical-station.complete', $surgery) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من إنهاء هذه المرحلة السريرية؟');">
-                        @csrf
-                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
-                        @if($currentPhase === 'pre_op')
-                            <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
-                                <i class="fas fa-check-double me-1"></i> إنهاء محطة ما قبل العملية ونقل للصالة
-                            </button>
-                        @else
-                            <button type="submit" class="btn btn-purple rounded-pill px-4 fw-bold shadow-sm" style="background: #7c3aed; color: #fff;">
-                                <i class="fas fa-flag-checkered me-1"></i> إنهاء متابعة ما بعد العملية
-                            </button>
-                        @endif
-                    </form>
-                </div>
-            </div>
         </div>
     @endif
 </div>
@@ -2078,15 +3191,26 @@
 window.loadReadingIntoTopForm = function(reading) {
     if (!reading) return;
 
-    // 1. تحديد معرف القراءة المراد تعديلها
+    // 1. تحديد معرف القراءة المراد تعديلها وتبديل وضع الصف الأول للتعديل
     const idInput = document.getElementById('editingReadingId');
     if (idInput) idInput.value = reading.id;
 
-    // إلغاء وضع القراءة الدورية الجديدة إن كان مفعلاً
     const isNewInput = document.getElementById('isNewReadingInput');
     if (isNewInput) isNewInput.value = '0';
 
-    // 2. تعبئة خانات الجدول العلوي بالقيم
+    const inputRow = document.getElementById('vitalsInputRow');
+    if (inputRow) {
+        inputRow.classList.remove('table-success');
+        inputRow.classList.add('table-primary');
+    }
+    const modeCell = document.getElementById('row1ModeCell');
+    if (modeCell) {
+        modeCell.innerHTML = '<span class="badge bg-primary text-white rounded-pill px-2 py-1 d-inline-block"><i class="fas fa-pen me-1"></i> قيد التعديل</span><div class="text-primary mt-1" style="font-size: 0.66rem;">تعديل قراءة سابقة</div>';
+    }
+    const cancelRowBtn = document.getElementById('row1CancelEditBtn');
+    if (cancelRowBtn) cancelRowBtn.classList.remove('d-none');
+
+    // 2. تعبئة خانات العلامات الحيوية الـ 6 بالقيم
     const setGridVal = function(id, val) {
         const inp = document.getElementById(id);
         if (inp) {
@@ -2105,20 +3229,42 @@ window.loadReadingIntoTopForm = function(reading) {
     setGridVal('grid_rr', reading.rr);
     setGridVal('grid_spo2', reading.spo2);
     setGridVal('grid_rbs', reading.rbs);
-    setGridVal('grid_pain_score', reading.pain_score);
-    setGridVal('grid_gcs', reading.gcs);
-    setGridVal('grid_crt', reading.crt);
 
-    // ملاحظات الفحص السريري
-    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
-    if (examTextarea) {
-        if (reading.clinical_examination || reading.notes) {
-            examTextarea.value = reading.clinical_examination || reading.notes || '';
+    // تعبئة حقول السوائل الـ 8 (القراءة فقط لغير التمريض/الأدمن)
+    const setFluidGridVal = function(id, val) {
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        inp.value = (val !== null && val !== undefined) ? val : '';
+        if (inp.getAttribute('data-fluid-editable') === '1') {
+            inp.removeAttribute('readonly');
+            inp.removeAttribute('disabled');
+            inp.classList.remove('bg-light');
+            inp.style.border = '2px solid #2563eb';
+            inp.style.backgroundColor = '#eff6ff';
         }
-        examTextarea.removeAttribute('readonly');
-        examTextarea.style.border = '2px solid #2563eb';
-        examTextarea.style.backgroundColor = '#eff6ff';
+    };
+
+    setFluidGridVal('grid_intake_iv_fluids', reading.intake_iv_fluids);
+    setFluidGridVal('grid_intake_oral', reading.intake_oral);
+    setFluidGridVal('grid_intake_blood', reading.intake_blood);
+    setFluidGridVal('grid_output_urine', reading.output_urine);
+    setFluidGridVal('grid_output_drain', reading.output_drain);
+    setFluidGridVal('grid_output_gtube_ng', reading.output_gtube_ng);
+    setFluidGridVal('grid_output_vomiting', reading.output_vomiting);
+    setFluidGridVal('grid_output_stool', reading.output_stool);
+    if (typeof window.updateLiveFluidBalance === 'function') {
+        window.updateLiveFluidBalance();
     }
+
+    @if(!empty($canManageClinicalExam))
+        const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
+        if (examTextarea) {
+            examTextarea.value = reading.clinical_examination || '';
+            examTextarea.removeAttribute('readonly');
+            examTextarea.style.border = '2px solid #2563eb';
+            examTextarea.style.backgroundColor = '#eff6ff';
+        }
+    @endif
 
     // 3. إظهار شارة التعديل العلوية
     const alertBox = document.getElementById('editingReadingAlert');
@@ -2146,11 +3292,26 @@ window.loadReadingIntoTopForm = function(reading) {
 };
 
 window.cancelEditingReading = function() {
-    // 1. تصفير معرف القراءة
+    // 1. تصفير معرف القراءة والعودة لوضع القراءة الجديدة في الصف الأول
     const idInput = document.getElementById('editingReadingId');
     if (idInput) idInput.value = '';
 
-    // 2. استرجاع القيم الأصلية
+    const isNewInput = document.getElementById('isNewReadingInput');
+    if (isNewInput) isNewInput.value = '1';
+
+    const inputRow = document.getElementById('vitalsInputRow');
+    if (inputRow) {
+        inputRow.classList.remove('table-primary');
+        inputRow.classList.add('table-success');
+    }
+    const modeCell = document.getElementById('row1ModeCell');
+    if (modeCell) {
+        modeCell.innerHTML = '<span class="badge bg-success text-white rounded-pill px-2 py-1 d-inline-block"><i class="fas fa-plus-circle me-1"></i> قراءة جديدة</span><div class="text-muted mt-1" style="font-size: 0.66rem;">أدخل القيم أفقياً</div>';
+    }
+    const cancelRowBtn = document.getElementById('row1CancelEditBtn');
+    if (cancelRowBtn) cancelRowBtn.classList.add('d-none');
+
+    // 2. تفريغ خانات الإدخال وإعادة حالة القراءة فقط الأصلية
     const resetGridVal = function(id) {
         const inp = document.getElementById(id);
         if (inp) {
@@ -2160,6 +3321,9 @@ window.cancelEditingReading = function() {
             if (inp.getAttribute('data-original-readonly') === '1') {
                 inp.setAttribute('readonly', 'readonly');
                 inp.classList.add('bg-light');
+            } else {
+                inp.removeAttribute('readonly');
+                inp.classList.remove('bg-light');
             }
         }
     };
@@ -2170,19 +3334,30 @@ window.cancelEditingReading = function() {
     resetGridVal('grid_rr');
     resetGridVal('grid_spo2');
     resetGridVal('grid_rbs');
-    resetGridVal('grid_pain_score');
-    resetGridVal('grid_gcs');
-    resetGridVal('grid_crt');
 
-    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
-    if (examTextarea) {
-        examTextarea.value = examTextarea.getAttribute('data-original') || '';
-        examTextarea.style.border = '';
-        examTextarea.style.backgroundColor = '';
-        if (examTextarea.getAttribute('data-original-readonly') === '1') {
-            examTextarea.setAttribute('readonly', 'readonly');
-        }
+    resetGridVal('grid_intake_iv_fluids');
+    resetGridVal('grid_intake_oral');
+    resetGridVal('grid_intake_blood');
+    resetGridVal('grid_output_urine');
+    resetGridVal('grid_output_drain');
+    resetGridVal('grid_output_gtube_ng');
+    resetGridVal('grid_output_vomiting');
+    resetGridVal('grid_output_stool');
+    if (typeof window.updateLiveFluidBalance === 'function') {
+        window.updateLiveFluidBalance();
     }
+
+    @if(!empty($canManageClinicalExam))
+        const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
+        if (examTextarea) {
+            examTextarea.value = examTextarea.getAttribute('data-original') || '';
+            examTextarea.style.border = '';
+            examTextarea.style.backgroundColor = '';
+            if (examTextarea.getAttribute('data-original-readonly') === '1') {
+                examTextarea.setAttribute('readonly', 'readonly');
+            }
+        }
+    @endif
 
     // 3. إخفاء شارة التعديل
     const alertBox = document.getElementById('editingReadingAlert');
@@ -2190,42 +3365,13 @@ window.cancelEditingReading = function() {
 };
 
 window.enableNewReadingMode = function() {
-    // تصفير معرف القراءة في حال كان هناك تعديل سابق
-    const editIdInput = document.getElementById('editingReadingId');
-    if (editIdInput) editIdInput.value = '';
-
-    const alertBox = document.getElementById('editingReadingAlert');
-    if (alertBox) alertBox.style.display = 'none';
-
-    const hiddenInput = document.getElementById('isNewReadingInput');
-    if (hiddenInput) {
-        hiddenInput.value = '1';
-    }
-    const table = document.getElementById('vitalsGridTable');
-    if (table) {
-        table.querySelectorAll('input').forEach(function(inp) {
-            inp.removeAttribute('readonly');
-            inp.removeAttribute('disabled');
-            inp.classList.remove('bg-light');
-            inp.value = '';
-            inp.style.border = '2px solid #16a34a';
-            inp.style.backgroundColor = '#f0fdf4';
-        });
-        const firstInp = document.getElementById('grid_bp') || table.querySelector('input[name="bp"]');
-        if (firstInp) firstInp.focus();
-    }
-    const examTextarea = document.querySelector('textarea[name="clinical_examination"]');
-    if (examTextarea) {
-        examTextarea.removeAttribute('readonly');
-        examTextarea.value = '';
-        examTextarea.style.border = '2px solid #16a34a';
-        examTextarea.style.backgroundColor = '#f0fdf4';
-    }
-
+    window.cancelEditingReading();
     const tableCard = document.getElementById('vitalsFlowsheetCard') || document.getElementById('vitalsGridTable');
     if (tableCard) {
         tableCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    const firstInp = document.getElementById('grid_bp');
+    if (firstInp) firstInp.focus();
 };
 
 window.confirmDeleteReading = function(deleteUrl) {
@@ -2255,7 +3401,81 @@ window.confirmDeleteReading = function(deleteUrl) {
     }
 };
 
+window.fillHistoryQuickText = function(fieldName, value) {
+    const el = document.getElementById('hist_' + fieldName)
+        || document.getElementById('plan_' + fieldName)
+        || document.querySelector('#clinicalHistoryGrid textarea[name="' + fieldName + '"], #clinicalPlanGrid textarea[name="' + fieldName + '"]');
+    if (!el || el.readOnly || el.disabled) {
+        return;
+    }
+    el.value = value;
+    el.focus();
+};
+
+window.updateLiveFluidBalance = function() {
+    const val = (id) => {
+        const el = document.getElementById(id);
+        if (!el || el.value === '' || isNaN(parseFloat(el.value))) return null;
+        return parseFloat(el.value);
+    };
+
+    const intakeIds = ['grid_intake_iv_fluids', 'grid_intake_oral', 'grid_intake_blood'];
+    const outputIds = ['grid_output_urine', 'grid_output_drain', 'grid_output_gtube_ng', 'grid_output_vomiting', 'grid_output_stool'];
+
+    let totalIntake = 0;
+    let totalOutput = 0;
+    let hasAny = false;
+
+    intakeIds.forEach((id) => {
+        const v = val(id);
+        if (v !== null) {
+            totalIntake += v;
+            hasAny = true;
+        }
+    });
+
+    outputIds.forEach((id) => {
+        const v = val(id);
+        if (v !== null) {
+            totalOutput += v;
+            hasAny = true;
+        }
+    });
+
+    const intakeEl = document.getElementById('fluidTotalIntakeDisplay');
+    const outputEl = document.getElementById('fluidTotalOutputDisplay');
+    const netEl = document.getElementById('fluidNetBalanceDisplay');
+    const boxEl = document.getElementById('fluidBalanceSummaryBox');
+
+    if (intakeEl) intakeEl.textContent = Math.round(totalIntake * 100) / 100;
+    if (outputEl) outputEl.textContent = Math.round(totalOutput * 100) / 100;
+
+    if (netEl && boxEl) {
+        if (!hasAny) {
+            netEl.textContent = '--';
+            netEl.className = 'fw-bold small text-secondary';
+            boxEl.className = 'rounded-2 border px-1.5 py-1 bg-light border-secondary-subtle';
+        } else {
+            const net = Math.round((totalIntake - totalOutput) * 100) / 100;
+            netEl.textContent = (net > 0 ? '+' : '') + net + ' ml';
+            if (net >= 0) {
+                netEl.className = 'fw-bold small text-success';
+                boxEl.className = 'rounded-2 border px-1.5 py-1 bg-success bg-opacity-10 border-success-subtle';
+            } else {
+                netEl.className = 'fw-bold small text-danger';
+                boxEl.className = 'rounded-2 border px-1.5 py-1 bg-danger bg-opacity-10 border-danger-subtle';
+            }
+        }
+    }
+};
+
 document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('.fluid-grid-input').forEach(function (inp) {
+        inp.addEventListener('input', window.updateLiveFluidBalance);
+    });
+    if (document.getElementById('vitalsFlowsheetCard')) {
+        window.updateLiveFluidBalance();
+    }
     @if($activeTab === 'vitals' && !empty($canViewVitalsCharts) && $readingsAsc->count() > 0)
         const labels = @json($readingsAsc->map(fn($r) => $r->created_at->format('h:i A')));
         

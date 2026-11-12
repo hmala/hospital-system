@@ -1220,8 +1220,11 @@ class SurgeryController extends Controller
         if ($prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
             \Log::info('Surgery treatments for surgery '.$surgery->id.': '.json_encode($prescribedMedications['surgery_treatments'][$surgery->id]));
 
-            // Delete existing treatments
-            $surgery->surgeryTreatments()->delete();
+            // Delete existing prescribed medications (without wiping dispensed floor supplies or stock-issued meds)
+            $surgery->surgeryTreatments()
+                ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
+                ->whereNull('batch_id')
+                ->delete();
 
             // Save new treatments
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
@@ -1232,6 +1235,7 @@ class SurgeryController extends Controller
                     \Log::info('Creating treatment for index '.$index);
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
+                        'item_type' => SurgeryTreatment::TYPE_MEDICATION,
                         'description' => $treatment['description'],
                         'dosage' => $treatment['dosage'] ?? null,
                         'timing' => $treatment['timing'] ?? null,

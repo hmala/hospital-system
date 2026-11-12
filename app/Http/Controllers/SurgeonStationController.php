@@ -117,12 +117,16 @@ class SurgeonStationController extends Controller
         // حفظ العلاجات المهيكلة في جدول surgery_treatments
         $prescribedMedications = $request->input('prescribed_medications');
         if ($prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
-            $surgery->surgeryTreatments()->delete();
+            $surgery->surgeryTreatments()
+                ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
+                ->whereNull('batch_id')
+                ->delete();
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
             foreach ($treatments as $index => $treatment) {
                 if (! empty($treatment['description'])) {
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
+                        'item_type' => SurgeryTreatment::TYPE_MEDICATION,
                         'description' => $treatment['description'],
                         'dosage' => $treatment['dosage'] ?? null,
                         'timing' => $treatment['timing'] ?? null,

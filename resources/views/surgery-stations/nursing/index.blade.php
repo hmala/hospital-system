@@ -451,8 +451,8 @@
                                     <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
                                         <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                                             <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-pills text-primary fs-5"></i>
-                                                <h6 class="mb-0 fw-bold text-dark">المواد والوجبات المتوفرة في عهدة الطابق</h6>
+                                                <i class="fas fa-boxes text-primary fs-5"></i>
+                                                <h6 class="mb-0 fw-bold text-dark">المستلزمات والمواد المتوفرة في عهدة الطابق</h6>
                                             </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="badge bg-primary text-white rounded-pill px-3 py-1.5" id="stockItemsCountBadge">{{ $stockBatches->count() }} مادة</span>
@@ -474,7 +474,6 @@
                                                 <div class="col-md-6 d-flex align-items-center gap-1.5 flex-wrap justify-content-md-end">
                                                     <span class="text-muted small me-1">تصفية:</span>
                                                     <button type="button" class="btn btn-xs btn-dark rounded-pill px-2.5 py-1 stock-filter-btn active" data-filter="all">الكل</button>
-                                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="medicine">💊 أدوية</button>
                                                     <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="supplies">🩹 مستلزمات</button>
                                                     <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="low">⚠️ نفاد</button>
                                                     <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="expiring">⏳ قريبة</button>
@@ -487,7 +486,7 @@
                                                 <table class="table table-hover align-middle mb-0" id="floorStockTable">
                                                     <thead class="table-light">
                                                         <tr>
-                                                            <th class="py-2.5 px-3">المادة / الدواء</th>
+                                                            <th class="py-2.5 px-3">المستلزم / المادة</th>
                                                             <th class="py-2.5 text-center">الرصيد الحالي</th>
                                                             <th class="py-2.5 text-center">تاريخ الصلاحية</th>
                                                             <th class="py-2.5 text-center">رقم الوجبة</th>
@@ -501,8 +500,8 @@
                                                                 $isExpiringSoon = $batch->expiry_date && $batch->expiry_date->diffInDays(now()) <= 60;
                                                                 $isLowStock = $batch->current_qty <= ($batch->product?->alert_quantity ?? 5);
                                                                 $categoryRaw = mb_strtolower($batch->product?->category ?? '');
-                                                                $isMedicine = str_contains($categoryRaw, 'أدوية') || str_contains($categoryRaw, 'دواء') || str_contains($categoryRaw, 'pharma') || str_contains($categoryRaw, 'med');
-                                                                $isSupply = str_contains($categoryRaw, 'مستلزم') || str_contains($categoryRaw, 'supply') || str_contains($categoryRaw, 'جراح');
+                                                                $isMedicine = $batch->product?->isMedication() ?? false;
+                                                                $isSupply = $batch->product?->isSupply() ?? false;
                                                             @endphp
                                                             <tr class="stock-row"
                                                                 data-name="{{ mb_strtolower($batch->product?->name ?? '') }}"
@@ -662,9 +661,7 @@
                 const matchesText = !query || name.includes(query) || barcode.includes(query);
 
                 let matchesCategory = true;
-                if (currentFilter === 'medicine') {
-                    matchesCategory = isMedicine;
-                } else if (currentFilter === 'supplies') {
+                if (currentFilter === 'supplies') {
                     matchesCategory = isSupply;
                 } else if (currentFilter === 'low') {
                     matchesCategory = isLow;
