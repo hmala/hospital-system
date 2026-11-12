@@ -1116,4 +1116,139 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             ->assertJsonPath('administered_count', 0)
             ->assertJsonPath('status', 'planned');
     }
+
+    public function test_hidden_tab_disappears_for_alias_and_multi_role_clinical_accounts(): void
+    {
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'الجراح', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'التخدير', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'patient', 'guard_name' => 'web']);
+
+        // Configure doctor -> nursing_care = hidden and anesthesia -> supplies = hidden via controller
+        $this->actingAs($this->admin)->post(route('surgery-stations.tab-settings.update'), [
+            'permissions' => [
+                'doctor' => ['nursing_care' => 'hidden'],
+                'anesthesia' => ['supplies' => 'hidden'],
+            ],
+        ])->assertRedirect(route('surgery-stations.tab-settings.index'));
+
+        // 1. Surgeon with both doctor + الجراح + patient
+        $multiRoleSurgeon = User::factory()->create(['role' => 'doctor']);
+        $multiRoleSurgeon->assignRole(['doctor', 'الجراح', 'patient']);
+
+        $resMulti = $this->actingAs($multiRoleSurgeon)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'tab' => 'nursing_care',
+        ]));
+        $resMulti->assertStatus(200);
+        $resMulti->assertDontSee('tab=nursing_care', false);
+
+        // 2. Surgeon with الجراح only
+        $arabicSurgeon = User::factory()->create(['role' => 'الجراح']);
+        $arabicSurgeon->assignRole('الجراح');
+        $arabicSurgeon->givePermissionTo('view surgeon station');
+
+        $resArabicSurgeon = $this->actingAs($arabicSurgeon)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'tab' => 'nursing_care',
+        ]));
+        $resArabicSurgeon->assertStatus(200);
+        $resArabicSurgeon->assertDontSee('tab=nursing_care', false);
+
+        // 3. Anesthesiologist with التخدير role
+        $anesthUser = User::factory()->create(['role' => 'Anesthesia']);
+        $anesthUser->assignRole('التخدير');
+
+        $resAnesth = $this->actingAs($anesthUser)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'tab' => 'supplies',
+        ]));
+        $resAnesth->assertStatus(200);
+        $resAnesth->assertDontSee('tab=supplies', false);
+    }
+
+    public function test_admin_can_add_and_remove_extra_station_roles_with_dynamic_access(): void
+    {
+        $emergencyUser = User::factory()->create(['role' => 'emergency_staff']);
+        $emergencyUser->assignRole('emergency_staff');
+
+        // 1. Before adding to detail matrix, emergency_staff cannot open /surgeries/{id}
+        $this->actingAs($emergencyUser)
+            ->get(route('surgeries.show', $this->surgery))
+            ->assertStatus(403);
+
+        // 2. Admin adds emergency_staff to BOTH matrices via settings endpoints
+        $this->actingAs($this->admin)->post(route('surgery-stations.tab-settings.roles.add'), [
+            'matrix_type' => 'detail',
+            'role_name' => 'emergency_staff',
+            'default_level' => 'read',
+        ])->assertRedirect(route('surgery-stations.tab-settings.index'))
+            ->assertSessionHas('active_matrix', 'detail');
+
+        $this->actingAs($this->admin)->post(route('surgery-stations.tab-settings.roles.add'), [
+            'matrix_type' => 'clinical',
+            'role_name' => 'emergency_staff',
+            'default_level' => 'read',
+        ])->assertRedirect(route('surgery-stations.tab-settings.index'))
+            ->assertSessionHas('active_matrix', 'clinical');
+
+        // Matrix UI shows 2 tabs, organized add-role modal, added role, and remove buttons
+        $this->actingAs($this->admin)->get(route('surgery-stations.tab-settings.index'))
+            ->assertStatus(200)
+            ->assertSee('id="btnTabClinical"', false)
+            ->assertSee('id="btnTabDetail"', false)
+            ->assertSee('id="paneClinicalMatrix"', false)
+            ->assertSee('id="paneDetailMatrix"', false)
+            ->assertSee('id="addMatrixRoleModal"', false)
+            ->assertSee('emergency_staff')
+            ->assertSee('remove-detail-'.md5('emergency_staff'), false)
+            ->assertSee('remove-clinical-'.md5('emergency_staff'), false);
+
+        // Query param ?matrix=detail pre-activates detail tab button and pane
+        $this->actingAs($this->admin)->get(route('surgery-stations.tab-settings.index', ['matrix' => 'detail']))
+            ->assertStatus(200)
+            ->assertSeeInOrder(['id="btnTabDetail"', 'class="nav-link active"'], false)
+            ->assertSeeInOrder(['id="paneDetailMatrix"', 'class="tab-pane fade show active"'], false);
+
+        // Customize permissions: hide detail_anesthesia in detail and hide supplies in clinical
+        $this->actingAs($this->admin)->post(route('surgery-stations.tab-settings.update'), [
+            'permissions' => [
+                'emergency_staff' => [
+                    'detail_anesthesia' => 'hidden',
+                    'detail_tests' => 'read',
+                    'supplies' => 'hidden',
+                    'history' => 'read',
+                ],
+            ],
+        ])->assertRedirect(route('surgery-stations.tab-settings.index'));
+
+        // 3. Added role can now access /surgeries/{id} with ONLY non-hidden tabs, and clinical station hides supplies
+        $detailRes = $this->actingAs($emergencyUser)->get(route('surgeries.show', $this->surgery));
+        $detailRes->assertStatus(200);
+        $detailRes->assertSee('id="tab-btn-detail_tests"', false);
+        $detailRes->assertDontSee('id="tab-btn-detail_anesthesia"', false);
+        $detailRes->assertDontSee('id="pane-detail_anesthesia"', false);
+
+        $clinicalRes = $this->actingAs($emergencyUser)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'tab' => 'supplies',
+        ]));
+        $clinicalRes->assertStatus(200);
+        $clinicalRes->assertSee('tab=history', false);
+        $clinicalRes->assertDontSee('tab=supplies', false);
+
+        // 4. Core built-in role cannot be deleted; custom role removal restores 403 on /surgeries/{id}
+        $this->actingAs($this->admin)->delete(route('surgery-stations.tab-settings.roles.remove'), [
+            'matrix_type' => 'detail',
+            'role_name' => 'nurse',
+        ])->assertSessionHas('error');
+
+        $this->actingAs($this->admin)->delete(route('surgery-stations.tab-settings.roles.remove'), [
+            'matrix_type' => 'detail',
+            'role_name' => 'emergency_staff',
+        ])->assertRedirect(route('surgery-stations.tab-settings.index'));
+
+        $this->actingAs($emergencyUser)
+            ->get(route('surgeries.show', $this->surgery))
+            ->assertStatus(403);
+    }
 }

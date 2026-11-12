@@ -5,27 +5,32 @@
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
-                <div class="card-body p-4 text-white">
+            <div class="card border shadow-sm rounded-4 overflow-hidden bg-white position-relative" style="border-color: #e2e8f0 !important;">
+                <div style="height: 3px; background: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #2563eb 100%);"></div>
+                <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle bg-warning bg-opacity-20 text-warning d-flex align-items-center justify-content-center shadow-sm" style="width: 56px; height: 56px;">
-                                <i class="fas fa-undo-alt fa-2x"></i>
+                            <div class="rounded-4 d-flex align-items-center justify-content-center shadow-sm text-white flex-shrink-0" style="width: 52px; height: 52px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                                <i class="fas fa-undo-alt fa-lg"></i>
                             </div>
                             <div>
-                                <h3 class="mb-1 fw-bold text-white">إرجاع مواد وعُهدة إلى المخزن الرئيسي</h3>
-                                <p class="mb-0 text-light opacity-75 small">
+                                <h3 class="mb-1 fw-bold" style="color: #0f172a;">إرجاع مواد وعُهدة إلى المخزن الرئيسي</h3>
+                                <p class="mb-0 text-muted small">
                                     توثيق وإرجاع الأدوية والمستلزمات الفائضة أو غير المستهلكة من عهدة الطابق إلى المستودع المركزي.
                                 </p>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            @if(request()->filled('from_nursing') || (Auth::user()?->location_id && $selectedFromLocation && Auth::user()->location_id == $selectedFromLocation->id))
-                                <a href="{{ route('nursing-station.index', ['location_id' => $selectedFromLocation?->id]) }}" class="btn btn-outline-light rounded-pill px-3 py-2 fw-semibold">
+                            @if(request()->filled('from_surgery'))
+                                <a href="{{ route('surgeries.index', ['tab' => 'or_store', 'location_id' => $selectedFromLocation?->id]) }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+                                    <i class="fas fa-arrow-right me-1"></i> العودة لمخزن العمليات
+                                </a>
+                            @elseif(request()->filled('from_nursing') || (Auth::user()?->location_id && $selectedFromLocation && Auth::user()->location_id == $selectedFromLocation->id))
+                                <a href="{{ route('nursing-station.index', ['location_id' => $selectedFromLocation?->id]) }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
                                     <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
                                 </a>
                             @endif
-                            <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-light text-dark rounded-pill px-3 py-2 fw-bold shadow-sm">
+                            <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
                                 <i class="fas fa-history me-1"></i> سجل الطلبيات والإرجاع
                             </a>
                         </div>
@@ -90,6 +95,9 @@
                         @csrf
                         @if(request()->filled('from_nursing'))
                             <input type="hidden" name="from_nursing" value="1">
+                        @endif
+                        @if(request()->filled('from_surgery'))
+                            <input type="hidden" name="from_surgery" value="1">
                         @endif
 
                         {{-- اختيار المخازن --}}
@@ -230,7 +238,7 @@
                         {{-- أزرار الإجراءات --}}
                         @if($floorBatches->isNotEmpty())
                             <div class="d-flex justify-content-between align-items-center gap-3 pt-3 border-top flex-wrap">
-                                <a href="{{ request()->filled('from_nursing') || (Auth::user()?->location_id && $selectedFromLocation && Auth::user()->location_id == $selectedFromLocation->id) ? route('nursing-station.index', ['location_id' => $selectedFromLocation?->id]) : route('stock-transfers.requests.index') }}" class="btn btn-light rounded-pill px-4 py-2 text-muted border">
+                                <a href="{{ request()->filled('from_surgery') ? route('surgeries.index', ['tab' => 'or_store', 'location_id' => $selectedFromLocation?->id]) : (request()->filled('from_nursing') || (Auth::user()?->location_id && $selectedFromLocation && Auth::user()->location_id == $selectedFromLocation->id) ? route('nursing-station.index', ['location_id' => $selectedFromLocation?->id]) : route('stock-transfers.requests.index')) }}" class="btn btn-light rounded-pill px-4 py-2 text-muted border">
                                     <i class="fas fa-arrow-left me-1"></i> إلغاء ورجوع
                                 </a>
                                 <button type="submit" class="btn btn-primary rounded-pill px-5 py-2.5 fw-bold shadow-sm" id="submitReturnBtn">

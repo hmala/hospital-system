@@ -54,6 +54,36 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-12 — المرحلة 193: ربط مخزن وعُهدة العمليات (`مخزن عمليات رئيسي`) بملف العملية وصرف وإرجاع المواد، وتبويب العهدة الحصري للحساب المعين له المخزن في `/surgeries`, بالإضافة لملاحظات نوع العملية وإزالة الحقول المكررة من التخدير Operations Sub-Store Custody & Dispensing Integration)
+
+### Done
+- **تبسيط تبويب التخدير وإضافة ملاحظات نوع العملية في `/surgeries/{id}` ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إزالة حقول تعيين أطباء التخدير المكررة وتوقيت التخدير من تبويب `detail_anesthesia` والإبقاء على نوع التخدير والوضعية وتصنيف ASA والملاحظات فقط.
+  * إضافة حقل `surgical_notes` مباشر مع زر حفظ في تبويب نوع العملية (`detail_type` عبر `#detailTypeNotesForm`).
+- **عزل مخزن العمليات وحل الأولوية لصالح `مخزن عمليات رئيسي` ([app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php))**:
+  * إضافة دوال `isOperationLocationName()`, `resolveOperationSubStores()`, و`getOperationSubStoreLocation()` بأولوية عهدة المستخدم (`user->location_id`) ثم **`مخزن عمليات رئيسي`** ثم صالات العمليات، مع منع تداخل `location_id` لصالات/مخازن العمليات مع استنتاج مخزن الطابق للتمريض (`getFloorSubStoreLocation()`).
+- **الصرف المباشر والإرجاع من مخزن العمليات في `/surgeries/{id}` (`tab=detail_supplies`) ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * استبدال جدول المستلزمات اليدوي السابق (`JSON`) بنظام صرف فعلي من عهدة مخزن العمليات (لكافة أصناف المخزن من مستلزمات وأدوية تخدير وغيرها) عبر `surgeries.supplies.dispense` مع خصم رصيد `StockBatch` وتسجيل `StockMovement` (`issue_to_patient`) وتوثيق الصرف في `SurgeryTreatment`، مع زر إرجاع وإلغاء صرف (`surgeries.supplies.reverse`) يعيد الرصيد ويسجل حركة `return` وتقييد الصلاحية بـ `detail_supplies = write`.
+- **تبويب `مخزن وعُهدة العمليات` الحصري في `/surgeries` ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php), [app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php), [resources/views/stock-transfers/return.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/return.blade.php))**:
+  * قصر ظهور التبويب واللوحة (`#btnTabOrStore`, `#paneOrStore`) **حصراً على الحسابات المعين لها مخزن عمليات في إدارة المستخدمين (`user->location_id`)** (مثل حساب `موظف العمليات` المربوط بـ `مخزن عمليات رئيسي`) مع حجبه التام عن بقية الحسابات حتى عبر تمرير `?tab=or_store`.
+  * توفير جرد الوجبات المتوفرة، بحث فوري، فلاتر التصنيف والنفاد والانتهاء، طلب تعزيز مواد، إرجاع عهدة للمخزن الرئيسي (`from_surgery=1`)، وسجل الحركات المباشر.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز `Laravel Pint` (7 ملفات)، تجميع Blade (`view:cache`)، واجتياز 4 حزم اختبارية (`SurgeryTest`, `NursingFloorDispenseTest`, `UnifiedClinicalStationAndTabPermissionsTest`, `RolePermissionsMatrixTest`) بإجمالي `44 passed, 621 assertions`.
+
+## Session log (2026-11-12 — المرحلة 192: توحيد ملف العملية وصالة العمليات `/surgeries/{id}` على نمط المحطة السريرية الموحدة، مصفوفة صلاحيات التبويبات المستقلة، وقفل حساب التخدير وترتيب المحتوى Unified Surgery Detail Workspace & Anesthesiologist Role Lock)
+
+### Done
+- **إصلاح حفظ موظف العمليات وإلغاء النماذج المتداخلة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إزالة جميع وسوم `<form>` المتداخلة وفصل كل تبويب بنموذج مستقل (`detailDiagnosisForm`, `detailAnesthesiaForm`, `detailTeamTimingForm`, `detailSuppliesForm`) لضمان عمل الحفظ لموظف العمليات والجراح والمخدر دون تعارض HTML.
+- **مصفوفة صلاحيات ملف العملية وصالة العمليات وقفل حساب المخدر ([app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php), [app/Http/Controllers/SurgeryTabPermissionController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryTabPermissionController.php), [resources/views/surgeries/settings/tabs.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
+  * إضافة `DETAIL_TABS` (`detail_tests`, `detail_type`, `detail_diagnosis`, `detail_anesthesia`, `detail_team_timing`, `detail_supplies`, `detail_followups`) ومصفوفة الصلاحيات الافتراضية `detailDefaultMatrix()` للأدوار (`anesthesia`, `doctor`, `surgery_staff`, `resident`, `nurse`, `surgery_coordinator`, `receptionist`, `admin`) وعرضها في بطاقة مستقلة في إعدادات التبويبات.
+  * تطبيق `isAnesthesiaUser()` و`resolveUserRolesForDetail()` للكشف الصارم عن حساب المخدر (دور `التخدير`/`anesthesia` أو `Doctor` بنوع/اختصاص تخدير) وحصر الكتابة فيه على تبويب `detail_anesthesia` فقط، ومنح الخادم `403` عند محاولة تعديل أي تبويب آخر.
+- **إعادة بناء وتنظيم `/surgeries/{id}` ومحتوياته ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تطبيق الرأس التنفيذي الموحد (`.clin-header-modern`) والتبويبات الأفقية المتجاوبة، والتوجيه الذكي لأول تبويب نشط حسب الدور (`detail_anesthesia` للمخدر، `detail_team_timing` لموظف العمليات، `detail_diagnosis` للجراح).
+  * إعادة ترتيب محتويات التبويبات داخل بطاقات `.clin-section-card` و`.clin-field-card` متراصة متعددة الأعمدة مع أزرار تعبئة سريعة (`حالة مستقرة`، `عام`/`نصفي`/`موضعي`، `إفاقة مستقرة`)، وحصر تعيين طاقم التخدير وتوقيت العملية في `detail_team_timing` واقتصار `detail_anesthesia` على نوع التخدير والملاحظات، مع مزامنة `AnesthesiaStation` وإضافات التوقيت.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز `Laravel Pint` (4 ملفات معدلة)، وترجمة Blade بنجاح (`php artisan view:cache`)، واجتياز 5 حزم اختبارية ذات صلة (`48 passed, 603 assertions`).
+
 ## Session log (2026-11-12 — المرحلة 191: بناء شبكة الأدوية MAR وفصل مخزن الطابق للمستلزمات فقط، وإصلاح نموذج حجز العملية `/surgeries/create` Medications MAR Grid, Floor Supplies Isolation & Surgery Create Form/TDZ Fix)
 
 ### Done

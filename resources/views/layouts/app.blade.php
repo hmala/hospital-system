@@ -2175,7 +2175,7 @@
             "debug": false,
             "newestOnTop": true,
             "progressBar": true,
-            "positionClass": "toast-top-left",
+            "positionClass": "toast-top-center",
             "preventDuplicates": false,
             "onclick": null,
             "showDuration": "300",
@@ -2294,7 +2294,7 @@
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             toast: true,
-                            position: 'top-start',
+                            position: 'top',
                             icon: 'success',
                             title: @json(session('success')),
                             showConfirmButton: false,

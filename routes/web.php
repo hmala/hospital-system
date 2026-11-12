@@ -706,6 +706,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/surgeries/{surgery}/remove-operation/{additionalOp}', [SurgeryController::class, 'removeOperation'])->name('surgeries.removeOperation');
     Route::post('/surgeries/{surgery}/add-device', [SurgeryController::class, 'addDevice'])->name('surgeries.addDevice');
     Route::delete('/surgeries/{surgery}/remove-device/{device}', [SurgeryController::class, 'removeDevice'])->name('surgeries.removeDevice');
+    Route::post('/surgeries/{surgery}/supplies/dispense', [SurgeryController::class, 'dispenseOperationItem'])->name('surgeries.supplies.dispense');
+    Route::delete('/surgeries/{surgery}/supplies/dispense/{treatment}', [SurgeryController::class, 'reverseOperationItem'])->name('surgeries.supplies.reverse');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
@@ -765,6 +767,8 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:manage surgery tab permissions')->group(function () {
             Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
             Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
+            Route::post('/settings/tabs/roles', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'addRole'])->name('surgery-stations.tab-settings.roles.add');
+            Route::delete('/settings/tabs/roles', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'removeRole'])->name('surgery-stations.tab-settings.roles.remove');
             Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
         });
 

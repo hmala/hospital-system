@@ -277,6 +277,10 @@
             background: #eff6ff;
             color: #2563eb;
         }
+        .sg-tab-btn.active .badge-or-color {
+            background: #fef3c7;
+            color: #b45309;
+        }
 
         /* Tables */
         .sg-table-container {
@@ -422,18 +426,18 @@
 
         {{-- Alerts --}}
         @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-3" role="alert">
+        <div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center justify-content-center text-center px-5 position-relative mb-3" role="alert">
             <i class="fas fa-check-circle fa-lg me-2"></i>
             <div>{{ session('success') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" style="left: 1rem; right: auto;" data-bs-dismiss="alert"></button>
         </div>
         @endif
 
         @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-3" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center justify-content-center text-center px-5 position-relative mb-3" role="alert">
             <i class="fas fa-exclamation-circle fa-lg me-2"></i>
             <div>{{ session('error') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" style="left: 1rem; right: auto;" data-bs-dismiss="alert"></button>
         </div>
         @endif
 
@@ -552,26 +556,41 @@
         {{-- 4. Segmented Tabs --}}
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
             <div class="sg-tabs-strip">
-                <button type="button" class="sg-tab-btn active" id="btnTabActive" onclick="switchSurgeryTab('active')">
+                <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'active' ? 'active' : '' }}" id="btnTabActive" onclick="switchSurgeryTab('active')">
                     <i class="fas fa-clock text-success"></i>
                     <span>العمليات النشطة (المجدولة والمنتظرة والجارية)</span>
                     <span class="sg-tab-pill-badge badge-active-color">{{ $activeSurgeries->total() }}</span>
                 </button>
-                <button type="button" class="sg-tab-btn" id="btnTabCompleted" onclick="switchSurgeryTab('completed')">
+                <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'completed' ? 'active' : '' }}" id="btnTabCompleted" onclick="switchSurgeryTab('completed')">
                     <i class="fas fa-check-circle text-primary"></i>
                     <span>العمليات المكتملة والملغاة (خرجت من الصالة)</span>
                     <span class="sg-tab-pill-badge badge-completed-color">{{ $completedSurgeries->total() }}</span>
                 </button>
+                @if($canViewOrStoreTab)
+                    <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'or_store' ? 'active' : '' }}" id="btnTabOrStore" onclick="switchSurgeryTab('or_store')">
+                        <i class="fas fa-warehouse text-warning"></i>
+                        <span>مخزن وعُهدة العمليات</span>
+                        <span class="sg-tab-pill-badge badge-or-color">{{ $orStockBatches->count() }}</span>
+                    </button>
+                @endif
             </div>
 
             <div class="text-muted small fw-bold">
                 <i class="fas fa-info-circle me-1 text-primary"></i>
-                <span id="tabCounterLabel">عرض العمليات النشطة حالياً داخل المستشفى</span>
+                <span id="tabCounterLabel">
+                    @if($activeIndexTab === 'completed')
+                        عرض أرشيف وسجل العمليات الجراحية المكتملة والملغاة
+                    @elseif($activeIndexTab === 'or_store')
+                        جرد ومراقبة عهدة مخزن العمليات وحركات الصرف المباشر للعمليات
+                    @else
+                        عرض العمليات النشطة حالياً داخل المستشفى
+                    @endif
+                </span>
             </div>
         </div>
 
         {{-- 5. Active Surgeries Table --}}
-        <div id="paneActiveSurgeries">
+        <div id="paneActiveSurgeries" style="{{ $activeIndexTab === 'active' ? '' : 'display: none;' }}">
             <div class="sg-table-container">
                 <div class="table-responsive">
                     <table class="sg-table">
@@ -912,7 +931,7 @@
         </div>
 
         {{-- 6. Completed Surgeries Table --}}
-        <div id="paneCompletedSurgeries" style="display: none;">
+        <div id="paneCompletedSurgeries" style="{{ $activeIndexTab === 'completed' ? '' : 'display: none;' }}">
             <div class="sg-table-container">
                 <div class="table-responsive">
                     <table class="sg-table">
@@ -1100,6 +1119,233 @@
                 @endif
             </div>
         </div>
+
+        {{-- 7. Operations Sub-Store Custody Tab (مخزن وعُهدة العمليات — للحساب المعين له المخزن فقط) --}}
+        @if($canViewOrStoreTab && $orCurrentLocation)
+        <div id="paneOrStore" style="{{ $activeIndexTab === 'or_store' ? '' : 'display: none;' }}">
+                {{-- OR Store Top Action Header --}}
+                <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+                    <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="rounded-circle bg-warning bg-opacity-25 text-warning-emphasis d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px;">
+                                <i class="fas fa-boxes fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark">دولاب ومخزن: {{ $orCurrentLocation->name }}</h6>
+                                <p class="text-muted small mb-0 d-flex flex-wrap align-items-center gap-2">
+                                    <span>المسؤول عن العهدة:</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5">
+                                        <i class="fas fa-check-circle me-1"></i> حسابك مخول بالطلب والصرف
+                                    </span>
+                                    <span>• إجمالي المواد المتوفرة: <strong class="text-primary">{{ $orStockBatches->sum('current_qty') }}</strong> وحدة</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <a href="{{ route('stock-transfers.create', ['to_location_id' => $orCurrentLocation->id]) }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm text-dark">
+                                <i class="fas fa-plus-circle me-1"></i> + طلب تعزيز مواد
+                            </a>
+                            <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $orCurrentLocation->id, 'from_surgery' => 1]) }}" class="btn btn-outline-danger rounded-pill px-3 py-2 fw-bold shadow-xs">
+                                <i class="fas fa-undo-alt me-1"></i> إرجاع عهدة للمخزن الرئيسي
+                            </a>
+                            <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 shadow-xs">
+                                <i class="fas fa-history me-1"></i> سجل الطلبيات
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    {{-- OR Stock Inventory Table --}}
+                    <div class="col-lg-8">
+                        <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
+                            <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-boxes text-primary fs-5"></i>
+                                    <h6 class="mb-0 fw-bold text-dark">المستلزمات والأدوية المتوفرة في عهدة العمليات</h6>
+                                </div>
+                                <span class="badge bg-primary text-white rounded-pill px-3 py-1" id="orStockItemsCountBadge">{{ $orStockBatches->count() }} مادة</span>
+                            </div>
+
+                            {{-- Live Search & Category Filters --}}
+                            <div class="p-3 bg-light border-bottom">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-5">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                                            <input type="text" id="orStockSearchInput" class="form-control bg-white border-start-0 ps-0" placeholder="بحث باسم المادة، الباركود، أو رقم الوجبة...">
+                                            <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" id="clearOrStockSearch" style="display:none;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-7 d-flex align-items-center gap-1 flex-wrap justify-content-md-end">
+                                        <span class="text-muted small me-1">تصفية:</span>
+                                        <button type="button" class="btn btn-xs btn-dark rounded-pill px-2 py-1 or-stock-filter-btn active" data-filter="all">الكل</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="supplies">🩹 مستلزمات</button>
+                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="medicines">💊 أدوية/أخرى</button>
+                                        <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="low">⚠️ نفاد</button>
+                                        <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="expiring">⏳ قريبة الانتهاء</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="orStockTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="py-2 px-3">المادة / المستلزم</th>
+                                                <th class="py-2 text-center">الرصيد الحالي</th>
+                                                <th class="py-2 text-center">تاريخ الصلاحية</th>
+                                                <th class="py-2 text-center">رقم الوجبة</th>
+                                                <th class="py-2 text-center">الحالة</th>
+                                                <th class="py-2 text-center" style="width: 100px;">إجراء</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="orStockTableBody">
+                                            @forelse($orStockBatches as $batch)
+                                                @php
+                                                    $isExpiringSoon = $batch->expiry_date && $batch->expiry_date->diffInDays(now()) <= 60;
+                                                    $isLowStock = $batch->current_qty <= ($batch->product?->alert_quantity ?? 5);
+                                                    $isSupply = $batch->product?->isSupply() ?? false;
+                                                    $isMedicine = ! $isSupply;
+                                                @endphp
+                                                <tr class="or-stock-row"
+                                                    data-name="{{ mb_strtolower($batch->product?->name ?? '') }}"
+                                                    data-barcode="{{ mb_strtolower($batch->internal_barcode ?: ($batch->manufacturer_lot_number ?: '#'.$batch->id)) }}"
+                                                    data-is-supply="{{ $isSupply ? '1' : '0' }}"
+                                                    data-is-medicine="{{ $isMedicine ? '1' : '0' }}"
+                                                    data-is-low="{{ $isLowStock ? '1' : '0' }}"
+                                                    data-is-expiring="{{ $isExpiringSoon ? '1' : '0' }}">
+                                                    <td class="px-3">
+                                                        <div class="fw-bold text-dark">{{ $batch->product?->name ?? 'مادة غير معروفة' }}</div>
+                                                        <small class="text-muted">{{ $batch->product?->category ?? 'عام' }} • وحدة: {{ $batch->product?->unit ?? 'قطعة' }}</small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="fw-bolder fs-6 {{ $isLowStock ? 'text-danger' : 'text-success' }}">
+                                                            {{ $batch->current_qty }}
+                                                        </span>
+                                                        <small class="text-muted d-block">{{ $batch->product?->unit ?? 'وحدة' }}</small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($batch->expiry_date)
+                                                            <span class="badge {{ $isExpiringSoon ? 'bg-danger text-white' : 'bg-light text-dark border' }} rounded-pill px-2 py-1">
+                                                                {{ $batch->expiry_date->format('Y-m-d') }}
+                                                            </span>
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 small">
+                                                            {{ $batch->internal_barcode ?: ($batch->manufacturer_lot_number ?: '#'.$batch->id) }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($isLowStock)
+                                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-1">شارف على النفاد</span>
+                                                        @else
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">متوفر</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if($isOperationCustodian)
+                                                            <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $orCurrentLocation->id, 'batch_id' => $batch->id, 'from_surgery' => 1]) }}"
+                                                               class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 fw-bold text-nowrap shadow-xs"
+                                                               title="إرجاع هذه الوجبة للمخزن الرئيسي">
+                                                                <i class="fas fa-undo-alt me-1"></i> إرجاع
+                                                            </a>
+                                                        @else
+                                                            <span class="text-muted small">-</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-5 text-muted">
+                                                        <i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i>
+                                                        <p class="mb-0 fw-semibold">لا يوجد رصيد مواد مسجل في {{ $orCurrentLocation->name }} حالياً</p>
+                                                        @if($isOperationCustodian)
+                                                            <a href="{{ route('stock-transfers.create', ['to_location_id' => $orCurrentLocation->id]) }}" class="btn btn-sm btn-warning rounded-pill mt-3 fw-bold text-dark">
+                                                                <i class="fas fa-plus-circle me-1"></i> اطلب أول شحنة تعزيز من المخزن الرئيسي
+                                                            </a>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                            <tr id="noMatchingOrStockRow" style="display: none;">
+                                                <td colspan="6" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-search fa-2x mb-2 text-secondary opacity-50"></i>
+                                                    <p class="mb-0 fw-semibold">لا توجد مواد تطابق معايير البحث والتصفية المحددة.</p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Recent OR Stock Movements Feed --}}
+                    <div class="col-lg-4">
+                        <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
+                            <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-history text-info me-2"></i> سجل حركات مخزن العمليات
+                                </h6>
+                                <span class="badge bg-info text-white rounded-pill px-2 py-1 small">مباشر</span>
+                            </div>
+                            <div class="card-body p-3">
+                                @if($orRecentMovements->count())
+                                    <div class="list-group list-group-flush">
+                                        @foreach($orRecentMovements as $mv)
+                                            <div class="list-group-item px-0 py-2 border-bottom">
+                                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                                    <div>
+                                                        <div class="fw-bold text-dark small">{{ $mv->batch?->product?->name ?? 'مادة مخزنية' }}</div>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-user text-primary me-1"></i>
+                                                            بواسطة: <strong>{{ $mv->user?->full_name ?? $mv->user?->name ?? 'كادر العمليات' }}</strong>
+                                                        </small>
+                                                        @if($mv->surgery)
+                                                            <small class="text-primary d-block">
+                                                                <i class="fas fa-procedures me-1"></i>
+                                                                <a href="{{ route('surgeries.show', ['surgery' => $mv->surgery_id, 'tab' => 'detail_supplies']) }}" class="text-decoration-none">
+                                                                    عملية #{{ $mv->surgery_id }} — {{ $mv->surgery->patient?->user?->name ?? 'مريض' }}
+                                                                </a>
+                                                            </small>
+                                                        @endif
+                                                    </div>
+                                                    @if($mv->type === 'return')
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">
+                                                            +{{ $mv->quantity }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2 py-1">
+                                                            -{{ $mv->quantity }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                                    <i class="far fa-clock me-1"></i> {{ $mv->created_at ? $mv->created_at->diffForHumans() : '-' }}
+                                                </small>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-center py-5 text-muted small">
+                                        <i class="fas fa-clipboard-check fa-2x mb-2 text-secondary opacity-50"></i>
+                                        <p class="mb-0">لا توجد حركات مسجلة حديثاً في {{ $orCurrentLocation->name }}.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -1113,24 +1359,140 @@
     function switchSurgeryTab(tabName) {
         const btnActive = document.getElementById('btnTabActive');
         const btnCompleted = document.getElementById('btnTabCompleted');
+        const btnOrStore = document.getElementById('btnTabOrStore');
         const paneActive = document.getElementById('paneActiveSurgeries');
         const paneCompleted = document.getElementById('paneCompletedSurgeries');
+        const paneOrStore = document.getElementById('paneOrStore');
         const counterLabel = document.getElementById('tabCounterLabel');
 
-        if (tabName === 'active') {
-            btnActive.classList.add('active');
-            btnCompleted.classList.remove('active');
-            paneActive.style.display = 'block';
-            paneCompleted.style.display = 'none';
-            counterLabel.textContent = 'عرض العمليات النشطة حالياً داخل المستشفى';
+        [btnActive, btnCompleted, btnOrStore].forEach(btn => btn && btn.classList.remove('active'));
+        [paneActive, paneCompleted, paneOrStore].forEach(pane => {
+            if (pane) pane.style.display = 'none';
+        });
+
+        if (tabName === 'completed') {
+            btnCompleted && btnCompleted.classList.add('active');
+            if (paneCompleted) paneCompleted.style.display = 'block';
+            if (counterLabel) counterLabel.textContent = 'عرض أرشيف وسجل العمليات الجراحية المكتملة والملغاة';
+        } else if (tabName === 'or_store' && paneOrStore) {
+            btnOrStore && btnOrStore.classList.add('active');
+            paneOrStore.style.display = 'block';
+            if (counterLabel) counterLabel.textContent = 'جرد ومراقبة عهدة مخزن العمليات وحركات الصرف المباشر للعمليات';
         } else {
-            btnCompleted.classList.add('active');
-            btnActive.classList.remove('active');
-            paneActive.style.display = 'none';
-            paneCompleted.style.display = 'block';
-            counterLabel.textContent = 'عرض أرشيف وسجل العمليات الجراحية المكتملة والملغاة';
+            btnActive && btnActive.classList.add('active');
+            if (paneActive) paneActive.style.display = 'block';
+            if (counterLabel) counterLabel.textContent = 'عرض العمليات النشطة حالياً داخل المستشفى';
+        }
+
+        if (window.history && window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tabName);
+            window.history.replaceState({}, '', url.toString());
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('orStockSearchInput');
+        const clearBtn = document.getElementById('clearOrStockSearch');
+        const filterBtns = document.querySelectorAll('.or-stock-filter-btn');
+        const rows = document.querySelectorAll('#orStockTableBody .or-stock-row');
+        const noMatchRow = document.getElementById('noMatchingOrStockRow');
+        const countBadge = document.getElementById('orStockItemsCountBadge');
+
+        let currentOrFilter = 'all';
+
+        function filterOrStockTable() {
+            const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+            let visibleCount = 0;
+
+            if (clearBtn) {
+                clearBtn.style.display = query.length > 0 ? 'inline-block' : 'none';
+            }
+
+            rows.forEach(row => {
+                const name = row.getAttribute('data-name') || '';
+                const barcode = row.getAttribute('data-barcode') || '';
+                const isSupply = row.getAttribute('data-is-supply') === '1';
+                const isMedicine = row.getAttribute('data-is-medicine') === '1';
+                const isLow = row.getAttribute('data-is-low') === '1';
+                const isExpiring = row.getAttribute('data-is-expiring') === '1';
+
+                const matchesText = !query || name.includes(query) || barcode.includes(query);
+
+                let matchesFilter = true;
+                if (currentOrFilter === 'supplies') {
+                    matchesFilter = isSupply;
+                } else if (currentOrFilter === 'medicines') {
+                    matchesFilter = isMedicine;
+                } else if (currentOrFilter === 'low') {
+                    matchesFilter = isLow;
+                } else if (currentOrFilter === 'expiring') {
+                    matchesFilter = isExpiring;
+                }
+
+                if (matchesText && matchesFilter) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noMatchRow) {
+                noMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+
+            if (countBadge) {
+                countBadge.textContent = visibleCount + ' مادة';
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterOrStockTable);
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                filterOrStockTable();
+                searchInput.focus();
+            });
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                filterBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-dark', 'btn-info', 'btn-warning', 'btn-danger');
+                    const f = b.getAttribute('data-filter');
+                    if (f === 'medicines') {
+                        b.classList.add('btn-outline-info');
+                    } else if (f === 'low') {
+                        b.classList.add('btn-outline-warning');
+                    } else if (f === 'expiring') {
+                        b.classList.add('btn-outline-danger');
+                    } else {
+                        b.classList.add('btn-outline-secondary');
+                    }
+                });
+
+                this.classList.add('active');
+                this.classList.remove('btn-outline-secondary', 'btn-outline-info', 'btn-outline-warning', 'btn-outline-danger');
+                const filter = this.getAttribute('data-filter');
+                if (filter === 'medicines') {
+                    this.classList.add('btn-info');
+                } else if (filter === 'low') {
+                    this.classList.add('btn-warning');
+                } else if (filter === 'expiring') {
+                    this.classList.add('btn-danger');
+                } else {
+                    this.classList.add('btn-dark');
+                }
+
+                currentOrFilter = filter;
+                filterOrStockTable();
+            });
+        });
+    });
 
     window.confirmCancelSurgery = function(event, route, title) {
         event.preventDefault();

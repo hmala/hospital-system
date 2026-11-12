@@ -6,12 +6,16 @@ use App\Events\SurgeryUpdated;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\LabTest;
+use App\Models\Location;
 use App\Models\OperationTheater;
 use App\Models\Patient;
 use App\Models\PatientDocument;
 use App\Models\RadiologyType;
 use App\Models\Room;
+use App\Models\StockBatch;
+use App\Models\StockMovement;
 use App\Models\Surgery;
+use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\SurgicalOperation;
 use Illuminate\Http\Request;
@@ -144,7 +148,48 @@ class SurgeryController extends Controller
             ")
             ->first();
 
-        return view('surgeries.index', compact('activeSurgeries', 'completedSurgeries', 'stats'));
+        // بيانات مخزن وعُهدة العمليات: يظهر التبويب فقط للحساب المعين له مخزن عمليات في إدارة المستخدمين (location_id)
+        $userAssignedLocation = ($user && $user->location_id)
+            ? Location::where('type', 'sub')->find($user->location_id)
+            : null;
+        $canViewOrStoreTab = (bool) ($userAssignedLocation && Surgery::isOperationLocationName($userAssignedLocation->name));
+        $orCurrentLocation = $canViewOrStoreTab ? $userAssignedLocation : null;
+        $orLocations = $orCurrentLocation ? collect([$orCurrentLocation]) : collect();
+        $isOperationCustodian = $canViewOrStoreTab;
+
+        $orStockBatches = collect();
+        $orRecentMovements = collect();
+        if ($canViewOrStoreTab && $orCurrentLocation) {
+            $orStockBatches = StockBatch::with('product')
+                ->where('location_id', $orCurrentLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get();
+
+            $orRecentMovements = StockMovement::with(['batch.product', 'user', 'surgery.patient.user'])
+                ->where('from_location_id', $orCurrentLocation->id)
+                ->orderBy('created_at', 'desc')
+                ->take(30)
+                ->get();
+        }
+
+        $allowedIndexTabs = $canViewOrStoreTab ? ['active', 'completed', 'or_store'] : ['active', 'completed'];
+        $activeIndexTab = in_array(request()->query('tab'), $allowedIndexTabs, true)
+            ? request()->query('tab')
+            : 'active';
+
+        return view('surgeries.index', compact(
+            'activeSurgeries',
+            'completedSurgeries',
+            'stats',
+            'canViewOrStoreTab',
+            'orLocations',
+            'orCurrentLocation',
+            'isOperationCustodian',
+            'orStockBatches',
+            'orRecentMovements',
+            'activeIndexTab'
+        ));
     }
 
     public function create()
@@ -397,17 +442,23 @@ class SurgeryController extends Controller
         return redirect()->route('surgeries.index')->with('success', 'تم حجز العملية بنجاح');
     }
 
-    public function show(Surgery $surgery)
+    public function show(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isAnesthesiaUser = SurgeryTabPermission::isAnesthesiaUser($user);
         $hasStationAccess = $user && $user->hasAnyPermission([
             'view surgeries', 'view resident station', 'view surgeon station',
             'view anesthesia station', 'view nursing station', 'view operation theater station',
         ]);
-        $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id || $user->doctor->id == $surgery->anesthesiologist_id);
+        $isAssignedDoctor = $user && $user->doctor && (
+            $user->doctor->id == $surgery->doctor_id
+            || $user->doctor->id == $surgery->anesthesiologist_id
+            || $user->doctor->id == $surgery->anesthesiologist_2_id
+        );
+        $hasConfiguredDetailAccess = SurgeryTabPermission::hasConfiguredVisibleDetailTab($user);
 
-        if (! $isAdmin && ! $hasStationAccess && ! $isAssignedDoctor) {
+        if (! $isAdmin && ! $hasStationAccess && ! $isAssignedDoctor && ! $isAnesthesiaUser && ! $hasConfiguredDetailAccess) {
             abort(403, 'غير مصرح لك باستعراض تفاصيل العمليات الجراحية');
         }
 
@@ -416,7 +467,26 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم باستعراض العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'surgeryTreatments', 'anesthesiaStation', 'residentStationFollowUps', 'medicalDevices']);
+        $surgery->load([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'visit',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'anesthesiologist.user',
+            'anesthesiologist2.user',
+            'surgeryTreatments.stockMovement.fromLocation',
+            'surgeryTreatments.batch.product',
+            'surgeryTreatments.administeredBy',
+            'anesthesiaStation',
+            'surgeonStation',
+            'residentStationFollowUps',
+            'medicalDevices',
+            'additionalOperations.surgicalOperation',
+            'room',
+            'location',
+        ]);
         $patients = Patient::with('user')->get()->sortBy(function ($p) {
             return optional($p->user)->name ?? '';
         });
@@ -435,7 +505,69 @@ class SurgeryController extends Controller
             ->get();
         $locations = \App\Models\Location::orderBy('name')->get();
 
-        return view('surgeries.show', compact('surgery', 'patients', 'anesthesiaDoctors', 'departments', 'labTests', 'radiologyTypes', 'surgicalOperations', 'devices', 'locations'));
+        // Compute dynamic tab permissions for /surgeries/{id}
+        $detailPermissions = SurgeryTabPermission::getDetailTabPermissions($user);
+        $visibleTabs = [];
+        foreach (SurgeryTabPermission::DETAIL_TABS as $key => $meta) {
+            $access = $detailPermissions[$key] ?? SurgeryTabPermission::ACCESS_HIDDEN;
+            if ($access !== SurgeryTabPermission::ACCESS_HIDDEN) {
+                $visibleTabs[$key] = array_merge($meta, [
+                    'access' => $access,
+                    'can_write' => ($access === SurgeryTabPermission::ACCESS_WRITE),
+                    'is_readonly' => ($access === SurgeryTabPermission::ACCESS_READ),
+                ]);
+            }
+        }
+
+        $activeTab = $request->query('tab');
+        if (! $activeTab || ! isset($visibleTabs[$activeTab])) {
+            if ($isAnesthesiaUser && isset($visibleTabs['detail_anesthesia'])) {
+                $activeTab = 'detail_anesthesia';
+            } elseif ($user->hasRole('surgery_staff') && ! $isAdmin && isset($visibleTabs['detail_team_timing'])) {
+                $activeTab = 'detail_team_timing';
+            } elseif (! $isAdmin && isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write']) {
+                $activeTab = 'detail_diagnosis';
+            } else {
+                $activeTab = array_key_first($visibleTabs) ?? 'detail_tests';
+            }
+        }
+
+        // بيانات مخزن وعُهدة العمليات وصرف المواد داخل تبويب detail_supplies
+        $operationStoreLocation = $surgery->getOperationSubStoreLocation($user);
+        $operationSupplyBatches = $operationStoreLocation
+            ? StockBatch::with('product')
+                ->where('location_id', $operationStoreLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get()
+            : collect();
+
+        $orDispensedItems = ($surgery->surgeryTreatments ?? collect())
+            ->filter(function (SurgeryTreatment $t) {
+                return ($t->stockMovement && Surgery::isOperationLocationName($t->stockMovement->fromLocation?->name))
+                    || $t->timing === 'صرف من مخزن العمليات';
+            })
+            ->sortByDesc('id')
+            ->values();
+
+        return view('surgeries.show', compact(
+            'surgery',
+            'patients',
+            'anesthesiaDoctors',
+            'departments',
+            'labTests',
+            'radiologyTypes',
+            'surgicalOperations',
+            'devices',
+            'locations',
+            'detailPermissions',
+            'visibleTabs',
+            'activeTab',
+            'isAnesthesiaUser',
+            'operationStoreLocation',
+            'operationSupplyBatches',
+            'orDispensedItems'
+        ));
     }
 
     public function edit(Surgery $surgery)
@@ -1088,29 +1220,45 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        $canEdit = $user && ($user->can('edit surgeries') || $user->can('view surgeon station'));
-        $isAssignedDoctor = $user && $user->doctor && ($user->doctor->id == $surgery->doctor_id);
-
-        if (! $isAdmin && ! $canEdit && ! $isAssignedDoctor) {
-            abort(403, 'غير مصرح لك بتحديث تفاصيل العملية');
-        }
+        $isAnesthesiaUser = SurgeryTabPermission::isAnesthesiaUser($user);
+        $detailPermissions = SurgeryTabPermission::getDetailTabPermissions($user);
 
         // منع الأطباء الاستشاريين من تحديث تفاصيل العمليات
-        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        if ($user && $user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث تفاصيل العمليات الجراحية');
         }
 
-        \Log::info('=== Update Surgery Details Started ===');
-        \Log::info('Surgery ID: '.$surgery->id);
-        \Log::info('Request data:', $request->all());
-        \Log::info('Request method: '.$request->method());
-        \Log::info('User: '.$user->name.' ('.$user->id.')');
+        $writableTabs = array_keys(array_filter(
+            $detailPermissions,
+            fn (string $level) => $level === SurgeryTabPermission::ACCESS_WRITE
+        ));
 
-        // Log specific fields
-        \Log::info('Diagnosis from request: '.$request->input('diagnosis'));
-        \Log::info('Anesthesia type from request: '.$request->input('anesthesia_type'));
-        \Log::info('Start time from request: '.$request->input('start_time'));
-        \Log::info('End time from request: '.$request->input('end_time'));
+        $canBaseEdit = $isAdmin
+            || $user?->can('edit surgeries')
+            || $user?->can('view surgeon station')
+            || $user?->hasRole('surgery_staff')
+            || $isAnesthesiaUser
+            || ($user && $user->doctor && (
+                $user->doctor->id == $surgery->doctor_id
+                || $user->doctor->id == $surgery->anesthesiologist_id
+                || $user->doctor->id == $surgery->anesthesiologist_2_id
+            ))
+            || ! empty($writableTabs);
+
+        if (! $canBaseEdit || empty($writableTabs)) {
+            abort(403, 'غير مصرح لك بتحديث تفاصيل العملية');
+        }
+
+        $requestedTab = $request->input('tab');
+        $scopedTabs = ['detail_type', 'detail_diagnosis', 'detail_anesthesia', 'detail_team_timing', 'detail_supplies'];
+        if ($requestedTab !== null && $requestedTab !== '') {
+            if (! in_array($requestedTab, $scopedTabs, true)) {
+                abort(403, 'تبويب غير صالح للتحديث.');
+            }
+            if (($detailPermissions[$requestedTab] ?? SurgeryTabPermission::ACCESS_HIDDEN) !== SurgeryTabPermission::ACCESS_WRITE) {
+                abort(403, 'غير مصرح لك بتعديل هذا القسم.');
+            }
+        }
 
         $validated = $request->validate([
             'location_id' => 'nullable|exists:locations,id',
@@ -1118,8 +1266,11 @@ class SurgeryController extends Controller
             'anesthesia_type' => 'nullable|string|max:255',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
             'anesthesiologist_2_id' => 'nullable|exists:doctors,id',
+            'anesthesia_start_time' => 'nullable|date_format:H:i',
+            'anesthesia_end_time' => 'nullable|date_format:H:i',
+            'anesthesia_notes' => 'nullable|string|max:2000',
             'surgical_assistant_name' => 'nullable|string|max:255',
-            'supplies' => 'nullable|string|max:1000',
+            'supplies' => 'nullable|string|max:10000',
             'start_time' => 'nullable|string',
             'end_time' => 'nullable|string',
             'estimated_duration' => 'nullable',
@@ -1147,92 +1298,113 @@ class SurgeryController extends Controller
             'required_fluids.*' => 'string|in:intake_iv_fluids,intake_oral,intake_blood,output_urine,output_drain,output_gtube_ng,output_vomiting,output_stool',
         ]);
 
-        \Log::info('Validation passed, validated data: ', $validated);
+        // Determine writable fields per tab permission
+        $canWriteType = ($detailPermissions['detail_type'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteDiagnosis = ($detailPermissions['detail_diagnosis'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteAnesthesia = ($detailPermissions['detail_anesthesia'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteTeamTiming = ($detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteSupplies = ($detailPermissions['detail_supplies'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
 
-        // Validate time formats manually
-        if (! empty($validated['start_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['start_time'])) {
-            return redirect()->back()->withErrors(['start_time' => 'وقت البدء غير صحيح']);
-        }
-        if (! empty($validated['end_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['end_time'])) {
-            return redirect()->back()->withErrors(['end_time' => 'وقت الانتهاء غير صحيح']);
-        }
-
-        // Convert time fields to full datetime using surgery's scheduled date
-        if (isset($validated['start_time']) && ! empty($validated['start_time'])) {
-            $validated['start_time'] = $surgery->scheduled_date->format('Y-m-d').' '.$validated['start_time'].':00';
+        if ($requestedTab === 'detail_type') {
+            $allowedKeys = ['surgical_notes'];
+        } elseif ($requestedTab === 'detail_diagnosis') {
+            $allowedKeys = ['diagnosis', 'post_op_notes', 'notes', 'treatment_plan', 'follow_up_date', 'prescribed_medications'];
+        } elseif ($requestedTab === 'detail_anesthesia') {
+            $allowedKeys = ['anesthesia_type', 'anesthesia_position', 'asa_classification', 'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes'];
+        } elseif ($requestedTab === 'detail_team_timing') {
+            $allowedKeys = ['location_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
+        } elseif ($requestedTab === 'detail_supplies') {
+            $allowedKeys = ['supplies'];
         } else {
-            $validated['start_time'] = null;
-        }
-        if (isset($validated['end_time']) && ! empty($validated['end_time'])) {
-            $validated['end_time'] = $surgery->scheduled_date->format('Y-m-d').' '.$validated['end_time'].':00';
-        } else {
-            $validated['end_time'] = null;
-        }
-
-        // Convert follow_up_date to Carbon instance
-        if (isset($validated['follow_up_date']) && ! empty($validated['follow_up_date'])) {
-            $validated['follow_up_date'] = \Carbon\Carbon::parse($validated['follow_up_date']);
-        } else {
-            $validated['follow_up_date'] = null;
-        }
-
-        // If the current user does not have surgeon station access or admin, allow only team, timing, supplies and location fields to be updated.
-        if (! $isAdmin && ! $user->can('view surgeon station')) {
-            $validated = Arr::only($validated, [
-                'anesthesiologist_id',
-                'anesthesiologist_2_id',
-                'surgical_assistant_name',
-                'start_time',
-                'end_time',
-                'supplies',
-                'location_id',
-            ]);
-        }
-
-        // Handle estimated duration - use minutes if available, otherwise convert from HH:MM format
-        if (isset($validated['estimated_duration_minutes'])) {
-            $validated['estimated_duration'] = $validated['estimated_duration_minutes'];
-            unset($validated['estimated_duration_minutes']);
-        } elseif (isset($validated['estimated_duration']) && ! empty($validated['estimated_duration'])) {
-            // Check if it's already in minutes (number) or in HH:MM format
-            if (is_numeric($validated['estimated_duration'])) {
-                // Already in minutes, keep it as is
-                $validated['estimated_duration'] = (int) $validated['estimated_duration'];
-            } elseif (strpos($validated['estimated_duration'], ':') !== false) {
-                // Convert HH:MM to minutes
-                [$hours, $minutes] = explode(':', $validated['estimated_duration']);
-                $validated['estimated_duration'] = ($hours * 60) + $minutes;
+            // Unscoped PATCH: dynamically intersect with user's writable detail tabs
+            $allowedKeys = [];
+            if ($canWriteType) {
+                $allowedKeys[] = 'surgical_notes';
             }
-        } else {
-            unset($validated['estimated_duration']);
+            if ($canWriteDiagnosis) {
+                $allowedKeys = array_merge($allowedKeys, [
+                    'diagnosis', 'post_op_notes', 'notes', 'treatment_plan', 'follow_up_date',
+                    'surgery_category', 'surgery_type_detail', 'surgical_complexity', 'surgical_notes', 'prescribed_medications', 'required_fluids',
+                ]);
+            }
+            if ($canWriteAnesthesia) {
+                $allowedKeys = array_merge($allowedKeys, [
+                    'anesthesia_type', 'anesthesia_position', 'asa_classification',
+                    'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes',
+                ]);
+            }
+            if ($canWriteTeamTiming) {
+                $allowedKeys = array_merge($allowedKeys, [
+                    'location_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name',
+                    'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes',
+                ]);
+            }
+            if ($canWriteSupplies) {
+                $allowedKeys[] = 'supplies';
+            }
+            $allowedKeys = array_values(array_unique($allowedKeys));
+
+            // If non-admin submitted payload containing no writable fields they own (e.g. anesthesiologist posting diagnosis), deny
+            $submittedFieldKeys = array_keys($request->except(['_token', '_method', 'tab']));
+            if (! $isAdmin && ! empty($submittedFieldKeys) && empty(array_intersect($submittedFieldKeys, $allowedKeys))) {
+                abort(403, 'غير مصرح لك بتحديث هذه الحقول.');
+            }
         }
 
-        // Handle prescribed_medications - save surgery treatments to separate table
-        \Log::info('=== Surgery Update Details Debug ===');
-        \Log::info('Raw request data:', $request->all());
-        \Log::info('Request method: '.$request->method());
-        \Log::info('Prescribed medications from request: '.json_encode($request->input('prescribed_medications')));
-        \Log::info('===================================');
+        // Validate and convert surgical timing only when team/timing fields are submitted & permitted
+        if (in_array('start_time', $allowedKeys, true) && $request->has('start_time')) {
+            if (! empty($validated['start_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['start_time'])) {
+                return redirect()->back()->withErrors(['start_time' => 'وقت البدء غير صحيح']);
+            }
+            $validated['start_time'] = ! empty($validated['start_time'])
+                ? $surgery->scheduled_date->format('Y-m-d').' '.$validated['start_time'].':00'
+                : null;
+        }
+        if (in_array('end_time', $allowedKeys, true) && $request->has('end_time')) {
+            if (! empty($validated['end_time']) && ! preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $validated['end_time'])) {
+                return redirect()->back()->withErrors(['end_time' => 'وقت الانتهاء غير صحيح']);
+            }
+            $validated['end_time'] = ! empty($validated['end_time'])
+                ? $surgery->scheduled_date->format('Y-m-d').' '.$validated['end_time'].':00'
+                : null;
+        }
 
-        // Check if we have surgery treatments to save
+        if (in_array('follow_up_date', $allowedKeys, true) && $request->has('follow_up_date')) {
+            $validated['follow_up_date'] = ! empty($validated['follow_up_date'])
+                ? \Carbon\Carbon::parse($validated['follow_up_date'])
+                : null;
+        }
+
+        $validated = Arr::only($validated, $allowedKeys);
+
+        // Handle estimated duration when team_timing is writable
+        if (in_array('estimated_duration', $allowedKeys, true) || in_array('estimated_duration_minutes', $allowedKeys, true)) {
+            if (isset($validated['estimated_duration_minutes'])) {
+                $validated['estimated_duration'] = $validated['estimated_duration_minutes'];
+                unset($validated['estimated_duration_minutes']);
+            } elseif (isset($validated['estimated_duration']) && ! empty($validated['estimated_duration'])) {
+                if (is_numeric($validated['estimated_duration'])) {
+                    $validated['estimated_duration'] = (int) $validated['estimated_duration'];
+                } elseif (strpos($validated['estimated_duration'], ':') !== false) {
+                    [$hours, $minutes] = explode(':', $validated['estimated_duration']);
+                    $validated['estimated_duration'] = ($hours * 60) + $minutes;
+                }
+            } else {
+                unset($validated['estimated_duration']);
+            }
+        }
+
+        // Save surgery treatments only when diagnosis/treatments tab is writable & submitted
         $prescribedMedications = $request->input('prescribed_medications');
-
-        if ($prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
-            \Log::info('Surgery treatments for surgery '.$surgery->id.': '.json_encode($prescribedMedications['surgery_treatments'][$surgery->id]));
-
-            // Delete existing prescribed medications (without wiping dispensed floor supplies or stock-issued meds)
+        if (in_array('prescribed_medications', $allowedKeys, true) && $prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
             $surgery->surgeryTreatments()
                 ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
                 ->whereNull('batch_id')
                 ->delete();
 
-            // Save new treatments
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
-            \Log::info('Treatments array: '.json_encode($treatments));
             foreach ($treatments as $index => $treatment) {
-                \Log::info('Processing treatment '.$index.': '.json_encode($treatment));
                 if (! empty($treatment['description'])) {
-                    \Log::info('Creating treatment for index '.$index);
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
                         'item_type' => SurgeryTreatment::TYPE_MEDICATION,
@@ -1243,20 +1415,12 @@ class SurgeryController extends Controller
                         'duration_unit' => $treatment['duration_unit'] ?? null,
                         'sort_order' => $index,
                     ]);
-                    \Log::info('Treatment created successfully');
-                } else {
-                    \Log::info('Skipping treatment '.$index.' - empty description');
                 }
             }
-        } else {
-            \Log::info('No surgery treatments found in request');
         }
-
-        // Remove prescribed_medications from validated array as we handled it separately
         unset($validated['prescribed_medications']);
 
-        // Save required_fluids to surgeon station
-        if ($request->has('required_fluids')) {
+        if (in_array('required_fluids', $allowedKeys, true) && $request->has('required_fluids')) {
             $station = $surgery->surgeonStation;
             if (! $station) {
                 $station = $surgery->surgeonStation()->create(['status' => 'pending', 'surgeon_id' => $surgery->doctor_id]);
@@ -1265,34 +1429,61 @@ class SurgeryController extends Controller
         }
         unset($validated['required_fluids']);
 
-        \Log::info('Final validated data to update: ', $validated);
+        // Extract AnesthesiaStation-specific fields before updating Surgery
+        $anesthesiaStartTime = $validated['anesthesia_start_time'] ?? null;
+        $anesthesiaEndTime = $validated['anesthesia_end_time'] ?? null;
+        $anesthesiaNotes = $validated['anesthesia_notes'] ?? null;
+        $hasAnesthesiaStart = array_key_exists('anesthesia_start_time', $validated);
+        $hasAnesthesiaEnd = array_key_exists('anesthesia_end_time', $validated);
+        $hasAnesthesiaNotes = array_key_exists('anesthesia_notes', $validated);
+        unset($validated['anesthesia_start_time'], $validated['anesthesia_end_time'], $validated['anesthesia_notes']);
 
         try {
-            $surgery->update($validated);
-            \Log::info('Surgery updated successfully, new data: ', $surgery->toArray());
+            if (! empty($validated)) {
+                $surgery->update($validated);
+            }
 
-            // إذا كانت هناك محطة تخدير قائمة، مزامنة تغييرات أطباء التخدير وبيانات التخدير
-            if ($surgery->anesthesiaStation) {
-                $stationSync = [];
-                foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_type'] as $field) {
-                    if (array_key_exists($field, $validated)) {
-                        $stationSync[$field] = $validated[$field];
-                    }
+            // Sync / create AnesthesiaStation when saving anesthesia details or updating team/anesthesiologist
+            $stationSync = [];
+            foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_type'] as $field) {
+                if (array_key_exists($field, $validated)) {
+                    $stationSync[$field] = $validated[$field];
                 }
-                if (! empty($stationSync)) {
+            }
+            if ($hasAnesthesiaStart) {
+                $stationSync['start_time'] = $anesthesiaStartTime;
+            }
+            if ($hasAnesthesiaEnd) {
+                $stationSync['end_time'] = $anesthesiaEndTime;
+            }
+            if ($hasAnesthesiaNotes) {
+                $stationSync['notes'] = $anesthesiaNotes;
+            }
+
+            if (! empty($stationSync)) {
+                if ($surgery->anesthesiaStation) {
                     $surgery->anesthesiaStation->update($stationSync);
+                } elseif ($requestedTab === 'detail_anesthesia' || $hasAnesthesiaNotes || $hasAnesthesiaStart || $hasAnesthesiaEnd) {
+                    $surgery->anesthesiaStation()->create(array_merge([
+                        'anesthesiologist_id' => $surgery->anesthesiologist_id,
+                        'anesthesiologist_2_id' => $surgery->anesthesiologist_2_id,
+                        'anesthesia_type' => $surgery->anesthesia_type,
+                        'status' => 'in_progress',
+                        'started_at' => now(),
+                    ], $stationSync));
                 }
             }
 
-            // إتمام محطة الجراح تلقائياً عند حفظ التفاصيل الطبية
-            if ($surgery->surgeonStation && $surgery->surgeonStation->status !== 'completed') {
-                $surgery->surgeonStation->markAsCompleted();
+            // Auto-complete surgeon station only when surgeon/admin updates diagnosis tab (or legacy unscoped)
+            if (($requestedTab === 'detail_diagnosis' || ! $requestedTab) && ($isAdmin || $user->can('view surgeon station')) && ! $isAnesthesiaUser) {
+                if ($surgery->surgeonStation && $surgery->surgeonStation->status !== 'completed') {
+                    $surgery->surgeonStation->markAsCompleted();
 
-                // إنشاء محطة التخدير التالية
-                if (! $surgery->anesthesiaStation) {
-                    $surgery->anesthesiaStation()->create([
-                        'status' => 'pending',
-                    ]);
+                    if (! $surgery->anesthesiaStation) {
+                        $surgery->anesthesiaStation()->create([
+                            'status' => 'pending',
+                        ]);
+                    }
                 }
             }
         } catch (\Exception $e) {
@@ -1301,17 +1492,32 @@ class SurgeryController extends Controller
             return redirect()->back()->with('error', 'حدث خطأ في حفظ البيانات: '.$e->getMessage());
         }
 
-        return redirect()->route('surgeries.show', $surgery)->with('success', 'تم حفظ تفاصيل العملية بنجاح وإرسالها لمحطة التخدير');
+        $redirectParams = ['surgery' => $surgery->id];
+        if ($requestedTab) {
+            $redirectParams['tab'] = $requestedTab;
+        }
+
+        $successMessage = match ($requestedTab) {
+            'detail_type' => 'تم حفظ ملاحظات نوع العملية بنجاح',
+            'detail_anesthesia' => 'تم حفظ تفاصيل التخدير بنجاح',
+            'detail_diagnosis' => 'تم حفظ التشخيص وخطة العلاج بنجاح',
+            'detail_team_timing' => 'تم حفظ بيانات الفريق الطبي والتوقيت بنجاح',
+            'detail_supplies' => 'تم حفظ المستلزمات الطبية بنجاح',
+            default => 'تم حفظ تفاصيل العملية بنجاح وإرسالها لمحطة التخدير',
+        };
+
+        return redirect()->route('surgeries.show', $redirectParams)->with('success', $successMessage);
     }
 
     public function updateSurgeryType(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $canWriteType = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_type') === SurgeryTabPermission::ACCESS_WRITE;
 
-        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+        if (! $isAdmin && ! $canWriteType) {
             return $request->expectsJson()
-                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                ? response()->json(['message' => 'غير مصرح لك بتعديل نوع العملية'], 403)
                 : abort(403, 'غير مصرح لك بتغيير نوع العملية');
         }
 
@@ -1361,9 +1567,10 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+        $canWriteType = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_type') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteType) {
             return $request->expectsJson()
-                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                ? response()->json(['message' => 'غير مصرح لك بإضافة عمليات إضافية'], 403)
                 : abort(403, 'غير مصرح لك بإضافة عمليات إضافية');
         }
 
@@ -1399,7 +1606,8 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+        $canWriteType = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_type') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteType) {
             abort(403, 'غير مصرح لك بحذف العملية الإضافية');
         }
         $additionalOp->delete();
@@ -1407,16 +1615,18 @@ class SurgeryController extends Controller
         $surgery->billing_status = 'pending_review';
         $surgery->save();
 
-        return redirect()->back()->with('success', 'تم حذف العملية الإضافية');
+        return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_type'])
+            ->with('success', 'تم حذف العملية الإضافية');
     }
 
     public function addDevice(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+        $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteSupplies) {
             return $request->expectsJson()
-                ? response()->json(['message' => 'غير مصرح لك'], 403)
+                ? response()->json(['message' => 'غير مصرح لك بإضافة أجهزة طبية'], 403)
                 : abort(403, 'غير مصرح لك بإضافة أجهزة طبية');
         }
 
@@ -1445,14 +1655,15 @@ class SurgeryController extends Controller
 
         return $request->expectsJson()
             ? response()->json(['success' => $msg])
-            : redirect()->back()->with('success', $msg);
+            : redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])->with('success', $msg);
     }
 
     public function removeDevice(Surgery $surgery, \App\Models\MedicalDevice $device)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+        $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteSupplies) {
             abort(403, 'غير مصرح لك بإزالة أجهزة طبية');
         }
 
@@ -1461,7 +1672,159 @@ class SurgeryController extends Controller
         $surgery->billing_status = 'pending_review';
         $surgery->save();
 
-        return redirect()->back()->with('success', 'تم إزالة الجهاز الطبي من العملية بنجاح');
+        return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+            ->with('success', 'تم إزالة الجهاز الطبي من العملية بنجاح');
+    }
+
+    /**
+     * صرف مادة أو مستلزم مباشرة للمريض من عهدة مخزن العمليات (تبويب detail_supplies)
+     */
+    public function dispenseOperationItem(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
+
+        if (! $isAdmin && ! $canWriteSupplies) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'غير مصرح لك بصرف مواد مخزن العمليات'], 403)
+                : abort(403, 'غير مصرح لك بصرف مواد مخزن العمليات');
+        }
+
+        $validated = $request->validate([
+            'batch_id' => 'required|exists:stock_batches,id',
+            'quantity' => 'required|integer|min:1',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $opLocation = $surgery->getOperationSubStoreLocation($user);
+        if (! $opLocation) {
+            return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+                ->with('error', 'لم يتم العثور على مخزن العمليات الفرعي (مخزن عمليات).');
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $surgery, $opLocation, $user) {
+                $batch = StockBatch::with('product')
+                    ->where('id', $validated['batch_id'])
+                    ->where('location_id', $opLocation->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $batch) {
+                    throw new \Exception("الوجبة المحددة لا تنتمي إلى عهدة ({$opLocation->name}).");
+                }
+
+                if ($batch->current_qty < $validated['quantity']) {
+                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في مخزن العمليات ({$batch->current_qty}).");
+                }
+
+                $batch->decrement('current_qty', $validated['quantity']);
+
+                $patientName = $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'مريض';
+                $movementNotes = "صرف من ({$opLocation->name}) لعملية #{$surgery->id} - المريض: {$patientName}";
+                if (! empty($validated['admin_notes'])) {
+                    $movementNotes .= ' - '.$validated['admin_notes'];
+                }
+
+                $movement = StockMovement::create([
+                    'batch_id' => $batch->id,
+                    'from_location_id' => $opLocation->id,
+                    'to_location_id' => null,
+                    'quantity' => $validated['quantity'],
+                    'type' => 'issue_to_patient',
+                    'user_id' => $user->id,
+                    'surgery_id' => $surgery->id,
+                    'notes' => $movementNotes,
+                ]);
+
+                $product = $batch->product;
+                $unitName = $product?->unit ?? 'قطعة';
+                $dosageText = "{$validated['quantity']} {$unitName}";
+
+                SurgeryTreatment::create([
+                    'surgery_id' => $surgery->id,
+                    'item_type' => SurgeryTreatment::TYPE_SUPPLY,
+                    'description' => $product?->name ?? 'مادة مخزنية',
+                    'dosage' => $dosageText,
+                    'timing' => 'صرف من مخزن العمليات',
+                    'status' => 'administered',
+                    'administered_by' => $user->id,
+                    'administered_at' => now(),
+                    'admin_notes' => $validated['admin_notes'] ?? null,
+                    'batch_id' => $batch->id,
+                    'stock_movement_id' => $movement->id,
+                    'quantity' => $validated['quantity'],
+                    'administrations' => [
+                        [
+                            'administered_at' => now()->format('Y-m-d H:i'),
+                            'administered_by' => $user->id,
+                            'administered_by_name' => $user->full_name ?? $user->name ?? 'موظف العمليات',
+                            'notes' => $validated['admin_notes'] ?? null,
+                        ],
+                    ],
+                ]);
+            });
+
+            return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+                ->with('success', "تم صرف المادة بنجاح من ({$opLocation->name}) وخصمها من الرصيد وتوثيقها في ملف العملية.");
+        } catch (\Exception $e) {
+            return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * إلغاء / إرجاع مادة مصروفة من مخزن العمليات وإعادة رصيدها للوجبة
+     */
+    public function reverseOperationItem(Request $request, Surgery $surgery, SurgeryTreatment $treatment)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
+
+        if (! $isAdmin && ! $canWriteSupplies) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'غير مصرح لك بإرجاع مواد مخزن العمليات'], 403)
+                : abort(403, 'غير مصرح لك بإرجاع مواد مخزن العمليات');
+        }
+
+        if ((int) $treatment->surgery_id !== (int) $surgery->id) {
+            abort(404);
+        }
+
+        $treatment->load('stockMovement');
+
+        DB::transaction(function () use ($treatment, $surgery, $user) {
+            if ($treatment->batch_id && $treatment->quantity) {
+                $batch = StockBatch::where('id', $treatment->batch_id)->lockForUpdate()->first();
+                $restoreLocationId = $batch?->location_id
+                    ?? $treatment->stockMovement?->from_location_id
+                    ?? $surgery->getOperationSubStoreLocation($user)?->id;
+
+                if ($batch) {
+                    $batch->increment('current_qty', $treatment->quantity);
+
+                    if ($restoreLocationId) {
+                        StockMovement::create([
+                            'batch_id' => $batch->id,
+                            'from_location_id' => $restoreLocationId,
+                            'to_location_id' => $restoreLocationId,
+                            'quantity' => $treatment->quantity,
+                            'type' => 'return',
+                            'user_id' => $user->id,
+                            'surgery_id' => $surgery->id,
+                            'notes' => "إرجاع لمخزن العمليات وإلغاء صرف عملية #{$surgery->id}: {$treatment->description}",
+                        ]);
+                    }
+                }
+            }
+
+            $treatment->delete();
+        });
+
+        return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+            ->with('success', 'تم إلغاء الصرف وإعادة الكمية إلى رصيد مخزن العمليات بنجاح.');
     }
 
     /**
