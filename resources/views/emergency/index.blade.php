@@ -333,13 +333,6 @@
                                                     </a>
                                                 @endif
                                             @endif
-
-                                            @if($emergency->status !== 'discharged' && $emergency->status !== 'cancelled')
-                                                <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" title="إلغاء حالة الطوارئ"
-                                                        onclick="openCancelEmergencyModal({{ $emergency->id }}, '{{ addslashes($patientRowName) }}', {{ $emergency->payment_status === 'paid' ? 'true' : 'false' }})">
-                                                    <i class="fas fa-ban"></i>
-                                                </button>
-                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -514,75 +507,7 @@
     @endif
 </div>
 
-<!-- Modal إلغاء حالة الطوارئ من القائمة -->
-<div class="modal fade" id="emergencyCancelIndexModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header bg-danger text-white p-3">
-                <h5 class="modal-title fw-bold mb-0">
-                    <i class="fas fa-ban me-2"></i>تأكيد إلغاء حالة الطوارئ
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="emergencyCancelIndexForm" method="POST">
-                @csrf
-                <div class="modal-body p-4 bg-light text-end">
-                    <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted small">المريض:</span>
-                            <strong id="cancelModalPatientName" class="text-dark">---</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted small">حالة السداد:</span>
-                            <span id="cancelModalPaymentBadge" class="badge bg-secondary">غير مسدد</span>
-                        </div>
-                    </div>
-
-                    <div id="cancelModalPaidNotice" class="alert alert-warning py-2 px-3 small border-warning d-none">
-                        <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
-                        <strong>ملاحظة مالية:</strong> هذه الحالة مسددة مسبقاً في الكاشير. عند الإلغاء سيتم تحويل المريض مباشرة إلى <strong>مستحقات الاسترجاع بالكاشير</strong> لاسترداد المبلغ المسدد.
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="cancel_index_reason" class="form-label fw-bold text-dark small">
-                            سبب إلغاء الحالة <span class="text-danger">*</span>:
-                        </label>
-                        <textarea class="form-control" id="cancel_index_reason" name="cancel_reason" rows="3" required
-                                  placeholder="يرجى كتابة سبب الإلغاء بدقة..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer bg-white justify-content-between p-3">
-                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
-                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
-                        <i class="fas fa-ban me-1"></i> تأكيد إلغاء الحالة
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
-    function openCancelEmergencyModal(emergencyId, patientName, isPaid) {
-        var form = document.getElementById('emergencyCancelIndexForm');
-        form.action = '/emergency/' + emergencyId + '/cancel';
-        document.getElementById('cancelModalPatientName').textContent = patientName;
-        
-        var badge = document.getElementById('cancelModalPaymentBadge');
-        var notice = document.getElementById('cancelModalPaidNotice');
-        if (isPaid) {
-            badge.className = 'badge bg-success';
-            badge.textContent = 'مسدد مسبقاً';
-            notice.classList.remove('d-none');
-        } else {
-            badge.className = 'badge bg-secondary';
-            badge.textContent = 'غير مسدد';
-            notice.classList.add('d-none');
-        }
-        
-        var modal = new bootstrap.Modal(document.getElementById('emergencyCancelIndexModal'));
-        modal.show();
-    }
     function updateEmergencyPaymentStatus() {
         axios.get('{{ route('cashier.emergency.payment.status') }}')
             .then(function(response) {

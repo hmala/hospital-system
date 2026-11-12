@@ -404,13 +404,6 @@
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                @can('create surgeries')
-                <a href="{{ route('surgeries.create') }}" class="sg-btn-create">
-                    <i class="fas fa-plus"></i>
-                    <span>حجز عملية جديدة</span>
-                </a>
-                @endcan
-
                 @canany(['manage surgery waiting list', 'view surgeries'])
                 <a href="{{ route('surgeries.waiting') }}" class="sg-btn-link-action">
                     <i class="fas fa-clock text-warning"></i>

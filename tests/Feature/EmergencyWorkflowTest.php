@@ -351,4 +351,15 @@ class EmergencyWorkflowTest extends TestCase
         $this->assertNotNull($this->emergency->payment);
         $this->assertEquals(30000, (float) $this->emergency->payment->amount);
     }
+
+    public function test_emergency_index_omits_inline_cancel_button_and_modal()
+    {
+        $response = $this->actingAs($this->admin)->get(route('emergency.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('فتح ملف الكشف');
+        $response->assertDontSee('إلغاء حالة الطوارئ');
+        $response->assertDontSee('openCancelEmergencyModal');
+        $response->assertDontSee('emergencyCancelIndexModal');
+    }
 }
