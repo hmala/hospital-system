@@ -2,11 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Emergency;
 use App\Models\EmergencyService;
-use App\Models\FinancialTransaction;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\User;
@@ -21,12 +19,19 @@ class EmergencyFinancialClearanceAndCancellationTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $cashierUser;
+
     protected $doctorUser;
+
     protected $doctor;
+
     protected $patient;
+
     protected $hospitalId;
+
     protected $deptId;
+
     protected $emergencyService;
 
     protected function setUp(): void
@@ -68,7 +73,7 @@ class EmergencyFinancialClearanceAndCancellationTest extends TestCase
             'owner_name' => 'الإدارة',
             'phone' => '07700000000',
             'address' => 'بغداد',
-            'license_number' => 'HOSP-' . uniqid(),
+            'license_number' => 'HOSP-'.uniqid(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -90,7 +95,7 @@ class EmergencyFinancialClearanceAndCancellationTest extends TestCase
             'department_id' => $this->deptId,
             'specialization' => 'طب الطوارئ',
             'qualification' => 'بكالوريوس طب وجراحة عامة',
-            'license_number' => 'DOC-ER-' . rand(1000, 9999),
+            'license_number' => 'DOC-ER-'.rand(1000, 9999),
             'consultation_fee' => 10000,
             'status' => 'active',
         ]);
@@ -153,6 +158,16 @@ class EmergencyFinancialClearanceAndCancellationTest extends TestCase
             'discharge_notes' => 'المريض بحالة جيدة',
         ]);
         $dischargeResponse->assertSessionHas('error');
+        $this->assertDatabaseMissing('emergencies', [
+            'id' => $emergency->id,
+            'status' => 'discharged',
+        ]);
+
+        // 2b. Trying to discharge as deceased while unpaid is equally blocked
+        $deceasedResponse = $this->actingAs($this->admin)->post(route('emergency.discharge', $emergency), [
+            'discharge_type' => 'deceased',
+        ]);
+        $deceasedResponse->assertSessionHas('error');
         $this->assertDatabaseMissing('emergencies', [
             'id' => $emergency->id,
             'status' => 'discharged',
@@ -309,7 +324,7 @@ class EmergencyFinancialClearanceAndCancellationTest extends TestCase
             'department_id' => $this->deptId,
             'specialization' => 'طوارئ',
             'qualification' => 'طب عام',
-            'license_number' => 'DOC-OTHER-' . rand(1000, 9999),
+            'license_number' => 'DOC-OTHER-'.rand(1000, 9999),
             'status' => 'active',
         ]);
 

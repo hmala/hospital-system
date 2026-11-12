@@ -207,6 +207,43 @@ class EmergencyWorkflowTest extends TestCase
         $this->assertEquals('تحويل إلى العيادة الاستشارية الباطنية للمتابعة', $this->emergency->discharge_notes);
     }
 
+    public function test_emergency_discharge_deceased_workflow_and_renders_across_views()
+    {
+        $showBefore = $this->actingAs($this->admin)->get(route('emergency.show', $this->emergency));
+        $showBefore->assertOk();
+        $showBefore->assertSee('value="deceased"', false);
+        $showBefore->assertSee('خرج متوفي');
+
+        $response = $this->actingAs($this->admin)->post(route('emergency.discharge', $this->emergency), [
+            'discharge_type' => 'deceased',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $this->emergency->refresh();
+
+        $this->assertEquals('discharged', $this->emergency->status);
+        $this->assertEquals('deceased', $this->emergency->discharge_type);
+        $this->assertEquals('خرج متوفي', $this->emergency->discharge_destination);
+        $this->assertEquals('توثيق حالة الوفاة واستكمال الإجراءات الرسمية', $this->emergency->discharge_recommendations);
+
+        $showAfter = $this->actingAs($this->admin)->get(route('emergency.show', $this->emergency));
+        $showAfter->assertOk();
+        $showAfter->assertSee('خرج متوفي');
+
+        $indexRes = $this->actingAs($this->admin)->get(route('emergency.index', ['filter' => 'discharged']));
+        $indexRes->assertOk();
+        $indexRes->assertSee('خرج متوفي');
+
+        $reportRes = $this->actingAs($this->admin)->get(route('emergency.medical-report', $this->emergency));
+        $reportRes->assertOk();
+        $reportRes->assertSee('خرج متوفي');
+
+        $verifyRes = $this->get(route('emergency.verify-report', $this->emergency));
+        $verifyRes->assertOk();
+        $verifyRes->assertSee('خرج متوفي');
+    }
+
     public function test_nursing_request_status_update()
     {
         $visit = \App\Models\Visit::create([

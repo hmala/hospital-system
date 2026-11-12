@@ -55,6 +55,15 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-12 — مزامنة آخر تحديثات `origin/main` على فرع `hr`: خيار خروج الطوارئ «خرج متوفي» `deceased` مع حماية قواعد مسار العمل `C:\get\hospital-system` Safe Main-to-HR Sync & Emergency Deceased Discharge)
+
+### Done
+- **سحب ودمج آخر تحديثات `origin/main` (`4cecb86`, `bf16ef7`) بأمان على فرع `hr`**:
+  * دمج ميزة خيار خروج الطوارئ **`خرج متوفي` (`deceased`)** عبر `--no-ff` مع استثناء وحماية ملفات القواعد والذاكرة المحلية ([GEMINI.md](file:///C:/get/hospital-system/GEMINI.md), [.agents/rules/hospital-core.md](file:///C:/get/hospital-system/.agents/rules/hospital-core.md), [AGENTS.md](file:///C:/get/hospital-system/AGENTS.md), [hospital-memory.md](file:///C:/get/hospital-system/hospital-memory.md)) لمنع استبدال مسار العمل الرسمي `C:\get\hospital-system` وقواعد النشر على `hr` بنسخة `main` (`wamp64`).
+  * **الكنترولر ومنطق الخروج ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**: إضافة `deceased` إلى قواعد التحقق في `discharge()` مع الالتزام بنفس شرط إبراء الذمة المالية (`getUnpaidAmount()`)، وضبط الوجهة الافتراضية (`خرج متوفي`) والتوصيات الافتراضية (`توثيق حالة الوفاة واستكمال الإجراءات الرسمية`).
+  * **واجهات الطوارئ والتقارير والتحقق ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php), [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php), [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php), [resources/views/emergency/verify-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php))**: إضافة خيار `خرج متوفي` لقائمة التخريج، وشارة الحالة الداكنة في الشاشة والسجل والتقرير الطبي وصفحة التحقق عبر QR.
+  * **الاختبارات الآلية ([tests/Feature/EmergencyWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php), [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php), [tests/Feature/EmergencyStandardReportDataTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyStandardReportDataTest.php))**: اجتياز كافة الحزم الأربع بنجاح (`25 passed, 139 assertions`).
+
 ## Session log (2026-11-11 — مزامنة تحديثات `origin/main` على فرع `hr` ونقل واعتماد مسار العمل الرسمي `C:\get\hospital-system` Workspace Migration & Safe Main-to-HR Sync)
 
 ### Done

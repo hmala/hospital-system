@@ -2215,7 +2215,7 @@ class EmergencyController extends Controller
         }
 
         $request->validate([
-            'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation',
+            'discharge_type' => 'required|in:recovered,against_medical_advice,transferred_to_consultation,deceased',
             'discharge_notes' => 'nullable|string|max:1000',
             'discharge_destination' => 'nullable|string|max:100',
             'discharge_recommendations' => 'nullable|string|max:1000',
@@ -2227,12 +2227,17 @@ class EmergencyController extends Controller
                 $destination = 'تحويل للاستشارية';
             } elseif ($request->discharge_type === 'against_medical_advice') {
                 $destination = 'خروج على مسؤوليته للمنزل';
+            } elseif ($request->discharge_type === 'deceased') {
+                $destination = 'خرج متوفي';
             } else {
                 $destination = 'خروج للمنزل';
             }
         }
 
-        $recommendations = $request->discharge_recommendations ?? $request->discharge_notes ?? 'مراجعة العيادة الخارجية';
+        $defaultRecommendation = $request->discharge_type === 'deceased'
+            ? 'توثيق حالة الوفاة واستكمال الإجراءات الرسمية'
+            : 'مراجعة العيادة الخارجية';
+        $recommendations = $request->discharge_recommendations ?? $request->discharge_notes ?? $defaultRecommendation;
 
         $updateData = [
             'status' => 'discharged',
@@ -2258,6 +2263,7 @@ class EmergencyController extends Controller
             'recovered' => 'خرج متعافي',
             'against_medical_advice' => 'خرج على مسؤوليته',
             'transferred_to_consultation' => 'تحويل للاستشارية',
+            'deceased' => 'خرج متوفي',
         ];
         $typeLabel = $typeLabels[$request->discharge_type] ?? 'تخريج المريض';
 

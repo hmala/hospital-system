@@ -83,6 +83,16 @@
                                             </button>
                                         </form>
                                     </li>
+                                    <li>
+                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متوفي)؟')">
+                                            @csrf
+                                            <input type="hidden" name="discharge_type" value="deceased">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center text-dark fw-bold py-2">
+                                                <i class="fas fa-heart-broken me-2 text-danger"></i>
+                                                <span>خرج متوفي</span>
+                                            </button>
+                                        </form>
+                                    </li>
                                 </ul>
                             </div>
                         @else
@@ -111,6 +121,10 @@
                         @elseif($emergency->discharge_type === 'transferred_to_consultation')
                             <span class="badge bg-info text-dark fs-6 py-1 px-2 shadow-sm fw-bold">
                                 <i class="fas fa-clinic-medical me-1"></i> تحويل للاستشارية ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
+                            </span>
+                        @elseif($emergency->discharge_type === 'deceased')
+                            <span class="badge bg-dark text-white fs-6 py-1 px-2 shadow-sm fw-bold">
+                                <i class="fas fa-heart-broken me-1 text-danger"></i> خرج متوفي ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @else
                             <span class="badge bg-secondary fs-6 py-1 px-2 shadow-sm">
