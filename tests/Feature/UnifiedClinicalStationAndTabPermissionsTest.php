@@ -4,15 +4,19 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Models\LabTest;
 use App\Models\Location;
 use App\Models\Medicine;
 use App\Models\MedicineBatch;
 use App\Models\OperationTheater;
 use App\Models\Patient;
 use App\Models\Product;
+use App\Models\RadiologyType;
 use App\Models\Room;
 use App\Models\StockBatch;
 use App\Models\Surgery;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\User;
@@ -1250,5 +1254,88 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
         $this->actingAs($emergencyUser)
             ->get(route('surgeries.show', $this->surgery))
             ->assertStatus(403);
+    }
+
+    public function test_clinical_station_can_order_and_delete_lab_and_radiology_tests()
+    {
+        $labTest = LabTest::create([
+            'name' => 'Complete Blood Count (CBC)',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $radType = RadiologyType::create([
+            'name' => 'Chest X-Ray',
+            'code' => 'RAD-CXR-01',
+            'base_price' => 25000,
+            'is_active' => true,
+        ]);
+
+        // 1. Resident requests lab tests
+        $res = $this->actingAs($this->residentUser)->post(route('clinical-station.lab-tests.store', $this->surgery), [
+            'lab_test_ids' => [$labTest->id],
+            'priority' => 'urgent',
+            'notes' => 'Pre-op assessment',
+        ]);
+        $res->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'tab' => 'tests']));
+        $res->assertSessionHas('success');
+
+        $this->assertDatabaseHas('surgery_lab_tests', [
+            'surgery_id' => $this->surgery->id,
+            'lab_test_id' => $labTest->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'notes' => '[عاجل STAT] Pre-op assessment',
+        ]);
+
+        // 2. Resident requests radiology test
+        $resRad = $this->actingAs($this->residentUser)->post(route('clinical-station.radiology-tests.store', $this->surgery), [
+            'radiology_type_id' => $radType->id,
+            'priority' => 'routine',
+            'notes' => 'Routine pre-op chest film',
+        ]);
+        $resRad->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'tab' => 'tests']));
+        $resRad->assertSessionHas('success');
+
+        $this->assertDatabaseHas('surgery_radiology_tests', [
+            'surgery_id' => $this->surgery->id,
+            'radiology_type_id' => $radType->id,
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'notes' => 'Routine pre-op chest film',
+        ]);
+
+        // 3. Clinical station show tab=tests renders cleanly with cashier link and test badges
+        $showRes = $this->actingAs($this->residentUser)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'phase' => 'pre_op',
+            'tab' => 'tests',
+        ]));
+        $showRes->assertStatus(200);
+        $showRes->assertSee('Complete Blood Count (CBC)');
+        $showRes->assertSee('Chest X-Ray');
+        $showRes->assertSee(route('cashier.surgeries.payment.form', $this->surgery));
+        $showRes->assertSee('غير مدفوع');
+
+        // 4. Resident can delete an unpaid lab test
+        $surgeryLab = SurgeryLabTest::where('surgery_id', $this->surgery->id)->where('lab_test_id', $labTest->id)->first();
+        $delRes = $this->actingAs($this->residentUser)->delete(route('clinical-station.lab-tests.delete', [
+            'surgery' => $this->surgery->id,
+            'labTest' => $surgeryLab->id,
+        ]));
+        $delRes->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'tab' => 'tests']));
+        $this->assertDatabaseMissing('surgery_lab_tests', ['id' => $surgeryLab->id]);
+
+        // 5. Paid test cannot be deleted
+        $surgeryRad = SurgeryRadiologyTest::where('surgery_id', $this->surgery->id)->where('radiology_type_id', $radType->id)->first();
+        $surgeryRad->update(['payment_status' => 'paid']);
+
+        $delPaidRes = $this->actingAs($this->residentUser)->delete(route('clinical-station.radiology-tests.delete', [
+            'surgery' => $this->surgery->id,
+            'radiologyTest' => $surgeryRad->id,
+        ]));
+        $delPaidRes->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'tab' => 'tests']));
+        $delPaidRes->assertSessionHas('error');
+        $this->assertDatabaseHas('surgery_radiology_tests', ['id' => $surgeryRad->id]);
     }
 }

@@ -36,6 +36,7 @@ class SurgeryCashierSplitAndInsurancePaymentTest extends TestCase
 
         Permission::firstOrCreate(['name' => 'process surgery payments', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'view surgery payments', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view cashier surgeries', 'guard_name' => 'web']);
 
         $hospital = Hospital::create([
             'name' => 'مستشفى الفرات الأهلي',
@@ -60,6 +61,7 @@ class SurgeryCashierSplitAndInsurancePaymentTest extends TestCase
         $this->cashier = User::factory()->create();
         $this->cashier->givePermissionTo('process surgery payments');
         $this->cashier->givePermissionTo('view surgery payments');
+        $this->cashier->givePermissionTo('view cashier surgeries');
 
         $patientUser = User::factory()->create(['name' => 'حسام عبد الستار']);
         $this->patient = Patient::create([
@@ -500,5 +502,48 @@ class SurgeryCashierSplitAndInsurancePaymentTest extends TestCase
         $surgExtra->refresh();
         $this->assertEquals('paid', $surgExtra->payment_status);
         $this->assertEquals($payment->id, $surgExtra->payment_id);
+    }
+
+    public function test_cashier_surgeries_index_displays_copay_amount_for_insured_patient_pending_tests(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'استئصال المرارة بالناظور',
+            'surgery_fee' => 1000000,
+            'surgery_fee_paid_amount' => 1000000,
+            'room_fee' => 0,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'scheduled',
+            'payment_status' => 'paid',
+            'insurance_type' => 'hi',
+        ]);
+
+        $test = LabTest::create([
+            'name' => 'Creatinine Test',
+            'code' => 'CREAT',
+            'price' => 11000,
+            'hi_price' => 8500,
+            'moi_price' => 9000,
+            'is_active' => true,
+        ]);
+
+        SurgeryLabTest::create([
+            'surgery_id' => $surgery->id,
+            'lab_test_id' => $test->id,
+            'price' => 11000,
+            'payment_status' => 'pending',
+            'status' => 'pending',
+        ]);
+
+        // Insured patient: 8,500 * 25% = 2,125 IQD pending
+        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('معلق: 2,125 IQD');
+        $response->assertSee('2,125 IQD');
+        $response->assertDontSee('11,000 IQD');
     }
 }

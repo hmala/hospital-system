@@ -170,20 +170,57 @@
                                 $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                 $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
                                 
+                                // خدمات إضافية
+                                $pendingExtraFee = $isCancelled ? 0 : $surgery->extraServices->where('payment_status', '!=', 'paid')->sum('total_amount');
+                                $paidExtraFee = $surgery->extraServices->where('payment_status', 'paid')->sum(function($extra) {
+                                    if ($extra->is_package_included) return 0;
+                                    return (float)($extra->total_amount ?? 0);
+                                });
+
+                                // التأمين ونسبة التحمل للمريض
+                                $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                $isIns = in_array($sIns, ['hi', 'moi']);
+                                $labCopayPct = match($sIns) {
+                                    'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
+                                    'moi' => (float)($patient?->copay_percentage ?? 15),
+                                    default => 100
+                                };
+                                $radCopayPct = match($sIns) {
+                                    'hi' => ($patient?->getCopayPercentageFor('radiology') ?? 15),
+                                    'moi' => (float)($patient?->copay_percentage ?? 15),
+                                    default => 100
+                                };
+
                                 // تحاليل
-                                $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                    return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $labCopayPct) {
+                                    $m = $test->labTest;
+                                    if (!$m) return 0;
+                                    $base = (float)($m->price ?? 0);
+                                    if (!$isIns) return $base;
+                                    $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                    $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                    $approved = ($sIns === 'hi') ? $hi : $moi;
+                                    return round($approved * ($labCopayPct / 100));
                                 });
                                 $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                                    return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                    if ($test->is_package_included) return 0;
+                                    return (float)($test->labTest?->price ?? 0);
                                 });
                                 
                                 // أشعة
-                                $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                    return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $radCopayPct) {
+                                    $m = $test->radiologyType;
+                                    if (!$m) return 0;
+                                    $base = (float)($m->base_price ?? 0);
+                                    if (!$isIns) return $base;
+                                    $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                    $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                    $approved = ($sIns === 'hi') ? $hi : $moi;
+                                    return round($approved * ($radCopayPct / 100));
                                 });
                                 $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                                    return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                    if ($test->is_package_included) return 0;
+                                    return (float)($test->radiologyType?->base_price ?? 0);
                                 });
                                 
                                 $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
@@ -191,10 +228,10 @@
                                     $patientRefundAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                     $patientPaidAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                 } else {
-                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
-                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee;
+                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
                                 }
-                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee;
                             }
                         @endphp
                         <div class="accordion-item">
@@ -291,26 +328,63 @@
                                                         $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                                         $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
 
-                                                        $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
-                                                        });
-                                                        $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                                        // خدمات إضافية
+                                                        $pendingExtraFee = $isCancelled ? 0 : $surgery->extraServices->where('payment_status', '!=', 'paid')->sum('total_amount');
+                                                        $paidExtraFee = $surgery->extraServices->where('payment_status', 'paid')->sum(function($extra) {
+                                                            if ($extra->is_package_included) return 0;
+                                                            return (float)($extra->total_amount ?? 0);
                                                         });
 
-                                                        $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                        // التأمين ونسبة التحمل للمريض
+                                                        $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                                        $isIns = in_array($sIns, ['hi', 'moi']);
+                                                        $labCopayPct = match($sIns) {
+                                                            'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
+                                                            'moi' => (float)($patient?->copay_percentage ?? 15),
+                                                            default => 100
+                                                        };
+                                                        $radCopayPct = match($sIns) {
+                                                            'hi' => ($patient?->getCopayPercentageFor('radiology') ?? 15),
+                                                            'moi' => (float)($patient?->copay_percentage ?? 15),
+                                                            default => 100
+                                                        };
+
+                                                        $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $labCopayPct) {
+                                                            $m = $test->labTest;
+                                                            if (!$m) return 0;
+                                                            $base = (float)($m->price ?? 0);
+                                                            if (!$isIns) return $base;
+                                                            $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                                            $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                                            $approved = ($sIns === 'hi') ? $hi : $moi;
+                                                            return round($approved * ($labCopayPct / 100));
+                                                        });
+                                                        $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
+                                                            if ($test->is_package_included) return 0;
+                                                            return (float)($test->labTest?->price ?? 0);
+                                                        });
+
+                                                        $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $radCopayPct) {
+                                                            $m = $test->radiologyType;
+                                                            if (!$m) return 0;
+                                                            $base = (float)($m->base_price ?? 0);
+                                                            if (!$isIns) return $base;
+                                                            $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                                            $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                                            $approved = ($sIns === 'hi') ? $hi : $moi;
+                                                            return round($approved * ($radCopayPct / 100));
                                                         });
                                                         $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                            if ($test->is_package_included) return 0;
+                                                            return (float)($test->radiologyType?->base_price ?? 0);
                                                         });
 
                                                         $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
                                                         $paidAmount = $isCancelled 
                                                             ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount))
-                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee);
-                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
-                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee);
+                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
+                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee;
                                                         
                                                         if ($isCancelled) {
                                                             $excessAmount = $paidAmount;

@@ -54,6 +54,61 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-13 — المرحلة 197: تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation)
+
+### Done
+- **تصحيح احتساب المبالغ المدفوعة سابقاً واستبعاد بنود الباقة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [resources/views/cashier/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php))**:
+  * استبعاد بنود باقة العملية (`is_package_included`) من التكرار والجمع المزدوج فوق رسم العملية في حساب `$paidLabFee` و`$paidRadiologyFee` و`$paidExtraFee`.
+  * تمييز بنود باقة العملية في جدول العناصر المدفوعة سابقاً ببادج أنيق: `مشمول بالباقة (0 د.ع)` بدلاً من عرض أسعار الكاش الافتراضية.
+  * إدراج صفوف الخدمات الإضافية المدفوعة فعلياً (`paidExtraServices`) داخل جدول العناصر المدفوعة سابقاً ليتطابق مجموع الصفوف مع الإجمالي في ذيل الجدول.
+- **إبراز المسدد نقداً من المريض وتغطية الضمان الصحي ([resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إضافة سطر تفصيلي واضح في بطاقة الملخص وفي ذيل جدول المدفوعات يوضح: `المسدد نقداً من المريض` (من واقع وصولات القبض المسجلة في الصندوق) مقابل `مطالبة وتغطية الضمان` لمريض التأمين.
+  * ضبط توازن الحسابات والمعلقات بحيث يطابق الإجمالي المعتمد بدقة: `الإجمالي = المدفوع سابقاً + المعلق المطلوب دفعه`.
+- **التحقق الآلي وتأكيد صحة الاختبارات ([tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php))**:
+  * اجتياز جميع اختبارات ميزة كاشير العمليات والضمان الصحي بنجاح 100% (`8 passed, 55 assertions`).
+
+## Session log (2026-11-13 — المرحلة 196: بناء واجهة ونظام دليل مساعدي الجراحين `/surgical-assistants`، تسجيل الأسماء الـ 9 المعتمدة، والربط التلقائي بملف العملية وصالة العمليات Dedicated Surgical Assistants Management & Dynamic Surgeries Integration)
+
+### Done
+- **إنشاء بنية وجدول مساعدي الجراحين ([database/migrations/2026_11_13_221000_create_surgical_assistants_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_13_221000_create_surgical_assistants_table.php), [app/Models/SurgicalAssistant.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalAssistant.php), [database/seeders/SurgicalAssistantSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/SurgicalAssistantSeeder.php))**:
+  * بناء جدول `surgical_assistants` ونموذج `SurgicalAssistant` بنمط كاستات لارافيل 12 الحديثة (`name`, `phone`, `notes`, `is_active`).
+  * تسجيل وتغذية الأسماء الـ 9 المعتمدة أولياً عبر السييدر (علياء عبدالجبار، علي عبدالله، حسين ناهي، ليث رحيم، حكم علاء، عبدالله علي، محمد فالح، مضاء علي، ومساعد جراح خارجي).
+- **بناء واجهة الإدارة الكاملة المستقلة ([app/Http/Controllers/SurgicalAssistantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [resources/views/surgical-assistants/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgical-assistants/index.blade.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تصميم واجهة متكاملة مطابقة لنمط واجهة الأطباء ودليل العمليات مع بطاقات إحصائيات سريعة، شريط بحث بالاسم والهاتف، جدول المساعدين مع إحصائية العمليات المسجلة لكل مساعد، زر تبديل الحالة (نشط/معطل)، ونوافذ منبثقة (Modals) للإضافة والتعديل والحذف.
+  * إضافة رابط `مساعدو الجراحين` بالقائمة الجانبية تحت قسم العمليات الجراحية للمشرفين وموظفي العمليات.
+- **الربط المباشر مع ملف العملية وصالة العمليات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تمرير قائمة المساعدين النشطين ديناميكياً لملف وتفاصيل العملية (`detail_team_timing`) وتزويد حقل `surgical_assistant_name` بقائمة اقتراحات `datalist` مع رابط مباشر يفتح دليل المساعدين.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع Blade واجتياز اختبارات الميزة بنجاح 100% (7 اختبارات).
+
+## Session log (2026-11-13 — المرحلة 195: تمكين ظهور المريض لطبيب التخدير فور التعيين، إزالة عائق اكتمال الجراح، ومزامنة محطة التخدير واعتماد أنواع التخدير الخمسة Anesthesiologist Immediate Visibility, Auto Station Sync & 5 Anesthesia Types)
+
+### Done
+- **إزالة عائق اكتمال الجراح وإتاحة الوصول الفوري لمريض التخدير ([app/Http/Controllers/AnesthesiaStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+  * إزالة شرط حجب العمليات القائم على اكتمال محطة الجراح (`whereHas('surgeonStation', fn($q) => $q->where('status', 'completed'))`) في محطة التخدير (`/anesthesia`)، مما يتيح ظهور العمليات المعينة فوراً للمخدر للبدء بالتوثيق والتجهيز السريري.
+  * إزالة التحويل الإجباري والمنع عند فتح شاشة التخدير (`show`).
+- **المزامنة والإنشاء التلقائي لمحطة التخدير وسجل العمليات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Http/Controllers/DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+  * إنشاء وتحديث سجل `AnesthesiaStation` فور قيام موظف العمليات بحفظ الفريق الطبي والتوقيت في `detail_team_timing`.
+  * شمول طبيب التخدير في استعلامات وفلاتر سجل العمليات العام (`/surgeries`) ليتمكن من رؤية عملياته كمخدر أو جراح، وتحديث عدادات القائمة الجانبية ولوحة التحكم.
+  * تثبيت صلاحيات دور `التخدير` و`anesthesia` في قاعدة البيانات وبذور الصلاحيات.
+- **اعتماد أنواع التخدير الخمسة المعتمدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [resources/views/surgery-stations/anesthesia/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/show.blade.php))**:
+  * توفير أزرار التعبئة السريعة وقوائم الاقتراح بالأنواع الخمسة: `عام` (General Anesthesia)، `نصفي` (Spinal Anesthesia)، `موضعي` (Local Anesthesia)، `مناطقي` (Regional Anesthesia)، `سديشن` (Sedation).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/AnesthesiologistVisibilityAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/AnesthesiologistVisibilityAndWorkflowTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع قوالب Blade واجتياز اختبارات الميزة بنجاح 100%.
+
+## Session log (2026-11-13 — المرحلة 194: تبسيط جدول سجل العمليات الجراحية `/surgeries`، إزالة تفاصيل ونتائج العملية المنسدلة وزر الإلغاء، وربط اسم المريض مباشرة بملف العملية الموحد Surgeries Index Streamlining & Redundant Accordion Removal)
+
+### Done
+- **إلغاء تفاصيل ونتائج العملية المنسدلة (`detailsRow`) وإلغاء زر الإلغاء المباشر ([resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * إزالة عامود `تشخيص / علاج` من جدول العمليات النشطة لتوفير المساحة وتجنب التكدس.
+  * إزالة الصف المنسدل للأكورديون بالكامل (`#detailsRow{{ $surgery->id }}`) الذي كان يعرض تحاليل المختبر والأشعة والعلاجات وزر إلغاء العملية، حيث أصبحت كل هذه البيانات الرسمية تُدار حصرياً ومفصلة ومحمية بداخل ملف العملية وصالة العمليات الموحد (`/surgeries/{id}`).
+  * إزالة الصف المنسدل من جدول العمليات المكتملة (`#detailsRowCompleted{{ $surgery->id }}`)، وحذف نموذج الإلغاء المخفي `#cancelSurgeryConfirmForm` والدالة `window.confirmCancelSurgery`، ليكون إلغاء العملية خاضعاً للحماية والتوثيق والسبب المحمي داخل شاشة تفاصيل العملية.
+  * تحويل زر اسم المريض في جدولي العمليات النشطة والمكتملة من زر فتح أكورديون إلى رابط مباشر يفتح ملف وتفاصيل العملية (`route('surgeries.show', $surgery)`).
+- **تحسين استعلامات الأداء في الكنترولر ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إزالة التحميل المسبق للعلاقات غير المستخدمة بعد الآن في صفحة الفهرس (`surgeryTreatments`, `radiologyTests`, `labTests`) من استعلامي `activeSurgeriesQuery` و`completedSurgeriesQuery`، مما يرفع سرعة الاستجابة ويقلل استهلاك الذاكرة واستعلامات قاعدة البيانات.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع Blade (`view:cache`)، واجتياز حزم الاختبارات الآلية بنجاح 100%.
+
 ## Session log (2026-11-12 — المرحلة 193: ربط مخزن وعُهدة العمليات (`مخزن عمليات رئيسي`) بملف العملية وصرف وإرجاع المواد، وتبويب العهدة الحصري للحساب المعين له المخزن في `/surgeries`, بالإضافة لملاحظات نوع العملية وإزالة الحقول المكررة من التخدير Operations Sub-Store Custody & Dispensing Integration)
 
 ### Done

@@ -179,33 +179,81 @@
     $roomFeePaid = $isCancelled ? ($roomFeePaidAmount <= 0) : ($remainingRoomFee <= 0 && $excessRoomFee <= 0);
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
-    // تحاليل معلقة ومدفوعة (مشمولة ضمن أتعاب العملية كالغرفة لأول يوم)
+    // تحاليل معلقة ومدفوعة
     $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid');
     $paidLabTests = $surgery->labTests->filter(function($test) use ($isCancelled) {
         return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->labTest);
     });
-    $pendingLabFee = 0; // مشمولة ضمن أتعاب العملية (0 د.ع إضافي)
-    $paidLabFee = 0;
+    $labCopayPct = match($defaultInsurance) {
+        'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
+        'moi' => (float)($patient?->copay_percentage ?? 15),
+        default => 100
+    };
+    $pendingLabFee = $isCancelled ? 0 : $pendingLabTests->sum(function($test) use ($defaultInsurance, $labCopayPct) {
+        $m = $test->labTest;
+        if (!$m) return 0;
+        $base = (float)($m->price ?? 0);
+        if (!in_array($defaultInsurance, ['hi', 'moi'])) {
+            return $base;
+        }
+        $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+        $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+        $approved = ($defaultInsurance === 'hi') ? $hi : $moi;
+        return round($approved * ($labCopayPct / 100));
+    });
+    $paidLabFee = $paidLabTests->sum(function($test) {
+        if ($test->is_package_included) {
+            return 0;
+        }
+        return (float)($test->labTest?->price ?? 0);
+    });
     
     // أشعة معلقة ومدفوعة
     $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid');
     $paidRadiologyTests = $surgery->radiologyTests->filter(function($test) use ($isCancelled) {
         return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->radiologyType);
     });
-    $pendingRadiologyFee = $isCancelled ? 0 : $pendingRadiologyTests->sum(function($test) {
-        return $test->radiologyType->base_price ?? 0;
+    $radCopayPct = match($defaultInsurance) {
+        'hi' => ($patient?->getCopayPercentageFor('radiology') ?? 15),
+        'moi' => (float)($patient?->copay_percentage ?? 15),
+        default => 100
+    };
+    $pendingRadiologyFee = $isCancelled ? 0 : $pendingRadiologyTests->sum(function($test) use ($defaultInsurance, $radCopayPct) {
+        $m = $test->radiologyType;
+        if (!$m) return 0;
+        $base = (float)($m->base_price ?? 0);
+        if (!in_array($defaultInsurance, ['hi', 'moi'])) {
+            return $base;
+        }
+        $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+        $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+        $approved = ($defaultInsurance === 'hi') ? $hi : $moi;
+        return round($approved * ($radCopayPct / 100));
     });
     $paidRadiologyFee = $paidRadiologyTests->sum(function($test) {
-        return $test->radiologyType->base_price ?? 0;
+        if ($test->is_package_included) {
+            return 0;
+        }
+        return (float)($test->radiologyType?->base_price ?? 0);
     });
     
     // خدمات إضافية وفندقية معلقة ومدفوعة
     $pendingExtraServices = $isCancelled ? collect() : $surgery->extraServices->where('payment_status', '!=', 'paid');
     $paidExtraServices = $surgery->extraServices->where('payment_status', 'paid');
     $pendingExtraFee = $isCancelled ? 0 : $pendingExtraServices->sum('total_amount');
-    $paidExtraFee = $paidExtraServices->sum('total_amount');
+    $paidExtraFee = $paidExtraServices->sum(function($extra) {
+        if ($extra->is_package_included) {
+            return 0;
+        }
+        return (float)($extra->total_amount ?? 0);
+    });
+
+    // تفاصيل مدفوعات الصندوق والتأمين
+    $patientPaidCash = (float) $surgery->payments->sum('amount');
+    $insurancePaidAmount = (float) $surgery->payments->sum('insurance_share');
 
     // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً والخدمات الإضافية)
+    $hasPendingItems = ($remainingSurgeryFee > 0) || ($remainingRoomFee > 0) || ($pendingLabTests->count() > 0) || ($pendingRadiologyTests->count() > 0) || ($pendingExtraServices->count() > 0);
     $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
     $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
     $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee);
@@ -348,7 +396,7 @@
                     <div class="alert alert-info mb-4">
                         <div class="row align-items-center">
                             <div class="col-md-4 text-center border-end">
-                                <small class="text-muted d-block">المدفوع سابقاً</small>
+                                <small class="text-muted d-block">المدفوع سابقاً (المعتمد المسدد)</small>
                                 <h4 class="text-success mb-0">{{ number_format($paidAmount, 0) }} IQD</h4>
                             </div>
                             <div class="col-md-4 text-center border-end">
@@ -356,10 +404,26 @@
                                 <h4 class="text-warning mb-0">{{ number_format($pendingAmount, 0) }} IQD</h4>
                             </div>
                             <div class="col-md-4 text-center">
-                                <small class="text-muted d-block">الإجمالي الكلي</small>
+                                <small class="text-muted d-block">الإجمالي الكلي المعتمد</small>
                                 <h4 class="text-primary mb-0">{{ number_format($totalAmount, 0) }} IQD</h4>
                             </div>
                         </div>
+                        @if($insurancePaidAmount > 0 || in_array($defaultInsurance, ['hi', 'moi']))
+                        <div class="row pt-2 mt-2 border-top text-center" style="font-size: 0.85rem;">
+                            <div class="col-md-6 text-md-start ps-3">
+                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                    <i class="fas fa-user-check me-1"></i>
+                                    المدفوع نقداً من المريض: <strong>{{ number_format($patientPaidCash, 0) }} د.ع</strong>
+                                </span>
+                            </div>
+                            <div class="col-md-6 text-md-end pe-3">
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info px-2 py-1">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    مغطى بالضمان الصحي: <strong>{{ number_format($insurancePaidAmount, 0) }} د.ع</strong>
+                                </span>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                     @endif
 
@@ -450,7 +514,13 @@
                                                 <em>غير محدد</em> (ID #{{ $labTest->lab_test_id }})
                                             @endif
                                         </td>
-                                        <td class="text-end">{{ number_format(optional($labTest->labTest)->price ?? 0, 0) }}</td>
+                                        <td class="text-end">
+                                            @if($labTest->is_package_included)
+                                                <span class="badge bg-info text-dark">مشمول بالباقة (0 د.ع)</span>
+                                            @else
+                                                {{ number_format(optional($labTest->labTest)->price ?? 0, 0) }}
+                                            @endif
+                                        </td>
                                         <td class="text-center">
                                             <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
                                         </td>
@@ -464,7 +534,33 @@
                                             أشعة
                                         </td>
                                         <td>{{ $radiologyTest->radiologyType->name ?? 'غير محدد' }}</td>
-                                        <td class="text-end">{{ number_format($radiologyTest->radiologyType->base_price ?? 0, 0) }}</td>
+                                        <td class="text-end">
+                                            @if($radiologyTest->is_package_included)
+                                                <span class="badge bg-info text-dark">مشمول بالباقة (0 د.ع)</span>
+                                            @else
+                                                {{ number_format($radiologyTest->radiologyType->base_price ?? 0, 0) }}
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+
+                                    @foreach($paidExtraServices as $extraService)
+                                    <tr class="table-success">
+                                        <td>
+                                            <i class="fas fa-concierge-bell text-success me-2"></i>
+                                            خدمة إضافية
+                                        </td>
+                                        <td>{{ $extraService->name ?? 'غير محدد' }}</td>
+                                        <td class="text-end">
+                                            @if($extraService->is_package_included)
+                                                <span class="badge bg-info text-dark">مشمول بالباقة (0 د.ع)</span>
+                                            @else
+                                                {{ number_format($extraService->total_amount ?? 0, 0) }}
+                                            @endif
+                                        </td>
                                         <td class="text-center">
                                             <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
                                         </td>
@@ -473,10 +569,19 @@
                                 </tbody>
                                 <tfoot class="table-success">
                                     <tr>
-                                        <td colspan="2" class="text-end"><strong>إجمالي المدفوع:</strong></td>
+                                        <td colspan="2" class="text-end"><strong>إجمالي المدفوع المعتمد:</strong></td>
                                         <td class="text-end"><strong>{{ number_format($paidAmount, 0) }} IQD</strong></td>
                                         <td></td>
                                     </tr>
+                                    @if($patientPaidCash > 0 && ($insurancePaidAmount > 0 || in_array($defaultInsurance, ['hi', 'moi'])))
+                                    <tr class="text-muted" style="font-size: 0.85rem; background-color: #f8fafc;">
+                                        <td colspan="4" class="text-end py-2">
+                                            <span class="text-success fw-bold"><i class="fas fa-user-check me-1"></i>المسدد نقداً من المريض: {{ number_format($patientPaidCash, 0) }} د.ع</span>
+                                            <span class="mx-2 text-muted">|</span>
+                                            <span class="text-info-emphasis fw-bold"><i class="fas fa-shield-alt me-1"></i>مطالبة وتغطية الضمان: {{ number_format($insurancePaidAmount, 0) }} د.ع</span>
+                                        </td>
+                                    </tr>
+                                    @endif
                                 </tfoot>
                             </table>
                         </div>
@@ -659,7 +764,7 @@
                     </div>
                     @endif
 
-                    @if(!$isCancelled && $pendingAmount > 0)
+                    @if(!$isCancelled && ($pendingAmount > 0 || $hasPendingItems))
                     <!-- نموذج الدفع للعناصر المعلقة -->
                     <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm" novalidate>
                         @csrf
@@ -1138,6 +1243,11 @@
                                                     $lBase = (float)($lModel->price ?? 0);
                                                     $lHi = (float)(($lModel && $lModel->hi_price > 0) ? $lModel->hi_price : $lBase);
                                                     $lMoi = (float)(($lModel && $lModel->moi_price > 0) ? $lModel->moi_price : $lBase);
+                                                    $lApproved = match($defaultInsurance) {
+                                                        'hi' => $lHi,
+                                                        'moi' => $lMoi,
+                                                        default => $lBase
+                                                    };
                                                 @endphp
                                                 <tr class="align-middle item-row" data-item-group="lab" data-item-id="{{ $labTest->id }}">
                                                     <td class="text-center">
@@ -1173,8 +1283,8 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end fw-bold">
-                                                        {{ number_format($lBase, 0) }} د.ع
+                                                    <td class="text-end fw-bold row-approved-price">
+                                                        {{ number_format($lApproved, 0) }} د.ع
                                                     </td>
                                                     <td class="text-end fw-bold text-success row-patient-share item-price-display">
                                                         0 د.ع
@@ -1254,6 +1364,11 @@
                                                     $rHi = (float)($rModel && $rModel->hi_price > 0 ? $rModel->hi_price : $rBase);
                                                     $rMoiActive = (bool)($rModel ? ($rModel->is_moi_active ?? true) : true);
                                                     $rHiActive = (bool)($rModel ? ($rModel->is_hi_active ?? true) : true);
+                                                    $rApproved = match($defaultInsurance) {
+                                                        'hi' => $rHi,
+                                                        'moi' => $rMoi,
+                                                        default => $rBase
+                                                    };
                                                 @endphp
                                                 <tr class="align-middle item-row" data-item-group="radiology" data-item-id="{{ $radiologyTest->id }}">
                                                     <td class="text-center">
@@ -1282,11 +1397,11 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end fw-bold">
-                                                        {{ number_format($rBase, 0) }} د.ع
+                                                    <td class="text-end fw-bold row-approved-price">
+                                                        {{ number_format($rApproved, 0) }} د.ع
                                                     </td>
                                                     <td class="text-end fw-bold text-success row-patient-share item-price-display">
-                                                        {{ number_format($rBase, 0) }} د.ع
+                                                        0 د.ع
                                                     </td>
                                                     <td class="text-end fw-bold text-primary row-insurance-share">
                                                         0 د.ع
@@ -1696,7 +1811,7 @@
                             </div>
                         </div>
                     </form>
-                    @elseif($totalExcess <= 0)
+                    @elseif($totalExcess <= 0 && !$hasPendingItems)
                     <!-- لا توجد عناصر معلقة -->
                     <div class="alert alert-success text-center">
                         <i class="fas fa-check-circle fa-3x mb-3"></i>
@@ -1714,7 +1829,7 @@
     </div>
 </div>
 
-@if($pendingAmount > 0)
+@if($pendingAmount > 0 || $hasPendingItems)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const pendingAmount = {{ $pendingAmount }};
@@ -2109,6 +2224,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const patShareCell = row.querySelector('.row-patient-share');
             const insShareCell = row.querySelector('.row-insurance-share');
+            const approvedCell = row.querySelector('.row-approved-price');
+
+            if (approvedCell && itemApproved > 0) {
+                approvedCell.textContent = numberFormat(itemApproved) + ' د.ع';
+            }
 
             if (patShareCell) {
                 if (isPkgIncluded) {

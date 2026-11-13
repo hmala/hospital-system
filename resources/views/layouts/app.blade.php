@@ -78,16 +78,25 @@
             }
 
             if (Auth::user()->can('view anesthesia station')) {
-                // عداد محطة التخدير - بعد الجراح
-                $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
-                        $q->where('status', 'completed');
-                    })
-                    ->where(function($q) {
-                        $q->whereDoesntHave('anesthesiaStation')
-                          ->orWhereHas('anesthesiaStation', function($sq) {
-                              $sq->where('status', '!=', 'completed');
-                          });
-                    })->count();
+                // عداد محطة التخدير
+                $anesthesiaCountQuery = \App\Models\Surgery::where('status', '!=', 'cancelled');
+                if (Auth::user()->doctor && ! Auth::user()->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+                    $anesDocId = Auth::user()->doctor->id;
+                    $anesthesiaCountQuery->where(function ($q) use ($anesDocId) {
+                        $q->where('anesthesiologist_id', $anesDocId)
+                            ->orWhere('anesthesiologist_2_id', $anesDocId)
+                            ->orWhereHas('anesthesiaStation', function ($sq) use ($anesDocId) {
+                                $sq->where('anesthesiologist_id', $anesDocId)
+                                    ->orWhere('anesthesiologist_2_id', $anesDocId);
+                            });
+                    });
+                }
+                $anesthesiaStationCount = $anesthesiaCountQuery->where(function ($q) {
+                    $q->whereDoesntHave('anesthesiaStation')
+                        ->orWhereHas('anesthesiaStation', function ($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        });
+                })->count();
             }
 
             if (Auth::user()->can('view nursing station')) {
@@ -1539,6 +1548,13 @@
                             </a>
                         </li>
                         @endcan
+                        @canany(['view surgeries', 'edit surgeries'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgical-assistants.*') ? 'active' : '' }}" href="{{ route('surgical-assistants.index') }}">
+                                <i class="fas fa-hands-helping text-info"></i><span> مساعدو الجراحين</span>
+                            </a>
+                        </li>
+                        @endcanany
                         @can('view medical devices')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('medical-devices.*') ? 'active' : '' }}" href="{{ route('medical-devices.index') }}">

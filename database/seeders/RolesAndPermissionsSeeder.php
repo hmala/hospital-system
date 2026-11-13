@@ -742,6 +742,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'view departments',
         ]);
 
+        // دور طبيب / مقيم التخدير (Anesthesiologist)
+        $anesthesiaPermissions = [
+            'view patients',
+            'view surgeries',
+            'edit surgeries',
+            'view anesthesia station',
+            'view resident station',
+            'view lab tests',
+            'view radiology',
+        ];
+        $anesthesiaRole = Role::firstOrCreate(['name' => 'التخدير']);
+        $anesthesiaRole->givePermissionTo($anesthesiaPermissions);
+        $anesthesiaEnRole = Role::firstOrCreate(['name' => 'anesthesia']);
+        $anesthesiaEnRole->givePermissionTo($anesthesiaPermissions);
+
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role
         $users = User::all();
         foreach ($users as $user) {

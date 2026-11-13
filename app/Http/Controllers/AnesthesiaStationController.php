@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Surgery;
-use App\Models\AnesthesiaStation;
 use App\Models\Doctor;
+use App\Models\Surgery;
 use Illuminate\Http\Request;
 
 class AnesthesiaStationController extends Controller
@@ -13,28 +12,31 @@ class AnesthesiaStationController extends Controller
     {
         $user = auth()->user();
 
-        // جلب العمليات التي في محطة التخدير (بعد الجراح)
-        $surgeries = Surgery::with(['patient.user', 'doctor.user', 'anesthesiaStation'])
-            ->whereHas('surgeonStation', function($q) {
-                $q->where('status', 'completed');
-            });
+        // جلب العمليات لمحطة التخدير
+        $query = Surgery::with(['patient.user', 'doctor.user', 'anesthesiaStation'])
+            ->where('status', '!=', 'cancelled');
 
-        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
             $doctorId = $user->doctor->id;
-            $surgeries->where(function($query) use ($doctorId) {
-                $query->whereHas('anesthesiaStation', function($q) use ($doctorId) {
-                        $q->where('anesthesiologist_id', $doctorId)
-                          ->orWhere('anesthesiologist_2_id', $doctorId);
-                    })
-                    ->orWhere(function($q) use ($doctorId) {
-                        $q->where('anesthesiologist_id', $doctorId)
-                          ->orWhere('anesthesiologist_2_id', $doctorId);
+            $query->where(function ($q) use ($doctorId) {
+                $q->where('anesthesiologist_id', $doctorId)
+                    ->orWhere('anesthesiologist_2_id', $doctorId)
+                    ->orWhereHas('anesthesiaStation', function ($sq) use ($doctorId) {
+                        $sq->where('anesthesiologist_id', $doctorId)
+                            ->orWhere('anesthesiologist_2_id', $doctorId);
                     });
+            });
+        } else {
+            // للمشرفين وموظفي العمليات: عرض العمليات التي تم تعيين طبيب تخدير لها أو لها محطة تخدير
+            $query->where(function ($q) {
+                $q->whereNotNull('anesthesiologist_id')
+                    ->orWhereNotNull('anesthesiologist_2_id')
+                    ->orWhereHas('anesthesiaStation');
             });
         }
 
-        $surgeries = $surgeries->orderBy('scheduled_date')
-            ->orderBy('scheduled_time')
+        $surgeries = $query->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
             ->get();
 
         return view('surgery-stations.anesthesia.index', compact('surgeries'));
@@ -44,14 +46,8 @@ class AnesthesiaStationController extends Controller
     {
         $this->authorizeAnesthesiologist($surgery);
 
-        // التحقق من أن محطة الجراح مكتملة
-        if (!$surgery->surgeonStation || $surgery->surgeonStation->status !== 'completed') {
-            return redirect()->route('surgeon-station.show', $surgery)
-                ->with('error', 'يجب إتمام محطة الجراح أولاً');
-        }
-
         // إنشاء محطة إذا لم تكن موجودة، أو مزامنة بيانات التخدير من جدول العمليات إذا توفر
-        if (!$surgery->anesthesiaStation) {
+        if (! $surgery->anesthesiaStation) {
             $surgery->anesthesiaStation()->create([
                 'anesthesiologist_id' => $surgery->anesthesiologist_id ?? $surgery->operationTheaterStation?->anesthesiologist_id,
                 'anesthesiologist_2_id' => $surgery->anesthesiologist_2_id,
@@ -61,25 +57,25 @@ class AnesthesiaStationController extends Controller
             ]);
         } else {
             $syncData = [];
-            if (!$surgery->anesthesiaStation->anesthesiologist_id && $surgery->anesthesiologist_id) {
+            if (! $surgery->anesthesiaStation->anesthesiologist_id && $surgery->anesthesiologist_id) {
                 $syncData['anesthesiologist_id'] = $surgery->anesthesiologist_id;
             }
-            if (!$surgery->anesthesiaStation->anesthesiologist_2_id && $surgery->anesthesiologist_2_id) {
+            if (! $surgery->anesthesiaStation->anesthesiologist_2_id && $surgery->anesthesiologist_2_id) {
                 $syncData['anesthesiologist_2_id'] = $surgery->anesthesiologist_2_id;
             }
-            if (!$surgery->anesthesiaStation->surgical_assistant_name && $surgery->surgical_assistant_name) {
+            if (! $surgery->anesthesiaStation->surgical_assistant_name && $surgery->surgical_assistant_name) {
                 $syncData['surgical_assistant_name'] = $surgery->surgical_assistant_name;
             }
-            if (!$surgery->anesthesiaStation->anesthesia_type && $surgery->anesthesia_type) {
+            if (! $surgery->anesthesiaStation->anesthesia_type && $surgery->anesthesia_type) {
                 $syncData['anesthesia_type'] = $surgery->anesthesia_type;
             }
-            if (!empty($syncData)) {
+            if (! empty($syncData)) {
                 $surgery->anesthesiaStation->update($syncData);
             }
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'anesthesiaStation.anesthesiologist.user', 'anesthesiaStation.anesthesiologist2.user']);
-        
+
         $doctors = Doctor::with('user')
             ->anesthesia()
             ->orderBy('id')
@@ -104,7 +100,7 @@ class AnesthesiaStationController extends Controller
         ]);
 
         $station = $surgery->anesthesiaStation;
-        if (!$station) {
+        if (! $station) {
             $station = $surgery->anesthesiaStation()->create([
                 'status' => $request->status ?? 'in_progress',
                 'started_at' => now(),
@@ -127,7 +123,7 @@ class AnesthesiaStationController extends Controller
         $this->authorizeAnesthesiologist($surgery);
 
         $station = $surgery->anesthesiaStation;
-        if (!$station) {
+        if (! $station) {
             return redirect()->back()->with('error', 'المحطة غير موجودة');
         }
 
@@ -135,7 +131,7 @@ class AnesthesiaStationController extends Controller
 
         // إنشاء محطة المقيم (post_op) التالية
         $postOpStation = $surgery->postOpResidentStation;
-        if (!$postOpStation) {
+        if (! $postOpStation) {
             $preOpStation = $surgery->preOpResidentStation;
             $surgery->residentStations()->create([
                 'phase' => 'post_op',
@@ -152,7 +148,7 @@ class AnesthesiaStationController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->doctor && !$user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
             $doctorId = $user->doctor->id;
             $assignedToDoctor = false;
 
@@ -164,7 +160,7 @@ class AnesthesiaStationController extends Controller
                     || $surgery->anesthesiologist_2_id === $doctorId;
             }
 
-            if (!$assignedToDoctor) {
+            if (! $assignedToDoctor) {
                 abort(403, 'غير مصرح لك بالوصول لهذه العملية');
             }
         }

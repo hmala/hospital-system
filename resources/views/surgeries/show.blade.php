@@ -1307,6 +1307,8 @@
                                                 <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير عام (General Anesthesia)')">عام</button>
                                                 <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير نصفي (Spinal Anesthesia)')">نصفي</button>
                                                 <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير موضعي (Local Anesthesia)')">موضعي</button>
+                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير مناطقي (Regional Anesthesia)')">مناطقي</button>
+                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('سديشن (Sedation)')">سديشن</button>
                                             </div>
                                         @endif
                                     </div>
@@ -1319,10 +1321,9 @@
                                     <datalist id="anesthesiaTypesList">
                                         <option value="تخدير عام (General Anesthesia)">
                                         <option value="تخدير نصفي (Spinal Anesthesia)">
-                                        <option value="تخدير فوق الجافية (Epidural Anesthesia)">
                                         <option value="تخدير موضعي (Local Anesthesia)">
-                                        <option value="تخدير ناحي (Regional Anesthesia)">
-                                        <option value="تسكين واعي (Conscious Sedation)">
+                                        <option value="تخدير مناطقي (Regional Anesthesia)">
+                                        <option value="سديشن (Sedation)">
                                     </datalist>
                                 @else
                                     <input type="text" class="form-control form-control-sm bg-light" value="{{ $currentAnesthesiaType ?: 'غير محدد' }}" readonly disabled>
@@ -1418,8 +1419,43 @@
 
                                     <div class="col-md-6">
                                         <div class="clin-field-card">
-                                            <label for="surgical_assistant_name" class="form-label fw-bold text-dark small mb-1">اسم مساعد الجراح (خارجي أو ممرض مساعد)</label>
-                                            <input type="text" id="surgical_assistant_name" @if($canWriteTeamTiming) name="surgical_assistant_name" @else readonly disabled @endif class="form-control form-control-sm {{ $canWriteTeamTiming ? '' : 'bg-light' }}" value="{{ old('surgical_assistant_name', $surgery->anesthesiaStation?->surgical_assistant_name ?? $surgery->surgical_assistant_name ?? '') }}" placeholder="أدخل اسم المساعد الجراحي...">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <label for="surgical_assistant_name" class="form-label fw-bold text-dark small mb-0">
+                                                    <i class="fas fa-hands-helping text-primary me-1"></i>اسم مساعد الجراح
+                                                </label>
+                                                @canany(['view surgeries', 'edit surgeries'])
+                                                    <a href="{{ route('surgical-assistants.index') }}" target="_blank" class="small text-decoration-none text-primary fw-semibold" title="فتح دليل وإدارة مساعدي الجراحين في نافذة جديدة">
+                                                        <i class="fas fa-external-link-alt me-1"></i>دليل المساعدين
+                                                    </a>
+                                                @endcanany
+                                            </div>
+                                            @php
+                                                $savedAssistant = old('surgical_assistant_name', $surgery->anesthesiaStation?->surgical_assistant_name ?? $surgery->surgical_assistant_name ?? '');
+                                            @endphp
+                                            @if($canWriteTeamTiming)
+                                                <div class="position-relative" id="assistantAutocompleteWrapper">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                        <input type="text" id="surgical_assistant_name" name="surgical_assistant_name"
+                                                               class="form-control form-control-sm border-primary"
+                                                               autocomplete="off"
+                                                               placeholder="انقر لاختيار مساعد أو اكتب للبحث..."
+                                                               value="{{ $savedAssistant }}">
+                                                        <button type="button" class="btn btn-outline-secondary {{ $savedAssistant ? '' : 'd-none' }}" id="clearAssistantBtn" title="مسح">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-primary" id="toggleAssistantMenuBtn" title="عرض قائمة المساعدين">
+                                                            <i class="fas fa-chevron-down"></i>
+                                                        </button>
+                                                    </div>
+
+                                                    <!-- Live Search Dropdown Menu (مثل التصنيف الدولي ICD-10) -->
+                                                    <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 250px; overflow-y: auto; display: none;">
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAssistant ?: 'غير محدد' }}" readonly disabled>
+                                            @endif
                                         </div>
                                     </div>
 
@@ -2228,5 +2264,132 @@
 
         form.submit();
     };
+
+    // ================= منظومة القائمة المنسدلة الذكية لمساعد الجراح (مثل التصنيف الدولي للأمراض) =================
+    window.surgicalAssistantsData = @json($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE);
+
+    function setupSurgicalAssistantAutocomplete() {
+        const input = document.getElementById('surgical_assistant_name');
+        const menu = document.getElementById('surgicalAssistantsMenu');
+        const clearBtn = document.getElementById('clearAssistantBtn');
+        const toggleBtn = document.getElementById('toggleAssistantMenuBtn');
+        const wrapper = document.getElementById('assistantAutocompleteWrapper');
+
+        if (!input || !menu) return;
+
+        function renderAssistantOptions(filterText = '') {
+            const query = (filterText || '').trim().toLowerCase();
+            const list = window.surgicalAssistantsData || [];
+
+            let matched = list.filter(item => {
+                const name = (item.name || '').toLowerCase();
+                const notes = (item.notes || '').toLowerCase();
+                return !query || name.includes(query) || notes.includes(query);
+            });
+
+            if (matched.length === 0) {
+                if (query.length > 0) {
+                    menu.innerHTML = `
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 assistant-option-item" style="cursor: pointer;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-plus-circle text-success me-2"></i>
+                                <span class="fw-bold text-dark">${filterText}</span>
+                            </div>
+                            <span class="badge bg-success-subtle text-success border small">استخدام هذا الاسم</span>
+                        </div>
+                    `;
+                    const customOpt = menu.querySelector('.assistant-option-item');
+                    if (customOpt) {
+                        customOpt.addEventListener('click', function() {
+                            selectAssistant(filterText);
+                        });
+                    }
+                    menu.style.display = 'block';
+                } else {
+                    menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا توجد أسماء مساعدين مسجلة</div>';
+                    menu.style.display = 'block';
+                }
+                return;
+            }
+
+            let html = '';
+            matched.forEach(item => {
+                const isSelected = input.value.trim() === item.name.trim();
+                const selectedClass = isSelected ? 'bg-primary-subtle border-primary' : '';
+                const roleBadge = item.notes
+                    ? `<span class="badge bg-light text-secondary border small">${item.notes}</span>`
+                    : '<span class="badge bg-info-subtle text-info border small">مساعد جراح</span>';
+
+                html += `
+                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 assistant-option-item ${selectedClass}" style="cursor: pointer;" data-assistant-name="${item.name.replace(/"/g, '&quot;')}">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-user-md text-primary me-2"></i>
+                            <strong class="text-dark">${item.name}</strong>
+                        </div>
+                        ${roleBadge}
+                    </div>
+                `;
+            });
+
+            menu.innerHTML = html;
+            menu.style.display = 'block';
+
+            menu.querySelectorAll('.assistant-option-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const name = this.getAttribute('data-assistant-name');
+                    if (name) selectAssistant(name);
+                });
+            });
+        }
+
+        function selectAssistant(name) {
+            input.value = name;
+            if (clearBtn) clearBtn.classList.remove('d-none');
+            menu.style.display = 'none';
+        }
+
+        input.addEventListener('focus', function() {
+            renderAssistantOptions(this.value);
+        });
+
+        input.addEventListener('input', function() {
+            if (clearBtn) clearBtn.classList.toggle('d-none', !this.value.trim());
+            renderAssistantOptions(this.value);
+        });
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (menu.style.display === 'block') {
+                    menu.style.display = 'none';
+                } else {
+                    renderAssistantOptions('');
+                    input.focus();
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                input.value = '';
+                this.classList.add('d-none');
+                renderAssistantOptions('');
+                input.focus();
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (wrapper && !wrapper.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupSurgicalAssistantAutocomplete);
+    } else {
+        setupSurgicalAssistantAutocomplete();
+    }
 </script>
 @endsection

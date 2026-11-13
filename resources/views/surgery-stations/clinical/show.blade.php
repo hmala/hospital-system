@@ -775,6 +775,7 @@
             </div>
 
             {{-- Form for tabs that submit directly to update --}}
+            @if(in_array($activeTab, ['history', 'vitals', 'plan', 'discharge']))
             <form action="{{ route('clinical-station.update', $surgery) }}" method="POST">
                 @csrf
                 @method('PATCH')
@@ -1357,75 +1358,7 @@
                         @endif
 
                     {{-- =============================================================== --}}
-                    {{-- TAB 3: LAB & RADIOLOGY TESTS (الفحوصات والمختبر والأشعة) --}}
-                    {{-- =============================================================== --}}
-                    @elseif($activeTab === 'tests')
-                        <div class="row g-4">
-                            {{-- Lab Tests --}}
-                            <div class="col-lg-6">
-                                <div class="card rounded-3 border h-100">
-                                    <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-flask me-1"></i> تحاليل المختبر (Lab Tests)</h6>
-                                        <span class="badge bg-danger rounded-pill">{{ $surgery->labTests?->count() ?? 0 }}</span>
-                                    </div>
-                                    <div class="p-3">
-                                        @if($surgery->labTests && $surgery->labTests->count() > 0)
-                                            <div class="list-group list-group-flush">
-                                                @foreach($surgery->labTests as $lt)
-                                                    <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
-                                                        <div>
-                                                            <div class="fw-bold text-dark">{{ $lt->labTest?->name ?? $lt->test?->name ?? 'فحص مخبري' }}</div>
-                                                            <div class="text-muted small">النتيجة: <strong>{{ $lt->result ?: 'قيد الإجراء' }}</strong></div>
-                                                        </div>
-                                                        <div>
-                                                            @if($lt->status === 'completed')
-                                                                <span class="badge bg-success">جاهز</span>
-                                                            @else
-                                                                <span class="badge bg-warning text-dark">{{ $lt->status }}</span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <div class="text-center text-muted py-4 small">لا توجد طلبات تحاليل مخبرية مرتبطة بهذه العملية.</div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Radiology Tests --}}
-                            <div class="col-lg-6">
-                                <div class="card rounded-3 border h-100">
-                                    <div class="card-header bg-light py-2.5 px-3 d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-x-ray me-1"></i> الفحوصات الإشعاعية (Radiology)</h6>
-                                        <span class="badge bg-primary rounded-pill">{{ $surgery->radiologyTests?->count() ?? 0 }}</span>
-                                    </div>
-                                    <div class="p-3">
-                                        @if($surgery->radiologyTests && $surgery->radiologyTests->count() > 0)
-                                            <div class="list-group list-group-flush">
-                                                @foreach($surgery->radiologyTests as $rt)
-                                                    <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
-                                                        <div>
-                                                            <div class="fw-bold text-dark">{{ $rt->radiologyType?->name ?? $rt->radiologyService?->name ?? 'فحص إشعاعي' }}</div>
-                                                            <div class="text-muted small">{{ $rt->result ?: ($rt->findings ?? 'قيد الفحص والتقرير') }}</div>
-                                                        </div>
-                                                        <div>
-                                                            <span class="badge bg-info text-dark">{{ $rt->status }}</span>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <div class="text-center text-muted py-4 small">لا توجد صور أو فحوصات إشعاعية مسجلة للعملية.</div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    {{-- =============================================================== --}}
-                    {{-- TAB 4: MEDICAL PLAN (الخطة الطبية وتوصيات الجراحة) --}}
+                    {{-- TAB 3: MEDICAL PLAN (الخطة الطبية وتوصيات الجراحة) --}}
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'plan')
                         @php
@@ -1615,6 +1548,275 @@
                     </div>
                 @endif
             </form>
+            @endif
+
+            {{-- =============================================================== --}}
+            {{-- SPECIAL SUB-VIEW FOR LAB & RADIOLOGY TESTS TAB --}}
+            {{-- =============================================================== --}}
+            @if($activeTab === 'tests')
+                <div class="p-4">
+                    @php
+                        $insType = $surgery->insurance_type ?? $surgery->patient?->insurance_type ?? 'none';
+                        $isPatientInsurance = in_array($insType, ['hi', 'moi']);
+                        $insLabel = match($insType) {
+                            'hi' => 'ضمان صحي (HI)',
+                            'moi' => 'قوى الأمن الداخلي (MOI)',
+                            default => 'دفع نقدي (كاش)'
+                        };
+                        $labCopayVal = $isPatientInsurance ? ($surgery->patient?->getCopayPercentageFor('lab') ?? 15) : 0;
+                        $radCopayVal = $isPatientInsurance ? ($surgery->patient?->getCopayPercentageFor('radiology') ?? 15) : 0;
+                    @endphp
+
+                    {{-- Financial & Workflow Guidance Banner --}}
+                    <div class="alert alert-info border-0 rounded-4 shadow-sm mb-3 d-flex flex-wrap align-items-center justify-content-between gap-3 p-3" style="background: #f0f9ff; border-inline-start: 4px solid #0284c7 !important;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                <i class="fas fa-file-invoice-dollar fa-lg"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark small mb-0.5">
+                                    الهوية المالية للعملية: <span class="badge {{ $isPatientInsurance ? 'bg-success' : 'bg-primary' }} rounded-pill px-2.5 py-1">{{ $insLabel }}</span>
+                                    @if($isPatientInsurance)
+                                        <span class="text-success small ms-2"><i class="fas fa-shield-alt"></i> نسبة تحمل المريض: {{ $labCopayVal }}% للتحاليل و {{ $radCopayVal }}% للأشعة</span>
+                                    @endif
+                                </div>
+                                <div class="text-muted small">
+                                    تظهر جميع الطلبات فوراً في شاشات المختبر والأشعة دون حجب مع تمييز حالة السداد، وتُدرج في كاشير العمليات للتحصيل (نقداً لمريض الكاش، وبنسبة التحمل المقررة لمريض الضمان).
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="{{ route('cashier.surgeries.payment.form', $surgery) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" target="_blank">
+                                <i class="fas fa-cash-register me-1"></i> كاشير العملية
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        {{-- Lab Tests --}}
+                        <div class="col-lg-6">
+                            <div class="card rounded-4 border shadow-sm h-100 bg-white overflow-hidden">
+                                <div class="card-header bg-white py-3 px-3.5 d-flex align-items-center justify-content-between border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="rounded-3 bg-danger bg-opacity-10 text-danger p-2 d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                            <i class="fas fa-flask"></i>
+                                        </span>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">تحاليل المختبر (Lab Tests)</h6>
+                                            <span class="text-muted small" style="font-size: 0.72rem;">إجمالي الفحوصات: {{ $surgery->labTests?->count() ?? 0 }}</span>
+                                        </div>
+                                    </div>
+                                    @if(!empty($canEditTests))
+                                        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderLabTestsModal">
+                                            <i class="fas fa-plus me-1"></i> طلب تحاليل
+                                        </button>
+                                    @endif
+                                </div>
+                                <div class="p-3">
+                                    @if($surgery->labTests && $surgery->labTests->count() > 0)
+                                        <div class="list-group list-group-flush gap-2">
+                                            @foreach($surgery->labTests as $lt)
+                                                @php
+                                                    $isPaid = ($lt->payment_status === 'paid');
+                                                    $labModel = $lt->labTest;
+                                                    $bPrice = (float)($labModel?->price ?? 0);
+                                                    $hiPrice = (float)(($labModel && $labModel->hi_price > 0) ? $labModel->hi_price : $bPrice);
+                                                    $moiPrice = (float)(($labModel && $labModel->moi_price > 0) ? $labModel->moi_price : $bPrice);
+                                                    $approvedPrice = match($insType) {
+                                                        'hi' => $hiPrice,
+                                                        'moi' => $moiPrice,
+                                                        default => $bPrice
+                                                    };
+                                                    $patientShare = $isPatientInsurance ? round($approvedPrice * ($labCopayVal / 100)) : $approvedPrice;
+                                                    $insShare = max(0, $approvedPrice - $patientShare);
+                                                @endphp
+                                                <div class="list-group-item p-3 border rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #fafafa;">
+                                                    <div class="d-flex align-items-start gap-2.5">
+                                                        <div class="rounded-circle bg-light border p-2 text-center" style="width: 36px; height: 36px;">
+                                                            <i class="fas fa-vial text-danger"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-dark">{{ $lt->labTest?->name ?? $lt->test?->name ?? 'فحص مخبري' }}</div>
+                                                            <div class="text-muted small">
+                                                                النتيجة: <strong>{{ $lt->result ?: 'قيد الإجراء بالمختبر' }}</strong>
+                                                                @if(!empty($lt->notes))
+                                                                    <span class="text-secondary ms-1">({{ $lt->notes }})</span>
+                                                                @endif
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.72rem;">
+                                                                @if($isPatientInsurance)
+                                                                    <span>سعر الضمان: <strong>{{ number_format($approvedPrice, 0) }}</strong> د.ع</span>
+                                                                    <span class="text-success ms-1">• استقطاع المريض ({{ $labCopayVal }}%): <strong>{{ number_format($patientShare, 0) }}</strong> د.ع</span>
+                                                                    <span class="text-primary ms-1">• مطالبة الضمان: {{ number_format($insShare, 0) }} د.ع</span>
+                                                                @else
+                                                                    <span>سعر الكاش: <strong>{{ number_format($approvedPrice, 0) }}</strong> د.ع</span>
+                                                                @endif
+                                                                @if($lt->created_at)
+                                                                    • الطلب: {{ $lt->created_at->format('Y-m-d H:i') }}
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        {{-- Technical status --}}
+                                                        @if($lt->status === 'completed')
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-check-circle me-1"></i> جاهز
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-hourglass-half me-1"></i> قيد الفحص
+                                                            </span>
+                                                        @endif
+
+                                                        {{-- Payment status badge --}}
+                                                        @if($isPaid)
+                                                            <span class="badge bg-success text-white px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-check-double me-1"></i> مدفوع
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark px-2.5 py-1 rounded-pill small" title="غير مسدد بالكاشير">
+                                                                <i class="fas fa-clock me-1"></i> غير مدفوع
+                                                            </span>
+                                                        @endif
+
+                                                        {{-- Delete button if unpaid and user has write access --}}
+                                                        @if(!empty($canEditTests) && !$isPaid)
+                                                            <form action="{{ route('clinical-station.lab-tests.delete', ['surgery' => $surgery->id, 'labTest' => $lt->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا التحليل غير المدفوع؟');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-1" style="width: 28px; height: 28px;" title="حذف التحليل">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center text-muted py-4 small">
+                                            <i class="fas fa-flask fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                            لا توجد طلبات تحاليل مخبرية مسجلة لهذه العملية.
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Radiology Tests --}}
+                        <div class="col-lg-6">
+                            <div class="card rounded-4 border shadow-sm h-100 bg-white overflow-hidden">
+                                <div class="card-header bg-white py-3 px-3.5 d-flex align-items-center justify-content-between border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                            <i class="fas fa-x-ray"></i>
+                                        </span>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">الفحوصات الإشعاعية (Radiology)</h6>
+                                            <span class="text-muted small" style="font-size: 0.72rem;">إجمالي الفحوصات: {{ $surgery->radiologyTests?->count() ?? 0 }}</span>
+                                        </div>
+                                    </div>
+                                    @if(!empty($canEditTests))
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderRadiologyModal">
+                                            <i class="fas fa-plus me-1"></i> طلب فحص أشعة
+                                        </button>
+                                    @endif
+                                </div>
+                                <div class="p-3">
+                                    @if($surgery->radiologyTests && $surgery->radiologyTests->count() > 0)
+                                        <div class="list-group list-group-flush gap-2">
+                                            @foreach($surgery->radiologyTests as $rt)
+                                                @php
+                                                    $isPaid = ($rt->payment_status === 'paid');
+                                                    $radModel = $rt->radiologyType;
+                                                    $rPrice = (float)($radModel?->base_price ?? 0);
+                                                    $rHi = (float)(($radModel && $radModel->hi_price > 0) ? $radModel->hi_price : $rPrice);
+                                                    $rMoi = (float)(($radModel && $radModel->moi_price > 0) ? $radModel->moi_price : $rPrice);
+                                                    $approvedRadPrice = match($insType) {
+                                                        'hi' => $rHi,
+                                                        'moi' => $rMoi,
+                                                        default => $rPrice
+                                                    };
+                                                    $patientRadShare = $isPatientInsurance ? round($approvedRadPrice * ($radCopayVal / 100)) : $approvedRadPrice;
+                                                    $insRadShare = max(0, $approvedRadPrice - $patientRadShare);
+                                                @endphp
+                                                <div class="list-group-item p-3 border rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #fafafa;">
+                                                    <div class="d-flex align-items-start gap-2.5">
+                                                        <div class="rounded-circle bg-light border p-2 text-center" style="width: 36px; height: 36px;">
+                                                            <i class="fas fa-x-ray text-primary"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-dark">{{ $rt->radiologyType?->name ?? $rt->radiologyService?->name ?? 'فحص إشعاعي' }}</div>
+                                                            <div class="text-muted small">
+                                                                النتيجة: <strong>{{ $rt->result ?: ($rt->findings ?? 'قيد التصوير والتقرير') }}</strong>
+                                                                @if(!empty($rt->notes))
+                                                                    <span class="text-secondary ms-1">({{ $rt->notes }})</span>
+                                                                @endif
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.72rem;">
+                                                                @if($isPatientInsurance)
+                                                                    <span>سعر الضمان: <strong>{{ number_format($approvedRadPrice, 0) }}</strong> د.ع</span>
+                                                                    <span class="text-success ms-1">• استقطاع المريض ({{ $radCopayVal }}%): <strong>{{ number_format($patientRadShare, 0) }}</strong> د.ع</span>
+                                                                    <span class="text-primary ms-1">• مطالبة الضمان: {{ number_format($insRadShare, 0) }} د.ع</span>
+                                                                @else
+                                                                    <span>سعر الكاش: <strong>{{ number_format($approvedRadPrice, 0) }}</strong> د.ع</span>
+                                                                @endif
+                                                                @if($rt->created_at)
+                                                                    • الطلب: {{ $rt->created_at->format('Y-m-d H:i') }}
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        {{-- Technical status --}}
+                                                        @if($rt->status === 'completed')
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-check-circle me-1"></i> مكتمل
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-camera me-1"></i> قيد الإجراء
+                                                            </span>
+                                                        @endif
+
+                                                        {{-- Payment status badge --}}
+                                                        @if($isPaid)
+                                                            <span class="badge bg-success text-white px-2.5 py-1 rounded-pill small">
+                                                                <i class="fas fa-check-double me-1"></i> مدفوع
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark px-2.5 py-1 rounded-pill small" title="غير مسدد بالكاشير">
+                                                                <i class="fas fa-clock me-1"></i> غير مدفوع
+                                                            </span>
+                                                        @endif
+
+                                                        {{-- Delete button if unpaid and user has write access --}}
+                                                        @if(!empty($canEditTests) && !$isPaid)
+                                                            <form action="{{ route('clinical-station.radiology-tests.delete', ['surgery' => $surgery->id, 'radiologyTest' => $rt->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف فحص الأشعة غير المدفوع؟');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-1" style="width: 28px; height: 28px;" title="حذف فحص الأشعة">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center text-muted py-4 small">
+                                            <i class="fas fa-x-ray fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                            لا توجد صور أو فحوصات إشعاعية مسجلة لهذه العملية.
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- =============================================================== --}}
             {{-- SPECIAL SUB-VIEW FOR INPATIENT SURVEY TAB --}}
@@ -3185,9 +3387,25 @@
     @method('DELETE')
 </form>
 
+{{-- Hidden Form for Delete Clinical Tests (Placed outside all parent forms to avoid form nesting) --}}
+<form id="deleteClinicalTestForm" method="POST" style="display: none;">
+    @csrf
+    @method('DELETE')
+</form>
+
 {{-- Scripts for Chart.js and Vitals Actions --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+window.confirmDeleteClinicalTest = function(actionUrl, confirmMsg) {
+    if (!actionUrl) return;
+    if (confirm(confirmMsg || 'هل أنت متأكد من الحذف؟')) {
+        const form = document.getElementById('deleteClinicalTestForm');
+        if (form) {
+            form.action = actionUrl;
+            form.submit();
+        }
+    }
+};
 window.loadReadingIntoTopForm = function(reading) {
     if (!reading) return;
 
@@ -3535,4 +3753,293 @@ document.addEventListener("DOMContentLoaded", function () {
     @endif
 });
 </script>
+
+{{-- =============================================================== --}}
+{{-- MODALS FOR ORDERING LAB AND RADIOLOGY TESTS --}}
+{{-- =============================================================== --}}
+@push('modals')
+@php
+    $modalInsType = $surgery->insurance_type ?? $surgery->patient?->insurance_type ?? 'none';
+    $modalIsInsurance = in_array($modalInsType, ['hi', 'moi']);
+    $modalInsLabel = match($modalInsType) {
+        'hi' => 'ضمان صحي (HI)',
+        'moi' => 'قوى الأمن الداخلي (MOI)',
+        default => 'دفع نقدي (كاش)'
+    };
+    $modalLabCopay = $modalIsInsurance ? ($surgery->patient?->getCopayPercentageFor('lab') ?? 15) : 0;
+    $modalRadCopay = $modalIsInsurance ? ($surgery->patient?->getCopayPercentageFor('radiology') ?? 15) : 0;
+@endphp
+
+{{-- 1. Order Lab Tests Modal --}}
+<div class="modal fade" id="orderLabTestsModal" tabindex="-1" aria-labelledby="orderLabTestsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 650px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="orderLabTestsModalLabel" style="color: #0f172a;">
+                    <span class="rounded-3 bg-danger bg-opacity-10 text-danger d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="fas fa-flask"></i>
+                    </span>
+                    <span>طلب تحاليل مخبرية للعملية #{{ $surgery->id }}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form action="{{ route('clinical-station.lab-tests.store', $surgery) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    {{-- Financial Banner --}}
+                    <div class="p-2.5 rounded-3 mb-3 border d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc;">
+                        <div class="small">
+                            <span class="text-secondary fw-semibold">المريض:</span> <strong>{{ $surgery->patient?->user?->name ?? 'غير محدد' }}</strong>
+                            <span class="mx-1.5 text-muted">•</span>
+                            <span class="text-secondary fw-semibold">الحساب:</span>
+                            <span class="badge {{ $modalIsInsurance ? 'bg-success' : 'bg-primary' }} rounded-pill px-2 py-0.5">{{ $modalInsLabel }}</span>
+                        </div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">
+                            @if($modalIsInsurance)
+                                <i class="fas fa-shield-alt text-success me-1"></i> نسبة التحمل: {{ $modalLabCopay }}% بالكاشير
+                            @else
+                                <i class="fas fa-money-bill-wave text-primary me-1"></i> تسديد كامل بالكاشير
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Package selector if available --}}
+                    @if(isset($labPackages) && $labPackages->count() > 0)
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary mb-1">
+                                <i class="fas fa-layer-group text-primary me-1"></i> اختيار باقة تحاليل جاهزة (اختياري):
+                            </label>
+                            <select name="package_id" id="modalLabPackageSelect" class="form-select form-select-sm" onchange="applyLabPackageSelection(this)">
+                                <option value="">-- اختيار تحاليل فردية يدوياً --</option>
+                                @foreach($labPackages as $pkg)
+                                    @php
+                                        $pkgTestIdsJson = json_encode($pkg->labTests->pluck('id')->toArray());
+                                    @endphp
+                                    <option value="{{ $pkg->id }}" data-tests="{{ $pkgTestIdsJson }}">
+                                        {{ $pkg->name }} ({{ $pkg->labTests->count() }} تحاليل)
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    {{-- Search filter --}}
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary mb-1">
+                            <i class="fas fa-search text-danger me-1"></i> تحديد الفحوصات المخبرية المطلوبة:
+                        </label>
+                        <input type="text" id="modalLabSearchInput" class="form-control form-control-sm mb-2" placeholder="بحث باسم التحليل..." oninput="filterModalLabTests(this.value)">
+                    </div>
+
+                    {{-- Tests scrollable list --}}
+                    <div class="border rounded-3 p-2.5 mb-3" style="max-height: 240px; overflow-y: auto; background: #ffffff;">
+                        @if(isset($availableLabTests) && $availableLabTests->count() > 0)
+                            <div class="row g-2" id="modalLabTestsListContainer">
+                                @foreach($availableLabTests as $test)
+                                    @php
+                                        $bPrice = (float)($test->price ?? 0);
+                                        $hiPrice = (float)(($test->hi_price > 0) ? $test->hi_price : $bPrice);
+                                        $moiPrice = (float)(($test->moi_price > 0) ? $test->moi_price : $bPrice);
+                                        $effPrice = match($modalInsType) {
+                                            'hi' => $hiPrice,
+                                            'moi' => $moiPrice,
+                                            default => $bPrice
+                                        };
+                                        $displayCopay = $modalIsInsurance ? round($effPrice * ($modalLabCopay / 100)) : $effPrice;
+                                    @endphp
+                                    <div class="col-md-6 modal-lab-item" data-name="{{ mb_strtolower($test->name) }}">
+                                        <div class="form-check p-2 border rounded-2 h-100 bg-light d-flex align-items-center justify-content-between gap-1">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input class="form-check-input modal-lab-checkbox ms-0" type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}" id="labTestCheck{{ $test->id }}">
+                                                <label class="form-check-label small fw-semibold text-dark cursor-pointer text-truncate" for="labTestCheck{{ $test->id }}" style="max-width: 170px;" title="{{ $test->name }}">
+                                                    {{ $test->name }}
+                                                </label>
+                                            </div>
+                                            @if($modalIsInsurance)
+                                                <div class="text-end lh-1">
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 rounded-pill" style="font-size: 0.68rem;" title="استقطاع المريض ({{ $modalLabCopay }}%) من سعر الضمان {{ number_format($effPrice, 0) }} د.ع">
+                                                        تحمل {{ $modalLabCopay }}%: {{ number_format($displayCopay, 0) }} د.ع
+                                                    </span>
+                                                    <small class="text-muted d-block mt-0.5" style="font-size: 0.60rem;">معتمد: {{ number_format($effPrice, 0) }} د.ع</small>
+                                                </div>
+                                            @else
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0.5 rounded-pill" style="font-size: 0.68rem;">
+                                                    كاش: {{ number_format($effPrice, 0) }} د.ع
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-3 small">لا توجد تحاليل مفعلة حالياً في النظام.</div>
+                        @endif
+                    </div>
+
+                    {{-- Priority & Notes --}}
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-5">
+                            <label class="form-label fw-bold small text-secondary mb-1">درجة الأهمية:</label>
+                            <div class="d-flex gap-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="labPrioRoutine" value="routine" checked>
+                                    <label class="form-check-label small" for="labPrioRoutine">عادي Routine</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="priority" id="labPrioUrgent" value="urgent">
+                                    <label class="form-check-label small text-danger fw-bold" for="labPrioUrgent">عاجل STAT</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-7">
+                            <label class="form-label fw-bold small text-secondary mb-1">ملاحظات سريرية للمختبر (اختياري):</label>
+                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="مثال: فحص سريع قبل دخول الصالة...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-0 px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                        <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للمختبر والكاشير
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- 2. Order Radiology Test Modal --}}
+<div class="modal fade" id="orderRadiologyModal" tabindex="-1" aria-labelledby="orderRadiologyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 560px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="orderRadiologyModalLabel" style="color: #0f172a;">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="fas fa-x-ray"></i>
+                    </span>
+                    <span>طلب فحص أشعة / تصوير للعملية #{{ $surgery->id }}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form action="{{ route('clinical-station.radiology-tests.store', $surgery) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    {{-- Financial Banner --}}
+                    <div class="p-2.5 rounded-3 mb-3 border d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc;">
+                        <div class="small">
+                            <span class="text-secondary fw-semibold">المريض:</span> <strong>{{ $surgery->patient?->user?->name ?? 'غير محدد' }}</strong>
+                            <span class="mx-1.5 text-muted">•</span>
+                            <span class="text-secondary fw-semibold">الحساب:</span>
+                            <span class="badge {{ $modalIsInsurance ? 'bg-success' : 'bg-primary' }} rounded-pill px-2 py-0.5">{{ $modalInsLabel }}</span>
+                        </div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">
+                            @if($modalIsInsurance)
+                                <i class="fas fa-shield-alt text-success me-1"></i> نسبة التحمل: {{ $modalRadCopay }}% بالكاشير
+                            @else
+                                <i class="fas fa-money-bill-wave text-primary me-1"></i> تسديد كامل بالكاشير
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Radiology Type Selection --}}
+                    <div class="mb-3">
+                        <label for="modalRadiologyTypeSelect" class="form-label fw-bold small text-secondary mb-1">
+                            <i class="fas fa-camera text-primary me-1"></i> نوع الفحص الإشعاعي المطلوب: <span class="text-danger">*</span>
+                        </label>
+                        <select name="radiology_type_id" id="modalRadiologyTypeSelect" class="form-select" required>
+                            <option value="">-- اختر نوع الأشعة / التصوير --</option>
+                            @if(isset($availableRadiologyTypes))
+                                @foreach($availableRadiologyTypes as $rad)
+                                    @php
+                                        $rPrice = (float)($rad->base_price ?? 0);
+                                        $rHi = (float)(($rad->hi_price > 0) ? $rad->hi_price : $rPrice);
+                                        $rMoi = (float)(($rad->moi_price > 0) ? $rad->moi_price : $rPrice);
+                                        $rEff = match($modalInsType) {
+                                            'hi' => $rHi,
+                                            'moi' => $rMoi,
+                                            default => $rPrice
+                                        };
+                                        $displayRadCopay = $modalIsInsurance ? round($rEff * ($modalRadCopay / 100)) : $rEff;
+                                    @endphp
+                                    <option value="{{ $rad->id }}">
+                                        {{ $rad->name }} — 
+                                        @if($modalIsInsurance)
+                                            [ضمان معتمد: {{ number_format($rEff, 0) }} د.ع | استقطاع {{ $modalRadCopay }}%: {{ number_format($displayRadCopay, 0) }} د.ع]
+                                        @else
+                                            [كاش: {{ number_format($rEff, 0) }} د.ع]
+                                        @endif
+                                    </option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+
+                    {{-- Priority --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary mb-1">درجة الأهمية:</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="priority" id="radPrioRoutine" value="routine" checked>
+                                <label class="form-check-label small" for="radPrioRoutine">عادي Routine</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="priority" id="radPrioUrgent" value="urgent">
+                                <label class="form-check-label small text-danger fw-bold" for="radPrioUrgent">عاجل STAT (قبل العملية)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Clinical indication / notes --}}
+                    <div class="mb-2">
+                        <label for="modalRadiologyNotes" class="form-label fw-bold small text-secondary mb-1">
+                            العضو المستهدف والتشخيص السريري (Clinical Indication):
+                        </label>
+                        <textarea name="notes" id="modalRadiologyNotes" rows="2" class="form-control form-control-sm" placeholder="مثال: صورة صدر لمريض قبل التخدير العام / سونار بطن وحوض..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-0 px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                        <i class="fas fa-paper-plane me-1"></i> إرسال الطلب للأشعة والكاشير
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterModalLabTests(query) {
+    const q = (query || '').trim().toLowerCase();
+    const items = document.querySelectorAll('#modalLabTestsListContainer .modal-lab-item');
+    items.forEach(el => {
+        const name = el.getAttribute('data-name') || '';
+        el.style.display = (!q || name.includes(q)) ? '' : 'none';
+    });
+}
+
+function applyLabPackageSelection(select) {
+    const option = select.options[select.selectedIndex];
+    const testsJson = option ? option.getAttribute('data-tests') : null;
+    if (!testsJson) return;
+
+    try {
+        const testIds = JSON.parse(testsJson) || [];
+        const checkboxes = document.querySelectorAll('.modal-lab-checkbox');
+        checkboxes.forEach(cb => {
+            const val = parseInt(cb.value);
+            if (testIds.includes(val)) {
+                cb.checked = true;
+            }
+        });
+    } catch (e) {
+        console.error('Error applying lab package:', e);
+    }
+}
+</script>
+@endpush
 @endsection

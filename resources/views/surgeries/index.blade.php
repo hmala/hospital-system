@@ -603,9 +603,6 @@
                                 <th>تاريخ وموعد العملية</th>
                                 <th>الغرفة</th>
                                 <th>حالة العملية</th>
-                                @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                    <th>تشخيص / علاج</th>
-                                @endif
                                 <th class="text-center" style="width: 140px;">الإجراءات</th>
                             </tr>
                         </thead>
@@ -622,10 +619,10 @@
                             <tr>
                                 <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
                                 <td>
-                                    <button type="button" class="patient-title-btn" data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRow{{ $surgery->id }}">
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض وتعديل تفاصيل العملية">
                                         <i class="fas fa-user-circle text-primary fs-5"></i>
                                         <span>{{ $patientName }}</span>
-                                    </button>
+                                    </a>
                                     @if($phone)
                                         <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
                                             <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
@@ -701,13 +698,6 @@
                                         <span class="status-badge-pill status-cancelled"><i class="fas fa-times me-1"></i>ملغاة</span>
                                     @endif
                                 </td>
-                                @if(!auth()->user()->hasRole(['receptionist', 'inquiry_staff']))
-                                <td>
-                                    <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary shadow-sm rounded-pill px-3" title="تفاصيل العملية">
-                                        <i class="fas fa-eye me-1"></i> تفاصيل
-                                    </a>
-                                </td>
-                                @endif
                                 <td class="text-center">
                                     <div class="d-flex gap-1 justify-content-center align-items-center">
                                         <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2 rounded-2" title="تفاصيل العملية">
@@ -736,175 +726,9 @@
                                     </div>
                                 </td>
                             </tr>
-
-                            {{-- Expandable Results Row --}}
-                            <tr class="bg-light">
-                                <td colspan="{{ auth()->user()->hasRole(['receptionist', 'inquiry_staff']) ? '8' : '9' }}" class="p-0 border-0">
-                                    <div class="collapse" id="detailsRow{{ $surgery->id }}">
-                                        <div class="p-3 m-2 sg-collapse-box shadow-sm">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="mb-0 fw-bold text-dark">
-                                                    <i class="fas fa-clipboard-list text-primary me-1"></i>
-                                                    تفاصيل ونتائج العملية (#{{ $surgery->id }})
-                                                </h6>
-                                                <div class="d-flex gap-2">
-                                                    @if($canManageSurgery && $surgery->status != 'cancelled' && $surgery->status != 'completed')
-                                                        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3" 
-                                                                onclick="confirmCancelSurgery(event, '{{ route('surgeries.cancel', $surgery) }}', '{{ addslashes($surgery->surgery_type) }}')">
-                                                            <i class="fas fa-times me-1"></i>إلغاء العملية
-                                                        </button>
-                                                    @endif
-                                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" type="button" 
-                                                            data-bs-toggle="collapse" data-bs-target="#detailsRow{{ $surgery->id }}">
-                                                        إخفاء التفاصيل
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div class="row row-cols-1 row-cols-md-3 g-3">
-                                                {{-- Radiology --}}
-                                                <div class="col">
-                                                    <div class="card h-100 shadow-sm border-0">
-                                                        <div class="card-header bg-primary text-white py-2 fw-bold d-flex justify-content-between align-items-center">
-                                                            <span><i class="fas fa-x-ray me-1"></i> الأشعة والسونار</span>
-                                                            <span class="badge bg-light text-dark">{{ $surgery->radiologyTests->count() }}</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: 0.82rem;">
-                                                            @if($surgery->radiologyTests->count())
-                                                                <div class="table-responsive">
-                                                                    <table class="table table-sm table-bordered mb-0">
-                                                                        <thead>
-                                                                            <tr class="bg-light">
-                                                                                <th>نوع الفحص</th>
-                                                                                <th>الحالة</th>
-                                                                                <th>النتيجة</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach($surgery->radiologyTests as $test)
-                                                                            <tr>
-                                                                                <td>{{ $test->radiologyType->name ?? '-' }}</td>
-                                                                                <td><span class="badge bg-light text-dark border">{{ $test->statusText ?? '-' }}</span></td>
-                                                                                <td>
-                                                                                    @if($test->result)
-                                                                                        <div>{{ $test->result }}</div>
-                                                                                    @endif
-                                                                                    @if($test->result_file)
-                                                                                        <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-xs btn-outline-primary mt-1">
-                                                                                            <i class="fas fa-paperclip"></i> مرفق
-                                                                                        </a>
-                                                                                    @elseif(!$test->result)
-                                                                                        -
-                                                                                    @endif
-                                                                                </td>
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            @else
-                                                                <p class="mb-0 text-muted p-2">لا توجد طلبات أشعة مسجلة</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Lab Tests --}}
-                                                <div class="col">
-                                                    <div class="card h-100 shadow-sm border-0">
-                                                        <div class="card-header bg-info text-white py-2 fw-bold d-flex justify-content-between align-items-center">
-                                                            <span><i class="fas fa-flask me-1"></i> التحاليل المختبرية</span>
-                                                            <span class="badge bg-light text-dark">{{ $surgery->labTests->count() }}</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: 0.82rem;">
-                                                            @if($surgery->labTests->count())
-                                                                <div class="table-responsive">
-                                                                    <table class="table table-sm table-bordered mb-0">
-                                                                        <thead>
-                                                                            <tr class="bg-light">
-                                                                                <th>التحليل</th>
-                                                                                <th>الحالة</th>
-                                                                                <th>النتيجة</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach($surgery->labTests as $test)
-                                                                            <tr>
-                                                                                <td>{{ $test->labTest->name ?? '-' }}</td>
-                                                                                <td><span class="badge bg-light text-dark border">{{ $test->statusText ?? '-' }}</span></td>
-                                                                                <td>
-                                                                                    @if($test->result)
-                                                                                        <div>{{ $test->result }}</div>
-                                                                                    @endif
-                                                                                    @if($test->result_file)
-                                                                                        <a href="{{ asset('storage/' . $test->result_file) }}" target="_blank" class="btn btn-xs btn-outline-primary mt-1">
-                                                                                            <i class="fas fa-paperclip"></i> مرفق
-                                                                                        </a>
-                                                                                    @elseif(!$test->result)
-                                                                                        -
-                                                                                    @endif
-                                                                                </td>
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            @else
-                                                                <p class="mb-0 text-muted p-2">لا توجد تحاليل مختبرية</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Treatments --}}
-                                                <div class="col">
-                                                    <div class="card h-100 shadow-sm border-0">
-                                                        <div class="card-header bg-secondary text-white py-2 fw-bold d-flex justify-content-between align-items-center">
-                                                            <span><i class="fas fa-pills me-1"></i> العلاجات والأدوية</span>
-                                                            <span class="badge bg-light text-dark">{{ $surgery->surgeryTreatments->count() }}</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: 0.82rem;">
-                                                            @if($surgery->surgeryTreatments->count())
-                                                                <div class="table-responsive">
-                                                                    <table class="table table-sm table-bordered mb-0">
-                                                                        <thead>
-                                                                            <tr class="bg-light">
-                                                                                <th>العلاج</th>
-                                                                                <th>الجرعة والتكرار</th>
-                                                                                <th>الحالة</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            @foreach($surgery->surgeryTreatments as $tr)
-                                                                            <tr>
-                                                                                <td class="fw-bold">{{ $tr->treatment_name }}</td>
-                                                                                <td>{{ $tr->dosage ?? '-' }} | {{ $tr->frequency ?? '-' }}</td>
-                                                                                <td>
-                                                                                    @if($tr->is_administered)
-                                                                                        <span class="badge bg-success-subtle text-success">تم الإعطاء</span>
-                                                                                    @else
-                                                                                        <span class="badge bg-warning-subtle text-warning">قيد الانتظار</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            @else
-                                                                <p class="mb-0 text-muted p-2">لا توجد علاجات موصوفة</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ auth()->user()->hasRole(['receptionist', 'inquiry_staff']) ? '8' : '9' }}">
+                                <td colspan="8">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-procedures fa-3x mb-3 text-secondary"></i>
                                         <div class="fw-bold fs-5">لا توجد عمليات نشطة حالياً مطابقة للبحث</div>
@@ -959,10 +783,10 @@
                             <tr>
                                 <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
                                 <td>
-                                    <button type="button" class="patient-title-btn" data-bs-toggle="collapse" data-bs-target="#detailsRowCompleted{{ $surgery->id }}" aria-expanded="false" aria-controls="detailsRowCompleted{{ $surgery->id }}">
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض تفاصيل العملية">
                                         <i class="fas fa-user-circle text-secondary fs-5"></i>
                                         <span>{{ $patientName }}</span>
-                                    </button>
+                                    </a>
                                     @if($phone)
                                         <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
                                             <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
@@ -1073,25 +897,7 @@
                                 </td>
                             </tr>
 
-                            {{-- Expandable Details for Completed --}}
-                            <tr class="bg-light">
-                                <td colspan="9" class="p-0 border-0">
-                                    <div class="collapse" id="detailsRowCompleted{{ $surgery->id }}">
-                                        <div class="p-3 m-2 sg-collapse-box shadow-sm">
-                                            <h6 class="mb-2 fw-bold text-dark">
-                                                <i class="fas fa-archive text-secondary me-1"></i>
-                                                أرشيف تفاصيل العملية (#{{ $surgery->id }})
-                                            </h6>
-                                            <p class="small text-muted mb-0">
-                                                الحالة النهائية: {{ $surgery->status === 'completed' ? 'مكتملة وخرجت من صالة العمليات' : 'ملغاة' }} 
-                                                @if($surgery->cancellation_reason)
-                                                    - سبب الإلغاء: <strong>{{ $surgery->cancellation_reason }}</strong>
-                                                @endif
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
+
                             @empty
                             <tr>
                                 <td colspan="9">
@@ -1349,11 +1155,7 @@
     </div>
 </div>
 
-{{-- Hidden Form for Cancellation --}}
-<form id="cancelSurgeryConfirmForm" method="POST" style="display: none;">
-    @csrf
-    <input type="hidden" name="cancellation_reason" id="cancel_reason_input" value="">
-</form>
+
 
 <script>
     function switchSurgeryTab(tabName) {
@@ -1494,28 +1296,6 @@
         });
     });
 
-    window.confirmCancelSurgery = function(event, route, title) {
-        event.preventDefault();
-        const message = 'هل أنت متأكد من إلغاء العملية: ' + title + '؟';
-        if (!window.confirm(message)) {
-            return false;
-        }
 
-        const reason = window.prompt('أدخل سبب الإلغاء (اختياري):', '');
-        if (reason === null) {
-            return false;
-        }
-
-        const form = document.getElementById('cancelSurgeryConfirmForm');
-        const reasonInput = document.getElementById('cancel_reason_input');
-        if (form && route) {
-            form.action = route;
-            if (reasonInput) {
-                reasonInput.value = reason.trim();
-            }
-            form.submit();
-        }
-        return true;
-    };
 </script>
 @endsection

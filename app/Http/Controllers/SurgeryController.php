@@ -17,6 +17,7 @@ use App\Models\StockMovement;
 use App\Models\Surgery;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
+use App\Models\SurgicalAssistant;
 use App\Models\SurgicalOperation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -30,26 +31,31 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('view surgeries'))) {
+        $canAccessSurgeries = $user && ($user->can('view surgeries') || $user->can('view anesthesia station'));
+        if (! $isAdmin && ! $canAccessSurgeries) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته)
-        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
             ->whereDoesntHave('operationTheaterStation', function ($q) {
                 $q->where('status', 'completed');
             });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
-        if ($user->hasRole('doctor') && $user->doctor) {
+        if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
             // إخفاء العمليات عن الأطباء الاستشاريين
             if ($user->doctor->type === 'consultant') {
                 // لا نعرض أي عمليات للطبيب الاستشاري
                 $activeSurgeriesQuery->whereRaw('1 = 0');
             } else {
                 // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $activeSurgeriesQuery->where('doctor_id', $user->doctor->id);
+                $activeSurgeriesQuery->where(function ($q) use ($user) {
+                    $q->where('doctor_id', $user->doctor->id)
+                        ->orWhere('anesthesiologist_id', $user->doctor->id)
+                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
+                });
             }
         }
 
@@ -81,7 +87,7 @@ class SurgeryController extends Controller
             ->appends(request()->query());
 
         // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها وخرجت)
-        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'surgeryTreatments', 'radiologyTests', 'labTests', 'operationTheaterStation'])
+        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->where(function ($q) {
                 $q->whereIn('status', ['completed', 'cancelled'])
                     ->orWhereHas('operationTheaterStation', function ($oq) {
@@ -90,14 +96,18 @@ class SurgeryController extends Controller
             });
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
-        if ($user->hasRole('doctor') && $user->doctor) {
+        if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
             // إخفاء العمليات عن الأطباء الاستشاريين
             if ($user->doctor->type === 'consultant') {
                 // لا نعرض أي عمليات للطبيب الاستشاري
                 $completedSurgeriesQuery->whereRaw('1 = 0');
             } else {
                 // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $completedSurgeriesQuery->where('doctor_id', $user->doctor->id);
+                $completedSurgeriesQuery->where(function ($q) use ($user) {
+                    $q->where('doctor_id', $user->doctor->id)
+                        ->orWhere('anesthesiologist_id', $user->doctor->id)
+                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
+                });
             }
         }
 
@@ -550,6 +560,8 @@ class SurgeryController extends Controller
             ->sortByDesc('id')
             ->values();
 
+        $surgicalAssistants = SurgicalAssistant::active()->orderBy('name')->get();
+
         return view('surgeries.show', compact(
             'surgery',
             'patients',
@@ -566,7 +578,8 @@ class SurgeryController extends Controller
             'isAnesthesiaUser',
             'operationStoreLocation',
             'operationSupplyBatches',
-            'orDispensedItems'
+            'orDispensedItems',
+            'surgicalAssistants'
         ));
     }
 
@@ -1463,12 +1476,16 @@ class SurgeryController extends Controller
             if (! empty($stationSync)) {
                 if ($surgery->anesthesiaStation) {
                     $surgery->anesthesiaStation->update($stationSync);
-                } elseif ($requestedTab === 'detail_anesthesia' || $hasAnesthesiaNotes || $hasAnesthesiaStart || $hasAnesthesiaEnd) {
+                } else {
+                    $initialStatus = ($requestedTab === 'detail_anesthesia' || $hasAnesthesiaNotes || $hasAnesthesiaStart || $hasAnesthesiaEnd)
+                        ? 'in_progress'
+                        : 'pending';
+
                     $surgery->anesthesiaStation()->create(array_merge([
                         'anesthesiologist_id' => $surgery->anesthesiologist_id,
                         'anesthesiologist_2_id' => $surgery->anesthesiologist_2_id,
                         'anesthesia_type' => $surgery->anesthesia_type,
-                        'status' => 'in_progress',
+                        'status' => $initialStatus,
                         'started_at' => now(),
                     ], $stationSync));
                 }

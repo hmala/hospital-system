@@ -1,14 +1,14 @@
 <?php
+
 namespace App\Http\Controllers;
 
 // app/Http/Controllers/DashboardController.php
 
-use Illuminate\Http\Request;
-use App\Models\User;
-use App\Models\Department;
 use App\Models\Appointment;
-use App\Models\Visit;
+use App\Models\Department;
 use App\Models\Room;
+use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -81,25 +81,41 @@ class DashboardController extends Controller
             return view('dashboard', compact('labStats', 'userStats'));
         }
 
-        // إحصائيات خاصة بمقيم التخدير
-        if ($user->hasRole('التخدير')) {
-            $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
-                    $q->where('status', 'completed');
-                })
-                ->where(function($q) {
-                    $q->whereDoesntHave('anesthesiaStation')
-                      ->orWhereHas('anesthesiaStation', function($sq) {
-                          $sq->where('status', '!=', 'completed');
-                      });
-                })->count();
+        // إحصائيات خاصة بطبيب / مقيم التخدير
+        if ($user->hasRole(['التخدير', 'anesthesia']) || ($user->doctor && $user->doctor->type === 'anesthesiologist')) {
+            $anesthesiaCountQuery = \App\Models\Surgery::where('status', '!=', 'cancelled');
+            if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+                $docId = $user->doctor->id;
+                $anesthesiaCountQuery->where(function ($q) use ($docId) {
+                    $q->where('anesthesiologist_id', $docId)
+                        ->orWhere('anesthesiologist_2_id', $docId)
+                        ->orWhereHas('anesthesiaStation', function ($sq) use ($docId) {
+                            $sq->where('anesthesiologist_id', $docId)
+                                ->orWhere('anesthesiologist_2_id', $docId);
+                        });
+                });
+            }
 
-            $completedToday = \App\Models\AnesthesiaStation::where('status', 'completed')
-                ->whereDate('updated_at', today())
-                ->count();
+            $anesthesiaStationCount = $anesthesiaCountQuery->where(function ($q) {
+                $q->whereDoesntHave('anesthesiaStation')
+                    ->orWhereHas('anesthesiaStation', function ($sq) {
+                        $sq->where('status', '!=', 'completed');
+                    });
+            })->count();
+
+            $completedTodayQuery = \App\Models\AnesthesiaStation::where('status', 'completed')
+                ->whereDate('updated_at', today());
+            if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+                $completedTodayQuery->where(function ($sq) use ($user) {
+                    $sq->where('anesthesiologist_id', $user->doctor->id)
+                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
+                });
+            }
+            $completedToday = $completedTodayQuery->count();
 
             $userStats = [
                 'name' => $user->name,
-                'role' => 'مقيم تخدير',
+                'role' => 'طبيب / مقيم تخدير',
                 'your_todo' => $anesthesiaStationCount,
                 'processed_today' => $completedToday,
             ];
@@ -137,7 +153,7 @@ class DashboardController extends Controller
         if ($user->hasRole('doctor') && $user->doctor) {
             $doctor = $user->doctor;
             $selectedMonth = request('month', now()->format('Y-m'));
-            
+
             try {
                 $monthDate = \Carbon\Carbon::createFromFormat('Y-m', $selectedMonth);
             } catch (\Exception $e) {
@@ -186,11 +202,11 @@ class DashboardController extends Controller
                 ->where(function ($q) use ($year, $month) {
                     $q->where(function ($sq) use ($year, $month) {
                         $sq->whereYear('scheduled_date', $year)
-                           ->whereMonth('scheduled_date', $month);
+                            ->whereMonth('scheduled_date', $month);
                     })->orWhere(function ($sq) use ($year, $month) {
                         $sq->whereNull('scheduled_date')
-                           ->whereYear('created_at', $year)
-                           ->whereMonth('created_at', $month);
+                            ->whereYear('created_at', $year)
+                            ->whereMonth('created_at', $month);
                     });
                 })
                 ->count();
@@ -231,7 +247,7 @@ class DashboardController extends Controller
                 ->whereYear('visit_date', $year)
                 ->whereMonth('visit_date', $month)
                 ->get()
-                ->groupBy(function($visit) {
+                ->groupBy(function ($visit) {
                     return \Carbon\Carbon::parse($visit->visit_date)->day;
                 })
                 ->map->count();
@@ -276,7 +292,6 @@ class DashboardController extends Controller
             $userStats['pending_payments'] = \App\Models\Payment::whereNull('paid_at')->count();
         }
 
-
         // إحصائيات الغرف
         $roomStats = [
             'total' => Room::count(),
@@ -311,12 +326,12 @@ class DashboardController extends Controller
         ];
 
         // توزيع المرضى حسب العيادات
-        $patientsByDepartment = Department::withCount(['doctors' => function($query) {
+        $patientsByDepartment = Department::withCount(['doctors' => function ($query) {
             $query->withCount('patients');
-        }])->get()->map(function($dept) {
+        }])->get()->map(function ($dept) {
             return [
                 'name' => $dept->name,
-                'count' => $dept->doctors->sum('patients_count') ?? 0
+                'count' => $dept->doctors->sum('patients_count') ?? 0,
             ];
         });
 
@@ -329,9 +344,9 @@ class DashboardController extends Controller
 
         // إحصائيات شهرية للمواعيد (آخر 6 أشهر)
         $monthlyAppointments = Appointment::select(
-                DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
-                DB::raw('count(*) as count')
-            )
+            DB::raw('DATE_FORMAT(appointment_date, "%Y-%m") as month'),
+            DB::raw('count(*) as count')
+        )
             ->whereBetween('appointment_date', [now()->subMonths(5)->startOfMonth(), now()])
             ->groupBy('month')
             ->orderBy('month')

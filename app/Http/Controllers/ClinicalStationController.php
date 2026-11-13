@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\NursingStation;
+use App\Models\Package;
+use App\Models\RadiologyType;
 use App\Models\ResidentStationFollowUp;
 use App\Models\ResidentStationReading;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
+use App\Models\SurgeryLabTest;
+use App\Models\SurgeryRadiologyTest;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\User;
+use App\Services\UserActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -116,6 +122,7 @@ class ClinicalStationController extends Controller
         // 5. Load relationships
         $surgery->load([
             'patient.user',
+            'patient.healthInsuranceCategory',
             'doctor.user',
             'operationTheater',
             'room',
@@ -186,6 +193,12 @@ class ClinicalStationController extends Controller
         $canActuallyEditVitals = (($tabPermissions['vitals'] ?? '') === SurgeryTabPermission::ACCESS_WRITE) && ($canEditVitals ?? true);
         $canEditFluids = ($isAdmin || ($user && $user->hasRole('nurse')))
             && (($tabPermissions['vitals'] ?? '') === SurgeryTabPermission::ACCESS_WRITE);
+        $canEditTests = (($tabPermissions['tests'] ?? '') === SurgeryTabPermission::ACCESS_WRITE)
+            && ($isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor', 'anesthesia'])));
+
+        $availableLabTests = LabTest::where('is_active', true)->orderBy('name')->get();
+        $availableRadiologyTypes = RadiologyType::where('is_active', true)->orderBy('name')->get();
+        $labPackages = Package::has('labTests')->with('labTests')->get();
 
         return view('surgery-stations.clinical.show', compact(
             'surgery',
@@ -215,6 +228,10 @@ class ClinicalStationController extends Controller
             'canManageClinicalExam',
             'canPrescribeTreatments',
             'canConfirmTreatmentDoses',
+            'canEditTests',
+            'availableLabTests',
+            'availableRadiologyTypes',
+            'labPackages',
             'isAdmin'
         ));
     }
@@ -1123,5 +1140,178 @@ class ClinicalStationController extends Controller
                 'fluid_balance' => null,
             ]);
         }
+    }
+
+    /**
+     * Store new lab tests requested from the Clinical Station.
+     */
+    public function storeLabTest(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin || (($userPermissions['tests'] ?? '') === SurgeryTabPermission::ACCESS_WRITE);
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بإضافة طلبات تحاليل مخبرية.');
+        }
+
+        $validated = $request->validate([
+            'lab_test_ids' => 'nullable|array',
+            'lab_test_ids.*' => 'integer|exists:lab_tests,id',
+            'package_id' => 'nullable|integer|exists:packages,id',
+            'notes' => 'nullable|string|max:500',
+            'priority' => 'nullable|string|in:routine,urgent',
+        ]);
+
+        $testIds = array_map('intval', $validated['lab_test_ids'] ?? []);
+        if (! empty($validated['package_id'])) {
+            $package = Package::find($validated['package_id']);
+            if ($package) {
+                $pkgTestIds = $package->labTests()->pluck('lab_tests.id')->toArray();
+                $testIds = array_values(array_unique(array_merge($testIds, $pkgTestIds)));
+            }
+        }
+
+        if (empty($testIds)) {
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+                ->with('error', 'يرجى اختيار تحليل واحد على الأقل أو باقة تحاليل.');
+        }
+
+        $notes = $validated['notes'] ?? null;
+        if (! empty($validated['priority']) && $validated['priority'] === 'urgent') {
+            $notes = trim('[عاجل STAT] '.($notes ?? ''));
+        }
+
+        $addedCount = 0;
+        foreach ($testIds as $testId) {
+            $surgery->labTests()->create([
+                'lab_test_id' => $testId,
+                'status' => 'pending',
+                'payment_status' => 'pending',
+                'notes' => $notes,
+            ]);
+            $addedCount++;
+        }
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'create',
+                'surgery',
+                "طلب فحص مخبري ({$addedCount} تحاليل) للعملية #{$surgery->id} للمريض {$surgery->patient?->user?->name}",
+                $surgery
+            );
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+            ->with('success', "تم إرسال {$addedCount} طلب تحليل مخبري بنجاح إلى المختبر وقائمة انتظار الكاشير.");
+    }
+
+    /**
+     * Delete an unpaid lab test requested from the Clinical Station.
+     */
+    public function deleteLabTest(Surgery $surgery, SurgeryLabTest $labTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin || (($userPermissions['tests'] ?? '') === SurgeryTabPermission::ACCESS_WRITE);
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بحذف هذا الفحص.');
+        }
+
+        if ($labTest->surgery_id !== $surgery->id) {
+            abort(404, 'الفحص غير مرتبط بهذه العملية.');
+        }
+
+        if ($labTest->payment_status === 'paid') {
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+                ->with('error', 'لا يمكن حذف فحص تم سداده مسبقاً في الكاشير.');
+        }
+
+        $testName = $labTest->labTest?->name ?? 'فحص مخبري';
+        $labTest->delete();
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+            ->with('success', "تم حذف التحليل «{$testName}» بنجاح.");
+    }
+
+    /**
+     * Store a new radiology test requested from the Clinical Station.
+     */
+    public function storeRadiologyTest(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin || (($userPermissions['tests'] ?? '') === SurgeryTabPermission::ACCESS_WRITE);
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بإضافة طلبات أشعة.');
+        }
+
+        $validated = $request->validate([
+            'radiology_type_id' => 'required|integer|exists:radiology_types,id',
+            'notes' => 'nullable|string|max:500',
+            'priority' => 'nullable|string|in:routine,urgent',
+        ]);
+
+        $notes = $validated['notes'] ?? null;
+        if (! empty($validated['priority']) && $validated['priority'] === 'urgent') {
+            $notes = trim('[عاجل STAT] '.($notes ?? ''));
+        }
+
+        $surgery->radiologyTests()->create([
+            'radiology_type_id' => $validated['radiology_type_id'],
+            'status' => 'pending',
+            'payment_status' => 'pending',
+            'notes' => $notes,
+        ]);
+
+        $radType = RadiologyType::find($validated['radiology_type_id']);
+        $radName = $radType?->name ?? 'فحص إشعاعي';
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'create',
+                'surgery',
+                "طلب فحص أشعة ({$radName}) للعملية #{$surgery->id} للمريض {$surgery->patient?->user?->name}",
+                $surgery
+            );
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+            ->with('success', "تم إرسال طلب فحص الأشعة «{$radName}» بنجاح إلى قسم الأشعة وقائمة انتظار الكاشير.");
+    }
+
+    /**
+     * Delete an unpaid radiology test requested from the Clinical Station.
+     */
+    public function deleteRadiologyTest(Surgery $surgery, SurgeryRadiologyTest $radiologyTest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin || (($userPermissions['tests'] ?? '') === SurgeryTabPermission::ACCESS_WRITE);
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بحذف هذا الفحص.');
+        }
+
+        if ($radiologyTest->surgery_id !== $surgery->id) {
+            abort(404, 'الفحص غير مرتبط بهذه العملية.');
+        }
+
+        if ($radiologyTest->payment_status === 'paid') {
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+                ->with('error', 'لا يمكن حذف فحص أشعة تم سداده مسبقاً في الكاشير.');
+        }
+
+        $radName = $radiologyTest->radiologyType?->name ?? 'فحص أشعة';
+        $radiologyTest->delete();
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
+            ->with('success', "تم حذف فحص الأشعة «{$radName}» بنجاح.");
     }
 }

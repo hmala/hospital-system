@@ -782,6 +782,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/clinical/treatments/{treatment}/toggle-dose', [\App\Http\Controllers\ClinicalStationController::class, 'toggleTreatmentDose'])->name('clinical-station.treatments.toggle-dose');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
         Route::post('/clinical/{surgery}/supplies/dispense', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.supplies.dispense');
+        Route::post('/clinical/{surgery}/lab-tests', [\App\Http\Controllers\ClinicalStationController::class, 'storeLabTest'])->name('clinical-station.lab-tests.store');
+        Route::delete('/clinical/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteLabTest'])->name('clinical-station.lab-tests.delete');
+        Route::post('/clinical/{surgery}/radiology-tests', [\App\Http\Controllers\ClinicalStationController::class, 'storeRadiologyTest'])->name('clinical-station.radiology-tests.store');
+        Route::delete('/clinical/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteRadiologyTest'])->name('clinical-station.radiology-tests.delete');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
         Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
         Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');
@@ -973,6 +977,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/trashed', [\App\Http\Controllers\SurgicalOperationController::class, 'trashed'])->name('trashed');
         Route::patch('/{surgicalOperation}/restore', [\App\Http\Controllers\SurgicalOperationController::class, 'restore'])->name('restore');
         Route::delete('/{surgicalOperation}', [\App\Http\Controllers\SurgicalOperationController::class, 'destroy'])->name('destroy');
+    });
+
+    // إدارة مساعدي الجراحين
+    Route::prefix('surgical-assistants')->name('surgical-assistants.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SurgicalAssistantController::class, 'index'])->name('index');
+        Route::post('/', [\App\Http\Controllers\SurgicalAssistantController::class, 'store'])->name('store');
+        Route::put('/{surgicalAssistant}', [\App\Http\Controllers\SurgicalAssistantController::class, 'update'])->name('update');
+        Route::patch('/{surgicalAssistant}/toggle-status', [\App\Http\Controllers\SurgicalAssistantController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{surgicalAssistant}', [\App\Http\Controllers\SurgicalAssistantController::class, 'destroy'])->name('destroy');
     });
 
     // إدارة الطوارئ

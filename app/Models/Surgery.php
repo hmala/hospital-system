@@ -83,6 +83,44 @@ class Surgery extends Model
         'status' => 'string',
     ];
 
+    protected static function booted(): void
+    {
+        static::created(function (Surgery $surgery) {
+            // Clean up any stale ghost records in station tables from previous deleted surgeries with the same ID
+            OperationTheaterStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            NursingStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            ResidentStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            ResidentStationFollowUp::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            AnesthesiaStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            SurgeonStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+        });
+
+        static::deleting(function (Surgery $surgery) {
+            // Cascade delete child station and related records when a surgery is deleted to prevent orphan ghosts
+            $surgery->operationTheaterStation()?->delete();
+            $surgery->nursingStation()?->delete();
+            $surgery->residentStations()->delete();
+            $surgery->residentStationFollowUps()->delete();
+            $surgery->anesthesiaStation()?->delete();
+            $surgery->surgeonStation()?->delete();
+            $surgery->additionalOperations()->delete();
+            $surgery->extraServices()->delete();
+            $surgery->surgeryTreatments()->delete();
+        });
+    }
+
     public function patient()
     {
         return $this->belongsTo(Patient::class);
