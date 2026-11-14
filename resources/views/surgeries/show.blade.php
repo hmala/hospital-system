@@ -338,6 +338,58 @@
             min-height: 36px;
             resize: vertical;
         }
+
+        /* ===== نمط الصفحة الواحدة الموحدة (Single Page View Mode) ===== */
+        .surgery-single-page-mode .tab-content > .tab-pane {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            margin-bottom: 24px !important;
+            scroll-margin-top: 95px;
+        }
+        .surgery-single-page-mode .clin-tabs-wrapper {
+            position: sticky;
+            top: 10px;
+            z-index: 1030;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 8px 10px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.85);
+            margin-bottom: 24px;
+            transition: all 0.2s ease;
+        }
+        .surgery-single-page-mode .clin-nav-tab {
+            cursor: pointer;
+        }
+        .surgery-single-page-mode .clin-tab-card {
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+            border: 1px solid #e2e8f0;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .surgery-single-page-mode .clin-tab-card:hover {
+            box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+            border-color: #cbd5e1;
+        }
+        #btnBackToTopSurgery {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 1050;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+            transition: all 0.2s ease;
+        }
+        #btnBackToTopSurgery:hover {
+            transform: translateY(-2px);
+        }
     </style>
 
     {{-- Top Breadcrumb & Quick Actions --}}
@@ -351,6 +403,16 @@
         </nav>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
+            {{-- زر التبديل بين نمط الصفحة الواحدة ونمط التبويبات --}}
+            <div class="btn-group btn-group-sm rounded-pill p-0.5 bg-white border shadow-2xs me-1" role="group" id="surgeryViewModeGroup">
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold" id="btnModeSinglePage" title="عرض كافة الأقسام في صفحة واحدة متصلة">
+                    <i class="fas fa-file-alt me-1"></i> صفحة واحدة
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold" id="btnModeTabs" title="عرض الأقسام كعلامات تبويب منفصلة">
+                    <i class="fas fa-layer-group me-1"></i> تبويبات
+                </button>
+            </div>
+
             @can('manage surgery tab permissions')
                 <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                     <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
@@ -494,12 +556,12 @@
                     <span class="badge-status-modern badge-status-cancelled"><span class="status-pulse-dot bg-danger"></span>ملغاة</span>
                 @endif
 
-                @if($user && $user->hasRole(['admin', 'surgery_staff', 'receptionist']))
-                    @if($surgery->status === 'scheduled')
+                @if($user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries')))
+                    @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
                         <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline mb-0">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-warning text-white rounded-pill px-3 fw-semibold" onclick="return confirm('هل تريد بدء العمل الجراحي الفعلي الآن؟')">
-                                <i class="fas fa-play me-1"></i>بدء العملية
+                            <button type="submit" class="btn btn-sm btn-success text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد بدء العملية الجراحية ودخول المريض لصالة العمليات؟')">
+                                <i class="fas fa-play me-1"></i>بدء العملية (دخول الصالة)
                             </button>
                         </form>
                     @endif
@@ -507,14 +569,14 @@
                     @if($surgery->status === 'in_progress')
                         <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline mb-0">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold" onclick="return confirm('هل تود نقل حالة العملية الجراحية إلى مكتملة؟')">
-                                <i class="fas fa-check-double me-1"></i>إكمال العملية
+                            <button type="submit" class="btn btn-sm btn-danger text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
+                                <i class="fas fa-check-double me-1"></i>إنهاء العملية (خروج من الصالة)
                             </button>
                         </form>
                         <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="d-inline mb-0">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="return confirm('هل تود إعادة المريض لقائمة الانتظار؟')">
-                                <i class="fas fa-history me-1"></i>إعادة للانتظار
+                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark border-warning rounded-pill px-3 fw-bold shadow-sm" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
+                                <i class="fas fa-door-open me-1 text-warning"></i>إعادة إخراجه من الصالة
                             </button>
                         </form>
                     @endif
@@ -1838,6 +1900,11 @@
 
         </div>
     @endif
+
+    {{-- زر العودة للأعلى بوضع الصفحة الواحدة --}}
+    <button type="button" id="btnBackToTopSurgery" class="btn btn-primary shadow-lg" title="العودة للأعلى">
+        <i class="fas fa-chevron-up"></i>
+    </button>
 </div>
 
 <!-- Modal Cancellation -->
@@ -2387,9 +2454,156 @@
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupSurgicalAssistantAutocomplete);
+        document.addEventListener('DOMContentLoaded', function() {
+            setupSurgicalAssistantAutocomplete();
+            initSurgeryViewMode();
+        });
     } else {
         setupSurgicalAssistantAutocomplete();
+        initSurgeryViewMode();
+    }
+
+    // ================= منظومة التبديل بين وضع الصفحة الواحدة وتبويبات العمليات =================
+    function initSurgeryViewMode() {
+        const app = document.getElementById('unifiedSurgeryDetailApp');
+        const btnSingle = document.getElementById('btnModeSinglePage');
+        const btnTabs = document.getElementById('btnModeTabs');
+        const backToTopBtn = document.getElementById('btnBackToTopSurgery');
+        const tabButtons = document.querySelectorAll('#surgeryDetailTabs .clin-nav-tab');
+        const panes = document.querySelectorAll('#surgeryDetailTabContent .tab-pane');
+
+        if (!app || !btnSingle || !btnTabs) return;
+
+        // الوضع الافتراضي: نعتمد وضع الصفحة الواحدة (single_page) تلقائياً لموظفي العمليات أو بحسب اختيار المستخدم
+        const savedMode = localStorage.getItem('surgery_view_mode') || 'single_page';
+
+        function applyMode(mode) {
+            if (mode === 'single_page') {
+                app.classList.add('surgery-single-page-mode');
+                btnSingle.classList.add('active', 'btn-primary');
+                btnSingle.classList.remove('btn-light', 'text-muted');
+                btnTabs.classList.remove('active', 'btn-primary');
+                btnTabs.classList.add('btn-light', 'text-muted');
+
+                // حفظ أهداف التبويب وإلغاء سلوك التبويب الافتراضي لتمكين التمرير
+                tabButtons.forEach(btn => {
+                    const target = btn.getAttribute('data-bs-target') || btn.getAttribute('data-single-target');
+                    if (target) {
+                        btn.setAttribute('data-single-target', target);
+                        btn.removeAttribute('data-bs-toggle');
+                    }
+                });
+
+                localStorage.setItem('surgery_view_mode', 'single_page');
+
+                // إذا كان هناك tab في الرابط URL نقفز إليه مباشرة
+                const urlParams = new URLSearchParams(window.location.search);
+                const requestedTab = urlParams.get('tab');
+                if (requestedTab) {
+                    const targetPane = document.getElementById('pane-' + requestedTab);
+                    if (targetPane) {
+                        setTimeout(() => {
+                            targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 200);
+                    }
+                }
+            } else {
+                app.classList.remove('surgery-single-page-mode');
+                btnTabs.classList.add('active', 'btn-primary');
+                btnTabs.classList.remove('btn-light', 'text-muted');
+                btnSingle.classList.remove('active', 'btn-primary');
+                btnSingle.classList.add('btn-light', 'text-muted');
+
+                // إعادة سلوك التبويبات القياسي
+                tabButtons.forEach(btn => {
+                    btn.setAttribute('data-bs-toggle', 'pill');
+                    const target = btn.getAttribute('data-single-target') || btn.getAttribute('data-bs-target');
+                    if (target) btn.setAttribute('data-bs-target', target);
+                });
+
+                // تفعيل التبويب المحدد
+                const activeBtn = document.querySelector('#surgeryDetailTabs .clin-nav-tab.active') || tabButtons[0];
+                if (activeBtn) {
+                    const targetId = activeBtn.getAttribute('data-bs-target');
+                    panes.forEach(p => p.classList.remove('show', 'active'));
+                    const targetPane = document.querySelector(targetId);
+                    if (targetPane) targetPane.classList.add('show', 'active');
+                }
+
+                localStorage.setItem('surgery_view_mode', 'tabs');
+            }
+        }
+
+        btnSingle.addEventListener('click', function() {
+            applyMode('single_page');
+        });
+
+        btnTabs.addEventListener('click', function() {
+            applyMode('tabs');
+        });
+
+        // النقر على أزرار الشريط العلوي للتمرير السلس في وضع الصفحة الواحدة
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (app.classList.contains('surgery-single-page-mode')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const targetSelector = this.getAttribute('data-single-target') || this.getAttribute('data-bs-target');
+                    const targetElement = document.querySelector(targetSelector);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        tabButtons.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        const key = this.getAttribute('data-tab-key');
+                        if (key && window.history && window.history.replaceState) {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('tab', key);
+                            window.history.replaceState({}, '', url.toString());
+                        }
+                    }
+                }
+            });
+        });
+
+        // متابعة التمرير لتحديث التبويب النشط وزر الصعود للأعلى
+        window.addEventListener('scroll', function() {
+            if (backToTopBtn) {
+                if (window.scrollY > 350) {
+                    backToTopBtn.style.display = 'flex';
+                } else {
+                    backToTopBtn.style.display = 'none';
+                }
+            }
+
+            if (!app.classList.contains('surgery-single-page-mode')) return;
+
+            let currentActiveId = '';
+            panes.forEach(pane => {
+                const rect = pane.getBoundingClientRect();
+                if (rect.top <= 170 && rect.bottom >= 170) {
+                    currentActiveId = '#' + pane.id;
+                }
+            });
+
+            if (currentActiveId) {
+                tabButtons.forEach(btn => {
+                    const target = btn.getAttribute('data-single-target') || btn.getAttribute('data-bs-target');
+                    if (target === currentActiveId) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+        }, { passive: true });
+
+        if (backToTopBtn) {
+            backToTopBtn.addEventListener('click', function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        applyMode(savedMode);
     }
 </script>
 @endsection

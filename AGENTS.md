@@ -54,6 +54,69 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-14 — المرحلة 201: تبسيط شاشة انتظار العمليات الجراحية `/surgeries/waiting` كجدول حصري بـ 5 أعمدة، إزالة التقويم والمؤشرات، تلوين المرضى حسب الحالة السريرية، وإضافة خيار إعادة الإخراج من الصالة Streamlined Waiting Table, Tri-Color Patient Stage Coding & Return to Waiting from OR)
+
+### Done
+- **تبسيط شاشة الانتظار وإزالة التقويم والمؤشرات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * حذف شبكة التقويم الشهري المدمجة وحذف بطاقات المؤشرات (KPIs) وأزرار الطي العلوية لتصبح الشاشة تركز بنسبة 100% على جدول العمليات الفوري.
+  * حصر أعمدة الجدول في 5 أعمدة معتمدة مطابقة للسجل العام: `حالة المريض في الصالة`، `المريض`، `نوع العملية`، `الطبيب الجراح`، و`رقم الغرفة`.
+  * حذف عمود الإجراءات السريعة بالكامل من جدول الانتظار، ليكون التحكم السريري بمسار المريض مداراً ومحمياً بالكامل من داخل ملف العملية.
+- **الترميز اللوني الثلاثي لصفوف وبيانات المرضى ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * تمييز كل مريض بلون واضح ومحدد بالعين المجردة حسب حالته الحقيقية:
+    1. `دخل الصالة (جارية)`: تظليل أزرق خفيف مع شريط جانبي أزرق عريض، شارة دخل الصالة بنبض أخضر، واسم وأيقونة المريض باللون الأزرق.
+    2. `بالانتظار (لم يدخل بعد)`: تظليل أصفر عنبري دافئ مع شريط جانبي أصفر وشارة انتظار دافئة.
+    3. `انتهى (خرج من الصالة)`: تظليل أخضر هادئ مع شريط جانبي أخضر، شارة انتهى (خرج من الصالة)، واسم وأيقونة المريض باللون الأخضر.
+    4. `ملغاة`: تظليل وشريط أحمر هادئ.
+  * تعميم هذا التمييز اللوني البصري الفوري على جدول العمليات العام `/surgeries`.
+- **إضافة خيار "إعادة إخراجه من الصالة" وتصفير محطة الصالة ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة زر تحكم صريح ومميز في شاشة ملف وتفاصيل العملية: `[ 🚪 إعادة إخراجه من الصالة ]`.
+  * تحديث دالة `returnToWaiting` في الكنترولر لتقوم بإلغاء حالة محطة صالة العمليات `operationTheaterStation` وإعادتها إلى `pending` وتصفير توقيت البدء، لمنع بقاء المريض معلقاً كـ `in_progress` بالخطأ.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php), [tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات شاشة الانتظار وإعادة الإخراج من الصالة بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز اختبارات `SurgeryTest` بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي أخطاء.
+
+## Session log (2026-11-14 — المرحلة 200: بناء نظام العرض الموحد كصفحة واحدة لملف العملية الجراحية `/surgeries/{id}` مع التبديل اللحظي والتنقل العائم Unified Continuous Single-Page Surgery File & Instant View Mode Switcher)
+
+### Done
+- **بناء نمط الصفحة الواحدة الموحدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة أزرار تبديل نمط العرض في أعلى شريط الإجراءات: `[ 📄 صفحة واحدة ]` و `[ 📑 تبويبات ]` مع حفظ التفضيل لحظياً في `localStorage`.
+  * تحويل عرض ملف العملية إلى صفحة واحدة متصلة تعرض كافة البطاقات المتاحة للمستخدم رأسياً بانسيابية تامة.
+  * تحويل شريط التبويبات إلى شريط تنقل سريع ثابت في الأعلى (Sticky Quick-Nav) يقفز للقسم المطلوب بضغطة زر مع تمييز القسم النشط تلقائياً بالتمرير (Scrollspy).
+  * إضافة زر عائم سلس أسفل الشاشة للعودة السريعة للأعلى (`Back to Top`).
+  * الحفاظ الكامل على مصفوفة الصلاحيات (حجب الأقسام غير المخولة، قفل أقسام القراءة فقط، وإتاحة الحفظ لأقسام الكتابة).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز اختبارات ملف العملية بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-14 — المرحلة 199: توجيه حساب الممرض تلقائياً لمحطة التمريض `/surgery-stations/nursing` كصفحة رئيسية وإصلاح استعلام إلغاء كشفية الطبيب Nurse Landing & Auto-Redirection to Nursing Station, Doctor Visit Cancel Query Fix)
+
+### Done
+- **توجيه حساب الممرض مباشرة لمحطة التمريض ([app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * ربط دور الممرض (`nurse` أو `تمريض` أو `user_type === 'nurse'`) بالتحويل التلقائي المباشر إلى محطة التمريض (`route('nursing-station.index')` / `/surgery-stations/nursing`).
+  * تفعيل التوجيه فور تسجيل الدخول، وعند زيارة المسار الجذر `/`، وعند الدخول إلى لوحة التحكم `/dashboard`.
+- **إصلاح استعلام إلغاء كشفية الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * تصحيح خطأ الاستعلام `Column not found: 1054 Unknown column 'payment_status' in 'WHERE'` في جدول `radiology_requests` وتحويله إلى التحقق الصحيح عبر `exists()`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseDashboardAndLoginRedirectTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseDashboardAndLoginRedirectTest.php), [tests/Feature/DoctorVisitCancellationRefundTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorVisitCancellationRefundTest.php))**:
+  * كتابة حزمة اختبارات تحقق التوجيه واجتيازها بنجاح 100% (`3 passed, 5 assertions`).
+  * اجتياز اختبار إلغاء كشفية الطبيب بنجاح (`2 passed, 6 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-14 — المرحلة 198: حصر وتخصيص أعمدة سجل العمليات الجراحية `/surgeries` بالأعمدة الـ 5 المعتمدة فقط Streamlining Surgeries Table to 5 Core Columns)
+
+### Done
+- **حصر أعمدة جدول العمليات النشطة والمكتملة ([resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * اقتصار الجدول حصراً على 5 أعمدة:
+    1. `حالة المريض في الصالة`: تمييز دقيق لحالة تواجد المريض (`دخل الصالة (جارية)` عند بدء العملية، `خرج من الصالة` عند الاكتمال، `لم يدخل بعد` في الانتظار أو الجدولة، و`ملغاة`).
+    2. `المريض`: اسم المريض كرابط مباشر لفتح وتعديل ملف العملية (`route('surgeries.show', $surgery)`) مع رقم الهاتف.
+    3. `نوع العملية`: مسمى العملية ونوع التغطية (كاش أو ضمان).
+    4. `الطبيب الجراح`: اسم الجراح (أو خارجي).
+    5. `رقم الغرفة`: رقم الغرفة بتصنيفها ونوعها.
+  * إزالة الأعمدة الزائدة كلياً: إزالة عمود المعرف `#`، وعمود `تاريخ وموعد العملية`، وعمود `تاريخ الخروج`، وعمود `الإجراءات` لتوفير أقصى قدر من الوضوح والسرعة للمستخدم.
+- **التحقق وتأكيد صحة القوالب**:
+  * تجميع قوالب Blade بنجاح (`php artisan view:cache`).
+  * اجتياز `Laravel Pint` واجتياز حزمة `tests/Feature/SurgeryTest.php` بنجاح 100% (`9 passed, 181 assertions`).
+
 ## Session log (2026-11-13 — المرحلة 197: تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation)
 
 ### Done

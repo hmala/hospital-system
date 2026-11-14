@@ -1224,9 +1224,15 @@ class SurgeryController extends Controller
         $surgery->status = 'waiting';
         $surgery->save();
 
+        if ($surgery->operationTheaterStation) {
+            $surgery->operationTheaterStation->status = 'pending';
+            $surgery->operationTheaterStation->started_at = null;
+            $surgery->operationTheaterStation->save();
+        }
+
         broadcast(new SurgeryUpdated($surgery));
 
-        return redirect()->back()->with('success', 'تم إعادة العملية إلى قائمة الانتظار');
+        return redirect()->back()->with('success', 'تم إعادة إخراج المريض من الصالة وإرجاعه إلى قائمة الانتظار بنجاح');
     }
 
     public function updateDetails(Request $request, Surgery $surgery)

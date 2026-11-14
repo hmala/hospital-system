@@ -2466,6 +2466,52 @@
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
     - 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
 
+- **المرحلة 201 (2026-11-14) — تبسيط شاشة انتظار العمليات الجراحية `/surgeries/waiting` كجدول حصري بـ 5 أعمدة، إزالة التقويم والمؤشرات، تلوين المرضى حسب الحالة السريرية (دخل/انتظار/انتهى)، وإضافة خيار إعادة الإخراج من الصالة (Streamlined Waiting Table, Tri-Color Patient Stage Coding & Return to Waiting from OR)**:
+  * **تبسيط شاشة الانتظار وإزالة التقويم والمؤشرات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+    - حذف شبكة التقويم الشهري المدمجة وحذف بطاقات المؤشرات (KPIs) وأزرار الطي العلوية لتصبح الشاشة تركز بنسبة 100% على جدول العمليات الفوري.
+    - حصر أعمدة الجدول في 5 أعمدة معتمدة مطابقة للسجل العام: `حالة المريض في الصالة`، `المريض`، `نوع العملية`، `الطبيب الجراح`، و`رقم الغرفة`.
+    - حذف عمود الإجراءات السريعة بالكامل من جدول الانتظار، ليكون التحكم السريري بمسار المريض مداراً ومحمياً بالكامل من داخل ملف العملية.
+  * **الترميز اللوني الثلاثي لصفوف وبيانات المرضى ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+    - تمييز كل مريض بلون واضح ومحدد بالعين المجردة حسب حالته الحقيقية:
+      1. `دخل الصالة (جارية)`: تظليل أزرق خفيف مع شريط جانبي أزرق عريض، شارة دخل الصالة بنبض أخضر، واسم وأيقونة المريض باللون الأزرق.
+      2. `بالانتظار (لم يدخل بعد)`: تظليل أصفر عنبري دافئ مع شريط جانبي أصفر وشارة انتظار دافئة.
+      3. `انتهى (خرج من الصالة)`: تظليل أخضر هادئ مع شريط جانبي أخضر، شارة انتهى (خرج من الصالة)، واسم وأيقونة المريض باللون الأخضر.
+      4. `ملغاة`: تظليل وشريط أحمر هادئ.
+    - تعميم هذا التمييز اللوني البصري الفوري على جدول العمليات العام `/surgeries`.
+  * **إضافة خيار "إعادة إخراجه من الصالة" وتصفير محطة الصالة ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إضافة زر تحكم صريح ومميز في شاشة ملف وتفاصيل العملية: `[ 🚪 إعادة إخراجه من الصالة ]`.
+    - تحديث دالة `returnToWaiting` في الكنترولر لتقوم بإلغاء حالة محطة صالة العمليات `operationTheaterStation` وإعادتها إلى `pending` وتصفير توقيت البدء، لمنع بقاء المريض معلقاً كـ `in_progress` بالخطأ.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php), [tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+    - اجتياز اختبارات شاشة الانتظار وإعادة الإخراج من الصالة بنجاح 100% (`9 passed, 32 assertions`).
+    - اجتياز اختبارات `SurgeryTest` بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي أخطاء.
+
+- **المرحلة 200 (2026-11-14) — بناء نظام العرض الموحد كصفحة واحدة لملف العملية الجراحية `/surgeries/{id}` مع التبديل اللحظي والتنقل العائم (Unified Continuous Single-Page Surgery File & Instant View Mode Switcher)**:
+  * **بناء محرك وضع الصفحة الواحدة المتصلة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إضافة زر تبديل علوي أنيق في شريط الإجراءات: `[ 📄 صفحة واحدة ]` و `[ 📑 تبويبات ]` مع حفظ التفضيل تلقائياً في `localStorage`.
+    - عند تفعيل وضع الصفحة الواحدة: تظهر جميع البطاقات والأقسام المتاحة للمستخدم رأسياً بشكل متسلسل ومتدفق في شاشة واحدة متصلة دون الحاجة للتنقل بين التبويبات.
+    - تحويل شريط التبويبات إلى **شريط تنقل سريع ثابت في الأعلى (Sticky Quick-Nav Bar)** يتيح القفز السلس الفوري لأي قسم بنقرة واحدة، مع تمييز القسم النشط تلقائياً أثناء التمرير (Scrollspy).
+    - إضافة زر عائم سلس أسفل الشاشة للعودة السريعة للأعلى (`Back to Top`).
+  * **التكامل التام مع مصفوفة الصلاحيات**:
+    - بقاء مصفوفة الصلاحيات (حجب/قراءة/كتابة) مطبقة بدقة متناهية: الأقسام المخفية لا تظهر نهائياً، وأقسام القراءة فقط تظهر معطلة الحقول دون أزرار حفظ، وأقسام الكتابة تتيح الحفظ المباشر.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز اختبارات تفاصيل وصلاحيات ملف العملية بنجاح 100% (`16 passed, 205 assertions`).
+    - اجتياز `Laravel Pint` بالكامل.
+
+- **المرحلة 199 (2026-11-14) — توجيه حساب الممرض تلقائياً لمحطة التمريض `/surgery-stations/nursing` كصفحة رئيسية، وإصلاح استعلام إلغاء كشفية الطبيب (Nurse Landing & Login Auto-Redirection to Nursing Station, Doctor Visit Cancel Query Fix)**:
+  * **توجيه تسجيل الدخول والصفحة الرئيسية للممرض ([app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - تعيين مسار محطة التمريض (`route('nursing-station.index')`) كمسار افتراضي مباشر لحساب الممرض (`nurse` أو `تمريض` أو `user_type === 'nurse'`) عند تسجيل الدخول، وعند زيارة المسار الرئيسي `/` أو لوحة التحكم `/dashboard`.
+  * **إصلاح استعلام إلغاء كشفية الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+    - إزالة الخطأ البرمجي `1054 Unknown column 'payment_status' in 'WHERE' (radiology_requests)` واستبداله بالتحقق الصائب `\App\Models\RadiologyRequest::where('visit_id', $visit->id)->exists()`.
+  * **التحقق والاختبارات الآلية ([tests/Feature/NurseDashboardAndLoginRedirectTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseDashboardAndLoginRedirectTest.php), [tests/Feature/DoctorVisitCancellationRefundTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorVisitCancellationRefundTest.php))**:
+    - اجتياز اختبارات توجيه التمريض بنجاح 100% (`3 passed, 5 assertions`) واجتياز اختبارات إلغاء الكشفية (`2 passed, 6 assertions`).
+    - اجتياز تنسيق الأكواد `Laravel Pint` بالكامل.
+
+- **المرحلة 198 (2026-11-14) — حصر وتخصيص أعمدة سجل العمليات الجراحية `/surgeries` بالأعمدة الـ 5 المعتمدة فقط Streamlining Surgeries Table to 5 Core Columns**:
+  * **اقتصار الجدولين (النشطة والمكتملة) على 5 أعمدة فقط**: (1) `حالة المريض في الصالة` (دخل الصالة / خرج من الصالة / لم يدخل بعد / ملغاة)، (2) `المريض` (رابط مباشر لملف العملية والتعديل مع الهاتف)، (3) `نوع العملية` (مع شارة التغطية)، (4) `الطبيب الجراح`، (5) `رقم الغرفة`.
+  * **إزالة الأعمدة غير المطلوبة**: حذف رقم العملية `#`، وموعد العملية، وتاريخ الخروج، والإجراءات الزائدة لسرعة الاستعراض.
+  * **التحقق**: اجتياز ترجمة Blade واختبارات `SurgeryTest` بنسبة 100% (`9 passed, 181 assertions`).
+
 - **المرحلة 197 (2026-11-13) — تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation**:
   * **استبعاد تكرار بنود الباقة (`is_package_included`)**: استبعاد الفحوصات والخدمات المشمولة بالباقة مجاناً من الجمع المزدوج فوق رسم العملية في حساب `$paidLabFee` و`$paidRadiologyFee` و`$paidExtraFee` في شاشة السداد `/cashier/surgeries/{id}/payment` وسجل العمليات `/cashier/surgeries`.
   * **تمييز بنود الباقة بـ `مشمول بالباقة (0 د.ع)`**: إظهار بادج معتمد لكل بند مشمول ضمن باقة الجراحة بدلاً من عرض أسعار الكاش الافتراضية.

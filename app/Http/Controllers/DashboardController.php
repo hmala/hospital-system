@@ -28,6 +28,11 @@ class DashboardController extends Controller
             return redirect()->route('doctor.visits.index');
         }
 
+        // توجيه التمريض مباشرة إلى محطة التمريض
+        if ($user && ($user->hasRole(['nurse', 'تمريض']) || $user->user_type === 'nurse')) {
+            return redirect()->route('nursing-station.index');
+        }
+
         // إحصائيات خاصة بموظف الأشعة
         if ($user->hasRole('radiology_staff')) {
             $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();
