@@ -1663,16 +1663,33 @@
                                     <i class="fas fa-archive text-secondary"></i><span> السجلات وأرشفة المرضى</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('incubators.index') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
-                                    <i class="fas fa-cogs text-warning"></i><span> إدارة الحاضنات والكبسولات</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
-                                    <i class="fas fa-tags text-warning"></i><span> تسعير وباقات خدمات الخدج</span>
-                                </a>
-                            </li>
+                            <!-- Submenu: الإعدادات -->
+                            @canany(['manage nicu services', 'manage incubator reservations', 'manage nicu care plans'])
+                            @php
+                                $isNicuSettingsActive = request()->routeIs('nicu.services.*') || request()->routeIs('incubators.*') || request()->routeIs('nicu.milk-types.*');
+                            @endphp
+                            <div class="sidebar-section-title {{ $isNicuSettingsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuSettingsSubSection" aria-expanded="{{ $isNicuSettingsActive ? 'true' : 'false' }}" style="font-size: 0.82rem; background: rgba(245, 158, 11, 0.08); color: #d97706; border-radius: 6px; cursor: pointer;">
+                                <span><i class="fas fa-sliders-h me-1 text-warning"></i> الإعدادات</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isNicuSettingsActive ? 'show' : '' }} ps-2" id="nicuSettingsSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
+                                        <i class="fas fa-tags text-warning"></i><span> تسعير باقات وخدمات الخدج (NICU)</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('incubators.*') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
+                                        <i class="fas fa-cogs text-warning"></i><span> إدارة حاضنات الخدج - ط6</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('nicu.milk-types.*') ? 'active' : '' }}" href="{{ route('nicu.milk-types.index') }}">
+                                        <i class="fas fa-baby text-warning"></i><span> قائمة وتصنيفات حليب وتغذية الخدج</span>
+                                    </a>
+                                </li>
+                            </div>
+                            @endcanany
                         </div>
                         @endcanany
 

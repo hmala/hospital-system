@@ -182,6 +182,13 @@ class HrEmployeeController extends Controller
             $validated['profile_photo'] = $path;
         }
 
+        if (isset($validated['employment_type'])) {
+            $empType = trim($validated['employment_type']);
+            if (strcasecmp($empType, 'fulltime') === 0 || strcasecmp($empType, 'full-time') === 0) {
+                $validated['employment_type'] = 'full_time';
+            }
+        }
+
         $employee = HrEmployee::create($validated);
 
         // معالجة ورفع المستمسكات المرفقة
@@ -292,6 +299,13 @@ class HrEmployeeController extends Controller
             }
             $path = $request->file('profile_photo')->store('employees/photos', 'public');
             $validated['profile_photo'] = $path;
+        }
+
+        if (isset($validated['employment_type'])) {
+            $empType = trim($validated['employment_type']);
+            if (strcasecmp($empType, 'fulltime') === 0 || strcasecmp($empType, 'full-time') === 0) {
+                $validated['employment_type'] = 'full_time';
+            }
         }
 
         $employee->update($validated);

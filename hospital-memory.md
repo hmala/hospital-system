@@ -78,6 +78,38 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 200 (2026-11-14 — `main`) — هيكلة تبويب وقائمة إعدادات الخدج والحاضنات، فصل شاشة دليل الحليب في واجهة مخصصة، وشريط التنقل الموحد (NICU Settings Submenu, Dedicated Milk Types View & Unified Sub-tabs Architecture)**:
+  * **هيكلة القائمة الجانبية لقسم الخدج ([resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+    - تنظيم بنود الإعدادات في تبويب/قائمة فرعية منسدلة (Collapsible Submenu) باسم **"الإعدادات"** تشمل العناوين الفرعية (Sub-titles) الثلاثة:
+      1. `تسعير باقات وخدمات الخدج (NICU)` (`nicu.services.index`).
+      2. `إدارة حاضنات الخدج - ط6` (`incubators.index`).
+      3. `قائمة وتصنيفات حليب وتغذية الخدج` (`nicu.milk-types.index`).
+  * **فصل وإفراد شاشة دليل أنواع الحليب والتغذية ([resources/views/nicu/milk-types/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/milk-types/index.blade.php), [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+    - إنشاء مسار `Route::get('/milk-types', ...)` ودالة `index()` في `NicuMilkTypeController` مع دعم الفرز والبحث السريع بالاسم والتصنيف والحالة.
+    - بناء واجهة متكاملة ومستقلة تشمل إحصائيات سريعة، جدول البيانات، ونوافذ الإضافة والتعديل والتبديل اللحظي للتفعيل بالـ AJAX.
+  * **شريط تبويبات الإعدادات المشترك ([resources/views/nicu/partials/settings-nav.blade.php](file:///c:/get/hospital-system/resources/views/nicu/partials/settings-nav.blade.php))**:
+    - بناء شريط تبويبات علوي أنيق موحد (Sub-tabs) يربط بين الصفحات الثلاث ويوضع في رأس شاشة تسعير الخدمات، وشاشة إدارة الحاضنات، وشاشة أنواع الحليب.
+    - تنظيف واجهة الخدمات [resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php) لتكون مخصصة كلياً لباقات الأسعار اليومية وأجهزة التنفس.
+  * **التحقق الآلي**: اجتياز فحص `Laravel Pint` وتجميع Blade واختبارات الميزة بنسبة 100% (`Tests\Feature\NicuGranularPermissionsAndMilkTypesTest` و `Tests\Feature\IncubatorWorkflowTest`).
+
+- **المرحلة 199 (2026-11-14 — `main`) — حل مشكلة استدعاءات AJAX في تبديل وتعديل أنواع حليب الخدج وباقات الخدمات وتوافق السيرفر السحابي هوسـتنجر (Subdirectory AJAX URL Fix & NICU Milk Types Toggle Compatibility)**:
+  * **معالجة الروابط المطلقة الصلبة في واجهة خدمات وحليب الخدج ([resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php))**:
+    - تصحيح زر تبديل التفعيل اللحظي لأنواع الحليب (`milk-type-toggle-switch`) وتحويله من `/nicu/milk-types/${id}/toggle` إلى المسار المعتمد `data-toggle-url="{{ route('nicu.milk-types.toggle', $milkType) }}"` مع مسار ديناميكي احتياطي `{{ url('nicu/milk-types') }}/${milkTypeId}/toggle`.
+    - حل مشكلة الخطأ 404 وتنبيه "فشل الاتصال بالخادم" الناتج عن تشغيل النظام على المسار الفرعي `https://hinpa.icu/hearmz/`.
+    - تزويد طلبات الـ fetch بترويسة `'Accept': 'application/json'` لضمان الاستجابة بصيغة JSON.
+    - تصحيح مسار الفورم في نافذة تعديل نوع الحليب (`editMilkForm`) ليستخدم `{{ url('nicu/milk-types') }}/${milkType.id}`.
+    - تصحيح زر تبديل باقات الخدمات (`service-toggle-switch`) ومودال تعديل الخدمة ليستخدم `{{ url('nicu/services') }}`.
+  * **توافق الصلاحيات في الكنترولر ([app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php))**:
+    - شمول صلاحية `manage incubator reservations` في دالة `authorizeManage()` لضمان عدم حدوث أي حجب صلاحيات (403) لمشرفي وموظفي الحاضنات.
+  * **تصحيح روابط توكن كاميرا الخدج ([resources/views/nicu/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/index.blade.php), [resources/views/nicu/reservations/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/reservations/index.blade.php))**:
+    - تحويل استدعاء توكن كاميرا الطفل `sendBabyCamLink` من المسار الصلب إلى `{{ url('nicu/reservations') }}/${reservationId}/cam-token`.
+  * **التحقق الآلي**: اجتياز فحص `Laravel Pint` وتجميع قوالب Blade واختبارات [`tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php`](file:///c:/get/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php) بنسبة 100% (5 اختبارات، 38 تأكيداً).
+
+- **المرحلة 198 (2026-11-14 — `main`) — حل استثناء قص البيانات 1265 عند إنشاء موظف جديد وتحويل عمود نوع التعاقد `employment_type` إلى VARCHAR مرن وتطبيع الخيارات (HR Employee Creation Data Truncation Fix & Flexible Employment Type Migration)**:
+  * تحويل عمود `employment_type` في جدول `hr_employees` من `ENUM` صارم محصور في 4 خيارات إلى `string('employment_type', 50)->default('full_time')` لمنع استثناء `SQLSTATE[01000]: Warning: 1265 Data truncated for column 'employment_type'` نهائياً.
+  * تطبيع قيمة `employment_type` تلقائياً في دالتي `store` و `update` لتحويل `Fulltime` أو `full-time` إلى الكود المعتمد `full_time`.
+  * إضافة اختبار `test_can_create_employee_with_custom_or_fulltime_employment_type()` واجتياز كافة اختبارات الموارد البشرية بنجاح 100% (`9 passed, 46 assertions`)، واجتياز فحص التنسيق القياسي `Laravel Pint`.
+
 - **المرحلة 196 (2026-11-13 — `main`) — بناء واجهة ونظام دليل مساعدي الجراحين (`/surgical-assistants`)، تسجيل الأسماء الـ 9 المعتمدة، والربط التلقائي بملف العملية وصالة العمليات (Dedicated Surgical Assistants Management & Dynamic Surgeries Integration)**:
   * **إنشاء بنية وجدول مساعدي الجراحين ([database/migrations/2026_11_13_221000_create_surgical_assistants_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_13_221000_create_surgical_assistants_table.php), [app/Models/SurgicalAssistant.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalAssistant.php), [database/seeders/SurgicalAssistantSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/SurgicalAssistantSeeder.php))**:
     - بناء جدول `surgical_assistants` ونموذج `SurgicalAssistant` بنمط كاستات لارافيل 12 الحديثة (`name`, `phone`, `notes`, `is_active`).
@@ -2465,6 +2497,17 @@
     - إضافة دالة المساعدة المركزية `redirectBackWithActiveState` وتعميمها عبر كافة دوال الخدج (توثيق العلامات الحيوية، جداول الرعاية، الملاحظات الطبية، الاستشارات، طلبات المختبر والأشعة، الوصفات، إدارة العلاج MAR، المرفقات، وتبديل الباقات)، لتمرير التبويب والتبويب الفرعي تلقائياً في الجلسة `session(['active_tab' => ..., 'active_pill' => ...])`.
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
     - 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
+
+- **المرحلة 198 (2026-11-14) — حل استثناء قص البيانات 1265 عند إنشاء موظف جديد وتحويل عمود نوع التعاقد `employment_type` إلى VARCHAR مرن وتطبيع الخيارات HR Employee Creation Data Truncation Fix & Flexible Employment Type Migration**:
+  * **ترحيل وتوسيع عمود نوع التعاقد ([database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php))**:
+    - تحويل عمود `employment_type` في جدول `hr_employees` من `ENUM` صارم محصور في 4 خيارات إلى `string('employment_type', 50)->default('full_time')` لمنع استثناء `SQLSTATE[01000]: Warning: 1265 Data truncated for column 'employment_type'` نهائياً.
+    - إتاحة التوافق التام مع خيارات القوائم المنسدلة الديناميكية (`hr_lookup_options`) وخيارات العقود الحكومية والوزارية (`gov_contract`) وأي خيارات يضيفها مسؤول الموارد البشرية عبر شاشة الإعدادات `/hr/settings`.
+  * **تطبيع الكود والمعالجة الوقائية ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+    - تطبيع قيمة `employment_type` تلقائياً في دالتي `store` و `update` لتحويل `Fulltime` أو `full-time` إلى الكود المعتمد `full_time`.
+    - تحديث دالة التسمية `getEmploymentTypeNameAttribute()` في الموديل للتعرف على العقود الحكومية وتوفير fallback ديناميكي للاستعلام التلقائي من جدول `HrLookupOption`.
+    - تصحيح السجل رقم 42 في `hr_lookup_options` لتوحيد الكود مع `full_time`.
+  * **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+    - إضافة اختبار `test_can_create_employee_with_custom_or_fulltime_employment_type()` واجتياز كافة اختبارات الموارد البشرية بنجاح 100% (`9 passed, 46 assertions`)، واجتياز فحص التنسيق القياسي `Laravel Pint`.
 
 - **المرحلة 197 (2026-11-13) — تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation**:
   * **استبعاد تكرار بنود الباقة (`is_package_included`)**: استبعاد الفحوصات والخدمات المشمولة بالباقة مجاناً من الجمع المزدوج فوق رسم العملية في حساب `$paidLabFee` و`$paidRadiologyFee` و`$paidExtraFee` في شاشة السداد `/cashier/surgeries/{id}/payment` وسجل العمليات `/cashier/surgeries`.

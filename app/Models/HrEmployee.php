@@ -145,11 +145,14 @@ class HrEmployee extends Model
     public function getEmploymentTypeNameAttribute(): string
     {
         return match ($this->employment_type) {
-            'full_time' => 'دوام كامل',
+            'full_time', 'Fulltime' => 'دوام كامل',
             'part_time' => 'دوام جزئي',
             'contract' => 'عقد محدد المدة',
+            'gov_contract' => 'عقد وزاري / حكومي',
             'daily_shift' => 'أجر يومي / خفارات',
-            default => $this->employment_type,
+            default => HrLookupOption::where('category', 'employment_type')
+                ->where('code', $this->employment_type)
+                ->value('name') ?? (string) $this->employment_type,
         };
     }
 

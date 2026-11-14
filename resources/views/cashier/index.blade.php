@@ -1894,9 +1894,9 @@
                                                                         <small class="text-muted d-block" style="font-size: 0.72rem;">فائض أمانات</small>
                                                                     </td>
                                                                     <td class="text-center">
-                                                                        <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#nicuRefundModal{{ $res->id }}" title="صرف واسترجاع فائض الأمانات">
+                                                                        <a href="{{ route('cashier.nicu.payment.form', $res->id) }}#refund_section" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" title="صرف واسترجاع فائض الأمانات">
                                                                             <i class="fas fa-undo-alt me-1 text-danger"></i> إرجاع الأمانات
-                                                                        </button>
+                                                                        </a>
                                                                     </td>
                                                                 </tr>
                                                             @endforeach

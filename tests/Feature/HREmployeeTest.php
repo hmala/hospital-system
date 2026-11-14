@@ -325,4 +325,68 @@ class HREmployeeTest extends TestCase
         $response->assertSee('مروة عبد الكريم');
         $response->assertSee(number_format(950000));
     }
+
+    public function test_can_create_employee_with_custom_or_fulltime_employment_type()
+    {
+        Storage::fake('public');
+        $hospital = Hospital::first();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $department = Department::first() ?? Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الباطنية',
+            'type' => 'surgery',
+            'room_number' => '102',
+            'consultation_fee' => 20000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'max_patients_per_day' => 20,
+        ]);
+
+        $employeeData = [
+            'employee_code' => 'EMP-FULLTIME-01',
+            'full_name' => 'علي حسن محمد',
+            'gender' => 'male',
+            'phone' => '07709876543',
+            'staff_type' => 'administrative',
+            'job_title' => 'محاسب',
+            'department_id' => $department->id,
+            'employment_type' => 'Fulltime',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 800000,
+            'status' => 'active',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeData);
+        $response->assertSessionHasNoErrors();
+
+        $employee = HrEmployee::where('employee_code', 'EMP-FULLTIME-01')->first();
+        $this->assertNotNull($employee);
+        $this->assertEquals('full_time', $employee->employment_type);
+        $this->assertEquals('دوام كامل', $employee->employment_type_name);
+
+        // اختبار نوع تعاقد مرن مثل gov_contract
+        $employeeDataGov = [
+            'employee_code' => 'EMP-GOV-01',
+            'full_name' => 'فاطمة جواد',
+            'gender' => 'female',
+            'phone' => '07709876544',
+            'staff_type' => 'administrative',
+            'job_title' => 'مدخل بيانات',
+            'department_id' => $department->id,
+            'employment_type' => 'gov_contract',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 700000,
+            'status' => 'active',
+        ];
+
+        $responseGov = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeDataGov);
+        $responseGov->assertSessionHasNoErrors();
+
+        $employeeGov = HrEmployee::where('employee_code', 'EMP-GOV-01')->first();
+        $this->assertNotNull($employeeGov);
+        $this->assertEquals('gov_contract', $employeeGov->employment_type);
+        $this->assertEquals('عقد وزاري / حكومي', $employeeGov->employment_type_name);
+    }
 }

@@ -222,18 +222,6 @@
                                     <option value="terminated" {{ old('status') == 'terminated' ? 'selected' : '' }}>منهي خدماته</option>
                                 </select>
                             </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">ربط بحساب مستخدم (اختياري)</label>
-                                <select name="user_id" class="form-select">
-                                    <option value="">بدون حساب دخول للنظام</option>
-                                    @foreach($users as $user)
-                                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
-                                            {{ $user->name }} ({{ $user->email }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
                         </div>
                     </div>
                 </div>

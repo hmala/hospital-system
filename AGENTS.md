@@ -54,6 +54,52 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-14 — المرحلة 200: هيكلة تبويب وقائمة إعدادات الخدج والحاضنات، فصل شاشة دليل الحليب في واجهة مخصصة، وشريط التنقل الموحد NICU Settings Submenu, Dedicated Milk Types View & Unified Sub-tabs Architecture)
+
+### Done
+- **هيكلة القائمة الجانبية وقسم الخدج ([resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تجميع بنود الإعدادات تحت قائمة فرعية منسدلة (Collapsible Submenu) باسم **"الإعدادات"** (`#nicuSettingsSubSection`) تشمل العناوين الفرعية (Sub-titles) الثلاثة:
+    1. `تسعير باقات وخدمات الخدج (NICU)` (`nicu.services.index`).
+    2. `إدارة حاضنات الخدج - ط6` (`incubators.index`).
+    3. `قائمة وتصنيفات حليب وتغذية الخدج` (`nicu.milk-types.index`).
+- **بناء واجهة مخصصة مستقلة لدليل أنواع وتغذية الخدج ([resources/views/nicu/milk-types/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/milk-types/index.blade.php), [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+  * إضافة مسار `Route::get('/milk-types', [NicuMilkTypeController::class, 'index'])->name('milk-types.index')` ودالة `index()` في الكنترولر مع دعم البحث بالاسم والتصنيف والفلترة بالحالة (نشط/معطل).
+  * تصميم واجهة مخصصة ومستقلة تشمل بطاقات إحصائيات سريعة، جدول الحليب، نوافذ منبثقة للإضافة والتعديل، ومفاتيح التفعيل اللحظية المعتمدة على AJAX.
+  * تحديث رابط إدارة الحليب في إضبارة الخديج السريرية ([resources/views/nicu/show.blade.php](file:///c:/get/hospital-system/resources/views/nicu/show.blade.php)) ليوجه مباشرة للواجهة المستقلة.
+- **شريط تبويبات الإعدادات المشترك ([resources/views/nicu/partials/settings-nav.blade.php](file:///c:/get/hospital-system/resources/views/nicu/partials/settings-nav.blade.php), [resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php), [resources/views/incubators/index.blade.php](file:///c:/get/hospital-system/resources/views/incubators/index.blade.php))**:
+  * إنشاء شريط تبويبات علوي أنيق موحد (Sub-tabs) يربط بين الصفحات الثلاث ويوضع في رأس كل شاشة لتسهيل التنقل اللحظي بين باقات الخدمات والحاضنات وأنواع الحليب.
+  * تنظيف شاشة الخدمات [resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php) وكنترولر الخدمات من كود الحليب وجعلها مخصصة كلياً لباقات التسعير والضمان والتنفس الاصطناعي.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/get/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php), [tests/Feature/IncubatorWorkflowTest.php](file:///c:/get/hospital-system/tests/Feature/IncubatorWorkflowTest.php))**:
+  * اجتياز فحص التنسيق القياسي `Laravel Pint`، ونجاح التجميع المؤقت لقوالب Blade (`view:cache`)، واجتياز اختبارات ميزة الخدج والحاضنات بنجاح 100% (`5 passed, 41 assertions` و `12 passed, 75 assertions`).
+
+## Session log (2026-11-14 — المرحلة 199: حل مشكلة استدعاءات AJAX في تبديل وتعديل أنواع حليب الخدج والخدمات وتوافق السيرفر السحابي Subdirectory AJAX URL Fix & NICU Milk Types Toggle Compatibility)
+
+### Done
+- **تصحيح مسارات استدعاءات الـ AJAX والنماذج في خدمات وحليب الخدج ([resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php))**:
+  * معالجة المسار المطلق الصلب في زر تبديل حالة تفعيل نوع الحليب (`milk-type-toggle-switch`) وتحويله من `/nicu/milk-types/${id}/toggle` إلى `data-toggle-url="{{ route('nicu.milk-types.toggle', $milkType) }}"` مع fallback ديناميكي `{{ url('nicu/milk-types') }}/${milkTypeId}/toggle`، مما يحل خطأ 404 وانقطاع الاتصال بالخادم على السيرفر السحابي هوسـتنجر المرفوع على مسار فرعي (`/hearmz/`).
+  * تزويد طلبات الـ fetch بترويسة `'Accept': 'application/json'` لضمان التعامل السلس مع استجابات JSON.
+  * تصحيح مسار الفورم في مودال تعديل نوع الحليب ليكون `{{ url('nicu/milk-types') }}/${milkType.id}` بدلاً من المسار الصلب.
+  * تصحيح مسار تبديل تفعيل باقات خدمات الخدج (`service-toggle-switch`) ومودال تعديل الخدمة لاستخدام `data-toggle-url` ومساعد `{{ url('nicu/services') }}`.
+- **توافق الصلاحيات وسلاسة التجربة ([app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php))**:
+  * توسيع فحص الصلاحية في `authorizeManage()` ليشمل صلاحية `manage incubator reservations` بجانب `manage nicu services` و `manage nicu care plans`، لمطابقة كنترولر الخدمات ومنع أي اعتراض صلاحيات 403 غير مقصود للمشرفين ومسؤولي الحاضنات.
+- **تصحيح استدعاءات كاميرا الخدج عبر AJAX ([resources/views/nicu/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/index.blade.php), [resources/views/nicu/reservations/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/reservations/index.blade.php))**:
+  * تحويل استدعاء توكن كاميرا الطفل `sendBabyCamLink` من `/nicu/reservations/...` إلى `{{ url('nicu/reservations') }}/${reservationId}/cam-token` للعمل بتوافق كامل مع النطاق المحلي والسحابي.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/get/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php))**:
+  * اجتياز فحص التنسيق القياسي `Laravel Pint`، ونجاح التجميع المؤقت لقوالب Blade (`view:cache`)، واجتياز اختبارات ميزة أنواع الحليب والصلاحيات بنجاح 100% (`5 passed, 38 assertions`).
+
+## Session log (2026-11-14 — المرحلة 198: حل استثناء قص البيانات 1265 عند إنشاء موظف جديد وتحويل عمود نوع التعاقد `employment_type` إلى VARCHAR مرن وتطبيع الخيارات HR Employee Creation Data Truncation Fix & Flexible Employment Type Migration)
+
+### Done
+- **ترحيل وتوسيع عمود نوع التعاقد ([database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php))**:
+  * تحويل عمود `employment_type` في جدول `hr_employees` من `ENUM` صارم محصور في 4 خيارات إلى `string('employment_type', 50)->default('full_time')` لمنع استثناء `SQLSTATE[01000]: Warning: 1265 Data truncated for column 'employment_type'` نهائياً.
+  * إتاحة التوافق التام مع خيارات القوائم المنسدلة الديناميكية (`hr_lookup_options`) وخيارات العقود الحكومية والوزارية (`gov_contract`) وأي خيارات يضيفها مسؤول الموارد البشرية عبر شاشة الإعدادات `/hr/settings`.
+- **تطبيع الكود والمعالجة الوقائية ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+  * تطبيع قيمة `employment_type` تلقائياً في دالتي `store` و `update` لتحويل `Fulltime` أو `full-time` إلى الكود المعتمد `full_time`.
+  * تحديث دالة التسمية `getEmploymentTypeNameAttribute()` في الموديل للتعرف على العقود الحكومية وتوفير fallback ديناميكي للاستعلام التلقائي من جدول `HrLookupOption`.
+  * تصحيح السجل رقم 42 في `hr_lookup_options` لتوحيد الكود مع `full_time`.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * إضافة اختبار `test_can_create_employee_with_custom_or_fulltime_employment_type()` واجتياز كافة اختبارات الموارد البشرية بنجاح 100% (`9 passed, 46 assertions`)، واجتياز فحص التنسيق القياسي `Laravel Pint`.
+
 ## Session log (2026-11-13 — المرحلة 197: تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation)
 
 ### Done

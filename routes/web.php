@@ -880,6 +880,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
 
         // إدارة وتصنيفات أنواع حليب وتغذية الخدج
+        Route::get('/milk-types', [\App\Http\Controllers\NicuMilkTypeController::class, 'index'])->name('milk-types.index');
         Route::get('/milk-types/active-list', [\App\Http\Controllers\NicuMilkTypeController::class, 'getActiveList'])->name('milk-types.active-list');
         Route::post('/milk-types', [\App\Http\Controllers\NicuMilkTypeController::class, 'store'])->name('milk-types.store');
         Route::put('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'update'])->name('milk-types.update');

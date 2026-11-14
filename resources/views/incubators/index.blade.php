@@ -1,7 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
+
+    <!-- شريط تبويبات الإعدادات المشترك -->
+    @include('nicu.partials.settings-nav', ['activeTab' => 'incubators'])
+
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
