@@ -16,6 +16,7 @@ class HrEmployee extends Model
         'department_id',
         'full_name',
         'national_id',
+        'nationality',
         'gender',
         'date_of_birth',
         'phone',

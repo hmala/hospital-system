@@ -41,6 +41,7 @@ class HrEmployeeController extends Controller
                     ->orWhere('employee_code', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('national_id', 'like', "%{$search}%")
+                    ->orWhere('nationality', 'like', "%{$search}%")
                     ->orWhere('medical_license_number', 'like', "%{$search}%");
             });
         }
@@ -109,6 +110,7 @@ class HrEmployeeController extends Controller
         // جلب خيارات القوائم المنسدلة النشطة
         $employmentTypes = HrLookupOption::where('category', 'employment_type')->where('is_active', true)->orderBy('sort_order')->get();
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
+        $nationalities = HrLookupOption::where('category', 'nationality')->where('is_active', true)->orderBy('sort_order')->get();
 
         // جلب خريطة الحقول الإجبارية
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
@@ -117,7 +119,7 @@ class HrEmployeeController extends Controller
         $latestId = HrEmployee::withTrashed()->max('id') ?? 0;
         $nextCode = 'EMP-'.str_pad($latestId + 1, 4, '0', STR_PAD_LEFT);
 
-        return view('hr.employees.create', compact('departments', 'users', 'employmentTypes', 'documentTypes', 'reqMap', 'nextCode'));
+        return view('hr.employees.create', compact('departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap', 'nextCode'));
     }
 
     /**
@@ -132,6 +134,7 @@ class HrEmployeeController extends Controller
             'employee_code' => 'required|string|max:30|unique:hr_employees,employee_code',
             'full_name' => 'required|string|max:255',
             'national_id' => ($reqMap['national_id'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
+            'nationality' => ($reqMap['nationality'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
             'gender' => ($reqMap['gender'] ?? true) ? 'required|in:male,female' : 'nullable|in:male,female',
             'date_of_birth' => ($reqMap['date_of_birth'] ?? false) ? 'required|date' : 'nullable|date',
             'phone' => ($reqMap['phone'] ?? true) ? 'required|string|max:30' : 'nullable|string|max:30',
@@ -189,6 +192,10 @@ class HrEmployeeController extends Controller
             }
         }
 
+        if (empty($validated['nationality'])) {
+            $validated['nationality'] = 'عراقي';
+        }
+
         $employee = HrEmployee::create($validated);
 
         // معالجة ورفع المستمسكات المرفقة
@@ -225,9 +232,10 @@ class HrEmployeeController extends Controller
 
         $employmentTypes = HrLookupOption::where('category', 'employment_type')->where('is_active', true)->orderBy('sort_order')->get();
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
+        $nationalities = HrLookupOption::where('category', 'nationality')->where('is_active', true)->orderBy('sort_order')->get();
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
 
-        return view('hr.employees.edit', compact('employee', 'departments', 'users', 'employmentTypes', 'documentTypes', 'reqMap'));
+        return view('hr.employees.edit', compact('employee', 'departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap'));
     }
 
     /**
@@ -264,6 +272,7 @@ class HrEmployeeController extends Controller
             'employee_code' => 'required|string|max:30|unique:hr_employees,employee_code,'.$employee->id,
             'full_name' => 'required|string|max:255',
             'national_id' => ($reqMap['national_id'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
+            'nationality' => ($reqMap['nationality'] ?? false) ? 'required|string|max:50' : 'nullable|string|max:50',
             'gender' => ($reqMap['gender'] ?? true) ? 'required|in:male,female' : 'nullable|in:male,female',
             'date_of_birth' => ($reqMap['date_of_birth'] ?? false) ? 'required|date' : 'nullable|date',
             'phone' => ($reqMap['phone'] ?? true) ? 'required|string|max:30' : 'nullable|string|max:30',
@@ -306,6 +315,10 @@ class HrEmployeeController extends Controller
             if (strcasecmp($empType, 'fulltime') === 0 || strcasecmp($empType, 'full-time') === 0) {
                 $validated['employment_type'] = 'full_time';
             }
+        }
+
+        if (empty($validated['nationality'])) {
+            $validated['nationality'] = 'عراقي';
         }
 
         $employee->update($validated);

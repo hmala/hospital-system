@@ -389,4 +389,87 @@ class HREmployeeTest extends TestCase
         $this->assertEquals('gov_contract', $employeeGov->employment_type);
         $this->assertEquals('عقد وزاري / حكومي', $employeeGov->employment_type_name);
     }
+
+    public function test_can_create_and_update_employee_with_nationality()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $hospital = Hospital::first();
+        $department = Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الباطنية',
+            'type' => 'internal',
+            'room_number' => '102',
+            'consultation_fee' => 20000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'max_patients_per_day' => 30,
+        ]);
+
+        // 1. فحص ظهور حقل الجنسية في شاشة الإنشاء
+        $createResponse = $this->actingAs($admin)->get(route('hr.employees.create'));
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('الجنسية');
+        $createResponse->assertSee('value="عراقي"', false);
+
+        // 2. إنشاء موظف مع تحديد جنسية مخصصة
+        $employeeData = [
+            'employee_code' => 'EMP-NAT-001',
+            'full_name' => 'د. سمير كمال الشامي',
+            'national_id' => 'SY-998877',
+            'nationality' => 'سوري',
+            'gender' => 'male',
+            'phone' => '07705544332',
+            'staff_type' => 'medical',
+            'job_title' => 'طبيب باطنية',
+            'department_id' => $department->id,
+            'employment_type' => 'contract',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 1500000,
+            'status' => 'active',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeData);
+        $response->assertSessionHasNoErrors();
+
+        $employee = HrEmployee::where('employee_code', 'EMP-NAT-001')->first();
+        $this->assertNotNull($employee);
+        $this->assertEquals('سوري', $employee->nationality);
+
+        // 3. فحص العرض في شاشة التفاصيل
+        $showResponse = $this->actingAs($admin)->get(route('hr.employees.show', $employee));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('سوري');
+
+        // 4. تعديل جنسية الموظف
+        $updateData = $employeeData;
+        $updateData['nationality'] = 'لبناني';
+
+        $updateResponse = $this->actingAs($admin)->put(route('hr.employees.update', $employee), $updateData);
+        $updateResponse->assertSessionHasNoErrors();
+
+        $employee->refresh();
+        $this->assertEquals('لبناني', $employee->nationality);
+
+        // 5. إنشاء موظف بدون تعبئة الجنسية يتخذ الافتراضي "عراقي"
+        $employeeDefaultData = [
+            'employee_code' => 'EMP-NAT-002',
+            'full_name' => 'محمد حسين العراقي',
+            'gender' => 'male',
+            'phone' => '07705544333',
+            'staff_type' => 'administrative',
+            'job_title' => 'إداري',
+            'department_id' => $department->id,
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 900000,
+            'status' => 'active',
+        ];
+
+        $this->actingAs($admin)->post(route('hr.employees.store'), $employeeDefaultData);
+        $defaultEmployee = HrEmployee::where('employee_code', 'EMP-NAT-002')->first();
+        $this->assertNotNull($defaultEmployee);
+        $this->assertEquals('عراقي', $defaultEmployee->nationality);
+    }
 }

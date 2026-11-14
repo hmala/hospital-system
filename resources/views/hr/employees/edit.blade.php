@@ -62,6 +62,31 @@
                             </div>
 
                             <div class="col-md-3">
+                                <label class="form-label small fw-bold">
+                                    الجنسية
+                                    {!! ($reqMap['nationality'] ?? false) ? '<span class="text-danger">*</span>' : '' !!}
+                                </label>
+                                <input type="text" name="nationality" class="form-control" list="nationalities_list" value="{{ old('nationality', $employee->nationality ?? 'عراقي') }}" {{ ($reqMap['nationality'] ?? false) ? 'required' : '' }}>
+                                <datalist id="nationalities_list">
+                                    @if(isset($nationalities) && $nationalities->count() > 0)
+                                        @foreach($nationalities as $nat)
+                                            <option value="{{ $nat->name }}">
+                                        @endforeach
+                                    @else
+                                        <option value="عراقي">
+                                        <option value="سوري">
+                                        <option value="لبناني">
+                                        <option value="مصري">
+                                        <option value="أردني">
+                                        <option value="هندي">
+                                        <option value="باكستاني">
+                                        <option value="فلبيني">
+                                        <option value="أخرى">
+                                    @endif
+                                </datalist>
+                            </div>
+
+                            <div class="col-md-3">
                                 <label class="form-label small fw-bold">الجنس <span class="text-danger">*</span></label>
                                 <select name="gender" class="form-select" required>
                                     <option value="male" {{ old('gender', $employee->gender) == 'male' ? 'selected' : '' }}>ذكر</option>
@@ -98,7 +123,7 @@
                                 <input type="text" name="phone" class="form-control" value="{{ old('phone', $employee->phone) }}" {{ ($reqMap['phone'] ?? true) ? 'required' : '' }}>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold">
                                     هاتف الطوارئ (قريب)
                                     {!! ($reqMap['emergency_phone'] ?? false) ? '<span class="text-danger">*</span>' : '' !!}
@@ -106,7 +131,7 @@
                                 <input type="text" name="emergency_phone" class="form-control" value="{{ old('emergency_phone', $employee->emergency_phone) }}" {{ ($reqMap['emergency_phone'] ?? false) ? 'required' : '' }}>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold">
                                     البريد الإلكتروني
                                     {!! ($reqMap['email'] ?? false) ? '<span class="text-danger">*</span>' : '' !!}
@@ -114,7 +139,7 @@
                                 <input type="email" name="email" class="form-control" value="{{ old('email', $employee->email) }}" {{ ($reqMap['email'] ?? false) ? 'required' : '' }}>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold">
                                     عنوان السكن
                                     {!! ($reqMap['address'] ?? false) ? '<span class="text-danger">*</span>' : '' !!}

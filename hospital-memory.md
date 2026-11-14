@@ -78,6 +78,25 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 201 (2026-11-14 — `main`) — إضافة وإدارة جنسية الموظف في نموذج تسجيل الموظفين وملفاتهم وإعدادات الحقول (HR Employee Nationality Field Integration, Dynamic Lookups & Profile Display)**:
+  * **بنية قاعدة البيانات والنموذج ([database/migrations/2026_11_14_211500_add_nationality_to_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_14_211500_add_nationality_to_hr_employees_table.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+    - إضافة عمود `nationality` بطول `VARCHAR(50)` بقيمة افتراضية `عراقي` في جدول `hr_employees` مباشرة بعد `national_id`.
+    - تضمين الحقل في مصفوفة الحقول القابلة للتعبئة `$fillable` بموديل `HrEmployee`.
+  * **التكامل مع نظام إعدادات الحقول والقوائم المنسدلة ([database/seeders/HrSettingsSeeder.php](file:///c:/get/hospital-system/database/seeders/HrSettingsSeeder.php))**:
+    - تسجيل الحقل في جدول `hr_field_requirements` ليظهر في شاشة إعدادات الموارد البشرية (`/hr/settings`) للتحكم في كونه إجبارياً أو اختيارياً.
+    - تزويد جدول `hr_lookup_options` بقائمة جنسيات شائعة بفئة `nationality` (عراقي، سوري، لبناني، مصري، أردني، هندي، باكستاني، فلبيني، أخرى).
+  * **التحكم والتحقق والبحث السريع ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php))**:
+    - تمرير قائمة الجنسيات النشطة لشاشتي الإضافة والتعديل (`create`, `edit`).
+    - تطبيق التحقق الديناميكي المستند لإعدادات النظام (`required` أو `nullable`)، واعتماد القيمة الافتراضية "عراقي" عند ترك الحقل فارغاً في دالتي `store` و `update`.
+    - شمول حقل الجنسية في فلتر البحث النصي السريع بسجل الموظفين (`index`).
+  * **الواجهات الأمامية ([resources/views/hr/employees/create.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/create.blade.php), [resources/views/hr/employees/edit.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/edit.blade.php), [resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+    - تصميم حقل الجنسية بجانب الرقم الوطني والجنس مع قائمة اقتراحات سريعة (`<datalist>`) وتعبئة افتراضية فورية "عراقي".
+    - إعادة ضبط وتوازن شبكة الأعمدة (Grid System) في بطاقة البيانات الشخصية لتكون متناسقة ومتوازنة على 3 صفوف متكاملة.
+    - إبراز شارة جنسية الموظف في إضبارة وتفاصيل الموظف (`show.blade.php`).
+  * **التحقق الآلي**:
+    - إضافة وتوسيع اختبارات الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`10 passed, 58 assertions`).
+    - اجتياز التنسيق القياسي عبر `Laravel Pint` ونجاح تجميع قوالب Blade (`view:cache`).
+
 - **المرحلة 200 (2026-11-14 — `main`) — هيكلة تبويب وقائمة إعدادات الخدج والحاضنات، فصل شاشة دليل الحليب في واجهة مخصصة، وشريط التنقل الموحد (NICU Settings Submenu, Dedicated Milk Types View & Unified Sub-tabs Architecture)**:
   * **هيكلة القائمة الجانبية لقسم الخدج ([resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
     - تنظيم بنود الإعدادات في تبويب/قائمة فرعية منسدلة (Collapsible Submenu) باسم **"الإعدادات"** تشمل العناوين الفرعية (Sub-titles) الثلاثة:

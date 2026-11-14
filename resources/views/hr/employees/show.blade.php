@@ -201,14 +201,21 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-3">
-                        <div class="col-sm-6">
+                        <div class="col-sm-4">
                             <label class="text-muted small">الاسم الكامل</label>
                             <div class="fw-bold text-dark">{{ $employee->full_name }}</div>
                         </div>
 
-                        <div class="col-sm-6">
+                        <div class="col-sm-4">
                             <label class="text-muted small">رقم البطاقة الموحدة / الهوية الوطنية</label>
                             <div class="fw-bold text-dark font-monospace">{{ $employee->national_id ?? '—' }}</div>
+                        </div>
+
+                        <div class="col-sm-4">
+                            <label class="text-muted small">الجنسية</label>
+                            <div class="fw-bold text-dark">
+                                <span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-flag text-primary me-1"></i>{{ $employee->nationality ?? 'عراقي' }}</span>
+                            </div>
                         </div>
 
                         <div class="col-sm-4">
