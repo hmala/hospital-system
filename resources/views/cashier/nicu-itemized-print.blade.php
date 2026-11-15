@@ -217,7 +217,7 @@
 
     <div class="thermal-ticket">
         <div class="header-box">
-            <div class="ar-title">مستشفى الكفاءات التخصصي</div>
+            <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
             <div class="sub-title">كشف حساب وخدمات تفصيلي - الخدج والحاضنات</div>
         </div>

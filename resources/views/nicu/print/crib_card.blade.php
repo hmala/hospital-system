@@ -81,7 +81,7 @@
 
 <div class="crib-card">
     <div class="header">
-        <h2>مستشفى الرعاية التخصصي</h2>
+        <h2>{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</h2>
         <p>قسم العناية المركزة لحديثي الولادة والخدج (NICU) - ط6</p>
     </div>
 

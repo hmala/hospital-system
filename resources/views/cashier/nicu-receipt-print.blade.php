@@ -232,7 +232,7 @@
     <div class="thermal-ticket">
         <!-- الترويسة الرسمية -->
         <div class="header-box">
-            <div class="ar-title">مستشفى الكفاءات التخصصي</div>
+            <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
             @if($nicuPayment->payment_type === 'refund')
                 <div class="sub-title">سند صرف واسترجاع رسوم - قسم الخدج (NICU)</div>

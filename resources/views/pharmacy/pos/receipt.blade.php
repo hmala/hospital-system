@@ -171,7 +171,7 @@
 
     <div class="thermal-ticket">
         <div class="ticket-header">
-            <div class="hospital-name">مستشفى الكفيل التخصصي</div>
+            <div class="hospital-name">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
             <div class="sub-title">الصيدلية المركزية - فاتورة صرف دواء</div>
         </div>
 

@@ -368,7 +368,7 @@
         <div class="badge-card">
             <!-- الترويسة والشعار -->
             <div class="badge-header">
-                <h6 class="badge-hospital-name">{{ $hospital->name ?? 'مستشفى الفيحاء الأهلي' }}</h6>
+                <h6 class="badge-hospital-name">{{ $hospital->name ?? 'مستشفى الكفاءات الأهلي' }}</h6>
                 <div class="badge-hospital-sub">HOSPITAL MANAGEMENT STAFF ID</div>
             </div>
 

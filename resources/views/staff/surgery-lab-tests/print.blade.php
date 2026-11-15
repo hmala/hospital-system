@@ -947,7 +947,7 @@
         if (str_starts_with($cleanPhone, '07')) {
             $cleanPhone = '964' . substr($cleanPhone, 1);
         }
-        $waShareUrl = $cleanPhone ? 'https://wa.me/' . $cleanPhone . '?text=' . urlencode("مرحباً بك {$rawName}، تم إصدار تقرير تحاليل عمليتك الجراحية المعتمد من مستشفى الفرات الأهلي:\n" . $verifyUrl) : null;
+        $waShareUrl = $cleanPhone ? 'https://wa.me/' . $cleanPhone . '?text=' . urlencode("مرحباً بك {$rawName}، تم إصدار تقرير تحاليل عمليتك الجراحية المعتمد من مستشفى الكفاءات الأهلي:\n" . $verifyUrl) : null;
     @endphp
 
     <!-- Floating Print Toolbar -->
@@ -988,7 +988,7 @@
             <!-- Full Official Header -->
             <div class="report-header" style="direction: rtl;">
                 <div class="header-hospital-ar">
-                    <h2>مستشفى الفرات الأهلي</h2>
+                    <h2>{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</h2>
                     <h4>قسم المختبر والتحاليل الطبية السريرية</h4>
                     <p>فحوصات وتحاليل العمليات الجراحية المعتمدة</p>
                 </div>
@@ -1209,7 +1209,7 @@
                 <div class="auth-cell">
                     <div class="stamp-circle-box">
                         <div style="font-size: 7px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                        <div style="font-size: 8px; font-weight: 900; line-height: 1.1;">مستشفى الفرات</div>
+                        <div style="font-size: 8px; font-weight: 900; line-height: 1.1;">مستشفى الكفاءات</div>
                         <div style="font-size: 7px; font-weight: 800; color: #0284c7;">مختبر العمليات</div>
                         <div style="font-size: 7px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
                     </div>
@@ -1228,7 +1228,7 @@
                 </div>
 
                 <div class="hospital-contact-line">
-                    📍 مستشفى الفرات الأهلي - قسم المختبرات والعمليات الجراحية &nbsp;|&nbsp; 📞 للاستفسار والمراجعة: مراجعة إدارة المختبر الطبي
+                    📍 {{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }} - قسم المختبرات والعمليات الجراحية &nbsp;|&nbsp; 📞 للاستفسار والمراجعة: مراجعة إدارة المختبر الطبي
                 </div>
             </div>
         </div>

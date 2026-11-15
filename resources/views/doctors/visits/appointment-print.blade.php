@@ -246,7 +246,7 @@
 
     @php
         $hospital = \App\Models\Hospital::first();
-        $hNameAr = $hospital?->name ?? 'مستشفى الكفاءات الاهلي';
+        $hNameAr = $hospital?->name ?? 'مستشفى الكفاءات الأهلي';
         $patient = $visit->patient;
         $patientUser = $patient?->user;
         $doctor = $visit->doctor;

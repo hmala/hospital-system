@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 202: اعتماد وتوحيد اسم "مستشفى الكفاءات الأهلي" في قاعدة البيانات وجميع وصولات وقوالب ووثائق النظام Unification of Hospital Name Across Database, Badge, Receipts & Views)
+
+### Done
+- **ترحيل وتحديث قاعدة البيانات ([database/migrations/2026_11_15_193000_update_hospital_name_to_alkafaat.php](file:///c:/get/hospital-system/database/migrations/2026_11_15_193000_update_hospital_name_to_alkafaat.php), [database/seeders/HospitalSeeder.php](file:///c:/get/hospital-system/database/seeders/HospitalSeeder.php))**:
+  * إنشاء مايجريشن لتحديث سجل المستشفى الأساسي `id = 1` في جدول `hospitals` ليصبح اسمه `مستشفى الكفاءات الأهلي` بدلاً من الاسم القديم (`مستشفى الأمل الأهلي`) وتحديث البريد إلى `info@alkafaat-hospital.com`.
+  * تحديث ملف البذار `HospitalSeeder.php` لضبط الهمزة وتطابق الاسم الرسمي.
+- **ضبط الإعدادات العامة للمشروع ([config/app.php](file:///c:/get/hospital-system/config/app.php), [.env](file:///c:/get/hospital-system/.env), [resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * ضبط `APP_NAME="مستشفى الكفاءات الأهلي"` في ملف التكوين والبيئة، وتحديث عنوان النظام الرئيسي في `layouts/app.blade.php`.
+- **توحيد القوالب والوصولات والباجات البرمجية**:
+  * تحديث القيمة الاحتياطية (fallback) في باجة وهوية الموظف [hr/employees/badge.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/badge.blade.php) وقسيمة الراتب [hr/payrolls/payslip.blade.php](file:///c:/get/hospital-system/resources/views/hr/payrolls/payslip.blade.php).
+  * توحيد بطاقة حجز الموعد [appointment-print.blade.php](file:///c:/get/hospital-system/resources/views/doctors/visits/appointment-print.blade.php) وطباعة الوصفة [prescription-print.blade.php](file:///c:/get/hospital-system/resources/views/doctors/visits/prescription-print.blade.php).
+  * توحيد وصولات الصندوق وسندات الاسترجاع الحرارية [receipt-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/receipt-print.blade.php) ووصولات الخدج [nicu-receipt-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/nicu-receipt-print.blade.php) وكشف حساب الخدج [nicu-itemized-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php).
+  * توحيد وصولات صيدلية الـ POS [pharmacy/pos/receipt.blade.php](file:///c:/get/hospital-system/resources/views/pharmacy/pos/receipt.blade.php)، كاشير العيون [eye_cashier_receipt_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/cashier/eye_cashier_receipt_print.blade.php)، كشف النظارات [eye_examination_glasses_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/examinations/eye_examination_glasses_print.blade.php)، وتذكرة حجز العيون [eye_reception_ticket_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/reception/eye_reception_ticket_print.blade.php).
+  * توحيد تقارير تحاليل وأشعة العمليات [staff/surgery-lab-tests/print.blade.php](file:///c:/get/hospital-system/resources/views/staff/surgery-lab-tests/print.blade.php) و [staff/surgery-radiology-tests/print.blade.php](file:///c:/get/hospital-system/resources/views/staff/surgery-radiology-tests/print.blade.php) وكارت سرير الخدج وسوار المعصم [nicu/print/crib_card.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/crib_card.blade.php) و [nicu/print/wristband.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/wristband.blade.php).
+- **التحقق الآلي**:
+  * تنسيق الكود عبر `vendor/bin/pint --dirty`، وتجميع Blade بنجاح (`view:cache`)، واجتياز اختبارات ميزة الموارد البشرية والباجات بنسبة 100% (`10 passed, 58 assertions`).
+
 ## Session log (2026-11-14 — المرحلة 201: إضافة وإدارة جنسية الموظف في نموذج تسجيل الموظفين وملفاتهم وإعدادات الحقول HR Employee Nationality Field Integration, Dynamic Lookups & Profile Display)
 
 ### Done

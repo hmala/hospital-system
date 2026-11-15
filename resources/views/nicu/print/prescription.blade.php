@@ -174,7 +174,7 @@
 
         <div class="footer">
             <div>
-                <div><strong>المستشفى الأهلي التخصصي</strong> - وحدة العناية المركزة للخدج</div>
+                <div><strong>{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</strong> - وحدة العناية المركزة للخدج</div>
                 <div style="color: #64748b; font-size: 10px; margin-top: 2px;">تطبع هذه الوصفة مباشرة من النظام السريري وتُعتمد للملف الطبي وللصيدلية.</div>
             </div>
             <div class="doctor-signature">

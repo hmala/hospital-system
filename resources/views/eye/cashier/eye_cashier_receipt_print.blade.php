@@ -133,7 +133,7 @@
 
 <div class="receipt-container">
     <div class="header">
-        <div class="hospital-name">مستشفى النور التخصصي</div>
+        <div class="hospital-name">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
         <div class="center-name">👁️ مركز طب وجراحة العيون التخصصي</div>
         <div class="receipt-title">وصل قبض رسمي (Eye Cashier Receipt)</div>
     </div>

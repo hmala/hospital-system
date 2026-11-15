@@ -73,7 +73,7 @@
                 </div>
                 <div class="radiology-badge">☢️ أشعة عمليات</div>
             </div>
-            <div class="hospital-name-ar">مستشفى الكفاءات الاهلي</div>
+            <div class="hospital-name-ar">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
             <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
             <div class="document-title">تقرير أشعة العمليات الجراحية</div>
         </div>

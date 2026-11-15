@@ -142,7 +142,7 @@
         <div class="col-7 d-flex align-items-center gap-3">
             <img src="{{ asset('images/لوغو.png') }}" alt="Logo" style="height: 50px; object-fit: contain;" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
             <div>
-                <div class="fw-bold fs-5 text-primary">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الاهلي' }}</div>
+                <div class="fw-bold fs-5 text-primary">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
                 <div class="text-muted small">العيادات الاستشارية والتخصصية | E-Prescription</div>
             </div>
         </div>

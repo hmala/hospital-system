@@ -276,7 +276,7 @@
         <div class="header-box">
             <img src="{{ asset('images/hospital-logo.svg') }}" class="header-logo" alt="Logo" onerror="this.style.display='none';">
             <div class="header-titles">
-                <div class="ar-title">مستشفى الكفاءات الاهلي</div>
+                <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
                 <div class="en-title">Al-Kafaat Hospital</div>
             </div>
             <div style="width: 36px;"></div>

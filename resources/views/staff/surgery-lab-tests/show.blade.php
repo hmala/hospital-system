@@ -134,7 +134,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                 }
                                 $printUrl = route('staff.surgery-lab-tests.print', $test);
                                 $patientName = optional($patientUser)->name ?? 'المريض';
-                                $waText = urlencode("مرحباً {$patientName}، تقرير نتائج تحاليل العملية الجراحية في مستشفى الفرات جاهز. يمكنك معاينة التقرير عبر الرابط: {$printUrl}");
+                                $waText = urlencode("مرحباً {$patientName}، تقرير نتائج تحاليل العملية الجراحية في مستشفى الكفاءات الأهلي جاهز. يمكنك معاينة التقرير عبر الرابط: {$printUrl}");
                                 $waShareUrl = "https://wa.me/{$cleanPhone}?text={$waText}";
                             @endphp
                             <a href="{{ $waShareUrl }}" target="_blank" class="btn fw-bold shadow-sm px-3 text-white" style="background-color: #25d366; border-color: #20ba5a;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
