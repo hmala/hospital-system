@@ -546,69 +546,108 @@
                 </div>
             </div>
 
-            {{-- Patient Status in OR & Operational Control Buttons --}}
-            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto ms-lg-0">
+            {{-- Patient Status in OR & Operational Control Dropdown --}}
+            <div class="d-flex align-items-center gap-2 ms-auto ms-lg-0">
                 @php
                     $otStation = $surgery->operationTheaterStation;
                     $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
                     $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                    $canControlSurgery = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
                 @endphp
 
-                <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-pill border shadow-sm">
-                    <span class="small text-muted fw-bold d-none d-sm-inline" style="font-size: 0.8rem;">حالة المريض في الصالة:</span>
-                    @if($isOtCompleted)
-                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.84rem; letter-spacing: 0.3px;" title="خرج من الصالة (مكتملة)">
-                            <i class="fas fa-check-double me-1 text-success"></i>Post-Op
-                        </span>
-                    @elseif($isOtInProgress)
-                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.84rem; letter-spacing: 0.3px;" title="داخل صالة العمليات (جارية)">
-                            <span class="sg-pulse-dot me-1"></span>Intra-Op
-                        </span>
-                    @elseif($surgery->status === 'cancelled')
-                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.84rem; letter-spacing: 0.3px;" title="ملغاة">
-                            <i class="fas fa-ban me-1 text-danger"></i>Cancelled
-                        </span>
+                <span class="small text-muted fw-bold d-none d-sm-inline" style="font-size: 0.82rem;">حالة المريض في الصالة:</span>
+
+                <div class="dropdown d-inline-block">
+                    @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                        <button class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-1.5"
+                                type="button"
+                                id="patientOrStatusDropdownBtn"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                style="border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
+                            @if($isOtInProgress)
+                                <span class="sg-pulse-dot me-1"></span>
+                                <span>Intra-Op (داخل الصالة)</span>
+                            @else
+                                <i class="fas fa-clock me-1 text-warning"></i>
+                                <span>Pre-Op (بالانتظار)</span>
+                            @endif
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
+                            <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
+                                تغيير وتحديث حالة المريض
+                            </li>
+
+                            @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
+                                <li>
+                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownStartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-success fw-bold" onclick="return confirm('تأكيد بدء العملية ودخول المريض لصالة العمليات؟')">
+                                            <i class="fas fa-play text-success" style="width: 18px;"></i>
+                                            <span>بدء العملية (دخول الصالة)</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
+                                        <i class="fas fa-calendar-alt text-warning" style="width: 18px;"></i>
+                                        <span class="text-dark fw-semibold">تأجيل العملية للموعد القادم</span>
+                                    </button>
+                                </li>
+                            @endif
+
+                            @if($surgery->status === 'in_progress')
+                                <li>
+                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownCompleteSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger fw-bold" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
+                                            <i class="fas fa-check-double text-danger" style="width: 18px;"></i>
+                                            <span>إنهاء العملية (خروج من الصالة)</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
+                                            <i class="fas fa-door-open text-warning" style="width: 18px;"></i>
+                                            <span class="text-dark">إعادة إخراجه من الصالة</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            @endif
+
+                            @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
+                                        <i class="fas fa-times-circle text-danger" style="width: 18px;"></i>
+                                        <span>إلغاء العملية</span>
+                                    </button>
+                                </li>
+                            @endif
+                        </ul>
                     @else
-                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.84rem; letter-spacing: 0.3px;" title="قبل دخول الصالة (بالانتظار)">
-                            <i class="fas fa-clock me-1 text-warning"></i>Pre-Op
-                        </span>
+                        {{-- شارة القراءة فقط عند اكتمال العملية أو إلغائها أو عدم امتلاك الصلاحية --}}
+                        @if($isOtCompleted)
+                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.84rem;">
+                                <i class="fas fa-check-double me-1 text-success"></i>Post-Op (خرج من الصالة)
+                            </span>
+                        @elseif($surgery->status === 'cancelled')
+                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.84rem;">
+                                <i class="fas fa-ban me-1 text-danger"></i>Cancelled (ملغاة)
+                            </span>
+                        @elseif($isOtInProgress)
+                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.84rem;">
+                                <span class="sg-pulse-dot me-1"></span>Intra-Op (داخل الصالة)
+                            </span>
+                        @else
+                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.84rem;">
+                                <i class="fas fa-clock me-1 text-warning"></i>Pre-Op (بالانتظار)
+                            </span>
+                        @endif
                     @endif
                 </div>
-
-                @if($user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries')))
-                    @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
-                        <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-success text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد بدء العملية الجراحية ودخول المريض لصالة العمليات؟')">
-                                <i class="fas fa-play me-1"></i>بدء العملية (دخول الصالة)
-                            </button>
-                        </form>
-                        <button type="button" class="btn btn-sm btn-outline-warning text-dark border-warning rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
-                            <i class="fas fa-calendar-alt me-1 text-warning"></i>تأجيل العملية
-                        </button>
-                    @endif
-
-                    @if($surgery->status === 'in_progress')
-                        <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-danger text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
-                                <i class="fas fa-check-double me-1"></i>إنهاء العملية (خروج من الصالة)
-                            </button>
-                        </form>
-                        <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark border-warning rounded-pill px-3 fw-bold shadow-sm" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
-                                <i class="fas fa-door-open me-1 text-warning"></i>إعادة إخراجه من الصالة
-                            </button>
-                        </form>
-                    @endif
-
-                    @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
-                            <i class="fas fa-times-circle me-1"></i>إلغاء العملية
-                        </button>
-                    @endif
-                @endif
             </div>
         </div>
     </div>

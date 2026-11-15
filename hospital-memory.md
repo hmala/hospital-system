@@ -78,6 +78,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 205 (2026-11-15 — `main`) — تحويل إجراءات وخيارات حالة المريض في الصالة إلى قائمة منسدلة موحدة بدلاً من الأزرار المتعددة (Dropdown Action Menu for Patient OR Status)**:
+  * **تحويل إجراءات حالة المريض في الصالة إلى قائمة منسدلة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - استبدال الأزرار المتفرقة في ترويسة ملف العملية بقائمة منسدلة موحدة وأنيقة (Dropdown Action Menu).
+    - عرض الحالة الحالية بنبض حي وسهم منسدل، وعند النقر تنبثق الخيارات المتاحة حسب المرحلة السريرية (`Pre-Op` / `Intra-Op`).
+    - الحفاظ الكامل على المزامنة اللحظية الحية ونوافذ التأجيل والإلغاء وإشارات الأمان.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+    - اجتياز جميع اختبارات العمليات الجراحية بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز `Laravel Pint` بالكامل.
+
 - **المرحلة 204 (2026-11-15 — `main`) — إلغاء نظام التبويبات نهائياً في ملف العملية الجراحية وتثبيت نمط العرض كصفحة واحدة منظمة ومفتوحة، وحذف بطاقات العدادات العلوية وعنوان قسم الفحوصات (Permanent Unified Single-Page Surgery File, Decommissioning Tabs & Stripping Tests Cards/Header)**:
   * **إلغاء التبويبات نهائياً ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - حذف شريط التبويبات العلوي وأزرار التبديل بالكامل، وتثبيت عرض كافة البطاقات السريرية المصرح بها مفتوحة ومرئية دائماً رأسياً.

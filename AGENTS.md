@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 205: تحويل إجراءات وخيارات حالة المريض في الصالة إلى قائمة منسدلة موحدة بدلاً من الأزرار المتعددة Dropdown Action Menu for Patient OR Status)
+
+### Done
+- **تحويل إجراءات حالة المريض في الصالة إلى قائمة منسدلة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إلغاء الأزرار المتعددة والمتفرقة في ترويسة ملف العملية (`بدء العملية`, `تأجيل العملية`, `إنهاء العملية`, `إعادة إخراجه من الصالة`, `إلغاء العملية`).
+  * بناء قائمة منسدلة موحدة ورشيقة (Bootstrap Dropdown Action Menu) تظهر الحالة الحالية بنبض ملون وبجانبها سهم `▾`.
+  * عند النقر، تنبثق القائمة الرأسية لتعرض الإجراءات المتاحة بدقة حسب المرحلة الحقيقية للمريض (`Pre-Op` / `Intra-Op`) مع تمييز لوني وأيقونات واضحة.
+  * الحفاظ على المزامنة اللحظية الفورية (`broadcastSurgeryLiveUpdate()`) وتأكيدات الأمان (Confirm Dialogs) والنوافذ المنبثقة للتأجيل والإلغاء.
+  * عرض شارة القراءة فقط المقفلة عند اكتمال العملية (`Post-Op`) أو إلغائها أو لغير المصرح لهم بالتحكم.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 204: إلغاء نظام التبويبات نهائياً في ملف وتفاصيل العملية وتثبيت نمط الصفحة الواحدة المنظمة المفتوحة بالكامل Permanent Unified Continuous Single-Page Surgery File & Decommissioning Tabs System)
 
 ### Done
