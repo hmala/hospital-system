@@ -48,6 +48,11 @@ class SurgicalAssistantController extends Controller
             }
         }
 
+        // Type filter (surgical / anesthesia)
+        if ($request->filled('type') && in_array($request->type, ['surgical', 'anesthesia'], true)) {
+            $query->where('type', $request->type);
+        }
+
         $assistants = $query->orderBy('name', 'asc')->paginate(25)->withQueryString();
 
         // Get surgery counts for each assistant in batch
@@ -85,20 +90,24 @@ class SurgicalAssistantController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:surgical_assistants,name',
+            'type' => 'nullable|string|in:surgical,anesthesia',
             'phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
         ], [
-            'name.required' => 'اسم مساعد الجراح مطلوب',
-            'name.unique' => 'اسم مساعد الجراح مسجل مسبقاً',
+            'name.required' => 'اسم المساعد مطلوب',
+            'name.unique' => 'اسم المساعد مسجل مسبقاً',
         ]);
 
+        $validated['type'] = $request->input('type', SurgicalAssistant::TYPE_SURGICAL) ?: SurgicalAssistant::TYPE_SURGICAL;
         $validated['is_active'] = $request->boolean('is_active', true);
 
         SurgicalAssistant::create($validated);
 
+        $label = $validated['type'] === SurgicalAssistant::TYPE_ANESTHESIA ? 'مساعد التخدير' : 'مساعد الجراح';
+
         return redirect()->route('surgical-assistants.index')
-            ->with('success', 'تمت إضافة مساعد الجراح بنجاح');
+            ->with('success', "تمت إضافة {$label} بنجاح");
     }
 
     /**
@@ -110,20 +119,24 @@ class SurgicalAssistantController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:surgical_assistants,name,'.$surgicalAssistant->id,
+            'type' => 'nullable|string|in:surgical,anesthesia',
             'phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
         ], [
-            'name.required' => 'اسم مساعد الجراح مطلوب',
-            'name.unique' => 'اسم مساعد الجراح مسجل مسبقاً',
+            'name.required' => 'اسم المساعد مطلوب',
+            'name.unique' => 'اسم المساعد مسجل مسبقاً',
         ]);
 
+        if ($request->filled('type')) {
+            $validated['type'] = $request->input('type');
+        }
         $validated['is_active'] = $request->boolean('is_active', true);
 
         $surgicalAssistant->update($validated);
 
         return redirect()->route('surgical-assistants.index')
-            ->with('success', 'تم تحديث بيانات مساعد الجراح بنجاح');
+            ->with('success', 'تم تحديث بيانات المساعد بنجاح');
     }
 
     /**

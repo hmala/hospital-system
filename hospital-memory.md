@@ -78,6 +78,25 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 211 (2026-11-15 — `main`) — الفريق الطبي أعلى التخدير بـ 5 قوائم منسدلة أفقية بصف واحد مع دعم مساعدي التخدير معمارياً في جدول المساعدين والعمليات (Medical Team Above Anesthesia with 5 Horizontal Dropdowns in 1 Row & Architecture Support for Anesthesia Assistants)**:
+  * **توسيع البنية المعمارية للمساعدين والعمليات ([database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php), [app/Models/SurgicalAssistant.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalAssistant.php), [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [app/Models/AnesthesiaStation.php](file:///c:/wamp64/www/hospital-system/app/Models/AnesthesiaStation.php))**:
+    - إضافة عمود `type` (`surgical` / `anesthesia`) إلى جدول `surgical_assistants` مع الفهارس والـ scopes (`scopeSurgical()` و `scopeAnesthesia()`).
+    - إضافة عمود `anesthesia_assistant_name` إلى جدولي `surgeries` و `anesthesia_stations` والمزامنة الحية عبر `SurgeryController::updateDetails`.
+    - ترقية شاشة إدارة المساعدين (`surgical-assistants/index.blade.php`) لتشمل فلترة النوع وتحديد نوع المساعد عند الإضافة والتعديل (`مساعد جراح` / `مساعد تخدير`).
+  * **صف أفقي واحد من 5 قوائم منسدلة للفريق الطبي أعلى التخدير ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - نقل الفريق الطبي بالكامل ليكون في **أعلى الكارت الموحد** في صف شبكي أفقي واحد متناسق:
+      1. `طبيب الجراح`: قائمة منسدلة بالأطباء والجراحين مع تحديد جراح العملية.
+      2. `مساعد جراح`: قائمة إكمال تلقائي ذكية مرتبطة بدليل مساعدي الجراحين.
+      3. `طبيب التخدير 1`: قائمة منسدلة بأطباء التخدير.
+      4. `طبيب التخدير 2`: قائمة منسدلة بأطباء التخدير (تصحيح المسمى بدقة).
+      5. `مساعد التخدير`: قائمة منسدلة وإكمال تلقائي ذكي لمساعدي التخدير مع رابط مباشر للدليل.
+    - وضع قسم تفاصيل وخطة التخدير في **أسفل الفريق الطبي** بعد فاصل أفقي، مشتملاً على نوع التخدير وملاحظات الإفاقة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+    - اجتياز اختبارات مساعدي الجراحين بنجاح 100% (`7 passed, 24 assertions`).
+    - اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز اختبارات شاشة انتظار العمليات بنجاح 100% (`9 passed, 32 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 210 (2026-11-15 — `main`) — دمج الفريق الطبي وتفاصيل التخدير في كارت موحد واحد جنباً إلى جنب، وترتيب أعضاء الفريق رأسياً دون كروت منفصلة (Single Unified Card Container for Medical Team & Anesthesia Side-by-Side with Clean Vertical Team List & No Nested Member Cards)**:
   * **دمج الفريق الطبي وتفاصيل التخدير في كارت واحد موحد ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - إلغاء الكروت المنفصلة السابقة للفريق الطبي وللتخدير ودمجهما داخل بطاقة سريرية واحدة موحدة (`card clin-tab-card`).

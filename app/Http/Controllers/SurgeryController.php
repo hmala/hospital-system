@@ -560,12 +560,21 @@ class SurgeryController extends Controller
             ->sortByDesc('id')
             ->values();
 
-        $surgicalAssistants = SurgicalAssistant::active()->orderBy('name')->get();
+        $surgeons = Doctor::with('user')
+            ->where('is_active', true)
+            ->get()
+            ->sortBy(function ($d) {
+                return optional($d->user)->name ?? '';
+            });
+
+        $surgicalAssistants = SurgicalAssistant::active()->surgical()->orderBy('name')->get();
+        $anesthesiaAssistants = SurgicalAssistant::active()->anesthesia()->orderBy('name')->get();
 
         return view('surgeries.show', compact(
             'surgery',
             'patients',
             'anesthesiaDoctors',
+            'surgeons',
             'departments',
             'labTests',
             'radiologyTypes',
@@ -579,7 +588,8 @@ class SurgeryController extends Controller
             'operationStoreLocation',
             'operationSupplyBatches',
             'orDispensedItems',
-            'surgicalAssistants'
+            'surgicalAssistants',
+            'anesthesiaAssistants'
         ));
     }
 
@@ -1285,6 +1295,7 @@ class SurgeryController extends Controller
 
         $validated = $request->validate([
             'location_id' => 'nullable|exists:locations,id',
+            'doctor_id' => 'nullable|exists:doctors,id',
             'diagnosis' => 'nullable|string|max:1000',
             'anesthesia_type' => 'nullable|string|max:255',
             'anesthesiologist_id' => 'nullable|exists:doctors,id',
@@ -1293,6 +1304,7 @@ class SurgeryController extends Controller
             'anesthesia_end_time' => 'nullable|date_format:H:i',
             'anesthesia_notes' => 'nullable|string|max:2000',
             'surgical_assistant_name' => 'nullable|string|max:255',
+            'anesthesia_assistant_name' => 'nullable|string|max:255',
             'supplies' => 'nullable|string|max:10000',
             'start_time' => 'nullable|string',
             'end_time' => 'nullable|string',
@@ -1335,7 +1347,7 @@ class SurgeryController extends Controller
         } elseif ($requestedTab === 'detail_anesthesia') {
             $allowedKeys = ['anesthesia_type', 'anesthesia_position', 'asa_classification', 'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes'];
         } elseif ($requestedTab === 'detail_team_timing') {
-            $allowedKeys = ['location_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
+            $allowedKeys = ['location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
         } elseif ($requestedTab === 'detail_supplies') {
             $allowedKeys = ['supplies'];
         } else {
@@ -1358,7 +1370,7 @@ class SurgeryController extends Controller
             }
             if ($canWriteTeamTiming) {
                 $allowedKeys = array_merge($allowedKeys, [
-                    'location_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name',
+                    'location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name',
                     'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes',
                 ]);
             }
@@ -1468,7 +1480,7 @@ class SurgeryController extends Controller
 
             // Sync / create AnesthesiaStation when saving anesthesia details or updating team/anesthesiologist
             $stationSync = [];
-            foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_type'] as $field) {
+            foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'anesthesia_type'] as $field) {
                 if (array_key_exists($field, $validated)) {
                     $stationSync[$field] = $validated[$field];
                 }
