@@ -361,7 +361,7 @@
             margin-bottom: 24px !important;
             scroll-margin-top: 95px;
         }
-        .tab-pane.col-xl-6, .tab-pane.col-lg-6 {
+        .tab-pane.col-xl-6, .tab-pane.col-lg-6, .tab-pane.col-xl-5, .tab-pane.col-xl-7, .tab-pane.col-md-5, .tab-pane.col-md-7, .tab-content .row .tab-pane {
             margin-bottom: 0 !important;
         }
         .clin-tabs-wrapper {
@@ -426,106 +426,6 @@
         </nav>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
-            {{-- حالة المريض في الصالة (قائمة منسدلة موحدة) --}}
-            @php
-                $otStation = $surgery->operationTheaterStation;
-                $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
-                $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
-                $canControlSurgery = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
-            @endphp
-
-            <div class="dropdown d-inline-block">
-                @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
-                    <button class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-2"
-                            type="button"
-                            id="patientOrStatusDropdownBtn"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                            style="font-size: 0.82rem; border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
-                        @if($isOtInProgress)
-                            <span class="sg-pulse-dot me-1" style="width: 6px; height: 6px;"></span>
-                            <span>حالة المريض: Intra-Op (داخل الصالة)</span>
-                        @else
-                            <i class="fas fa-clock me-1 text-warning" style="font-size: 0.78rem;"></i>
-                            <span>حالة المريض: Pre-Op (بالانتظار)</span>
-                        @endif
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
-                        <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
-                            تحديث حالة المريض بالصالة
-                        </li>
-
-                        @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
-                            <li>
-                                <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownStartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-success fw-bold" onclick="return confirm('تأكيد بدء العملية ودخول المريض لصالة العمليات؟')">
-                                        <i class="fas fa-play text-success" style="width: 16px;"></i>
-                                        <span>بدء العملية (دخول الصالة)</span>
-                                    </button>
-                                </form>
-                            </li>
-                            <li>
-                                <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
-                                    <i class="fas fa-calendar-alt text-warning" style="width: 16px;"></i>
-                                    <span class="text-dark fw-semibold">تأجيل العملية للموعد القادم</span>
-                                </button>
-                            </li>
-                        @endif
-
-                        @if($surgery->status === 'in_progress')
-                            <li>
-                                <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownCompleteSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger fw-bold" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
-                                        <i class="fas fa-check-double text-danger" style="width: 16px;"></i>
-                                        <span>إنهاء العملية (خروج من الصالة)</span>
-                                    </button>
-                                </form>
-                            </li>
-                            <li>
-                                <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
-                                        <i class="fas fa-door-open text-warning" style="width: 16px;"></i>
-                                        <span class="text-dark">إعادة إخراجه من الصالة</span>
-                                    </button>
-                                </form>
-                            </li>
-                        @endif
-
-                        @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
-                            <li><hr class="dropdown-divider my-1"></li>
-                            <li>
-                                <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
-                                    <i class="fas fa-times-circle text-danger" style="width: 16px;"></i>
-                                    <span>إلغاء العملية</span>
-                                </button>
-                            </li>
-                        @endif
-                    </ul>
-                @else
-                    {{-- شارة القراءة فقط --}}
-                    @if($isOtCompleted)
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.82rem;">
-                            <i class="fas fa-check-double me-1 text-success"></i>Post-Op (خرج من الصالة)
-                        </span>
-                    @elseif($surgery->status === 'cancelled')
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.82rem;">
-                            <i class="fas fa-ban me-1 text-danger"></i>Cancelled (ملغاة)
-                        </span>
-                    @elseif($isOtInProgress)
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.82rem;">
-                            <span class="sg-pulse-dot me-1"></span>Intra-Op (داخل الصالة)
-                        </span>
-                    @else
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.82rem;">
-                            <i class="fas fa-clock me-1 text-warning"></i>Pre-Op (بالانتظار)
-                        </span>
-                    @endif
-                @endif
-            </div>
-
             @can('manage surgery tab permissions')
                 <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                     <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
@@ -775,6 +675,283 @@
                                             <span class="badge rounded-pill bg-info text-white px-2 py-1">+{{ $additionalOpsCount }} إضافية</span>
                                         @endif
                                         <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
+                                    </button>
+                                @endif
+
+                                {{-- Button 4: حالة المريض في الصالة (قائمة منسدلة موحدة) --}}
+                                @php
+                                    $otStation = $surgery->operationTheaterStation;
+                                    $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                                    $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                                    $canControlSurgery = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
+                                @endphp
+
+                                <div class="dropdown d-inline-block">
+                                    @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                                        <button class="btn btn-sm rounded-pill px-3 py-2 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-2"
+                                                type="button"
+                                                id="patientOrStatusDropdownBtn"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                style="font-size: 0.92rem; border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
+                                            @if($isOtInProgress)
+                                                <span class="sg-pulse-dot me-1" style="width: 8px; height: 8px;"></span>
+                                                <span>حالة المريض: Intra-Op (داخل الصالة)</span>
+                                            @else
+                                                <i class="fas fa-clock me-1 text-warning"></i>
+                                                <span>حالة المريض: Pre-Op (بالانتظار)</span>
+                                            @endif
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
+                                            <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
+                                                تحديث حالة المريض بالصالة
+                                            </li>
+
+                                            @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
+                                                <li>
+                                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownStartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-success fw-bold" onclick="return confirm('تأكيد بدء العملية ودخول المريض لصالة العمليات؟')">
+                                                            <i class="fas fa-play text-success" style="width: 16px;"></i>
+                                                            <span>بدء العملية (دخول الصالة)</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
+                                                        <i class="fas fa-calendar-alt text-warning" style="width: 16px;"></i>
+                                                        <span class="text-dark fw-semibold">تأجيل العملية للموعد القادم</span>
+                                                    </button>
+                                                </li>
+                                            @endif
+
+                                            @if($surgery->status === 'in_progress')
+                                                <li>
+                                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownCompleteSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger fw-bold" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
+                                                            <i class="fas fa-check-double text-danger" style="width: 16px;"></i>
+                                                            <span>إنهاء العملية (خروج من الصالة)</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
+                                                            <i class="fas fa-door-open text-warning" style="width: 16px;"></i>
+                                                            <span class="text-dark">إعادة إخراجه من الصالة</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            @endif
+
+                                            @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                                                <li><hr class="dropdown-divider my-1"></li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
+                                                        <i class="fas fa-times-circle text-danger" style="width: 16px;"></i>
+                                                        <span>إلغاء العملية</span>
+                                                    </button>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    @else
+                                        {{-- شارة القراءة فقط --}}
+                                        @if($isOtCompleted)
+                                            <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.92rem;">
+                                                <i class="fas fa-check-double me-1 text-success"></i>Post-Op (خرج من الصالة)
+                                            </span>
+                                        @elseif($surgery->status === 'cancelled')
+                                            <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.92rem;">
+                                                <i class="fas fa-ban me-1 text-danger"></i>Cancelled (ملغاة)
+                                            </span>
+                                        @elseif($isOtInProgress)
+                                            <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.92rem;">
+                                                <span class="sg-pulse-dot me-1"></span>Intra-Op (داخل الصالة)
+                                            </span>
+                                        @else
+                                            <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.92rem;">
+                                                <i class="fas fa-clock me-1 text-warning"></i>Pre-Op (بالانتظار)
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
+
+                                {{-- Button 5: صالة العمليات / الردهة (منقولة قبل مدة العملية) --}}
+                                @php
+                                    $canWriteLocation = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
+                                    $currentLocationName = $surgery->location?->name;
+                                @endphp
+                                <div class="dropdown d-inline-block" id="locationDropdownWrapper">
+                                    <button class="btn btn-outline-danger text-dark fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-xs dropdown-toggle"
+                                            type="button"
+                                            id="btnToggleLocationDropdown"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false"
+                                            style="font-size: 0.92rem; transition: all 0.2s ease; border-color: #fca5a5; background: #ffffff; color: #991b1b;">
+                                        <i class="fas fa-map-marker-alt text-danger"></i>
+                                        <span>الصالة/الردهة:</span>
+                                        <span class="badge rounded-pill {{ $currentLocationName ? 'bg-danger text-white' : 'bg-light text-muted border' }} px-2 py-1" id="topLocationBadge">
+                                            {{ $currentLocationName ?: 'غير محددة' }}
+                                        </span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 p-3 border-0" aria-labelledby="btnToggleLocationDropdown" style="min-width: 290px;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                                            <span class="fw-bold small text-dark"><i class="fas fa-door-open text-danger me-1"></i>تحديد صالة العمليات / الردهة</span>
+                                            @if($currentLocationName)
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="topLocationPreviewBadge">{{ $currentLocationName }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if($canWriteLocation)
+                                            <div class="mb-2">
+                                                <label for="top_location_id" class="form-label text-dark fw-bold small mb-1">اختر الصالة أو الردهة:</label>
+                                                <select id="top_location_id" class="form-select form-select-sm border-danger" onchange="syncLocationSelection(this)">
+                                                    <option value="">-- اختر صالة العمليات / الردهة --</option>
+                                                    @foreach($locations as $loc)
+                                                        <option value="{{ $loc->id }}" {{ old('location_id', $surgery->location_id) == $loc->id ? 'selected' : '' }}>
+                                                            {{ $loc->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                                <small class="text-muted">يُحفظ مع زر الحفظ</small>
+                                                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold" onclick="submitUnifiedSurgeryForm()">
+                                                    <i class="fas fa-check me-1"></i>حفظ الصالة
+                                                </button>
+                                            </div>
+                                        @else
+                                            <div class="py-2 text-center text-muted small">
+                                                <div class="fs-6 fw-bold text-dark mb-1">{{ $currentLocationName ?: 'لم تحدد الصالة بعد' }}</div>
+                                                <div class="text-secondary small">تعديل الصالة متاح للكادر المخول بصلاحية صالة العمليات.</div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Button 6: مدة العملية وتوقيتها (رقم بالدقائق مع شرائح سريعة) --}}
+                                @php
+                                    $canWriteTiming = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
+                                    $durationMinutes = $surgery->estimated_duration;
+                                    $durationHoursText = $durationMinutes ? sprintf('%02d:%02d', floor($durationMinutes / 60), $durationMinutes % 60) : null;
+                                @endphp
+                                <div class="dropdown d-inline-block" id="durationDropdownWrapper">
+                                    <button class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-xs dropdown-toggle"
+                                            type="button"
+                                            id="btnToggleDurationDropdown"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false"
+                                            style="font-size: 0.92rem; transition: all 0.2s ease; border-color: #cbd5e1; background: #ffffff; color: #334155;">
+                                        <i class="fas fa-stopwatch text-warning-emphasis"></i>
+                                        <span>مدة العملية:</span>
+                                        @if($durationMinutes)
+                                            <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                                {{ $durationMinutes }} دقيقة
+                                                @if($durationMinutes >= 60)
+                                                    <small class="text-muted fw-normal">({{ $durationHoursText }} س)</small>
+                                                @endif
+                                            </span>
+                                        @else
+                                            <span class="badge rounded-pill bg-light text-muted border px-2 py-1">غير مسجلة</span>
+                                        @endif
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 p-3 border-0" aria-labelledby="btnToggleDurationDropdown" style="min-width: 300px;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                                            <span class="fw-bold small text-dark"><i class="fas fa-clock text-primary me-1"></i>مدة العملية الجراحية (رقم)</span>
+                                            @if($durationMinutes)
+                                                <span class="badge bg-primary text-white">{{ $durationMinutes }} دقيقة</span>
+                                            @endif
+                                        </div>
+
+                                        @if($canWriteTiming)
+                                            <form action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" id="formQuickSurgeryDuration" class="mb-0">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="tab" value="detail_team_timing">
+
+                                                {{-- أزرار سريعة بنقرة واحدة --}}
+                                                <div class="mb-2">
+                                                    <label class="form-label text-muted small mb-1">خيارات سريعة بنقرة واحدة:</label>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @foreach([30, 45, 60, 90, 120, 150, 180] as $chipMin)
+                                                            <button type="button" class="btn btn-sm btn-light border py-1 px-2 fw-semibold" style="font-size: 0.78rem;" onclick="setQuickDurationVal({{ $chipMin }})">
+                                                                {{ $chipMin }}د
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+
+                                                {{-- حقل إدخال الرقم --}}
+                                                <div class="mb-2">
+                                                    <label for="quickDurationInput" class="form-label text-dark fw-bold small mb-1">المدة بالدقائق (رقم):</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-primary"><i class="fas fa-stopwatch"></i></span>
+                                                        <input type="number" min="1" step="5" class="form-control fw-bold text-center border-primary" id="quickDurationInput" name="estimated_duration_minutes" value="{{ $durationMinutes ?? '' }}" placeholder="أدخل المدة (مثلاً: 60)" oninput="updateQuickDurationHelper(this.value)">
+                                                        <span class="input-group-text bg-light text-muted">دقيقة</span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                                    <small class="text-muted fw-semibold" id="quickDurationHelperText">{{ $durationMinutes ? 'المسجلة: ' . $durationMinutes . ' دقيقة (' . $durationHoursText . ' س)' : 'أدخل رقماً بالدقائق' }}</small>
+                                                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold">
+                                                        <i class="fas fa-check me-1"></i>حفظ المدة
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        @else
+                                            <div class="py-2 text-center text-muted small">
+                                                @if($durationMinutes)
+                                                    <div class="fs-5 fw-bold text-primary mb-1">{{ $durationMinutes }} دقيقة</div>
+                                                    <div>يعادل: {{ $durationHoursText }} ساعة</div>
+                                                @else
+                                                    لم يتم تسجيل مدة للعملية بعد.
+                                                @endif
+                                                <div class="text-secondary small mt-1">تعديل المدة متاح للكادر المخول بصلاحية التوقيت.</div>
+                                            </div>
+                                        @endif
+
+                                        @if($surgeryStartFormatted || $surgeryEndFormatted)
+                                            <div class="mt-2 pt-2 border-top text-muted small" style="font-size: 0.76rem;">
+                                                <i class="fas fa-calendar-check me-1 text-success"></i>
+                                                البدء: <strong>{{ $surgeryStartFormatted ?: '—' }}</strong> | الانتهاء: <strong>{{ $surgeryEndFormatted ?: '—' }}</strong>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Button 6: زر الحفظ الموحد بجانب مدة العملية --}}
+                                @php
+                                    $canWriteDiagnosis = isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write'];
+                                    $canWriteTeamTiming = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
+                                    $canWriteAnesthesia = isset($visibleTabs['detail_anesthesia']) && $visibleTabs['detail_anesthesia']['can_write'];
+                                    $canSaveAny = $canWriteDiagnosis || $canWriteTeamTiming || $canWriteAnesthesia || $canWriteTiming;
+                                    $writableCount = ($canWriteDiagnosis ? 1 : 0) + ($canWriteTeamTiming ? 1 : 0) + ($canWriteAnesthesia ? 1 : 0);
+                                @endphp
+                                @if($canSaveAny)
+                                    <button type="button"
+                                            class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3.5 py-2 rounded-pill shadow-sm"
+                                            id="btnUnifiedSaveSurgery"
+                                            onclick="submitUnifiedSurgeryForm()"
+                                            title="حفظ كافة البيانات والتعديلات المدخلة"
+                                            style="font-size: 0.92rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none;">
+                                        <i class="fas fa-save text-white"></i>
+                                        <span>
+                                            @if($writableCount > 1)
+                                                حفظ بيانات العملية
+                                            @elseif($canWriteDiagnosis)
+                                                حفظ التشخيص والعلاجات
+                                            @elseif($canWriteAnesthesia)
+                                                حفظ تفاصيل التخدير
+                                            @elseif($canWriteTeamTiming)
+                                                حفظ الفريق الطبي والتوقيت
+                                            @else
+                                                حفظ التعديلات
+                                            @endif
+                                        </span>
                                     </button>
                                 @endif
                             </div>
@@ -1093,13 +1270,19 @@
                 </div>
             @endif
 
-            {{-- ROW: التشخيص الطبي للجراح وجدول العلاجات (يمين) + توثيق تفاصيل التخدير (يسار) --}}
-            @if(isset($visibleTabs['detail_diagnosis']) || isset($visibleTabs['detail_anesthesia']))
+            {{-- ROW: التشخيص الطبي للجراح وجدول العلاجات (يمين) + دمج الفريق الطبي والتخدير معاً (يسار) --}}
+            @if(isset($visibleTabs['detail_diagnosis']) || isset($visibleTabs['detail_team_timing']) || isset($visibleTabs['detail_anesthesia']))
+                @php
+                    $hasLeftColumn = isset($visibleTabs['detail_team_timing']) || isset($visibleTabs['detail_anesthesia']);
+                    $hasRightColumn = isset($visibleTabs['detail_diagnosis']);
+                    $rightColClass = $hasLeftColumn ? 'col-xl-5 col-lg-12' : 'col-12';
+                    $leftColClass = $hasRightColumn ? 'col-xl-7 col-lg-12' : 'col-12';
+                @endphp
                 <div class="row g-3 mb-4">
                     {{-- TAB 3: التشخيص وخطة العلاج (يمين) --}}
                     @if(isset($visibleTabs['detail_diagnosis']))
                         @php $canWriteDiagnosis = $visibleTabs['detail_diagnosis']['can_write']; @endphp
-                        <div class="{{ isset($visibleTabs['detail_anesthesia']) ? 'col-xl-6 col-lg-6' : 'col-12' }} tab-pane fade {{ $activeTab === 'detail_diagnosis' ? 'show active' : '' }}" id="pane-detail_diagnosis" role="tabpanel" aria-labelledby="tab-btn-detail_diagnosis">
+                        <div class="{{ $rightColClass }} tab-pane fade {{ $activeTab === 'detail_diagnosis' ? 'show active' : '' }}" id="pane-detail_diagnosis" role="tabpanel" aria-labelledby="tab-btn-detail_diagnosis">
                             <div class="card clin-tab-card h-100 d-flex flex-column">
                                 @if($canWriteDiagnosis)
                                     <form id="detailDiagnosisForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
@@ -1305,306 +1488,244 @@
                         </div>
 
                         @if($canWriteDiagnosis)
-                            <div class="card-footer bg-light text-end py-3 border-top mt-auto">
-                                <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm">
-                                    <i class="fas fa-save me-2"></i>حفظ التشخيص والعلاجات
-                                </button>
-                            </div>
                             </form>
                         @endif
                     </div>
                 </div>
             @endif
 
-            {{-- TAB 4: تفاصيل التخدير (يسار) --}}
-            @if(isset($visibleTabs['detail_anesthesia']))
-                @php $canWriteAnesthesia = $visibleTabs['detail_anesthesia']['can_write']; @endphp
-                <div class="{{ isset($visibleTabs['detail_diagnosis']) ? 'col-xl-6 col-lg-6' : 'col-12' }} tab-pane fade {{ $activeTab === 'detail_anesthesia' ? 'show active' : '' }}" id="pane-detail_anesthesia" role="tabpanel" aria-labelledby="tab-btn-detail_anesthesia">
-                    <div class="card clin-tab-card h-100 d-flex flex-column">
-                        @if($canWriteAnesthesia)
-                            <form id="detailAnesthesiaForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="tab" value="detail_anesthesia">
-                        @endif
-                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <h6 class="fw-bold text-success mb-0">
-                                    <i class="fas fa-syringe me-2"></i>توثيق تفاصيل التخدير
-                                </h6>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge {{ $surgery->anesthesiaStation?->status === 'completed' ? 'bg-success' : ($surgery->anesthesiaStation?->status === 'in_progress' ? 'bg-warning text-dark' : 'bg-secondary') }}">
-                                        حالة المحطة:
-                                        {{ $surgery->anesthesiaStation?->status === 'completed' ? 'مكتملة' : ($surgery->anesthesiaStation?->status === 'in_progress' ? 'قيد العمل' : 'معلقة') }}
-                                    </span>
-                                    @if($canWriteAnesthesia)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>وضع التعديل نشط</span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
-                                    @endif
+                    {{-- العمود الأيسر: بطاقة موحدة تجمع الفريق الطبي (واحد أسفل الآخر بدون كروت منفصلة) وتفاصيل التخدير بنفس الصف --}}
+                    @if($hasLeftColumn)
+                        <div class="{{ $leftColClass }}">
+                            <div class="card clin-tab-card h-100 shadow-sm border d-flex flex-column">
+                                <div class="card-header bg-white border-bottom py-2.5 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                                        <i class="fas fa-user-md text-primary"></i>
+                                        <span>الفريق الطبي المشارك وخطة التخدير</span>
+                                    </h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if($user && $user->can('view anesthesia station') && $surgery->anesthesiaStation && $surgery->anesthesiaStation->status !== 'completed')
+                                            <button type="button" class="btn btn-outline-success btn-sm px-3 rounded-pill fw-bold" onclick="completeAnesthesia({{ $surgery->id }})">
+                                                <i class="fas fa-check-double me-1"></i>اعتماد وإتمام محطة التخدير
+                                            </button>
+                                        @endif
+                                        <span class="badge {{ $surgery->anesthesiaStation?->status === 'completed' ? 'bg-success' : ($surgery->anesthesiaStation?->status === 'in_progress' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                                            {{ $surgery->anesthesiaStation?->status === 'completed' ? 'محطة التخدير: مكتملة' : ($surgery->anesthesiaStation?->status === 'in_progress' ? 'محطة التخدير: قيد العمل' : 'محطة التخدير: معلقة') }}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            @if(!$canWriteAnesthesia)
-                                <div class="alert alert-secondary border-secondary bg-white py-2 mb-0 small">
-                                    <i class="fas fa-eye me-2"></i>
-                                    هذا القسم للعرض فقط وفق صلاحيات دورك الوظيفي؛ يتم توثيق تفاصيل التخدير من قِبَل طبيب التخدير.
-                                </div>
-                            @endif
+                                <div class="card-body p-3 flex-grow-1">
+                                    <div class="row g-3 h-100">
+                                        {{-- الفريق الطبي المشارك (أعضاء الفريق واحد أسفل الآخر بدون كروت منفصلة) --}}
+                                        @if(isset($visibleTabs['detail_team_timing']))
+                                            @php
+                                                $teamCol = isset($visibleTabs['detail_anesthesia']) ? 'col-md-5 border-start' : 'col-12';
+                                                $canWriteTeamTiming = $visibleTabs['detail_team_timing']['can_write'];
+                                            @endphp
+                                            <div class="{{ $teamCol }} tab-pane fade {{ $activeTab === 'detail_team_timing' ? 'show active' : '' }}" id="pane-detail_team_timing" role="tabpanel" aria-labelledby="tab-btn-detail_team_timing">
+                                                @if($canWriteTeamTiming)
+                                                    <form id="detailTeamTimingForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="tab" value="detail_team_timing">
+                                                @endif
 
-                            {{-- Section 1: Anesthesia Type --}}
-                            <div class="clin-section-card">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                                    <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <label for="anesthesia_type_input" class="clin-section-title text-success mb-0">
-                                            <i class="fas fa-syringe"></i> نوع التخدير
-                                        </label>
-                                        @if($canWriteAnesthesia)
-                                            <div class="d-flex flex-wrap gap-1">
-                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير عام (General Anesthesia)')">عام</button>
-                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير نصفي (Spinal Anesthesia)')">نصفي</button>
-                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير موضعي (Local Anesthesia)')">موضعي</button>
-                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير مناطقي (Regional Anesthesia)')">مناطقي</button>
-                                                <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('سديشن (Sedation)')">سديشن</button>
+                                                <input type="hidden" id="team_location_id" name="location_id" value="{{ old('location_id', $surgery->location_id) }}">
+
+                                                <div class="d-flex flex-column gap-2.5 h-100 pe-md-2">
+                                                    <div class="fw-bold text-primary small pb-1 border-bottom d-flex align-items-center justify-content-between">
+                                                        <span><i class="fas fa-users-cog me-1"></i>أعضاء الفريق الطبي</span>
+                                                        @if($canWriteTeamTiming)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-2">تعديل</span>
+                                                        @else
+                                                            <span class="badge bg-secondary-subtle text-secondary border py-0.5 px-2">قراءة</span>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- 1. الجراح الرئيسي --}}
+                                                    <div class="d-flex align-items-center justify-content-between py-1.5 px-2.5 rounded bg-light border-0">
+                                                        <span class="text-muted small fw-semibold"><i class="fas fa-user-md me-1 text-primary"></i>الجراح الرئيسي:</span>
+                                                        <span class="fw-bold text-dark small">د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }}</span>
+                                                    </div>
+
+                                                    {{-- 2. مساعد الجراح --}}
+                                                    <div>
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <label for="surgical_assistant_name" class="form-label text-dark small fw-semibold mb-0">
+                                                                <i class="fas fa-hands-helping text-primary me-1"></i>مساعد الجراح:
+                                                            </label>
+                                                            @canany(['view surgeries', 'edit surgeries'])
+                                                                <a href="{{ route('surgical-assistants.index') }}" target="_blank" class="small text-decoration-none text-primary fw-semibold" style="font-size: 0.74rem;" title="فتح دليل وإدارة مساعدي الجراحين في نافذة جديدة">
+                                                                    <i class="fas fa-external-link-alt me-1"></i>دليل المساعدين
+                                                                </a>
+                                                            @endcanany
+                                                        </div>
+                                                        @php
+                                                            $savedAssistant = old('surgical_assistant_name', $surgery->anesthesiaStation?->surgical_assistant_name ?? $surgery->surgical_assistant_name ?? '');
+                                                        @endphp
+                                                        @if($canWriteTeamTiming)
+                                                            <div class="position-relative" id="assistantAutocompleteWrapper">
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                                    <input type="text" id="surgical_assistant_name" name="surgical_assistant_name"
+                                                                           class="form-control form-control-sm border-primary"
+                                                                           autocomplete="off"
+                                                                           placeholder="انقر لاختيار مساعد أو اكتب..."
+                                                                           value="{{ $savedAssistant }}">
+                                                                    <button type="button" class="btn btn-outline-secondary {{ $savedAssistant ? '' : 'd-none' }}" id="clearAssistantBtn" title="مسح">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-primary" id="toggleAssistantMenuBtn" title="عرض القائمة">
+                                                                        <i class="fas fa-chevron-down"></i>
+                                                                    </button>
+                                                                </div>
+
+                                                                <!-- Live Search Dropdown Menu (مثل التصنيف الدولي ICD-10) -->
+                                                                <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;">
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAssistant ?: 'غير محدد' }}" readonly disabled>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- 3. طبيب التخدير الأول --}}
+                                                    <div>
+                                                        <label for="team_anesthesiologist_id" class="form-label text-dark small fw-semibold mb-1">
+                                                            <i class="fas fa-syringe text-success me-1"></i>طبيب التخدير الأول:
+                                                        </label>
+                                                        @if($canWriteTeamTiming)
+                                                            <select id="team_anesthesiologist_id" name="anesthesiologist_id" class="form-select form-select-sm">
+                                                                <option value="">اختر طبيب التخدير الأول</option>
+                                                                @foreach($anesthesiaDoctors as $doctor)
+                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_id', $primaryAnesthId) == $doctor->id ? 'selected' : '' }}>
+                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $primaryAnesthName }}" readonly disabled>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- 4. طبيب التخدير المساعد --}}
+                                                    <div>
+                                                        <label for="team_anesthesiologist_2_id" class="form-label text-dark small fw-semibold mb-1">
+                                                            <i class="fas fa-user-friends text-info me-1"></i>طبيب التخدير المساعد:
+                                                        </label>
+                                                        @if($canWriteTeamTiming)
+                                                            <select id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" class="form-select form-select-sm">
+                                                                <option value="">اختر طبيب التخدير المساعد</option>
+                                                                @foreach($anesthesiaDoctors as $doctor)
+                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_2_id', $secondaryAnesthId) == $doctor->id ? 'selected' : '' }}>
+                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $secondaryAnesthName }}" readonly disabled>
+                                                        @endif
+                                                    </div>
+
+                                                    @if($canWriteTeamTiming)
+                                                        <input type="hidden" id="start_time" name="start_time" value="{{ old('start_time', $surgeryStartFormatted) }}">
+                                                        <input type="hidden" id="end_time" name="end_time" value="{{ old('end_time', $surgeryEndFormatted) }}">
+                                                        <input type="hidden" id="estimated_duration_minutes" name="estimated_duration_minutes" value="{{ $surgery->estimated_duration ?? '' }}">
+                                                    @endif
+                                                </div>
+
+                                                @if($canWriteTeamTiming)
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        {{-- تفاصيل وخطة التخدير السريرية (بنفس صف الفريق الطبي) --}}
+                                        @if(isset($visibleTabs['detail_anesthesia']))
+                                            @php
+                                                $anesthCol = isset($visibleTabs['detail_team_timing']) ? 'col-md-7' : 'col-12';
+                                                $canWriteAnesthesia = $visibleTabs['detail_anesthesia']['can_write'];
+                                            @endphp
+                                            <div class="{{ $anesthCol }} tab-pane fade {{ $activeTab === 'detail_anesthesia' ? 'show active' : '' }}" id="pane-detail_anesthesia" role="tabpanel" aria-labelledby="tab-btn-detail_anesthesia">
+                                                @if($canWriteAnesthesia)
+                                                    <form id="detailAnesthesiaForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="tab" value="detail_anesthesia">
+                                                @endif
+
+                                                <div class="d-flex flex-column gap-2.5 h-100 ps-md-2">
+                                                    <div class="fw-bold text-success small pb-1 border-bottom d-flex align-items-center justify-content-between">
+                                                        <span><i class="fas fa-syringe me-1"></i>خطة وتفاصيل التخدير</span>
+                                                        @if($canWriteAnesthesia)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-2">تعديل</span>
+                                                        @else
+                                                            <span class="badge bg-secondary-subtle text-secondary border py-0.5 px-2">قراءة</span>
+                                                        @endif
+                                                    </div>
+
+                                                    @if(!$canWriteAnesthesia)
+                                                        <div class="alert alert-secondary border-secondary bg-white py-1.5 px-2 mb-0 small">
+                                                            <i class="fas fa-eye me-1"></i>
+                                                            قسم التخدير للعرض فقط وفق صلاحياتك؛ التوثيق لطبيب التخدير.
+                                                        </div>
+                                                    @endif
+
+                                                    {{-- Section 1: Anesthesia Type --}}
+                                                    <div>
+                                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-1">
+                                                            <label for="anesthesia_type_input" class="form-label text-dark small fw-semibold mb-0">
+                                                                <i class="fas fa-syringe text-success me-1"></i>نوع التخدير:
+                                                            </label>
+                                                            @if($canWriteAnesthesia)
+                                                                <div class="d-flex flex-wrap gap-1">
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير عام (General Anesthesia)')">عام</button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير نصفي (Spinal Anesthesia)')">نصفي</button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير موضعي (Local Anesthesia)')">موضعي</button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير مناطقي (Regional Anesthesia)')">مناطقي</button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('سديشن (Sedation)')">سديشن</button>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                        @if($canWriteAnesthesia)
+                                                            <input type="text" id="anesthesia_type_input" name="anesthesia_type" list="anesthesiaTypesList" class="form-control form-control-sm border-success-subtle" value="{{ old('anesthesia_type', $currentAnesthesiaType) }}" placeholder="مثال: تخدير عام (General Anesthesia)">
+                                                            <datalist id="anesthesiaTypesList">
+                                                                <option value="تخدير عام (General Anesthesia)">
+                                                                <option value="تخدير نصفي (Spinal Anesthesia)">
+                                                                <option value="تخدير موضعي (Local Anesthesia)">
+                                                                <option value="تخدير مناطقي (Regional Anesthesia)">
+                                                                <option value="سديشن (Sedation)">
+                                                            </datalist>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $currentAnesthesiaType ?: 'غير محدد' }}" readonly disabled>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- Section 2: Anesthesia Clinical Notes --}}
+                                                    <div class="flex-grow-1 d-flex flex-column">
+                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                            <label for="anesthesia_notes" class="form-label text-dark small fw-semibold mb-0">
+                                                                <i class="fas fa-notes-medical text-success me-1"></i>ملاحظات وتفاصيل طبيب التخدير:
+                                                            </label>
+                                                            @if($canWriteAnesthesia)
+                                                                <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('anesthesia_notes', 'مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات')">إفاقة مستقرة</button>
+                                                            @endif
+                                                        </div>
+                                                        <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1 {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="3" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
+                                                    </div>
+                                                </div>
+
+                                                @if($canWriteAnesthesia)
+                                                    </form>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
-                                    <span class="badge bg-light text-dark border small fw-normal">
-                                        <i class="fas fa-user-md me-1 text-success"></i>طبيب التخدير: {{ $primaryAnesthName }}@if($secondaryAnesthId) — المساعد: {{ $secondaryAnesthName }}@endif
-                                    </span>
-                                </div>
-                                @if($canWriteAnesthesia)
-                                    <input type="text" id="anesthesia_type_input" name="anesthesia_type" list="anesthesiaTypesList" class="form-control form-control-sm border-success-subtle" value="{{ old('anesthesia_type', $currentAnesthesiaType) }}" placeholder="مثال: تخدير عام (General Anesthesia)">
-                                    <datalist id="anesthesiaTypesList">
-                                        <option value="تخدير عام (General Anesthesia)">
-                                        <option value="تخدير نصفي (Spinal Anesthesia)">
-                                        <option value="تخدير موضعي (Local Anesthesia)">
-                                        <option value="تخدير مناطقي (Regional Anesthesia)">
-                                        <option value="سديشن (Sedation)">
-                                    </datalist>
-                                @else
-                                    <input type="text" class="form-control form-control-sm bg-light" value="{{ $currentAnesthesiaType ?: 'غير محدد' }}" readonly disabled>
-                                @endif
-                            </div>
-
-                            {{-- Section 2: Anesthesia Clinical Notes --}}
-                            <div class="clin-section-card clin-surface-white">
-                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                    <label for="anesthesia_notes" class="clin-section-title text-success mb-0">
-                                        <i class="fas fa-notes-medical"></i> ملاحظات وتفاصيل طبيب التخدير
-                                    </label>
-                                    @if($canWriteAnesthesia)
-                                        <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('anesthesia_notes', 'مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات')">إفاقة مستقرة</button>
-                                    @endif
-                                </div>
-                                <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="3" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
-                            </div>
-                        </div>
-
-                        @if($canWriteAnesthesia)
-                            <div class="card-footer bg-light d-flex flex-wrap justify-content-end gap-2 py-3 border-top mt-auto">
-                                <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold shadow-sm">
-                                    <i class="fas fa-save me-2"></i>حفظ تفاصيل التخدير
-                                </button>
-
-                                @if($user && $user->can('view anesthesia station') && $surgery->anesthesiaStation && $surgery->anesthesiaStation->status !== 'completed')
-                                    <button type="button" class="btn btn-outline-success px-4 rounded-pill fw-bold" onclick="completeAnesthesia({{ $surgery->id }})">
-                                        <i class="fas fa-check-double me-1"></i>اعتماد وإتمام محطة التخدير
-                                    </button>
-                                @endif
-                            </div>
-                            </form>
-                        @endif
-                    </div>
-                </div>
-            @endif
-        </div>
-    @endif
-
-            {{-- TAB 5: الفريق الطبي والتوقيت --}}
-            @if(isset($visibleTabs['detail_team_timing']))
-                @php $canWriteTeamTiming = $visibleTabs['detail_team_timing']['can_write']; @endphp
-                <div class="tab-pane fade {{ $activeTab === 'detail_team_timing' ? 'show active' : '' }}" id="pane-detail_team_timing" role="tabpanel" aria-labelledby="tab-btn-detail_team_timing">
-                    <div class="card clin-tab-card">
-                        @if($canWriteTeamTiming)
-                            <form id="detailTeamTimingForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="tab" value="detail_team_timing">
-                        @endif
-                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <h6 class="fw-bold text-warning-emphasis mb-0">
-                                    <i class="fas fa-users-cog me-2 text-warning"></i>الفريق الطبي والتوقيت الفعلي للعملية
-                                </h6>
-                                @if($canWriteTeamTiming)
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
-                                @else
-                                    <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
-                                @endif
-                            </div>
-
-                            {{-- Section 1: Operating Location & Surgical/Anesthesia Team --}}
-                            <div class="clin-section-card">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                                    <span class="clin-section-title text-primary">
-                                        <i class="fas fa-users"></i> صالة العمليات والفريق الطبي المشارك
-                                    </span>
-                                    <span class="badge-doctor-chip">
-                                        <i class="fas fa-user-md me-1"></i> الجراح الرئيسي: د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }}
-                                    </span>
-                                </div>
-
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <div class="clin-field-card">
-                                            <label for="team_location_id" class="form-label fw-bold text-dark small mb-1">
-                                                <i class="fas fa-map-marker-alt me-1 text-danger"></i>صالة العمليات / الردهة
-                                            </label>
-                                            @if($canWriteTeamTiming)
-                                                <select id="team_location_id" name="location_id" class="form-select form-select-sm border-primary">
-                                                    <option value="">اختر صالة العمليات / الردهة</option>
-                                                    @foreach($locations as $loc)
-                                                        <option value="{{ $loc->id }}" {{ old('location_id', $surgery->location_id) == $loc->id ? 'selected' : '' }}>
-                                                            {{ $loc->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            @else
-                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $surgery->location?->name ?? 'غير محدد' }}" readonly disabled>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="clin-field-card">
-                                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                                <label for="surgical_assistant_name" class="form-label fw-bold text-dark small mb-0">
-                                                    <i class="fas fa-hands-helping text-primary me-1"></i>اسم مساعد الجراح
-                                                </label>
-                                                @canany(['view surgeries', 'edit surgeries'])
-                                                    <a href="{{ route('surgical-assistants.index') }}" target="_blank" class="small text-decoration-none text-primary fw-semibold" title="فتح دليل وإدارة مساعدي الجراحين في نافذة جديدة">
-                                                        <i class="fas fa-external-link-alt me-1"></i>دليل المساعدين
-                                                    </a>
-                                                @endcanany
-                                            </div>
-                                            @php
-                                                $savedAssistant = old('surgical_assistant_name', $surgery->anesthesiaStation?->surgical_assistant_name ?? $surgery->surgical_assistant_name ?? '');
-                                            @endphp
-                                            @if($canWriteTeamTiming)
-                                                <div class="position-relative" id="assistantAutocompleteWrapper">
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
-                                                        <input type="text" id="surgical_assistant_name" name="surgical_assistant_name"
-                                                               class="form-control form-control-sm border-primary"
-                                                               autocomplete="off"
-                                                               placeholder="انقر لاختيار مساعد أو اكتب للبحث..."
-                                                               value="{{ $savedAssistant }}">
-                                                        <button type="button" class="btn btn-outline-secondary {{ $savedAssistant ? '' : 'd-none' }}" id="clearAssistantBtn" title="مسح">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-primary" id="toggleAssistantMenuBtn" title="عرض قائمة المساعدين">
-                                                            <i class="fas fa-chevron-down"></i>
-                                                        </button>
-                                                    </div>
-
-                                                    <!-- Live Search Dropdown Menu (مثل التصنيف الدولي ICD-10) -->
-                                                    <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 250px; overflow-y: auto; display: none;">
-                                                    </div>
-                                                </div>
-                                            @else
-                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAssistant ?: 'غير محدد' }}" readonly disabled>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="clin-field-card">
-                                            <label for="team_anesthesiologist_id" class="form-label fw-bold text-dark small mb-1">طبيب التخدير الأول</label>
-                                            @if($canWriteTeamTiming)
-                                                <select id="team_anesthesiologist_id" name="anesthesiologist_id" class="form-select form-select-sm">
-                                                    <option value="">اختر الطبيب المخدر الأول</option>
-                                                    @foreach($anesthesiaDoctors as $doctor)
-                                                        <option value="{{ $doctor->id }}" {{ old('anesthesiologist_id', $primaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                            د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            @else
-                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $primaryAnesthName }}" readonly disabled>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="clin-field-card">
-                                            <label for="team_anesthesiologist_2_id" class="form-label fw-bold text-dark small mb-1">طبيب التخدير المساعد</label>
-                                            @if($canWriteTeamTiming)
-                                                <select id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" class="form-select form-select-sm">
-                                                    <option value="">اختر الطبيب المخدر المساعد</option>
-                                                    @foreach($anesthesiaDoctors as $doctor)
-                                                        <option value="{{ $doctor->id }}" {{ old('anesthesiologist_2_id', $secondaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                            د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            @else
-                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $secondaryAnesthName }}" readonly disabled>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Section 2: Actual Surgery Timing & Calculated Duration --}}
-                            <div class="clin-section-card clin-surface-white">
-                                <div class="clin-section-title text-primary mb-2">
-                                    <i class="fas fa-clock"></i> التوقيت الفعلي ومدة العملية الجراحية
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <div class="clin-field-card">
-                                            <label for="start_time" class="form-label fw-bold text-dark small mb-1">وقت بدء العملية</label>
-                                            <div class="input-group input-group-sm">
-                                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-play text-success"></i></span>
-                                                <input type="time" class="form-control border-start-0 {{ $canWriteTeamTiming ? '' : 'bg-light' }}" id="start_time" @if($canWriteTeamTiming) name="start_time" @else readonly disabled @endif value="{{ old('start_time', $surgeryStartFormatted) }}">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="clin-field-card">
-                                            <label for="end_time" class="form-label fw-bold text-dark small mb-1">وقت انتهاء العملية</label>
-                                            <div class="input-group input-group-sm">
-                                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-stop text-danger"></i></span>
-                                                <input type="time" class="form-control border-start-0 {{ $canWriteTeamTiming ? '' : 'bg-light' }}" id="end_time" @if($canWriteTeamTiming) name="end_time" @else readonly disabled @endif value="{{ old('end_time', $surgeryEndFormatted) }}">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="clin-field-card">
-                                            <label for="estimated_duration" class="form-label fw-bold text-dark small mb-1">المدة المستغرقة (س:د)</label>
-                                            <div class="input-group input-group-sm">
-                                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-hourglass-half text-primary"></i></span>
-                                                <input type="text" class="form-control bg-light fw-bold text-primary border-start-0 text-center" id="estimated_duration" @if($canWriteTeamTiming) name="estimated_duration" @endif value="{{ $surgery->estimated_duration ? sprintf('%02d:%02d', floor($surgery->estimated_duration / 60), $surgery->estimated_duration % 60) : '' }}" readonly placeholder="--:--">
-                                            </div>
-                                            @if($canWriteTeamTiming)
-                                                <input type="hidden" id="estimated_duration_minutes" name="estimated_duration_minutes" value="{{ $surgery->estimated_duration ?? '' }}">
-                                            @endif
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        @if($canWriteTeamTiming)
-                            <div class="card-footer bg-light text-end py-3 border-top">
-                                <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm">
-                                    <i class="fas fa-save me-2"></i>حفظ الفريق الطبي والتوقيت
-                                </button>
-                            </div>
-                            </form>
-                        @endif
-                    </div>
+                    @endif
                 </div>
             @endif
 
@@ -2074,6 +2195,172 @@
             el.focus();
         };
 
+        window.setQuickDurationVal = function(min) {
+            const input = document.getElementById('quickDurationInput');
+            if (input) {
+                input.value = min;
+                window.updateQuickDurationHelper(min);
+            }
+        };
+
+        window.updateQuickDurationHelper = function(val) {
+            const helper = document.getElementById('quickDurationHelperText');
+            if (!helper) return;
+            const min = parseInt(val, 10);
+            if (!isNaN(min) && min > 0) {
+                const hours = Math.floor(min / 60);
+                const minutes = min % 60;
+                let formatted = '';
+                if (hours > 0 && minutes > 0) {
+                    formatted = hours + ' ساعة و ' + minutes + ' دقيقة';
+                } else if (hours > 0) {
+                    formatted = hours + ' ساعة';
+                } else {
+                    formatted = minutes + ' دقيقة';
+                }
+                helper.textContent = 'المدة: ' + min + ' دقيقة (' + formatted + ')';
+            } else {
+                helper.textContent = 'أدخل رقماً بالدقائق';
+            }
+        };
+
+        window.syncLocationSelection = function(selectEl) {
+            if (!selectEl) return;
+            const val = selectEl.value;
+            const text = selectEl.options[selectEl.selectedIndex]?.text || 'غير محددة';
+            const hiddenLoc = document.getElementById('team_location_id');
+            if (hiddenLoc) {
+                hiddenLoc.value = val;
+            }
+            const badge = document.getElementById('topLocationBadge');
+            if (badge) {
+                badge.textContent = val ? text : 'غير محددة';
+                badge.className = 'badge rounded-pill ' + (val ? 'bg-danger text-white' : 'bg-light text-muted border') + ' px-2 py-1';
+            }
+            const previewBadge = document.getElementById('topLocationPreviewBadge');
+            if (previewBadge) {
+                previewBadge.textContent = text;
+            }
+        };
+
+        window.submitUnifiedSurgeryForm = function() {
+            const saveBtn = document.getElementById('btnUnifiedSaveSurgery');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-white"></i> <span>جاري الحفظ...</span>';
+            }
+
+            const diagForm = document.getElementById('detailDiagnosisForm');
+            const teamForm = document.getElementById('detailTeamTimingForm');
+            const anesthForm = document.getElementById('detailAnesthesiaForm');
+            const quickDurationInput = document.getElementById('quickDurationInput');
+            const topLocationSelect = document.getElementById('top_location_id');
+
+            // Sync top location into hidden field if selected
+            if (topLocationSelect && topLocationSelect.value) {
+                const hiddenLoc = document.getElementById('team_location_id');
+                if (hiddenLoc) hiddenLoc.value = topLocationSelect.value;
+            }
+
+            const formCount = (diagForm ? 1 : 0) + (teamForm ? 1 : 0) + (anesthForm ? 1 : 0);
+
+            // If only one writable form is present on the page (e.g. single-role Surgeon or Anesthesiologist or Surgery Staff)
+            if (formCount === 1) {
+                const targetForm = diagForm || teamForm || anesthForm;
+                if (targetForm) {
+                    if (quickDurationInput && quickDurationInput.value) {
+                        let durField = targetForm.querySelector('#estimated_duration_minutes');
+                        if (!durField) {
+                            durField = document.createElement('input');
+                            durField.type = 'hidden';
+                            durField.name = 'estimated_duration_minutes';
+                            durField.id = 'estimated_duration_minutes';
+                            targetForm.appendChild(durField);
+                        }
+                        durField.value = quickDurationInput.value;
+                    }
+                    if (topLocationSelect && topLocationSelect.value) {
+                        let locField = targetForm.querySelector('#team_location_id');
+                        if (!locField) {
+                            locField = document.createElement('input');
+                            locField.type = 'hidden';
+                            locField.name = 'location_id';
+                            locField.id = 'team_location_id';
+                            targetForm.appendChild(locField);
+                        }
+                        locField.value = topLocationSelect.value;
+                    }
+                    if (typeof window.broadcastSurgeryLiveUpdate === 'function') {
+                        window.broadcastSurgeryLiveUpdate();
+                    }
+                    targetForm.submit();
+                    return;
+                }
+            }
+
+            // For multi-role users or Admin: merge all writable forms and submit in one unscoped PATCH request
+            const unifiedForm = document.createElement('form');
+            unifiedForm.method = 'POST';
+            unifiedForm.action = '{{ route("surgeries.updateDetails", $surgery) }}';
+            unifiedForm.style.display = 'none';
+
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = '{{ csrf_token() }}';
+            unifiedForm.appendChild(tokenInput);
+
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.value = 'PATCH';
+            unifiedForm.appendChild(methodInput);
+
+            const gatheredNames = new Set(['_token', '_method', 'tab']);
+
+            [diagForm, teamForm, anesthForm].forEach(form => {
+                if (!form) return;
+                const formData = new FormData(form);
+                for (let [name, value] of formData.entries()) {
+                    if (gatheredNames.has(name)) continue;
+                    if (name === 'estimated_duration_minutes' && quickDurationInput && quickDurationInput.value) {
+                        value = quickDurationInput.value;
+                    }
+                    if (name === 'location_id' && topLocationSelect && topLocationSelect.value) {
+                        value = topLocationSelect.value;
+                    }
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    unifiedForm.appendChild(input);
+                }
+            });
+
+            if (quickDurationInput && quickDurationInput.value && !unifiedForm.querySelector('[name="estimated_duration_minutes"]')) {
+                const durInput = document.createElement('input');
+                durInput.type = 'hidden';
+                durInput.name = 'estimated_duration_minutes';
+                durInput.value = quickDurationInput.value;
+                unifiedForm.appendChild(durInput);
+            }
+
+            if (topLocationSelect && topLocationSelect.value && !unifiedForm.querySelector('[name="location_id"]')) {
+                const locInput = document.createElement('input');
+                locInput.type = 'hidden';
+                locInput.name = 'location_id';
+                locInput.value = topLocationSelect.value;
+                unifiedForm.appendChild(locInput);
+            }
+
+            if (typeof window.broadcastSurgeryLiveUpdate === 'function') {
+                window.broadcastSurgeryLiveUpdate();
+            }
+
+            document.body.appendChild(unifiedForm);
+            unifiedForm.submit();
+        };
+
         const orBatchSelect = document.getElementById('or_dispense_batch_id');
         if (orBatchSelect) {
             updateOrDispenseMaxQty(orBatchSelect, 'or_dispense_qty', 'or_dispense_unit');
@@ -2373,7 +2660,7 @@
     };
 
     // ================= منظومة القائمة المنسدلة الذكية لمساعد الجراح (مثل التصنيف الدولي للأمراض) =================
-    window.surgicalAssistantsData = @json($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE);
+    window.surgicalAssistantsData = {!! json_encode($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};
 
     function setupSurgicalAssistantAutocomplete() {
         const input = document.getElementById('surgical_assistant_name');

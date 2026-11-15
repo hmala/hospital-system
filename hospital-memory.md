@@ -78,6 +78,42 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 210 (2026-11-15 — `main`) — دمج الفريق الطبي وتفاصيل التخدير في كارت موحد واحد جنباً إلى جنب، وترتيب أعضاء الفريق رأسياً دون كروت منفصلة (Single Unified Card Container for Medical Team & Anesthesia Side-by-Side with Clean Vertical Team List & No Nested Member Cards)**:
+  * **دمج الفريق الطبي وتفاصيل التخدير في كارت واحد موحد ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إلغاء الكروت المنفصلة السابقة للفريق الطبي وللتخدير ودمجهما داخل بطاقة سريرية واحدة موحدة (`card clin-tab-card`).
+    - ترويسة بطاقة موحدة: `الفريق الطبي المشارك وخطة التخدير` مع شارة حالة محطة التخدير وزر `اعتماد وإتمام محطة التخدير`.
+    - تقسيم داخلي شبكي متجاور في نفس الصف (`row g-3 h-100`): عمود اليمين للفريق الطبي (`col-md-5 border-start`) وعمود اليسار لتفاصيل وخطة التخدير (`col-md-7`).
+    - ترتيب أعضاء الفريق الطبي رأسياً (واحد أسفل الآخر) بانسيابية تامة:
+      1. الجراح الرئيسي: د. فلان (عرض خفيف بدون كارت منفصل).
+      2. مساعد الجراح: مع رابط `دليل المساعدين`، وقائمة الإكمال التلقائي الذكية `#surgical_assistant_name` و`#surgicalAssistantsMenu`.
+      3. طبيب التخدير الأول: قائمة منسدلة `#team_anesthesiologist_id`.
+      4. طبيب التخدير المساعد: قائمة منسدلة `#team_anesthesiologist_2_id`.
+    - حذف الإطارات والكروت المتداخلة المنفصلة (`clin-field-card`) نهائياً حول كل عضو لتوفير مظهر مدمج ومنظم ونظيف.
+    - استقلال النماذج البرمجية بالكامل (`detailTeamTimingForm` و `detailAnesthesiaForm`) دون أي تداخل في وسوم `<form>`.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+    - اجتياز اختبارات مساعدي الجراحين بنجاح 100% (`7 passed, 24 assertions`).
+    - اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز اختبارات شاشة انتظار العمليات بنجاح 100% (`9 passed, 32 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+- **المرحلة 209 (2026-11-15 — `main`) — نقل صالة العمليات ومدة العملية كرقم وحالة المريض للشريط العلوي، توحيد أزرار الحفظ في زر واحد (Top Action Bar for Location, Duration & Status, Unified Save Button)**:
+  * نقل صالة العمليات / الردهة لتسبق مدة العملية مباشرة بقائمة منسدلة تفاعلية ومزامنة للحقل المخفي.
+  * إدراج مدة العملية كرقم بالدقائق مع أزرار سريعة بنقرة واحدة (30د - 180د).
+  * توحيد أزرار الحفظ في زر واحد رئيسي بجانب مدة العملية ديناميكي حسب الصلاحيات (`submitUnifiedSurgeryForm()`).
+
+- **المرحلة 208 (2026-11-15 — `main`) — تخطيط ثلاثي الأعمدة المتوازي في صف شبكي واحد: التشخيص والعلاجات (يمين) | الفريق الطبي والتوقيت (وسط) | تفاصيل التخدير (يسار) (3-Column Row: Diagnosis on Right, Medical Team in Middle, Anesthesia on Left)**:
+  * **تخطيط ثلاثي الأعمدة المتوازي في ملف العملية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - دمج البطاقات السريرية الثلاث في صف شبكي واحد (`row g-3 mb-4`) بديناميكية تجاوبية (`col-xl-4 col-lg-4 col-md-12`).
+    - إسناد عمود اليمين للتشخيص الطبي للجراح والملاحظات وجدول الأدوية والعلاجات (`pane-detail_diagnosis`).
+    - إسناد عمود الوسط لصالة العمليات والفريق الطبي المشارك، ومساعد الجراح، والتوقيت الفعلي للعملية الجراحية (`pane-detail_team_timing`).
+    - إسناد عمود اليسار لتوثيق تفاصيل ونوع وخطة وملاحظات التخدير (`pane-detail_anesthesia`).
+    - مطابقة الارتفاع الرأسي للكروت الثلاثة بنسبة 100% (`h-100 d-flex flex-column`) ومحاذاة أزرار الحفظ في أسفل كل بطاقة (`mt-auto`).
+    - الحفاظ الكامل على النماذج البرمجية المستقلة (`detailDiagnosisForm`، `detailTeamTimingForm`، `detailAnesthesiaForm`) ومصفوفة الصلاحيات المشددة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز اختبارات المساعدين الجراحيين بنجاح 100% (`7 passed, 24 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 207 (2026-11-15 — `main`) — مواءمة التشخيص الطبي للجراح وجدول العلاجات في العمود الأيمن وتفاصيل التخدير في العمود الأيسر (Two-Column Side-by-Side Row: Surgeon Diagnosis & Treatments on Right, Anesthesia on Left)**:
   * **تخطيط ثنائي الأعمدة المتوازي في ملف العملية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - دمج بطاقة "التشخيص الطبي للجراح وجدول العلاجات" وبطاقة "توثيق تفاصيل التخدير" في صف شبكي واحد متجاور (`<div class="row g-3 mb-4">`).
@@ -2550,6 +2586,28 @@
     - إضافة دالة المساعدة المركزية `redirectBackWithActiveState` وتعميمها عبر كافة دوال الخدج (توثيق العلامات الحيوية، جداول الرعاية، الملاحظات الطبية، الاستشارات، طلبات المختبر والأشعة، الوصفات، إدارة العلاج MAR، المرفقات، وتبديل الباقات)، لتمرير التبويب والتبويب الفرعي تلقائياً في الجلسة `session(['active_tab' => ..., 'active_pill' => ...])`.
   * **حزمة الاختبارات الآلية الشاملة ([tests/Feature/NicuTabAndStatePersistenceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NicuTabAndStatePersistenceTest.php))**:
     - 5 اختبارات ميزة تغطي توثيق القراءات الحيوية، جداول الرعاية، ملاحظات الأطباء، وتفعيل التبويبات والتبويبات الفرعية على صعيد السيرفر بنجاح 100% (`5 passed, 20 assertions`).
+
+- **المرحلة 209 (2026-11-15) — نقل صالة العمليات ومدة العملية (رقم) وحالة المريض للشريط العلوي، توحيد زر الحفظ، ودمج الفريق الطبي مع التخدير في العمود الأيسر (Surgery Show: Top Action Bar for Location, Duration & Status, Unified Save Button, and Merged Team & Anesthesia Left Column)**:
+  * **نقل صالة العمليات / الردهة ومدة العملية وحالة المريض للشريط العلوي الموحد ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - ترتيب أزرار الإجراءات السريعة العلوية:
+      1. `[ 🧪 التحاليل المخبرية ]`
+      2. `[ 🩻 الأشعة والتصوير الطبي ]`
+      3. `[ 🔪 نوع العملية والعمليات الإضافية ]`
+      4. `[ ⏱️ حالة المريض بالصالة (Pre-Op / Intra-Op) ▾ ]` (قائمة منسدلة موحدة)
+      5. `[ 📍 صالة العمليات / الردهة: (اسم الصالة) ▾ ]` (منقولة قبل مدة العملية مباشرة بقائمة منسدلة تفاعلية)
+      6. `[ ⏱️ مدة العملية: X دقيقة ▾ ]` (رقم بالدقائق، أزرار سريعة بنقرة واحدة `30د-180د`، ومساعد تحويل الساعات)
+      7. `[ 💾 حفظ بيانات العملية ]` (زر الحفظ الموحد الرئيسي بجانب مدة العملية)
+  * **توحيد زر الحفظ وإلغاء التكرار في ذيل الكروت**:
+    - حذف أزرار الحفظ المتفرقة في أسفل كروت التشخيص، الفريق الطبي، التخدير، ومدة العملية.
+    - توحيد الحفظ في زر علوي بارز بجانب مدة العملية ديناميكي حسب الصلاحية: `حفظ بيانات العملية` للمسؤول/متعددي الصلاحيات، و`حفظ التشخيص والعلاجات` للجراح، و`حفظ تفاصيل التخدير` لطبيب التخدير، و`حفظ الفريق الطبي والتوقيت` لموظف العمليات.
+    - دعم الإرسال الموحد `submitUnifiedSurgeryForm()` ومزامنة الصالة اللحظية `syncLocationSelection()`.
+  * **دمج الفريق الطبي مع التخدير في العمود الأيسر**:
+    - إسناد العمود الأيمن (`col-xl-6`) للتشخيص الطبي للجراح وجدول العلاجات.
+    - إسناد العمود الأيسر (`col-xl-6`) لكارتين متتاليين: كارت الفريق الطبي المشارك (أعلى) وكارت توثيق وخطة التخدير (أسفل).
+    - نقل زر `اعتماد وإتمام محطة التخدير` إلى ترويسة كارت التخدير بأناقة.
+  * **التحقق الآلي والاختبارات**:
+    - اجتياز كافة اختبارات العمليات الجراحية وقائمة الانتظار والمساعدين بنجاح 100% (`25 passed, 237 assertions`).
+    - اجتياز `Laravel Pint` بالكامل.
 
 - **المرحلة 201 (2026-11-14) — تبسيط شاشة انتظار العمليات الجراحية `/surgeries/waiting` كجدول حصري بـ 5 أعمدة، إزالة التقويم والمؤشرات، تلوين المرضى حسب الحالة السريرية (دخل/انتظار/انتهى)، وإضافة خيار إعادة الإخراج من الصالة (Streamlined Waiting Table, Tri-Color Patient Stage Coding & Return to Waiting from OR)**:
   * **تبسيط شاشة الانتظار وإزالة التقويم والمؤشرات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php))**:
