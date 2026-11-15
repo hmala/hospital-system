@@ -404,6 +404,12 @@
         #btnBackToTopSurgery:hover {
             transform: translateY(-2px);
         }
+        .collapse-arrow {
+            transition: transform 0.25s ease;
+        }
+        [data-bs-toggle="collapse"][aria-expanded="true"] .collapse-arrow {
+            transform: rotate(180deg);
+        }
     </style>
 
     {{-- Top Breadcrumb & Quick Actions --}}
@@ -417,6 +423,106 @@
         </nav>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
+            {{-- حالة المريض في الصالة (قائمة منسدلة موحدة) --}}
+            @php
+                $otStation = $surgery->operationTheaterStation;
+                $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                $canControlSurgery = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
+            @endphp
+
+            <div class="dropdown d-inline-block">
+                @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                    <button class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-2"
+                            type="button"
+                            id="patientOrStatusDropdownBtn"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            style="font-size: 0.82rem; border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
+                        @if($isOtInProgress)
+                            <span class="sg-pulse-dot me-1" style="width: 6px; height: 6px;"></span>
+                            <span>حالة المريض: Intra-Op (داخل الصالة)</span>
+                        @else
+                            <i class="fas fa-clock me-1 text-warning" style="font-size: 0.78rem;"></i>
+                            <span>حالة المريض: Pre-Op (بالانتظار)</span>
+                        @endif
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
+                        <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
+                            تحديث حالة المريض بالصالة
+                        </li>
+
+                        @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
+                            <li>
+                                <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownStartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-success fw-bold" onclick="return confirm('تأكيد بدء العملية ودخول المريض لصالة العمليات؟')">
+                                        <i class="fas fa-play text-success" style="width: 16px;"></i>
+                                        <span>بدء العملية (دخول الصالة)</span>
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
+                                    <i class="fas fa-calendar-alt text-warning" style="width: 16px;"></i>
+                                    <span class="text-dark fw-semibold">تأجيل العملية للموعد القادم</span>
+                                </button>
+                            </li>
+                        @endif
+
+                        @if($surgery->status === 'in_progress')
+                            <li>
+                                <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownCompleteSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger fw-bold" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
+                                        <i class="fas fa-check-double text-danger" style="width: 16px;"></i>
+                                        <span>إنهاء العملية (خروج من الصالة)</span>
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
+                                        <i class="fas fa-door-open text-warning" style="width: 16px;"></i>
+                                        <span class="text-dark">إعادة إخراجه من الصالة</span>
+                                    </button>
+                                </form>
+                            </li>
+                        @endif
+
+                        @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
+                                    <i class="fas fa-times-circle text-danger" style="width: 16px;"></i>
+                                    <span>إلغاء العملية</span>
+                                </button>
+                            </li>
+                        @endif
+                    </ul>
+                @else
+                    {{-- شارة القراءة فقط --}}
+                    @if($isOtCompleted)
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.82rem;">
+                            <i class="fas fa-check-double me-1 text-success"></i>Post-Op (خرج من الصالة)
+                        </span>
+                    @elseif($surgery->status === 'cancelled')
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.82rem;">
+                            <i class="fas fa-ban me-1 text-danger"></i>Cancelled (ملغاة)
+                        </span>
+                    @elseif($isOtInProgress)
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.82rem;">
+                            <span class="sg-pulse-dot me-1"></span>Intra-Op (داخل الصالة)
+                        </span>
+                    @else
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.82rem;">
+                            <i class="fas fa-clock me-1 text-warning"></i>Pre-Op (بالانتظار)
+                        </span>
+                    @endif
+                @endif
+            </div>
+
             @can('manage surgery tab permissions')
                 <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                     <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
@@ -470,184 +576,65 @@
         </div>
     @endif
 
-    {{-- Executive Header --}}
-    <div class="clin-header-modern mb-3">
+    {{-- كارت معلومات وبيانات المريض (Patient Information Card) --}}
+    <div class="card border-0 shadow-sm rounded-4 mb-3 p-3 p-xl-4 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);"></div>
+
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div class="d-flex flex-wrap align-items-center gap-3 gap-xl-4">
-                {{-- Patient --}}
-                <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-modern-box flex-shrink-0">
-                        <i class="fas fa-procedures"></i>
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير محدد' }}</h3>
-                            <span class="badge-modern-code">#{{ $surgery->patient?->patient_id ?? $surgery->patient_id ?? 'N/A' }}</span>
-                            <span class="badge bg-light text-dark border font-monospace" style="font-size:0.7rem;">عملية #{{ $surgery->id }}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 text-muted small mt-1 flex-wrap">
-                            <span class="badge-modern-sub">
-                                <i class="fas fa-birthday-cake me-1 text-primary"></i>{{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : 'العمر غير مسجل' }}
-                            </span>
-                            <span class="badge-modern-sub">
-                                <i class="fas fa-venus-mars me-1 text-info"></i>{{ $surgery->patient?->gender === 'male' ? 'ذكر' : ($surgery->patient?->gender === 'female' ? 'أنثى' : 'غير محدد') }}
-                            </span>
-                            @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                    <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'حجز ضمان صحي' : 'حجز ضمان قوى الأمن' }}
-                                </span>
-                            @else
-                                <span class="badge bg-secondary-subtle text-secondary border">
-                                    <i class="fas fa-money-bill-wave me-1"></i>حجز نقدي (كاش)
-                                </span>
-                            @endif
-                        </div>
-                    </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="avatar-modern-box flex-shrink-0" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                    <i class="fas fa-user-injured text-primary"></i>
                 </div>
-
-                <div class="clin-v-divider d-none d-md-block"></div>
-
-                {{-- Procedure & Surgeon --}}
                 <div>
-                    <div class="clin-meta-label">
-                        <i class="fas fa-procedures text-primary me-1"></i> تفاصيل العملية
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h4 class="clin-patient-name mb-0" title="{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير محدد' }}">
+                            {{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير محدد' }}
+                        </h4>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold" style="font-size: 0.76rem;">
+                            #{{ $surgery->patient?->patient_id ?? $surgery->patient_id ?? 'N/A' }}
+                        </span>
+                        @if($surgery->patient?->file_number)
+                            <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.72rem;">
+                                ملف: {{ $surgery->patient->file_number }}
+                            </span>
+                        @endif
                     </div>
-                    <div class="fw-bold text-dark fs-6" title="{{ $surgery->surgery_type }}">
-                        {{ $surgery->surgery_type ?? 'غير محدد' }}
-                    </div>
-                    <div class="text-secondary small mt-1 d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge-doctor-chip">
-                            <i class="fas fa-user-md text-success me-1"></i> الجراح: د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }}
+
+                    <div class="d-flex align-items-center gap-2 text-muted small mt-1.5 flex-wrap">
+                        <span class="badge-modern-sub">
+                            <i class="fas fa-birthday-cake me-1 text-primary"></i>{{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : 'العمر غير مسجل' }}
                         </span>
                         <span class="badge-modern-sub">
-                            <i class="fas fa-syringe text-primary me-1"></i> المخدر: {{ $primaryAnesthName }}
+                            <i class="fas fa-venus-mars me-1 text-info"></i>{{ $surgery->patient?->gender === 'male' ? 'ذكر' : ($surgery->patient?->gender === 'female' ? 'أنثى' : 'غير محدد') }}
                         </span>
-                    </div>
-                </div>
-
-                <div class="clin-v-divider d-none d-lg-block"></div>
-
-                {{-- Location & Schedule --}}
-                <div>
-                    <div class="clin-meta-label">
-                        <i class="fas fa-map-marker-alt text-warning me-1"></i> الموقع والجدولة
-                    </div>
-                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                        <span class="badge-room-chip">
-                            <i class="fas fa-door-open me-1"></i>{{ $surgery->location?->name ?? $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}
-                        </span>
-                        <span class="badge-time-chip">
-                            <i class="far fa-calendar-alt me-1"></i>{{ optional($surgery->scheduled_date)->format('Y-m-d') ?? '--' }}
-                        </span>
-                        <span class="badge-time-chip">
-                            <i class="far fa-clock me-1"></i>{{ $surgery->scheduled_time ? (is_string($surgery->scheduled_time) ? \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') : $surgery->scheduled_time->format('h:i A')) : '--:--' }}
-                        </span>
+                        @if($surgery->patient?->blood_group)
+                            <span class="badge bg-danger-subtle text-danger border" style="font-size: 0.74rem;">
+                                <i class="fas fa-tint me-1"></i>{{ $surgery->patient->blood_group }}
+                            </span>
+                        @endif
+                        @if($surgery->patient?->user?->phone)
+                            <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.74rem;">
+                                <i class="fas fa-phone-alt me-1 text-muted"></i>{{ $surgery->patient->user->phone }}
+                            </span>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            {{-- Patient Status in OR & Operational Control Dropdown --}}
-            <div class="d-flex align-items-center gap-2 ms-auto ms-lg-0">
-                @php
-                    $otStation = $surgery->operationTheaterStation;
-                    $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
-                    $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
-                    $canControlSurgery = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
-                @endphp
-
-                <span class="small text-muted fw-bold d-none d-sm-inline" style="font-size: 0.82rem;">حالة المريض في الصالة:</span>
-
-                <div class="dropdown d-inline-block">
-                    @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
-                        <button class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-1.5"
-                                type="button"
-                                id="patientOrStatusDropdownBtn"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                style="border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
-                            @if($isOtInProgress)
-                                <span class="sg-pulse-dot me-1"></span>
-                                <span>Intra-Op (داخل الصالة)</span>
-                            @else
-                                <i class="fas fa-clock me-1 text-warning"></i>
-                                <span>Pre-Op (بالانتظار)</span>
-                            @endif
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
-                            <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
-                                تغيير وتحديث حالة المريض
-                            </li>
-
-                            @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
-                                <li>
-                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownStartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-success fw-bold" onclick="return confirm('تأكيد بدء العملية ودخول المريض لصالة العمليات؟')">
-                                            <i class="fas fa-play text-success" style="width: 18px;"></i>
-                                            <span>بدء العملية (دخول الصالة)</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li>
-                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
-                                        <i class="fas fa-calendar-alt text-warning" style="width: 18px;"></i>
-                                        <span class="text-dark fw-semibold">تأجيل العملية للموعد القادم</span>
-                                    </button>
-                                </li>
-                            @endif
-
-                            @if($surgery->status === 'in_progress')
-                                <li>
-                                    <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownCompleteSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger fw-bold" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
-                                            <i class="fas fa-check-double text-danger" style="width: 18px;"></i>
-                                            <span>إنهاء العملية (خروج من الصالة)</span>
-                                        </button>
-                                    </form>
-                                </li>
-                                <li>
-                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
-                                            <i class="fas fa-door-open text-warning" style="width: 18px;"></i>
-                                            <span class="text-dark">إعادة إخراجه من الصالة</span>
-                                        </button>
-                                    </form>
-                                </li>
-                            @endif
-
-                            @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li>
-                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
-                                        <i class="fas fa-times-circle text-danger" style="width: 18px;"></i>
-                                        <span>إلغاء العملية</span>
-                                    </button>
-                                </li>
-                            @endif
-                        </ul>
-                    @else
-                        {{-- شارة القراءة فقط عند اكتمال العملية أو إلغائها أو عدم امتلاك الصلاحية --}}
-                        @if($isOtCompleted)
-                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.84rem;">
-                                <i class="fas fa-check-double me-1 text-success"></i>Post-Op (خرج من الصالة)
-                            </span>
-                        @elseif($surgery->status === 'cancelled')
-                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.84rem;">
-                                <i class="fas fa-ban me-1 text-danger"></i>Cancelled (ملغاة)
-                            </span>
-                        @elseif($isOtInProgress)
-                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.84rem;">
-                                <span class="sg-pulse-dot me-1"></span>Intra-Op (داخل الصالة)
-                            </span>
-                        @else
-                            <span class="badge py-1.5 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.84rem;">
-                                <i class="fas fa-clock me-1 text-warning"></i>Pre-Op (بالانتظار)
-                            </span>
-                        @endif
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="small text-muted fw-bold">الحساب:</span>
+                @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5" style="font-size: 0.8rem;">
+                        <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
+                    </span>
+                    @if($surgery->patient?->insurance_card_no)
+                        <span class="text-muted small font-monospace">بطاقة: {{ $surgery->patient->insurance_card_no }}</span>
                     @endif
-                </div>
+                @else
+                    <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.8rem;">
+                        <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
+                    </span>
+                @endif
             </div>
         </div>
     </div>
@@ -716,24 +703,90 @@
         {{-- Unified Tab Content Panes --}}
         <div class="tab-content" id="surgeryDetailTabContent">
 
-            {{-- TAB 1: الفحوصات والتحاليل --}}
-            @if(isset($visibleTabs['detail_tests']))
-                <div class="tab-pane fade {{ $activeTab === 'detail_tests' ? 'show active' : '' }}" id="pane-detail_tests" role="tabpanel" aria-labelledby="tab-btn-detail_tests">
-                    <div class="card clin-tab-card">
-                        <div class="card-body p-4">
-                            <div class="row g-4">
-                                <div class="col-lg-6">
-                                    <p class="fw-bold text-primary mb-2 pb-1 border-bottom">
-                                        <i class="fas fa-flask me-2"></i>التحاليل والفحوصات المطلوبة للعملية
-                                    </p>
-                                    <div class="mb-4 table-responsive rounded-3 border" style="border-color:#bfdbfe !important;">
+            {{-- TAB 1 & 2: الفحوصات والتحاليل ونوع العملية والإضافات --}}
+            @php
+                $hasTestsTab = isset($visibleTabs['detail_tests']);
+                $hasTypeTab = isset($visibleTabs['detail_type']);
+            @endphp
+
+            @if($hasTestsTab || $hasTypeTab)
+                @php
+                    $surgeryLabCount = $surgery->labTests->count();
+                    $surgeryRadCount = $surgery->radiologyTests->count();
+                    $canWriteType = $hasTypeTab ? $visibleTabs['detail_type']['can_write'] : false;
+                    $protocol = $surgery->surgeonStation?->monitoring_protocol ?? null;
+                    $typeChanges = $hasTypeTab ? $surgery->surgeryTypeChanges()->latest()->get() : collect();
+                    $additionalOpsCount = $surgery->additionalOperations->count();
+                @endphp
+
+                <div class="tab-pane fade show active" id="pane-detail_tests" role="tabpanel" aria-labelledby="tab-btn-detail_tests">
+                    <div class="card clin-tab-card shadow-sm border-0 mb-4" style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                        <div class="card-body p-3 p-md-4">
+                            {{-- Interactive Action Buttons for Tests & Operations --}}
+                            <div class="d-flex flex-wrap align-items-center justify-content-start gap-2.5">
+                                @if($hasTestsTab)
+                                    {{-- Button 1: Lab Tests --}}
+                                    <button class="btn btn-outline-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-xs"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#collapseLabTestsSection"
+                                            aria-expanded="false"
+                                            aria-controls="collapseLabTestsSection"
+                                            id="btnToggleLabTests"
+                                            style="font-size: 0.92rem; transition: all 0.2s ease;">
+                                        <i class="fas fa-flask text-primary"></i>
+                                        <span>التحاليل والفحوصات المخبرية</span>
+                                        <span class="badge rounded-pill bg-primary text-white px-2 py-1">{{ $surgeryLabCount }}</span>
+                                        <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
+                                    </button>
+
+                                    {{-- Button 2: Radiology Tests --}}
+                                    <button class="btn btn-outline-success fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-xs"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#collapseRadiologyTestsSection"
+                                            aria-expanded="false"
+                                            aria-controls="collapseRadiologyTestsSection"
+                                            id="btnToggleRadiologyTests"
+                                            style="font-size: 0.92rem; transition: all 0.2s ease;">
+                                        <i class="fas fa-x-ray text-success"></i>
+                                        <span>الأشعة والتصوير الطبي</span>
+                                        <span class="badge rounded-pill bg-success text-white px-2 py-1">{{ $surgeryRadCount }}</span>
+                                        <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
+                                    </button>
+                                @endif
+
+                                @if($hasTypeTab)
+                                    {{-- Button 3: Surgery Type & Additional Operations --}}
+                                    <button class="btn btn-outline-info text-dark fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-xs"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#collapseSurgeryTypeSection"
+                                            aria-expanded="{{ $activeTab === 'detail_type' ? 'true' : 'false' }}"
+                                            aria-controls="collapseSurgeryTypeSection"
+                                            id="btnToggleSurgeryType"
+                                            style="font-size: 0.92rem; transition: all 0.2s ease; border-color: #38bdf8;">
+                                        <i class="fas fa-procedures text-info"></i>
+                                        <span>نوع العملية والعمليات الإضافية</span>
+                                        @if($additionalOpsCount > 0)
+                                            <span class="badge rounded-pill bg-info text-white px-2 py-1">+{{ $additionalOpsCount }} إضافية</span>
+                                        @endif
+                                        <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
+                                    </button>
+                                @endif
+                            </div>
+
+                            @if($hasTestsTab)
+                                {{-- Collapsible Container 1: Lab Tests (Surgery Lab Tests Only) --}}
+                                <div class="collapse mt-3" id="collapseLabTestsSection">
+                                    <div class="table-responsive rounded-3 border bg-white" style="border-color:#bfdbfe !important;">
                                         <table class="table table-hover align-middle mb-0" style="font-size:0.875rem;">
                                             <thead style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-primary fw-bold border-0"><i class="fas fa-vial me-1"></i>التحاليل المخبرية</th>
+                                                    <th class="px-3 py-2 text-primary fw-bold border-0"><i class="fas fa-vial me-1"></i>التحليل المخبري للعملية</th>
                                                     <th class="py-2 text-muted fw-semibold border-0">النتيجة</th>
                                                     <th class="py-2 text-muted fw-semibold border-0 text-center">الحالة</th>
-                                                    <th class="py-2 border-0"></th>
+                                                    <th class="py-2 border-0 text-end pe-3">المرفق</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -742,9 +795,11 @@
                                                         <td class="px-3 fw-semibold text-dark">{{ optional($labTest->labTest)->name ?? 'تحليل طبي' }}</td>
                                                         <td>@if($labTest->result)<strong class="text-dark">{{ $labTest->result }}</strong>@else<span class="text-muted small">—</span>@endif</td>
                                                         <td class="text-center"><span class="badge bg-{{ $labTest->status_color }}">{{ $labTest->status_text }}</span></td>
-                                                        <td>
+                                                        <td class="text-end pe-3">
                                                             @if($labTest->result_file)
-                                                                <a href="{{ asset('storage/' . $labTest->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="fas fa-download"></i></a>
+                                                                <a href="{{ asset('storage/' . $labTest->result_file) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="fas fa-download me-1"></i>تحميل</a>
+                                                            @else
+                                                                <span class="text-muted small">—</span>
                                                             @endif
                                                         </td>
                                                     </tr>
@@ -754,15 +809,18 @@
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
 
-                                    <div class="table-responsive rounded-3 border" style="border-color:#bbf7d0 !important;">
+                                {{-- Collapsible Container 2: Radiology Tests (Surgery Radiology Tests Only) --}}
+                                <div class="collapse mt-3" id="collapseRadiologyTestsSection">
+                                    <div class="table-responsive rounded-3 border bg-white" style="border-color:#bbf7d0 !important;">
                                         <table class="table table-hover align-middle mb-0" style="font-size:0.875rem;">
                                             <thead style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-success fw-bold border-0"><i class="fas fa-x-ray me-1"></i>الأشعة والتصوير</th>
-                                                    <th class="py-2 text-muted fw-semibold border-0">التقرير</th>
+                                                    <th class="px-3 py-2 text-success fw-bold border-0"><i class="fas fa-x-ray me-1"></i>الأشعة والتصوير للعملية</th>
+                                                    <th class="py-2 text-muted fw-semibold border-0">التقرير / النتيجة</th>
                                                     <th class="py-2 text-muted fw-semibold border-0 text-center">الحالة</th>
-                                                    <th class="py-2 border-0"></th>
+                                                    <th class="py-2 border-0 text-end pe-3">المرفق</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -771,9 +829,11 @@
                                                         <td class="px-3 fw-semibold text-dark">{{ optional($radTest->radiologyType)->name ?? 'تصوير طبي' }}</td>
                                                         <td>@if($radTest->result)<span class="text-dark small">{{ $radTest->result }}</span>@else<span class="text-muted small">—</span>@endif</td>
                                                         <td class="text-center"><span class="badge bg-{{ $radTest->status_color }}">{{ $radTest->status_text }}</span></td>
-                                                        <td>
+                                                        <td class="text-end pe-3">
                                                             @if($radTest->result_file)
-                                                                <a href="{{ asset('storage/' . $radTest->result_file) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="fas fa-download"></i></a>
+                                                                <a href="{{ asset('storage/' . $radTest->result_file) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="fas fa-download me-1"></i>تحميل</a>
+                                                            @else
+                                                                <span class="text-muted small">—</span>
                                                             @endif
                                                         </td>
                                                     </tr>
@@ -784,324 +844,247 @@
                                         </table>
                                     </div>
                                 </div>
+                            @endif
 
-                                <div class="col-lg-6">
-                                    <p class="fw-bold text-success mb-2 pb-1 border-bottom">
-                                        <i class="fas fa-history me-2"></i>الفحوصات والتحاليل السابقة بالزيارة
-                                    </p>
-                                    @if($surgery->visit)
-                                        <div class="mb-4 table-responsive rounded-3 border" style="border-color:#e9d5ff !important;">
-                                            <table class="table table-hover align-middle mb-0" style="font-size:0.875rem;">
-                                                <thead style="background:linear-gradient(135deg,#fdf4ff,#f3e8ff);">
-                                                    <tr>
-                                                        <th class="px-3 py-2 fw-bold border-0" style="color:#7c3aed;"><i class="fas fa-vials me-1"></i>نتائج المختبر بالزيارة</th>
-                                                        <th class="py-2 text-muted fw-semibold border-0">النتيجة</th>
-                                                        <th class="py-2 text-muted fw-semibold border-0">الوحدة</th>
-                                                        <th class="py-2 text-muted fw-semibold border-0 text-center">الحالة</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @forelse($surgery->visit->getLatestLabResults() as $labRes)
-                                                        <tr class="{{ $labRes->is_abnormal ? 'table-danger' : '' }}">
-                                                            <td class="px-3 fw-semibold text-dark">{{ $labRes->test_name }}</td>
-                                                            <td><strong>{{ $labRes->result }}</strong></td>
-                                                            <td class="text-muted small">{{ $labRes->unit }}</td>
-                                                            <td class="text-center">
-                                                                @if($labRes->is_abnormal)
-                                                                    <span class="badge bg-danger">غير طبيعي</span>
-                                                                @else
-                                                                    <span class="badge bg-success">طبيعي</span>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                        <tr><td colspan="4" class="text-center text-muted py-3">لا توجد نتائج مختبر للزيارة</td></tr>
-                                                    @endforelse
-                                                </tbody>
-                                            </table>
-                                        </div>
+                            @if($hasTypeTab)
+                                {{-- Collapsible Container 3: Surgery Type, Additional Operations & Notes --}}
+                                <div id="pane-detail_type">
+                                    <div class="collapse {{ $activeTab === 'detail_type' ? 'show' : '' }} mt-3" id="collapseSurgeryTypeSection">
+                                        <div class="p-3 rounded-3" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                                                <h6 class="fw-bold text-primary mb-0">
+                                                    <i class="fas fa-procedures me-2"></i>نوع العملية والعمليات الإضافية والملاحظات
+                                                </h6>
+                                                @if($canWriteType)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
+                                                @else
+                                                    <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-eye me-1"></i>قراءة فقط</span>
+                                                @endif
+                                            </div>
 
-                                        <div class="table-responsive rounded-3 border" style="border-color:#fde68a !important;">
-                                            <table class="table table-hover align-middle mb-0" style="font-size:0.875rem;">
-                                                <thead style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
-                                                    <tr>
-                                                        <th class="px-3 py-2 text-warning fw-bold border-0"><i class="fas fa-image me-1"></i>تقارير الأشعة بالزيارة</th>
-                                                        <th class="py-2 text-muted fw-semibold border-0">التقرير / الملاحظات</th>
-                                                        <th class="py-2 text-muted fw-semibold border-0 text-center">الحالة</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @forelse($surgery->visit->radiologyRequests as $radReq)
-                                                        <tr>
-                                                            <td class="px-3 fw-semibold text-dark">{{ optional($radReq->radiologyType)->name ?? '—' }}</td>
-                                                            <td class="text-muted small" style="max-width:200px;">
-                                                                @if($radReq->result)
-                                                                    {{ $radReq->result->findings }}
-                                                                @else
-                                                                    <i class="fas fa-hourglass-half me-1"></i>بانتظار التقرير...
-                                                                @endif
-                                                            </td>
-                                                            <td class="text-center"><span class="badge bg-{{ $radReq->status_color }}">{{ $radReq->status_text }}</span></td>
-                                                        </tr>
-                                                    @empty
-                                                        <tr><td colspan="3" class="text-center text-muted py-3">لا توجد طلبات أشعة للزيارة</td></tr>
-                                                    @endforelse
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    @else
-                                        <div class="alert alert-info text-center py-4 mb-0 rounded-3">
-                                            <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
-                                            لا توجد زيارة سابقة مرتبطة بهذه العملية.
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
+                                            {{-- Section 1: Main Procedure Summary & Change Type Option --}}
+                                            <div class="clin-section-card mb-3">
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                                    <div>
+                                                        <div class="clin-section-title text-primary mb-1">
+                                                            <i class="fas fa-scalpel"></i> نوع العملية الرئيسي والتصنيف
+                                                        </div>
+                                                        <div class="fw-bold text-dark fs-5">{{ $surgery->surgery_type ?? 'غير محدد' }}</div>
+                                                    </div>
 
-            {{-- TAB 2: نوع العملية والإضافات --}}
-            @if(isset($visibleTabs['detail_type']))
-                @php
-                    $canWriteType = $visibleTabs['detail_type']['can_write'];
-                    $protocol = $surgery->surgeonStation?->monitoring_protocol ?? null;
-                    $typeChanges = $surgery->surgeryTypeChanges()->latest()->get();
-                @endphp
-                <div class="tab-pane fade {{ $activeTab === 'detail_type' ? 'show active' : '' }}" id="pane-detail_type" role="tabpanel" aria-labelledby="tab-btn-detail_type">
-                    <div class="card clin-tab-card">
-                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <h6 class="fw-bold text-primary mb-0">
-                                    <i class="fas fa-procedures me-2"></i>نوع العملية والعمليات الإضافية
-                                </h6>
-                                @if($canWriteType)
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
-                                @else
-                                    <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-eye me-1"></i>قراءة فقط</span>
-                                @endif
-                            </div>
+                                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                                        @if($surgery->surgery_type_detail)
+                                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                                                <i class="fas fa-tag me-1"></i>التصنيف: {{ $surgery->surgery_type_detail }}
+                                                            </span>
+                                                        @endif
+                                                        @if($currentAnesthesiaType)
+                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                                                <i class="fas fa-syringe me-1"></i>التخدير: {{ $currentAnesthesiaType }}
+                                                            </span>
+                                                        @endif
+                                                        @if($protocol)
+                                                            <span class="badge bg-dark-subtle text-dark border px-2 py-1">
+                                                                <i class="fas fa-chart-line me-1"></i>المراقبة:
+                                                                @switch($protocol)
+                                                                    @case('standard') قياسي @break
+                                                                    @case('fluid_monitoring') مراقبة السوائل @break
+                                                                    @case('intensive') مكثف @break
+                                                                    @default {{ $protocol }}
+                                                                @endswitch
+                                                            </span>
+                                                        @endif
 
-                            {{-- Section 1: Main Procedure Summary & Classification Chips --}}
-                            <div class="clin-section-card">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                                    <div>
-                                        <div class="clin-section-title text-primary mb-1">
-                                            <i class="fas fa-scalpel"></i> نوع العملية الرئيسي والتصنيف
-                                        </div>
-                                        <div class="fw-bold text-dark fs-5">{{ $surgery->surgery_type ?? 'غير محدد' }}</div>
-                                    </div>
-
-                                    <div class="d-flex flex-wrap align-items-center gap-2">
-                                        @if($surgery->surgery_type_detail)
-                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
-                                                <i class="fas fa-tag me-1"></i>التصنيف: {{ $surgery->surgery_type_detail }}
-                                            </span>
-                                        @endif
-                                        @if($currentAnesthesiaType)
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
-                                                <i class="fas fa-syringe me-1"></i>التخدير: {{ $currentAnesthesiaType }}
-                                            </span>
-                                        @endif
-                                        @if($protocol)
-                                            <span class="badge bg-dark-subtle text-dark border px-2 py-1">
-                                                <i class="fas fa-chart-line me-1"></i>المراقبة:
-                                                @switch($protocol)
-                                                    @case('standard') قياسي @break
-                                                    @case('fluid_monitoring') مراقبة السوائل @break
-                                                    @case('intensive') مكثف @break
-                                                    @default {{ $protocol }}
-                                                @endswitch
-                                            </span>
-                                        @endif
-
-                                        @if($canWriteType)
-                                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="toggleSurgeryTypeArea()">
-                                                <i class="fas fa-exchange-alt me-1"></i>تغيير نوع العملية
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                @if($canWriteType)
-                                    <div id="surgeryTypeChangeArea" style="display: none;" class="mt-3 p-3 border rounded-3 bg-white">
-                                        <input type="hidden" id="surgeryTypeCsrf" value="{{ csrf_token() }}">
-                                        <div class="row g-2">
-                                            <div class="col-md-8">
-                                                <input type="text" id="surgeryTypeSearch" class="form-control form-control-sm mb-2" placeholder="ابحث عن نوع العملية..." oninput="filterSurgeryTypes()">
-                                                <select id="surgery_type_select" class="form-select form-select-sm border-primary" size="6" onchange="toggleSurgeryTypeInput()">
-                                                    <option value="">-- اختر نوع العملية --</option>
-                                                    @foreach($surgicalOperations->groupBy('category') as $category => $operations)
-                                                        <optgroup label="{{ $category }}">
-                                                            @foreach($operations as $op)
-                                                                <option value="{{ $op->name }}" data-op-id="{{ $op->id }}">{{ $op->name }}</option>
-                                                            @endforeach
-                                                        </optgroup>
-                                                    @endforeach
-                                                    <option value="other">أخرى (يدوي)</option>
-                                                </select>
-                                                <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
-                                                    <input type="text" id="custom_surgery_type" class="form-control form-control-sm border-primary" placeholder="اكتب نوع العملية يدوياً...">
+                                                        @if($canWriteType)
+                                                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="toggleSurgeryTypeArea()">
+                                                                <i class="fas fa-exchange-alt me-1"></i>تغيير نوع العملية
+                                                            </button>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div class="col-md-4 d-flex align-items-end gap-2">
-                                                <button type="button" class="btn btn-primary btn-sm" onclick="submitSurgeryTypeChange()">
-                                                    <i class="fas fa-check me-1"></i>تأكيد
-                                                </button>
-                                                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSurgeryTypeArea()">إلغاء</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
 
-                            {{-- Section 1.5: Direct Procedure Notes (surgical_notes) --}}
-                            <div class="clin-section-card clin-surface-white">
-                                @if($canWriteType)
-                                    <form id="detailTypeNotesForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="hidden" name="tab" value="detail_type">
-                                @endif
-                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                                            <label for="surgical_notes" class="clin-section-title text-primary mb-0">
-                                                <i class="fas fa-sticky-note"></i> ملاحظات نوع العملية
-                                            </label>
-                                            @if($canWriteType)
-                                                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm">
-                                                    <i class="fas fa-save me-1"></i>حفظ الملاحظات
-                                                </button>
-                                            @endif
-                                        </div>
-                                        <textarea id="surgical_notes" @if($canWriteType) name="surgical_notes" @else readonly disabled @endif class="form-control clin-compact-textarea {{ $canWriteType ? 'border-primary-subtle' : 'bg-light' }}" rows="2" placeholder="أدخل أي ملاحظات أو تفاصيل إضافية متعلقة بنوع العملية...">{{ old('surgical_notes', $surgery->surgical_notes) }}</textarea>
-                                @if($canWriteType)
-                                    </form>
-                                @endif
-                            </div>
-
-                            {{-- Section 2: Side-by-Side Additional Operations & Type Change Log --}}
-                            <div class="row g-3 align-items-start">
-                                <div class="col-lg-7">
-                                    <div class="clin-section-card clin-surface-white h-100">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <span class="clin-section-title text-success">
-                                                <i class="fas fa-plus-circle"></i> العمليات الإضافية / التكميلية ({{ $surgery->additionalOperations->count() }})
-                                            </span>
-                                            @if($canWriteType)
-                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="toggleAddOperationArea()">
-                                                    <i class="fas fa-plus me-1"></i>إضافة عملية
-                                                </button>
-                                            @endif
-                                        </div>
-
-                                        @if($surgery->additionalOperations->count() > 0)
-                                            <div class="table-responsive rounded-2 border">
-                                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.86rem;">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>العملية</th>
-                                                            <th>السعر</th>
-                                                            <th>ملاحظات</th>
-                                                            <th>التاريخ</th>
-                                                            @if($canWriteType)
-                                                                <th class="text-center" width="50">حذف</th>
-                                                            @endif
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach($surgery->additionalOperations as $addOp)
-                                                            <tr>
-                                                                <td class="fw-semibold">{{ $addOp->surgicalOperation?->name ?? 'غير محدد' }}</td>
-                                                                <td class="fw-bold text-success">{{ number_format($addOp->fee ?? 0) }} د.ع</td>
-                                                                <td class="small">{{ $addOp->notes ?? '-' }}</td>
-                                                                <td class="text-muted small">{{ optional($addOp->created_at)->format('Y-m-d H:i') }}</td>
-                                                                @if($canWriteType)
-                                                                    <td class="text-center">
-                                                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="submitDeleteAction('{{ route('surgeries.removeOperation', [$surgery, $addOp]) }}', 'حذف هذه العملية الإضافية؟')">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </td>
-                                                                @endif
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        @else
-                                            <div class="text-center py-3 text-muted small border rounded-2 bg-light">
-                                                لا توجد عمليات إضافية مسجلة.
-                                            </div>
-                                        @endif
-
-                                        @if($canWriteType)
-                                            <div id="addOperationArea" style="display: none;" class="mt-3 p-3 border rounded-3 bg-light">
-                                                <input type="hidden" id="addOpCsrf" value="{{ csrf_token() }}">
-                                                <div class="row g-2">
-                                                    <div class="col-md-8">
-                                                        <input type="text" id="addOpSearch" class="form-control form-control-sm mb-2" placeholder="ابحث عن العملية..." oninput="filterAddOperations()">
-                                                        <select id="add_op_select" class="form-select form-select-sm border-primary" size="6" multiple>
-                                                            @foreach($surgicalOperations->groupBy('category') as $category => $operations)
-                                                                <optgroup label="{{ $category }}">
-                                                                    @foreach($operations as $op)
-                                                                        <option value="{{ $op->id }}">{{ $op->name }}</option>
+                                                @if($canWriteType)
+                                                    <div id="surgeryTypeChangeArea" style="display: none;" class="mt-3 p-3 border rounded-3 bg-white">
+                                                        <input type="hidden" id="surgeryTypeCsrf" value="{{ csrf_token() }}">
+                                                        <div class="row g-2">
+                                                            <div class="col-md-8">
+                                                                <input type="text" id="surgeryTypeSearch" class="form-control form-control-sm mb-2" placeholder="ابحث عن نوع العملية..." oninput="filterSurgeryTypes()">
+                                                                <select id="surgery_type_select" class="form-select form-select-sm border-primary" size="6" onchange="toggleSurgeryTypeInput()">
+                                                                    <option value="">-- اختر نوع العملية --</option>
+                                                                    @foreach($surgicalOperations->groupBy('category') as $category => $operations)
+                                                                        <optgroup label="{{ $category }}">
+                                                                            @foreach($operations as $op)
+                                                                                <option value="{{ $op->name }}" data-op-id="{{ $op->id }}">{{ $op->name }}</option>
+                                                                            @endforeach
+                                                                        </optgroup>
                                                                     @endforeach
-                                                                </optgroup>
-                                                            @endforeach
-                                                        </select>
-                                                        <small class="text-muted d-block mt-1">اضغط Ctrl + اختر لاختيار عدة عمليات</small>
+                                                                    <option value="other">أخرى (يدوي)</option>
+                                                                </select>
+                                                                <div id="custom_surgery_type_wrapper" style="display: none;" class="mt-2">
+                                                                    <input type="text" id="custom_surgery_type" class="form-control form-control-sm border-primary" placeholder="اكتب نوع العملية يدوياً...">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-4 d-flex align-items-end gap-2">
+                                                                <button type="button" class="btn btn-primary btn-sm" onclick="submitSurgeryTypeChange()">
+                                                                    <i class="fas fa-check me-1"></i>تأكيد
+                                                                </button>
+                                                                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSurgeryTypeArea()">إلغاء</button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div class="col-md-4 d-flex flex-column gap-2">
-                                                        <textarea id="add_op_notes" class="form-control form-control-sm" rows="3" placeholder="ملاحظات..."></textarea>
-                                                        <button type="button" class="btn btn-success btn-sm" onclick="submitAddOperation()">
-                                                            <i class="fas fa-check me-1"></i>إضافة
-                                                        </button>
-                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAddOperationArea()">إلغاء</button>
+                                                @endif
+                                            </div>
+
+                                            {{-- Section 2: Direct Procedure Notes (surgical_notes) --}}
+                                            <div class="clin-section-card clin-surface-white mb-3">
+                                                @if($canWriteType)
+                                                    <form id="detailTypeNotesForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="tab" value="detail_type">
+                                                @endif
+                                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                                            <label for="surgical_notes" class="clin-section-title text-primary mb-0">
+                                                                <i class="fas fa-sticky-note"></i> ملاحظات نوع العملية
+                                                            </label>
+                                                            @if($canWriteType)
+                                                                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm">
+                                                                    <i class="fas fa-save me-1"></i>حفظ الملاحظات
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                        <textarea id="surgical_notes" @if($canWriteType) name="surgical_notes" @else readonly disabled @endif class="form-control clin-compact-textarea {{ $canWriteType ? 'border-primary-subtle' : 'bg-light' }}" rows="2" placeholder="أدخل أي ملاحظات أو تفاصيل إضافية متعلقة بنوع العملية...">{{ old('surgical_notes', $surgery->surgical_notes) }}</textarea>
+                                                @if($canWriteType)
+                                                    </form>
+                                                @endif
+                                            </div>
+
+                                            {{-- Section 3: Side-by-Side Additional Operations & Type Change Log --}}
+                                            <div class="row g-3 align-items-start">
+                                                <div class="col-lg-7">
+                                                    <div class="clin-section-card clin-surface-white h-100">
+                                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                                            <span class="clin-section-title text-success">
+                                                                <i class="fas fa-plus-circle"></i> العمليات الإضافية / التكميلية ({{ $surgery->additionalOperations->count() }})
+                                                            </span>
+                                                            @if($canWriteType)
+                                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="toggleAddOperationArea()">
+                                                                    <i class="fas fa-plus me-1"></i>إضافة عملية
+                                                                </button>
+                                                            @endif
+                                                        </div>
+
+                                                        @if($surgery->additionalOperations->count() > 0)
+                                                            <div class="table-responsive rounded-2 border">
+                                                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.86rem;">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>العملية</th>
+                                                                            <th>السعر</th>
+                                                                            <th>ملاحظات</th>
+                                                                            <th>التاريخ</th>
+                                                                            @if($canWriteType)
+                                                                                <th class="text-center" width="50">حذف</th>
+                                                                            @endif
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach($surgery->additionalOperations as $addOp)
+                                                                            <tr>
+                                                                                <td class="fw-semibold">{{ $addOp->surgicalOperation?->name ?? 'غير محدد' }}</td>
+                                                                                <td class="fw-bold text-success">{{ number_format($addOp->fee ?? 0) }} د.ع</td>
+                                                                                <td class="small">{{ $addOp->notes ?? '-' }}</td>
+                                                                                <td class="text-muted small">{{ optional($addOp->created_at)->format('Y-m-d H:i') }}</td>
+                                                                                @if($canWriteType)
+                                                                                    <td class="text-center">
+                                                                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="submitDeleteAction('{{ route('surgeries.removeOperation', [$surgery, $addOp]) }}', 'حذف هذه العملية الإضافية؟')">
+                                                                                            <i class="fas fa-trash"></i>
+                                                                                        </button>
+                                                                                    </td>
+                                                                                @endif
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        @else
+                                                            <div class="text-center py-3 text-muted small border rounded-2 bg-light">
+                                                                لا توجد عمليات إضافية مسجلة.
+                                                            </div>
+                                                        @endif
+
+                                                        @if($canWriteType)
+                                                            <div id="addOperationArea" style="display: none;" class="mt-3 p-3 border rounded-3 bg-light">
+                                                                <input type="hidden" id="addOpCsrf" value="{{ csrf_token() }}">
+                                                                <div class="row g-2">
+                                                                    <div class="col-md-8">
+                                                                        <input type="text" id="addOpSearch" class="form-control form-control-sm mb-2" placeholder="ابحث عن العملية..." oninput="filterAddOperations()">
+                                                                        <select id="add_op_select" class="form-select form-select-sm border-primary" size="6" multiple>
+                                                                            @foreach($surgicalOperations->groupBy('category') as $category => $operations)
+                                                                                <optgroup label="{{ $category }}">
+                                                                                    @foreach($operations as $op)
+                                                                                        <option value="{{ $op->id }}">{{ $op->name }}</option>
+                                                                                    @endforeach
+                                                                                </optgroup>
+                                                                            @endforeach
+                                                                        </select>
+                                                                        <small class="text-muted d-block mt-1">اضغط Ctrl + اختر لاختيار عدة عمليات</small>
+                                                                    </div>
+                                                                    <div class="col-md-4 d-flex flex-column gap-2">
+                                                                        <textarea id="add_op_notes" class="form-control form-control-sm" rows="3" placeholder="ملاحظات..."></textarea>
+                                                                        <button type="button" class="btn btn-success btn-sm" onclick="submitAddOperation()">
+                                                                            <i class="fas fa-check me-1"></i>إضافة
+                                                                        </button>
+                                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAddOperationArea()">إلغاء</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-lg-5">
+                                                    <div class="clin-section-card clin-surface-white h-100">
+                                                        <div class="clin-section-title text-secondary mb-2">
+                                                            <i class="fas fa-history"></i> سجل تغييرات نوع العملية ({{ $typeChanges->count() }})
+                                                        </div>
+                                                        @if($typeChanges->count() > 0)
+                                                            <div class="table-responsive rounded-2 border">
+                                                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem;">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>القديم ← الجديد</th>
+                                                                            <th>التاريخ / بواسطة</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach($typeChanges as $change)
+                                                                            <tr>
+                                                                                <td>
+                                                                                    <div class="text-danger small"><s>{{ $change->old_type ?? '-' }}</s></div>
+                                                                                    <div class="text-success fw-bold">{{ $change->new_type }}</div>
+                                                                                </td>
+                                                                                <td class="text-muted small">
+                                                                                    <div>{{ $change->created_at->format('Y-m-d h:i A') }}</div>
+                                                                                    <div>{{ $change->changedBy?->name ?? 'غير معروف' }}</div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        @else
+                                                            <div class="text-center py-3 text-muted small border rounded-2 bg-light">
+                                                                لم يطرأ أي تغيير على نوع العملية الأساسي.
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <div class="col-lg-5">
-                                    <div class="clin-section-card clin-surface-white h-100">
-                                        <div class="clin-section-title text-secondary mb-2">
-                                            <i class="fas fa-history"></i> سجل تغييرات نوع العملية ({{ $typeChanges->count() }})
                                         </div>
-                                        @if($typeChanges->count() > 0)
-                                            <div class="table-responsive rounded-2 border">
-                                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem;">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>القديم ← الجديد</th>
-                                                            <th>التاريخ / بواسطة</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach($typeChanges as $change)
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="text-danger small"><s>{{ $change->old_type ?? '-' }}</s></div>
-                                                                    <div class="text-success fw-bold">{{ $change->new_type }}</div>
-                                                                </td>
-                                                                <td class="text-muted small">
-                                                                    <div>{{ $change->created_at->format('Y-m-d h:i A') }}</div>
-                                                                    <div>{{ $change->changedBy?->name ?? 'غير معروف' }}</div>
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        @else
-                                            <div class="text-center py-3 text-muted small border rounded-2 bg-light">
-                                                لم يطرأ أي تغيير على نوع العملية الأساسي.
-                                            </div>
-                                        @endif
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
