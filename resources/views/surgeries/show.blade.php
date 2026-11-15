@@ -1605,51 +1605,83 @@
                                                 {{-- 3. طبيب التخدير 1 --}}
                                                 <div class="col-lg col-md-4 col-sm-6">
                                                     <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
-                                                        <label for="team_anesthesiologist_id" class="form-label text-dark small fw-semibold mb-0">
+                                                        <label for="team_anesthesiologist_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-syringe text-success me-1"></i>طبيب التخدير 1:
                                                         </label>
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
                                                     </div>
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text bg-light text-success"><i class="fas fa-syringe"></i></span>
-                                                        @if($canWriteTeamTiming)
-                                                            <select id="team_anesthesiologist_id" name="anesthesiologist_id" class="form-select form-select-sm border-success-subtle">
-                                                                <option value="">اختر طبيب التخدير 1...</option>
-                                                                @foreach($anesthesiaDoctors as $doctor)
-                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_id', $primaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                                    </option>
-                                                                @endforeach
-                                                            </select>
-                                                        @else
-                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $primaryAnesthName }}" readonly disabled>
-                                                        @endif
-                                                    </div>
+                                                    @php
+                                                        $selectedAnesth1Doc = $anesthesiaDoctors->firstWhere('id', old('anesthesiologist_id', $primaryAnesthId));
+                                                        $savedAnesth1Name = $selectedAnesth1Doc
+                                                            ? 'د. ' . ($selectedAnesth1Doc->user?->full_name ?? $selectedAnesth1Doc->user?->name ?? 'طبيب تخدير')
+                                                            : ($primaryAnesthId && $primaryAnesthName !== 'غير محدد' ? (str_starts_with($primaryAnesthName, 'د. ') ? $primaryAnesthName : 'د. ' . $primaryAnesthName) : '');
+                                                    @endphp
+                                                    <input type="hidden" id="team_anesthesiologist_id" name="anesthesiologist_id" value="{{ old('anesthesiologist_id', $primaryAnesthId) }}">
+                                                    @if($canWriteTeamTiming)
+                                                        <div class="position-relative" id="anesth1AutocompleteWrapper">
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text bg-light text-success"><i class="fas fa-syringe"></i></span>
+                                                                <input type="text" id="team_anesthesiologist_name"
+                                                                       class="form-control form-control-sm border-success-subtle"
+                                                                       autocomplete="off"
+                                                                       placeholder="اختيار أو بحث طبيب..."
+                                                                       value="{{ $savedAnesth1Name }}">
+                                                                <button type="button" class="btn btn-outline-secondary {{ $savedAnesth1Name ? '' : 'd-none' }}" id="clearAnesth1Btn" title="مسح">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-success" id="toggleAnesth1MenuBtn" title="عرض القائمة">
+                                                                    <i class="fas fa-chevron-down"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div id="anesthesiaDoctors1Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                        </div>
+                                                    @else
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-success"><i class="fas fa-syringe"></i></span>
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAnesth1Name ?: 'غير محدد' }}" readonly disabled>
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                                 {{-- 4. طبيب التخدير 2 --}}
                                                 <div class="col-lg col-md-6 col-sm-6">
                                                     <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
-                                                        <label for="team_anesthesiologist_2_id" class="form-label text-dark small fw-semibold mb-0">
+                                                        <label for="team_anesthesiologist_2_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-user-md text-info me-1"></i>طبيب التخدير 2:
                                                         </label>
                                                         <span class="badge bg-info-subtle text-info border border-info-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
                                                     </div>
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text bg-light text-info"><i class="fas fa-user-md"></i></span>
-                                                        @if($canWriteTeamTiming)
-                                                            <select id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" class="form-select form-select-sm border-info-subtle">
-                                                                <option value="">اختر طبيب التخدير 2...</option>
-                                                                @foreach($anesthesiaDoctors as $doctor)
-                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_2_id', $secondaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                                    </option>
-                                                                @endforeach
-                                                            </select>
-                                                        @else
-                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $secondaryAnesthName }}" readonly disabled>
-                                                        @endif
-                                                    </div>
+                                                    @php
+                                                        $selectedAnesth2Doc = $anesthesiaDoctors->firstWhere('id', old('anesthesiologist_2_id', $secondaryAnesthId));
+                                                        $savedAnesth2Name = $selectedAnesth2Doc
+                                                            ? 'د. ' . ($selectedAnesth2Doc->user?->full_name ?? $selectedAnesth2Doc->user?->name ?? 'طبيب تخدير')
+                                                            : ($secondaryAnesthId && $secondaryAnesthName !== 'غير محدد' ? (str_starts_with($secondaryAnesthName, 'د. ') ? $secondaryAnesthName : 'د. ' . $secondaryAnesthName) : '');
+                                                    @endphp
+                                                    <input type="hidden" id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" value="{{ old('anesthesiologist_2_id', $secondaryAnesthId) }}">
+                                                    @if($canWriteTeamTiming)
+                                                        <div class="position-relative" id="anesth2AutocompleteWrapper">
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text bg-light text-info"><i class="fas fa-user-md"></i></span>
+                                                                <input type="text" id="team_anesthesiologist_2_name"
+                                                                       class="form-control form-control-sm border-info-subtle"
+                                                                       autocomplete="off"
+                                                                       placeholder="اختيار أو بحث طبيب..."
+                                                                       value="{{ $savedAnesth2Name }}">
+                                                                <button type="button" class="btn btn-outline-secondary {{ $savedAnesth2Name ? '' : 'd-none' }}" id="clearAnesth2Btn" title="مسح">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-info" id="toggleAnesth2MenuBtn" title="عرض القائمة">
+                                                                    <i class="fas fa-chevron-down"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div id="anesthesiaDoctors2Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                        </div>
+                                                    @else
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-info"><i class="fas fa-user-md"></i></span>
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAnesth2Name ?: 'غير محدد' }}" readonly disabled>
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                                 {{-- 5. مساعد التخدير --}}
@@ -2729,6 +2761,13 @@
     // ================= منظومة القائمة المنسدلة الذكية لمساعد الجراح (مثل التصنيف الدولي للأمراض) =================
     window.surgicalAssistantsData = {!! json_encode($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};
     window.anesthesiaAssistantsData = {!! json_encode($anesthesiaAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};
+    window.anesthesiaDoctorsData = {!! json_encode(collect($anesthesiaDoctors ?? [])->map(function($doc) {
+        return [
+            'id' => $doc->id,
+            'name' => 'د. ' . ($doc->user?->full_name ?? $doc->user?->name ?? 'طبيب تخدير'),
+            'specialization' => $doc->specialization ?? 'طبيب تخدير',
+        ];
+    })->values(), JSON_UNESCAPED_UNICODE) !!};
 
     function setupSurgicalAssistantAutocomplete() {
         const input = document.getElementById('surgical_assistant_name');
@@ -2966,14 +3005,142 @@
         });
     }
 
+    function setupAnesthesiaDoctorAutocomplete(slotNum) {
+        const hiddenInput = document.getElementById(slotNum === 1 ? 'team_anesthesiologist_id' : 'team_anesthesiologist_2_id');
+        const input = document.getElementById(slotNum === 1 ? 'team_anesthesiologist_name' : 'team_anesthesiologist_2_name');
+        const menu = document.getElementById(slotNum === 1 ? 'anesthesiaDoctors1Menu' : 'anesthesiaDoctors2Menu');
+        const clearBtn = document.getElementById(slotNum === 1 ? 'clearAnesth1Btn' : 'clearAnesth2Btn');
+        const toggleBtn = document.getElementById(slotNum === 1 ? 'toggleAnesth1MenuBtn' : 'toggleAnesth2MenuBtn');
+        const wrapper = document.getElementById(slotNum === 1 ? 'anesth1AutocompleteWrapper' : 'anesth2AutocompleteWrapper');
+        const badgeColor = slotNum === 1 ? 'success' : 'info';
+        const docIcon = slotNum === 1 ? 'fa-syringe' : 'fa-user-md';
+
+        if (!input || !menu || !hiddenInput) return;
+
+        function renderDoctorOptions(filterText = '') {
+            const query = (filterText || '').trim().toLowerCase();
+            const list = window.anesthesiaDoctorsData || [];
+
+            let matched = list.filter(item => {
+                const name = (item.name || '').toLowerCase();
+                const spec = (item.specialization || '').toLowerCase();
+                return !query || name.includes(query) || spec.includes(query);
+            });
+
+            if (matched.length === 0) {
+                menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا يوجد أطباء تخدير مطابقين للبحث</div>';
+                menu.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+            matched.forEach(item => {
+                const isSelected = String(hiddenInput.value) === String(item.id);
+                const selectedClass = isSelected ? `bg-${badgeColor}-subtle border-${badgeColor}` : '';
+                const specBadge = `<span class="badge bg-${badgeColor}-subtle text-${badgeColor} border small">${item.specialization || 'طبيب تخدير'}</span>`;
+
+                html += `
+                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 anesth-doctor-option-item-${slotNum} ${selectedClass}" style="cursor: pointer;" data-doctor-id="${item.id}" data-doctor-name="${item.name.replace(/"/g, '&quot;')}">
+                        <div class="d-flex align-items-center">
+                            <i class="fas ${docIcon} text-${badgeColor} me-2"></i>
+                            <strong class="text-dark">${item.name}</strong>
+                        </div>
+                        ${specBadge}
+                    </div>
+                `;
+            });
+
+            menu.innerHTML = html;
+            menu.style.display = 'block';
+
+            menu.querySelectorAll(`.anesth-doctor-option-item-${slotNum}`).forEach(el => {
+                el.addEventListener('click', function() {
+                    const id = this.getAttribute('data-doctor-id');
+                    const name = this.getAttribute('data-doctor-name');
+                    if (id) selectDoctor(id, name);
+                });
+            });
+        }
+
+        function selectDoctor(id, name) {
+            hiddenInput.value = id;
+            input.value = name;
+            if (clearBtn) clearBtn.classList.remove('d-none');
+            menu.style.display = 'none';
+        }
+
+        input.addEventListener('focus', function() {
+            renderDoctorOptions(this.value);
+        });
+
+        input.addEventListener('input', function() {
+            if (!this.value.trim()) {
+                hiddenInput.value = '';
+                if (clearBtn) clearBtn.classList.add('d-none');
+            } else {
+                if (clearBtn) clearBtn.classList.remove('d-none');
+            }
+            renderDoctorOptions(this.value);
+        });
+
+        input.addEventListener('change', function() {
+            const query = this.value.trim().toLowerCase();
+            if (!query) {
+                hiddenInput.value = '';
+                if (clearBtn) clearBtn.classList.add('d-none');
+                return;
+            }
+            const list = window.anesthesiaDoctorsData || [];
+            const exact = list.find(item => item.name.toLowerCase() === query || item.name.replace(/^د\.\s*/, '').toLowerCase() === query);
+            if (exact) {
+                hiddenInput.value = exact.id;
+                input.value = exact.name;
+                if (clearBtn) clearBtn.classList.remove('d-none');
+            }
+        });
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (menu.style.display === 'block') {
+                    menu.style.display = 'none';
+                } else {
+                    renderDoctorOptions('');
+                    input.focus();
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                hiddenInput.value = '';
+                input.value = '';
+                this.classList.add('d-none');
+                renderDoctorOptions('');
+                input.focus();
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (wrapper && !wrapper.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             setupSurgicalAssistantAutocomplete();
+            setupAnesthesiaDoctorAutocomplete(1);
+            setupAnesthesiaDoctorAutocomplete(2);
             setupAnesthesiaAssistantAutocomplete();
             initSinglePageNavigation();
         });
     } else {
         setupSurgicalAssistantAutocomplete();
+        setupAnesthesiaDoctorAutocomplete(1);
+        setupAnesthesiaDoctorAutocomplete(2);
         setupAnesthesiaAssistantAutocomplete();
         initSinglePageNavigation();
     }
