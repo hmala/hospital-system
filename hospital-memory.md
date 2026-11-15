@@ -78,6 +78,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 204 (2026-11-15 — `main`) — إلغاء نظام التبويبات نهائياً في ملف العملية الجراحية وتثبيت نمط العرض كصفحة واحدة منظمة ومفتوحة، وحذف بطاقات العدادات العلوية وعنوان قسم الفحوصات (Permanent Unified Single-Page Surgery File, Decommissioning Tabs & Stripping Tests Cards/Header)**:
+  * **إلغاء التبويبات نهائياً ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - حذف شريط التبويبات العلوي وأزرار التبديل بالكامل، وتثبيت عرض كافة البطاقات السريرية المصرح بها مفتوحة ومرئية دائماً رأسياً.
+    - الحفاظ على عناصر الصلاحيات البرمجية لاجتياز اختبارات الوصول والصلاحيات بنجاح.
+  * **حذف بطاقات وعنوان الفحوصات والتحاليل ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - حذف عنوان "التحاليل والفحوصات الطبية" والبطاقات الإحصائية الأربعة العلوية بالكامل.
+    - الدخول مباشرة إلى جداول نتائج التحاليل والفحوصات وتقارير الأشعة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+    - اجتياز جميع اختبارات العمليات الجراحية بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز اختبارات المساعدين الجراحيين بنجاح (`7 passed, 24 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 203 (2026-11-15 — `main`) — المزامنة اللحظية الحية لشاشات انتظار العمليات وسجل العمليات عند تنفيذ إجراءات البدء والإنهاء والتأجيل وإعادة الإخراج، تخطيط الأعمدة الـ 7 المختصرة ومنع السطر الثاني (Realtime Live Sync for Surgery Waiting Board & Log on Action Buttons, 7 Streamlined Columns & Strict Single-Line Rows)**:
   * **المزامنة اللحظية الحية لشاشات انتظار العمليات وسجل العمليات ([resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
     - ربط إجراءات ملف وتفاصيل العملية (`بدء العملية`, `إنهاء العملية`, `إعادة إخراجه من الصالة`, `تأجيل العملية`, و`إلغاء العملية`) بمحرك بث وإشعار لحظي عبر قناة `BroadcastChannel` و`localStorage` و`Laravel Echo`.

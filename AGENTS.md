@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 204: إلغاء نظام التبويبات نهائياً في ملف وتفاصيل العملية وتثبيت نمط الصفحة الواحدة المنظمة المفتوحة بالكامل Permanent Unified Continuous Single-Page Surgery File & Decommissioning Tabs System)
+
+### Done
+- **إلغاء نظام التبويبات وتثبيت الصفحة الواحدة المنظمة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف أزرار التبديل `surgeryViewModeGroup` (`[ 📄 صفحة واحدة ]` و `[ 📑 تبويبات ]`) بالكامل من ترويسة الصفحة.
+  * جعل كافة البطاقات والأقسام السريرية المصرح بها مفتوحة ومرئية دائماً رأسياً (`display: block !important`) بتسلسل انسيابي موحد.
+  * تحويل شريط العناوين العلوي إلى شريط وصول وقفز سلس (Sticky Quick-Jump Links) للتنقل السريع بين الأقسام بضغطة زر دون طي أو إخفاء أي قسم.
+  * دعم التمييز التلقائي للقسم النشط عبر التمرير (Scrollspy) وزر عائم للعودة للأعلى (`Back to Top`).
+  * الحفاظ التام على مصفوفة الصلاحيات (حجب غير المصرح، قفل القراءة فقط، وإتاحة حفظ الأقسام القابلة للتعديل).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز اختبارات ملف العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات المساعدين الجراحيين بنجاح 100% (`7 passed, 24 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 203: المزامنة اللحظية الحية لشاشات انتظار العمليات وسجل العمليات عند تنفيذ إجراءات البدء والإنهاء والتأجيل وإعادة الإخراج، تخطيط الأعمدة الـ 7 المختصرة ومنع السطر الثاني Realtime Live Sync for Surgery Waiting Board & Log on Action Buttons, 7 Streamlined Columns & Strict Single-Line Rows)
 
 ### Done

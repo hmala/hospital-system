@@ -354,14 +354,14 @@
         }
 
         /* ===== نمط الصفحة الواحدة الموحدة (Single Page View Mode) ===== */
-        .surgery-single-page-mode .tab-content > .tab-pane {
+        .tab-content > .tab-pane {
             display: block !important;
             opacity: 1 !important;
             visibility: visible !important;
             margin-bottom: 24px !important;
             scroll-margin-top: 95px;
         }
-        .surgery-single-page-mode .clin-tabs-wrapper {
+        .clin-tabs-wrapper {
             position: sticky;
             top: 10px;
             z-index: 1030;
@@ -374,16 +374,16 @@
             margin-bottom: 24px;
             transition: all 0.2s ease;
         }
-        .surgery-single-page-mode .clin-nav-tab {
+        .clin-nav-tab {
             cursor: pointer;
         }
-        .surgery-single-page-mode .clin-tab-card {
+        .clin-tab-card {
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
             border: 1px solid #e2e8f0;
             transition: box-shadow 0.2s ease, border-color 0.2s ease;
         }
-        .surgery-single-page-mode .clin-tab-card:hover {
+        .clin-tab-card:hover {
             box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
             border-color: #cbd5e1;
         }
@@ -417,16 +417,6 @@
         </nav>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
-            {{-- زر التبديل بين نمط الصفحة الواحدة ونمط التبويبات --}}
-            <div class="btn-group btn-group-sm rounded-pill p-0.5 bg-white border shadow-2xs me-1" role="group" id="surgeryViewModeGroup">
-                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold" id="btnModeSinglePage" title="عرض كافة الأقسام في صفحة واحدة متصلة">
-                    <i class="fas fa-file-alt me-1"></i> صفحة واحدة
-                </button>
-                <button type="button" class="btn btn-sm rounded-pill px-3 fw-bold" id="btnModeTabs" title="عرض الأقسام كعلامات تبويب منفصلة">
-                    <i class="fas fa-layer-group me-1"></i> تبويبات
-                </button>
-            </div>
-
             @can('manage surgery tab permissions')
                 <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                     <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
@@ -677,32 +667,11 @@
             <p class="text-muted mb-0">يرجى مراجعة إدارة المستشفى لمنحك الصلاحيات المناسبة لدورك الوظيفي.</p>
         </div>
     @else
-        {{-- Unified Horizontal Auto-Fit Tabs Bar --}}
-        <div class="clin-tabs-wrapper mb-3">
-            <ul class="clin-tabs-grid nav" id="surgeryDetailTabs" role="tablist">
-                @foreach($visibleTabs as $tKey => $tMeta)
-                    <li class="clin-tab-item" role="presentation">
-                        <button class="clin-nav-tab {{ $activeTab === $tKey ? 'active' : '' }}"
-                                id="tab-btn-{{ $tKey }}"
-                                data-bs-toggle="pill"
-                                data-bs-target="#pane-{{ $tKey }}"
-                                data-tab-key="{{ $tKey }}"
-                                type="button"
-                                role="tab"
-                                aria-controls="pane-{{ $tKey }}"
-                                aria-selected="{{ $activeTab === $tKey ? 'true' : 'false' }}"
-                                title="{{ $tMeta['label'] }}">
-                            <i class="{{ $tMeta['icon'] }} small"></i>
-                            <span>{{ $shortTabLabels[$tKey] ?? $tMeta['label'] }}</span>
-                            @if($tMeta['can_write'])
-                                <span class="badge-perm-dot badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
-                            @else
-                                <span class="badge-perm-dot badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
-                            @endif
-                        </button>
-                    </li>
-                @endforeach
-            </ul>
+        {{-- عناصر الصلاحيات البرمجية (شريط التبويبات ملغي كلياً والصفحة متصلة مباشرة) --}}
+        <div class="d-none" id="surgeryDetailTabs">
+            @foreach($visibleTabs as $tKey => $tMeta)
+                <span id="tab-btn-{{ $tKey }}"></span>
+            @endforeach
         </div>
 
         {{-- Unified Tab Content Panes --}}
@@ -713,40 +682,6 @@
                 <div class="tab-pane fade {{ $activeTab === 'detail_tests' ? 'show active' : '' }}" id="pane-detail_tests" role="tabpanel" aria-labelledby="tab-btn-detail_tests">
                     <div class="card clin-tab-card">
                         <div class="card-body p-4">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                <h6 class="fw-bold text-primary mb-0">
-                                    <i class="fas fa-vials me-2"></i>التحاليل والفحوصات الطبية
-                                </h6>
-                                <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-eye me-1"></i>سجل النتائج</span>
-                            </div>
-
-                            <div class="row g-3 mb-4">
-                                <div class="col-6 col-md-3">
-                                    <div class="rounded-3 p-3 text-center h-100" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;">
-                                        <div class="fw-bold fs-4 text-primary">{{ $surgery->labTests->count() }}</div>
-                                        <div class="small text-muted mt-1"><i class="fas fa-vial me-1"></i>تحليل مخبري</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="rounded-3 p-3 text-center h-100" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;">
-                                        <div class="fw-bold fs-4 text-success">{{ $surgery->radiologyTests->count() }}</div>
-                                        <div class="small text-muted mt-1"><i class="fas fa-x-ray me-1"></i>طلب أشعة</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="rounded-3 p-3 text-center h-100" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;">
-                                        <div class="fw-bold fs-4 text-warning">{{ $surgery->labTests->where('status','pending')->count() + $surgery->radiologyTests->where('status','pending')->count() }}</div>
-                                        <div class="small text-muted mt-1"><i class="fas fa-hourglass-half me-1"></i>بانتظار النتيجة</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="rounded-3 p-3 text-center h-100" style="background:linear-gradient(135deg,#fdf4ff,#f3e8ff);border:1px solid #e9d5ff;">
-                                        <div class="fw-bold fs-4" style="color:#7c3aed;">{{ $surgery->labTests->where('status','completed')->count() + $surgery->radiologyTests->where('status','completed')->count() }}</div>
-                                        <div class="small text-muted mt-1"><i class="fas fa-check-circle me-1"></i>مكتمل</div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <div class="row g-4">
                                 <div class="col-lg-6">
                                     <p class="fw-bold text-primary mb-2 pb-1 border-bottom">
@@ -2531,116 +2466,30 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             setupSurgicalAssistantAutocomplete();
-            initSurgeryViewMode();
+            initSinglePageNavigation();
         });
     } else {
         setupSurgicalAssistantAutocomplete();
-        initSurgeryViewMode();
+        initSinglePageNavigation();
     }
 
-    // ================= منظومة التبديل بين وضع الصفحة الواحدة وتبويبات العمليات =================
-    function initSurgeryViewMode() {
-        const app = document.getElementById('unifiedSurgeryDetailApp');
-        const btnSingle = document.getElementById('btnModeSinglePage');
-        const btnTabs = document.getElementById('btnModeTabs');
+    // ================= منظومة الصفحة الواحدة الموحدة =================
+    function initSinglePageNavigation() {
         const backToTopBtn = document.getElementById('btnBackToTopSurgery');
-        const tabButtons = document.querySelectorAll('#surgeryDetailTabs .clin-nav-tab');
-        const panes = document.querySelectorAll('#surgeryDetailTabContent .tab-pane');
 
-        if (!app || !btnSingle || !btnTabs) return;
-
-        // الوضع الافتراضي: نعتمد وضع الصفحة الواحدة (single_page) تلقائياً لموظفي العمليات أو بحسب اختيار المستخدم
-        const savedMode = localStorage.getItem('surgery_view_mode') || 'single_page';
-
-        function applyMode(mode) {
-            if (mode === 'single_page') {
-                app.classList.add('surgery-single-page-mode');
-                btnSingle.classList.add('active', 'btn-primary');
-                btnSingle.classList.remove('btn-light', 'text-muted');
-                btnTabs.classList.remove('active', 'btn-primary');
-                btnTabs.classList.add('btn-light', 'text-muted');
-
-                // حفظ أهداف التبويب وإلغاء سلوك التبويب الافتراضي لتمكين التمرير
-                tabButtons.forEach(btn => {
-                    const target = btn.getAttribute('data-bs-target') || btn.getAttribute('data-single-target');
-                    if (target) {
-                        btn.setAttribute('data-single-target', target);
-                        btn.removeAttribute('data-bs-toggle');
-                    }
-                });
-
-                localStorage.setItem('surgery_view_mode', 'single_page');
-
-                // إذا كان هناك tab في الرابط URL نقفز إليه مباشرة
-                const urlParams = new URLSearchParams(window.location.search);
-                const requestedTab = urlParams.get('tab');
-                if (requestedTab) {
-                    const targetPane = document.getElementById('pane-' + requestedTab);
-                    if (targetPane) {
-                        setTimeout(() => {
-                            targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 200);
-                    }
-                }
-            } else {
-                app.classList.remove('surgery-single-page-mode');
-                btnTabs.classList.add('active', 'btn-primary');
-                btnTabs.classList.remove('btn-light', 'text-muted');
-                btnSingle.classList.remove('active', 'btn-primary');
-                btnSingle.classList.add('btn-light', 'text-muted');
-
-                // إعادة سلوك التبويبات القياسي
-                tabButtons.forEach(btn => {
-                    btn.setAttribute('data-bs-toggle', 'pill');
-                    const target = btn.getAttribute('data-single-target') || btn.getAttribute('data-bs-target');
-                    if (target) btn.setAttribute('data-bs-target', target);
-                });
-
-                // تفعيل التبويب المحدد
-                const activeBtn = document.querySelector('#surgeryDetailTabs .clin-nav-tab.active') || tabButtons[0];
-                if (activeBtn) {
-                    const targetId = activeBtn.getAttribute('data-bs-target');
-                    panes.forEach(p => p.classList.remove('show', 'active'));
-                    const targetPane = document.querySelector(targetId);
-                    if (targetPane) targetPane.classList.add('show', 'active');
-                }
-
-                localStorage.setItem('surgery_view_mode', 'tabs');
+        // إذا كان هناك tab في الرابط URL نقفز إليه مباشرة
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedTab = urlParams.get('tab');
+        if (requestedTab) {
+            const targetPane = document.getElementById('pane-' + requestedTab);
+            if (targetPane) {
+                setTimeout(() => {
+                    targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
             }
         }
 
-        btnSingle.addEventListener('click', function() {
-            applyMode('single_page');
-        });
-
-        btnTabs.addEventListener('click', function() {
-            applyMode('tabs');
-        });
-
-        // النقر على أزرار الشريط العلوي للتمرير السلس في وضع الصفحة الواحدة
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                if (app.classList.contains('surgery-single-page-mode')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const targetSelector = this.getAttribute('data-single-target') || this.getAttribute('data-bs-target');
-                    const targetElement = document.querySelector(targetSelector);
-                    if (targetElement) {
-                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        tabButtons.forEach(b => b.classList.remove('active'));
-                        this.classList.add('active');
-                        const key = this.getAttribute('data-tab-key');
-                        if (key && window.history && window.history.replaceState) {
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('tab', key);
-                            window.history.replaceState({}, '', url.toString());
-                        }
-                    }
-                }
-            });
-        });
-
-        // متابعة التمرير لتحديث التبويب النشط وزر الصعود للأعلى
+        // إظهار وإخفاء زر الصعود للأعلى
         window.addEventListener('scroll', function() {
             if (backToTopBtn) {
                 if (window.scrollY > 350) {
@@ -2649,27 +2498,6 @@
                     backToTopBtn.style.display = 'none';
                 }
             }
-
-            if (!app.classList.contains('surgery-single-page-mode')) return;
-
-            let currentActiveId = '';
-            panes.forEach(pane => {
-                const rect = pane.getBoundingClientRect();
-                if (rect.top <= 170 && rect.bottom >= 170) {
-                    currentActiveId = '#' + pane.id;
-                }
-            });
-
-            if (currentActiveId) {
-                tabButtons.forEach(btn => {
-                    const target = btn.getAttribute('data-single-target') || btn.getAttribute('data-bs-target');
-                    if (target === currentActiveId) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-            }
         }, { passive: true });
 
         if (backToTopBtn) {
@@ -2677,8 +2505,6 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         }
-
-        applyMode(savedMode);
     }
 
     // ==========================================
