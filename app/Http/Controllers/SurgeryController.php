@@ -1030,6 +1030,10 @@ class SurgeryController extends Controller
 
         broadcast(new SurgeryUpdated($surgery));
 
+        if (! $request->expectsJson() && ! $request->ajax()) {
+            return redirect()->back()->with('success', 'تم تأجيل وتحديث موعد وصالة العملية الجراحية بنجاح');
+        }
+
         return response()->json([
             'success' => true,
             'surgery' => $surgery,

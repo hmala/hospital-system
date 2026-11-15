@@ -40,6 +40,10 @@ class LoginController extends Controller
             return route('nursing-station.index');
         }
 
+        if ($user && ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff')) {
+            return route('surgeries.index');
+        }
+
         return '/dashboard';
     }
 

@@ -37,6 +37,10 @@ Route::get('/', function () {
             return redirect()->route('nursing-station.index');
         }
 
+        if ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff') {
+            return redirect()->route('surgeries.index');
+        }
+
         if ($user->hasRole('doctor')) {
             return redirect()->route('doctor.visits.index');
         }

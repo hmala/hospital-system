@@ -168,6 +168,20 @@
             border-radius: 50%;
             display: inline-block;
         }
+        .sg-pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: sgPulse 1.8s infinite;
+        }
+        @keyframes sgPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
         .badge-status-completed {
             background: #f0fdf4;
             color: #15803d;
@@ -542,19 +556,34 @@
                 </div>
             </div>
 
-            {{-- Status & Operational Control Buttons --}}
+            {{-- Patient Status in OR & Operational Control Buttons --}}
             <div class="d-flex flex-wrap align-items-center gap-2 ms-auto ms-lg-0">
-                @if($surgery->status === 'scheduled')
-                    <span class="badge-status-modern badge-status-waiting"><span class="status-pulse-dot bg-secondary"></span>مجدولة</span>
-                @elseif($surgery->status === 'waiting')
-                    <span class="badge-status-modern badge-status-waiting"><span class="status-pulse-dot bg-info"></span>في الانتظار</span>
-                @elseif($surgery->status === 'in_progress')
-                    <span class="badge-status-modern badge-status-progress"><span class="status-pulse-dot bg-warning"></span>جارية الآن</span>
-                @elseif($surgery->status === 'completed')
-                    <span class="badge-status-modern badge-status-completed"><span class="status-pulse-dot bg-success"></span>مكتملة</span>
-                @else
-                    <span class="badge-status-modern badge-status-cancelled"><span class="status-pulse-dot bg-danger"></span>ملغاة</span>
-                @endif
+                @php
+                    $otStation = $surgery->operationTheaterStation;
+                    $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                    $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                @endphp
+
+                <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-pill border shadow-sm">
+                    <span class="small text-muted fw-bold d-none d-sm-inline" style="font-size: 0.8rem;">حالة المريض في الصالة:</span>
+                    @if($isOtCompleted)
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #10b981; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
+                            <i class="fas fa-check-double me-1.5"></i>انتهى (خرج من الصالة)
+                        </span>
+                    @elseif($isOtInProgress)
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #0284c7; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
+                            <span class="sg-pulse-dot me-1.5"></span>دخل الصالة (جارية)
+                        </span>
+                    @elseif($surgery->status === 'cancelled')
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #ef4444; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
+                            <i class="fas fa-times me-1.5"></i>ملغاة
+                        </span>
+                    @else
+                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #f59e0b; color: #1e293b; font-size: 0.86rem; letter-spacing: 0.2px;">
+                            <i class="fas fa-clock me-1.5 text-dark"></i>بالانتظار (لم يدخل بعد)
+                        </span>
+                    @endif
+                </div>
 
                 @if($user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries')))
                     @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
@@ -564,6 +593,9 @@
                                 <i class="fas fa-play me-1"></i>بدء العملية (دخول الصالة)
                             </button>
                         </form>
+                        <button type="button" class="btn btn-sm btn-outline-warning text-dark border-warning rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#postponeSurgeryModal">
+                            <i class="fas fa-calendar-alt me-1 text-warning"></i>تأجيل العملية
+                        </button>
                     @endif
 
                     @if($surgery->status === 'in_progress')
@@ -1929,6 +1961,49 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-danger">تأكيد إلغاء العملية</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Postpone / Reschedule -->
+<div class="modal fade" id="postponeSurgeryModal" tabindex="-1" aria-labelledby="postponeSurgeryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="postponeSurgeryModalLabel">
+                    <i class="fas fa-calendar-alt me-2 text-dark"></i>تأجيل موعد العملية الجراحية
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <form action="{{ route('surgeries.quick-update-schedule', $surgery) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">يمكنك تعديل تاريخ ووقت العملية لتأجيلها وإبقائها في قائمة الانتظار للموعد الجديد.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">تاريخ الموعد الجديد</label>
+                        <input type="date" name="scheduled_date" class="form-control" value="{{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : date('Y-m-d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">الوقت الجديد</label>
+                        <input type="time" name="scheduled_time" class="form-control" value="{{ $surgery->scheduled_time ? (is_string($surgery->scheduled_time) ? substr($surgery->scheduled_time, 11, 5) : $surgery->scheduled_time->format('H:i')) : '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">صالة العمليات (اختياري)</label>
+                        <select name="operation_theater_id" class="form-select">
+                            <option value="">-- بدون تحديد --</option>
+                            @foreach(\App\Models\OperationTheater::where('is_active', true)->orderBy('name')->get() as $ot)
+                                <option value="{{ $ot->id }}" {{ $surgery->operation_theater_id == $ot->id ? 'selected' : '' }}>
+                                    {{ $ot->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold rounded-pill px-4">حفظ وتأجيل الموعد</button>
                 </div>
             </form>
         </div>

@@ -49,6 +49,19 @@
             flex-shrink: 0;
         }
 
+        /* Fullscreen Flight Board - Hide System Sidebar & Maximize Space */
+        .sidebar,
+        .sidebar-backdrop {
+            display: none !important;
+        }
+        .main-content {
+            margin-right: 0 !important;
+            margin-left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 16px 20px !important;
+        }
+
         /* Modern Table Styling */
         .or-table-shell {
             border: 1px solid var(--or-border);
@@ -66,8 +79,8 @@
             color: #475569;
             font-weight: 700;
             font-size: 0.8rem;
-            letter-spacing: 0.3px;
-            padding: 14px 16px;
+            letter-spacing: 0.2px;
+            padding: 10px 12px;
             border-bottom: 2px solid var(--or-border);
             white-space: nowrap;
         }
@@ -82,8 +95,9 @@
             background-color: #f8fafc;
         }
         .or-master-table tbody td {
-            padding: 12px 16px;
+            padding: 9px 12px;
             vertical-align: middle;
+            font-size: 0.84rem;
         }
 
         /* Patient Avatar */
@@ -292,12 +306,6 @@
                 </a>
                 @endcan
 
-                @can('view surgeries')
-                <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" style="border-color: #cbd5e1; color: #334155;">
-                    <i class="fas fa-archive me-1 text-secondary"></i> الأرشيف العام
-                </a>
-                @endcan
-
                 <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="عرض مخصص لشاشات الـ TV وممرات العمليات">
                     <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">شاشة العرض (TV)</span>
                 </button>
@@ -308,184 +316,299 @@
             </div>
         </div>
 
-        {{-- Realtime Search Bar --}}
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-            <div class="position-relative flex-grow-1" style="max-width: 520px;">
-                <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                <input type="text" id="surgerySearchInput" class="form-control rounded-pill ps-5 pe-4 py-2 border" style="background: #f8fafc; font-size: 0.88rem;" placeholder="بحث فوري بالاسم، رقم الملف، الطبيب، العملية، رقم الغرفة...">
+        @php
+            $waitingSurgeriesList = $daySurgeries->filter(function($s) {
+                $otStation = $s->operationTheaterStation;
+                $isOtCompleted = ($s->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                $isOtInProgress = ($s->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                return !$isOtCompleted && !$isOtInProgress && $s->status !== 'cancelled';
+            })->values();
+
+            $inProgressSurgeriesList = $daySurgeries->filter(function($s) {
+                $otStation = $s->operationTheaterStation;
+                $isOtCompleted = ($s->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                $isOtInProgress = ($s->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+                return !$isOtCompleted && $isOtInProgress;
+            })->values();
+        @endphp
+
+        {{-- 2-Column Live Flight Boards: Waiting (Before OR) vs In Progress (Inside OR) --}}
+        <div class="row g-3">
+            {{-- العمود الأول: قبل دخول الصالة (بالانتظار) --}}
+            <div class="col-xl-6">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100" style="background: #ffffff; border: 1px solid #fde68a !important;">
+                    <div class="card-header py-3 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-bottom: 2px solid #f59e0b;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs" style="width: 32px; height: 32px; background: #f59e0b;">
+                                <i class="fas fa-clock" style="font-size: 0.9rem;"></i>
+                            </span>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">١. قبل دخول الصالة (بالانتظار)</h6>
+                                <small class="text-muted" style="font-size: 0.74rem;">المرضى المجدولون وبانتظار الدخول لصالة العمليات</small>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill px-3 py-1.5 fw-bold shadow-xs" style="background: #f59e0b; color: #1e293b; font-size: 0.82rem;">
+                            {{ $waitingSurgeriesList->count() }} بالانتظار
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="or-table-shell table-responsive mb-0" style="border: none; box-shadow: none;">
+                            <table class="or-master-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">المريض</th>
+                                        <th style="width: 27%;">نوع العملية</th>
+                                        <th style="width: 20%;">الطبيب الجراح</th>
+                                        <th style="width: 13%;">رقم الغرفة</th>
+                                        <th class="text-center" style="width: 15%;">حالة المريض في الصالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($waitingSurgeriesList as $surgery)
+                                    @php
+                                        $patientName = optional(optional($surgery->patient)->user)->name ?? 'غير محدد';
+                                        $phone = optional(optional($surgery->patient)->user)->phone;
+                                        $fileNumber = $surgery->patient->file_number ?? '-';
+                                        $doctorName = $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد';
+                                        $room = $surgery->room;
+                                        $rtype = $room ? $room->room_type : null;
+
+                                        $searchData = strtolower(
+                                            $patientName . ' ' .
+                                            $fileNumber . ' ' .
+                                            $surgery->surgery_type . ' ' .
+                                            $doctorName . ' ' .
+                                            ($room ? $room->room_number : '')
+                                        );
+
+                                        $rowTheme = 'row-status-waiting';
+                                        $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
+                                        $patientIcon = 'fas fa-user-clock text-warning';
+                                        $patientColor = 'text-dark';
+                                        $badgeHtml = '<span class="badge py-1.5 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #f59e0b; color: #1e293b; font-size: 0.8rem; letter-spacing: 0.2px;"><i class="fas fa-clock me-1 text-dark"></i>بالانتظار</span>';
+                                    @endphp
+                                    <tr class="surgery-row {{ $rowTheme }}" style="{{ $rowStyle }}" data-search="{{ $searchData }}" data-status="waiting" id="surgeryRow-{{ $surgery->id }}">
+                                        <td>
+                                            <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1.5 fw-bold text-decoration-none" style="font-size: 0.92rem;" title="فتح ملف وتفاصيل العملية">
+                                                <i class="{{ $patientIcon }} fs-6"></i>
+                                                <span class="{{ $patientColor }}">{{ $patientName }}</span>
+                                            </a>
+                                            @if($surgery->patient && $surgery->patient->age)
+                                                <div class="mt-0.5">
+                                                    <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.9rem;">
+                                                {{ $surgery->surgery_type }}
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $surgery->surgicalOperation->category }}</small>
+                                                @endif
+                                                @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <i class="fas fa-user-md text-success"></i>
+                                                <span class="fw-semibold small">
+                                                    @if($surgery->doctor && $surgery->doctor->user)
+                                                        د. {{ $surgery->doctor->user->name }}
+                                                    @elseif($surgery->surgeon_name)
+                                                        {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
+                                                    @else
+                                                        <span class="text-muted">غير محدد</span>
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if($room)
+                                                <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}" style="font-size: 0.75rem;">
+                                                    @if($rtype === 'vvip')
+                                                        <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
+                                                    @elseif($rtype === 'vip')
+                                                        <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                                    @else
+                                                        <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                    @endif
+                                                </span>
+                                            @else
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">بدون غرفة</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            {!! $badgeHtml !!}
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <div class="py-3">
+                                                <i class="fas fa-check-circle fa-2x mb-2 text-warning opacity-50 d-block"></i>
+                                                <div class="fw-bold fs-6 text-dark">لا يوجد مرضى بانتظار الدخول حالياً</div>
+                                                <div class="small text-muted mt-1">جميع المرضى إما داخل الصالة أو اكتملت عملياتهم</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="small text-muted fw-semibold">
-                عرض <span id="visibleRowCount" class="text-primary font-monospace fw-bold">{{ $daySurgeries->count() }}</span> من أصل <span class="font-monospace fw-bold">{{ $daySurgeries->count() }}</span> عملية
+
+            {{-- العمود الثاني: داخل صالة العمليات (جارية الآن) --}}
+            <div class="col-xl-6">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100" style="background: #ffffff; border: 1px solid #bae6fd !important;">
+                    <div class="card-header py-3 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 2px solid #0284c7;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs" style="width: 32px; height: 32px; background: #0284c7;">
+                                <i class="fas fa-procedures" style="font-size: 0.9rem;"></i>
+                            </span>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">٢. داخل صالة العمليات (جارية الآن)</h6>
+                                <small class="text-muted" style="font-size: 0.74rem;">العمليات الجراحية النشطة الجارية داخل الصالات حالياً</small>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1" style="background: #0284c7; color: #fff; font-size: 0.82rem;">
+                            <span class="sg-pulse-dot me-1"></span>
+                            {{ $inProgressSurgeriesList->count() }} جارية بالصالة
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="or-table-shell table-responsive mb-0" style="border: none; box-shadow: none;">
+                            <table class="or-master-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">المريض</th>
+                                        <th style="width: 27%;">نوع العملية</th>
+                                        <th style="width: 20%;">الطبيب الجراح</th>
+                                        <th style="width: 13%;">رقم الغرفة</th>
+                                        <th class="text-center" style="width: 15%;">حالة المريض في الصالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($inProgressSurgeriesList as $surgery)
+                                    @php
+                                        $patientName = optional(optional($surgery->patient)->user)->name ?? 'غير محدد';
+                                        $phone = optional(optional($surgery->patient)->user)->phone;
+                                        $fileNumber = $surgery->patient->file_number ?? '-';
+                                        $doctorName = $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد';
+                                        $room = $surgery->room;
+                                        $rtype = $room ? $room->room_type : null;
+
+                                        $searchData = strtolower(
+                                            $patientName . ' ' .
+                                            $fileNumber . ' ' .
+                                            $surgery->surgery_type . ' ' .
+                                            $doctorName . ' ' .
+                                            ($room ? $room->room_number : '')
+                                        );
+
+                                        $rowTheme = 'row-status-in-progress';
+                                        $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
+                                        $patientIcon = 'fas fa-procedures text-primary';
+                                        $patientColor = 'text-primary';
+                                        $badgeHtml = '<span class="badge py-1.5 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #0284c7; color: #fff; font-size: 0.8rem; letter-spacing: 0.2px;"><span class="sg-pulse-dot me-1"></span>دخل الصالة</span>';
+                                    @endphp
+                                    <tr class="surgery-row {{ $rowTheme }}" style="{{ $rowStyle }}" data-search="{{ $searchData }}" data-status="in_progress" id="surgeryRow-{{ $surgery->id }}">
+                                        <td>
+                                            <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1.5 fw-bold text-decoration-none" style="font-size: 0.92rem;" title="فتح ملف وتفاصيل العملية">
+                                                <i class="{{ $patientIcon }} fs-6"></i>
+                                                <span class="{{ $patientColor }}">{{ $patientName }}</span>
+                                            </a>
+                                            <div class="d-flex flex-wrap align-items-center gap-1 mt-0.5">
+                                                @if($surgery->patient && $surgery->patient->age)
+                                                    <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                                @endif
+                                                @if($surgery->operationTheater)
+                                                    <span class="badge bg-info-subtle text-info border px-1.5 py-0.5" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-door-closed me-0.5"></i>{{ $surgery->operationTheater->name }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.9rem;">
+                                                {{ $surgery->surgery_type }}
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
+                                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $surgery->surgicalOperation->category }}</small>
+                                                @endif
+                                                @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <i class="fas fa-user-md text-success"></i>
+                                                <span class="fw-semibold small">
+                                                    @if($surgery->doctor && $surgery->doctor->user)
+                                                        د. {{ $surgery->doctor->user->name }}
+                                                    @elseif($surgery->surgeon_name)
+                                                        {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
+                                                    @else
+                                                        <span class="text-muted">غير محدد</span>
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if($room)
+                                                <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}" style="font-size: 0.75rem;">
+                                                    @if($rtype === 'vvip')
+                                                        <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
+                                                    @elseif($rtype === 'vip')
+                                                        <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                                    @else
+                                                        <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                    @endif
+                                                </span>
+                                            @else
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">بدون غرفة</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            {!! $badgeHtml !!}
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <div class="py-3">
+                                                <i class="fas fa-procedures fa-2x mb-2 text-primary opacity-50 d-block"></i>
+                                                <div class="fw-bold fs-6 text-dark">لا توجد عمليات جارية داخل الصالة حالياً</div>
+                                                <div class="small text-muted mt-1">عند بدء أي عملية من تفاصيلها ستظهر هنا مباشرة</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        {{-- Master Flight Board Table (5 Consolidated Columns) --}}
-        <div class="or-table-shell table-responsive">
-            <table class="or-master-table">
-                <thead>
-                    <tr>
-                        <th style="width: 18%;">حالة المريض في الصالة</th>
-                        <th style="width: 26%;">المريض</th>
-                        <th style="width: 24%;">نوع العملية</th>
-                        <th style="width: 20%;">الطبيب الجراح</th>
-                        <th style="width: 12%;">رقم الغرفة</th>
-                    </tr>
-                </thead>
-                <tbody id="surgeriesTableBody">
-                    @forelse($daySurgeries as $surgery)
-                    @php
-                        $patientName = optional(optional($surgery->patient)->user)->name ?? 'غير محدد';
-                        $phone = optional(optional($surgery->patient)->user)->phone;
-                        $fileNumber = $surgery->patient->file_number ?? '-';
-                        $doctorName = $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد';
-                        $room = $surgery->room;
-                        $rtype = $room ? $room->room_type : null;
-                        $otStation = $surgery->operationTheaterStation;
-                        $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
-                        $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
-
-                        $searchData = strtolower(
-                            $patientName . ' ' .
-                            $fileNumber . ' ' .
-                            $surgery->surgery_type . ' ' .
-                            $doctorName . ' ' .
-                            ($room ? $room->room_number : '')
-                        );
-
-                        // Normalized status for interactive KPI filter
-                        $normalizedStatus = $surgery->status;
-                        if (in_array($normalizedStatus, ['waiting', 'checked_in'])) {
-                            $normalizedStatus = 'waiting';
-                        } elseif ($isOtCompleted) {
-                            $normalizedStatus = 'completed';
-                        }
-
-                        // Color theme per presence state (دخل / انتظار / انتهى)
-                        if ($isOtCompleted) {
-                            $rowTheme = 'row-status-completed';
-                            $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
-                            $patientIcon = 'fas fa-check-circle text-success';
-                            $patientColor = 'text-success';
-                            $badgeHtml = '<span class="badge bg-success text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-check-double me-1"></i>انتهى (خرج من الصالة)</span>';
-                        } elseif ($isOtInProgress) {
-                            $rowTheme = 'row-status-in-progress';
-                            $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
-                            $patientIcon = 'fas fa-procedures text-primary';
-                            $patientColor = 'text-primary';
-                            $badgeHtml = '<span class="badge bg-primary text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><span class="sg-pulse-dot me-1"></span>دخل الصالة (جارية)</span>';
-                        } elseif ($surgery->status === 'cancelled') {
-                            $rowTheme = 'row-status-cancelled';
-                            $rowStyle = 'background-color: rgba(239, 68, 68, 0.04); border-right: 4px solid #ef4444;';
-                            $patientIcon = 'fas fa-user-times text-danger';
-                            $patientColor = 'text-danger';
-                            $badgeHtml = '<span class="badge bg-danger text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-times me-1"></i>ملغاة</span>';
-                        } else {
-                            $rowTheme = 'row-status-waiting';
-                            $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
-                            $patientIcon = 'fas fa-user-clock text-warning';
-                            $patientColor = 'text-dark';
-                            $badgeHtml = '<span class="badge bg-warning text-dark py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-clock me-1"></i>بالانتظار (لم يدخل بعد)</span>';
-                        }
-                    @endphp
-                    <tr class="surgery-row {{ $rowTheme }}" style="{{ $rowStyle }}" data-search="{{ $searchData }}" data-status="{{ $normalizedStatus }}" id="surgeryRow-{{ $surgery->id }}">
-                        {{-- Col 1: Presence in OR (Stage / Status) --}}
-                        <td>
-                            {!! $badgeHtml !!}
-                        </td>
-
-                        {{-- Col 2: Patient --}}
-                        <td>
-                            <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1.5 fw-bold text-decoration-none" style="font-size: 0.96rem;" title="فتح ملف وتفاصيل العملية">
-                                <i class="{{ $patientIcon }} fs-5"></i>
-                                <span class="{{ $patientColor }}">{{ $patientName }}</span>
-                            </a>
-                            <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
-                                <span class="badge bg-white text-muted border font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ملف #{{ $fileNumber }}</span>
-                                @if($surgery->patient && $surgery->patient->age)
-                                    <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
-                                @endif
-                                @if($phone)
-                                    <span class="small text-muted" style="font-size: 0.75rem;">
-                                        <i class="fas fa-phone-alt me-0.5 text-secondary"></i>{{ $phone }}
-                                    </span>
-                                @endif
-                            </div>
-                        </td>
-
-                        {{-- Col 3: Surgery Type --}}
-                        <td>
-                            <div class="fw-bold text-dark" style="color: #0f172a !important; font-size: 0.94rem;">
-                                {{ $surgery->surgery_type }}
-                            </div>
-                            <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                                @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
-                                    <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
-                                @endif
-                                @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                        <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
-                                    </span>
-                                @else
-                                    <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                        <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
-                                    </span>
-                                @endif
-                            </div>
-                        </td>
-
-                        {{-- Col 4: Surgeon --}}
-                        <td>
-                            <div class="d-flex align-items-center gap-1">
-                                <i class="fas fa-user-md text-success"></i>
-                                <span class="fw-semibold">
-                                    @if($surgery->doctor && $surgery->doctor->user)
-                                        د. {{ $surgery->doctor->user->name }}
-                                    @elseif($surgery->surgeon_name)
-                                        {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
-                                    @else
-                                        <span class="text-muted">غير محدد</span>
-                                    @endif
-                                </span>
-                            </div>
-                        </td>
-
-                        {{-- Col 5: Room Number --}}
-                        <td>
-                            @if($room)
-                                <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
-                                    @if($rtype === 'vvip')
-                                        <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
-                                    @elseif($rtype === 'vip')
-                                        <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
-                                    @else
-                                        <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
-                                    @endif
-                                </span>
-                            @else
-                                <span class="badge bg-light text-muted border">بدون غرفة</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <div class="py-4">
-                                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center p-3 mb-2 text-muted" style="width: 70px; height: 70px;">
-                                    <i class="far fa-calendar-times fs-2"></i>
-                                </div>
-                                <div class="fw-bold fs-6 text-dark">لا توجد عمليات مسجلة في هذا اليوم</div>
-                                <div class="small text-muted mt-1">اختر يوماً آخر من التقويم في الأعلى أو قم بحجز عملية جديدة</div>
-                                @can('create surgeries')
-                                <a href="{{ route('surgeries.create') }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 mt-3 fw-bold">
-                                    <i class="fas fa-plus me-1"></i> حجز عملية الآن
-                                </a>
-                                @endcan
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
