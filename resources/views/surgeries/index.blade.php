@@ -300,18 +300,20 @@
             color: #475569;
             font-weight: 800;
             font-size: 0.8rem;
-            padding: 12px 14px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--sg-border);
             white-space: nowrap;
             text-align: right;
         }
         .sg-table tbody td {
-            padding: 12px 14px;
+            padding: 9px 12px;
             vertical-align: middle;
             border-bottom: 1px solid #f1f5f9;
             font-size: 0.86rem;
             color: #1e293b;
             background: #ffffff;
+            white-space: nowrap;
+            line-height: 1.2;
             transition: background 0.15s ease;
         }
         .sg-table tbody tr:hover td {
@@ -596,14 +598,11 @@
                     <table class="sg-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">#</th>
+                                <th class="text-center" style="width: 10%;" title="حالة المريض في الصالة">الحالة</th>
                                 <th>المريض</th>
                                 <th>نوع العملية</th>
                                 <th>الطبيب الجراح</th>
-                                <th>تاريخ وموعد العملية</th>
-                                <th>الغرفة</th>
-                                <th>حالة العملية</th>
-                                <th class="text-center" style="width: 140px;">الإجراءات</th>
+                                <th>رقم الغرفة</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -613,36 +612,66 @@
                                 $phone = optional(optional($surgery->patient)->user)->phone;
                                 $room = $surgery->room;
                                 $rtype = $room ? $room->room_type : null;
-                                $canManageSurgery = auth()->check() && (auth()->user()->hasRole(['surgery_staff', 'admin']) || 
-                                                   (auth()->user()->isDoctor() && auth()->user()->doctor && auth()->user()->doctor->id == $surgery->doctor_id));
+                                $otStation = $surgery->operationTheaterStation;
+                                $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                                $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+
+                                if ($isOtCompleted) {
+                                    $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
+                                    $patientIcon = 'fas fa-check-circle text-success';
+                                    $patientColor = 'text-success';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.72rem; letter-spacing: 0.2px;" title="Post-Op (خرج من الصالة)"><i class="fas fa-check-double me-1 text-success" style="font-size: 0.65rem;"></i>Post-Op</span>';
+                                } elseif ($isOtInProgress) {
+                                    $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
+                                    $patientIcon = 'fas fa-procedures text-primary';
+                                    $patientColor = 'text-primary';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; letter-spacing: 0.2px;" title="Intra-Op (داخل الصالة)"><span class="sg-pulse-dot me-1" style="width: 5px; height: 5px;"></span>Intra-Op</span>';
+                                } elseif ($surgery->status === 'cancelled') {
+                                    $rowStyle = 'background-color: rgba(239, 68, 68, 0.04); border-right: 4px solid #ef4444;';
+                                    $patientIcon = 'fas fa-user-times text-danger';
+                                    $patientColor = 'text-danger';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.72rem; letter-spacing: 0.2px;" title="Cancelled (ملغاة)"><i class="fas fa-ban me-1 text-danger" style="font-size: 0.65rem;"></i>Cancelled</span>';
+                                } else {
+                                    $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
+                                    $patientIcon = 'fas fa-user-clock text-warning';
+                                    $patientColor = 'text-dark';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.72rem; letter-spacing: 0.2px;" title="Pre-Op (بالانتظار)"><i class="fas fa-clock me-1 text-warning" style="font-size: 0.65rem;"></i>Pre-Op</span>';
+                                }
                             @endphp
-                            <tr>
-                                <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
+                            <tr style="{{ $rowStyle }}">
                                 <td>
-                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض وتعديل تفاصيل العملية">
-                                        <i class="fas fa-user-circle text-primary fs-5"></i>
-                                        <span>{{ $patientName }}</span>
-                                    </a>
-                                    @if($phone)
-                                        <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
-                                            <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
-                                        </div>
-                                    @endif
+                                    {!! $badgeHtml !!}
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض وتعديل تفاصيل العملية">
+                                        <i class="{{ $patientIcon }} fs-5"></i>
+                                        <span class="{{ $patientColor }}">{{ $patientName }}</span>
+                                    </a>
                                     <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                                        @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
-                                            <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
+                                        @if($surgery->patient && $surgery->patient->age)
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
                                         @endif
+                                        @if($surgery->patient && $surgery->patient->gender)
+                                            <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                            </span>
+                                        @endif
+                                        @if($phone)
+                                            <span class="small text-muted ms-1" style="font-size:0.75rem;">
+                                                <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center gap-1.5 text-nowrap">
+                                        <span class="fw-bold text-dark text-truncate" style="max-width: 170px;" title="{{ $surgery->surgery_type }}">
+                                            {{ $surgery->surgery_type }}
+                                        </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
-                                            </span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
-                                            </span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
                                         @endif
                                     </div>
                                 </td>
@@ -661,16 +690,6 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark font-monospace" style="font-size: 0.85rem;">
-                                        <i class="fas fa-calendar-day text-secondary me-1"></i>
-                                        {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}
-                                    </div>
-                                    <small class="text-muted font-monospace">
-                                        <i class="fas fa-clock text-secondary me-1"></i>
-                                        {{ is_object($surgery->scheduled_time) ? $surgery->scheduled_time->format('H:i') : substr($surgery->scheduled_time ?? '', 0, 5) }}
-                                    </small>
-                                </td>
-                                <td>
                                     @if($room)
                                         <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
                                             @if($rtype === 'vvip')
@@ -685,50 +704,10 @@
                                         <span class="badge bg-light text-muted border">بدون غرفة</span>
                                     @endif
                                 </td>
-                                <td>
-                                    @if($surgery->status == 'scheduled')
-                                        <span class="status-badge-pill status-scheduled"><i class="fas fa-calendar-check me-1"></i>مجدولة</span>
-                                    @elseif($surgery->status == 'waiting')
-                                        <span class="status-badge-pill status-waiting"><i class="fas fa-clock me-1"></i>في الانتظار</span>
-                                    @elseif($surgery->status == 'in_progress')
-                                        <span class="status-badge-pill status-in_progress"><span class="sg-pulse-dot me-1"></span>جارية</span>
-                                    @elseif($surgery->status == 'completed')
-                                        <span class="status-badge-pill status-completed"><i class="fas fa-check me-1"></i>مكتملة</span>
-                                    @else
-                                        <span class="status-badge-pill status-cancelled"><i class="fas fa-times me-1"></i>ملغاة</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center align-items-center">
-                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2 rounded-2" title="تفاصيل العملية">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-
-                                        @can('edit surgeries')
-                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 rounded-2" title="تعديل الحجز">
-                                                <i class="fas fa-edit text-warning"></i>
-                                            </a>
-                                        @endcan
-
-                                        <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2 rounded-2" title="طباعة الوصل">
-                                            <i class="fas fa-print"></i>
-                                        </a>
-
-                                        @can('delete surgeries')
-                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وإلغاء حجز العملية نهائياً للمريض وتحرير الغرفة؟');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 rounded-2" title="حذف / إلغاء الحجز">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
-                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8">
+                                <td colspan="5">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-procedures fa-3x mb-3 text-secondary"></i>
                                         <div class="fw-bold fs-5">لا توجد عمليات نشطة حالياً مطابقة للبحث</div>
@@ -761,15 +740,11 @@
                     <table class="sg-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">#</th>
+                                <th>حالة المريض في الصالة</th>
                                 <th>المريض</th>
                                 <th>نوع العملية</th>
                                 <th>الطبيب الجراح</th>
-                                <th>تاريخ وموعد العملية</th>
-                                <th>الغرفة</th>
-                                <th>حالة العملية</th>
-                                <th>تاريخ الخروج</th>
-                                <th class="text-center" style="width: 140px;">الإجراءات</th>
+                                <th>رقم الغرفة</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -779,31 +754,66 @@
                                 $phone = optional(optional($surgery->patient)->user)->phone;
                                 $room = $surgery->room;
                                 $rtype = $room ? $room->room_type : null;
+                                $otStation = $surgery->operationTheaterStation;
+                                $isOtCompleted = ($surgery->status === 'completed') || ($otStation && $otStation->status === 'completed');
+                                $isOtInProgress = ($surgery->status === 'in_progress') || ($otStation && $otStation->status === 'in_progress');
+
+                                if ($isOtCompleted) {
+                                    $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
+                                    $patientIcon = 'fas fa-check-circle text-success';
+                                    $patientColor = 'text-success';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.8rem; letter-spacing: 0.3px;" title="خرج من الصالة (مكتملة)"><i class="fas fa-check-double me-1 text-success"></i>Post-Op</span>';
+                                } elseif ($isOtInProgress) {
+                                    $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
+                                    $patientIcon = 'fas fa-procedures text-primary';
+                                    $patientColor = 'text-primary';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.8rem; letter-spacing: 0.3px;" title="داخل صالة العمليات (جارية)"><span class="sg-pulse-dot me-1"></span>Intra-Op</span>';
+                                } elseif ($surgery->status === 'cancelled') {
+                                    $rowStyle = 'background-color: rgba(239, 68, 68, 0.04); border-right: 4px solid #ef4444;';
+                                    $patientIcon = 'fas fa-user-times text-danger';
+                                    $patientColor = 'text-danger';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.8rem; letter-spacing: 0.3px;" title="ملغاة"><i class="fas fa-times me-1 text-danger"></i>Cancelled</span>';
+                                } else {
+                                    $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
+                                    $patientIcon = 'fas fa-user-clock text-warning';
+                                    $patientColor = 'text-dark';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.8rem; letter-spacing: 0.3px;" title="قبل دخول الصالة (بالانتظار)"><i class="fas fa-clock me-1 text-warning"></i>Pre-Op</span>';
+                                }
                             @endphp
-                            <tr>
-                                <td class="text-muted fw-bold">#{{ $surgery->id }}</td>
+                            <tr style="{{ $rowStyle }}">
                                 <td>
-                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض تفاصيل العملية">
-                                        <i class="fas fa-user-circle text-secondary fs-5"></i>
-                                        <span>{{ $patientName }}</span>
-                                    </a>
-                                    @if($phone)
-                                        <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
-                                            <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
-                                        </div>
-                                    @endif
+                                    {!! $badgeHtml !!}
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="patient-title-btn" title="عرض تفاصيل العملية">
+                                        <i class="{{ $patientIcon }} fs-5"></i>
+                                        <span class="{{ $patientColor }}">{{ $patientName }}</span>
+                                    </a>
                                     <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                        @if($surgery->patient && $surgery->patient->age)
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                        @endif
+                                        @if($surgery->patient && $surgery->patient->gender)
+                                            <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                            </span>
+                                        @endif
+                                        @if($phone)
+                                            <span class="small text-muted ms-1" style="font-size:0.75rem;">
+                                                <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center gap-1.5 text-nowrap">
+                                        <span class="fw-bold text-dark text-truncate" style="max-width: 170px;" title="{{ $surgery->surgery_type }}">
+                                            {{ $surgery->surgery_type }}
+                                        </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
-                                            </span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
-                                            </span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
                                         @endif
                                     </div>
                                 </td>
@@ -822,16 +832,6 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark font-monospace" style="font-size: 0.85rem;">
-                                        <i class="fas fa-calendar-day text-secondary me-1"></i>
-                                        {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}
-                                    </div>
-                                    <small class="text-muted font-monospace">
-                                        <i class="fas fa-clock text-secondary me-1"></i>
-                                        {{ is_object($surgery->scheduled_time) ? $surgery->scheduled_time->format('H:i') : substr($surgery->scheduled_time ?? '', 0, 5) }}
-                                    </small>
-                                </td>
-                                <td>
                                     @if($room)
                                         <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
                                             @if($rtype === 'vvip')
@@ -846,61 +846,12 @@
                                         <span class="badge bg-light text-muted border">بدون غرفة</span>
                                     @endif
                                 </td>
-                                <td>
-                                    @if($surgery->status == 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed'))
-                                        <span class="status-badge-pill status-completed"><i class="fas fa-check-circle me-1"></i>مكتملة (خرجت من الصالة)</span>
-                                    @else
-                                        <span class="status-badge-pill status-cancelled"><i class="fas fa-times-circle me-1"></i>ملغاة</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($surgery->discharged_at)
-                                        <span class="text-success fw-bold d-block font-monospace" style="font-size: 0.82rem;">
-                                            <i class="fas fa-calendar-check me-1"></i>
-                                            {{ $surgery->discharged_at->format('Y-m-d H:i') }}
-                                        </span>
-                                        @if($surgery->discharge_notes)
-                                            <small class="text-info" title="{{ $surgery->discharge_notes }}">
-                                                <i class="fas fa-sticky-note me-1"></i>ملاحظات
-                                            </small>
-                                        @endif
-                                    @else
-                                        <span class="badge bg-light text-secondary border">لم يخرج بعد</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center align-items-center">
-                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-primary px-2 rounded-2" title="تفاصيل العملية">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-
-                                        @can('edit surgeries')
-                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 rounded-2" title="تعديل الحجز">
-                                                <i class="fas fa-edit text-warning"></i>
-                                            </a>
-                                        @endcan
-
-                                        <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-sm btn-outline-secondary px-2 rounded-2" title="طباعة الوصل">
-                                            <i class="fas fa-print"></i>
-                                        </a>
-
-                                        @can('delete surgeries')
-                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 rounded-2" title="حذف السجل">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
-                                </td>
                             </tr>
 
 
                             @empty
                             <tr>
-                                <td colspan="9">
+                                <td colspan="5">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-archive fa-3x mb-3 text-secondary"></i>
                                         <div class="fw-bold fs-5">لا توجد عمليات مكتملة أو مؤرشفة مطابقة للبحث</div>
@@ -1294,6 +1245,83 @@
                 filterOrStockTable();
             });
         });
+
+        // ==========================================
+        // Realtime Live Sync for Surgeries Index
+        // ==========================================
+        let isRefreshingSurgeriesIndex = false;
+        async function refreshSurgeriesIndexLive() {
+            if (isRefreshingSurgeriesIndex) return;
+            isRefreshingSurgeriesIndex = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html'
+                    }
+                });
+                if (response.ok) {
+                    const htmlText = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+
+                    const newPane = doc.getElementById('paneActiveSurgeries');
+                    const currPane = document.getElementById('paneActiveSurgeries');
+                    if (newPane && currPane && newPane.innerHTML.trim() !== currPane.innerHTML.trim()) {
+                        currPane.innerHTML = newPane.innerHTML;
+                    }
+
+                    const newCompleted = doc.getElementById('paneCompletedSurgeries');
+                    const currCompleted = document.getElementById('paneCompletedSurgeries');
+                    if (newCompleted && currCompleted && newCompleted.innerHTML.trim() !== currCompleted.innerHTML.trim()) {
+                        currCompleted.innerHTML = newCompleted.innerHTML;
+                    }
+
+                    const newTabBtnActive = doc.getElementById('btnTabActive');
+                    const currTabBtnActive = document.getElementById('btnTabActive');
+                    if (newTabBtnActive && currTabBtnActive) {
+                        currTabBtnActive.innerHTML = newTabBtnActive.innerHTML;
+                    }
+
+                    const newTabBtnComp = doc.getElementById('btnTabCompleted');
+                    const currTabBtnComp = document.getElementById('btnTabCompleted');
+                    if (newTabBtnComp && currTabBtnComp) {
+                        currTabBtnComp.innerHTML = newTabBtnComp.innerHTML;
+                    }
+                }
+            } catch (e) {
+                console.warn('Index live sync error:', e);
+            } finally {
+                isRefreshingSurgeriesIndex = false;
+            }
+        }
+
+        window.refreshSurgeriesIndexLive = refreshSurgeriesIndexLive;
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const liveChannel = new BroadcastChannel('hospital_surgery_live_channel');
+                liveChannel.onmessage = function (event) {
+                    if (event.data && event.data.action === 'surgery_updated') {
+                        refreshSurgeriesIndexLive();
+                    }
+                };
+            } catch (err) {}
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'hospital_surgery_live_trigger') {
+                refreshSurgeriesIndexLive();
+            }
+        });
+
+        if (window.Echo) {
+            try {
+                window.Echo.channel('surgeries').listen('.surgery.updated', function() {
+                    refreshSurgeriesIndexLive();
+                });
+            } catch (e) {}
+        }
     });
 
 

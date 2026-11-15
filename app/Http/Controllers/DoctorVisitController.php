@@ -955,7 +955,7 @@ class DoctorVisitController extends Controller
             );
 
             $hasPaidRequests = \App\Models\Request::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists()
-                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists();
+                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->exists();
 
             $successMsg = 'تم إلغاء كشفية الطبيب بنجاح واسترجاع رسوم الكشف للمريض.';
             if ($hasPaidRequests) {

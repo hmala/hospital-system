@@ -93,14 +93,22 @@
         <div class="card-body p-3">
             <form method="GET" action="{{ route('surgical-assistants.index') }}">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-6 col-lg-5">
+                    <div class="col-md-4 col-lg-4">
                         <label class="form-label small fw-bold text-muted mb-1">البحث بالاسم أو الهاتف أو الملاحظات</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" name="search" class="form-control border-start-0" placeholder="اكتب اسم المساعد للبحث..." value="{{ request('search') }}">
                         </div>
                     </div>
-                    <div class="col-md-3 col-lg-3">
+                    <div class="col-md-3 col-lg-2">
+                        <label class="form-label small fw-bold text-muted mb-1">النوع</label>
+                        <select name="type" class="form-select form-select-sm">
+                            <option value="">كافة الأنواع</option>
+                            <option value="surgical" @selected(request('type') === 'surgical')>مساعد جراح</option>
+                            <option value="anesthesia" @selected(request('type') === 'anesthesia')>مساعد تخدير</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-lg-2">
                         <label class="form-label small fw-bold text-muted mb-1">الحالة</label>
                         <select name="status" class="form-select form-select-sm">
                             <option value="">جميع الحالات</option>
@@ -112,7 +120,7 @@
                         <button type="submit" class="btn btn-sm btn-primary px-3 rounded-2 fw-semibold">
                             <i class="fas fa-filter me-1"></i> تصفية
                         </button>
-                        @if(request('search') || request('status'))
+                        @if(request('search') || request('status') || request('type'))
                             <a href="{{ route('surgical-assistants.index') }}" class="btn btn-sm btn-outline-secondary px-3 rounded-2">
                                 <i class="fas fa-undo me-1"></i> إعادة تعيين
                             </a>
@@ -130,7 +138,7 @@
                 <thead class="bg-light table-light">
                     <tr>
                         <th style="width: 60px;" class="text-center">#</th>
-                        <th>اسم مساعد الجراح</th>
+                        <th>اسم المساعد والصفة</th>
                         <th>رقم الهاتف</th>
                         <th>الصفة / الملاحظات</th>
                         <th class="text-center">العمليات المسجلة</th>
@@ -154,6 +162,15 @@
                                     </div>
                                     <div>
                                         <div class="fw-bold text-dark">{{ $assistant->name }}</div>
+                                        @if(($assistant->type ?? 'surgical') === 'anesthesia')
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle py-0.5 px-2" style="font-size: 0.72rem;">
+                                                <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                            </span>
+                                        @else
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-0.5 px-2" style="font-size: 0.72rem;">
+                                                <i class="fas fa-user-md me-1"></i>مساعد جراح
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -204,7 +221,7 @@
                                 <div class="d-flex align-items-center justify-content-center gap-1">
                                     @if($canManage)
                                         <button type="button" class="btn btn-sm btn-outline-primary px-2 rounded-2" title="تعديل البيانات"
-                                            onclick="openEditAssistantModal({{ $assistant->id }}, '{{ addslashes($assistant->name) }}', '{{ addslashes($assistant->phone ?? '') }}', '{{ addslashes($assistant->notes ?? '') }}', {{ $assistant->is_active ? 'true' : 'false' }})">
+                                            onclick="openEditAssistantModal({{ $assistant->id }}, '{{ addslashes($assistant->name) }}', '{{ $assistant->type ?? 'surgical' }}', '{{ addslashes($assistant->phone ?? '') }}', '{{ addslashes($assistant->notes ?? '') }}', {{ $assistant->is_active ? 'true' : 'false' }})">
                                             <i class="fas fa-edit"></i>
                                         </button>
 
@@ -251,13 +268,30 @@
                 @csrf
                 <div class="modal-header bg-primary text-white py-3">
                     <h5 class="modal-title fw-bold" id="createAssistantModalLabel">
-                        <i class="fas fa-user-plus me-2"></i>إضافة مساعد جراح جديد
+                        <i class="fas fa-user-plus me-2"></i>إضافة مساعد جراح / مساعد تخدير جديد
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label for="create_name" class="form-label fw-bold text-dark small">الاسم الكامل لمساعد الجراح <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3 p-2 rounded bg-light border">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="create_type_surgical" value="surgical" checked>
+                                <label class="form-check-label small fw-semibold text-primary" for="create_type_surgical">
+                                    <i class="fas fa-hands-helping me-1"></i>مساعد جراح
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="create_type_anesthesia" value="anesthesia">
+                                <label class="form-check-label small fw-semibold text-info" for="create_type_anesthesia">
+                                    <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_name" class="form-label fw-bold text-dark small">الاسم الكامل للمساعد <span class="text-danger">*</span></label>
                         <input type="text" id="create_name" name="name" class="form-control" required placeholder="مثال: د. علي عبدالله أو كادر تمريض عمليات...">
                     </div>
                     <div class="mb-3">
@@ -291,13 +325,30 @@
                 @method('PUT')
                 <div class="modal-header bg-dark text-white py-3">
                     <h5 class="modal-title fw-bold" id="editAssistantModalLabel">
-                        <i class="fas fa-edit me-2"></i>تعديل بيانات مساعد الجراح
+                        <i class="fas fa-edit me-2"></i>تعديل بيانات المساعد
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label for="edit_name" class="form-label fw-bold text-dark small">الاسم الكامل لمساعد الجراح <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3 p-2 rounded bg-light border">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="edit_type_surgical" value="surgical">
+                                <label class="form-check-label small fw-semibold text-primary" for="edit_type_surgical">
+                                    <i class="fas fa-hands-helping me-1"></i>مساعد جراح
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="edit_type_anesthesia" value="anesthesia">
+                                <label class="form-check-label small fw-semibold text-info" for="edit_type_anesthesia">
+                                    <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label fw-bold text-dark small">الاسم الكامل للمساعد <span class="text-danger">*</span></label>
                         <input type="text" id="edit_name" name="name" class="form-control" required>
                     </div>
                     <div class="mb-3">
@@ -323,10 +374,15 @@
 </div>
 
 <script>
-    function openEditAssistantModal(id, name, phone, notes, isActive) {
+    function openEditAssistantModal(id, name, type, phone, notes, isActive) {
         const form = document.getElementById('editAssistantForm');
         form.action = "{{ url('surgical-assistants') }}/" + id;
         document.getElementById('edit_name').value = name;
+        if (type === 'anesthesia') {
+            document.getElementById('edit_type_anesthesia').checked = true;
+        } else {
+            document.getElementById('edit_type_surgical').checked = true;
+        }
         document.getElementById('edit_phone').value = phone || '';
         document.getElementById('edit_notes').value = notes || '';
         document.getElementById('edit_is_active').checked = Boolean(isActive);

@@ -28,8 +28,21 @@ Route::pattern('radiology', '[0-9]+');
 
 Route::get('/', function () {
     if (Auth::check()) {
-        if (Auth::user()->hasRole('thaman')) {
+        $user = Auth::user();
+        if ($user->hasRole('thaman')) {
             return redirect()->route('patients.index');
+        }
+
+        if ($user->hasRole(['nurse', 'تمريض']) || $user->user_type === 'nurse') {
+            return redirect()->route('nursing-station.index');
+        }
+
+        if ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff') {
+            return redirect()->route('surgeries.index');
+        }
+
+        if ($user->hasRole('doctor')) {
+            return redirect()->route('doctor.visits.index');
         }
 
         return redirect('/dashboard');
