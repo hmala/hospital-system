@@ -2,7 +2,7 @@
 setlocal
 title Hospital System - Hostinger Deploy
 
-cd /d "c:\wamp64\www\hospital-system"
+cd /d "%~dp0"
 
 :menu
 cls
