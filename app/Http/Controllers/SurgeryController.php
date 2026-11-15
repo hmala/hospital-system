@@ -1674,9 +1674,11 @@ class SurgeryController extends Controller
     public function addDevice(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
-        if (! $isAdmin && ! $canWriteSupplies) {
+        $canWriteAnesthesia = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_anesthesia') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteTeamTiming = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_team_timing') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteSupplies && ! $canWriteAnesthesia && ! $canWriteTeamTiming) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'غير مصرح لك بإضافة أجهزة طبية'], 403)
                 : abort(403, 'غير مصرح لك بإضافة أجهزة طبية');
@@ -1705,17 +1707,21 @@ class SurgeryController extends Controller
         $names = $devices->pluck('name')->join('، ');
         $msg = 'تم إضافة أجهزة طبية: '.$names;
 
+        $targetTab = $request->input('tab', 'detail_anesthesia');
+
         return $request->expectsJson()
             ? response()->json(['success' => $msg])
-            : redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])->with('success', $msg);
+            : redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => $targetTab])->with('success', $msg);
     }
 
     public function removeDevice(Surgery $surgery, \App\Models\MedicalDevice $device)
     {
         $user = auth()->user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         $canWriteSupplies = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_supplies') === SurgeryTabPermission::ACCESS_WRITE;
-        if (! $isAdmin && ! $canWriteSupplies) {
+        $canWriteAnesthesia = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_anesthesia') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteTeamTiming = SurgeryTabPermission::getDetailAccessForUser($user, 'detail_team_timing') === SurgeryTabPermission::ACCESS_WRITE;
+        if (! $isAdmin && ! $canWriteSupplies && ! $canWriteAnesthesia && ! $canWriteTeamTiming) {
             abort(403, 'غير مصرح لك بإزالة أجهزة طبية');
         }
 
@@ -1724,7 +1730,9 @@ class SurgeryController extends Controller
         $surgery->billing_status = 'pending_review';
         $surgery->save();
 
-        return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
+        $targetTab = request()->input('tab', 'detail_anesthesia');
+
+        return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => $targetTab])
             ->with('success', 'تم إزالة الجهاز الطبي من العملية بنجاح');
     }
 

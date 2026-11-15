@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 219: نقل جدول العلاج للمنسدلة العلوية، إسناد الأجهزة الطبية لكارت التخدير، ووضع ملاحظات التخدير أسفل نوع التخدير Treatments in Top Dropdown, Medical Devices Next to Anesthesia, and Anesthesia Notes Below Type)
+
+### Done
+- **نقل جدول العلاجات لقائمة منسدلة علوية وإلغاء التكرار في كارت التشخيص ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة زر منسدل تفاعلي لجدول العلاج في شريط الإجراءات العلوي بجانب صالة ومدة العملية: `[ 💊 جدول العلاج: X علاج ▾ ]`.
+  * إتاحة إدارة الأدوية وإضافة وحذف العلاجات وكليشة البروتوكول الجراحي الشائع داخل المنسدلة العلوية مع زر حفظ مستقل ومزامنة تلقائية مع زر الحفظ الموحد.
+  * حذف جدول وبنر العلاج المكرر من كارت التشخيص ليصبح مخصصاً حصراً للتشخيص والخطة السريرية وتوصيات وملاحظات الجراح دون أي تكرار.
+- **إعادة هيكلة كارت التخدير: الملاحظات أسفل نوع التخدير ومكانها الأجهزة الطبية المستخدمة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * وضع حقل وملاحظات وتفاصيل طبيب التخدير والكليشات المعتمدة أسفل حقل نوع التخدير رأسياً في العمود الأيمن.
+  * تخصيص العمود الأيسر لكارت الأجهزة الطبية المستخدمة في العملية (عرض الأجهزة المرتبطة، زر إضافة جهاز طبي، بحث وتأكيد فوري، وزر الحذف السريع).
+  * توسيع صلاحيات إضافة وإزالة الأجهزة في `SurgeryController::addDevice` و `removeDevice` لتشمل التخدير والعمليات مع الحفاظ التلقائي على التبويب الحالي عبر `redirect()->back()`.
+  * توسيع جدول صرف مخزن العمليات في تبويب المستلزمات ليكون بعرض الشاشة الكامل (`col-xl-12`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 218: تطوير وتحديث جدول الدوام والخفارات بنظام الجدولة الذكي، أداة الختم السريع، كشف التغطية والجاهزية، والتعبئة التلقائية للدوام الثابت، والطباعة الرسمية HR Smart Hospital Roster Upgrade with Quick Shift Stamp, Daily Coverage Radar, One-Click Auto-Fill & Official Landscape Print)
 
 ### Done
@@ -111,6 +127,7 @@ Consult these files before making changes or proposing fixes:
 - **التحقق الآلي**:
   * إضافة وتوسيع اختبار الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`11 passed, 85 assertions`).
   * اجتياز فحص `Laravel Pint` بالكامل دون أي أخطاء.
+
 
 ## Session log (2026-11-15 — المرحلة 215: قصر قائمة اختيار الصالة في ملف العملية على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى Restrict Surgery Show Hall Dropdown Exclusively to Operating Theaters & Exclude General Wards and Non-OR Departments)
 
