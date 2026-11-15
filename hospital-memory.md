@@ -78,6 +78,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 212 (2026-11-15 — `main`) — توحيد مظهر وتنسيق قوائم الفريق الطبي الـ 5 لتطابق مساعد الجراح، وقفل جراح العملية محدد مسبقاً من الاستعلامات (Unified 5-Slot Medical Team Design Matching Surgical Assistant & Locked Pre-Determined Reception Surgeon)**:
+  * **توحيد تصميم وهيكل الحقول الـ 5 ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - **قفل طبيب الجراح (محمي ومحدد من الاستعلامات):** إلغاء القائمة القابلة للتغيير، وعرض اسم الجراح في حقل `input-group` ثابت ومقفل للقراءة فقط (`readonly`) مع شارة قفل `الاستعلامات` لمنع أي تعديل عشوائي للجراح المعتمد.
+    - **توحيد المظهر والارتفاع لجميع الحقول الخمسة:**
+      * جميع الأعمدة تستخدم `col-lg` بنسبة متساوية 20% لكل عنصر على الشاشات العريضة لتصطف في صف أفقي واحد منتظم.
+      * ترويسة علوية موحدة الارتفاع (`min-height: 22px`) لكل حقل تشتمل على الأيقونة والعنوان والشارة/الرابط.
+      * استخدام `input-group input-group-sm` متطابق في الارتفاع والأيقونة الأمامية والأطراف المنحنية لكافة القوائم (طبيب الجراح، مساعد جراح، طبيب التخدير 1، طبيب التخدير 2، مساعد التخدير).
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 211 (2026-11-15 — `main`) — الفريق الطبي أعلى التخدير بـ 5 قوائم منسدلة أفقية بصف واحد مع دعم مساعدي التخدير معمارياً في جدول المساعدين والعمليات (Medical Team Above Anesthesia with 5 Horizontal Dropdowns in 1 Row & Architecture Support for Anesthesia Assistants)**:
   * **توسيع البنية المعمارية للمساعدين والعمليات ([database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php), [app/Models/SurgicalAssistant.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalAssistant.php), [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [app/Models/AnesthesiaStation.php](file:///c:/wamp64/www/hospital-system/app/Models/AnesthesiaStation.php))**:
     - إضافة عمود `type` (`surgical` / `anesthesia`) إلى جدول `surgical_assistants` مع الفهارس والـ scopes (`scopeSurgical()` و `scopeAnesthesia()`).

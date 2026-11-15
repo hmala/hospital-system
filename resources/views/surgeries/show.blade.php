@@ -1540,32 +1540,30 @@
                                                 @endif
                                             </div>
 
-                                            {{-- صف أفقي واحد يضم 5 قوائم منسدلة --}}
+                                            {{-- صف أفقي واحد يضم 5 قوائم/حقول متناسقة تماماً وموحدة المظهر والارتفاع --}}
                                             <div class="row g-2 align-items-end">
-                                                {{-- 1. طبيب الجراح --}}
-                                                <div class="col-xl col-lg-4 col-md-6">
-                                                    <label for="team_doctor_id" class="form-label text-dark small fw-semibold mb-1">
-                                                        <i class="fas fa-user-md text-primary me-1"></i>طبيب الجراح:
-                                                    </label>
-                                                    @if($canWriteTeamTiming)
-                                                        <select id="team_doctor_id" name="doctor_id" class="form-select form-select-sm">
-                                                            @if(!$surgery->doctor_id)
-                                                                <option value="">اختر الجراح...</option>
-                                                            @endif
-                                                            @foreach($surgeons ?? [] as $sDoc)
-                                                                <option value="{{ $sDoc->id }}" {{ old('doctor_id', $surgery->doctor_id) == $sDoc->id ? 'selected' : '' }}>
-                                                                    د. {{ $sDoc->user?->full_name ?? $sDoc->user?->name ?? 'طبيب جراح' }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    @else
-                                                        <input type="text" class="form-control form-control-sm bg-light" value="د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }}" readonly disabled>
-                                                    @endif
+                                                {{-- 1. طبيب الجراح (محدد مسبقاً ومقفل من الاستعلامات) --}}
+                                                <div class="col-lg col-md-4 col-sm-6">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
+                                                        <label class="form-label text-dark small fw-semibold mb-0">
+                                                            <i class="fas fa-user-md text-primary me-1"></i>طبيب الجراح:
+                                                        </label>
+                                                        <span class="badge bg-light text-muted border small py-0 px-1.5" style="font-size: 0.68rem;" title="محدد مسبقاً ومثبت من الاستعلامات">
+                                                            <i class="fas fa-lock me-1 text-secondary"></i>الاستعلامات
+                                                        </span>
+                                                    </div>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                        <input type="text" class="form-control form-control-sm bg-light fw-bold text-dark text-truncate border-secondary-subtle"
+                                                               value="د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }}"
+                                                               readonly disabled
+                                                               title="د. {{ $surgery->doctor?->user?->full_name ?? $surgery->doctor?->user?->name ?? 'غير محدد' }} (محدد من الاستعلامات)">
+                                                    </div>
                                                 </div>
 
                                                 {{-- 2. مساعد جراح --}}
-                                                <div class="col-xl col-lg-4 col-md-6">
-                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <div class="col-lg col-md-4 col-sm-6">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
                                                         <label for="surgical_assistant_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-hands-helping text-primary me-1"></i>مساعد جراح:
                                                         </label>
@@ -1581,7 +1579,7 @@
                                                     @if($canWriteTeamTiming)
                                                         <div class="position-relative" id="assistantAutocompleteWrapper">
                                                             <div class="input-group input-group-sm">
-                                                                <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                                <span class="input-group-text bg-light text-primary"><i class="fas fa-hands-helping"></i></span>
                                                                 <input type="text" id="surgical_assistant_name" name="surgical_assistant_name"
                                                                        class="form-control form-control-sm border-primary"
                                                                        autocomplete="off"
@@ -1597,51 +1595,66 @@
                                                             <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
                                                         </div>
                                                     @else
-                                                        <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAssistant ?: 'غير محدد' }}" readonly disabled>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-primary"><i class="fas fa-hands-helping"></i></span>
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAssistant ?: 'غير محدد' }}" readonly disabled>
+                                                        </div>
                                                     @endif
                                                 </div>
 
                                                 {{-- 3. طبيب التخدير 1 --}}
-                                                <div class="col-xl col-lg-4 col-md-6">
-                                                    <label for="team_anesthesiologist_id" class="form-label text-dark small fw-semibold mb-1">
-                                                        <i class="fas fa-syringe text-success me-1"></i>طبيب التخدير 1:
-                                                    </label>
-                                                    @if($canWriteTeamTiming)
-                                                        <select id="team_anesthesiologist_id" name="anesthesiologist_id" class="form-select form-select-sm">
-                                                            <option value="">اختر طبيب التخدير 1</option>
-                                                            @foreach($anesthesiaDoctors as $doctor)
-                                                                <option value="{{ $doctor->id }}" {{ old('anesthesiologist_id', $primaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                                    د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    @else
-                                                        <input type="text" class="form-control form-control-sm bg-light" value="{{ $primaryAnesthName }}" readonly disabled>
-                                                    @endif
+                                                <div class="col-lg col-md-4 col-sm-6">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
+                                                        <label for="team_anesthesiologist_id" class="form-label text-dark small fw-semibold mb-0">
+                                                            <i class="fas fa-syringe text-success me-1"></i>طبيب التخدير 1:
+                                                        </label>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
+                                                    </div>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-success"><i class="fas fa-syringe"></i></span>
+                                                        @if($canWriteTeamTiming)
+                                                            <select id="team_anesthesiologist_id" name="anesthesiologist_id" class="form-select form-select-sm border-success-subtle">
+                                                                <option value="">اختر طبيب التخدير 1...</option>
+                                                                @foreach($anesthesiaDoctors as $doctor)
+                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_id', $primaryAnesthId) == $doctor->id ? 'selected' : '' }}>
+                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $primaryAnesthName }}" readonly disabled>
+                                                        @endif
+                                                    </div>
                                                 </div>
 
                                                 {{-- 4. طبيب التخدير 2 --}}
-                                                <div class="col-xl col-lg-6 col-md-6">
-                                                    <label for="team_anesthesiologist_2_id" class="form-label text-dark small fw-semibold mb-1">
-                                                        <i class="fas fa-user-md text-info me-1"></i>طبيب التخدير 2:
-                                                    </label>
-                                                    @if($canWriteTeamTiming)
-                                                        <select id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" class="form-select form-select-sm">
-                                                            <option value="">اختر طبيب التخدير 2</option>
-                                                            @foreach($anesthesiaDoctors as $doctor)
-                                                                <option value="{{ $doctor->id }}" {{ old('anesthesiologist_2_id', $secondaryAnesthId) == $doctor->id ? 'selected' : '' }}>
-                                                                    د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    @else
-                                                        <input type="text" class="form-control form-control-sm bg-light" value="{{ $secondaryAnesthName }}" readonly disabled>
-                                                    @endif
+                                                <div class="col-lg col-md-6 col-sm-6">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
+                                                        <label for="team_anesthesiologist_2_id" class="form-label text-dark small fw-semibold mb-0">
+                                                            <i class="fas fa-user-md text-info me-1"></i>طبيب التخدير 2:
+                                                        </label>
+                                                        <span class="badge bg-info-subtle text-info border border-info-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
+                                                    </div>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-info"><i class="fas fa-user-md"></i></span>
+                                                        @if($canWriteTeamTiming)
+                                                            <select id="team_anesthesiologist_2_id" name="anesthesiologist_2_id" class="form-select form-select-sm border-info-subtle">
+                                                                <option value="">اختر طبيب التخدير 2...</option>
+                                                                @foreach($anesthesiaDoctors as $doctor)
+                                                                    <option value="{{ $doctor->id }}" {{ old('anesthesiologist_2_id', $secondaryAnesthId) == $doctor->id ? 'selected' : '' }}>
+                                                                        د. {{ $doctor->user?->full_name ?? $doctor->user?->name ?? 'طبيب تخدير' }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $secondaryAnesthName }}" readonly disabled>
+                                                        @endif
+                                                    </div>
                                                 </div>
 
                                                 {{-- 5. مساعد التخدير --}}
-                                                <div class="col-xl col-lg-6 col-md-12">
-                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <div class="col-lg col-md-6 col-sm-12">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
                                                         <label for="team_anesthesia_assistant_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-user-nurse text-secondary me-1"></i>مساعد التخدير:
                                                         </label>
@@ -1657,23 +1670,26 @@
                                                     @if($canWriteTeamTiming)
                                                         <div class="position-relative" id="anesthAssistantAutocompleteWrapper">
                                                             <div class="input-group input-group-sm">
-                                                                <span class="input-group-text bg-light text-info"><i class="fas fa-user-nurse"></i></span>
+                                                                <span class="input-group-text bg-light text-secondary"><i class="fas fa-user-nurse"></i></span>
                                                                 <input type="text" id="team_anesthesia_assistant_name" name="anesthesia_assistant_name"
-                                                                       class="form-control form-control-sm border-info"
+                                                                       class="form-control form-control-sm border-secondary-subtle"
                                                                        autocomplete="off"
-                                                                       placeholder="اختيار أو كتابة مساعد التخدير..."
+                                                                       placeholder="اختيار أو كتابة..."
                                                                        value="{{ $savedAnesthAssistant }}">
                                                                 <button type="button" class="btn btn-outline-secondary {{ $savedAnesthAssistant ? '' : 'd-none' }}" id="clearAnesthAssistantBtn" title="مسح">
                                                                     <i class="fas fa-times"></i>
                                                                 </button>
-                                                                <button type="button" class="btn btn-outline-info" id="toggleAnesthAssistantMenuBtn" title="عرض القائمة">
+                                                                <button type="button" class="btn btn-outline-secondary" id="toggleAnesthAssistantMenuBtn" title="عرض القائمة">
                                                                     <i class="fas fa-chevron-down"></i>
                                                                 </button>
                                                             </div>
                                                             <div id="anesthesiaAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
                                                         </div>
                                                     @else
-                                                        <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAnesthAssistant ?: 'غير محدد' }}" readonly disabled>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-secondary"><i class="fas fa-user-nurse"></i></span>
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedAnesthAssistant ?: 'غير محدد' }}" readonly disabled>
+                                                        </div>
                                                     @endif
                                                 </div>
                                             </div>
