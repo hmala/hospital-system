@@ -791,15 +791,15 @@
                                             data-bs-auto-close="outside"
                                             aria-expanded="false"
                                             style="font-size: 0.92rem; transition: all 0.2s ease; border-color: #fca5a5; background: #ffffff; color: #991b1b;">
-                                        <i class="fas fa-map-marker-alt text-danger"></i>
-                                        <span>الصالة/الردهة:</span>
+                                        <i class="fas fa-door-open text-danger"></i>
+                                        <span>صالة العمليات:</span>
                                         <span class="badge rounded-pill {{ $currentLocationName ? 'bg-danger text-white' : 'bg-light text-muted border' }} px-2 py-1" id="topLocationBadge">
                                             {{ $currentLocationName ?: 'غير محددة' }}
                                         </span>
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 p-3 border-0" aria-labelledby="btnToggleLocationDropdown" style="min-width: 290px;">
                                         <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                                            <span class="fw-bold small text-dark"><i class="fas fa-door-open text-danger me-1"></i>تحديد صالة العمليات / الردهة</span>
+                                            <span class="fw-bold small text-dark"><i class="fas fa-door-open text-danger me-1"></i>تحديد صالة العمليات</span>
                                             @if($currentLocationName)
                                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="topLocationPreviewBadge">{{ $currentLocationName }}</span>
                                             @endif
@@ -807,9 +807,9 @@
 
                                         @if($canWriteLocation)
                                             <div class="mb-2">
-                                                <label for="top_location_id" class="form-label text-dark fw-bold small mb-1">اختر الصالة أو الردهة:</label>
+                                                <label for="top_location_id" class="form-label text-dark fw-bold small mb-1">اختر صالة العمليات:</label>
                                                 <select id="top_location_id" class="form-select form-select-sm border-danger" onchange="syncLocationSelection(this)">
-                                                    <option value="">-- اختر صالة العمليات / الردهة --</option>
+                                                    <option value="">-- اختر صالة العمليات --</option>
                                                     @foreach($locations as $loc)
                                                         <option value="{{ $loc->id }}" {{ old('location_id', $surgery->location_id) == $loc->id ? 'selected' : '' }}>
                                                             {{ $loc->name }}

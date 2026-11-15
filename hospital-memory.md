@@ -78,6 +78,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 215 (2026-11-15 — `main`) — قصر قائمة اختيار الصالة في ملف العملية على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى (Restrict Surgery Show Hall Dropdown Exclusively to Operating Theaters & Exclude General Wards and Non-OR Departments)**:
+  * **قصر قائمة الصالات في ملف العملية على صالات العمليات الجراحية فقط ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - فلترة المواقع `$locations` في `SurgeryController::show` لتشمل فقط صالات العمليات الجراحية (`عمليات`, `صالة`, `operation`, `theater`).
+    - استبعاد المخازن العامة والفرعية (`مخزن`, `store`) وكافة الأقسام الطبية والإدارية غير الجراحية (المختبر، الطوارئ، الرسبشن، الصيدلة، الخدج، ردهات الطوابق، إلخ).
+    - الحفاظ التلقائي على صالة العملية الحالية المحددة للمريض لعدم فقدان الاختيار المسجل مسبقاً.
+  * **تحسين نصوص وتسميات قائمة الصالة في الواجهة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - تغيير التسمية من `الصالة/الردهة:` إلى `صالة العمليات:` في الزر الرئيسي العلوي والقائمة المنسدلة.
+    - تحديث مسمى خيار الاختيار الافتراضي إلى `-- اختر صالة العمليات --`.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 214 (2026-11-15 — `main`) — الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير (Automatic Anesthesia Templates Binding on Type Selection)**:
   * **تضمين كليشات التخدير المعتمدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - ربط مباشر بين حقل نوع التخدير وملاحظات طبيب التخدير (`#anesthesia_notes`):

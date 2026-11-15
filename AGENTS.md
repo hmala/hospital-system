@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 215: قصر قائمة اختيار الصالة في ملف العملية على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى Restrict Surgery Show Hall Dropdown Exclusively to Operating Theaters & Exclude General Wards and Non-OR Departments)
+
+### Done
+- **قصر قائمة الصالات في ملف العملية على صالات العمليات الجراحية فقط ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحديث استعلام جلب الصالات `$locations` في `SurgeryController::show`:
+    * فلترة المواقع لتشمل فقط صالات العمليات الجراحية (`عمليات`, `صالة`, `operation`, `theater`).
+    * استبعاد المخازن العامة والفرعية غير المخصصة كصالات جراحية (`مخزن`, `store`).
+    * استبعاد كافة الأقسام العامة (الاستشارية، المختبر، الطوارئ، الرسبشن، الحسابات، الإدارة، الفندقة، الصيدلة، الخدج، ردهات الطوابق، وغيرها من الأقسام غير الجراحية).
+    * الحفاظ التلقائي على صالة العملية الحالية المحددة للمريض عبر `when($surgery->location_id, fn ($q) => $q->orWhere('id', $surgery->location_id))`.
+- **تحسين نصوص وتسميات قائمة الصالة في الواجهة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تغيير النص من `الصالة/الردهة:` إلى `صالة العمليات:` في الزر الرئيسي العلوي.
+  * تحديث عنوان القائمة المنسدلة إلى `تحديد صالة العمليات`.
+  * تحديث مسمى الحقل وخيار القائمة الافتراضي إلى `-- اختر صالة العمليات --`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة اختبارات العمليات الجراحية ومساعدي الجراحين بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 214: الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير Automatic Anesthesia Templates Binding on Type Selection)
 
 ### Done

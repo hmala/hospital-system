@@ -513,7 +513,20 @@ class SurgeryController extends Controller
         $devices = \App\Models\MedicalDevice::where('status', 'active')
             ->orderBy('name')
             ->get();
-        $locations = \App\Models\Location::orderBy('name')->get();
+        // قصر قائمة الصالات على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى
+        $locations = \App\Models\Location::where(function ($q) {
+            $q->where('name', 'like', '%عمليات%')
+                ->orWhere('name', 'like', '%صالة%')
+                ->orWhere('name', 'like', '%operation%')
+                ->orWhere('name', 'like', '%theater%');
+        })
+            ->where(function ($q) {
+                $q->where('name', 'not like', '%مخزن%')
+                    ->where('name', 'not like', '%store%');
+            })
+            ->when($surgery->location_id, fn ($q) => $q->orWhere('id', $surgery->location_id))
+            ->orderBy('name')
+            ->get();
 
         // Compute dynamic tab permissions for /surgeries/{id}
         $detailPermissions = SurgeryTabPermission::getDetailTabPermissions($user);
