@@ -1781,8 +1781,8 @@
                                                                 <div class="d-flex flex-wrap gap-1">
                                                                     <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير عام (General Anesthesia)')">عام</button>
                                                                     <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير نصفي (Spinal Anesthesia)')">نصفي</button>
-                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير موضعي (Local Anesthesia)')">موضعي</button>
                                                                     <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير مناطقي (Regional Anesthesia)')">مناطقي</button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('تخدير موضعي (Local Anesthesia)')">موضعي</button>
                                                                     <button type="button" class="clin-quick-chip" onclick="setAnesthesiaQuickType('سديشن (Sedation)')">سديشن</button>
                                                                 </div>
                                                             @endif
@@ -1792,8 +1792,8 @@
                                                             <datalist id="anesthesiaTypesList">
                                                                 <option value="تخدير عام (General Anesthesia)">
                                                                 <option value="تخدير نصفي (Spinal Anesthesia)">
-                                                                <option value="تخدير موضعي (Local Anesthesia)">
                                                                 <option value="تخدير مناطقي (Regional Anesthesia)">
+                                                                <option value="تخدير موضعي (Local Anesthesia)">
                                                                 <option value="سديشن (Sedation)">
                                                             </datalist>
                                                         @else
@@ -1808,10 +1808,15 @@
                                                                 <i class="fas fa-notes-medical text-success me-1"></i>ملاحظات وتفاصيل طبيب التخدير:
                                                             </label>
                                                             @if($canWriteAnesthesia)
-                                                                <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('anesthesia_notes', 'مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات')">إفاقة مستقرة</button>
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    <button type="button" class="clin-quick-chip" onclick="applyAnesthesiaTemplate(document.getElementById('anesthesia_type_input')?.value, true)" title="إدراج كليشة نوع التخدير المختار تلقائياً">
+                                                                        <i class="fas fa-magic me-1"></i>كليشة التخدير
+                                                                    </button>
+                                                                    <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('anesthesia_notes', 'مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات')">إفاقة مستقرة</button>
+                                                                </div>
                                                             @endif
                                                         </div>
-                                                        <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1 {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="3" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
+                                                        <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1 {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="5" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2287,10 +2292,58 @@
             el.focus();
         };
 
+        // كليشات ونماذج التخدير المعتمدة بحسب النوع
+        window.anesthesiaTypeTemplates = {
+            'تخدير عام': "prmedication given\ngeneralanesthesia given\noperation passesd smoothly without complication\npatient recoverd well",
+            'تخدير نصفي': "2IV canulae putted\nspinal aneshesia given\npatient recovered well",
+            'تخدير مناطقي': "2IV canulea putted\nregional anesthesia given\npatient recovered well",
+            'تخدير موضعي': "يتم كتب التقرير من قبل الطبيب الجراح"
+        };
+
+        window.getAnesthesiaTemplate = function(type) {
+            if (!type) return '';
+            const clean = type.trim().toLowerCase();
+            if (clean.includes('عام') || clean.includes('general')) {
+                return window.anesthesiaTypeTemplates['تخدير عام'];
+            }
+            if (clean.includes('نصفي') || clean.includes('spinal')) {
+                return window.anesthesiaTypeTemplates['تخدير نصفي'];
+            }
+            if (clean.includes('مناطقي') || clean.includes('regional')) {
+                return window.anesthesiaTypeTemplates['تخدير مناطقي'];
+            }
+            if (clean.includes('موضعي') || clean.includes('local')) {
+                return window.anesthesiaTypeTemplates['تخدير موضعي'];
+            }
+            return '';
+        };
+
+        window.applyAnesthesiaTemplate = function(typeValue, force = false) {
+            const notesEl = document.getElementById('anesthesia_notes');
+            if (!notesEl || notesEl.readOnly || notesEl.disabled) return;
+
+            const template = window.getAnesthesiaTemplate(typeValue || '');
+            if (!template) return;
+
+            const currentNotes = (notesEl.value || '').trim();
+            const standardList = [
+                window.anesthesiaTypeTemplates['تخدير عام'].trim(),
+                window.anesthesiaTypeTemplates['تخدير نصفي'].trim(),
+                window.anesthesiaTypeTemplates['تخدير مناطقي'].trim(),
+                window.anesthesiaTypeTemplates['تخدير موضعي'].trim(),
+                "مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات"
+            ];
+
+            if (force || !currentNotes || standardList.includes(currentNotes)) {
+                notesEl.value = template;
+            }
+        };
+
         window.setAnesthesiaQuickType = function(value) {
             const el = document.getElementById('anesthesia_type_input');
             if (!el || el.readOnly || el.disabled) return;
             el.value = value;
+            window.applyAnesthesiaTemplate(value, true);
             el.focus();
         };
 
@@ -3129,12 +3182,33 @@
         });
     }
 
+    function setupAnesthesiaTypeTemplateSync() {
+        const anesthTypeEl = document.getElementById('anesthesia_type_input');
+        if (!anesthTypeEl) return;
+
+        anesthTypeEl.addEventListener('change', function() {
+            window.applyAnesthesiaTemplate(this.value, false);
+        });
+
+        anesthTypeEl.addEventListener('input', function() {
+            const val = this.value.trim();
+            const datalist = document.getElementById('anesthesiaTypesList');
+            if (datalist) {
+                const options = Array.from(datalist.options).map(o => o.value);
+                if (options.includes(val)) {
+                    window.applyAnesthesiaTemplate(val, false);
+                }
+            }
+        });
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             setupSurgicalAssistantAutocomplete();
             setupAnesthesiaDoctorAutocomplete(1);
             setupAnesthesiaDoctorAutocomplete(2);
             setupAnesthesiaAssistantAutocomplete();
+            setupAnesthesiaTypeTemplateSync();
             initSinglePageNavigation();
         });
     } else {
@@ -3142,6 +3216,7 @@
         setupAnesthesiaDoctorAutocomplete(1);
         setupAnesthesiaDoctorAutocomplete(2);
         setupAnesthesiaAssistantAutocomplete();
+        setupAnesthesiaTypeTemplateSync();
         initSinglePageNavigation();
     }
 

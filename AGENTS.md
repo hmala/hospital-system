@@ -54,6 +54,32 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 214: الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير Automatic Anesthesia Templates Binding on Type Selection)
+
+### Done
+- **تضمين كليشات التخدير المعتمدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * ربط مباشر بين حقل نوع التخدير وملاحظات طبيب التخدير (`#anesthesia_notes`):
+    * **تخدير عام:** إدراج الكليشة المعتمدة تلقائياً:
+      `prmedication given`
+      `generalanesthesia given`
+      `operation passesd smoothly without complication`
+      `patient recoverd well`
+    * **تخدير نصفي:** إدراج الكليشة المعتمدة تلقائياً:
+      `2IV canulae putted`
+      `spinal aneshesia given`
+      `patient recovered well`
+    * **تخدير مناطقي:** إدراج الكليشة المعتمدة تلقائياً:
+      `2IV canulea putted`
+      `regional anesthesia given`
+      `patient recovered well`
+    * **تخدير موضعي:** إدراج الكليشة المعتمدة تلقائياً:
+      `يتم كتب التقرير من قبل الطبيب الجراح`
+  * التفعيل التلقائي عند النقر على أي من الأزرار السريعة (`عام`، `نصفي`، `مناطقي`، `موضعي`) أو عند الاختيار من القائمة المنسدلة / الكتابة.
+  * إضافة زر إدراج كليشة سريع `[ 📋 كليشة التخدير ]` وتوسيع ارتفاع حقل الملاحظات إلى `rows="5"` لعرض الأسطر بوضوح دون تمرير.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 213: توحيد تصميم طبيب التخدير 1 و2 بقوائم بحث وإكمال تلقائي ذكية متطابقة مع مساعد الجراح والتخدير Unified Searchable Autocomplete Dropdowns for Anesthesiologist 1 & 2 Matching Assistants)
 
 ### Done

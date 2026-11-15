@@ -78,6 +78,38 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 214 (2026-11-15 — `main`) — الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير (Automatic Anesthesia Templates Binding on Type Selection)**:
+  * **تضمين كليشات التخدير المعتمدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - ربط مباشر بين حقل نوع التخدير وملاحظات طبيب التخدير (`#anesthesia_notes`):
+      * **تخدير عام (General Anesthesia):**
+        ```text
+        prmedication given
+        generalanesthesia given
+        operation passesd smoothly without complication
+        patient recoverd well
+        ```
+      * **تخدير نصفي (Spinal Anesthesia):**
+        ```text
+        2IV canulae putted
+        spinal aneshesia given
+        patient recovered well
+        ```
+      * **تخدير مناطقي (Regional Anesthesia):**
+        ```text
+        2IV canulea putted
+        regional anesthesia given
+        patient recovered well
+        ```
+      * **تخدير موضعي (Local Anesthesia):**
+        ```text
+        يتم كتب التقرير من قبل الطبيب الجراح
+        ```
+    - التفعيل التلقائي عند النقر على أي من الأزرار السريعة (`عام`، `نصفي`، `مناطقي`، `موضعي`) أو عند الاختيار من القائمة المنسدلة / الكتابة.
+    - إضافة زر إدراج كليشة سريع `[ 📋 كليشة التخدير ]` وتوسيع ارتفاع حقل الملاحظات إلى `rows="5"` لعرض الأسطر بوضوح دون تمرير.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 213 (2026-11-15 — `main`) — توحيد تصميم طبيب التخدير 1 و2 بقوائم بحث وإكمال تلقائي ذكية متطابقة تماماً مع مساعد الجراح والتخدير (Unified Searchable Autocomplete Dropdowns for Anesthesiologist 1 & 2 Matching Assistants)**:
   * **توحيد المكون البرمجي والتصميمي لطبيب التخدير 1 و2 ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - استبدال وسوم `<select>` التقليدية بمكون القائمة المنسدلة الذكية التفاعلية متطابق 100% مع مساعد الجراح ومساعد التخدير:
