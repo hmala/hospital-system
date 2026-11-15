@@ -2012,6 +2012,13 @@
                                 </a>
                             </li>
                             @endcan
+                            @can('view departments')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('departments.*') ? 'active' : '' }}" href="{{ route('departments.admin') }}">
+                                    <i class="fas fa-sitemap"></i><span> إدارة الأقسام والعيادات</span>
+                                </a>
+                            </li>
+                            @endcan
                             @can('manage hr actions')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">

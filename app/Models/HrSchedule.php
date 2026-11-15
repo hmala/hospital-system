@@ -17,6 +17,11 @@ class HrSchedule extends Model
         'is_off_day' => 'boolean',
     ];
 
+    public function setShiftDateAttribute($value)
+    {
+        $this->attributes['shift_date'] = $value ? \Carbon\Carbon::parse($value)->format('Y-m-d') : null;
+    }
+
     public function employee()
     {
         return $this->belongsTo(HrEmployee::class, 'hr_employee_id');

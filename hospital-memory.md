@@ -78,6 +78,59 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 218 (2026-11-15 — `main`) — تطوير وتحديث جدول الدوام والخفارات بنظام الجدولة الذكي، أداة الختم السريع، كشف التغطية والجاهزية، والتعبئة التلقائية للدوام الثابت، والطباعة الرسمية (HR Smart Hospital Roster Upgrade with Quick Shift Stamp, Daily Coverage Radar, One-Click Auto-Fill & Official Landscape Print)**:
+  * **تطوير المعالجة والمتحكم ([app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+    - **دعم التنقل السريع وأنماط العرض:** إضافة محددات `prevDate` و `nextDate` و `currentPeriodDate` للتنقل اللحظي بين الأسابيع والأشهر بنقرة واحدة، ودعم نمطي العرض: `week` (أسبوعي 7 أيام) و `month` (شهري كامل لجدولة الأطباء والخفارات على مدار الشهر).
+    - **محرك التعبئة التلقائية للدوام الثابت (`autoFillDefaults`):** أتمتة تعبئة جدول الفترة بنقرة واحدة لجميع الموظفين بناءً على شفتاتهم الدائمة وأيام استراحتهم المسجلة في إضبارتهم مع خيار استبدال الشفتات أو تعبئة الفراغات فقط.
+    - **كشف التغطية والجاهزية اليومية (`dailyCoverage`):** احتساب أوتوماتيكي لعدد الكوادر المداومة في كل شفت (صباحي، مسائي، ليلي/خفارة، راحة Off) لكل يوم.
+    - **تحديث الخلية الفوري عبر AJAX (`updateCell`):** دعم الحفظ التلقائي الصامت لأي تغيير في أي خلية دون الحاجة لإعادة تحميل الصفحة.
+    - **تفريغ وإعادة ضبط الفترة (`clearRange`):** إمكانية مسح شفتات الفترة المحددة لقسم معين لإعادة بنائها من الصفر.
+  * **ترقية النموذج وقاعدة البيانات ([app/Models/HrSchedule.php](file:///c:/get/hospital-system/app/Models/HrSchedule.php))**:
+    - إضافة mutator `setShiftDateAttribute` لضمان تخزين التاريخ بصيغة قياسية `Y-m-d` والقضاء على أي تعارض بين MySQL و SQLite.
+  * **إعادة تصميم واجهة الجدول وتطوير تجربة المستخدم ([resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php))**:
+    - **أداة الختم السريع (Shift Stamp Palette):** شريط أدوات علوي يتيح اختيار الشفت (صباحي / مسائي / ليلي / راحة / مسح) والنقر المباشر على أي خلية لتلوينها وتعيينها فوراً مع خيار الحفظ التلقائي (AJAX Switch).
+    - **البحث والتصفية اللحظية (Client-Side Live Filter):** شريط بحث سريع بالاسم أو الوظيفة، وأزرار تصفية فورية (الكل / الدوام الثابت / الخفارات المتناوبة / الوجبتين) مع عداد الكوادر الظاهرة.
+    - **شريط إجراءات الصف السريعة (Row Fill Menu):** قائمة منسدلة لكل موظف لتعبئة أسبوعه كاملاً بشفته الدائم أو أي شفت آخر بنقرة واحدة.
+    - **شريط إحصاء التغطية اليومية السفلي (Daily Coverage Summary Footer):** صف مثبت أسفل الجدول يعرض إجمالي الكادر في كل شفت لكل يوم، وتحديث تلقائي لحظي عند أي تعديل.
+    - **شيت الطباعة الرسمي المعتمد (`@media print`):** تحويل تلقائي للجدول إلى شيت رسمي أفقي (A4 Landscape) مع ترويسة المستشفى وتوقيع مسؤول القسم ومدقق الـ HR ومدير المستشفى.
+    - إصلاح الخطأ البرمجي في وسم الـ `<script>` المزدوج.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/HrScheduleTest.php](file:///c:/get/hospital-system/tests/Feature/HrScheduleTest.php))**:
+    - إنشاء حزمة اختبارات شاملة تغطي كافة العمليات والمسارات الجديدة (العرض الأسبوعي والشهري، التعبئة التلقائية، التحديث الفوري، التفريغ، وتبادل الخفارات) واجتيازها بنجاح 100% (`5 passed, 25 assertions`).
+    - اجتياز اختبارات الموارد البشرية العامة بالكامل بنجاح 100% (`11 passed, 90 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+- **المرحلة 217 (2026-11-15 — `main`) — إعادة هيكلة وتصميم إضبارة الموظف بنظام التبويبات التفاعلية الذكية وتثبيت الشريط الجانبي والقضاء على السكرول الطويل (HR Employee Dossier Redesign with Interactive Nav Tabs, Sticky Sidebar & Zero-Scroll Layout)**:
+  * **إعادة هيكلة واجهة إضبارة الموظف ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+    - القضاء على السكرول الرأسي اللانهائي الذي كان يتطلب التمرير عبر 11 بطاقة وجدولاً ضخماً، واستبداله بنظام تبويبات تفاعلية مدمجة وأنيقة (`nav-pills` مع تأثيرات بصرية حديثة).
+    - توزيع أقسام إضبارة الموظف على 5 تبويبات وظيفية منظمة مع شارات أرقام ديناميكية (`Badges`):
+      1. **الملف الوظيفي (`tab-profile`):** البيانات الشخصية، تفاصيل التعاقد، نظام الدوام والشفتات وأيام الاستراحة، التراخيص الطبية، والملاحظات الإدارية.
+      2. **الراتب والمالية (`tab-payroll`):** إعدادات هيكلة الراتب والدفع، جدول المخصصات والعلاوات الثابتة، وسجل السلف والأقساط.
+      3. **الدوام والحضور (`tab-attendance`):** بطاقة شفت العمل المعتمد ورابط جدول الخفارات، سجل الغيابات والتأخيرات، وسجل العمل الإضافي.
+      4. **العقوبات والمكافآت (`tab-actions`):** سجل اللوائح والعقوبات والإنذارات والمكافآت مع التأثير المالي والترحيل.
+      5. **المستمسكات والأرشيف (`tab-documents`):** أرشيف الوثائق والمستمسكات الرسمية مع التحميل والمعاينة والرفع.
+    - تثبيت البطاقة الجانبية للموظف (`sticky-employee-sidebar` / `sticky-top`) لتبقى هوية الموظف (الصورة، الكود، المسمى، الهاتف، فصيلة الدم، وحساب النظام) ظاهرة ومثبتة دائماً أمام المستخدم أثناء التنقل.
+    - إضافة حفظ التبويب النشط ذكياً عبر الرابط (`URL Hash`) والذاكرة المحلية (`localStorage`) لضمان بقاء المستخدم في نفس التبويب بعد إرسال النماذج والمودالات أو تحديث الصفحة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+    - تحديث حزمة الاختبارات لتأكيد وجود عناصر وتبويبات الواجهة الجديدة (`tab-profile`, `tab-payroll`, `tab-attendance`, `tab-actions`, `tab-documents`).
+    - اجتياز كامل اختبارات الموارد البشرية بنجاح 100% (`11 passed, 90 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+- **المرحلة 216 (2026-11-15 — `main`) — تثبيت نظام الدوام والشفتات الدائمة وعطلات الاستراحة ودعم الوجبتين لجميع الموظفين (HR Permanent Work Schedules, Shift Customization, Split-Shifts & Dynamic Weekly Off-Days)**:
+  * **بنية قاعدة البيانات والنموذج ([database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+    - إضافة حقول الدوام في `hr_employees`: نوع الجدولة `schedule_type` (ثابت fixed / خفارات متناوبة rotating)، الشفت الدائم `default_shift_id`، مفتاح دوام الوجبتين `is_split_shift`، الشفت المسائي الثاني `second_shift_id`، ساعات العمل المخصصة `custom_start_time` و `custom_end_time`، ومصفوفة أيام الاستراحة `weekly_off_days`.
+    - تعريف علاقات `defaultShift()` و `secondShift()` و `schedules()` ومساعدات `getWeeklyOffDaysArabicAttribute()` و `isOffOn($date)`.
+  * **المعالجة والتحكم ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php))**:
+    - تمرير الشفتات النشطة لشاشات الإضافة والتعديل (`create`, `edit`).
+    - معالجة وتحقق وحفظ إعدادات الدوام والعطلات في دالتي `store` و `update`.
+    - دعم الجلب الذكي للموظفين الثابتين ومطابقة أيام استراحتهم في جدول الدوام الأسبوعي/الشهري (`/hr/schedules`).
+  * **الواجهات الأمامية ([resources/views/hr/employees/create.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/create.blade.php), [resources/views/hr/employees/edit.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/edit.blade.php), [resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php), [resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+    - إضافة قسم "3. نظام الدوام والشفتات وأيام الاستراحة" في شاشتي إنشاء وتعديل الموظف مع تبديل لحظي للوجبتين، وتحديد أوقات مخصصة بدقة (مثل 8-4 أو 9-3)، وشبكة اختيار أيام العطلات الأسبوعية (الجمعة، السبت، الخميس، إلخ).
+    - إضافة بطاقة نظام الدوام والشفتات وأيام الاستراحة في إضبارة وتفاصيل الموظف (`show.blade.php`).
+    - إدراج رابط مباشر لإدارة الأقسام والعيادات (`departments.admin`) تحت قسم الموارد البشرية بالقائمة الجانبية لتسهيل الوصول والتحكم بالأقسام.
+  * **التحقق الآلي**:
+    - إضافة وتوسيع اختبار الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`11 passed, 85 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي أخطاء.
+
 - **المرحلة 215 (2026-11-15 — `main`) — قصر قائمة اختيار الصالة في ملف العملية على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى (Restrict Surgery Show Hall Dropdown Exclusively to Operating Theaters & Exclude General Wards and Non-OR Departments)**:
   * **قصر قائمة الصالات في ملف العملية على صالات العمليات الجراحية فقط ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
     - فلترة المواقع `$locations` في `SurgeryController::show` لتشمل فقط صالات العمليات الجراحية (`عمليات`, `صالة`, `operation`, `theater`).
@@ -88,6 +141,46 @@
     - تحديث مسمى خيار الاختيار الافتراضي إلى `-- اختر صالة العمليات --`.
   * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
     - اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+
+- **المرحلة 217 (2026-11-15 — `main`) — إعادة هيكلة وتصميم إضبارة الموظف بنظام التبويبات التفاعلية الذكية وتثبيت الشريط الجانبي والقضاء على السكرول الطويل (HR Employee Dossier Redesign with Interactive Nav Tabs, Sticky Sidebar & Zero-Scroll Layout)**:
+  * **إعادة هيكلة واجهة إضبارة الموظف ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+    - القضاء على السكرول الرأسي اللانهائي الذي كان يتطلب التمرير عبر 11 بطاقة وجدولاً ضخماً، واستبداله بنظام تبويبات تفاعلية مدمجة وأنيقة (`nav-pills` مع تأثيرات بصرية حديثة).
+    - توزيع أقسام إضبارة الموظف على 5 تبويبات وظيفية منظمة مع شارات أرقام ديناميكية (`Badges`):
+      1. **الملف الوظيفي (`tab-profile`):** البيانات الشخصية، تفاصيل التعاقد، نظام الدوام والشفتات وأيام الاستراحة، التراخيص الطبية، والملاحظات الإدارية.
+      2. **الراتب والمالية (`tab-payroll`):** إعدادات هيكلة الراتب والدفع، جدول المخصصات والعلاوات الثابتة، وسجل السلف والأقساط.
+      3. **الدوام والحضور (`tab-attendance`):** بطاقة شفت العمل المعتمد ورابط جدول الخفارات، سجل الغيابات والتأخيرات، وسجل العمل الإضافي.
+      4. **العقوبات والمكافآت (`tab-actions`):** سجل اللوائح والعقوبات والإنذارات والمكافآت مع التأثير المالي والترحيل.
+      5. **المستمسكات والأرشيف (`tab-documents`):** أرشيف الوثائق والمستمسكات الرسمية مع التحميل والمعاينة والرفع.
+    - تثبيت البطاقة الجانبية للموظف (`sticky-employee-sidebar` / `sticky-top`) لتبقى هوية الموظف (الصورة، الكود، المسمى، الهاتف، فصيلة الدم، وحساب النظام) ظاهرة ومثبتة دائماً أمام المستخدم أثناء التنقل.
+    - إضافة حفظ التبويب النشط ذكياً عبر الرابط (`URL Hash`) والذاكرة المحلية (`localStorage`) لضمان بقاء المستخدم في نفس التبويب بعد إرسال النماذج والمودالات أو تحديث الصفحة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+    - تحديث حزمة الاختبارات لتأكيد وجود عناصر وتبويبات الواجهة الجديدة (`tab-profile`, `tab-payroll`, `tab-attendance`, `tab-actions`, `tab-documents`).
+    - اجتياز كامل اختبارات الموارد البشرية بنجاح 100% (`11 passed, 90 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+- **المرحلة 216 (2026-11-15 — `main`) — تثبيت نظام الدوام والشفتات الدائمة وعطلات الاستراحة ودعم الوجبتين لجميع الموظفين (HR Permanent Work Schedules, Shift Customization, Split-Shifts & Dynamic Weekly Off-Days)**:
+  * **بنية قاعدة البيانات والنموذج ([database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+    - إضافة حقول الدوام في `hr_employees`: نوع الجدولة `schedule_type` (ثابت fixed / خفارات متناوبة rotating)، الشفت الدائم `default_shift_id`، مفتاح دوام الوجبتين `is_split_shift`، الشفت المسائي الثاني `second_shift_id`، ساعات العمل المخصصة `custom_start_time` و `custom_end_time`، ومصفوفة أيام الاستراحة `weekly_off_days`.
+    - تعريف علاقات `defaultShift()` و `secondShift()` و `schedules()` ومساعدات `getWeeklyOffDaysArabicAttribute()` و `isOffOn($date)`.
+  * **المعالجة والتحكم ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php))**:
+    - تمرير الشفتات النشطة لشاشات الإضافة والتعديل (`create`, `edit`).
+    - معالجة وتحقق وحفظ إعدادات الدوام والعطلات في دالتي `store` و `update`.
+    - دعم الجلب الذكي للموظفين الثابتين ومطابقة أيام استراحتهم في جدول الدوام الأسبوعي/الشهري (`/hr/schedules`).
+  * **الواجهات الأمامية ([resources/views/hr/employees/create.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/create.blade.php), [resources/views/hr/employees/edit.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/edit.blade.php), [resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php), [resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+    - إضافة قسم "3. نظام الدوام والشفتات وأيام الاستراحة" في شاشتي إنشاء وتعديل الموظف مع تبديل لحظي للوجبتين، وتحديد أوقات مخصصة بدقة (مثل 8-4 أو 9-3)، وشبكة اختيار أيام العطلات الأسبوعية (الجمعة، السبت، الخميس، إلخ).
+    - إضافة بطاقة نظام الدوام والشفتات وأيام الاستراحة في إضبارة وتفاصيل الموظف (`show.blade.php`).
+    - إدراج رابط مباشر لإدارة الأقسام والعيادات (`departments.admin`) تحت قسم الموارد البشرية بالقائمة الجانبية لتسهيل الوصول والتحكم بالأقسام.
+  * **التحقق الآلي**:
+    - إضافة وتوسيع اختبار الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`11 passed, 85 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي أخطاء.
+
+- **المرحلة 215 (2026-11-15 — `main`) — إخفاء زر طباعة الإضبارة من شاشة الموارد البشرية (Hiding Dossier Print Button from HR Employee Show View)**:
+  * **إخفاء زر طباعة الإضبارة ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+    - حذف زر `<button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fas fa-print me-1"></i> طباعة الإضبارة</button>` من شريط الإجراءات العلوي لشاشة تفاصيل الموظف بالموارد البشرية بناءً على التوجيه الصريح، مع الإبقاء على زر طباعة الباجة (ID Card) وإضافة المستمسكات الرسمية وباقي عناصر التحكم.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+    - تحديث الاختبار الآلي وإضافة تأكيد عدم الظهور (`assertDontSee('طباعة الإضبارة')`).
+    - اجتياز كافة اختبارات الموارد البشرية بنجاح 100% (`11 passed, 85 assertions`).
+>>>>>>> fdcfd97 (feat(hr): upgrade hospital roster with quick shift stamp, daily coverage radar, auto-fill defaults and official landscape print)
     - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
 
 - **المرحلة 214 (2026-11-15 — `main`) — الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير (Automatic Anesthesia Templates Binding on Type Selection)**:

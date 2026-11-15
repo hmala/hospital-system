@@ -8,6 +8,7 @@ use App\Models\HrEmployee;
 use App\Models\HrEmployeeDocument;
 use App\Models\HrFieldRequirement;
 use App\Models\HrLookupOption;
+use App\Models\HrShift;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -114,12 +115,13 @@ class HrEmployeeController extends Controller
 
         // جلب خريطة الحقول الإجبارية
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
+        $shifts = HrShift::where('is_active', true)->orderBy('start_time')->get();
 
         // توليد رقم وظيفي افتراضي تلقائياً
         $latestId = HrEmployee::withTrashed()->max('id') ?? 0;
         $nextCode = 'EMP-'.str_pad($latestId + 1, 4, '0', STR_PAD_LEFT);
 
-        return view('hr.employees.create', compact('departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap', 'nextCode'));
+        return view('hr.employees.create', compact('departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap', 'shifts', 'nextCode'));
     }
 
     /**
@@ -158,6 +160,14 @@ class HrEmployeeController extends Controller
             'qualification' => ($reqMap['qualification'] ?? false) ? 'required|string|max:255' : 'nullable|string|max:255',
             'profile_photo' => ($reqMap['profile_photo'] ?? false) ? 'required|image|mimes:jpeg,png,jpg,webp|max:2048' : 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'notes' => 'nullable|string',
+            'schedule_type' => 'nullable|in:fixed,rotating',
+            'default_shift_id' => 'nullable|exists:hr_shifts,id',
+            'is_split_shift' => 'nullable|boolean',
+            'second_shift_id' => 'nullable|exists:hr_shifts,id',
+            'custom_start_time' => 'nullable',
+            'custom_end_time' => 'nullable',
+            'weekly_off_days' => 'nullable|array',
+            'weekly_off_days.*' => 'in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
             'documents.*.type' => 'nullable|string|max:100',
             'documents.*.file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240', // 10MB
         ];
@@ -196,6 +206,16 @@ class HrEmployeeController extends Controller
             $validated['nationality'] = 'عراقي';
         }
 
+        $validated['schedule_type'] = $validated['schedule_type'] ?? 'fixed';
+        $validated['is_split_shift'] = $request->boolean('is_split_shift');
+        if (! $validated['is_split_shift']) {
+            $validated['second_shift_id'] = null;
+        }
+        $validated['weekly_off_days'] = $request->input('weekly_off_days', ['friday']);
+        if (empty($validated['weekly_off_days'])) {
+            $validated['weekly_off_days'] = ['friday'];
+        }
+
         $employee = HrEmployee::create($validated);
 
         // معالجة ورفع المستمسكات المرفقة
@@ -210,7 +230,7 @@ class HrEmployeeController extends Controller
      */
     public function show(HrEmployee $employee)
     {
-        $employee->load(['department', 'user', 'documents.uploader']);
+        $employee->load(['department', 'user', 'documents.uploader', 'defaultShift', 'secondShift']);
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
         $actionSettings = \App\Models\HrActionSetting::where('is_active', true)->orderBy('category')->get();
 
@@ -234,8 +254,9 @@ class HrEmployeeController extends Controller
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
         $nationalities = HrLookupOption::where('category', 'nationality')->where('is_active', true)->orderBy('sort_order')->get();
         $reqMap = HrFieldRequirement::pluck('is_required', 'field_key')->toArray();
+        $shifts = HrShift::where('is_active', true)->orderBy('start_time')->get();
 
-        return view('hr.employees.edit', compact('employee', 'departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap'));
+        return view('hr.employees.edit', compact('employee', 'departments', 'users', 'employmentTypes', 'documentTypes', 'nationalities', 'reqMap', 'shifts'));
     }
 
     /**
@@ -296,6 +317,14 @@ class HrEmployeeController extends Controller
             'qualification' => ($reqMap['qualification'] ?? false) ? 'required|string|max:255' : 'nullable|string|max:255',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'notes' => 'nullable|string',
+            'schedule_type' => 'nullable|in:fixed,rotating',
+            'default_shift_id' => 'nullable|exists:hr_shifts,id',
+            'is_split_shift' => 'nullable|boolean',
+            'second_shift_id' => 'nullable|exists:hr_shifts,id',
+            'custom_start_time' => 'nullable',
+            'custom_end_time' => 'nullable',
+            'weekly_off_days' => 'nullable|array',
+            'weekly_off_days.*' => 'in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
             'documents.*.type' => 'nullable|string|max:100',
             'documents.*.file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ];
@@ -319,6 +348,16 @@ class HrEmployeeController extends Controller
 
         if (empty($validated['nationality'])) {
             $validated['nationality'] = 'عراقي';
+        }
+
+        $validated['schedule_type'] = $validated['schedule_type'] ?? ($employee->schedule_type ?? 'fixed');
+        $validated['is_split_shift'] = $request->boolean('is_split_shift');
+        if (! $validated['is_split_shift']) {
+            $validated['second_shift_id'] = null;
+        }
+        $validated['weekly_off_days'] = $request->input('weekly_off_days', ['friday']);
+        if (empty($validated['weekly_off_days'])) {
+            $validated['weekly_off_days'] = ['friday'];
         }
 
         $employee->update($validated);

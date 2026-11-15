@@ -43,6 +43,14 @@ class HrEmployee extends Model
         'overtime_hourly_rate',
         'subject_to_social_security', 'social_security_percentage',
         'subject_to_tax', 'tax_percentage',
+        // حقول الدوام والشفتات والعطلات
+        'schedule_type',
+        'default_shift_id',
+        'is_split_shift',
+        'second_shift_id',
+        'custom_start_time',
+        'custom_end_time',
+        'weekly_off_days',
     ];
 
     protected $casts = [
@@ -56,6 +64,8 @@ class HrEmployee extends Model
         'tax_percentage' => 'decimal:2',
         'subject_to_social_security' => 'boolean',
         'subject_to_tax' => 'boolean',
+        'is_split_shift' => 'boolean',
+        'weekly_off_days' => 'array',
     ];
 
     // العلاقات
@@ -67,6 +77,21 @@ class HrEmployee extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function defaultShift()
+    {
+        return $this->belongsTo(HrShift::class, 'default_shift_id');
+    }
+
+    public function secondShift()
+    {
+        return $this->belongsTo(HrShift::class, 'second_shift_id');
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(HrSchedule::class, 'hr_employee_id');
     }
 
     public function documents()
@@ -188,5 +213,45 @@ class HrEmployee extends Model
     public function actions()
     {
         return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+
+    public function getScheduleTypeNameAttribute(): string
+    {
+        return match ($this->schedule_type) {
+            'fixed' => 'دوام ثابت',
+            'rotating' => 'خفارات متناوبة',
+            default => $this->schedule_type ?? 'دوام ثابت',
+        };
+    }
+
+    public function getWeeklyOffDaysListAttribute(): array
+    {
+        return is_array($this->weekly_off_days) ? $this->weekly_off_days : ['friday'];
+    }
+
+    public function getWeeklyOffDaysArabicAttribute(): string
+    {
+        $days = $this->weekly_off_days_list;
+        $map = [
+            'sunday' => 'الأحد',
+            'monday' => 'الاثنين',
+            'tuesday' => 'الثلاثاء',
+            'wednesday' => 'الأربعاء',
+            'thursday' => 'الخميس',
+            'friday' => 'الجمعة',
+            'saturday' => 'السبت',
+        ];
+
+        $arabicDays = array_map(fn ($day) => $map[strtolower($day)] ?? $day, $days);
+
+        return empty($arabicDays) ? 'لا يوجد' : implode('، ', $arabicDays);
+    }
+
+    public function isOffOn(string|\Carbon\Carbon $date): bool
+    {
+        $carbonDate = is_a($date, \Carbon\Carbon::class) ? $date : \Carbon\Carbon::parse($date);
+        $dayName = strtolower($carbonDate->format('l'));
+
+        return in_array($dayName, $this->weekly_off_days_list);
     }
 }

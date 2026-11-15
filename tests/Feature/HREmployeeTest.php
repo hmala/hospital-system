@@ -441,6 +441,12 @@ class HREmployeeTest extends TestCase
         $showResponse = $this->actingAs($admin)->get(route('hr.employees.show', $employee));
         $showResponse->assertStatus(200);
         $showResponse->assertSee('سوري');
+        $showResponse->assertDontSee('طباعة الإضبارة');
+        $showResponse->assertSee('tab-profile');
+        $showResponse->assertSee('tab-payroll');
+        $showResponse->assertSee('tab-attendance');
+        $showResponse->assertSee('tab-actions');
+        $showResponse->assertSee('tab-documents');
 
         // 4. تعديل جنسية الموظف
         $updateData = $employeeData;
@@ -471,5 +477,117 @@ class HREmployeeTest extends TestCase
         $defaultEmployee = HrEmployee::where('employee_code', 'EMP-NAT-002')->first();
         $this->assertNotNull($defaultEmployee);
         $this->assertEquals('عراقي', $defaultEmployee->nationality);
+    }
+
+    public function test_can_create_and_manage_employee_with_fixed_and_split_shifts_and_custom_off_days()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $hospital = Hospital::first();
+        $department = Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الحسابات والصناديق',
+            'type' => 'other',
+            'room_number' => 'C-01',
+            'consultation_fee' => 0,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '22:00',
+            'max_patients_per_day' => 100,
+        ]);
+
+        $morningShift = \App\Models\HrShift::create([
+            'name' => 'صباحي قياسي',
+            'start_time' => '08:00:00',
+            'end_time' => '15:00:00',
+            'color_code' => '#0d6efd',
+            'is_active' => true,
+        ]);
+
+        $eveningShift = \App\Models\HrShift::create([
+            'name' => 'مسائي كاشير',
+            'start_time' => '16:00:00',
+            'end_time' => '22:00:00',
+            'color_code' => '#ffc107',
+            'is_active' => true,
+        ]);
+
+        // 1. إنشاء محاسب بنظام الوجبتين (صباحي + مسائي) وعطلة (الجمعة والسبت)
+        $cashierData = [
+            'employee_code' => 'EMP-CSH-001',
+            'full_name' => 'حسين علي المحاسب',
+            'gender' => 'male',
+            'phone' => '07709988771',
+            'staff_type' => 'administrative',
+            'job_title' => 'كاشير رئيسي',
+            'department_id' => $department->id,
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 850000,
+            'status' => 'active',
+            'schedule_type' => 'fixed',
+            'default_shift_id' => $morningShift->id,
+            'is_split_shift' => '1',
+            'second_shift_id' => $eveningShift->id,
+            'custom_start_time' => '08:30',
+            'custom_end_time' => '15:30',
+            'weekly_off_days' => ['friday', 'saturday'],
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $cashierData);
+        $response->assertSessionHasNoErrors();
+
+        $cashier = HrEmployee::where('employee_code', 'EMP-CSH-001')->first();
+        $this->assertNotNull($cashier);
+        $this->assertEquals('fixed', $cashier->schedule_type);
+        $this->assertEquals($morningShift->id, $cashier->default_shift_id);
+        $this->assertTrue($cashier->is_split_shift);
+        $this->assertEquals($eveningShift->id, $cashier->second_shift_id);
+        $this->assertEquals(['friday', 'saturday'], $cashier->weekly_off_days_list);
+        $this->assertStringContainsString('الجمعة', $cashier->weekly_off_days_arabic);
+        $this->assertStringContainsString('السبت', $cashier->weekly_off_days_arabic);
+
+        // فحص دالة فحص العطلة (الجمعة والسبت عطلة، والأحد دوام)
+        $fridayDate = \Carbon\Carbon::parse('next friday');
+        $saturdayDate = \Carbon\Carbon::parse('next saturday');
+        $sundayDate = \Carbon\Carbon::parse('next sunday');
+
+        $this->assertTrue($cashier->isOffOn($fridayDate));
+        $this->assertTrue($cashier->isOffOn($saturdayDate));
+        $this->assertFalse($cashier->isOffOn($sundayDate));
+
+        // 2. فحص العرض في شاشة الإضبارة والتفاصيل
+        $showResponse = $this->actingAs($admin)->get(route('hr.employees.show', $cashier));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('صباحي قياسي');
+        $showResponse->assertSee('مسائي كاشير');
+        $showResponse->assertSee('دوام وجبتين');
+        $showResponse->assertSee('الجمعة');
+        $showResponse->assertSee('السبت');
+
+        // 3. تعديل الموظف ليكون عطلته (الخميس فقط) وإلغاء الوجبتين
+        $updateData = $cashierData;
+        $updateData['is_split_shift'] = '0';
+        $updateData['weekly_off_days'] = ['thursday'];
+
+        $updateResponse = $this->actingAs($admin)->put(route('hr.employees.update', $cashier), $updateData);
+        $updateResponse->assertSessionHasNoErrors();
+
+        $cashier->refresh();
+        $this->assertFalse($cashier->is_split_shift);
+        $this->assertNull($cashier->second_shift_id);
+        $this->assertEquals(['thursday'], $cashier->weekly_off_days_list);
+
+        $thursdayDate = \Carbon\Carbon::parse('next thursday');
+        $this->assertTrue($cashier->isOffOn($thursdayDate));
+        $this->assertFalse($cashier->isOffOn($fridayDate));
+
+        // 4. فحص ظهور الموظف الذكي في جدول الدوام العام
+        $scheduleResponse = $this->actingAs($admin)->get(route('hr.schedules.index', [
+            'department_id' => $department->id,
+            'start_date' => now()->startOfWeek(\Carbon\Carbon::SUNDAY)->format('Y-m-d'),
+        ]));
+        $scheduleResponse->assertStatus(200);
+        $scheduleResponse->assertSee($cashier->full_name);
     }
 }

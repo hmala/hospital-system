@@ -1088,6 +1088,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('schedules/swap', [\App\Http\Controllers\HR\HrScheduleController::class, 'swap'])->name('schedules.swap');
         Route::get('schedules/emergency-cover-search', [\App\Http\Controllers\HR\HrScheduleController::class, 'emergencyCoverSearch'])->name('schedules.emergency-cover-search');
         Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
+        Route::post('schedules/auto-fill-defaults', [\App\Http\Controllers\HR\HrScheduleController::class, 'autoFillDefaults'])->name('schedules.auto-fill-defaults');
+        Route::post('schedules/clear-range', [\App\Http\Controllers\HR\HrScheduleController::class, 'clearRange'])->name('schedules.clear-range');
+        Route::post('schedules/update-cell', [\App\Http\Controllers\HR\HrScheduleController::class, 'updateCell'])->name('schedules.update-cell');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
 
         // المخصصات الثابتة

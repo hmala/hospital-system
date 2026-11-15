@@ -251,12 +251,145 @@
                     </div>
                 </div>
 
-                <!-- 3. البيانات المهنية والتراخيص الطبية -->
+                <!-- 3. نظام الدوام والشفتات وأيام الاستراحة والعطلات -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="card-title fw-bold text-dark mb-0">
+                            <i class="fas fa-clock text-primary me-2"></i>3. نظام الدوام والشفتات وأيام الاستراحة
+                        </h6>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 small">
+                            تثبيت الدوام والعطلات في بروفايل الموظف
+                        </span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <!-- نوع ونمط الجدولة -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">طبيعة ونمط الدوام <span class="text-danger">*</span></label>
+                                <select name="schedule_type" id="schedule_type_select" class="form-select border-primary">
+                                    <option value="fixed" {{ old('schedule_type', 'fixed') == 'fixed' ? 'selected' : '' }}>📌 دوام ثابت (إداري / محاسبة / خدمات وملاك دائم)</option>
+                                    <option value="rotating" {{ old('schedule_type') == 'rotating' ? 'selected' : '' }}>🔄 دوام خفارات متناوبة (تمريض / أطباء ومقيمين)</option>
+                                </select>
+                                <div class="form-text text-muted small">الدوام الثابت لا يتطلب جدولاً أسبوعياً متكرراً؛ النظام يعتمده تلقائياً.</div>
+                            </div>
+
+                            <!-- الشفت الأساسي الدائم -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">الشفت الدائم / الأساسي للموظف</label>
+                                <select name="default_shift_id" id="default_shift_select" class="form-select">
+                                    <option value="">— اختر الشفت الأساسي —</option>
+                                    @foreach($shifts as $s)
+                                        <option value="{{ $s->id }}" {{ old('default_shift_id') == $s->id ? 'selected' : '' }}>
+                                            {{ $s->name }} ({{ \Carbon\Carbon::parse($s->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($s->end_time)->format('h:i A') }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text text-muted small">الشفت الذي يسكن عليه الموظف بصفة دائمة.</div>
+                            </div>
+
+                            <!-- مفتاح تبديل دوام الوجبتين لأي موظف -->
+                            <div class="col-12">
+                                <div class="p-3 bg-light rounded-3 border">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="is_split_shift" id="is_split_shift" value="1" {{ old('is_split_shift') ? 'checked' : '' }} onchange="toggleSplitShift(this.checked)">
+                                        <label class="form-check-label fw-bold text-dark ms-2" for="is_split_shift">
+                                            <i class="fas fa-layer-group text-warning me-1"></i> دوام وجبتين (صباحي + مسائي / Split Shift)
+                                        </label>
+                                        <div class="text-muted small mt-1">فعل هذا الخيار إذا كان الموظف (كاشير، استقبال، صيدلية، عيادات...) ملتزماً بالحضور فترتين يومياً (صباحاً ومساءً).</div>
+                                    </div>
+
+                                    <!-- الشفت الثاني المسائي -->
+                                    <div class="mt-3 {{ old('is_split_shift') ? '' : 'd-none' }}" id="second_shift_container">
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-primary">الشفت المسائي الثاني (الوجبة الثانية):</label>
+                                                <select name="second_shift_id" class="form-select border-warning">
+                                                    <option value="">— اختر الشفت المسائي الثاني —</option>
+                                                    @foreach($shifts as $s)
+                                                        <option value="{{ $s->id }}" {{ old('second_shift_id') == $s->id ? 'selected' : '' }}>
+                                                            {{ $s->name }} ({{ \Carbon\Carbon::parse($s->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($s->end_time)->format('h:i A') }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="alert alert-warning py-2 px-3 mb-0 small border-0">
+                                                    <i class="fas fa-info-circle me-1"></i> النظام سيتوقع تسجيل حضور وانصراف لكل وجبة بشكل مستقل.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- أوقات حضور وانصراف مخصصة بدقة (استثناء) -->
+                            <div class="col-12">
+                                <div class="p-3 border rounded-3 bg-white">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label small fw-bold text-secondary mb-0">
+                                            <i class="fas fa-user-clock me-1"></i> ساعات عمل مخصصة للموظف (استثناء عن توقيت الشفت المعتاد):
+                                        </label>
+                                        <span class="text-muted small">اختياري (اتركه فارغاً للاعتماد على أوقات الشفت الرسمية)</span>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light">وقت الحضور المعتمد</span>
+                                                <input type="time" name="custom_start_time" class="form-control" value="{{ old('custom_start_time') }}">
+                                            </div>
+                                            <div class="form-text small">مثال: لمن يبدأ 09:00 بدلاً من 08:00</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light">وقت الانصراف المعتمد</span>
+                                                <input type="time" name="custom_end_time" class="form-control" value="{{ old('custom_end_time') }}">
+                                            </div>
+                                            <div class="form-text small">مثال: لمن ينتهي 16:00 (4 عصراً) بدلاً من 15:00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- أيام الاستراحة والعطلة الأسبوعية المعتمدة -->
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark">
+                                    <i class="fas fa-couch text-success me-1"></i> أيام الاستراحة والعطلة الأسبوعية المعتمدة للموظف:
+                                </label>
+                                <p class="text-muted small mb-2">اختر اليوم أو الأيام التي يستريح فيها الموظف (النظام سيعتبرها تلقائياً أيام عطلة Off ولا يسجل عليه غياباً فيها):</p>
+
+                                @php
+                                    $selectedOffDays = old('weekly_off_days', ['friday']);
+                                    $weekDays = [
+                                        'friday' => 'الجمعة (الرسمية)',
+                                        'saturday' => 'السبت',
+                                        'thursday' => 'الخميس',
+                                        'sunday' => 'الأحد',
+                                        'monday' => 'الاثنين',
+                                        'tuesday' => 'الثلاثاء',
+                                        'wednesday' => 'الأربعاء',
+                                    ];
+                                @endphp
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach($weekDays as $dayKey => $dayLabel)
+                                        @php $isChecked = in_array($dayKey, (array)$selectedOffDays); @endphp
+                                        <input type="checkbox" class="btn-check" name="weekly_off_days[]" id="off_day_{{ $dayKey }}" value="{{ $dayKey }}" {{ $isChecked ? 'checked' : '' }} autocomplete="off">
+                                        <label class="btn btn-outline-secondary btn-sm px-3 rounded-pill" for="off_day_{{ $dayKey }}">
+                                            {{ $dayLabel }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. البيانات المهنية والتراخيص الطبية -->
                 <div class="card border-0 shadow-sm rounded-3 mb-4" id="medical_credentials_card">
                     <div class="card-header bg-info bg-opacity-10 py-3 border-bottom border-info border-opacity-25">
                         <div class="d-flex justify-content-between align-items-center">
                             <h6 class="card-title fw-bold text-info mb-0">
-                                <i class="fas fa-stethoscope me-2"></i>3. التراخيص المهنية والبيانات الطبية
+                                <i class="fas fa-stethoscope me-2"></i>4. التراخيص المهنية والبيانات الطبية
                             </h6>
                             <span class="badge bg-info text-dark">خاص بالكوادر الطبية والفنية</span>
                         </div>
@@ -515,6 +648,17 @@
             addNewDocRow();
         });
     });
+
+    function toggleSplitShift(checked) {
+        const container = document.getElementById('second_shift_container');
+        if (container) {
+            if (checked) {
+                container.classList.remove('d-none');
+            } else {
+                container.classList.add('d-none');
+            }
+        }
+    }
 
     function previewImage(input) {
         if (input.files && input.files[0]) {
