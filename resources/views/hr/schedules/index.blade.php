@@ -2,222 +2,201 @@
 @section('title', 'جدول الدوام والخفارات - HR')
 
 @section('content')
-<div class="container-fluid schedule-roster-container">
-    <!-- Header Section -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
-        <div>
-            <h4 class="fw-bold text-dark mb-1">
-                <i class="fas fa-calendar-alt text-primary me-2"></i>جدول الدوام والخفارات (Hospital Roster)
-            </h4>
-            <p class="text-muted small mb-0">جدولة وتوزيع الشفتات والخفارات الأسبوعية والشهرية مع كشف التغطية الذكي</p>
+<div class="container-fluid schedule-roster-container px-3 py-2">
+    <!-- Top Action & Navigation Bar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2 no-print bg-white p-2 rounded-3 shadow-sm border">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                <i class="fas fa-calendar-alt text-primary me-2"></i>جدول الدوام والخفارات
+            </h5>
+            <span class="badge bg-light text-dark border px-2 py-1 small">
+                {{ $startDate->format('Y-m-d') }} &larr; {{ $endDate->format('Y-m-d') }}
+            </span>
         </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <!-- Navigation buttons -->
-            <div class="btn-group shadow-sm">
-                <a href="{{ route('hr.schedules.index', ['start_date' => $prevDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-secondary btn-sm" title="الفترة السابقة">
-                    <i class="fas fa-chevron-right me-1"></i> السابق
+
+        <!-- Center: Quick Nav & View Mode -->
+        <div class="d-flex gap-2 align-items-center">
+            <div class="btn-group btn-group-sm shadow-xs">
+                <a href="{{ route('hr.schedules.index', ['start_date' => $prevDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-secondary" title="الفترة السابقة">
+                    <i class="fas fa-chevron-right"></i> السابق
                 </a>
-                <a href="{{ route('hr.schedules.index', ['start_date' => $currentPeriodDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-primary btn-sm fw-bold" title="الانتقال إلى اليوم / الفترة الحالية">
-                    <i class="fas fa-dot-circle text-danger me-1"></i> اليوم / الحالي
+                <a href="{{ route('hr.schedules.index', ['start_date' => $currentPeriodDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-primary fw-bold" title="الانتقال إلى اليوم الحالي">
+                    <i class="fas fa-dot-circle text-danger me-1"></i> الحالي
                 </a>
-                <a href="{{ route('hr.schedules.index', ['start_date' => $nextDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-secondary btn-sm" title="الفترة التالية">
-                    التالي <i class="fas fa-chevron-left ms-1"></i>
+                <a href="{{ route('hr.schedules.index', ['start_date' => $nextDate, 'view_mode' => $viewMode, 'department_id' => $departmentId]) }}" class="btn btn-outline-secondary" title="الفترة التالية">
+                    التالي <i class="fas fa-chevron-left"></i>
                 </a>
             </div>
 
-            <!-- View Mode Switcher -->
-            <div class="btn-group shadow-sm">
+            <div class="btn-group btn-group-sm shadow-xs">
                 <a href="{{ route('hr.schedules.index', ['start_date' => $startDate->format('Y-m-d'), 'view_mode' => 'week', 'department_id' => $departmentId]) }}" 
-                   class="btn btn-sm {{ $viewMode === 'week' ? 'btn-primary fw-bold' : 'btn-outline-primary' }}">
-                    <i class="fas fa-calendar-week me-1"></i> أسبوعي (7 أيام)
+                   class="btn {{ $viewMode === 'week' ? 'btn-primary fw-bold' : 'btn-outline-primary' }}">
+                    أسبوعي (7 أيام)
                 </a>
                 <a href="{{ route('hr.schedules.index', ['start_date' => $startDate->format('Y-m-d'), 'view_mode' => 'month', 'department_id' => $departmentId]) }}" 
-                   class="btn btn-sm {{ $viewMode === 'month' ? 'btn-primary fw-bold' : 'btn-outline-primary' }}">
-                    <i class="fas fa-calendar-alt me-1"></i> شهري كامل
+                   class="btn {{ $viewMode === 'month' ? 'btn-primary fw-bold' : 'btn-outline-primary' }}">
+                    شهري كامل
                 </a>
             </div>
+        </div>
 
-            <!-- Print Button -->
-            <button type="button" class="btn btn-sm btn-outline-dark fw-bold shadow-sm" onclick="window.print()">
-                <i class="fas fa-print me-1"></i> طباعة الجدول الرسمي
+        <!-- Right: Actions -->
+        <div class="d-flex gap-1 align-items-center">
+            <button type="button" class="btn btn-sm btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#autoFillModal" title="تطبيق دوام الموظفين الافتراضي">
+                <i class="fas fa-magic me-1"></i> تعبئة تلقائية
+            </button>
+            <form action="{{ route('hr.schedules.copy-last-week') }}" method="POST" class="d-inline-block">
+                @csrf
+                <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
+                <input type="hidden" name="department_id" value="{{ $departmentId }}">
+                <button type="submit" class="btn btn-sm btn-outline-info" onclick="return confirm('نسخ جدول الأسبوع الماضي؟')" title="نسخ جدول الأسبوع الماضي">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </form>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearRangeModal" title="تفريغ الجدول">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()" title="طباعة رسمية">
+                <i class="fas fa-print me-1"></i> طباعة
+            </button>
+            <button type="submit" form="rosterForm" class="btn btn-sm btn-success fw-bold px-3 shadow-sm">
+                <i class="fas fa-save me-1"></i> حفظ
             </button>
         </div>
     </div>
 
     <!-- Alert Messages -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 no-print" role="alert">
+        <div class="alert alert-success alert-dismissible fade show shadow-sm py-2 px-3 small border-0 mb-2 no-print" role="alert">
             <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 no-print" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm py-2 px-3 small border-0 mb-2 no-print" role="alert">
             <i class="fas fa-exclamation-triangle me-1"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- Control & Filter Toolbar -->
-    <div class="card border-0 shadow-sm rounded-3 mb-3 no-print">
-        <div class="card-body p-3">
-            <div class="row g-3 align-items-center">
-                <!-- Department Filter Form -->
-                <div class="col-xl-4 col-lg-5">
-                    <form action="{{ route('hr.schedules.index') }}" method="GET" class="row g-2 align-items-center" id="deptFilterForm">
-                        <input type="hidden" name="view_mode" value="{{ $viewMode }}">
-                        <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
-                        <div class="col-8">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light"><i class="fas fa-hospital-user text-muted"></i></span>
-                                <select name="department_id" class="form-select form-select-sm" onchange="document.getElementById('deptFilterForm').submit()">
-                                    <option value="">جميع الأقسام والعيادات</option>
-                                    @foreach($departments as $dept)
-                                        <option value="{{ $dept->id }}" {{ $departmentId == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ $startDate->format('Y-m-d') }}" onchange="document.getElementById('deptFilterForm').submit()">
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Live Client Search & Quick Filter Pills -->
-                <div class="col-xl-5 col-lg-7">
-                    <div class="d-flex gap-2 align-items-center">
-                        <div class="input-group input-group-sm flex-grow-1">
-                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="rosterSearchInput" class="form-control form-control-sm border-start-0" placeholder="بحث فوري بالاسم أو الوظيفة..." onkeyup="filterRosterRows()">
-                        </div>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary active filter-pill-btn" onclick="setRosterScheduleFilter('all', this)">الكل</button>
-                            <button type="button" class="btn btn-outline-secondary filter-pill-btn" onclick="setRosterScheduleFilter('fixed', this)">ثابت</button>
-                            <button type="button" class="btn btn-outline-secondary filter-pill-btn" onclick="setRosterScheduleFilter('rotating', this)">خفارات</button>
-                            <button type="button" class="btn btn-outline-secondary filter-pill-btn" onclick="setRosterScheduleFilter('split', this)">وجبتين</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Emergency & Swap Triggers -->
-                <div class="col-xl-3 col-lg-12 d-flex justify-content-xl-end gap-2 flex-wrap">
-                    <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#swapModal">
-                        <i class="fas fa-exchange-alt me-1 text-warning"></i> تبادل خفارات
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#emergencyModal">
-                        <i class="fas fa-ambulance me-1"></i> بديل طوارئ
-                    </button>
-                </div>
-            </div>
+    <!-- Compact KPI & Summary Strip -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between bg-white border rounded-3 px-3 py-1 mb-2 no-print small shadow-xs">
+        <div class="d-flex align-items-center gap-3">
+            <span><i class="fas fa-users text-primary me-1"></i> الكوادر الظاهرة: <strong id="visibleStaffCount">{{ $employees->count() }}</strong></span>
+            <span class="text-muted">|</span>
+            <span><i class="fas fa-clock text-warning me-1"></i> إجمالي نوبات العمل: <strong class="text-success">{{ $kpiStats['total_shifts'] ?? 0 }}</strong></span>
+            <span class="text-muted">|</span>
+            <span><i class="fas fa-coffee text-secondary me-1"></i> أيام الراحة (Off): <strong>{{ $kpiStats['total_off'] ?? 0 }}</strong></span>
+            <span class="text-muted">|</span>
+            <span><i class="fas fa-layer-group text-danger me-1"></i> كادر الوجبتين: <strong class="badge bg-warning text-dark">{{ $kpiStats['split_count'] ?? 0 }}</strong></span>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" class="btn btn-link text-warning p-0 text-decoration-none small fw-bold" data-bs-toggle="modal" data-bs-target="#swapModal">
+                <i class="fas fa-exchange-alt me-1"></i> تبادل خفارات
+            </button>
+            <span class="text-muted">•</span>
+            <button type="button" class="btn btn-link text-danger p-0 text-decoration-none small fw-bold" data-bs-toggle="modal" data-bs-target="#emergencyModal">
+                <i class="fas fa-ambulance me-1"></i> بديل طوارئ
+            </button>
         </div>
     </div>
 
-    <!-- Quick Stamp Tool (أداة الختم والتلوين السريع) -->
-    <div class="card border-0 shadow-sm rounded-3 mb-3 bg-light no-print border-start border-4 border-primary">
-        <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary px-2 py-1"><i class="fas fa-stamp me-1"></i> أداة الختم السريع</span>
-                <span class="small text-muted d-none d-md-inline">اختر شفت ثم انقر على أي خلية لتعيينه وتلوينه وحفظه فوراً:</span>
-            </div>
-            <div class="d-flex flex-wrap gap-1 align-items-center" id="stampPalette">
-                <button type="button" class="btn btn-sm btn-outline-dark stamp-btn active" data-val="" data-color="" onclick="selectStamp(this)">
-                    <i class="fas fa-eraser me-1"></i> مسح (فراغ)
-                </button>
-                <button type="button" class="btn btn-sm btn-secondary stamp-btn" data-val="off" data-color="#6c757d" onclick="selectStamp(this)">
-                    <i class="fas fa-coffee me-1"></i> راحة (Off)
-                </button>
-                @foreach($shifts as $shift)
-                    <button type="button" class="btn btn-sm text-white stamp-btn" 
-                            style="background-color: {{ $shift->color_code }}; border-color: {{ $shift->color_code }}; opacity: 0.9;" 
-                            data-val="{{ $shift->id }}" 
-                            data-color="{{ $shift->color_code }}" 
-                            onclick="selectStamp(this)">
-                        <i class="fas fa-clock me-1"></i> {{ $shift->name }}
-                        <small class="opacity-75 ms-1">({{ \Carbon\Carbon::parse($shift->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($shift->end_time)->format('H:i') }})</small>
+    <!-- Unified Sleek Filter & Quick Stamp Palette Bar -->
+    <div class="card border-0 shadow-sm rounded-3 mb-2 no-print bg-light">
+        <div class="card-body p-2">
+            <div class="row g-2 align-items-center">
+                <!-- Department & Search & Type Filter -->
+                <div class="col-xl-6 col-lg-7 d-flex gap-2 align-items-center flex-wrap">
+                    <!-- Dept Filter -->
+                    <form action="{{ route('hr.schedules.index') }}" method="GET" class="d-inline-block m-0" id="quickDeptForm">
+                        <input type="hidden" name="view_mode" value="{{ $viewMode }}">
+                        <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
+                        <select name="department_id" class="form-select form-select-sm py-1 shadow-xs" style="max-width: 170px;" onchange="document.getElementById('quickDeptForm').submit()">
+                            <option value="">جميع الأقسام</option>
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}" {{ $departmentId == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+
+                    <!-- Instant Search Input -->
+                    <div class="input-group input-group-sm shadow-xs" style="max-width: 190px;">
+                        <span class="input-group-text bg-white border-end-0 py-0"><i class="fas fa-search text-muted small"></i></span>
+                        <input type="text" id="rosterSearchInput" class="form-control form-control-sm border-start-0 py-1" placeholder="بحث بالاسم أو الوظيفة..." onkeyup="filterRosterRows()">
+                    </div>
+
+                    <!-- Filter Pills -->
+                    <div class="btn-group btn-group-sm shadow-xs" role="group">
+                        <button type="button" class="btn btn-outline-secondary active filter-pill-btn py-1" onclick="setRosterScheduleFilter('all', this)">الكل</button>
+                        <button type="button" class="btn btn-outline-secondary filter-pill-btn py-1" onclick="setRosterScheduleFilter('fixed', this)">ثابت</button>
+                        <button type="button" class="btn btn-outline-secondary filter-pill-btn py-1" onclick="setRosterScheduleFilter('rotating', this)">خفارات</button>
+                        <button type="button" class="btn btn-outline-secondary filter-pill-btn py-1" onclick="setRosterScheduleFilter('split', this)">وجبتين</button>
+                    </div>
+                </div>
+
+                <!-- Quick Stamp Tool Palette -->
+                <div class="col-xl-6 col-lg-5 d-flex justify-content-xl-end align-items-center gap-1 flex-wrap">
+                    <span class="small fw-bold text-muted me-1"><i class="fas fa-stamp text-primary"></i> أداة الختم السريع:</span>
+                    <button type="button" class="btn btn-xs btn-outline-dark stamp-btn active py-1 px-2" data-val="" data-color="" onclick="selectStamp(this)" title="مسح / فراغ">
+                        <i class="fas fa-eraser"></i>
                     </button>
-                @endforeach
-                <div class="vr mx-2"></div>
-                <div class="form-check form-switch m-0 pt-1">
-                    <input class="form-check-input" type="checkbox" id="ajaxAutoSaveToggle" checked>
-                    <label class="form-check-label small fw-bold text-dark" for="ajaxAutoSaveToggle">حفظ فوري تلقائي (AJAX)</label>
+                    <button type="button" class="btn btn-xs btn-secondary stamp-btn py-1 px-2" data-val="off" data-color="#6c757d" onclick="selectStamp(this)" title="راحة Off">
+                        Off
+                    </button>
+                    @foreach($shifts as $shift)
+                        <button type="button" class="btn btn-xs text-white stamp-btn py-1 px-2 fw-bold" 
+                                style="background-color: {{ $shift->color_code }}; border-color: {{ $shift->color_code }}; font-size: 0.75rem;" 
+                                data-val="{{ $shift->id }}" 
+                                data-color="{{ $shift->color_code }}" 
+                                onclick="selectStamp(this)"
+                                title="{{ $shift->name }} ({{ \Carbon\Carbon::parse($shift->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($shift->end_time)->format('H:i') }})">
+                            {{ Str::limit($shift->name, 8, '') }}
+                        </button>
+                    @endforeach
+                    <div class="form-check form-switch m-0 ms-2 pt-1">
+                        <input class="form-check-input" type="checkbox" id="ajaxAutoSaveToggle" checked>
+                        <label class="form-check-label small text-muted" for="ajaxAutoSaveToggle" title="حفظ فوري عبر AJAX">حفظ تلقائي</label>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Official Hospital Print Header (Visible Only on Print) -->
-    <div class="d-none d-print-block print-header mb-4 text-center border-bottom pb-3">
+    <div class="d-none d-print-block print-header mb-3 text-center border-bottom pb-2">
         <div class="d-flex justify-content-between align-items-center">
             <div class="text-start">
                 <h6 class="fw-bold mb-0">جمهورية العراق</h6>
-                <p class="small mb-0">وزارة الصحة / دائرة صحة بغداد</p>
-                <p class="small fw-bold mb-0">إدارة المستشفى - قسم الموارد البشرية</p>
+                <p class="small mb-0">وزارة الصحة / إدارة المستشفى</p>
+                <p class="small fw-bold mb-0">قسم الموارد البشرية - جدول الدوام والخفارات</p>
             </div>
             <div class="text-center">
-                <h4 class="fw-bold mb-1">جدول توزيع الدوام والخفارات الرسمية (Roster)</h4>
-                <p class="mb-0 fw-bold">الفترة: من {{ $startDate->format('Y-m-d') }} إلى {{ $endDate->format('Y-m-d') }}</p>
-                <p class="small text-muted mb-0">القسم: {{ $departments->firstWhere('id', $departmentId)->name ?? 'كافة الأقسام' }}</p>
+                <h5 class="fw-bold mb-1">جدول الخفارات والدوام المعتمد</h5>
+                <p class="mb-0 fw-bold small">الفترة: {{ $startDate->format('Y-m-d') }} &larr; {{ $endDate->format('Y-m-d') }} | القسم: {{ $departments->firstWhere('id', $departmentId)->name ?? 'كافة الأقسام' }}</p>
             </div>
             <div class="text-end">
-                <p class="small mb-0">تاريخ الطباعة: {{ now()->format('Y-m-d H:i') }}</p>
-                <p class="small mb-0">رمز الوثيقة: HR-ROST-{{ $startDate->format('Ymd') }}</p>
+                <p class="small mb-0">تاريخ الطباعة: {{ now()->format('Y-m-d') }}</p>
+                <p class="small text-muted mb-0">وثيقة رسمية معتمدة</p>
             </div>
         </div>
     </div>
 
-    <!-- Main Grid Card -->
+    <!-- Main Table Card -->
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 no-print">
-            <div class="d-flex align-items-center gap-2">
-                <h6 class="mb-0 fw-bold text-dark">
-                    <i class="fas fa-calendar-check text-success me-1"></i>
-                    الجدول للفترة: <span class="badge bg-light text-dark border">{{ $startDate->format('Y-m-d') }}</span> إلى <span class="badge bg-light text-dark border">{{ $endDate->format('Y-m-d') }}</span>
-                </h6>
-                <span class="badge bg-primary bg-opacity-10 text-primary fw-normal" id="visibleEmpCountBadge">
-                    عدد الكوادر: {{ $employees->count() }} موظف
-                </span>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <!-- Auto-Fill Defaults Button -->
-                <button type="button" class="btn btn-sm btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#autoFillModal">
-                    <i class="fas fa-magic me-1"></i> تعبئة الدوام الافتراضي تلقائياً
-                </button>
-                <!-- Copy Last Week Button -->
-                <form action="{{ route('hr.schedules.copy-last-week') }}" method="POST" class="d-inline-block">
-                    @csrf
-                    <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
-                    <input type="hidden" name="department_id" value="{{ $departmentId }}">
-                    <button type="submit" class="btn btn-sm btn-outline-info fw-bold" onclick="return confirm('هل أنت متأكد من جلب جدول الأسبوع الماضي؟ سيتم استبدال جدول هذا الأسبوع بالبيانات المستنسخة.')">
-                        <i class="fas fa-copy me-1"></i> نسخ الأسبوع الماضي
-                    </button>
-                </form>
-                <!-- Clear Range Button -->
-                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearRangeModal">
-                    <i class="fas fa-trash-alt me-1"></i> تفريغ
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('rosterForm').reset(); reapplyAllColors();">
-                    <i class="fas fa-undo me-1"></i> تراجع
-                </button>
-                <button type="submit" form="rosterForm" class="btn btn-sm btn-success fw-bold px-3 shadow-sm">
-                    <i class="fas fa-save me-1"></i> حفظ كافة التعديلات
-                </button>
-            </div>
-        </div>
-
-        <div class="table-responsive roster-table-wrapper" style="max-height: 70vh;">
+        <div class="table-responsive roster-table-wrapper" style="max-height: 72vh;">
             <form action="{{ route('hr.schedules.store') }}" method="POST" id="rosterForm">
                 @csrf
                 <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
                 <input type="hidden" name="end_date" value="{{ $endDate->format('Y-m-d') }}">
                 
-                <table class="table table-bordered table-hover align-middle mb-0 text-center roster-table" style="min-width: {{ count($dates) * 115 + 240 }}px;" id="rosterMainTable">
-                    <thead class="bg-light sticky-top shadow-sm" style="z-index: 10;">
+                <table class="table table-bordered table-hover align-middle mb-0 text-center roster-table" style="min-width: {{ count($dates) * 110 + 230 }}px;" id="rosterMainTable">
+                    <!-- Table Head -->
+                    <thead class="bg-light sticky-top shadow-xs" style="z-index: 10;">
                         <tr>
-                            <th class="align-middle text-start roster-emp-th" style="width: 240px; min-width: 240px; position: sticky; right: 0; background-color: #f8f9fa; z-index: 11;">
+                            <th class="align-middle text-start roster-emp-th py-2 px-3" style="width: 230px; min-width: 230px; position: sticky; right: 0; background-color: #f8f9fa; z-index: 11;">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">الموظف / القسم</span>
-                                    <span class="badge bg-secondary text-white small" style="font-size: 0.65rem;">النوع</span>
+                                    <span class="fw-bold text-dark small">الموظف / القسم</span>
+                                    <span class="badge bg-secondary text-white" style="font-size: 0.6rem;">النمط</span>
                                 </div>
                             </th>
                             @foreach($dates as $date)
@@ -225,24 +204,27 @@
                                     $isToday = $date->isToday();
                                     $isFriday = $date->isFriday();
                                 @endphp
-                                <th class="align-middle roster-date-th {{ $isToday ? 'bg-primary bg-opacity-10 text-primary border-primary' : '' }} {{ $isFriday ? 'bg-secondary bg-opacity-10' : '' }}" style="width: 115px; min-width: 115px;">
-                                    <div class="fw-bold {{ $isToday ? 'text-primary' : '' }}">
+                                <th class="align-middle roster-date-th py-1 px-1 {{ $isToday ? 'bg-primary bg-opacity-10 text-primary border-primary' : '' }} {{ $isFriday ? 'bg-secondary bg-opacity-10' : '' }}" style="width: 110px; min-width: 110px;">
+                                    <div class="fw-bold small {{ $isToday ? 'text-primary' : '' }}">
                                         {{ $date->locale('ar')->translatedFormat('l') }}
                                         @if($isToday)
-                                            <span class="badge bg-danger ms-1" style="font-size: 0.6rem;">اليوم</span>
+                                            <span class="badge bg-danger ms-1" style="font-size: 0.55rem;">اليوم</span>
                                         @endif
                                     </div>
-                                    <div class="small text-muted">{{ $date->format('m/d') }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">{{ $date->format('m/d') }}</div>
                                 </th>
                             @endforeach
                         </tr>
                     </thead>
+
+                    <!-- Table Body -->
                     <tbody>
                         @forelse($employees as $emp)
                             @php
                                 $empSchedules = $existingSchedules->get($emp->id, collect());
+                                $isSplit = (bool) $emp->is_split_shift;
                                 $scheduleType = $emp->schedule_type ?? 'rotating';
-                                if ($emp->is_split_shift) {
+                                if ($isSplit) {
                                     $filterType = 'split';
                                 } elseif ($scheduleType === 'fixed') {
                                     $filterType = 'fixed';
@@ -250,93 +232,183 @@
                                     $filterType = 'rotating';
                                 }
                             @endphp
-                            <tr class="roster-emp-row" data-schedule-type="{{ $filterType }}" data-emp-name="{{ strtolower($emp->full_name) }}" data-emp-job="{{ strtolower($emp->job_title) }}" data-emp-id="{{ $emp->id }}">
-                                <td class="text-start roster-emp-cell" style="position: sticky; right: 0; background-color: white; z-index: 5;">
+                            <tr class="roster-emp-row {{ $isSplit ? 'split-shift-row' : '' }}" data-schedule-type="{{ $filterType }}" data-emp-name="{{ strtolower($emp->full_name) }}" data-emp-job="{{ strtolower($emp->job_title) }}" data-emp-id="{{ $emp->id }}">
+                                <!-- Sticky Employee Info Cell -->
+                                <td class="text-start roster-emp-cell py-1 px-2" style="position: sticky; right: 0; background-color: white; z-index: 5;">
                                     <div class="d-flex align-items-center justify-content-between">
-                                        <span class="fw-bold text-dark emp-name-text" style="font-size: 0.88rem;">{{ $emp->full_name }}</span>
+                                        <span class="fw-bold text-dark emp-name-text" style="font-size: 0.85rem;">{{ $emp->full_name }}</span>
                                         <div class="d-flex gap-1 align-items-center">
-                                            @if($emp->is_split_shift)
-                                                <span class="badge bg-warning text-dark" style="font-size: 0.62rem;" title="دوام وجبتين">وجبتين</span>
+                                            @if($isSplit)
+                                                <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.6rem;" title="دوام وجبتين">وجبتين</span>
                                             @elseif($scheduleType === 'fixed')
-                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary" style="font-size: 0.62rem;" title="دوام ثابت">ثابت</span>
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary" style="font-size: 0.6rem;" title="دوام ثابت">ثابت</span>
                                             @else
-                                                <span class="badge bg-info bg-opacity-10 text-info border border-info" style="font-size: 0.62rem;" title="خفارات متناوبة">متناوب</span>
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info" style="font-size: 0.6rem;" title="خفارات متناوبة">متناوب</span>
                                             @endif
-                                            <!-- Row Quick Fill Dropdown -->
+
+                                            <!-- Row Menu -->
                                             <div class="dropdown no-print">
-                                                <button class="btn btn-sm btn-light border-0 py-0 px-1 text-muted" type="button" data-bs-toggle="dropdown" title="تعبئة سريعة لأسبوع هذا الموظف">
-                                                    <i class="fas fa-ellipsis-v" style="font-size: 0.75rem;"></i>
+                                                <button class="btn btn-sm btn-light border-0 py-0 px-1 text-muted" type="button" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v" style="font-size: 0.7rem;"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
                                                     <li><h6 class="dropdown-header py-1 small">تعبئة سريعة لـ {{ Str::words($emp->full_name, 2, '') }}</h6></li>
                                                     @if($emp->defaultShift)
-                                                        <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $emp->default_shift_id }}', '{{ $emp->defaultShift->color_code }}')"><i class="fas fa-magic text-primary me-2"></i>تطبيق الشفت الدائم ({{ $emp->defaultShift->name }})</a></li>
+                                                        <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $emp->default_shift_id }}', '{{ $emp->defaultShift->color_code }}', {{ $isSplit ? "'".$emp->second_shift_id."'" : 'null' }}, {{ $isSplit ? "'".($emp->secondShift->color_code ?? '')."'" : 'null' }})"><i class="fas fa-magic text-primary me-2"></i>تطبيق الشفت الدائم</a></li>
                                                     @endif
                                                     @foreach($shifts as $sh)
-                                                        <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $sh->id }}', '{{ $sh->color_code }}')"><i class="fas fa-clock me-2" style="color: {{ $sh->color_code }}"></i>تعبئة الكل بـ {{ $sh->name }}</a></li>
+                                                        <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $sh->id }}', '{{ $sh->color_code }}', null, null)"><i class="fas fa-clock me-2" style="color: {{ $sh->color_code }}"></i>تعبئة الكل بـ {{ $sh->name }}</a></li>
                                                     @endforeach
-                                                    <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', 'off', '#6c757d')"><i class="fas fa-coffee text-secondary me-2"></i>تعبئة الكل راحة (Off)</a></li>
+                                                    <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', 'off', '#6c757d', 'off', '#6c757d')"><i class="fas fa-coffee text-secondary me-2"></i>تعبئة الكل راحة (Off)</a></li>
                                                     <li><hr class="dropdown-divider my-1"></li>
-                                                    <li><a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '', '')"><i class="fas fa-eraser me-2"></i>مسح أسبوع الموظف</a></li>
+                                                    <li><a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '', '', '', '')"><i class="fas fa-eraser me-2"></i>مسح أسبوع الموظف</a></li>
                                                 </ul>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="small text-muted emp-job-text" style="font-size: 0.73rem;">
+                                    <div class="text-muted emp-job-text" style="font-size: 0.7rem;">
                                         {{ $emp->department->name ?? '—' }} | {{ $emp->job_title }}
-                                        @if($emp->defaultShift)
+                                        @if($isSplit && $emp->defaultShift && $emp->secondShift)
+                                            <div class="text-secondary" style="font-size: 0.65rem;">
+                                                <i class="fas fa-sun text-warning me-1"></i>{{ $emp->defaultShift->name }} + <i class="fas fa-moon text-primary me-1"></i>{{ $emp->secondShift->name }}
+                                            </div>
+                                        @elseif($emp->defaultShift)
                                             <span class="text-secondary ms-1">({{ $emp->defaultShift->name }})</span>
                                         @endif
                                     </div>
                                 </td>
+
+                                <!-- Shift Day Cells -->
                                 @foreach($dates as $date)
                                     @php
                                         $dateStr = $date->format('Y-m-d');
-                                        $daySchedule = $empSchedules->first(function($item) use ($dateStr) { 
+                                        $daySchedules = $empSchedules->filter(function($item) use ($dateStr) { 
                                             return $item->shift_date->format('Y-m-d') === $dateStr; 
                                         });
-                                        $currentVal = '';
-                                        $currentColor = '';
-                                        if ($daySchedule) {
-                                            if ($daySchedule->is_off_day) {
-                                                $currentVal = 'off';
-                                                $currentColor = '#6c757d';
-                                            } else if ($daySchedule->hr_shift_id) {
-                                                $currentVal = $daySchedule->hr_shift_id;
-                                                $currentColor = $daySchedule->shift->color_code ?? '';
+
+                                        $val1 = '';
+                                        $color1 = '';
+                                        $val2 = '';
+                                        $color2 = '';
+
+                                        if ($daySchedules->isNotEmpty()) {
+                                            $isOff = $daySchedules->contains('is_off_day', true);
+                                            if ($isOff) {
+                                                $val1 = 'off';
+                                                $color1 = '#6c757d';
+                                                $val2 = 'off';
+                                                $color2 = '#6c757d';
+                                            } else {
+                                                $firstSch = $daySchedules->first();
+                                                if ($firstSch && $firstSch->hr_shift_id) {
+                                                    $val1 = $firstSch->hr_shift_id;
+                                                    $color1 = $firstSch->shift->color_code ?? '#0d6efd';
+                                                }
+                                                $secondSch = $daySchedules->skip(1)->first();
+                                                if ($secondSch && $secondSch->hr_shift_id) {
+                                                    $val2 = $secondSch->hr_shift_id;
+                                                    $color2 = $secondSch->shift->color_code ?? '#ffc107';
+                                                }
                                             }
-                                        } else if ($emp->schedule_type === 'fixed') {
+                                        } elseif ($emp->schedule_type === 'fixed') {
                                             if ($emp->isOffOn($date)) {
-                                                $currentVal = 'off';
-                                                $currentColor = '#6c757d';
-                                            } elseif ($emp->default_shift_id) {
-                                                $currentVal = $emp->default_shift_id;
-                                                $currentColor = $emp->defaultShift->color_code ?? '#0d6efd';
+                                                $val1 = 'off';
+                                                $color1 = '#6c757d';
+                                                $val2 = 'off';
+                                                $color2 = '#6c757d';
+                                            } else {
+                                                if ($emp->default_shift_id) {
+                                                    $val1 = $emp->default_shift_id;
+                                                    $color1 = $emp->defaultShift->color_code ?? '#0d6efd';
+                                                }
+                                                if ($isSplit && $emp->second_shift_id) {
+                                                    $val2 = $emp->second_shift_id;
+                                                    $color2 = $emp->secondShift->color_code ?? '#ffc107';
+                                                }
                                             }
                                         }
                                     @endphp
-                                    <td class="p-1 roster-cell position-relative" data-date="{{ $dateStr }}" data-emp-id="{{ $emp->id }}" onclick="handleCellStampClick(this, event)">
-                                        <select name="schedules[{{ $emp->id }}][{{ $dateStr }}]" 
-                                                class="form-select roster-select text-center" 
-                                                data-emp-id="{{ $emp->id }}"
-                                                data-date="{{ $dateStr }}"
-                                                style="color: {{ $currentColor ? '#fff' : 'inherit' }}; background-color: {{ $currentColor ? $currentColor : 'transparent' }}; border-color: {{ $currentColor ? $currentColor : '#dee2e6' }};"
-                                                onchange="updateSelectColor(this, true)">
-                                            <option value="" style="color: black; background: white;">— فراغ —</option>
-                                            <option value="off" data-color="#6c757d" style="color: white; background: #6c757d;" {{ $currentVal === 'off' ? 'selected' : '' }}>يوم راحة (Off)</option>
-                                            @foreach($shifts as $shift)
-                                                <option value="{{ $shift->id }}" data-color="{{ $shift->color_code }}" style="color: white; background: {{ $shift->color_code }};" {{ $currentVal == $shift->id ? 'selected' : '' }}>
-                                                    {{ $shift->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <!-- Print-only text -->
+                                    <td class="p-1 roster-cell position-relative" data-date="{{ $dateStr }}" data-emp-id="{{ $emp->id }}" data-is-split="{{ $isSplit ? '1' : '0' }}">
+                                        @if($isSplit)
+                                            <!-- Double Shift / Split Shift Box (الوجبتين) -->
+                                            <div class="split-shift-box d-flex flex-column gap-1">
+                                                <!-- Slot 1 (الوجبة الأولى) -->
+                                                <div class="input-group input-group-xs" title="الوجبة الأولى (الصباحية)">
+                                                    <span class="input-group-text p-0 px-1 border-0 text-muted" style="font-size: 0.6rem; background: #e9ecef;">1</span>
+                                                    <select name="schedules[{{ $emp->id }}][{{ $dateStr }}][slot1]" 
+                                                            class="form-select roster-select roster-slot1 text-center py-0" 
+                                                            data-emp-id="{{ $emp->id }}"
+                                                            data-date="{{ $dateStr }}"
+                                                            data-slot="slot1"
+                                                            style="color: {{ $color1 ? '#fff' : 'inherit' }}; background-color: {{ $color1 ? $color1 : 'transparent' }}; border-color: {{ $color1 ? $color1 : '#dee2e6' }}; font-size: 0.72rem; height: 24px;"
+                                                            onchange="updateSelectColor(this, true)"
+                                                            onclick="handleCellSlotStampClick(this, event)">
+                                                        <option value="" style="color: black; background: white;">— فراغ —</option>
+                                                        <option value="off" data-color="#6c757d" style="color: white; background: #6c757d;" {{ $val1 === 'off' ? 'selected' : '' }}>راحه (Off)</option>
+                                                        @foreach($shifts as $shift)
+                                                            <option value="{{ $shift->id }}" data-color="{{ $shift->color_code }}" style="color: white; background: {{ $shift->color_code }};" {{ $val1 == $shift->id ? 'selected' : '' }}>
+                                                                {{ $shift->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                <!-- Slot 2 (الوجبة الثانية) -->
+                                                <div class="input-group input-group-xs" title="الوجبة الثانية (المسائية)">
+                                                    <span class="input-group-text p-0 px-1 border-0 text-muted" style="font-size: 0.6rem; background: #e9ecef;">2</span>
+                                                    <select name="schedules[{{ $emp->id }}][{{ $dateStr }}][slot2]" 
+                                                            class="form-select roster-select roster-slot2 text-center py-0" 
+                                                            data-emp-id="{{ $emp->id }}"
+                                                            data-date="{{ $dateStr }}"
+                                                            data-slot="slot2"
+                                                            style="color: {{ $color2 ? '#fff' : 'inherit' }}; background-color: {{ $color2 ? $color2 : 'transparent' }}; border-color: {{ $color2 ? $color2 : '#dee2e6' }}; font-size: 0.72rem; height: 24px;"
+                                                            onchange="updateSelectColor(this, true)"
+                                                            onclick="handleCellSlotStampClick(this, event)">
+                                                        <option value="" style="color: black; background: white;">— فراغ —</option>
+                                                        <option value="off" data-color="#6c757d" style="color: white; background: #6c757d;" {{ $val2 === 'off' ? 'selected' : '' }}>راحه (Off)</option>
+                                                        @foreach($shifts as $shift)
+                                                            <option value="{{ $shift->id }}" data-color="{{ $shift->color_code }}" style="color: white; background: {{ $shift->color_code }};" {{ $val2 == $shift->id ? 'selected' : '' }}>
+                                                                {{ $shift->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <!-- Single Shift Box (دوام اعتيادي) -->
+                                            <select name="schedules[{{ $emp->id }}][{{ $dateStr }}][slot1]" 
+                                                    class="form-select roster-select roster-slot1 text-center py-1" 
+                                                    data-emp-id="{{ $emp->id }}"
+                                                    data-date="{{ $dateStr }}"
+                                                    data-slot="slot1"
+                                                    style="color: {{ $color1 ? '#fff' : 'inherit' }}; background-color: {{ $color1 ? $color1 : 'transparent' }}; border-color: {{ $color1 ? $color1 : '#dee2e6' }}; font-size: 0.75rem; height: 28px;"
+                                                    onchange="updateSelectColor(this, true)"
+                                                    onclick="handleCellSlotStampClick(this, event)">
+                                                <option value="" style="color: black; background: white;">— فراغ —</option>
+                                                <option value="off" data-color="#6c757d" style="color: white; background: #6c757d;" {{ $val1 === 'off' ? 'selected' : '' }}>يوم راحة (Off)</option>
+                                                @foreach($shifts as $shift)
+                                                    <option value="{{ $shift->id }}" data-color="{{ $shift->color_code }}" style="color: white; background: {{ $shift->color_code }};" {{ $val1 == $shift->id ? 'selected' : '' }}>
+                                                        {{ $shift->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @endif
+
+                                        <!-- Print-only View -->
                                         <div class="d-none d-print-block print-cell-label small fw-bold">
-                                            @if($currentVal === 'off')
+                                            @if($val1 === 'off' || $val2 === 'off')
                                                 <span class="text-secondary">Off</span>
-                                            @elseif($currentVal)
-                                                @php $sObj = $shifts->firstWhere('id', $currentVal); @endphp
-                                                <span>{{ $sObj ? $sObj->name : $currentVal }}</span>
+                                            @elseif($isSplit)
+                                                @php
+                                                    $s1 = $shifts->firstWhere('id', $val1);
+                                                    $s2 = $shifts->firstWhere('id', $val2);
+                                                @endphp
+                                                <span>{{ $s1 ? $s1->name : '—' }}</span>
+                                                <br>
+                                                <span class="text-primary">{{ $s2 ? $s2->name : '—' }}</span>
+                                            @elseif($val1)
+                                                @php $s1 = $shifts->firstWhere('id', $val1); @endphp
+                                                <span>{{ $s1 ? $s1->name : '—' }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
@@ -353,31 +425,36 @@
                             </tr>
                         @endforelse
                     </tbody>
-                    <!-- Shift Coverage Footer Row (كشف التغطية والجاهزية اليومية) -->
-                    <tfoot class="bg-light sticky-bottom shadow-sm border-top-2" style="z-index: 9;">
-                        <tr class="fw-bold coverage-row">
-                            <td class="text-start roster-emp-cell bg-light" style="position: sticky; right: 0; z-index: 6;">
-                                <div class="fw-bold text-dark"><i class="fas fa-chart-pie text-primary me-1"></i> إجمالي التغطية اليومية</div>
-                                <div class="small text-muted" style="font-size: 0.7rem;">حساب تلقائي لعدد الكوادر المداومة</div>
+
+                    <!-- Clean & Streamlined Daily Shift Coverage Footer -->
+                    <tfoot class="bg-light sticky-bottom shadow-xs border-top" style="z-index: 9;">
+                        <tr class="coverage-row align-middle">
+                            <td class="text-start roster-emp-cell bg-light py-2 px-3" style="position: sticky; right: 0; z-index: 6;">
+                                <div class="fw-bold text-dark small"><i class="fas fa-chart-pie text-primary me-1"></i> إجمالي التغطية اليومية</div>
+                                <div class="text-muted" style="font-size: 0.65rem;">إجمالي الكوادر المداومة</div>
                             </td>
                             @foreach($dates as $date)
                                 @php
                                     $dStr = $date->format('Y-m-d');
                                     $dayCov = $dailyCoverage[$dStr] ?? ['shifts' => [], 'off' => 0, 'empty' => 0, 'total' => 0];
                                 @endphp
-                                <td class="p-1 coverage-cell text-start small" data-date="{{ $dStr }}">
-                                    <div class="d-flex flex-column gap-1 coverage-badges" style="font-size: 0.72rem;">
+                                <td class="p-1 coverage-cell text-center" data-date="{{ $dStr }}">
+                                    <!-- Compact Horizontal Badge Strip -->
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center align-items-center coverage-badges-wrapper">
                                         @foreach($shifts as $sh)
                                             @php $cnt = $dayCov['shifts'][$sh->id] ?? 0; @endphp
-                                            <div class="d-flex justify-content-between align-items-center px-1 rounded" style="background-color: {{ $sh->color_code }}15; border-right: 3px solid {{ $sh->color_code }};">
-                                                <span style="color: {{ $sh->color_code }}; font-weight: 600;">{{ Str::limit($sh->name, 7, '') }}:</span>
-                                                <span class="badge rounded-pill text-white cov-count-badge" data-shift-id="{{ $sh->id }}" style="background-color: {{ $sh->color_code }}; font-size: 0.65rem;">{{ $cnt }}</span>
-                                            </div>
+                                            <span class="badge rounded-pill text-white cov-shift-badge px-1 py-0" 
+                                                  data-shift-id="{{ $sh->id }}" 
+                                                  style="background-color: {{ $sh->color_code }}; font-size: 0.65rem; min-width: 20px;" 
+                                                  title="{{ $sh->name }}: {{ $cnt }} كادر">
+                                                {{ Str::limit($sh->name, 4, '') }}: <strong class="badge-num">{{ $cnt }}</strong>
+                                            </span>
                                         @endforeach
-                                        <div class="d-flex justify-content-between align-items-center px-1 bg-secondary bg-opacity-10 rounded border-end border-3 border-secondary">
-                                            <span class="text-secondary fw-bold">راحة (Off):</span>
-                                            <span class="badge rounded-pill bg-secondary cov-off-badge" style="font-size: 0.65rem;">{{ $dayCov['off'] ?? 0 }}</span>
-                                        </div>
+                                        <span class="badge rounded-pill bg-secondary text-white cov-off-badge px-1 py-0" 
+                                              style="font-size: 0.65rem;" 
+                                              title="أيام راحة (Off): {{ $dayCov['off'] ?? 0 }}">
+                                            Off: <strong class="off-num">{{ $dayCov['off'] ?? 0 }}</strong>
+                                        </span>
                                     </div>
                                 </td>
                             @endforeach
@@ -388,20 +465,20 @@
         </div>
     </div>
 
-    <!-- Official Print Sign-off (Visible only on print) -->
-    <div class="d-none d-print-block print-signatures mt-5 pt-4 border-top">
+    <!-- Official Print Signatures -->
+    <div class="d-none d-print-block print-signatures mt-4 pt-3 border-top">
         <div class="row text-center">
             <div class="col-4">
-                <p class="fw-bold mb-4">مسؤول القسم / الشعبة</p>
-                <p class="text-muted small">التوقيع: .......................................</p>
+                <p class="fw-bold mb-3 small">مسؤول القسم / الشعبة</p>
+                <p class="text-muted small">التوقيع: ...........................</p>
             </div>
             <div class="col-4">
-                <p class="fw-bold mb-4">مدقق جدول الموارد البشرية</p>
-                <p class="text-muted small">التوقيع: .......................................</p>
+                <p class="fw-bold mb-3 small">مدقق جدول الموارد البشرية</p>
+                <p class="text-muted small">التوقيع: ...........................</p>
             </div>
             <div class="col-4">
-                <p class="fw-bold mb-4">اعتماد مدير المستشفى / المعاون</p>
-                <p class="text-muted small">الختم والتوقيع: .......................................</p>
+                <p class="fw-bold mb-3 small">اعتماد إدارة المستشفى</p>
+                <p class="text-muted small">الختم والتوقيع: ...........................</p>
             </div>
         </div>
     </div>
@@ -415,35 +492,35 @@
         <div class="modal-content border-0 shadow">
             <form action="{{ route('hr.schedules.auto-fill-defaults') }}" method="POST">
                 @csrf
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-magic me-2"></i>تعبئة الدوام الافتراضي تلقائياً</h5>
+                <div class="modal-header bg-primary text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-magic me-2"></i>تعبئة الدوام الافتراضي تلقائياً</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-3">
-                        يقوم هذا الأمر بقراءة إعدادات كل موظف (الشفت الدائم، وأيام الاستراحة الأسبوعية المسجلة في إضبارته) وتطبيقها آلياً على كامل أيام الفترة المعروضة بضغطة زر واحدة.
+                <div class="modal-body p-3">
+                    <p class="text-muted small mb-2">
+                        يقوم هذا الإجراء بتطبيق إعدادات كل موظف (الشفت الدائم + أيام الاستراحة + شفت الوجبة الثانية لموظفي الوجبتين) آلياً على كامل أيام الفترة المعروضة بضغطة زر واحدة.
                     </p>
                     <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
                     <input type="hidden" name="end_date" value="{{ $endDate->format('Y-m-d') }}">
                     <input type="hidden" name="department_id" value="{{ $departmentId }}">
 
-                    <div class="alert alert-info border-0 small mb-3">
-                        <i class="fas fa-info-circle me-1"></i> الفترة المحددة: من <strong>{{ $startDate->format('Y-m-d') }}</strong> إلى <strong>{{ $endDate->format('Y-m-d') }}</strong>
+                    <div class="alert alert-info border-0 py-2 px-3 small mb-2">
+                        <i class="fas fa-info-circle me-1"></i> الفترة: <strong>{{ $startDate->format('Y-m-d') }}</strong> إلى <strong>{{ $endDate->format('Y-m-d') }}</strong>
                         <br>
                         القسم: <strong>{{ $departments->firstWhere('id', $departmentId)->name ?? 'كافة الأقسام' }}</strong>
                     </div>
 
-                    <div class="form-check mb-2">
+                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="overwrite" value="1" id="overwriteCheck">
                         <label class="form-check-label fw-bold small text-dark" for="overwriteCheck">
                             استبدال الشفتات المجدولة مسبقاً (إعادة بناء وتحديث كامل للفترة)
                         </label>
                     </div>
-                    <small class="text-muted d-block">إذا لم تفعل هذا الخيار، سيتم تعبئة الأيام الفارغة فقط مع الحفاظ على أي شفت قمت بتحديده يدوياً.</small>
+                    <small class="text-muted d-block mt-1">إذا لم تفعل هذا الخيار، سيتم تعبئة الأيام الفارغة فقط مع الحفاظ على التعديلات اليدوية.</small>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fas fa-check me-1"></i> تطبيق الدوام الافتراضي</button>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-primary fw-bold px-3"><i class="fas fa-check me-1"></i> تطبيق الدوام الافتراضي</button>
                 </div>
             </form>
         </div>
@@ -452,24 +529,24 @@
 
 <!-- Clear Range Modal -->
 <div class="modal fade" id="clearRangeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-sm">
         <div class="modal-content border-0 shadow">
             <form action="{{ route('hr.schedules.clear-range') }}" method="POST">
                 @csrf
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-trash-alt me-2"></i>تفريغ وإعادة تعيين جدول الفترة</h5>
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-trash-alt me-2"></i>تفريغ الجدول</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <p class="text-danger fw-bold mb-2">تحذير: هل أنت متأكد من تفريغ كافة شفتات الفترة المحددة؟</p>
-                    <p class="text-muted small mb-0">سيتم حذف جميع الشفتات المسجلة من <strong>{{ $startDate->format('Y-m-d') }}</strong> إلى <strong>{{ $endDate->format('Y-m-d') }}</strong> للقسم المحدد، لتتمكن من إعادة بنائها من الصفر.</p>
+                <div class="modal-body p-3">
+                    <p class="text-danger fw-bold small mb-1">هل أنت متأكد من تفريغ كافة شفتات الفترة؟</p>
+                    <p class="text-muted small mb-0">سيتم حذف شفتات الفترة المحددة للقسم للبدء من الصفر.</p>
                     <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
                     <input type="hidden" name="end_date" value="{{ $endDate->format('Y-m-d') }}">
                     <input type="hidden" name="department_id" value="{{ $departmentId }}">
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-danger fw-bold px-4">نعم، تفريغ الجدول</button>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-danger fw-bold px-3">نعم، تفريغ</button>
                 </div>
             </form>
         </div>
@@ -482,29 +559,28 @@
         <div class="modal-content border-0 shadow">
             <form action="{{ route('hr.schedules.swap') }}" method="POST">
                 @csrf
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-exchange-alt me-2"></i>تبادل شفتات / خفارات</h5>
+                <div class="modal-header bg-warning py-2">
+                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-exchange-alt me-2"></i>تبادل شفتات / خفارات</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">اختر التاريخ واسم الموظفين ليتم تبديل شفتاتهم في ذلك اليوم فوراً.</p>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">تاريخ التبادل <span class="text-danger">*</span></label>
-                        <input type="date" name="swap_date" class="form-control" required value="{{ date('Y-m-d') }}">
+                <div class="modal-body p-3">
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">تاريخ التبادل</label>
+                        <input type="date" name="swap_date" class="form-control form-control-sm" required value="{{ date('Y-m-d') }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الموظف الأول (سيتنازل عن شفته) <span class="text-danger">*</span></label>
-                        <select name="employee1_id" class="form-select" required>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">الموظف الأول</label>
+                        <select name="employee1_id" class="form-select form-select-sm" required>
                             <option value="">اختر الموظف...</option>
                             @foreach($employees as $emp)
                                 <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->job_title }})</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="text-center my-2 text-muted"><i class="fas fa-arrow-up"></i> تبادل <i class="fas fa-arrow-down"></i></div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الموظف الثاني (البديل) <span class="text-danger">*</span></label>
-                        <select name="employee2_id" class="form-select" required>
+                    <div class="text-center my-1 text-muted small"><i class="fas fa-arrow-up"></i> تبادل <i class="fas fa-arrow-down"></i></div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">الموظف الثاني (البديل)</label>
+                        <select name="employee2_id" class="form-select form-select-sm" required>
                             <option value="">اختر الموظف...</option>
                             @foreach($employees as $emp)
                                 <option value="{{ $emp->id }}">{{ $emp->full_name }} ({{ $emp->job_title }})</option>
@@ -512,9 +588,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-warning fw-bold px-4">تأكيد التبادل</button>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold px-3">تأكيد التبادل</button>
                 </div>
             </form>
         </div>
@@ -525,20 +601,20 @@
 <div class="modal fade" id="emergencyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-ambulance me-2"></i>البحث عن بديل للطوارئ</h5>
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title fw-bold"><i class="fas fa-ambulance me-2"></i>البحث عن بديل للطوارئ</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small mb-3">اختر اليوم والقسم ليعرض لك النظام الموظفين الذين في "يوم راحة (Off)" ومتاحين لتغطية النقص.</p>
-                <div class="row mb-3">
+            <div class="modal-body p-3">
+                <p class="text-muted small mb-2">اختر اليوم والقسم ليعرض لك النظام الموظفين المتاحين في (يوم راحة Off) لتغطية النقص.</p>
+                <div class="row g-2 mb-2">
                     <div class="col-6">
-                        <label class="form-label fw-bold">تاريخ النقص</label>
-                        <input type="date" id="emDate" class="form-control" value="{{ date('Y-m-d') }}">
+                        <label class="form-label small fw-bold">التاريخ</label>
+                        <input type="date" id="emDate" class="form-control form-control-sm" value="{{ date('Y-m-d') }}">
                     </div>
                     <div class="col-6">
-                        <label class="form-label fw-bold">القسم</label>
-                        <select id="emDept" class="form-select">
+                        <label class="form-label small fw-bold">القسم</label>
+                        <select id="emDept" class="form-select form-select-sm">
                             <option value="">أي قسم</option>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}" {{ $departmentId == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
@@ -546,13 +622,13 @@
                         </select>
                     </div>
                 </div>
-                <button type="button" class="btn btn-danger w-100 mb-4 fw-bold" onclick="searchEmergencyCover()">
-                    <i class="fas fa-search me-1"></i> بحث عن المتاحين للعمل
+                <button type="button" class="btn btn-sm btn-danger w-100 mb-3 fw-bold" onclick="searchEmergencyCover()">
+                    <i class="fas fa-search me-1"></i> بحث عن المتاحين
                 </button>
 
                 <div id="emResults" class="d-none">
-                    <h6 class="fw-bold mb-2 text-success">المتاحون في هذا اليوم (Off أو غير مجدولين):</h6>
-                    <ul class="list-group" id="emList">
+                    <h6 class="fw-bold mb-2 text-success small">المتاحون في هذا اليوم (Off):</h6>
+                    <ul class="list-group small" id="emList">
                         <!-- Populated dynamically -->
                     </ul>
                 </div>
@@ -565,7 +641,7 @@
 <div class="position-fixed bottom-0 start-0 p-3" style="z-index: 9999;">
     <div id="rosterToast" class="toast align-items-center text-white bg-dark border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
-            <div class="toast-body" id="rosterToastBody">
+            <div class="toast-body small py-2" id="rosterToastBody">
                 <i class="fas fa-check-circle text-success me-1"></i> تم الحفظ التلقائي بنجاح.
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -575,39 +651,44 @@
 
 <!-- ================= STYLES ================= -->
 <style>
+    .schedule-roster-container {
+        font-family: inherit;
+    }
     .roster-select {
-        font-size: 0.8rem;
-        padding: 3px 4px;
-        height: 30px;
         border-radius: 4px;
-        font-weight: bold;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
     }
     .roster-cell:hover {
-        background-color: #f0f7ff;
+        background-color: #f4f8ff;
     }
-    .stamp-btn {
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    .split-shift-row {
+        background-color: #fffdf5;
+    }
+    .split-shift-box {
+        min-width: 90px;
+    }
+    .btn-xs {
+        padding: 2px 6px;
+        font-size: 0.72rem;
+        border-radius: 4px;
     }
     .stamp-btn.active {
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.4) !important;
-        transform: scale(1.04);
+        box-shadow: 0 0 0 2px #0d6efd !important;
+        transform: scale(1.06);
         font-weight: bold;
-    }
-    .stamp-active-cell {
-        cursor: crosshair !important;
     }
 
     /* Print Styles */
     @media print {
         @page {
             size: A4 landscape;
-            margin: 10mm;
+            margin: 8mm;
         }
         body {
             background: white !important;
-            font-size: 11px !important;
+            font-size: 10px !important;
         }
         .no-print, .btn, .navbar, .sidebar, .modal, .toast, .dropdown {
             display: none !important;
@@ -627,9 +708,9 @@
         .roster-table {
             min-width: 100% !important;
             width: 100% !important;
-            font-size: 10px !important;
+            font-size: 9px !important;
         }
-        .roster-select {
+        .roster-select, .input-group-text {
             display: none !important;
         }
         .print-cell-label {
@@ -650,7 +731,6 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script>
-    // Global active stamp
     var activeStampVal = null;
     var activeStampColor = '';
 
@@ -661,20 +741,11 @@
         activeStampColor = btn.getAttribute('data-color') || '';
     }
 
-    function handleCellStampClick(cell, event) {
-        // If the user clicked directly on the select element, let normal select work
-        if (event.target.tagName.toLowerCase() === 'select') {
-            return;
-        }
-        
-        // If active stamp is set (or empty to clear), apply it to the select in this cell
-        var select = cell.querySelector('select');
-        if (!select) return;
+    function handleCellSlotStampClick(selectObj, event) {
+        if (activeStampVal === null) return;
 
-        if (activeStampVal !== null) {
-            select.value = activeStampVal;
-            updateSelectColor(select, true);
-        }
+        selectObj.value = activeStampVal;
+        updateSelectColor(selectObj, true);
     }
 
     function updateSelectColor(selectObj, triggerAjax) {
@@ -691,6 +762,20 @@
             selectObj.style.borderColor = '#dee2e6';
         }
 
+        // If user set slot1 to 'off' and it's split shift, sync slot2 to off as well
+        var cell = selectObj.closest('.roster-cell');
+        if (cell && cell.getAttribute('data-is-split') === '1') {
+            var slot = selectObj.getAttribute('data-slot');
+            var otherSelect = (slot === 'slot1') ? cell.querySelector('.roster-slot2') : cell.querySelector('.roster-slot1');
+            
+            if (selectObj.value === 'off' && otherSelect && otherSelect.value !== 'off') {
+                otherSelect.value = 'off';
+                otherSelect.style.backgroundColor = '#6c757d';
+                otherSelect.style.color = 'white';
+                otherSelect.style.borderColor = '#6c757d';
+            }
+        }
+
         recalculateCoverage();
         checkFatigue();
 
@@ -704,7 +789,17 @@
     function saveCellAjax(selectObj) {
         var empId = selectObj.getAttribute('data-emp-id');
         var date = selectObj.getAttribute('data-date');
+        var slot = selectObj.getAttribute('data-slot');
         var val = selectObj.value;
+
+        var cell = selectObj.closest('.roster-cell');
+        var otherVal = '';
+        if (cell && cell.getAttribute('data-is-split') === '1') {
+            var otherSelect = (slot === 'slot1') ? cell.querySelector('.roster-slot2') : cell.querySelector('.roster-slot1');
+            if (otherSelect) {
+                otherVal = otherSelect.value;
+            }
+        }
 
         fetch('{{ route("hr.schedules.update-cell") }}', {
             method: 'POST',
@@ -715,7 +810,9 @@
             body: JSON.stringify({
                 hr_employee_id: empId,
                 shift_date: date,
-                shift_value: val
+                slot: slot,
+                shift_value: val,
+                other_value: otherVal
             })
         })
         .then(res => res.json())
@@ -733,80 +830,75 @@
         var toastEl = document.getElementById('rosterToast');
         if (toastEl) {
             document.getElementById('rosterToastBody').innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> ' + msg;
-            var toast = new bootstrap.Toast(toastEl, { delay: 1800 });
+            var toast = new bootstrap.Toast(toastEl, { delay: 1500 });
             toast.show();
         }
     }
 
-    function fillEmployeeRow(empId, shiftVal, shiftColor) {
+    function fillEmployeeRow(empId, shift1Val, shift1Color, shift2Val, shift2Color) {
         var row = document.querySelector('tr[data-emp-id="' + empId + '"]');
         if (!row) return;
 
-        var selects = row.querySelectorAll('select.roster-select');
-        selects.forEach(sel => {
-            sel.value = shiftVal;
+        var selects1 = row.querySelectorAll('select.roster-slot1');
+        selects1.forEach(sel => {
+            sel.value = shift1Val || '';
             updateSelectColor(sel, false);
         });
 
-        // If AJAX autosave is on, submit full form or trigger save
-        showRosterToast('تم تعبئة أسبوع الموظف. اضغط "حفظ كافة التعديلات" للتثبيت.');
-    }
-
-    function reapplyAllColors() {
-        document.querySelectorAll('select.roster-select').forEach(sel => {
-            var selectedOption = sel.options[sel.selectedIndex];
-            var color = selectedOption.getAttribute('data-color');
-            if (color) {
-                sel.style.backgroundColor = color;
-                sel.style.color = 'white';
-                sel.style.borderColor = color;
-            } else {
-                sel.style.backgroundColor = 'transparent';
-                sel.style.color = 'inherit';
-                sel.style.borderColor = '#dee2e6';
-            }
+        var selects2 = row.querySelectorAll('select.roster-slot2');
+        selects2.forEach(sel => {
+            sel.value = shift2Val || '';
+            updateSelectColor(sel, false);
         });
+
         recalculateCoverage();
         checkFatigue();
+        showRosterToast('تم تعبئة أسبوع الموظف. اضغط "حفظ" للتثبيت النهائي.');
     }
 
     function recalculateCoverage() {
         var table = document.getElementById('rosterMainTable');
         if (!table) return;
 
-        var dateCells = table.querySelectorAll('thead th.roster-date-th');
-        var dates = [];
-        dateCells.forEach(th => {
-            // Find corresponding date from body cells
-        });
-
         var covCells = table.querySelectorAll('tfoot td.coverage-cell');
         covCells.forEach(covTd => {
             var dateStr = covTd.getAttribute('data-date');
             if (!dateStr) return;
 
-            // Count for this date
+            // Gather all selects for this date
             var selects = table.querySelectorAll('tbody select.roster-select[data-date="' + dateStr + '"]');
             var counts = { off: 0 };
+            
+            // To prevent double counting off for the same employee who has two slots
+            var countedOffEmps = new Set();
+
             selects.forEach(sel => {
                 var row = sel.closest('tr');
                 if (row && row.style.display === 'none') return; // ignore hidden filtered rows
 
+                var empId = sel.getAttribute('data-emp-id');
                 var val = sel.value;
+
                 if (val === 'off') {
-                    counts.off = (counts.off || 0) + 1;
+                    if (!countedOffEmps.has(empId)) {
+                        counts.off = (counts.off || 0) + 1;
+                        countedOffEmps.add(empId);
+                    }
                 } else if (val) {
                     counts[val] = (counts[val] || 0) + 1;
                 }
             });
 
-            // Update badges in this covTd
-            var offBadge = covTd.querySelector('.cov-off-badge');
+            // Update badges in this column
+            var offBadge = covTd.querySelector('.off-num');
             if (offBadge) offBadge.textContent = counts.off || 0;
 
-            covTd.querySelectorAll('.cov-count-badge').forEach(badge => {
+            covTd.querySelectorAll('.cov-shift-badge').forEach(badge => {
                 var shId = badge.getAttribute('data-shift-id');
-                badge.textContent = counts[shId] || 0;
+                var numSpan = badge.querySelector('.badge-num');
+                if (numSpan) {
+                    numSpan.textContent = counts[shId] || 0;
+                }
             });
         });
     }
@@ -814,7 +906,7 @@
     function checkFatigue() {
         var rows = document.querySelectorAll('tr.roster-emp-row');
         rows.forEach(row => {
-            var selects = row.querySelectorAll('select.roster-select');
+            var selects = row.querySelectorAll('select.roster-slot1');
             var workDaysCount = 0;
             selects.forEach(select => {
                 if (select.value !== '' && select.value !== 'off') {
@@ -829,10 +921,10 @@
                 if (!existingBadge) {
                     var b = document.createElement('div');
                     b.className = 'fatigue-badge mt-1';
-                    b.innerHTML = '<span class="badge bg-danger" style="font-size: 0.62rem;" title="تنبيه إرهاق: يعمل الموظف 6 أيام متواصلة أو أكثر دون راحة"><i class="fas fa-exclamation-triangle"></i> تنبيه إرهاق (' + workDaysCount + ' أيام)</span>';
+                    b.innerHTML = '<span class="badge bg-danger" style="font-size: 0.6rem;" title="يعمل 6 أيام أو أكثر دون راحة"><i class="fas fa-exclamation-triangle"></i> إرهاق (' + workDaysCount + ' أيام)</span>';
                     nameCell.appendChild(b);
                 } else {
-                    existingBadge.querySelector('.badge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> تنبيه إرهاق (' + workDaysCount + ' أيام)';
+                    existingBadge.querySelector('.badge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> إرهاق (' + workDaysCount + ' أيام)';
                 }
             } else {
                 if (existingBadge) {
@@ -845,8 +937,6 @@
     // Client-side instant filter by name or job
     function filterRosterRows() {
         var q = (document.getElementById('rosterSearchInput').value || '').trim().toLowerCase();
-        var activeFilterPill = document.querySelector('.filter-pill-btn.active').textContent.trim();
-        
         var rows = document.querySelectorAll('tr.roster-emp-row');
         var visibleCount = 0;
 
@@ -869,9 +959,9 @@
             }
         });
 
-        var badge = document.getElementById('visibleEmpCountBadge');
+        var badge = document.getElementById('visibleStaffCount');
         if (badge) {
-            badge.textContent = 'يظهر: ' + visibleCount + ' من أصل ' + rows.length + ' موظف';
+            badge.textContent = visibleCount;
         }
 
         recalculateCoverage();
@@ -888,13 +978,12 @@
         filterRosterRows();
     }
 
-    // Emergency Cover Search via AJAX
     function searchEmergencyCover() {
         var date = document.getElementById('emDate').value;
         var dept = document.getElementById('emDept').value;
         if (!date) return;
         
-        document.getElementById('emList').innerHTML = '<li class="list-group-item text-center"><i class="fas fa-spinner fa-spin"></i> جاري البحث عن الكوادر المتاحة...</li>';
+        document.getElementById('emList').innerHTML = '<li class="list-group-item text-center py-2"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</li>';
         document.getElementById('emResults').classList.remove('d-none');
 
         fetch(`{{ route("hr.schedules.emergency-cover-search") }}?date=${date}&department_id=${dept}`)
@@ -902,23 +991,22 @@
             .then(data => {
                 var html = '';
                 if (data.length === 0) {
-                    html = '<li class="list-group-item text-danger text-center">لا يوجد أي موظف في يوم راحة (Off) في هذا اليوم.</li>';
+                    html = '<li class="list-group-item text-danger text-center py-2">لا يوجد أي موظف في يوم راحة (Off).</li>';
                 } else {
                     data.forEach(emp => {
-                        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div><strong>${emp.name}</strong> <br><small class="text-muted">${emp.job || '—'}</small></div>
-                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i> متاح للعمل (Off)</span>
+                        html += `<li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                    <div><strong>${emp.name}</strong> <small class="text-muted">(${emp.job || '—'})</small></div>
+                                    <span class="badge bg-success" style="font-size: 0.65rem;">متاح (Off)</span>
                                  </li>`;
                     });
                 }
                 document.getElementById('emList').innerHTML = html;
             })
             .catch(err => {
-                document.getElementById('emList').innerHTML = '<li class="list-group-item text-danger">حدث خطأ في الاتصال.</li>';
+                document.getElementById('emList').innerHTML = '<li class="list-group-item text-danger py-2">حدث خطأ في الاتصال.</li>';
             });
     }
 
-    // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', function() {
         checkFatigue();
     });

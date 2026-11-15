@@ -57,13 +57,21 @@ class HrScheduleController extends Controller
 
         // Get existing schedules
         $existingSchedules = HrSchedule::whereIn('hr_employee_id', $employees->pluck('id'))
-            ->whereBetween('shift_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->whereDate('shift_date', '>=', $startDate->format('Y-m-d'))
+            ->whereDate('shift_date', '<=', $endDate->format('Y-m-d'))
             ->with('shift')
             ->get()
             ->groupBy('hr_employee_id');
 
-        // Calculate daily shift coverage totals
+        // Calculate daily shift coverage totals and overall KPI stats
         $dailyCoverage = [];
+        $kpiStats = [
+            'total_shifts' => 0,
+            'total_off' => 0,
+            'split_count' => $employees->where('is_split_shift', true)->count(),
+            'total_staff' => $employees->count(),
+        ];
+
         foreach ($dates as $date) {
             $dStr = $date->format('Y-m-d');
             $dailyCoverage[$dStr] = [
@@ -78,25 +86,44 @@ class HrScheduleController extends Controller
 
             foreach ($employees as $emp) {
                 $empSchedules = $existingSchedules->get($emp->id, collect());
-                $daySchedule = $empSchedules->first(function ($item) use ($dStr) {
+                $daySchedules = $empSchedules->filter(function ($item) use ($dStr) {
                     return $item->shift_date->format('Y-m-d') === $dStr;
                 });
 
-                if ($daySchedule) {
-                    if ($daySchedule->is_off_day) {
+                if ($daySchedules->isNotEmpty()) {
+                    $isOff = $daySchedules->contains('is_off_day', true);
+                    if ($isOff) {
                         $dailyCoverage[$dStr]['off']++;
-                    } elseif ($daySchedule->hr_shift_id && isset($dailyCoverage[$dStr]['shifts'][$daySchedule->hr_shift_id])) {
-                        $dailyCoverage[$dStr]['shifts'][$daySchedule->hr_shift_id]++;
-                        $dailyCoverage[$dStr]['total']++;
+                        $kpiStats['total_off']++;
+                    } else {
+                        foreach ($daySchedules as $sch) {
+                            if ($sch->hr_shift_id && isset($dailyCoverage[$dStr]['shifts'][$sch->hr_shift_id])) {
+                                $dailyCoverage[$dStr]['shifts'][$sch->hr_shift_id]++;
+                                $dailyCoverage[$dStr]['total']++;
+                                $kpiStats['total_shifts']++;
+                            }
+                        }
                     }
                 } elseif ($emp->schedule_type === 'fixed') {
                     if ($emp->isOffOn($date)) {
                         $dailyCoverage[$dStr]['off']++;
-                    } elseif ($emp->default_shift_id && isset($dailyCoverage[$dStr]['shifts'][$emp->default_shift_id])) {
-                        $dailyCoverage[$dStr]['shifts'][$emp->default_shift_id]++;
-                        $dailyCoverage[$dStr]['total']++;
+                        $kpiStats['total_off']++;
                     } else {
-                        $dailyCoverage[$dStr]['empty']++;
+                        // Slot 1
+                        if ($emp->default_shift_id && isset($dailyCoverage[$dStr]['shifts'][$emp->default_shift_id])) {
+                            $dailyCoverage[$dStr]['shifts'][$emp->default_shift_id]++;
+                            $dailyCoverage[$dStr]['total']++;
+                            $kpiStats['total_shifts']++;
+                        }
+                        // Slot 2 if split shift
+                        if ($emp->is_split_shift && $emp->second_shift_id && isset($dailyCoverage[$dStr]['shifts'][$emp->second_shift_id])) {
+                            $dailyCoverage[$dStr]['shifts'][$emp->second_shift_id]++;
+                            $dailyCoverage[$dStr]['total']++;
+                            $kpiStats['total_shifts']++;
+                        }
+                        if (! $emp->default_shift_id && (! $emp->is_split_shift || ! $emp->second_shift_id)) {
+                            $dailyCoverage[$dStr]['empty']++;
+                        }
                     }
                 } else {
                     $dailyCoverage[$dStr]['empty']++;
@@ -107,7 +134,7 @@ class HrScheduleController extends Controller
         return view('hr.schedules.index', compact(
             'departments', 'departmentId', 'startDate', 'endDate',
             'dates', 'employees', 'shifts', 'existingSchedules',
-            'viewMode', 'prevDate', 'nextDate', 'currentPeriodDate', 'dailyCoverage'
+            'viewMode', 'prevDate', 'nextDate', 'currentPeriodDate', 'dailyCoverage', 'kpiStats'
         ));
     }
 
@@ -117,41 +144,44 @@ class HrScheduleController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date',
             'schedules' => 'nullable|array',
-            // schedules format: schedules[employee_id][date] = shift_id (or 'off' or empty)
         ]);
 
         $schedules = $request->input('schedules', []);
 
         // Loop through all submitted schedules and update/create
         foreach ($schedules as $employeeId => $dates) {
-            foreach ($dates as $date => $shiftValue) {
+            foreach ($dates as $date => $shiftValues) {
                 $formattedDate = \Carbon\Carbon::parse($date)->format('Y-m-d');
-                $existing = HrSchedule::where('hr_employee_id', $employeeId)
+                $values = is_array($shiftValues) ? $shiftValues : [$shiftValues];
+
+                // Remove existing records for this employee on this date
+                HrSchedule::where('hr_employee_id', $employeeId)
                     ->whereDate('shift_date', $formattedDate)
-                    ->first();
+                    ->delete();
 
-                if (empty($shiftValue)) {
-                    if ($existing) {
-                        $existing->delete();
-                    }
-                } else {
-                    $isOffDay = ($shiftValue === 'off');
-                    $shiftId = $isOffDay ? null : $shiftValue;
+                // If 'off' is selected in any slot, mark day as off
+                if (in_array('off', $values, true)) {
+                    HrSchedule::create([
+                        'hr_employee_id' => $employeeId,
+                        'shift_date' => $formattedDate,
+                        'hr_shift_id' => null,
+                        'is_off_day' => true,
+                        'created_by' => auth()->id(),
+                    ]);
 
-                    if ($existing) {
-                        $existing->update([
-                            'hr_shift_id' => $shiftId,
-                            'is_off_day' => $isOffDay,
-                        ]);
-                    } else {
-                        HrSchedule::create([
-                            'hr_employee_id' => $employeeId,
-                            'shift_date' => $formattedDate,
-                            'hr_shift_id' => $shiftId,
-                            'is_off_day' => $isOffDay,
-                            'created_by' => auth()->id(),
-                        ]);
-                    }
+                    continue;
+                }
+
+                // Filter valid numeric shift IDs
+                $validShiftIds = array_unique(array_filter($values, fn ($v) => ! empty($v) && is_numeric($v)));
+                foreach ($validShiftIds as $sId) {
+                    HrSchedule::create([
+                        'hr_employee_id' => $employeeId,
+                        'shift_date' => $formattedDate,
+                        'hr_shift_id' => (int) $sId,
+                        'is_off_day' => false,
+                        'created_by' => auth()->id(),
+                    ]);
                 }
             }
         }
@@ -302,40 +332,61 @@ class HrScheduleController extends Controller
         for ($date = clone $startDate; $date->lte($endDate); $date->addDay()) {
             $dateStr = $date->format('Y-m-d');
             foreach ($employees as $emp) {
-                $existing = HrSchedule::where('hr_employee_id', $emp->id)
+                $hasExisting = HrSchedule::where('hr_employee_id', $emp->id)
                     ->whereDate('shift_date', $dateStr)
-                    ->first();
+                    ->exists();
 
-                if (! $overwrite && $existing) {
+                if (! $overwrite && $hasExisting) {
                     continue;
                 }
 
                 if ($emp->schedule_type === 'fixed') {
-                    $isOff = $emp->isOffOn($date);
-                    $shiftId = $isOff ? null : $emp->default_shift_id;
+                    if ($overwrite && $hasExisting) {
+                        HrSchedule::where('hr_employee_id', $emp->id)
+                            ->whereDate('shift_date', $dateStr)
+                            ->delete();
+                    }
 
-                    if ($isOff || $shiftId) {
-                        if ($existing) {
-                            $existing->update([
-                                'hr_shift_id' => $shiftId,
-                                'is_off_day' => $isOff,
-                            ]);
-                        } else {
+                    $isOff = $emp->isOffOn($date);
+                    if ($isOff) {
+                        HrSchedule::create([
+                            'hr_employee_id' => $emp->id,
+                            'shift_date' => $dateStr,
+                            'hr_shift_id' => null,
+                            'is_off_day' => true,
+                            'created_by' => auth()->id(),
+                        ]);
+                        $count++;
+                    } else {
+                        // Slot 1: Default shift
+                        if ($emp->default_shift_id) {
                             HrSchedule::create([
                                 'hr_employee_id' => $emp->id,
                                 'shift_date' => $dateStr,
-                                'hr_shift_id' => $shiftId,
-                                'is_off_day' => $isOff,
+                                'hr_shift_id' => $emp->default_shift_id,
+                                'is_off_day' => false,
                                 'created_by' => auth()->id(),
                             ]);
+                            $count++;
                         }
-                        $count++;
+
+                        // Slot 2: Split shift if applicable
+                        if ($emp->is_split_shift && $emp->second_shift_id && $emp->second_shift_id != $emp->default_shift_id) {
+                            HrSchedule::create([
+                                'hr_employee_id' => $emp->id,
+                                'shift_date' => $dateStr,
+                                'hr_shift_id' => $emp->second_shift_id,
+                                'is_off_day' => false,
+                                'created_by' => auth()->id(),
+                            ]);
+                            $count++;
+                        }
                     }
                 }
             }
         }
 
-        return back()->with('success', "تم تطبيق الدوام الافتراضي تلقائياً لـ ($count) موضع/يوم عمل بنجاح.");
+        return back()->with('success', "تم تطبيق الدوام الافتراضي تلقائياً لـ ($count) نوبة/يوم عمل بنجاح.");
     }
 
     public function clearRange(Request $request)
@@ -368,39 +419,69 @@ class HrScheduleController extends Controller
         $validated = $request->validate([
             'hr_employee_id' => 'required|exists:hr_employees,id',
             'shift_date' => 'required|date',
+            'slot' => 'nullable|string',
             'shift_value' => 'nullable|string',
+            'other_value' => 'nullable|string',
         ]);
 
         $employeeId = $validated['hr_employee_id'];
         $date = \Carbon\Carbon::parse($validated['shift_date'])->format('Y-m-d');
         $shiftValue = $validated['shift_value'];
+        $slot = $request->input('slot', 'slot1');
+        $otherValue = $request->input('other_value');
 
-        $existing = HrSchedule::where('hr_employee_id', $employeeId)
-            ->whereDate('shift_date', $date)
-            ->first();
-
-        if (empty($shiftValue)) {
-            if ($existing) {
-                $existing->delete();
+        // Collect distinct shift values for this day
+        $values = [];
+        if ($slot === 'slot2') {
+            if (! empty($otherValue)) {
+                $values[] = $otherValue;
             }
-
-            return response()->json(['success' => true, 'action' => 'deleted']);
+            if (! empty($shiftValue)) {
+                $values[] = $shiftValue;
+            }
+        } else {
+            if (! empty($shiftValue)) {
+                $values[] = $shiftValue;
+            }
+            if (! empty($otherValue)) {
+                $values[] = $otherValue;
+            }
         }
 
-        $isOff = ($shiftValue === 'off');
-        $shiftId = $isOff ? null : $shiftValue;
+        // Delete old records for this day
+        HrSchedule::where('hr_employee_id', $employeeId)
+            ->whereDate('shift_date', $date)
+            ->delete();
 
-        if ($existing) {
-            $existing->update([
-                'hr_shift_id' => $shiftId,
-                'is_off_day' => $isOff,
-            ]);
-        } else {
+        if (in_array('off', $values, true)) {
             HrSchedule::create([
                 'hr_employee_id' => $employeeId,
                 'shift_date' => $date,
-                'hr_shift_id' => $shiftId,
-                'is_off_day' => $isOff,
+                'hr_shift_id' => null,
+                'is_off_day' => true,
+                'created_by' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'action' => 'saved',
+                'is_off' => true,
+                'shift_id' => null,
+                'shift_ids' => [],
+            ]);
+        }
+
+        $validShiftIds = array_unique(array_filter($values, fn ($v) => ! empty($v) && is_numeric($v)));
+        if (empty($validShiftIds)) {
+            return response()->json(['success' => true, 'action' => 'deleted']);
+        }
+
+        foreach ($validShiftIds as $sId) {
+            HrSchedule::create([
+                'hr_employee_id' => $employeeId,
+                'shift_date' => $date,
+                'hr_shift_id' => (int) $sId,
+                'is_off_day' => false,
                 'created_by' => auth()->id(),
             ]);
         }
@@ -408,8 +489,9 @@ class HrScheduleController extends Controller
         return response()->json([
             'success' => true,
             'action' => 'saved',
-            'is_off' => $isOff,
-            'shift_id' => $shiftId,
+            'is_off' => false,
+            'shift_id' => (int) ($validShiftIds[0] ?? 0),
+            'shift_ids' => $validShiftIds,
         ]);
     }
 }

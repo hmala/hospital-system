@@ -155,6 +155,50 @@ class HrScheduleTest extends TestCase
         $this->assertNull($fridaySchedule->hr_shift_id);
     }
 
+    public function test_admin_can_schedule_split_shift_employee_and_see_both_shifts()
+    {
+        $splitEmployee = $this->createEmployee([
+            'full_name' => 'سامر الكاشير',
+            'job_title' => 'محاسب كاشير',
+            'schedule_type' => 'fixed',
+            'is_split_shift' => true,
+            'default_shift_id' => $this->morningShift->id,
+            'second_shift_id' => $this->nightShift->id,
+            'weekly_off_days' => ['friday'],
+        ]);
+
+        $startDate = now()->startOfWeek(\Carbon\Carbon::SUNDAY)->format('Y-m-d');
+        $endDate = now()->startOfWeek(\Carbon\Carbon::SUNDAY)->addDays(6)->format('Y-m-d');
+
+        // Auto fill defaults
+        $response = $this->actingAs($this->admin)->post(route('hr.schedules.auto-fill-defaults'), [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'department_id' => $this->department->id,
+            'overwrite' => '1',
+        ]);
+        $response->assertSessionHas('success');
+
+        // Check Sunday (day 0): should have 2 shifts (morning + night)
+        $sundayShifts = HrSchedule::where('hr_employee_id', $splitEmployee->id)
+            ->whereDate('shift_date', $startDate)
+            ->get();
+        $this->assertCount(2, $sundayShifts);
+        $this->assertTrue($sundayShifts->contains('hr_shift_id', $this->morningShift->id));
+        $this->assertTrue($sundayShifts->contains('hr_shift_id', $this->nightShift->id));
+
+        // View roster and assert seeing both slots
+        $viewResponse = $this->actingAs($this->admin)->get(route('hr.schedules.index', [
+            'department_id' => $this->department->id,
+            'start_date' => $startDate,
+        ]));
+        $viewResponse->assertStatus(200);
+        $viewResponse->assertSee($splitEmployee->full_name);
+        $viewResponse->assertSee('وجبتين');
+        $viewResponse->assertSee('roster-slot1');
+        $viewResponse->assertSee('roster-slot2');
+    }
+
     public function test_admin_can_update_single_cell_via_ajax()
     {
         $employee = $this->createEmployee([
