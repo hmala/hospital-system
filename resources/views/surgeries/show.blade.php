@@ -354,12 +354,15 @@
         }
 
         /* ===== نمط الصفحة الواحدة الموحدة (Single Page View Mode) ===== */
-        .tab-content > .tab-pane {
+        .tab-content .tab-pane {
             display: block !important;
             opacity: 1 !important;
             visibility: visible !important;
             margin-bottom: 24px !important;
             scroll-margin-top: 95px;
+        }
+        .tab-pane.col-xl-6, .tab-pane.col-lg-6 {
+            margin-bottom: 0 !important;
         }
         .clin-tabs-wrapper {
             position: sticky;
@@ -1090,79 +1093,82 @@
                 </div>
             @endif
 
-            {{-- TAB 3: التشخيص وخطة العلاج --}}
-            @if(isset($visibleTabs['detail_diagnosis']))
-                @php $canWriteDiagnosis = $visibleTabs['detail_diagnosis']['can_write']; @endphp
-                <div class="tab-pane fade {{ $activeTab === 'detail_diagnosis' ? 'show active' : '' }}" id="pane-detail_diagnosis" role="tabpanel" aria-labelledby="tab-btn-detail_diagnosis">
-                    <div class="card clin-tab-card">
-                        @if($canWriteDiagnosis)
-                            <form id="detailDiagnosisForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="tab" value="detail_diagnosis">
-                        @endif
-                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                <h6 class="fw-bold text-primary mb-0">
-                                    <i class="fas fa-stethoscope me-2"></i>التشخيص الطبي للجراح وجدول العلاجات
-                                </h6>
+            {{-- ROW: التشخيص الطبي للجراح وجدول العلاجات (يمين) + توثيق تفاصيل التخدير (يسار) --}}
+            @if(isset($visibleTabs['detail_diagnosis']) || isset($visibleTabs['detail_anesthesia']))
+                <div class="row g-3 mb-4">
+                    {{-- TAB 3: التشخيص وخطة العلاج (يمين) --}}
+                    @if(isset($visibleTabs['detail_diagnosis']))
+                        @php $canWriteDiagnosis = $visibleTabs['detail_diagnosis']['can_write']; @endphp
+                        <div class="{{ isset($visibleTabs['detail_anesthesia']) ? 'col-xl-6 col-lg-6' : 'col-12' }} tab-pane fade {{ $activeTab === 'detail_diagnosis' ? 'show active' : '' }}" id="pane-detail_diagnosis" role="tabpanel" aria-labelledby="tab-btn-detail_diagnosis">
+                            <div class="card clin-tab-card h-100 d-flex flex-column">
                                 @if($canWriteDiagnosis)
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
-                                @else
-                                    <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
+                                    <form id="detailDiagnosisForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="tab" value="detail_diagnosis">
                                 @endif
-                            </div>
-
-                            @if(!$canWriteDiagnosis)
-                                <div class="alert alert-info border-info bg-info bg-opacity-10 py-2 mb-0 small">
-                                    <i class="fas fa-eye me-1"></i> هذا القسم للعرض فقط وفق صلاحيات دورك الوظيفي؛ يتم توثيق التشخيص والعلاجات من قِبَل الطبيب الجراح.
-                                </div>
-                            @elseif($isSurgeryStaff && empty($surgery->diagnosis))
-                                <div class="alert alert-warning border-warning bg-warning bg-opacity-10 py-2 mb-0 small">
-                                    <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إدخال التشخيص الطبي للعملية بعد.
-                                </div>
-                            @endif
-
-                            {{-- Section 1: Compact 3-Column Clinical Summary Grid --}}
-                            <div class="clin-section-card">
-                                <div class="clin-section-title text-primary mb-2">
-                                    <i class="fas fa-notes-medical"></i> التشخيص والخطة السريرية للجراح
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-lg-4">
-                                        <div class="clin-field-card">
-                                            <label for="diagnosis" class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
-                                                <i class="fas fa-stethoscope text-primary"></i>
-                                                <span>التشخيص الطبي للعملية</span>
-                                            </label>
-                                            <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="diagnosis" @if($canWriteDiagnosis) name="diagnosis" @else readonly disabled @endif rows="3" placeholder="أدخل التشخيص الطبي المفصل للمريض...">{{ old('diagnosis', $surgery->diagnosis) }}</textarea>
-                                        </div>
+                                <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                        <h6 class="fw-bold text-primary mb-0">
+                                            <i class="fas fa-stethoscope me-2"></i>التشخيص الطبي للجراح وجدول العلاجات
+                                        </h6>
+                                        @if($canWriteDiagnosis)
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
+                                        @endif
                                     </div>
-                                    <div class="col-lg-4">
-                                        <div class="clin-field-card">
-                                            <label for="treatment_plan" class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
-                                                <i class="fas fa-file-medical text-info"></i>
-                                                <span>خطة العلاج والتوصيات الجراحية</span>
-                                            </label>
-                                            <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="treatment_plan" @if($canWriteDiagnosis) name="treatment_plan" @else readonly disabled @endif rows="3" placeholder="خطة العلاج وتوصيات ما بعد العملية...">{{ old('treatment_plan', $surgery->treatment_plan) }}</textarea>
+
+                                    @if(!$canWriteDiagnosis)
+                                        <div class="alert alert-info border-info bg-info bg-opacity-10 py-2 mb-0 small">
+                                            <i class="fas fa-eye me-1"></i> هذا القسم للعرض فقط وفق صلاحيات دورك الوظيفي؛ يتم توثيق التشخيص والعلاجات من قِبَل الطبيب الجراح.
                                         </div>
-                                    </div>
-                                    <div class="col-lg-4">
-                                        <div class="clin-field-card">
-                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
-                                                <label for="post_op_notes" class="form-label fw-bold text-dark small mb-0 d-flex align-items-center gap-1">
-                                                    <i class="fas fa-clipboard-check text-success"></i>
-                                                    <span>ملاحظات ما بعد العملية</span>
-                                                </label>
-                                                @if($canWriteDiagnosis)
-                                                    <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('post_op_notes', 'حالة مستقرة — دون مضاعفات أثناء التداخل الجراحي')">حالة مستقرة</button>
-                                                @endif
+                                    @elseif($isSurgeryStaff && empty($surgery->diagnosis))
+                                        <div class="alert alert-warning border-warning bg-warning bg-opacity-10 py-2 mb-0 small">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إدخال التشخيص الطبي للعملية بعد.
+                                        </div>
+                                    @endif
+
+                                    {{-- Section 1: Compact Clinical Summary Grid --}}
+                                    <div class="clin-section-card">
+                                        <div class="clin-section-title text-primary mb-2">
+                                            <i class="fas fa-notes-medical"></i> التشخيص والخطة السريرية للجراح
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-12">
+                                                <div class="clin-field-card">
+                                                    <label for="diagnosis" class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
+                                                        <i class="fas fa-stethoscope text-primary"></i>
+                                                        <span>التشخيص الطبي للعملية</span>
+                                                    </label>
+                                                    <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="diagnosis" @if($canWriteDiagnosis) name="diagnosis" @else readonly disabled @endif rows="2" placeholder="أدخل التشخيص الطبي المفصل للمريض...">{{ old('diagnosis', $surgery->diagnosis) }}</textarea>
+                                                </div>
                                             </div>
-                                            <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="post_op_notes" @if($canWriteDiagnosis) name="post_op_notes" @else readonly disabled @endif rows="3" placeholder="ملاحظات الجراح بعد التداخل...">{{ old('post_op_notes', $surgery->post_op_notes) }}</textarea>
+                                            <div class="col-12">
+                                                <div class="clin-field-card">
+                                                    <label for="treatment_plan" class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
+                                                        <i class="fas fa-file-medical text-info"></i>
+                                                        <span>خطة العلاج والتوصيات الجراحية</span>
+                                                    </label>
+                                                    <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="treatment_plan" @if($canWriteDiagnosis) name="treatment_plan" @else readonly disabled @endif rows="2" placeholder="خطة العلاج وتوصيات ما بعد العملية...">{{ old('treatment_plan', $surgery->treatment_plan) }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-12">
+                                                <div class="clin-field-card">
+                                                    <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                                        <label for="post_op_notes" class="form-label fw-bold text-dark small mb-0 d-flex align-items-center gap-1">
+                                                            <i class="fas fa-clipboard-check text-success"></i>
+                                                            <span>ملاحظات ما بعد العملية</span>
+                                                        </label>
+                                                        @if($canWriteDiagnosis)
+                                                            <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('post_op_notes', 'حالة مستقرة — دون مضاعفات أثناء التداخل الجراحي')">حالة مستقرة</button>
+                                                        @endif
+                                                    </div>
+                                                    <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="post_op_notes" @if($canWriteDiagnosis) name="post_op_notes" @else readonly disabled @endif rows="2" placeholder="ملاحظات الجراح بعد التداخل...">{{ old('post_op_notes', $surgery->post_op_notes) }}</textarea>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
                             {{-- Section 2: Medications & Treatment Table --}}
                             <div class="clin-section-card clin-surface-white">
@@ -1299,7 +1305,7 @@
                         </div>
 
                         @if($canWriteDiagnosis)
-                            <div class="card-footer bg-light text-end py-3 border-top">
+                            <div class="card-footer bg-light text-end py-3 border-top mt-auto">
                                 <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm">
                                     <i class="fas fa-save me-2"></i>حفظ التشخيص والعلاجات
                                 </button>
@@ -1310,18 +1316,18 @@
                 </div>
             @endif
 
-            {{-- TAB 4: تفاصيل التخدير --}}
+            {{-- TAB 4: تفاصيل التخدير (يسار) --}}
             @if(isset($visibleTabs['detail_anesthesia']))
                 @php $canWriteAnesthesia = $visibleTabs['detail_anesthesia']['can_write']; @endphp
-                <div class="tab-pane fade {{ $activeTab === 'detail_anesthesia' ? 'show active' : '' }}" id="pane-detail_anesthesia" role="tabpanel" aria-labelledby="tab-btn-detail_anesthesia">
-                    <div class="card clin-tab-card">
+                <div class="{{ isset($visibleTabs['detail_diagnosis']) ? 'col-xl-6 col-lg-6' : 'col-12' }} tab-pane fade {{ $activeTab === 'detail_anesthesia' ? 'show active' : '' }}" id="pane-detail_anesthesia" role="tabpanel" aria-labelledby="tab-btn-detail_anesthesia">
+                    <div class="card clin-tab-card h-100 d-flex flex-column">
                         @if($canWriteAnesthesia)
-                            <form id="detailAnesthesiaForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST">
+                            <form id="detailAnesthesiaForm" action="{{ route('surgeries.updateDetails', $surgery) }}" method="POST" class="d-flex flex-column h-100 mb-0">
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="tab" value="detail_anesthesia">
                         @endif
-                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3">
+                        <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 flex-grow-1">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
                                 <h6 class="fw-bold text-success mb-0">
                                     <i class="fas fa-syringe me-2"></i>توثيق تفاصيل التخدير
@@ -1396,7 +1402,7 @@
                         </div>
 
                         @if($canWriteAnesthesia)
-                            <div class="card-footer bg-light d-flex flex-wrap justify-content-end gap-2 py-3 border-top">
+                            <div class="card-footer bg-light d-flex flex-wrap justify-content-end gap-2 py-3 border-top mt-auto">
                                 <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold shadow-sm">
                                     <i class="fas fa-save me-2"></i>حفظ تفاصيل التخدير
                                 </button>
@@ -1412,6 +1418,8 @@
                     </div>
                 </div>
             @endif
+        </div>
+    @endif
 
             {{-- TAB 5: الفريق الطبي والتوقيت --}}
             @if(isset($visibleTabs['detail_team_timing']))
