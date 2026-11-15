@@ -1966,15 +1966,36 @@
                             <div class="card clin-tab-card h-100">
                                 <div class="card-body p-3 p-md-4 d-flex flex-column gap-3">
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-2">
-                                        <div>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
                                             <h6 class="fw-bold text-primary mb-0">
-                                                <i class="fas fa-boxes me-2"></i>صرف مستلزمات ومواد {{ $operationStoreLocation?->name ?? 'مخزن العمليات' }} ({{ $orDispensedItems->count() }})
+                                                <i class="fas fa-boxes me-2"></i>مستلزمات ومواد العملية ({{ $orDispensedItems->count() }})
                                             </h6>
                                             @if($operationStoreLocation)
-                                                <small class="text-muted">الصرف المباشر يخصم تلقائياً من عهدة وجبات {{ $operationStoreLocation->name }}</small>
+                                                <span class="badge bg-light text-dark border px-3 py-1.5 rounded-pill small">
+                                                    <i class="fas fa-warehouse text-primary me-1"></i>المخزن التابع: <strong>{{ $operationStoreLocation->name }}</strong>
+                                                    @if($operationSupplyBatches->count() > 0)
+                                                        <span class="badge bg-success-subtle text-success ms-1">{{ $operationSupplyBatches->count() }} مادة</span>
+                                                    @endif
+                                                </span>
                                             @endif
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            @if($canWriteSupplies && $operationStoreLocation && $operationSupplyBatches->isNotEmpty())
+                                                {{-- Button: Toggle Supplies Dispense Table (like Lab & Radiology) --}}
+                                                <button class="btn btn-outline-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill shadow-xs"
+                                                        type="button"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#collapseSupplyDispenseSection"
+                                                        aria-expanded="false"
+                                                        aria-controls="collapseSupplyDispenseSection"
+                                                        id="btnToggleSupplyDispense"
+                                                        style="font-size: 0.88rem; transition: all 0.2s ease;">
+                                                    <i class="fas fa-cart-plus text-primary"></i>
+                                                    <span>صرف مستلزمات من المخزن</span>
+                                                    <span class="badge rounded-pill bg-primary text-white px-2 py-0.5">{{ $operationSupplyBatches->count() }} مادة</span>
+                                                    <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
+                                                </button>
+                                            @endif
                                             <a href="{{ route('surgeries.index', array_filter(['tab' => 'or_store', 'location_id' => $operationStoreLocation?->id])) }}"
                                                class="btn btn-outline-secondary btn-sm rounded-pill px-3">
                                                 <i class="fas fa-warehouse me-1"></i>جرد وعهدة العمليات
@@ -1989,62 +2010,178 @@
                                         @if(!$operationStoreLocation)
                                             <div class="alert alert-warning rounded-3 mb-0">
                                                 <i class="fas fa-exclamation-triangle me-2"></i>
-                                                لم يتم العثور على مخزن فرعي للعمليات (مثل <strong>مخزن عمليات</strong>). يرجى تعريفه في إدارة المخازن أولاً.
+                                                لم يتم العثور على مخزن فرعي للعمليات أو مخزن رئيسي. يرجى مراجعة إدارة المخازن.
                                             </div>
                                         @elseif($operationSupplyBatches->isEmpty())
                                             <div class="clin-section-card text-center py-4 mb-0">
                                                 <i class="fas fa-box-open fa-2x text-warning mb-2 d-block"></i>
                                                 <div class="fw-bold text-dark mb-1">لا يوجد رصيد متوفر حالياً في {{ $operationStoreLocation->name }}</div>
-                                                <p class="small text-muted mb-3">يرجى طلب تعزيز مواد من المخزن الرئيسي لإتاحة الصرف المباشر للمريض.</p>
+                                                <p class="small text-muted mb-3">يرجى طلب تعزيز مواد من المخزن الرئيسي إلى {{ $operationStoreLocation->name }} لإتاحة الصرف المباشر للعملية.</p>
                                                 <a href="{{ route('stock-transfers.create', ['to_location_id' => $operationStoreLocation->id]) }}"
                                                    class="btn btn-warning btn-sm rounded-pill px-4 fw-bold text-dark shadow-sm">
                                                     <i class="fas fa-plus-circle me-1"></i>طلب تعزيز لمخزن العمليات
                                                 </a>
                                             </div>
                                         @else
-                                            <form id="detailSuppliesForm" action="{{ route('surgeries.supplies.dispense', $surgery) }}" method="POST" class="clin-section-card clin-surface-white mb-0">
-                                                @csrf
-                                                <div class="clin-section-title text-primary mb-2">
-                                                    <i class="fas fa-cart-arrow-down"></i>صرف مادة أو مستلزم من {{ $operationStoreLocation->name }}
+                                            <div class="collapse" id="collapseSupplyDispenseSection">
+                                                <form id="detailSuppliesForm" action="{{ route('surgeries.supplies.dispense', $surgery) }}" method="POST" class="clin-section-card clin-surface-white mb-0 p-3">
+                                                    @csrf
+                                                    <input type="hidden" name="location_id" value="{{ $operationStoreLocation->id }}">
+
+                                                <!-- Header bar with title, counter, and actions -->
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                                    <div>
+                                                        <h6 class="fw-bold text-primary mb-1">
+                                                            <i class="fas fa-cart-arrow-down me-1"></i>صرف من مخزن العمليات — جدول المواد والمستلزمات المتوفرة في ({{ $operationStoreLocation->name }})
+                                                        </h6>
+                                                        <div class="small text-muted">
+                                                            حدد المواد والكميات المطلوبة، ثم اضغط على زر الصرف ليتم صرفها وحفظها دفعة واحدة للمريض.
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold" id="suppliesSelectedBadge">
+                                                            <i class="fas fa-check-circle me-1"></i><span id="suppliesSelectedCount">0</span> مادة محددة
+                                                        </span>
+                                                        <button type="submit" id="btnSubmitSuppliesTop" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm" disabled>
+                                                            <i class="fas fa-check-circle me-1"></i>صرف من مخزن العمليات (<span class="btn-selected-count">0</span>)
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div class="row g-2 align-items-end">
-                                                    <div class="col-md-6">
-                                                        <label for="or_dispense_batch_id" class="form-label small fw-bold mb-1">المادة / الوجبة المتوفرة</label>
-                                                        <select id="or_dispense_batch_id" name="batch_id" class="form-select form-select-sm border-primary-subtle" required
-                                                                onchange="updateOrDispenseMaxQty(this, 'or_dispense_qty', 'or_dispense_unit')">
+
+                                                <!-- Quick live search and filter row -->
+                                                <div class="row g-2 align-items-center mb-3">
+                                                    <div class="col-md-5">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                                                            <input type="text" id="supplyLiveSearch" class="form-control" placeholder="بحث سريع باسم المادة أو الباركود..." oninput="filterSupplyGrid()">
+                                                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('supplyLiveSearch').value=''; filterSupplyGrid();">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-7 d-flex flex-wrap align-items-center justify-content-md-end gap-1">
+                                                        <span class="small text-muted me-1">التصنيف:</span>
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill active px-2 py-1 supply-filter-btn" data-cat="all" onclick="filterSupplyCategory('all', this)">الكل</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 supply-filter-btn" data-cat="supply" onclick="filterSupplyCategory('supply', this)">مستلزمات</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 supply-filter-btn" data-cat="medicine" onclick="filterSupplyCategory('medicine', this)">أدوية ومحاليل</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2 py-1 supply-filter-btn" data-cat="selected" onclick="filterSupplyCategory('selected', this)">المحدد فقط (<span id="filterSelectedCount">0</span>)</button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Table of Batches -->
+                                                <div class="table-responsive rounded-3 border" style="max-height: 480px; overflow-y: auto;">
+                                                    <table class="table table-sm table-hover align-middle mb-0" id="suppliesBatchTable" style="font-size:0.87rem;">
+                                                        <thead class="table-light sticky-top" style="z-index: 2;">
+                                                            <tr>
+                                                                <th style="width: 45px;" class="text-center">
+                                                                    <input type="checkbox" class="form-check-input" id="masterSupplyCheck" onchange="toggleSelectAllSupplies(this)" title="تحديد / إلغاء تحديد الكل">
+                                                                </th>
+                                                                <th>المادة / المستلزم</th>
+                                                                <th style="width: 140px;">التصنيف</th>
+                                                                <th style="width: 140px;">الوجبة والباركود</th>
+                                                                <th style="width: 110px;" class="text-center">الرصيد المتوفر</th>
+                                                                <th style="width: 130px;" class="text-center">الكمية المطلوبة</th>
+                                                                <th style="width: 180px;">ملاحظات</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
                                                             @foreach($operationSupplyBatches as $batch)
                                                                 @php
                                                                     $prod = $batch->product;
-                                                                    $catLabel = $prod?->isSupply() ? 'مستلزم' : ($prod?->category ?: 'مادة مخزنية');
+                                                                    $isSupply = $prod?->isSupply();
+                                                                    $catText = $isSupply ? 'مستلزم جراحي' : ($prod?->category ?: 'أدوية ومحاليل');
+                                                                    $catType = $isSupply ? 'supply' : 'medicine';
                                                                     $unitText = $prod?->unit ?? 'قطعة';
                                                                     $lotText = $batch->internal_barcode ?: ($batch->manufacturer_lot_number ?: '#'.$batch->id);
                                                                 @endphp
-                                                                <option value="{{ $batch->id }}"
-                                                                        data-max="{{ $batch->current_qty }}"
-                                                                        data-unit="{{ $unitText }}">
-                                                                    {{ $prod?->name ?? 'مادة' }} [{{ $catLabel }}] — متوفر: {{ $batch->current_qty }} {{ $unitText }} (وجبة: {{ $lotText }})
-                                                                </option>
+                                                                <tr class="supply-batch-row" 
+                                                                    id="supply_row_{{ $batch->id }}"
+                                                                    data-batch-id="{{ $batch->id }}"
+                                                                    data-cat="{{ $catType }}"
+                                                                    data-name="{{ strtolower($prod?->name ?? '') }}"
+                                                                    data-lot="{{ strtolower($lotText) }}">
+                                                                    <td class="text-center">
+                                                                        <input type="checkbox" 
+                                                                               class="form-check-input supply-item-checkbox" 
+                                                                               id="chk_batch_{{ $batch->id }}"
+                                                                               name="items[{{ $batch->id }}][batch_id]"
+                                                                               value="{{ $batch->id }}"
+                                                                               onchange="handleSupplyItemToggle({{ $batch->id }})">
+                                                                    </td>
+                                                                    <td>
+                                                                        <label for="chk_batch_{{ $batch->id }}" class="fw-bold text-dark d-block mb-0 cursor-pointer user-select-none">
+                                                                            {{ $prod?->name ?? 'مادة مخزنية' }}
+                                                                        </label>
+                                                                        @if($prod?->description)
+                                                                            <small class="text-muted d-block text-truncate" style="max-width: 320px;">{{ $prod->description }}</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge {{ $isSupply ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-info-subtle text-info border border-info-subtle' }} rounded-pill px-2 py-1">
+                                                                            {{ $catText }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="font-monospace small text-muted">{{ $lotText }}</span>
+                                                                        @if($batch->expiry_date)
+                                                                            <div class="small {{ $batch->expiry_date->isPast() ? 'text-danger fw-bold' : ($batch->expiry_date->diffInDays(now()) < 60 ? 'text-warning fw-bold' : 'text-muted') }}" style="font-size:0.75rem;">
+                                                                                انتهاء: {{ $batch->expiry_date->format('Y-m-d') }}
+                                                                            </div>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-bold">
+                                                                            {{ $batch->current_qty }} {{ $unitText }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="input-group input-group-sm">
+                                                                            <input type="number" 
+                                                                                   class="form-control text-center fw-bold supply-qty-input"
+                                                                                   id="qty_batch_{{ $batch->id }}"
+                                                                                   name="items[{{ $batch->id }}][quantity]"
+                                                                                   value="1"
+                                                                                   min="1"
+                                                                                   max="{{ $batch->current_qty }}"
+                                                                                   data-max="{{ $batch->current_qty }}"
+                                                                                   disabled
+                                                                                   oninput="handleSupplyQtyInput({{ $batch->id }})">
+                                                                            <span class="input-group-text small bg-light text-muted px-1">{{ $unitText }}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <input type="text" 
+                                                                               class="form-control form-control-sm supply-notes-input"
+                                                                               id="notes_batch_{{ $batch->id }}"
+                                                                               name="items[{{ $batch->id }}][admin_notes]"
+                                                                               placeholder="ملاحظات..."
+                                                                               disabled>
+                                                                    </td>
+                                                                </tr>
                                                             @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-2 col-6">
-                                                        <label for="or_dispense_qty" class="form-label small fw-bold mb-1">الكمية (<span id="or_dispense_unit">{{ $operationSupplyBatches->first()?->product?->unit ?? 'قطعة' }}</span>)</label>
-                                                        <input type="number" id="or_dispense_qty" name="quantity" class="form-control form-control-sm text-center fw-bold"
-                                                               value="1" min="1" max="{{ $operationSupplyBatches->first()?->current_qty ?? 1 }}" required>
-                                                    </div>
-                                                    <div class="col-md-4 col-6">
-                                                        <label for="or_dispense_notes" class="form-label small fw-bold mb-1">ملاحظات الصرف</label>
-                                                        <input type="text" id="or_dispense_notes" name="admin_notes" class="form-control form-control-sm" placeholder="مثال: أثناء العملية...">
-                                                    </div>
+                                                        </tbody>
+                                                    </table>
                                                 </div>
-                                                <div class="d-flex justify-content-end mt-3 pt-2 border-top">
-                                                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
-                                                        <i class="fas fa-check-circle me-1"></i>صرف من مخزن العمليات
-                                                    </button>
+
+                                                <!-- Bottom summary and submit bar -->
+                                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-2 border-top">
+                                                    <div class="small text-muted">
+                                                        <i class="fas fa-info-circle me-1 text-primary"></i>
+                                                        إجمالي المواد المعروضة: <strong>{{ $operationSupplyBatches->count() }}</strong> وجبة. سيتم خصم الكميات من المخزن المحدد وتوثيقها فوراً في سجل العملية وفاتورة المريض.
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="resetAllSuppliesSelection()">
+                                                            <i class="fas fa-undo me-1"></i>إلغاء التحديد
+                                                        </button>
+                                                        <button type="submit" id="btnSubmitSuppliesBottom" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" disabled>
+                                                            <i class="fas fa-check-circle me-1"></i>صرف من مخزن العمليات (<span class="btn-selected-count">0</span>)
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </form>
-                                        @endif
+                                        </div>
                                     @endif
+                                @endif
 
                                     <div>
                                         <div class="clin-section-title text-dark mb-2">
@@ -3334,6 +3471,169 @@
             }
         });
     }
+
+    // ==========================================
+    // Multi-Item OR Store Supplies Dispense System
+    // ==========================================
+
+    function handleSupplyItemToggle(batchId) {
+        const chk = document.getElementById('chk_batch_' + batchId);
+        const qtyInput = document.getElementById('qty_batch_' + batchId);
+        const notesInput = document.getElementById('notes_batch_' + batchId);
+        const row = document.getElementById('supply_row_' + batchId);
+        if (!chk) return;
+
+        if (chk.checked) {
+            if (qtyInput) {
+                qtyInput.removeAttribute('disabled');
+                if (!qtyInput.value || parseInt(qtyInput.value) < 1) qtyInput.value = 1;
+            }
+            if (notesInput) notesInput.removeAttribute('disabled');
+            if (row) row.classList.add('table-primary');
+        } else {
+            if (qtyInput) qtyInput.setAttribute('disabled', 'disabled');
+            if (notesInput) notesInput.setAttribute('disabled', 'disabled');
+            if (row) row.classList.remove('table-primary');
+        }
+        updateBulkSuppliesCounter();
+    }
+    window.handleSupplyItemToggle = handleSupplyItemToggle;
+
+    function handleSupplyQtyInput(batchId) {
+        const qtyInput = document.getElementById('qty_batch_' + batchId);
+        if (!qtyInput) return;
+        const max = parseInt(qtyInput.getAttribute('data-max') || '999999');
+        let val = parseInt(qtyInput.value || '1');
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > max) val = max;
+        qtyInput.value = val;
+    }
+    window.handleSupplyQtyInput = handleSupplyQtyInput;
+
+    function toggleSelectAllSupplies(masterEl) {
+        const isChecked = masterEl.checked;
+        const rows = document.querySelectorAll('.supply-batch-row');
+        rows.forEach(row => {
+            if (row.style.display !== 'none') {
+                const chk = row.querySelector('.supply-item-checkbox');
+                if (chk) {
+                    chk.checked = isChecked;
+                    const batchId = row.getAttribute('data-batch-id');
+                    if (batchId) {
+                        const qtyInput = document.getElementById('qty_batch_' + batchId);
+                        const notesInput = document.getElementById('notes_batch_' + batchId);
+                        if (isChecked) {
+                            if (qtyInput) {
+                                qtyInput.removeAttribute('disabled');
+                                if (!qtyInput.value || parseInt(qtyInput.value) < 1) qtyInput.value = 1;
+                            }
+                            if (notesInput) notesInput.removeAttribute('disabled');
+                            row.classList.add('table-primary');
+                        } else {
+                            if (qtyInput) qtyInput.setAttribute('disabled', 'disabled');
+                            if (notesInput) notesInput.setAttribute('disabled', 'disabled');
+                            row.classList.remove('table-primary');
+                        }
+                    }
+                }
+            }
+        });
+        updateBulkSuppliesCounter();
+    }
+    window.toggleSelectAllSupplies = toggleSelectAllSupplies;
+
+    function resetAllSuppliesSelection() {
+        const master = document.getElementById('masterSupplyCheck');
+        if (master) master.checked = false;
+        document.querySelectorAll('.supply-item-checkbox').forEach(chk => {
+            chk.checked = false;
+        });
+        document.querySelectorAll('.supply-qty-input').forEach(input => {
+            input.setAttribute('disabled', 'disabled');
+        });
+        document.querySelectorAll('.supply-notes-input').forEach(input => {
+            input.setAttribute('disabled', 'disabled');
+        });
+        document.querySelectorAll('.supply-batch-row').forEach(row => {
+            row.classList.remove('table-primary');
+        });
+        updateBulkSuppliesCounter();
+    }
+    window.resetAllSuppliesSelection = resetAllSuppliesSelection;
+
+    let currentSupplyCategory = 'all';
+    function filterSupplyCategory(category, btn) {
+        currentSupplyCategory = category;
+        document.querySelectorAll('.supply-filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        filterSupplyGrid();
+    }
+    window.filterSupplyCategory = filterSupplyCategory;
+
+    function filterSupplyGrid() {
+        const searchInput = document.getElementById('supplyLiveSearch');
+        const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        const rows = document.querySelectorAll('.supply-batch-row');
+
+        rows.forEach(row => {
+            const cat = row.getAttribute('data-cat') || '';
+            const name = row.getAttribute('data-name') || '';
+            const lot = row.getAttribute('data-lot') || '';
+            const chk = row.querySelector('.supply-item-checkbox');
+            const isChecked = chk && chk.checked;
+
+            let matchCat = true;
+            if (currentSupplyCategory === 'supply') {
+                matchCat = (cat === 'supply');
+            } else if (currentSupplyCategory === 'medicine') {
+                matchCat = (cat === 'medicine');
+            } else if (currentSupplyCategory === 'selected') {
+                matchCat = isChecked;
+            }
+
+            let matchSearch = true;
+            if (term) {
+                matchSearch = name.includes(term) || lot.includes(term);
+            }
+
+            if (matchCat && matchSearch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    window.filterSupplyGrid = filterSupplyGrid;
+
+    function updateBulkSuppliesCounter() {
+        const checkedBoxes = document.querySelectorAll('.supply-item-checkbox:checked');
+        const count = checkedBoxes.length;
+
+        const countSpan = document.getElementById('suppliesSelectedCount');
+        if (countSpan) countSpan.textContent = count;
+
+        const filterCount = document.getElementById('filterSelectedCount');
+        if (filterCount) filterCount.textContent = count;
+
+        document.querySelectorAll('.btn-selected-count').forEach(el => {
+            el.textContent = count;
+        });
+
+        const topBtn = document.getElementById('btnSubmitSuppliesTop');
+        const bottomBtn = document.getElementById('btnSubmitSuppliesBottom');
+        if (topBtn) topBtn.disabled = (count === 0);
+        if (bottomBtn) bottomBtn.disabled = (count === 0);
+
+        const badge = document.getElementById('suppliesSelectedBadge');
+        if (badge) {
+            if (count > 0) {
+                badge.className = 'badge bg-success text-white px-3 py-2 rounded-pill fw-bold shadow-sm';
+            } else {
+                badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold';
+            }
+        }
+    }
+    window.updateBulkSuppliesCounter = updateBulkSuppliesCounter;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {

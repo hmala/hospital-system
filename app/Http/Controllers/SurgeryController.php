@@ -555,8 +555,11 @@ class SurgeryController extends Controller
             }
         }
 
-        // بيانات مخزن وعُهدة العمليات وصرف المواد داخل تبويب detail_supplies
-        $operationStoreLocation = $surgery->getOperationSubStoreLocation($user);
+        // تحديد مخزن وعُهدة العمليات التابع للعملية تلقائياً للسحب المباشر
+        $operationStoreLocation = $surgery->getOperationSubStoreLocation($user)
+            ?: Location::where('name', 'like', '%عمليات%')->where('type', 'sub')->first()
+            ?: Location::where('type', 'main')->first();
+
         $operationSupplyBatches = $operationStoreLocation
             ? StockBatch::with('product')
                 ->where('location_id', $operationStoreLocation->id)
@@ -1751,13 +1754,123 @@ class SurgeryController extends Controller
                 : abort(403, 'غير مصرح لك بصرف مواد مخزن العمليات');
         }
 
+        // 1. Bulk multi-items dispense
+        if ($request->has('items') && is_array($request->input('items'))) {
+            $validated = $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.batch_id' => 'required|exists:stock_batches,id',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.admin_notes' => 'nullable|string|max:1000',
+                'location_id' => 'nullable|exists:locations,id',
+                'admin_notes' => 'nullable|string|max:1000',
+            ]);
+
+            $locationId = $request->input('location_id');
+            $opLocation = $locationId ? Location::find($locationId) : $surgery->getOperationSubStoreLocation($user);
+
+            try {
+                $dispensedCount = 0;
+                $dispensedNames = [];
+
+                DB::transaction(function () use ($validated, $surgery, $opLocation, $user, &$dispensedCount, &$dispensedNames) {
+                    $patientName = $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'مريض';
+
+                    foreach ($validated['items'] as $item) {
+                        $batch = StockBatch::with('product')
+                            ->where('id', $item['batch_id'])
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (! $batch) {
+                            throw new \Exception("الوجبة رقم ({$item['batch_id']}) غير موجودة في المخزن.");
+                        }
+
+                        $itemLoc = $batch->location ?: $opLocation;
+                        $locName = $itemLoc?->name ?? 'المخزن';
+
+                        if ($batch->current_qty < $item['quantity']) {
+                            $prodName = $batch->product?->name ?? 'مادة';
+                            throw new \Exception("الكمية المطلوبة ({$item['quantity']}) من [{$prodName}] تتجاوز الرصيد المتوفر في {$locName} ({$batch->current_qty}).");
+                        }
+
+                        $batch->decrement('current_qty', $item['quantity']);
+
+                        $itemNotes = $item['admin_notes'] ?? $validated['admin_notes'] ?? '';
+                        $movementNotes = "صرف من ({$locName}) لعملية #{$surgery->id} - المريض: {$patientName}";
+                        if (! empty($itemNotes)) {
+                            $movementNotes .= ' - '.$itemNotes;
+                        }
+
+                        $movement = StockMovement::create([
+                            'batch_id' => $batch->id,
+                            'from_location_id' => $itemLoc?->id,
+                            'to_location_id' => null,
+                            'quantity' => $item['quantity'],
+                            'type' => 'issue_to_patient',
+                            'user_id' => $user->id,
+                            'surgery_id' => $surgery->id,
+                            'notes' => $movementNotes,
+                        ]);
+
+                        $product = $batch->product;
+                        $unitName = $product?->unit ?? 'قطعة';
+                        $dosageText = "{$item['quantity']} {$unitName}";
+
+                        SurgeryTreatment::create([
+                            'surgery_id' => $surgery->id,
+                            'item_type' => SurgeryTreatment::TYPE_SUPPLY,
+                            'description' => $product?->name ?? 'مادة مخزنية',
+                            'dosage' => $dosageText,
+                            'timing' => 'صرف من مخزن العمليات',
+                            'status' => 'administered',
+                            'administered_by' => $user->id,
+                            'administered_at' => now(),
+                            'admin_notes' => $itemNotes ?: null,
+                            'batch_id' => $batch->id,
+                            'stock_movement_id' => $movement->id,
+                            'quantity' => $item['quantity'],
+                            'administrations' => [
+                                [
+                                    'administered_at' => now()->format('Y-m-d H:i'),
+                                    'administered_by' => $user->id,
+                                    'administered_by_name' => $user->full_name ?? $user->name ?? 'موظف العمليات',
+                                    'notes' => $itemNotes ?: null,
+                                ],
+                            ],
+                        ]);
+
+                        $dispensedCount++;
+                        $dispensedNames[] = ($product?->name ?? 'مادة')." ({$item['quantity']} {$unitName})";
+                    }
+                });
+
+                $msg = "تم صرف {$dispensedCount} مواد ومستلزمات بنجاح للعملية: ".implode('، ', array_slice($dispensedNames, 0, 4)).(count($dispensedNames) > 4 ? ' وغيرها...' : '');
+
+                return $request->expectsJson()
+                    ? response()->json(['success' => $msg])
+                    : redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])->with('success', $msg);
+            } catch (\Exception $e) {
+                return $request->expectsJson()
+                    ? response()->json(['message' => $e->getMessage()], 422)
+                    : redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])->with('error', $e->getMessage());
+            }
+        }
+
+        // 2. Single item dispense (backward compatibility with existing forms and tests)
         $validated = $request->validate([
             'batch_id' => 'required|exists:stock_batches,id',
             'quantity' => 'required|integer|min:1',
             'admin_notes' => 'nullable|string|max:1000',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
-        $opLocation = $surgery->getOperationSubStoreLocation($user);
+        $locationId = $request->input('location_id');
+        $opLocation = $locationId ? Location::find($locationId) : $surgery->getOperationSubStoreLocation($user);
+        if (! $opLocation) {
+            $batchObj = StockBatch::find($validated['batch_id']);
+            $opLocation = $batchObj?->location;
+        }
+
         if (! $opLocation) {
             return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_supplies'])
                 ->with('error', 'لم يتم العثور على مخزن العمليات الفرعي (مخزن عمليات).');

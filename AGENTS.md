@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-15 — المرحلة 221: جدول صرف المستلزمات المتعدد المباشر من مخزن العمليات التابع بزر تفاعلي مطابق للمختبر والأشعة Multi-Item Store Dispense Grid with Auto-Affiliated OR Store and Reveal Toggle)
+
+### Done
+- **جدول الصرف المتعدد للمستلزمات دفعة واحدة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحويل صرف المواد والمستلزمات من اختيار فردي إلى جدول تفاعلي شامل (`#detailSuppliesForm`) يتيح تحديد مربعات الاختيار (`checkbox`) لعدة مواد مع تحديد كمياتها وملاحظاتها وصرفها دفعة واحدة للمريض بنقرة زر واحدة في حركة مخزنية وسجل سريري موحد (`DB::transaction`).
+  * دعم البحث اللحظي وفلاتر التصنيف (الكل، مستلزمات، أدوية ومحاليل، المحدد فقط) وتحديد الكل وتحديث عداد المواد النشط لحظياً.
+- **سحب تلقائي من مخزن العمليات التابع وإلغاء القوائم المنسدلة للمخازن**:
+  * ضبط السحب التلقائي والمباشر من المخزن التابع للعملية (`مخزن عمليات رئيسي` أو مخزن العمليات الفرعي) تلقائياً دون إظهار أي قائمة منسدلة لاختيار المخازن، مع إبراز اسم المخزن التابع كبادج رسمي واضح.
+- **زر إظهار وإخفاء تفاعلي مطابق للمختبر والأشعة**:
+  * إدراج زر كبسولي أنيق في ترويسة بطاقة المستلزمات (`[ 🛒 صرف مستلزمات من المخزن: X مادة ▾ ]`) يفتح ويغلق جدول الصرف عبر `collapse` لترتيب الصفحة وتجنب السكرول الطويل، مع إبقاء سجل المواد المصروفة سابقاً واضحاً ومستقلاً دائماً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز فحص `Laravel Pint` وتحديث `view:cache` بدون أي أخطاء.
+
 ## Session log (2026-11-15 — المرحلة 220: إعادة هيكلة واجهة جدول الدوام بالكامل، دعم دوام الوجبتين بخلية مزدوجة، وترشيق شريط الإحصاءات اليومية وشريط الأدوات الموحد HR Roster Complete Redesign with Split-Shift Dual Slots, Streamlined Daily Coverage Badges & Unified Command Bar)
 
 ### Done
