@@ -567,27 +567,27 @@
                 <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-pill border shadow-sm">
                     <span class="small text-muted fw-bold d-none d-sm-inline" style="font-size: 0.8rem;">حالة المريض في الصالة:</span>
                     @if($isOtCompleted)
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #10b981; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
-                            <i class="fas fa-check-double me-1.5"></i>انتهى (خرج من الصالة)
+                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.84rem; letter-spacing: 0.3px;" title="خرج من الصالة (مكتملة)">
+                            <i class="fas fa-check-double me-1 text-success"></i>Post-Op
                         </span>
                     @elseif($isOtInProgress)
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #0284c7; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
-                            <span class="sg-pulse-dot me-1.5"></span>دخل الصالة (جارية)
+                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.84rem; letter-spacing: 0.3px;" title="داخل صالة العمليات (جارية)">
+                            <span class="sg-pulse-dot me-1"></span>Intra-Op
                         </span>
                     @elseif($surgery->status === 'cancelled')
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #ef4444; color: #fff; font-size: 0.86rem; letter-spacing: 0.2px;">
-                            <i class="fas fa-times me-1.5"></i>ملغاة
+                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.84rem; letter-spacing: 0.3px;" title="ملغاة">
+                            <i class="fas fa-ban me-1 text-danger"></i>Cancelled
                         </span>
                     @else
-                        <span class="badge py-1.5 px-3 rounded-pill shadow-sm fw-bold d-inline-flex align-items-center" style="background: #f59e0b; color: #1e293b; font-size: 0.86rem; letter-spacing: 0.2px;">
-                            <i class="fas fa-clock me-1.5 text-dark"></i>بالانتظار (لم يدخل بعد)
+                        <span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.84rem; letter-spacing: 0.3px;" title="قبل دخول الصالة (بالانتظار)">
+                            <i class="fas fa-clock me-1 text-warning"></i>Pre-Op
                         </span>
                     @endif
                 </div>
 
                 @if($user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries')))
                     @if(in_array($surgery->status, ['scheduled', 'waiting', 'checked_in']))
-                        <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline mb-0">
+                        <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-success text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد بدء العملية الجراحية ودخول المريض لصالة العمليات؟')">
                                 <i class="fas fa-play me-1"></i>بدء العملية (دخول الصالة)
@@ -599,13 +599,13 @@
                     @endif
 
                     @if($surgery->status === 'in_progress')
-                        <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline mb-0">
+                        <form action="{{ route('surgeries.complete', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-danger text-white rounded-pill px-3 fw-semibold shadow-sm" onclick="return confirm('تأكيد إنهاء العملية الجراحية واكتمالها؟')">
                                 <i class="fas fa-check-double me-1"></i>إنهاء العملية (خروج من الصالة)
                             </button>
                         </form>
-                        <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="d-inline mb-0">
+                        <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="d-inline mb-0 surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-outline-warning text-dark border-warning rounded-pill px-3 fw-bold shadow-sm" onclick="return confirm('تأكيد إعادة إخراج المريض من صالة العمليات وإرجاعه لقائمة الانتظار؟')">
                                 <i class="fas fa-door-open me-1 text-warning"></i>إعادة إخراجه من الصالة
@@ -1949,7 +1949,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
-            <form action="{{ route('surgeries.cancel', $surgery) }}" method="POST">
+            <form action="{{ route('surgeries.cancel', $surgery) }}" method="POST" class="surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1977,7 +1977,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
-            <form action="{{ route('surgeries.quick-update-schedule', $surgery) }}" method="POST">
+            <form action="{{ route('surgeries.quick-update-schedule', $surgery) }}" method="POST" class="surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
                 @csrf
                 <div class="modal-body">
                     <p class="small text-muted mb-3">يمكنك تعديل تاريخ ووقت العملية لتأجيلها وإبقائها في قائمة الانتظار للموعد الجديد.</p>
@@ -2680,5 +2680,40 @@
 
         applyMode(savedMode);
     }
+
+    // ==========================================
+    // Realtime Live Sync Broadcast
+    // ==========================================
+    function broadcastSurgeryLiveUpdate() {
+        try {
+            const timestamp = Date.now().toString();
+            localStorage.setItem('hospital_surgery_live_trigger', timestamp);
+            if (typeof BroadcastChannel !== 'undefined') {
+                const bc = new BroadcastChannel('hospital_surgery_live_channel');
+                bc.postMessage({
+                    action: 'surgery_updated',
+                    surgery_id: {{ $surgery->id }},
+                    time: timestamp
+                });
+                bc.close();
+            }
+        } catch (e) {
+            console.error('Error broadcasting surgery live update:', e);
+        }
+    }
+
+    window.broadcastSurgeryLiveUpdate = broadcastSurgeryLiveUpdate;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.surgery-live-action-form').forEach(form => {
+            form.addEventListener('submit', function() {
+                broadcastSurgeryLiveUpdate();
+            });
+        });
+
+        @if(session('success'))
+        broadcastSurgeryLiveUpdate();
+        @endif
+    });
 </script>
 @endsection

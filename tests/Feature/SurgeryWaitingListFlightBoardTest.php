@@ -144,8 +144,8 @@ class SurgeryWaitingListFlightBoardTest extends TestCase
         $response = $this->actingAs($staff)->get(route('surgeries.waiting'));
 
         $response->assertStatus(200);
-        $response->assertSee('بالانتظار');
-        $response->assertSee('دخل الصالة');
+        $response->assertSee('Pre-Op');
+        $response->assertSee('Intra-Op');
     }
 
     public function test_check_in_transitions_surgery_from_scheduled_to_waiting(): void

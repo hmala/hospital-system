@@ -300,18 +300,20 @@
             color: #475569;
             font-weight: 800;
             font-size: 0.8rem;
-            padding: 12px 14px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--sg-border);
             white-space: nowrap;
             text-align: right;
         }
         .sg-table tbody td {
-            padding: 12px 14px;
+            padding: 9px 12px;
             vertical-align: middle;
             border-bottom: 1px solid #f1f5f9;
             font-size: 0.86rem;
             color: #1e293b;
             background: #ffffff;
+            white-space: nowrap;
+            line-height: 1.2;
             transition: background 0.15s ease;
         }
         .sg-table tbody tr:hover td {
@@ -596,7 +598,7 @@
                     <table class="sg-table">
                         <thead>
                             <tr>
-                                <th>حالة المريض في الصالة</th>
+                                <th class="text-center" style="width: 10%;" title="حالة المريض في الصالة">الحالة</th>
                                 <th>المريض</th>
                                 <th>نوع العملية</th>
                                 <th>الطبيب الجراح</th>
@@ -618,22 +620,22 @@
                                     $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
                                     $patientIcon = 'fas fa-check-circle text-success';
                                     $patientColor = 'text-success';
-                                    $badgeHtml = '<span class="badge bg-success text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-check-double me-1"></i>انتهى (خرج من الصالة)</span>';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.72rem; letter-spacing: 0.2px;" title="Post-Op (خرج من الصالة)"><i class="fas fa-check-double me-1 text-success" style="font-size: 0.65rem;"></i>Post-Op</span>';
                                 } elseif ($isOtInProgress) {
                                     $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
                                     $patientIcon = 'fas fa-procedures text-primary';
                                     $patientColor = 'text-primary';
-                                    $badgeHtml = '<span class="badge bg-primary text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><span class="sg-pulse-dot me-1"></span>دخل الصالة (جارية)</span>';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; letter-spacing: 0.2px;" title="Intra-Op (داخل الصالة)"><span class="sg-pulse-dot me-1" style="width: 5px; height: 5px;"></span>Intra-Op</span>';
                                 } elseif ($surgery->status === 'cancelled') {
                                     $rowStyle = 'background-color: rgba(239, 68, 68, 0.04); border-right: 4px solid #ef4444;';
                                     $patientIcon = 'fas fa-user-times text-danger';
                                     $patientColor = 'text-danger';
-                                    $badgeHtml = '<span class="badge bg-danger text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-times me-1"></i>ملغاة</span>';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.72rem; letter-spacing: 0.2px;" title="Cancelled (ملغاة)"><i class="fas fa-ban me-1 text-danger" style="font-size: 0.65rem;"></i>Cancelled</span>';
                                 } else {
                                     $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
                                     $patientIcon = 'fas fa-user-clock text-warning';
                                     $patientColor = 'text-dark';
-                                    $badgeHtml = '<span class="badge bg-warning text-dark py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-clock me-1"></i>بالانتظار (لم يدخل بعد)</span>';
+                                    $badgeHtml = '<span class="badge py-0.5 px-2 rounded-pill fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.72rem; letter-spacing: 0.2px;" title="Pre-Op (بالانتظار)"><i class="fas fa-clock me-1 text-warning" style="font-size: 0.65rem;"></i>Pre-Op</span>';
                                 }
                             @endphp
                             <tr style="{{ $rowStyle }}">
@@ -645,26 +647,31 @@
                                         <i class="{{ $patientIcon }} fs-5"></i>
                                         <span class="{{ $patientColor }}">{{ $patientName }}</span>
                                     </a>
-                                    @if($phone)
-                                        <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
-                                            <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
-                                        </div>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                        @if($surgery->patient && $surgery->patient->age)
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                        @endif
+                                        @if($surgery->patient && $surgery->patient->gender)
+                                            <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                            </span>
+                                        @endif
+                                        @if($phone)
+                                            <span class="small text-muted ms-1" style="font-size:0.75rem;">
+                                                <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
-                                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                                        @if($surgery->surgicalOperation && $surgery->surgicalOperation->category)
-                                            <small class="text-muted">{{ $surgery->surgicalOperation->category }}</small>
-                                        @endif
+                                    <div class="d-inline-flex align-items-center gap-1.5 text-nowrap">
+                                        <span class="fw-bold text-dark text-truncate" style="max-width: 170px;" title="{{ $surgery->surgery_type }}">
+                                            {{ $surgery->surgery_type }}
+                                        </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
-                                            </span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
-                                            </span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
                                         @endif
                                     </div>
                                 </td>
@@ -755,22 +762,22 @@
                                     $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
                                     $patientIcon = 'fas fa-check-circle text-success';
                                     $patientColor = 'text-success';
-                                    $badgeHtml = '<span class="badge bg-success text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-check-double me-1"></i>انتهى (خرج من الصالة)</span>';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.8rem; letter-spacing: 0.3px;" title="خرج من الصالة (مكتملة)"><i class="fas fa-check-double me-1 text-success"></i>Post-Op</span>';
                                 } elseif ($isOtInProgress) {
                                     $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
                                     $patientIcon = 'fas fa-procedures text-primary';
                                     $patientColor = 'text-primary';
-                                    $badgeHtml = '<span class="badge bg-primary text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><span class="sg-pulse-dot me-1"></span>دخل الصالة (جارية)</span>';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.8rem; letter-spacing: 0.3px;" title="داخل صالة العمليات (جارية)"><span class="sg-pulse-dot me-1"></span>Intra-Op</span>';
                                 } elseif ($surgery->status === 'cancelled') {
                                     $rowStyle = 'background-color: rgba(239, 68, 68, 0.04); border-right: 4px solid #ef4444;';
                                     $patientIcon = 'fas fa-user-times text-danger';
                                     $patientColor = 'text-danger';
-                                    $badgeHtml = '<span class="badge bg-danger text-white py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-times me-1"></i>ملغاة</span>';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.8rem; letter-spacing: 0.3px;" title="ملغاة"><i class="fas fa-times me-1 text-danger"></i>Cancelled</span>';
                                 } else {
                                     $rowStyle = 'background-color: rgba(245, 158, 11, 0.05); border-right: 4px solid #f59e0b;';
                                     $patientIcon = 'fas fa-user-clock text-warning';
                                     $patientColor = 'text-dark';
-                                    $badgeHtml = '<span class="badge bg-warning text-dark py-1.5 px-3 rounded-pill shadow-sm fw-bold"><i class="fas fa-clock me-1"></i>بالانتظار (لم يدخل بعد)</span>';
+                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.8rem; letter-spacing: 0.3px;" title="قبل دخول الصالة (بالانتظار)"><i class="fas fa-clock me-1 text-warning"></i>Pre-Op</span>';
                                 }
                             @endphp
                             <tr style="{{ $rowStyle }}">
@@ -782,23 +789,31 @@
                                         <i class="{{ $patientIcon }} fs-5"></i>
                                         <span class="{{ $patientColor }}">{{ $patientName }}</span>
                                     </a>
-                                    @if($phone)
-                                        <div class="small text-muted ps-4 mt-1" style="font-size:0.75rem;">
-                                            <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
-                                        </div>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                        @if($surgery->patient && $surgery->patient->age)
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                        @endif
+                                        @if($surgery->patient && $surgery->patient->gender)
+                                            <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                            </span>
+                                        @endif
+                                        @if($phone)
+                                            <span class="small text-muted ms-1" style="font-size:0.75rem;">
+                                                <i class="fas fa-phone-alt me-1"></i>{{ $phone }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $surgery->surgery_type }}</div>
-                                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                    <div class="d-inline-flex align-items-center gap-1.5 text-nowrap">
+                                        <span class="fw-bold text-dark text-truncate" style="max-width: 170px;" title="{{ $surgery->surgery_type }}">
+                                            {{ $surgery->surgery_type }}
+                                        </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-shield-alt me-1"></i>{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}
-                                            </span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border py-0 px-2 rounded-pill" style="font-size: 0.72rem;">
-                                                <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
-                                            </span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
                                         @endif
                                     </div>
                                 </td>
@@ -1230,6 +1245,83 @@
                 filterOrStockTable();
             });
         });
+
+        // ==========================================
+        // Realtime Live Sync for Surgeries Index
+        // ==========================================
+        let isRefreshingSurgeriesIndex = false;
+        async function refreshSurgeriesIndexLive() {
+            if (isRefreshingSurgeriesIndex) return;
+            isRefreshingSurgeriesIndex = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html'
+                    }
+                });
+                if (response.ok) {
+                    const htmlText = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+
+                    const newPane = doc.getElementById('paneActiveSurgeries');
+                    const currPane = document.getElementById('paneActiveSurgeries');
+                    if (newPane && currPane && newPane.innerHTML.trim() !== currPane.innerHTML.trim()) {
+                        currPane.innerHTML = newPane.innerHTML;
+                    }
+
+                    const newCompleted = doc.getElementById('paneCompletedSurgeries');
+                    const currCompleted = document.getElementById('paneCompletedSurgeries');
+                    if (newCompleted && currCompleted && newCompleted.innerHTML.trim() !== currCompleted.innerHTML.trim()) {
+                        currCompleted.innerHTML = newCompleted.innerHTML;
+                    }
+
+                    const newTabBtnActive = doc.getElementById('btnTabActive');
+                    const currTabBtnActive = document.getElementById('btnTabActive');
+                    if (newTabBtnActive && currTabBtnActive) {
+                        currTabBtnActive.innerHTML = newTabBtnActive.innerHTML;
+                    }
+
+                    const newTabBtnComp = doc.getElementById('btnTabCompleted');
+                    const currTabBtnComp = document.getElementById('btnTabCompleted');
+                    if (newTabBtnComp && currTabBtnComp) {
+                        currTabBtnComp.innerHTML = newTabBtnComp.innerHTML;
+                    }
+                }
+            } catch (e) {
+                console.warn('Index live sync error:', e);
+            } finally {
+                isRefreshingSurgeriesIndex = false;
+            }
+        }
+
+        window.refreshSurgeriesIndexLive = refreshSurgeriesIndexLive;
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const liveChannel = new BroadcastChannel('hospital_surgery_live_channel');
+                liveChannel.onmessage = function (event) {
+                    if (event.data && event.data.action === 'surgery_updated') {
+                        refreshSurgeriesIndexLive();
+                    }
+                };
+            } catch (err) {}
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'hospital_surgery_live_trigger') {
+                refreshSurgeriesIndexLive();
+            }
+        });
+
+        if (window.Echo) {
+            try {
+                window.Echo.channel('surgeries').listen('.surgery.updated', function() {
+                    refreshSurgeriesIndexLive();
+                });
+            } catch (e) {}
+        }
     });
 
 
