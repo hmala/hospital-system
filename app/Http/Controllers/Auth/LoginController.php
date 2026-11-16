@@ -33,6 +33,10 @@ class LoginController extends Controller
             return route('surgeon-station.index');
         }
 
+        if ($user && ($user->hasRole(['التخدير', 'anesthesiologist']) || ($user->doctor && ($user->doctor->type === 'anesthesiologist' || $user->doctor->type === 'anesthesia')) || in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || $user->email === 'anth@hospital.com')) {
+            return route('anesthesia-station.index');
+        }
+
         if ($user && $user->hasRole('doctor')) {
             return route('doctor.visits.index');
         }

@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 227: تطوير محطة طبيب التخدير: شريط فلاتر متقدم، ضبط نوعي الحسابات الموحد والخاص، وتعيين المحطة كصفحة رئيسية للتخدير Anesthesia Station Complete Redesign: Real-time Filters, Dual Account Architecture for Shared OR vs Personal Anesthesiologist, and Default Home Landing Page)
+
+### Done
+- **إعادة تصميم واجهة محطة التخدير بالكامل ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+  * بناء ترويسة تنفيذية داكنة حديثة مع تمييز تلقائي للحساب الموحد (`صالة العمليات - الحساب الموحد لكافة أطباء التخدير`) أو الحساب الخاص (`د. [الاسم] (حساب خاص)`).
+  * شريط فلاتر ذكي: بحث لحظي سريع في المتصفح (`client-side`) مع دعم الخادم (`server-side`)، فلتر أطباء التخدير المنسدل للحساب الموحد، فلتر حالة المحطة (بانتظار المعاينة / قيد المتابعة / مكتملة ومُعتمدة)، وفلتر التاريخ مع أزرار سريعة (`اليوم` / `الكل`).
+  * جدول عمليات رشيق ومفصل يوضح المريض، العملية، الموعد، طبيب التخدير، نوع التخدير ببادج ملون، حالة المحطة، وأزرار الإجراءات السريعة (فتح المحطة وتفاصيل العملية).
+- **ضبط منظومة نوعي الحسابات في الكنترولر ([app/Http/Controllers/AnesthesiaStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+  * **الحساب الخاص بطبيب التخدير (Personal Doctor)**: يعرض حصراً العمليات المسندة إليه (رئيسي أو مساعد 2)، ومحمي في `authorizeAnesthesiologist` من فتح عمليات باقي الأطباء بحظر 403.
+  * **حساب صالة العمليات الموحد (`حساب أطباء التخدير` / `anth@hospital.com`)**: يعرض كافة العمليات في صالة العمليات مع إمكانية الفلترة حسب أي طبيب تخدير، وصلاحية كاملة لفتح وتعديل المحطة دون أي حجب.
+- **التعيين كواجهة هبوط رئيسية وشريط التنقل ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * توجيه الحساب الموحد وأطباء التخدير فوراً إلى `anesthesia-station.index` عند تسجيل الدخول أو زيارة `/` أو `/dashboard`، وتخصيص رابط الرئيسية في السايدبار ليكون `محطة التخدير (الرئيسية)`.
+- **التحقق الآلي وتنسيق الكود**:
+  * اجتياز حزمة سيناريوهات التخدير 100%، واجتياز فحص `Laravel Pint`.
+
 ## Session log (2026-11-16 — المرحلة 226: إلغاء الكروت الإحصائية، إضافة فلاتر البحث والتواريخ وحالة المحطة، وضبط ازدواجية الحساب الموحد لصالة العمليات مقابل الحساب الخاص للجراح Surgeon Station Streamlining: Remove KPI Cards, Advanced Real-Time Filters, and Dual Account Architecture for Shared OR vs Personal Surgeon)
 
 ### Done

@@ -1009,6 +1009,10 @@
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
                                 <i class="fas fa-user-md me-2"></i>محطة الجراح (الرئيسية)
                             </a>
+                        @elseif(auth()->check() && (auth()->user()->hasRole(['التخدير', 'anesthesiologist']) || (auth()->user()->doctor && (auth()->user()->doctor->type === 'anesthesiologist' || auth()->user()->doctor->type === 'anesthesia')) || in_array(auth()->user()->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || auth()->user()->email === 'anth@hospital.com'))
+                            <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
+                                <i class="fas fa-syringe me-2"></i>محطة التخدير (الرئيسية)
+                            </a>
                         @elseif(auth()->check() && auth()->user()->hasRole('doctor'))
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
                                 <i class="fas fa-stethoscope me-2"></i>عيادتي وزيارات المرضى

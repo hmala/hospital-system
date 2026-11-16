@@ -8,26 +8,50 @@ use Illuminate\Http\Request;
 
 class AnesthesiaStationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $isSharedAccount = (
+            in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير'])
+            || $user->email === 'anth@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole('التخدير') && ! $user->doctor)
+        );
 
         // جلب العمليات لمحطة التخدير
-        $query = Surgery::with(['patient.user', 'doctor.user', 'anesthesiaStation'])
-            ->where('status', '!=', 'cancelled');
+        $query = Surgery::with([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'anesthesiaStation.anesthesiologist.user',
+            'anesthesiaStation.anesthesiologist2.user',
+            'anesthesiologist.user',
+            'anesthesiologist2.user',
+        ])->where('status', '!=', 'cancelled');
 
-        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            $doctorId = $user->doctor->id;
-            $query->where(function ($q) use ($doctorId) {
-                $q->where('anesthesiologist_id', $doctorId)
-                    ->orWhere('anesthesiologist_2_id', $doctorId)
-                    ->orWhereHas('anesthesiaStation', function ($sq) use ($doctorId) {
-                        $sq->where('anesthesiologist_id', $doctorId)
-                            ->orWhere('anesthesiologist_2_id', $doctorId);
+        // إذا كان طبيب تخدير بحساب شخصي، نعرض له عملياته فقط
+        if (! $isSharedAccount && $user->doctor) {
+            $doctorIds = $this->getAnesthesiologistDoctorIds($user);
+            $query->where(function ($q) use ($doctorIds) {
+                $q->whereIn('anesthesiologist_id', $doctorIds)
+                    ->orWhereIn('anesthesiologist_2_id', $doctorIds)
+                    ->orWhereHas('anesthesiaStation', function ($sq) use ($doctorIds) {
+                        $sq->whereIn('anesthesiologist_id', $doctorIds)
+                            ->orWhereIn('anesthesiologist_2_id', $doctorIds);
+                    });
+            });
+        } elseif ($request->filled('anesthesiologist_id')) {
+            $selectedDocId = $request->anesthesiologist_id;
+            $query->where(function ($q) use ($selectedDocId) {
+                $q->where('anesthesiologist_id', $selectedDocId)
+                    ->orWhere('anesthesiologist_2_id', $selectedDocId)
+                    ->orWhereHas('anesthesiaStation', function ($sq) use ($selectedDocId) {
+                        $sq->where('anesthesiologist_id', $selectedDocId)
+                            ->orWhere('anesthesiologist_2_id', $selectedDocId);
                     });
             });
         } else {
-            // للمشرفين وموظفي العمليات: عرض العمليات التي تم تعيين طبيب تخدير لها أو لها محطة تخدير
+            // للحساب الموحد أو المشرفين: العمليات التي لها تخدير أو محطة تخدير
             $query->where(function ($q) {
                 $q->whereNotNull('anesthesiologist_id')
                     ->orWhereNotNull('anesthesiologist_2_id')
@@ -35,11 +59,60 @@ class AnesthesiaStationController extends Controller
             });
         }
 
+        // فلترة التاريخ
+        if ($request->filled('date')) {
+            if ($request->date === 'today') {
+                $query->whereDate('scheduled_date', today());
+            } elseif ($request->date !== 'all') {
+                $query->whereDate('scheduled_date', $request->date);
+            }
+        }
+
+        // فلترة حالة محطة التخدير
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'pending') {
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('anesthesiaStation')
+                        ->orWhereHas('anesthesiaStation', fn ($sq) => $sq->where('status', 'pending'));
+                });
+            } else {
+                $query->whereHas('anesthesiaStation', function ($q) use ($request) {
+                    $q->where('status', $request->status);
+                });
+            }
+        }
+
+        // فلترة البحث النصي (اسم المريض، رقم الملف، اسم العملية، نوع التخدير، اسم الطبيب)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('surgery_type', 'like', "%{$search}%")
+                    ->orWhere('anesthesia_type', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('patient', function ($pq) use ($search) {
+                        $pq->where('file_number', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('anesthesiaStation.anesthesiologist.user', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('anesthesiologist.user', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $surgeries = $query->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
             ->get();
 
-        return view('surgery-stations.anesthesia.index', compact('surgeries'));
+        // قائمة أطباء التخدير للاختيار منها في الحساب الموحد
+        $anesthesiologists = $isSharedAccount
+            ? Doctor::anesthesia()->where('is_active', true)->with('user')->get()->sortBy(fn ($d) => $d->user?->name ?? '')
+            : collect();
+
+        return view('surgery-stations.anesthesia.index', compact('surgeries', 'isSharedAccount', 'anesthesiologists'));
     }
 
     public function show(Surgery $surgery)
@@ -147,22 +220,65 @@ class AnesthesiaStationController extends Controller
     private function authorizeAnesthesiologist(Surgery $surgery)
     {
         $user = auth()->user();
+        if (! $user) {
+            abort(401);
+        }
 
-        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
-            $doctorId = $user->doctor->id;
+        $isSharedAccount = (
+            in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير'])
+            || $user->email === 'anth@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole('التخدير') && ! $user->doctor)
+        );
+
+        // الحساب الموحد لصالة العمليات أو الإدارة لديهم صلاحية كاملة على كل العمليات
+        if ($isSharedAccount) {
+            return;
+        }
+
+        if ($user->doctor) {
+            $doctorIds = $this->getAnesthesiologistDoctorIds($user);
             $assignedToDoctor = false;
 
             if ($surgery->anesthesiaStation) {
-                $assignedToDoctor = $surgery->anesthesiaStation->anesthesiologist_id === $doctorId
-                    || $surgery->anesthesiaStation->anesthesiologist_2_id === $doctorId;
-            } else {
-                $assignedToDoctor = $surgery->anesthesiologist_id === $doctorId
-                    || $surgery->anesthesiologist_2_id === $doctorId;
+                $assignedToDoctor = in_array($surgery->anesthesiaStation->anesthesiologist_id, $doctorIds)
+                    || in_array($surgery->anesthesiaStation->anesthesiologist_2_id, $doctorIds);
             }
 
             if (! $assignedToDoctor) {
-                abort(403, 'غير مصرح لك بالوصول لهذه العملية');
+                $assignedToDoctor = in_array($surgery->anesthesiologist_id, $doctorIds)
+                    || in_array($surgery->anesthesiologist_2_id, $doctorIds);
+            }
+
+            if (! $assignedToDoctor) {
+                abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية المسندة لطبيب تخدير آخر');
             }
         }
+    }
+
+    /**
+     * جلب كافة المعرّفات المرتبطة بطبيب التخدير لمعالجة الازدواجية والربط
+     */
+    protected function getAnesthesiologistDoctorIds($user): array
+    {
+        $ids = [];
+        if ($user->doctor) {
+            $ids[] = $user->doctor->id;
+        }
+
+        $doctorByUser = Doctor::where('user_id', $user->id)->pluck('id')->toArray();
+        $ids = array_merge($ids, $doctorByUser);
+
+        // مطابقة أي حساب طبيب مسجل بنفس اسم المستخدم (مع إزالة البادئات د. أو دكتور)
+        $cleanName = trim(preg_replace('/^(د\.|دكتور|دكتورة)\s*/u', '', $user->name));
+        if (! empty($cleanName)) {
+            $matchedByName = Doctor::whereHas('user', function ($q) use ($cleanName) {
+                $q->where('name', 'like', "%{$cleanName}%");
+            })->pluck('id')->toArray();
+
+            $ids = array_merge($ids, $matchedByName);
+        }
+
+        return array_values(array_unique(array_filter($ids)));
     }
 }
