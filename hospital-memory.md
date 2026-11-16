@@ -2483,6 +2483,25 @@
     - اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` بنسبة 100%.
     - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
 
+- **المرحلة 235 (2026-11-16) — تمكين حساب الجراحين العام من استعراض كافة العمليات بالصالة، فك تقييد إتمام صالة العمليات، والربط السلس بملف وسجل العملية (Surgeon Station: Display All Active Operating Room Surgeries for Shared Surgeon Account, Remove Operation Theater Completed Constraint, and Streamline Direct Click-Through Navigation)**:
+  * **معالجة حجب العمليات عن حساب الجراحين العام ([app/Http/Controllers/SurgeonStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+    - **توسيع التعرف على الحساب الموحد للجراحين (`$isSharedAccount`)**: شمول الاسم المعتمد في قاعدة البيانات `حساب الجراحين العام` بالإضافة إلى `حساب الجراحين`، البريد `gh@hospital.com`، دور `الجراح` بدون بروفايل طبيب، وصلاحية `view surgeon station`.
+    - **إزالة تقييد حصر العمليات بـ `operationTheaterStation completed`**: إلغاء شرط `whereHas('operationTheaterStation', fn($q) => $q->where('status', 'completed'))` الذي كان يخفي 9 من أصل 14 عملية نشطة ومجدولة وقيد الانتظار، واستبداله بعرض كافة العمليات غير الملغاة `where('status', '!=', 'cancelled')` بمطابقة كاملة مع محطة التخدير.
+    - **فك حظر فتح محطة الجراح في `show`**: إزالة شرط إعادة التوجيه لخطأ `يجب إتمام مرحلة صالة العمليات أولاً`، وتمكين الجراح من فتح وتوثيق الخطة والتوجيهات السريرية في أي مرحلة.
+    - **تحديث الصلاحيات `authorizeSurgeon`**: منح الحساب الموحد للجراحين صلاحية كاملة على كل العمليات بالصالة دون أي حجب 403.
+    - **دعم فلترة الحالات غير المسندة**: تمكين فلتر `doctor_id === 'unassigned'` لجلب العمليات التي بانتظار تعيين طبيب جراح.
+  * **تطوير واجهة محطة الجراح ([resources/views/surgery-stations/surgeon/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+    - إضافة خيار `⚠️ بانتظار تعيين طبيب جراح` وخيار `👨‍⚕️ كل العمليات بالصالة` بالقائمة المنسدلة.
+    - جعل النقر على اسم المريض، صورته الرمزية، واسم العملية روابط مباشرة وسلسة تفتح تفاصيل وسجل العملية (`surgeries.show`) مع تأثير hover مميز.
+    - تمييز العمليات التي لم يُعين لها جراح ببادج تفاعلي `[ ➕ بانتظار التعيين ]` يفتح العملية للتعيين الفوري.
+  * **توجيه تسجيل الدخول والصفحة الرئيسية ([app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - تحديث منطق التوجيه لشمل `حساب الجراحين العام` و `gh@hospital.com` ليكون الهبوط الرئيسي دائماً في محطة الجراح.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonGeneralAccountAllSurgeriesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonGeneralAccountAllSurgeriesTest.php), [tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+    - بناء 4 اختبارات متخصصة تؤكد: استعراض حساب الجراحين العام لكافة العمليات بالصالة بنجاح، عمل فلتر الحالات غير المسندة، إمكانية فتح المحطة دون انتظار إتمام الصالة، وتوجيه تسجيل الدخول بنسبة نجاح 100% (`4 passed, 15 assertions`).
+    - اجتياز اختبارات تدفق الجراح الأساسية بنسبة 100% (`5 passed, 22 assertions`).
+    - اجتياز كامل حزمة العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+    - اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
 - **المرحلة 234 (2026-11-16) — فك الارتباط التام لجدول العلاج عن التشخيص وتمكين التحكم المستقل به لجميع الأدوار بما فيها المدير من مصفوفة الصلاحيات (Full Decoupling of Medications/Treatments Dropdown from Diagnosis & Granular Control via Tab Permissions Matrix)**:
   * **فك الارتباط عن تشخيص الجراح ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php))**:
     - تصحيح شرط ظهور زر جدول العلاج في الترويسة العلوية لكارت العملية من `@if(isset($visibleTabs['detail_medications']) || isset($visibleTabs['detail_diagnosis']))` إلى `@if(isset($visibleTabs['detail_medications']))` حصراً، حيث كان الارتباط بـ `detail_diagnosis` يجبر جدول العلاج على الظهور دوماً حتى عند تعيينه كمخفي `hidden`.
