@@ -54,6 +54,16 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 229: ترشيق جدول محطة التخدير بحذف أعمدة الإجراءات وحالة المحطة ونوع التخدير، وجعل النقر على اسم المريض يفتح تفاصيل العملية مباشرة Streamlining Anesthesia Table to 4 Core Columns with Direct Click-Through on Patient and Surgery Name to Surgery Details)
+
+### Done
+- **ترشيق جدول محطة التخدير إلى 4 أعمدة رئيسية ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+  * حذف عمود `الإجراءات` وعمود `حالة المحطة` وعمود `نوع التخدير` بالكامل لتوفير مساحة أفقية واسعة ومنع الازدحام البصري.
+  * الاقتصار على الأعمدة الـ 4 الأساسية: (1) `المريض`، (2) `العملية الجراحية`، (3) `موعد العملية`، (4) `طبيب التخدير`.
+  * جعل النقر على اسم المريض وصورته واسم العملية رابطاً مباشراً وسلساً يفتح تفاصيل وسجل العملية (`surgeries.show`) لتعديل كافة التفاصيل والتخدير بيسر وسرعة.
+  * ترشيق شريط الفلاتر بإزالة فلتر الحالة غير المطلوب والتركيز على البحث اللحظي وفلتر الطبيب وفلتر التاريخ.
+- **التحقق وتنسيق الكود**: اجتياز التحقق الآلي وتحديث الذاكرة المركزية والرفع على الفرع الرئيسي.
+
 ## Session log (2026-11-16 — المرحلة 228: تمكين حسابات التخدير من استعراض كافة العمليات بالصالة لتعيين الأطباء وإدخال التفاصيل، مع خيار فلترة الحالات غير المسندة Anesthesia Station: Display All Operating Room Surgeries for Doctor Assignment and Clinical Entry with Unassigned Status Filter)
 
 ### Done
