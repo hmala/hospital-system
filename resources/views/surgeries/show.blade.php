@@ -47,6 +47,12 @@
         || ! empty(trim($currentAnesthesiaNotes ?? ''))
         || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed');
 
+    $canWriteDiagnosis = isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write'];
+    $canWriteTeamTiming = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
+    $canWriteAnesthesia = isset($visibleTabs['detail_anesthesia']) && $visibleTabs['detail_anesthesia']['can_write'];
+    $canWriteTiming = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
+    $canSaveAny = $canWriteDiagnosis || $canWriteTeamTiming || $canWriteAnesthesia || $canWriteTiming;
+
     $shortTabLabels = [
         'detail_tests' => 'الفحوصات والتحاليل',
         'detail_type' => 'نوع العملية',
@@ -436,6 +442,17 @@
                 </a>
             @endcan
 
+            @if($canSaveAny)
+                <button type="button"
+                        class="btn btn-success btn-sm rounded-pill px-3.5 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5"
+                        id="btnUnifiedSaveSurgeryTop"
+                        onclick="submitUnifiedSurgeryForm()"
+                        title="حفظ كافة البيانات والتعديلات المدخلة في العملية">
+                    <i class="fas fa-save"></i>
+                    <span>حفظ بيانات العملية</span>
+                </button>
+            @endif
+
             @if($user && ($isAdmin || $user->can('view surgeries') || $user->can('view surgeon station')) && ! ($user->hasRole('doctor') && $user->doctor?->type === 'consultant'))
                 <a href="{{ route('surgeries.print', $surgery) }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                     <i class="fas fa-print me-1"></i> طباعة التقرير
@@ -719,14 +736,17 @@
                                 @endphp
 
                                 <div class="dropdown d-inline-block">
-                                    @if($canControlSurgery && $surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                                    @if($canControlSurgery && $surgery->status !== 'cancelled')
                                         <button class="btn btn-sm rounded-pill px-3 py-2 fw-bold shadow-xs dropdown-toggle d-inline-flex align-items-center gap-2"
                                                 type="button"
                                                 id="patientOrStatusDropdownBtn"
                                                 data-bs-toggle="dropdown"
                                                 aria-expanded="false"
-                                                style="font-size: 0.92rem; border: 1px solid {{ $isOtInProgress ? '#bae6fd' : '#fde68a' }}; background: {{ $isOtInProgress ? '#e0f2fe' : '#fef3c7' }}; color: {{ $isOtInProgress ? '#0369a1' : '#92400e' }};">
-                                            @if($isOtInProgress)
+                                                style="font-size: 0.92rem; border: 1px solid {{ $isOtCompleted ? '#a7f3d0' : ($isOtInProgress ? '#bae6fd' : '#fde68a') }}; background: {{ $isOtCompleted ? '#ecfdf5' : ($isOtInProgress ? '#e0f2fe' : '#fef3c7') }}; color: {{ $isOtCompleted ? '#065f46' : ($isOtInProgress ? '#0369a1' : '#92400e') }};">
+                                            @if($isOtCompleted)
+                                                <i class="fas fa-check-double me-1 text-success"></i>
+                                                <span>حالة المريض: Post-Op (خرج من الصالة)</span>
+                                            @elseif($isOtInProgress)
                                                 <span class="sg-pulse-dot me-1" style="width: 8px; height: 8px;"></span>
                                                 <span>حالة المريض: Intra-Op (داخل الصالة)</span>
                                             @else
@@ -734,7 +754,7 @@
                                                 <span>حالة المريض: Pre-Op (بالانتظار)</span>
                                             @endif
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 240px; font-size: 0.88rem;">
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 py-2 border-0" aria-labelledby="patientOrStatusDropdownBtn" style="min-width: 250px; font-size: 0.88rem;">
                                             <li class="dropdown-header small text-muted fw-bold pb-1 border-bottom mb-1">
                                                 تحديث حالة المريض بالصالة
                                             </li>
@@ -778,7 +798,28 @@
                                                 </li>
                                             @endif
 
-                                            @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed')
+                                            @if($surgery->status === 'completed')
+                                                <li>
+                                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownRestartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-primary fw-bold" onclick="return confirm('تأكيد استئناف العملية وإعادة إدخال المريض لصالة العمليات (Intra-Op)؟')">
+                                                            <i class="fas fa-undo text-primary" style="width: 16px;"></i>
+                                                            <span>استئناف العملية (إعادة دخول الصالة)</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnFromCompleted" onsubmit="broadcastSurgeryLiveUpdate()">
+                                                        @csrf
+                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm('تأكيد إرجاع المريض إلى قائمة الانتظار (Pre-Op)؟')">
+                                                            <i class="fas fa-clock text-warning" style="width: 16px;"></i>
+                                                            <span class="text-dark">إرجاعه لقائمة الانتظار (Pre-Op)</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            @endif
+
+                                            @if($surgery->status !== 'cancelled')
                                                 <li><hr class="dropdown-divider my-1"></li>
                                                 <li>
                                                     <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">
@@ -1108,38 +1149,6 @@
                                         @endif
                                     </div>
                                 </div>
-
-                                {{-- Button 8: زر الحفظ الموحد بجانب مدة العملية والعلاج --}}
-                                @php
-                                    $canWriteDiagnosis = isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write'];
-                                    $canWriteTeamTiming = isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write'];
-                                    $canWriteAnesthesia = isset($visibleTabs['detail_anesthesia']) && $visibleTabs['detail_anesthesia']['can_write'];
-                                    $canSaveAny = $canWriteDiagnosis || $canWriteTeamTiming || $canWriteAnesthesia || $canWriteTiming;
-                                    $writableCount = ($canWriteDiagnosis ? 1 : 0) + ($canWriteTeamTiming ? 1 : 0) + ($canWriteAnesthesia ? 1 : 0);
-                                @endphp
-                                @if($canSaveAny)
-                                    <button type="button"
-                                            class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3.5 py-2 rounded-pill shadow-sm"
-                                            id="btnUnifiedSaveSurgery"
-                                            onclick="submitUnifiedSurgeryForm()"
-                                            title="حفظ كافة البيانات والتعديلات المدخلة"
-                                            style="font-size: 0.92rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none;">
-                                        <i class="fas fa-save text-white"></i>
-                                        <span>
-                                            @if($writableCount > 1)
-                                                حفظ بيانات العملية
-                                            @elseif($canWriteDiagnosis)
-                                                حفظ التشخيص والعلاجات
-                                            @elseif($canWriteAnesthesia)
-                                                حفظ تفاصيل التخدير
-                                            @elseif($canWriteTeamTiming)
-                                                حفظ الفريق الطبي والتوقيت
-                                            @else
-                                                حفظ التعديلات
-                                            @endif
-                                        </span>
-                                    </button>
-                                @endif
                             </div>
 
                             @if($hasTestsTab)
@@ -2683,9 +2692,14 @@
 
         window.submitUnifiedSurgeryForm = function() {
             const saveBtn = document.getElementById('btnUnifiedSaveSurgery');
+            const saveBtnTop = document.getElementById('btnUnifiedSaveSurgeryTop');
             if (saveBtn) {
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-white"></i> <span>جاري الحفظ...</span>';
+            }
+            if (saveBtnTop) {
+                saveBtnTop.disabled = true;
+                saveBtnTop.innerHTML = '<i class="fas fa-spinner fa-spin text-white"></i> <span>جاري الحفظ...</span>';
             }
 
             const diagForm = document.getElementById('detailDiagnosisForm');

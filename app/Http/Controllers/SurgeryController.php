@@ -668,9 +668,29 @@ class SurgeryController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بطباعة تفاصيل العملية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room']);
+        $surgery->load([
+            'patient.user',
+            'doctor.user',
+            'department.hospital',
+            'visit',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'anesthesiologist.user',
+            'anesthesiologist2.user',
+            'anesthesiaStation.anesthesiologist.user',
+            'anesthesiaStation.anesthesiologist2.user',
+            'surgeonStation',
+            'operationTheaterStation',
+            'additionalOperations.surgicalOperation',
+            'surgeryTreatments',
+            'medicalDevices',
+            'room',
+            'location',
+        ]);
 
-        return view('surgeries.print', compact('surgery'));
+        $hospital = $surgery->department?->hospital ?? \App\Models\Hospital::first();
+
+        return view('surgeries.print', compact('surgery', 'hospital'));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -1083,6 +1103,7 @@ class SurgeryController extends Controller
         }
 
         $surgery->status = 'waiting';
+        $surgery->end_time = null;
         $surgery->save();
 
         broadcast(new SurgeryUpdated($surgery));
@@ -1099,7 +1120,8 @@ class SurgeryController extends Controller
         }
 
         $surgery->status = 'in_progress';
-        $surgery->started_at = now();
+        $surgery->started_at = $surgery->started_at ?? now();
+        $surgery->end_time = null;
         $surgery->save();
 
         // بدء محطة صالة العمليات
@@ -1252,6 +1274,7 @@ class SurgeryController extends Controller
         }
 
         $surgery->status = 'waiting';
+        $surgery->end_time = null;
         $surgery->save();
 
         if ($surgery->operationTheaterStation) {
