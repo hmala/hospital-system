@@ -2957,6 +2957,16 @@
     - اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
     - اجتياز فحص `Laravel Pint` وتحديث `view:cache` بدون أي أخطاء.
 
+- **المرحلة 228 (2026-11-16) — تمكين حسابات التخدير من استعراض كافة العمليات بالصالة لتعيين الأطباء وإدخال التفاصيل، مع خيار فلترة الحالات غير المسندة Anesthesia Station: Display All Operating Room Surgeries for Doctor Assignment and Clinical Entry with Unassigned Status Filter**:
+  * **عرض كافة العمليات الجراحية في محطة التخدير ([AnesthesiaStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+    - إزالة تقييد حصر العمليات بالمسندة مسبقاً، وإتاحة ظهور جميع العمليات النشطة بصالة العمليات (المسندة وغير المسندة) لتمكين كادر التخدير من تعيين الأطباء وتوثيق البيانات والتفاصيل السريرية.
+    - دعم فلترة سريعة للحالات غير المسندة (`⚠️ بانتظار تعيين طبيب تخدير`) في القائمة المنسدلة للوصول الفوري إليها.
+    - مزامنة فورية في `update()` لبيانات طبيب التخدير الأول والمساعد ونوع التخدير واسم مساعد التخدير مع جدول العمليات الرئيسي `surgeries` وإعادة التوجيه لمحطة التخدير.
+  * **تطوير واجهة محطة التخدير ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+    - تمييز العمليات التي لم يُعين لها طبيب تخدير ببادج بارز `[ ⚠️ بانتظار التعيين ]` وزر مباشر باللون البرتقالي `[ ➕ تعيين طبيب وتفاصيل ]`.
+    - إتاحة خيار استعراض كل العمليات أو العمليات الخاصة أو غير المعينة لكافة المستخدمين المخولين.
+  * **التحقق الآلي**: اجتياز اختبارات استعراض وتعيين العمليات وتحديث الموديل بنسبة 100%، واجتياز فحص `Laravel Pint`.
+
 - **المرحلة 227 (2026-11-16) — تطوير محطة طبيب التخدير: شريط فلاتر متقدم، ضبط نوعي الحسابات الموحد والخاص، وتعيين المحطة كصفحة رئيسية للتخدير Anesthesia Station Complete Redesign: Real-time Filters, Dual Account Architecture for Shared OR vs Personal Anesthesiologist, and Default Home Landing Page**:
   * **إعادة تصميم واجهة محطة التخدير بالكامل ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
     - بناء ترويسة تنفيذية داكنة حديثة تميز تلقائياً الحساب الموحد لصالة العمليات (`صالة العمليات - الحساب الموحد لكافة أطباء التخدير`) أو الحساب الخاص (`د. [الاسم] (حساب خاص)`).

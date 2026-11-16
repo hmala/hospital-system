@@ -80,11 +80,12 @@
                     </div>
                 </div>
 
-                {{-- Anesthesiologist Filter (For Unified Account) or Personal Doctor Badge --}}
+                {{-- Anesthesiologist Filter (For Unified Account) or Personal Doctor Dropdown --}}
                 @if($isSharedAccount)
                     <div class="col-6 col-md-3 col-lg-2">
                         <select name="anesthesiologist_id" id="filterAnesthesiologist" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل أطباء التخدير</option>
+                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب تخدير</option>
                             @foreach($anesthesiologists as $doctor)
                                 <option value="{{ $doctor->id }}" {{ request('anesthesiologist_id') == $doctor->id ? 'selected' : '' }}>
                                     {{ $doctor->user?->name ?? 'طبيب تخدير #'.$doctor->id }}
@@ -94,9 +95,15 @@
                     </div>
                 @else
                     <div class="col-6 col-md-3 col-lg-2">
-                        <div class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 w-100 py-2 d-flex align-items-center justify-content-center text-truncate" title="عملياتك الخاصة فقط">
-                            <i class="fas fa-user-md me-1"></i> د. {{ auth()->user()->name }}
-                        </div>
+                        <select name="anesthesiologist_id" id="filterAnesthesiologist" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            @if(auth()->user()->doctor)
+                                <option value="{{ auth()->user()->doctor->id }}" {{ request('anesthesiologist_id') == auth()->user()->doctor->id ? 'selected' : '' }}>
+                                    ⭐ د. {{ auth()->user()->name }} (عملياتي)
+                                </option>
+                            @endif
+                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب تخدير</option>
+                        </select>
                     </div>
                 @endif
 
@@ -225,7 +232,9 @@
                                             <span class="fw-semibold text-dark">{{ $anesthetistName }}</span>
                                         </div>
                                     @else
-                                        <span class="badge bg-light text-muted border">غير محدد</span>
+                                        <span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-50 rounded-pill px-2.5 py-1 fw-bold">
+                                            <i class="fas fa-user-plus me-1"></i> بانتظار التعيين
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="py-3">
@@ -234,7 +243,7 @@
                                             {{ $anesthesiaType }}
                                         </span>
                                     @else
-                                        <span class="text-muted small">-</span>
+                                        <span class="badge bg-light text-muted border rounded-pill px-2 py-0.5 small">غير محدد</span>
                                     @endif
                                 </td>
                                 <td class="py-3 text-center">
@@ -254,9 +263,15 @@
                                 </td>
                                 <td class="pe-4 py-3 text-center">
                                     <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
-                                        <a href="{{ route('anesthesia-station.show', $surgery) }}" class="btn btn-sm btn-info text-white fw-bold px-3 py-1.5 shadow-sm rounded-pill" title="فتح المحطة السريرية للتخدير">
-                                            <i class="fas fa-syringe me-1"></i> فتح المحطة
-                                        </a>
+                                        @if(!$anesthetistName)
+                                            <a href="{{ route('anesthesia-station.show', $surgery) }}" class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1.5 shadow-sm rounded-pill" title="فتح المحطة وتعيين طبيب التخدير">
+                                                <i class="fas fa-user-plus me-1"></i> تعيين طبيب وتفاصيل
+                                            </a>
+                                        @else
+                                            <a href="{{ route('anesthesia-station.show', $surgery) }}" class="btn btn-sm btn-info text-white fw-bold px-3 py-1.5 shadow-sm rounded-pill" title="فتح المحطة السريرية للتخدير">
+                                                <i class="fas fa-syringe me-1"></i> فتح المحطة
+                                            </a>
+                                        @endif
                                         <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-secondary fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="عرض السجل العام للعملية">
                                             <i class="fas fa-eye"></i>
                                         </a>
