@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $combinedReadings = $combinedReadings ?? collect();
+    $allFollowUps = $surgery->residentStationFollowUps ? $surgery->residentStationFollowUps->sortByDesc('created_at') : collect();
+@endphp
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -15,28 +19,10 @@
                     </a>
                 </div>
                  <div class="card-body">
-                     @if($surgery->preOpResidentStation || $surgery->postOpResidentStation)
-                         <div class="mb-4">
-                             @php
-                                 $combinedReadings = collect();
-                                 if ($surgery->preOpResidentStation) {
-                                     $combinedReadings = $combinedReadings->concat($surgery->preOpResidentStation->readings->map(function($reading) {
-                                         $reading->phase_label = 'قبل دخول الصالة';
-                                         return $reading;
-                                     }));
-                                 }
-                                 if ($surgery->postOpResidentStation) {
-                                     $combinedReadings = $combinedReadings->concat($surgery->postOpResidentStation->readings->map(function($reading) {
-                                         $reading->phase_label = 'بعد العملية';
-                                         return $reading;
-                                     }));
-                                 }
-                                 $combinedReadings = $combinedReadings->sortByDesc('created_at');
-                             @endphp
+                     <div class="mb-4">
+                         <h5 class="mb-3"><i class="fas fa-heartbeat text-danger me-2"></i>قراءات العلامات الحيوية</h5>
 
-                             <h5 class="mb-3"><i class="fas fa-heartbeat text-danger me-2"></i>قراءات العلامات الحيوية</h5>
-
-                             @if($combinedReadings->count() > 0)
+                         @if($combinedReadings->count() > 0)
                                  <!-- Tabs for switching between Chart and Table views -->
                                  <ul class="nav nav-tabs mb-3 shadow-sm rounded bg-white p-1" id="vitalSignsTab" role="tablist" style="border: 1px solid #dee2e6;">
                                      <li class="nav-item" role="presentation">
@@ -159,53 +145,46 @@
                                  </div>
                              @else
                                  <div class="alert alert-secondary mb-3">
-                                     لا توجد قراءات علامات حيوية مسجلة حتى الآن.
+                                     <i class="fas fa-info-circle me-1"></i> لا توجد قراءات علامات حيوية مسجلة حتى الآن لهذا المريض.
                                  </div>
                              @endif
-
-                             <h5 class="mb-3">متابعات الطبيب المقيم</h5>
                          </div>
 
-                         @php
-                             $allFollowUps = $surgery->residentStationFollowUps->sortByDesc('created_at');
-                         @endphp
-                         @if($allFollowUps->count() > 0)
-                             <div class="table-responsive">
-                                 <table class="table table-bordered table-hover align-middle">
-                                     <thead class="table-light">
-                                         <tr>
-                                             <th>تاريخ المتابعة</th>
-                                             <th>الوردية</th>
-                                             <th>المقيم</th>
-                                             <th>الملاحظات</th>
-                                             <th>توقيت التسجيل</th>
-                                             <th>منسق التسجيل</th>
-                                         </tr>
-                                     </thead>
-                                     <tbody>
-                                         @foreach($allFollowUps as $followUp)
+                         <div class="mb-0">
+                             <h5 class="mb-3"><i class="fas fa-user-md text-primary me-2"></i>متابعات الطبيب المقيم</h5>
+                             @if($allFollowUps->count() > 0)
+                                 <div class="table-responsive">
+                                     <table class="table table-bordered table-hover align-middle">
+                                         <thead class="table-light">
                                              <tr>
-                                                 <td>{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
-                                                 <td>{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>
-                                                 <td>{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
-                                                 <td>{!! nl2br(e($followUp->notes)) !!}</td>
-                                                 <td>{{ $followUp->created_at->format('Y-m-d H:i') }}</td>
-                                                 <td>{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
+                                                 <th>تاريخ المتابعة</th>
+                                                 <th>الوردية</th>
+                                                 <th>المقيم</th>
+                                                 <th>الملاحظات</th>
+                                                 <th>توقيت التسجيل</th>
+                                                 <th>منسق التسجيل</th>
                                              </tr>
-                                         @endforeach
-                                     </tbody>
-                                 </table>
-                             </div>
-                         @else
-                             <div class="alert alert-info mb-0">
-                                 لا توجد متابعات مسجلة حتى الآن من الطبيب المقيم.
-                             </div>
-                         @endif
-                     @else
-                         <div class="alert alert-info mb-0">
-                             لا توجد قراءات أو متابعات مسجلة لهذا الجراحة بعد (في مرحلة ما قبل أو ما بعد العملية).
+                                         </thead>
+                                         <tbody>
+                                             @foreach($allFollowUps as $followUp)
+                                                 <tr>
+                                                     <td>{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
+                                                     <td>{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>
+                                                     <td>{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
+                                                     <td>{!! nl2br(e($followUp->notes)) !!}</td>
+                                                     <td>{{ $followUp->created_at->format('Y-m-d H:i') }}</td>
+                                                     <td>{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
+                                                 </tr>
+                                             @endforeach
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             @else
+                                 <div class="alert alert-info mb-0">
+                                     <i class="fas fa-info-circle me-1"></i> لا توجد متابعات مسجلة حتى الآن من الطبيب المقيم.
+                                 </div>
+                             @endif
                          </div>
-                     @endif
                  </div>
             </div>
         </div>
@@ -218,7 +197,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Check if we have readings data
-    @if($combinedReadings->count() > 0)
+    @if(!empty($combinedReadings) && $combinedReadings->count() > 0)
         const rawData = @json($combinedReadings->sortBy('created_at')->values());
         
         // 1. Prepare labels (Arabic dates and times)

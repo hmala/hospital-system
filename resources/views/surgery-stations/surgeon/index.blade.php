@@ -1,6 +1,19 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .hover-primary:hover {
+        color: #0284c7 !important;
+        text-decoration: underline !important;
+    }
+    .surgery-link-row {
+        transition: background-color 0.15s ease-in-out;
+    }
+    .surgery-link-row:hover {
+        background-color: rgba(2, 132, 199, 0.035) !important;
+    }
+</style>
+
 <div class="container-fluid py-3">
     {{-- Executive Header --}}
     <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 14px;">
@@ -25,9 +38,9 @@
                         </div>
                         <p class="text-white-50 mb-0 small mt-1">
                             @if($isSharedAccount)
-                                حساب موحد لمحطة صالة العمليات يتيح متابعة وتوثيق جميع العمليات لكافة أطباء الجراحة وإصدار توجيهات المتابعة للمقيمين
+                                استعراض كافة عمليات صالة العمليات، تعيين ومتابعة الأطباء الجراحين، وتوثيق القرارات السريرية والتوجيهات للمقيمين
                             @else
-                                متابعة وتوثيق العمليات الجراحية الخاصة بك بعد الصالة وتوثيق الخطة العلاجية والتوجيهات السريرية
+                                متابعة وتوثيق العمليات الجراحية الخاصة بك وتوثيق الخطة العلاجية والتوجيهات السريرية
                             @endif
                         </p>
                     </div>
@@ -80,11 +93,12 @@
                     </div>
                 </div>
 
-                {{-- Surgeon Filter (For Unified Account) or Personal Surgeon Badge --}}
+                {{-- Surgeon Filter (For Unified Account) or Personal Surgeon Dropdown --}}
                 @if($isSharedAccount)
                     <div class="col-6 col-md-3 col-lg-2">
                         <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل الجراحين</option>
+                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب جراح</option>
                             @foreach($surgeons as $surgeon)
                                 <option value="{{ $surgeon->id }}" {{ request('doctor_id') == $surgeon->id ? 'selected' : '' }}>
                                     {{ $surgeon->user?->name ?? 'طبيب #'.$surgeon->id }}
@@ -94,9 +108,15 @@
                     </div>
                 @else
                     <div class="col-6 col-md-3 col-lg-2">
-                        <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 w-100 py-2 d-flex align-items-center justify-content-center text-truncate" title="عملياتك الخاصة فقط">
-                            <i class="fas fa-user-md me-1"></i> د. {{ auth()->user()->name }}
-                        </div>
+                        <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            @if(auth()->user()->doctor)
+                                <option value="{{ auth()->user()->doctor->id }}" {{ request('doctor_id') == auth()->user()->doctor->id ? 'selected' : '' }}>
+                                    ⭐ د. {{ auth()->user()->name }} (عملياتي)
+                                </option>
+                            @endif
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب جراح</option>
+                        </select>
                     </div>
                 @endif
 
@@ -175,19 +195,24 @@
                                 $doctorName = $surgery->doctor?->user?->name ?? '';
                                 $searchString = mb_strtolower(trim("{$patientName} {$fileNumber} {$surgeryName} {$doctorName}"));
                             @endphp
-                            <tr class="surgery-row"
+                            <tr class="surgery-row surgery-link-row"
                                 data-search="{{ $searchString }}"
-                                data-surgeon-id="{{ $surgery->doctor_id }}"
+                                data-surgeon-id="{{ $surgery->doctor_id ?? 'unassigned' }}"
                                 data-status="{{ $stationStatus }}"
                                 data-date="{{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '' }}">
                                 <td class="ps-4 py-3">
                                     <div class="d-flex align-items-center gap-2.5">
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" 
-                                             style="width: 38px; height: 38px; min-width: 38px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 13px;">
-                                            {{ mb_substr($patientName ?: 'م', 0, 1) }}
-                                        </div>
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="text-decoration-none">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" 
+                                                 style="width: 38px; height: 38px; min-width: 38px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 13px;">
+                                                {{ mb_substr($patientName ?: 'م', 0, 1) }}
+                                            </div>
+                                        </a>
                                         <div>
-                                            <div class="fw-bold text-dark">{{ $patientName ?: '-' }}</div>
+                                            <a href="{{ route('surgeries.show', $surgery) }}" class="fw-bold text-dark text-decoration-none hover-primary d-inline-flex align-items-center gap-1" title="عرض وتعديل تفاصيل العملية">
+                                                <span>{{ $patientName ?: '-' }}</span>
+                                                <i class="fas fa-external-link-alt text-muted" style="font-size: 10px;"></i>
+                                            </a>
                                             <div class="text-muted small">
                                                 <span>ملف: #{{ $fileNumber ?: '-' }}</span>
                                                 @if($surgery->patient?->age)
@@ -199,7 +224,9 @@
                                     </div>
                                 </td>
                                 <td class="py-3">
-                                    <span class="fw-bold text-dark">{{ $surgeryName ?: '-' }}</span>
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="fw-bold text-dark text-decoration-none hover-primary" title="عرض تفاصيل العملية">
+                                        {{ $surgeryName ?: '-' }}
+                                    </a>
                                     @if($surgery->department)
                                         <div class="text-muted small">{{ $surgery->department->name }}</div>
                                     @endif
@@ -215,10 +242,18 @@
                                     </div>
                                 </td>
                                 <td class="py-3">
-                                    <div class="d-flex align-items-center gap-1.5">
-                                        <i class="fas fa-user-md text-primary"></i>
-                                        <span class="fw-semibold text-dark">{{ $doctorName ?: '-' }}</span>
-                                    </div>
+                                    @if($doctorName)
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <i class="fas fa-user-md text-primary"></i>
+                                            <span class="fw-semibold text-dark">{{ $doctorName }}</span>
+                                        </div>
+                                    @else
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="text-decoration-none" title="انقر لتعيين الطبيب الجراح وتفاصيل العملية">
+                                            <span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-50 rounded-pill px-2.5 py-1 fw-bold">
+                                                <i class="fas fa-user-plus me-1"></i> بانتظار التعيين
+                                            </span>
+                                        </a>
+                                    @endif
                                 </td>
                                 <td class="py-3 text-center">
                                     @if($isCompleted)
@@ -243,7 +278,7 @@
                                         <a href="{{ route('surgeon-station.resident-follow-ups', $surgery) }}" class="btn btn-sm btn-outline-info fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="سجل متابعات المقيم">
                                             <i class="fas fa-notes-medical me-1"></i> متابعات المقيم
                                         </a>
-                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-secondary fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="عرض السجل العام للعملية">
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-secondary fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="عرض وتعديل تفاصيل العملية">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </div>
@@ -255,7 +290,7 @@
                                     <div class="py-4">
                                         <i class="fas fa-procedures text-muted fa-3x mb-3 opacity-25"></i>
                                         <h6 class="fw-bold text-secondary">لا توجد عمليات مطابقة للفلاتر المحددة</h6>
-                                        <p class="text-muted small mb-0">تظهر هنا تلقائياً العمليات بعد انتهاء وخروج المريض من صالة العمليات</p>
+                                        <p class="text-muted small mb-0">تظهر هنا تلقائياً كافة العمليات النشطة والمجدولة في صالة العمليات</p>
                                     </div>
                                 </td>
                             </tr>

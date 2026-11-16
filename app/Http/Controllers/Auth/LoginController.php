@@ -29,7 +29,7 @@ class LoginController extends Controller
     {
         $user = auth()->user();
 
-        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || $user->name === 'حساب الجراحين')) {
+        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام']) || $user->email === 'gh@hospital.com')) {
             return route('surgeon-station.index');
         }
 

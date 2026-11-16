@@ -20,6 +20,8 @@ class SurgeryGranularTabControlTest extends TestCase
 
     protected User $staffUser;
 
+    protected User $adminUser;
+
     protected Surgery $surgery;
 
     protected function setUp(): void
@@ -51,6 +53,9 @@ class SurgeryGranularTabControlTest extends TestCase
 
         $this->staffUser = User::factory()->create(['name' => 'Surgery Staff User', 'email' => 'staff_user_test@hospital.com']);
         $this->staffUser->assignRole('surgery_staff');
+
+        $this->adminUser = User::factory()->create(['name' => 'Admin User Test', 'email' => 'admin_granular_test@hospital.com']);
+        $this->adminUser->assignRole('admin');
 
         $doctorUser = User::factory()->create(['name' => 'Dr. Lead Surgeon', 'email' => 'lead_surgeon_test@hospital.com']);
         $doctorUser->assignRole('doctor');
@@ -145,12 +150,13 @@ class SurgeryGranularTabControlTest extends TestCase
 
     public function test_hiding_medications_removes_treatments_dropdown(): void
     {
-        SurgeryTabPermission::updateOrCreate(
-            ['role_name' => 'surgery_staff', 'tab_key' => 'detail_medications'],
-            ['access_level' => SurgeryTabPermission::ACCESS_HIDDEN]
-        );
+        // Keep diagnosis visible with write access to prove medications is independently controlled
         SurgeryTabPermission::updateOrCreate(
             ['role_name' => 'surgery_staff', 'tab_key' => 'detail_diagnosis'],
+            ['access_level' => SurgeryTabPermission::ACCESS_WRITE]
+        );
+        SurgeryTabPermission::updateOrCreate(
+            ['role_name' => 'surgery_staff', 'tab_key' => 'detail_medications'],
             ['access_level' => SurgeryTabPermission::ACCESS_HIDDEN]
         );
 
@@ -158,6 +164,7 @@ class SurgeryGranularTabControlTest extends TestCase
             ->get(route('surgeries.show', $this->surgery));
 
         $response->assertStatus(200);
+        $response->assertSee('التشخيص: لم يُشخص بعد');
         $response->assertDontSee('id="treatmentsDropdownWrapper"', false);
     }
 
@@ -177,5 +184,25 @@ class SurgeryGranularTabControlTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertDontSee('الأجهزة الطبية المستخدمة:');
+    }
+
+    public function test_admin_can_hide_treatments_dropdown_via_custom_permission(): void
+    {
+        // By default, admin sees treatments dropdown
+        $response1 = $this->actingAs($this->adminUser)
+            ->get(route('surgeries.show', $this->surgery));
+        $response1->assertStatus(200);
+        $response1->assertSee('جدول العلاج:');
+
+        // Admin custom configuration to hide medications
+        SurgeryTabPermission::updateOrCreate(
+            ['role_name' => 'admin', 'tab_key' => 'detail_medications'],
+            ['access_level' => SurgeryTabPermission::ACCESS_HIDDEN]
+        );
+
+        $response2 = $this->actingAs($this->adminUser)
+            ->get(route('surgeries.show', $this->surgery));
+        $response2->assertStatus(200);
+        $response2->assertDontSee('id="treatmentsDropdownWrapper"', false);
     }
 }

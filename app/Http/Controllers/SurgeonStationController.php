@@ -13,23 +13,47 @@ class SurgeonStationController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $isSharedAccount = ($user->name === 'حساب الجراحين' || $user->hasRole(['admin', 'receptionist', 'surgery_staff']));
+        $isSharedAccount = (
+            in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام', 'حساب أطباء الجراحة', 'حساب الجراحة'])
+            || $user->email === 'gh@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole(['الجراح', 'جراح', 'surgeon']) && ! $user->doctor)
+        );
 
-        // جلب العمليات التي في محطة الجراح (بعد صالة العمليات)
-        $query = Surgery::with(['patient.user', 'doctor.user', 'surgeonStation', 'department'])
-            ->whereHas('operationTheaterStation', function ($q) {
-                $q->where('status', 'completed');
-            })
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-            ->orderBy('scheduled_date', 'desc')
-            ->orderBy('scheduled_time', 'desc');
+        // جلب العمليات لمحطة الجراح (كافة العمليات النشطة في صالة العمليات مثل محطة التخدير)
+        $query = Surgery::with([
+            'patient.user',
+            'doctor.user',
+            'surgeonStation.surgeon.user',
+            'department',
+        ])->where('status', '!=', 'cancelled');
 
-        // إذا كان المستخدم طبيباً جراحاً بحساب خاص، نعرض له عملياته فقط
-        if (! $isSharedAccount && $user->doctor) {
+        // فلترة الطبيب الجراح (إذا تم اختياره من القائمة المنسدلة)
+        if ($request->filled('doctor_id')) {
+            if ($request->doctor_id === 'unassigned') {
+                $query->whereNull('doctor_id')
+                    ->where(function ($q) {
+                        $q->whereDoesntHave('surgeonStation')
+                            ->orWhereHas('surgeonStation', fn ($sq) => $sq->whereNull('surgeon_id'));
+                    });
+            } else {
+                $selectedDocId = $request->doctor_id;
+                $query->where(function ($q) use ($selectedDocId) {
+                    $q->where('doctor_id', $selectedDocId)
+                        ->orWhereHas('surgeonStation', function ($sq) use ($selectedDocId) {
+                            $sq->where('surgeon_id', $selectedDocId);
+                        });
+                });
+            }
+        } elseif (! $isSharedAccount && $user->doctor && ! $user->can('view surgeon station')) {
+            // إذا كان طبيباً عادياً لا يحمل صلاحية محطة الجراح العامة
             $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
-            $query->whereIn('doctor_id', $surgeonDoctorIds);
-        } elseif ($request->filled('doctor_id')) {
-            $query->where('doctor_id', $request->doctor_id);
+            $query->where(function ($q) use ($surgeonDoctorIds) {
+                $q->whereIn('doctor_id', $surgeonDoctorIds)
+                    ->orWhereHas('surgeonStation', function ($sq) use ($surgeonDoctorIds) {
+                        $sq->whereIn('surgeon_id', $surgeonDoctorIds);
+                    });
+            });
         }
 
         // فلترة التاريخ
@@ -55,26 +79,34 @@ class SurgeonStationController extends Controller
             }
         }
 
-        // فلترة البحث النصي بالاسم، رقم الملف، اسم العملية
+        // فلترة البحث النصي بالاسم، رقم الملف، اسم العملية، واسم الطبيب الجراح
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
-                $q->where('surgery_type', 'like', "%{$search}%")
+                $q->where('surgery_name', 'like', "%{$search}%")
+                    ->orWhere('surgery_type', 'like', "%{$search}%")
                     ->orWhereHas('patient.user', function ($uq) use ($search) {
                         $uq->where('name', 'like', "%{$search}%");
                     })
                     ->orWhereHas('patient', function ($pq) use ($search) {
                         $pq->where('file_number', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('doctor.user', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%");
                     });
             });
         }
 
-        $surgeries = $query->get();
+        $surgeries = $query->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->get();
 
-        // قائمة الجراحين للاختيار منها في الحساب الموحد
-        $surgeons = $isSharedAccount
-            ? Doctor::where('type', 'surgeon')->where('is_active', true)->with('user')->get()->sortBy(fn ($d) => $d->user?->name ?? '')
-            : collect();
+        // قائمة الجراحين للاختيار منها في الفلتر
+        $surgeons = Doctor::where('type', 'surgeon')
+            ->where('is_active', true)
+            ->with('user')
+            ->get()
+            ->sortBy(fn ($d) => $d->user?->name ?? '');
 
         return view('surgery-stations.surgeon.index', compact('surgeries', 'isSharedAccount', 'surgeons'));
     }
@@ -83,17 +115,15 @@ class SurgeonStationController extends Controller
     {
         $this->authorizeSurgeon($surgery);
 
-        // التحقق من أن صالة العمليات مكتملة
-        if (! $surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed') {
-            return redirect()->route('operation-theater-station.show', $surgery)
-                ->with('error', 'يجب إتمام مرحلة صالة العمليات أولاً');
-        }
-
-        // إنشاء محطة إذا لم تكن موجودة
+        // إنشاء محطة إذا لم تكن موجودة ومزامنة الجراح
         if (! $surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'pending',
+            ]);
+        } elseif (! $surgery->surgeonStation->surgeon_id && $surgery->doctor_id) {
+            $surgery->surgeonStation()->update([
+                'surgeon_id' => $surgery->doctor_id,
             ]);
         }
 
@@ -117,7 +147,24 @@ class SurgeonStationController extends Controller
             'residentStationFollowUps',
         ]);
 
-        return view('surgery-stations.surgeon.follow-ups', compact('surgery'));
+        $combinedReadings = collect();
+        if ($surgery->preOpResidentStation) {
+            $combinedReadings = $combinedReadings->concat($surgery->preOpResidentStation->readings->map(function ($reading) {
+                $reading->phase_label = 'قبل دخول الصالة';
+
+                return $reading;
+            }));
+        }
+        if ($surgery->postOpResidentStation) {
+            $combinedReadings = $combinedReadings->concat($surgery->postOpResidentStation->readings->map(function ($reading) {
+                $reading->phase_label = 'بعد العملية';
+
+                return $reading;
+            }));
+        }
+        $combinedReadings = $combinedReadings->sortByDesc('created_at');
+
+        return view('surgery-stations.surgeon.follow-ups', compact('surgery', 'combinedReadings'));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -218,13 +265,21 @@ class SurgeonStationController extends Controller
         }
 
         // الحساب الموحد لصالة العمليات أو الإدارة لديهم صلاحية كاملة على كل العمليات
-        if ($user->name === 'حساب الجراحين' || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+        $isShared = (
+            in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام', 'حساب أطباء الجراحة', 'حساب الجراحة'])
+            || $user->email === 'gh@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole(['الجراح', 'جراح', 'surgeon']) && ! $user->doctor)
+        );
+
+        if ($isShared) {
             return;
         }
 
         if ($user->doctor) {
             $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
-            if (! in_array($surgery->doctor_id, $surgeonDoctorIds)) {
+            $surgeryDoctorIds = array_filter([$surgery->doctor_id, $surgery->surgeonStation?->surgeon_id]);
+            if (empty(array_intersect($surgeryDoctorIds, $surgeonDoctorIds))) {
                 abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية المسندة لجراح آخر');
             }
         }

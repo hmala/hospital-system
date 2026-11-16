@@ -54,8 +54,7 @@
         || (isset($visibleTabs['detail_team_timing']) && $visibleTabs['detail_team_timing']['can_write']);
     $canWriteTeamTiming = $canWriteTeam || $canWriteTimingLocation;
     $canWriteAnesthesia = isset($visibleTabs['detail_anesthesia']) && $visibleTabs['detail_anesthesia']['can_write'];
-    $canWriteMedications = (isset($visibleTabs['detail_medications']) && $visibleTabs['detail_medications']['can_write'])
-        || (isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write']);
+    $canWriteMedications = isset($visibleTabs['detail_medications']) && $visibleTabs['detail_medications']['can_write'];
     $canWriteTiming = $canWriteTimingLocation;
     $canSaveAny = $canWriteDiagnosis || $canWriteTeamTiming || $canWriteAnesthesia || $canWriteTiming || $canWriteMedications;
 
@@ -1018,10 +1017,9 @@
                                 @endif
 
                                 {{-- Button 7: جدول العلاجات والأدوية (منسدلة تفاعلية بجانب الصالة والمدة) --}}
-                                @if(isset($visibleTabs['detail_medications']) || isset($visibleTabs['detail_diagnosis']))
+                                @if(isset($visibleTabs['detail_medications']))
                                     @php
-                                        $canWriteMedications = (isset($visibleTabs['detail_medications']) && $visibleTabs['detail_medications']['can_write'])
-                                            || (isset($visibleTabs['detail_diagnosis']) && $visibleTabs['detail_diagnosis']['can_write']);
+                                        $canWriteMedications = $visibleTabs['detail_medications']['can_write'];
                                         $treatmentsTotalCount = $savedMedications->count();
                                     @endphp
                                     <div class="dropdown d-inline-block" id="treatmentsDropdownWrapper">

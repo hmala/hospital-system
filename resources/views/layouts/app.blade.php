@@ -1005,7 +1005,7 @@
                     {{-- ===== نهاية جرس الإشعارات ===== --}}
 
                     <div class="sidebar-item mt-1">
-                        @if(auth()->check() && (auth()->user()->hasRole(['الجراح', 'surgeon']) || (auth()->user()->doctor && auth()->user()->doctor->type === 'surgeon') || auth()->user()->name === 'حساب الجراحين'))
+                        @if(auth()->check() && (auth()->user()->hasRole(['الجراح', 'surgeon']) || (auth()->user()->doctor && auth()->user()->doctor->type === 'surgeon') || in_array(auth()->user()->name, ['حساب الجراحين', 'حساب الجراحين العام']) || auth()->user()->email === 'gh@hospital.com'))
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
                                 <i class="fas fa-user-md me-2"></i>محطة الجراح (الرئيسية)
                             </a>

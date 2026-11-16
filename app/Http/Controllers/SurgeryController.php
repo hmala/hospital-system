@@ -1334,7 +1334,6 @@ class SurgeryController extends Controller
             $targetLevel = $detailPermissions[$requestedTab]
                 ?? ($requestedTab === 'detail_team_timing' ? ($detailPermissions['detail_team'] ?? $detailPermissions['detail_timing_location'] ?? null) : null)
                 ?? ($requestedTab === 'detail_team' || $requestedTab === 'detail_timing_location' ? ($detailPermissions['detail_team_timing'] ?? null) : null)
-                ?? ($requestedTab === 'detail_medications' ? ($detailPermissions['detail_diagnosis'] ?? null) : null)
                 ?? ($requestedTab === 'detail_devices' ? ($detailPermissions['detail_supplies'] ?? null) : null)
                 ?? SurgeryTabPermission::ACCESS_HIDDEN;
 
@@ -1386,7 +1385,7 @@ class SurgeryController extends Controller
         // Determine writable fields per tab permission
         $canWriteType = ($detailPermissions['detail_type'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteDiagnosis = ($detailPermissions['detail_diagnosis'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
-        $canWriteMedications = ($detailPermissions['detail_medications'] ?? $detailPermissions['detail_diagnosis'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteMedications = ($detailPermissions['detail_medications'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteAnesthesia = ($detailPermissions['detail_anesthesia'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteTeamTiming = ($detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteTeam = ($detailPermissions['detail_team'] ?? $detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;

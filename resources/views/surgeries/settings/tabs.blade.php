@@ -503,22 +503,15 @@
                                                     ?? 'read';
                                             @endphp
                                             <td class="text-center p-2">
-                                                @if($isRoleAdmin)
-                                                    <span class="badge bg-success bg-opacity-25 text-success border border-success-subtle px-3 py-2 rounded-3 fw-bold small">
-                                                        <i class="fas fa-check-double me-1"></i> إدخال كامل (ثابت)
-                                                    </span>
-                                                    <input type="hidden" name="permissions[{{ $roleKey }}][{{ $tabKey }}]" value="write">
-                                                @else
-                                                    <select name="permissions[{{ $roleKey }}][{{ $tabKey }}]"
-                                                            class="form-select form-select-sm perm-select mx-auto"
-                                                            data-level="{{ $currentLevel }}"
-                                                            onchange="updateSelectColor(this)"
-                                                            style="max-width: 145px;">
-                                                        <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>🚫 مخفي</option>
-                                                        <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>👁️ قراءة فقط</option>
-                                                        <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>✍️ قراءة وإدخال</option>
-                                                    </select>
-                                                @endif
+                                                <select name="permissions[{{ $roleKey }}][{{ $tabKey }}]"
+                                                        class="form-select form-select-sm perm-select mx-auto"
+                                                        data-level="{{ $currentLevel }}"
+                                                        onchange="updateSelectColor(this)"
+                                                        style="max-width: 145px;">
+                                                    <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>🚫 مخفي</option>
+                                                    <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>👁️ قراءة فقط</option>
+                                                    <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>✍️ قراءة وإدخال</option>
+                                                </select>
                                             </td>
                                         @endforeach
                                     </tr>

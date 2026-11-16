@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         // توجيه الجراح أو حساب الجراحين مباشرة إلى محطة الجراح
-        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || $user->name === 'حساب الجراحين')) {
+        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام']) || $user->email === 'gh@hospital.com')) {
             return redirect()->route('surgeon-station.index');
         }
 

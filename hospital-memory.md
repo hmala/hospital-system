@@ -2483,6 +2483,33 @@
     - اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` بنسبة 100%.
     - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
 
+- **المرحلة 234 (2026-11-16) — فك الارتباط التام لجدول العلاج عن التشخيص وتمكين التحكم المستقل به لجميع الأدوار بما فيها المدير من مصفوفة الصلاحيات (Full Decoupling of Medications/Treatments Dropdown from Diagnosis & Granular Control via Tab Permissions Matrix)**:
+  * **فك الارتباط عن تشخيص الجراح ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php))**:
+    - تصحيح شرط ظهور زر جدول العلاج في الترويسة العلوية لكارت العملية من `@if(isset($visibleTabs['detail_medications']) || isset($visibleTabs['detail_diagnosis']))` إلى `@if(isset($visibleTabs['detail_medications']))` حصراً، حيث كان الارتباط بـ `detail_diagnosis` يجبر جدول العلاج على الظهور دوماً حتى عند تعيينه كمخفي `hidden`.
+    - تصحيح شرط صلاحية تعديل وإضافة العلاجات `$canWriteMedications` ليعتمد حصراً على `$visibleTabs['detail_medications']['can_write']` دون وراثة صلاحية الكتابة من التشخيص.
+    - إزالة التراجع الاحتياطي (Fallback) من `SurgeryTabPermission` و`SurgeryController::updateDetails` ليكون `detail_medications` مستقلاً استقلالاً تاماً عن أي قسم آخر.
+  * **تمكين التحكم بالصلاحيات لدور مدير النظام (Admin Role Control in Matrix)**:
+    - في صفحة مصفوفة الصلاحيات ([resources/views/surgeries/settings/tabs.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/settings/tabs.blade.php)): استبدال شارة `إدخال كامل (ثابت)` القديمة بقائمة منسدلة تفاعلية `<select>` لدور `admin` تمكّن المدير من تخصيص وتجربة الصلاحيات (`مخفي`, `قراءة فقط`, `إدخال كامل`) لحسابه أيضاً.
+    - في `SurgeryTabPermission::getDetailTabPermissions`: تمكين حسابات المدراء من تطبيق التخصيصات المحفوظة في جدول الصلاحيات في حال تخصيصها، مع البقاء على `ACCESS_WRITE` كوضع افتراضي عند عدم وجود تخصيص يدوي.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryGranularTabControlTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+    - تحديث اختبار `test_hiding_medications_removes_treatments_dropdown` ليثبت اختفاء جدول العلاج عند إخفاء `detail_medications` منفرداً مع بقاء `detail_diagnosis` ظاهراً ومتاحاً للكتابة.
+    - إضافة اختبار جديد `test_admin_can_hide_treatments_dropdown_via_custom_permission` يؤكد إمكانية تحكم حساب المدير بجدول العلاجات إخفاءً وظهوراً عبر مصفوفة الصلاحيات بنجاح.
+    - اجتياز كامل اختبارات التحكم الحبيبي بنسبة 100% (`6 passed, 20 assertions`).
+    - اجتياز حزمة اختبارات العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+    - اجتياز اختبارات محطة الجراح المعدلة بنسبة 100% (`9 passed, 37 assertions`).
+    - اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
+- **المرحلة 233 (2026-11-16) — معالجة خطأ المتغير غير المعرف $combinedReadings في صفحة متابعات المقيم بمحطة الجراح وتأمين العرض المستقل (Fix Undefined Variable $combinedReadings & Decouple Resident Follow-ups in Surgeon Station)**:
+  * **معالجة خطأ `$combinedReadings` وتأمينه في الكنترولر والواجهة ([app/Http/Controllers/SurgeonStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeonStationController.php), [resources/views/surgery-stations/surgeon/follow-ups.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/follow-ups.blade.php))**:
+    - تجميع قراءات العلامات الحيوية لمرحلتي قبل وبعد العملية في `SurgeonStationController::residentFollowUps` وتمرير المتغير `$combinedReadings` مع العرض دائماً.
+    - تأمين واجهة العرض بتهيئة احتياطية `$combinedReadings = $combinedReadings ?? collect();` في أعلى ملف Blade لمنع حدوث أي خطأ `Undefined variable` مستقبلاً.
+    - تحديث شرط السكربت إلى `@if(!empty($combinedReadings) && $combinedReadings->count() > 0)`.
+    - فك تشابك متابعات الطبيب المقيم وجعلها قسماً مستقلاً بذاته يعرض الجدول عند توفر المتابعات حتى إن لم تكن هناك محطات ما قبل/ما بعد العملية مسجلة بعد.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+    - إضافة اختبار `test_surgeon_can_view_resident_follow_ups_even_without_resident_stations` للتحقق من فتح صفحة المتابعات بنجاح (HTTP 200) دون أخطاء حتى في غياب قراءات العلامات الحيوية.
+    - اجتياز كامل حزمة اختبارات محطة الجراح بنسبة 100% (`5 passed, 22 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 232 (2026-11-16) — الهندسة المعمارية الذرية لتفكيك عناصر واجهة العملية والتحكم المستقل بكل معلومة وعنصر عبر مصفوفة الصلاحيات (Granular Modular Architecture for Surgery File UI Control via Tab Permissions Matrix)**:
   * **تفكيك التداخلات الموروثة وإتاحة التحكم الفردي المستقل ([app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php), [resources/views/surgeries/settings/tabs.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
     - تفكيك التبويبات المركبة القديمة (`detail_team_timing`, `detail_supplies`) إلى 11 عنصراً ومفتاحاً معيارياً مستقلاً في `SurgeryTabPermission::DETAIL_TABS`:

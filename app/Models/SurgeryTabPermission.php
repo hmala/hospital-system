@@ -530,6 +530,8 @@ class SurgeryTabPermission extends Model
                     $normalized[] = 'resident';
                 } elseif (in_array($trimmed, ['ممرض', 'تمريض'], true)) {
                     $normalized[] = 'nurse';
+                } elseif (in_array($lower, ['admin', 'admin-hsop', 'hospital_admin', 'super_admin'], true)) {
+                    $normalized[] = 'admin';
                 } else {
                     $normalized[] = $trimmed;
                 }
@@ -570,7 +572,6 @@ class SurgeryTabPermission extends Model
                 $perm = $permissions->where('role_name', $role)->where('tab_key', $tabKey)->first();
                 if (! $perm) {
                     $fallbackKey = match ($tabKey) {
-                        'detail_medications' => 'detail_diagnosis',
                         'detail_team' => 'detail_team_timing',
                         'detail_timing_location' => 'detail_team_timing',
                         'detail_devices' => 'detail_supplies',
@@ -645,12 +646,16 @@ class SurgeryTabPermission extends Model
             return $result;
         }
 
-        if ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
-            foreach ($tabKeys as $key) {
-                $result[$key] = self::ACCESS_WRITE;
-            }
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if ($isAdmin) {
+            $hasConfigured = self::where('role_name', 'admin')->whereIn('tab_key', $tabKeys)->exists();
+            if (! $hasConfigured) {
+                foreach ($tabKeys as $key) {
+                    $result[$key] = self::ACCESS_WRITE;
+                }
 
-            return $result;
+                return $result;
+            }
         }
 
         $userRoles = self::resolveUserRolesForDetail($user);
@@ -714,12 +719,16 @@ class SurgeryTabPermission extends Model
         }
 
         // Admins and Super Admins always have write access
-        if ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
-            foreach ($tabKeys as $key) {
-                $result[$key] = self::ACCESS_WRITE;
-            }
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if ($isAdmin) {
+            $hasConfigured = self::where('role_name', 'admin')->whereIn('tab_key', $tabKeys)->exists();
+            if (! $hasConfigured) {
+                foreach ($tabKeys as $key) {
+                    $result[$key] = self::ACCESS_WRITE;
+                }
 
-            return $result;
+                return $result;
+            }
         }
 
         $userRoles = self::resolveUserRolesForClinical($user);
