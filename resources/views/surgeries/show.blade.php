@@ -1832,14 +1832,6 @@
                                                                 <label for="anesthesia_notes" class="form-label text-dark small fw-semibold mb-0">
                                                                     <i class="fas fa-notes-medical text-success me-1"></i>ملاحظات وتفاصيل طبيب التخدير:
                                                                 </label>
-                                                                @if($canWriteAnesthesia)
-                                                                    <div class="d-flex align-items-center gap-1">
-                                                                        <button type="button" class="clin-quick-chip" onclick="applyAnesthesiaTemplate(document.getElementById('anesthesia_type_input')?.value, true)" title="إدراج كليشة نوع التخدير المختار تلقائياً">
-                                                                            <i class="fas fa-magic me-1"></i>كليشة التخدير
-                                                                        </button>
-                                                                        <button type="button" class="clin-quick-chip" onclick="fillDetailQuickText('anesthesia_notes', 'مستقر خلال التداخل، مجرى الهواء سليم، إفاقة سلسة دون مضاعفات')">إفاقة مستقرة</button>
-                                                                    </div>
-                                                                @endif
                                                             </div>
                                                             <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1 {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="4" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
                                                         </div>
@@ -1996,10 +1988,6 @@
                                                     <i class="fas fa-chevron-down ms-1 text-muted small collapse-arrow"></i>
                                                 </button>
                                             @endif
-                                            <a href="{{ route('surgeries.index', array_filter(['tab' => 'or_store', 'location_id' => $operationStoreLocation?->id])) }}"
-                                               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                                                <i class="fas fa-warehouse me-1"></i>جرد وعهدة العمليات
-                                            </a>
                                             @if(!$canWriteSupplies)
                                                 <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
                                             @endif

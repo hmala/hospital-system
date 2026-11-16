@@ -54,6 +54,16 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 223: إلغاء أزرار كليشة التخدير وإفاقة مستقرة وجرد وعهدة العمليات في تفاصيل العملية Remove Anesthesia Template, Stable Recovery, and OR Store Inventory Buttons in Surgery Show)
+
+### Done
+- **ترشيق واجهة تفاصيل العملية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف أزرار الكبسولة `[ 🪄 كليشة التخدير ]` و `[ إفاقة مستقرة ]` من أعلى حقل ملاحظات طبيب التخدير مع بقاء آلية التعبئة التلقائية عند اختيار نوع التخدير (`عام`، `نصفي`، `مناطقي`، `موضعي`) سارية بالكامل.
+  * حذف زر `[ 🏭 جرد وعهدة العمليات ]` من شريط أدوات ترويسة بطاقة المستلزمات والأجهزة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-16 — المرحلة 222: إلغاء زر طلب تعزيز المواد لمخزن العمليات في شاشة تفاصيل العملية عند فراغ رصيد المخزن Remove OR Store Replenishment Request Button in Surgery Show on Empty Stock)
 
 ### Done

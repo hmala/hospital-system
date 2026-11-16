@@ -78,6 +78,14 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 223 (2026-11-16 — `main`) — إلغاء أزرار كليشة التخدير وإفاقة مستقرة وجرد وعهدة العمليات في تفاصيل العملية (Remove Anesthesia Template, Stable Recovery & OR Store Inventory Buttons in Surgery Show)**:
+  * **ترشيق واجهة تفاصيل العملية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إزالة أزرار الكبسولة الإضافية `[ 🪄 كليشة التخدير ]` و `[ إفاقة مستقرة ]` أعلى حقل ملاحظات طبيب التخدير مع استمرار التعبئة التلقائية الذكية عند اختيار نوع التخدير (`عام`، `نصفي`، `مناطقي`، `موضعي`).
+    - إزالة زر `[ 🏭 جرد وعهدة العمليات ]` من ترويسة بطاقة المستلزمات والأجهزة لمنع تشتيت الكادر خارج مسار العملية.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+    - اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 222 (2026-11-16 — `main`) — إلغاء زر طلب تعزيز المواد لمخزن العمليات في شاشة تفاصيل العملية عند فراغ رصيد المخزن (Remove OR Store Replenishment Request Button in Surgery Show on Empty Stock)**:
   * **ترشيق حالة المخزن الفارغ ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - إزالة زر `طلب تعزيز لمخزن العمليات` ورابط التحويل المخزني عند فراغ رصيد مخزن العمليات التابع.
