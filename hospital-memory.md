@@ -78,6 +78,14 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 224 (2026-11-16 — `main`) — ترشيق قوائم الفريق الطبي، تصغير حجم الخط، وإلغاء شارات النوع المكررة بجانب الأسماء (Compact Dropdown Typography & Role Badges Cleanup in Medical Team Selectors)**:
+  * **تحسين الواجهة وتجربة المستخدم ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - تصغير حجم خط القوائم المنسدلة الذكية (أطباء التخدير 1 و2 ومساعد الجراح ومساعد التخدير) ليتناسق بدقة مع حقول الإدخال المصغرة (`font-size: 0.8rem` مع حشوة رشيقة `py-1.5 px-2.5`).
+    - إزالة شارات النوع المتكررة بجانب الأسماء داخل القوائم (`مساعد جراح`، `مساعد تخدير`، `طبيب تخدير`) والشارة العلوية المكررة (`طبيب`) لكون مسمى القائمة والحقل واضحاً بذاته، ليظهر الاسم منفرداً بأناقة وسرعة في القراءة.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+    - اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 223 (2026-11-16 — `main`) — إلغاء أزرار كليشة التخدير وإفاقة مستقرة وجرد وعهدة العمليات في تفاصيل العملية (Remove Anesthesia Template, Stable Recovery & OR Store Inventory Buttons in Surgery Show)**:
   * **ترشيق واجهة تفاصيل العملية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
     - إزالة أزرار الكبسولة الإضافية `[ 🪄 كليشة التخدير ]` و `[ إفاقة مستقرة ]` أعلى حقل ملاحظات طبيب التخدير مع استمرار التعبئة التلقائية الذكية عند اختيار نوع التخدير (`عام`، `نصفي`، `مناطقي`، `موضعي`).

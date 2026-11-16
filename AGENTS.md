@@ -54,6 +54,16 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 224: ترشيق قوائم الفريق الطبي، تصغير حجم الخط، وإلغاء شارات النوع المكررة بجانب الأسماء Compact Dropdown Typography & Role Badges Cleanup in Medical Team Selectors)
+
+### Done
+- **ترشيق القوائم المنسدلة للفريق الطبي ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تصغير حجم الخط لجميع القوائم المنسدلة الذكية (أطباء التخدير ومساعد الجراح ومساعد التخدير) ليصبح بنمط مدمج ومتناسق (`font-size: 0.8rem` وحشوة أسطر رشيقة `py-1.5 px-2.5`).
+  * حذف شارات النوع المكررة التي كانت تظهر بجانب كل اسم داخل القوائم (`مساعد جراح`، `مساعد تخدير`، `طبيب تخدير`) وإزالة شارة `طبيب` من ترويسة الحقل لكون اسم القائمة كافياً وواضحاً تماماً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-16 — المرحلة 223: إلغاء أزرار كليشة التخدير وإفاقة مستقرة وجرد وعهدة العمليات في تفاصيل العملية Remove Anesthesia Template, Stable Recovery, and OR Store Inventory Buttons in Surgery Show)
 
 ### Done

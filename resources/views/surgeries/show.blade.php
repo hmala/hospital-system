@@ -1615,7 +1615,7 @@
                                                                     <i class="fas fa-chevron-down"></i>
                                                                 </button>
                                                             </div>
-                                                            <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                            <div id="surgicalAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none; font-size: 0.82rem;"></div>
                                                         </div>
                                                     @else
                                                         <div class="input-group input-group-sm">
@@ -1631,7 +1631,6 @@
                                                         <label for="team_anesthesiologist_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-syringe text-success me-1"></i>طبيب التخدير 1:
                                                         </label>
-                                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
                                                     </div>
                                                     @php
                                                         $selectedAnesth1Doc = $anesthesiaDoctors->firstWhere('id', old('anesthesiologist_id', $primaryAnesthId));
@@ -1656,7 +1655,7 @@
                                                                     <i class="fas fa-chevron-down"></i>
                                                                 </button>
                                                             </div>
-                                                            <div id="anesthesiaDoctors1Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                            <div id="anesthesiaDoctors1Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none; font-size: 0.82rem;"></div>
                                                         </div>
                                                     @else
                                                         <div class="input-group input-group-sm">
@@ -1672,7 +1671,6 @@
                                                         <label for="team_anesthesiologist_2_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-user-md text-info me-1"></i>طبيب التخدير 2:
                                                         </label>
-                                                        <span class="badge bg-info-subtle text-info border border-info-subtle py-0 px-1.5" style="font-size: 0.68rem;">طبيب</span>
                                                     </div>
                                                     @php
                                                         $selectedAnesth2Doc = $anesthesiaDoctors->firstWhere('id', old('anesthesiologist_2_id', $secondaryAnesthId));
@@ -1697,7 +1695,7 @@
                                                                     <i class="fas fa-chevron-down"></i>
                                                                 </button>
                                                             </div>
-                                                            <div id="anesthesiaDoctors2Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                            <div id="anesthesiaDoctors2Menu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none; font-size: 0.82rem;"></div>
                                                         </div>
                                                     @else
                                                         <div class="input-group input-group-sm">
@@ -1738,7 +1736,7 @@
                                                                     <i class="fas fa-chevron-down"></i>
                                                                 </button>
                                                             </div>
-                                                            <div id="anesthesiaAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                            <div id="anesthesiaAssistantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none; font-size: 0.82rem;"></div>
                                                         </div>
                                                     @else
                                                         <div class="input-group input-group-sm">
@@ -3098,12 +3096,12 @@
             if (matched.length === 0) {
                 if (query.length > 0) {
                     menu.innerHTML = `
-                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 assistant-option-item" style="cursor: pointer;">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-plus-circle text-success me-2"></i>
-                                <span class="fw-bold text-dark">${filterText}</span>
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1.5 px-2.5 assistant-option-item" style="cursor: pointer; font-size: 0.8rem;">
+                            <div class="d-flex align-items-center text-truncate">
+                                <i class="fas fa-plus-circle text-success me-2" style="font-size: 0.8rem;"></i>
+                                <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${filterText}</span>
                             </div>
-                            <span class="badge bg-success-subtle text-success border small">استخدام هذا الاسم</span>
+                            <span class="badge bg-success-subtle text-success border py-0.5 px-1.5 ms-1" style="font-size: 0.68rem;">استخدام هذا الاسم</span>
                         </div>
                     `;
                     const customOpt = menu.querySelector('.assistant-option-item');
@@ -3114,7 +3112,7 @@
                     }
                     menu.style.display = 'block';
                 } else {
-                    menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا توجد أسماء مساعدين مسجلة</div>';
+                    menu.innerHTML = '<div class="p-2.5 text-center text-muted small" style="font-size: 0.8rem;"><i class="fas fa-info-circle me-1"></i>لا توجد أسماء مساعدين مسجلة</div>';
                     menu.style.display = 'block';
                 }
                 return;
@@ -3124,17 +3122,11 @@
             matched.forEach(item => {
                 const isSelected = input.value.trim() === item.name.trim();
                 const selectedClass = isSelected ? 'bg-primary-subtle border-primary' : '';
-                const roleBadge = item.notes
-                    ? `<span class="badge bg-light text-secondary border small">${item.notes}</span>`
-                    : '<span class="badge bg-info-subtle text-info border small">مساعد جراح</span>';
 
                 html += `
-                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 assistant-option-item ${selectedClass}" style="cursor: pointer;" data-assistant-name="${item.name.replace(/"/g, '&quot;')}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-user-md text-primary me-2"></i>
-                            <strong class="text-dark">${item.name}</strong>
-                        </div>
-                        ${roleBadge}
+                    <div class="list-group-item list-group-item-action d-flex align-items-center py-1.5 px-2.5 assistant-option-item ${selectedClass}" style="cursor: pointer; font-size: 0.8rem;" data-assistant-name="${item.name.replace(/"/g, '&quot;')}">
+                        <i class="fas fa-user-md text-primary me-2" style="font-size: 0.8rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${item.name}</span>
                     </div>
                 `;
             });
@@ -3216,12 +3208,12 @@
             if (matched.length === 0) {
                 if (query.length > 0) {
                     menu.innerHTML = `
-                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 anesth-assistant-option-item" style="cursor: pointer;">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-plus-circle text-info me-2"></i>
-                                <span class="fw-bold text-dark">${filterText}</span>
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1.5 px-2.5 anesth-assistant-option-item" style="cursor: pointer; font-size: 0.8rem;">
+                            <div class="d-flex align-items-center text-truncate">
+                                <i class="fas fa-plus-circle text-info me-2" style="font-size: 0.8rem;"></i>
+                                <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${filterText}</span>
                             </div>
-                            <span class="badge bg-info-subtle text-info border small">استخدام هذا الاسم</span>
+                            <span class="badge bg-info-subtle text-info border py-0.5 px-1.5 ms-1" style="font-size: 0.68rem;">استخدام هذا الاسم</span>
                         </div>
                     `;
                     const customOpt = menu.querySelector('.anesth-assistant-option-item');
@@ -3232,7 +3224,7 @@
                     }
                     menu.style.display = 'block';
                 } else {
-                    menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا توجد أسماء مسجلة؛ يمكنك كتابة الاسم مباشرة</div>';
+                    menu.innerHTML = '<div class="p-2.5 text-center text-muted small" style="font-size: 0.8rem;"><i class="fas fa-info-circle me-1"></i>لا توجد أسماء مسجلة؛ يمكنك كتابة الاسم مباشرة</div>';
                     menu.style.display = 'block';
                 }
                 return;
@@ -3242,17 +3234,11 @@
             matched.forEach(item => {
                 const isSelected = input.value.trim() === item.name.trim();
                 const selectedClass = isSelected ? 'bg-info-subtle border-info' : '';
-                const roleBadge = item.notes
-                    ? `<span class="badge bg-light text-secondary border small">${item.notes}</span>`
-                    : '<span class="badge bg-info-subtle text-info border small">مساعد تخدير</span>';
 
                 html += `
-                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 anesth-assistant-option-item ${selectedClass}" style="cursor: pointer;" data-assistant-name="${item.name.replace(/"/g, '&quot;')}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-user-nurse text-info me-2"></i>
-                            <strong class="text-dark">${item.name}</strong>
-                        </div>
-                        ${roleBadge}
+                    <div class="list-group-item list-group-item-action d-flex align-items-center py-1.5 px-2.5 anesth-assistant-option-item ${selectedClass}" style="cursor: pointer; font-size: 0.8rem;" data-assistant-name="${item.name.replace(/"/g, '&quot;')}">
+                        <i class="fas fa-user-nurse text-info me-2" style="font-size: 0.8rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${item.name}</span>
                     </div>
                 `;
             });
@@ -3335,7 +3321,7 @@
             });
 
             if (matched.length === 0) {
-                menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا يوجد أطباء تخدير مطابقين للبحث</div>';
+                menu.innerHTML = '<div class="p-2.5 text-center text-muted small" style="font-size: 0.8rem;"><i class="fas fa-info-circle me-1"></i>لا يوجد أطباء تخدير مطابقين للبحث</div>';
                 menu.style.display = 'block';
                 return;
             }
@@ -3344,15 +3330,11 @@
             matched.forEach(item => {
                 const isSelected = String(hiddenInput.value) === String(item.id);
                 const selectedClass = isSelected ? `bg-${badgeColor}-subtle border-${badgeColor}` : '';
-                const specBadge = `<span class="badge bg-${badgeColor}-subtle text-${badgeColor} border small">${item.specialization || 'طبيب تخدير'}</span>`;
 
                 html += `
-                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 anesth-doctor-option-item-${slotNum} ${selectedClass}" style="cursor: pointer;" data-doctor-id="${item.id}" data-doctor-name="${item.name.replace(/"/g, '&quot;')}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas ${docIcon} text-${badgeColor} me-2"></i>
-                            <strong class="text-dark">${item.name}</strong>
-                        </div>
-                        ${specBadge}
+                    <div class="list-group-item list-group-item-action d-flex align-items-center py-1.5 px-2.5 anesth-doctor-option-item-${slotNum} ${selectedClass}" style="cursor: pointer; font-size: 0.8rem;" data-doctor-id="${item.id}" data-doctor-name="${item.name.replace(/"/g, '&quot;')}">
+                        <i class="fas ${docIcon} text-${badgeColor} me-2" style="font-size: 0.8rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${item.name}</span>
                     </div>
                 `;
             });
