@@ -2014,13 +2014,9 @@
                                             </div>
                                         @elseif($operationSupplyBatches->isEmpty())
                                             <div class="clin-section-card text-center py-4 mb-0">
-                                                <i class="fas fa-box-open fa-2x text-warning mb-2 d-block"></i>
+                                                <i class="fas fa-box-open fa-2x text-muted mb-2 d-block"></i>
                                                 <div class="fw-bold text-dark mb-1">لا يوجد رصيد متوفر حالياً في {{ $operationStoreLocation->name }}</div>
-                                                <p class="small text-muted mb-3">يرجى طلب تعزيز مواد من المخزن الرئيسي إلى {{ $operationStoreLocation->name }} لإتاحة الصرف المباشر للعملية.</p>
-                                                <a href="{{ route('stock-transfers.create', ['to_location_id' => $operationStoreLocation->id]) }}"
-                                                   class="btn btn-warning btn-sm rounded-pill px-4 fw-bold text-dark shadow-sm">
-                                                    <i class="fas fa-plus-circle me-1"></i>طلب تعزيز لمخزن العمليات
-                                                </a>
+                                                <p class="small text-muted mb-0">المخزن لا يحتوي على مواد أو مستلزمات متاحة للصرف حالياً لهذه العملية.</p>
                                             </div>
                                         @else
                                             <div class="collapse" id="collapseSupplyDispenseSection">

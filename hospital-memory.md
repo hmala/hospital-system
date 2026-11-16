@@ -78,7 +78,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-- **المرحلة 220 (2026-11-15 — `main`) — إعادة هيكلة واجهة جدول الدوام بالكامل، دعم دوام الوجبتين بخلية مزدوجة، وترشيق شريط الإحصاءات اليومية وشريط الأدوات الموحد (HR Roster Complete Redesign with Split-Shift Dual Slots, Streamlined Daily Coverage Badges & Unified Command Bar)**:
+- **المرحلة 222 (2026-11-16 — `main`) — إلغاء زر طلب تعزيز المواد لمخزن العمليات في شاشة تفاصيل العملية عند فراغ رصيد المخزن (Remove OR Store Replenishment Request Button in Surgery Show on Empty Stock)**:
+  * **ترشيق حالة المخزن الفارغ ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إزالة زر `طلب تعزيز لمخزن العمليات` ورابط التحويل المخزني عند فراغ رصيد مخزن العمليات التابع.
+    - الاكتفاء بعرض تنبيه نظيف وهادئ يفيد بعدم توفر رصيد قابل للصرف حالياً دون توجيه كادر العمليات خارج شاشة العملية.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+    - اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+    - اجتياز `Laravel Pint` وتحديث الذاكرة.
+
+- **المرحلة 221 (2026-11-15 — `main`) — جدول صرف المستلزمات المتعدد المباشر من مخزن العمليات التابع بزر تفاعلي مطابق للمختبر والأشعة (Multi-Item Store Dispense Grid with Auto-Affiliated OR Store and Reveal Toggle)**:
   * **معالجة دوام الوجبتين في الباك إند ([app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php))**:
     - **دعم استرجاع وحفظ الشفتات المتعددة لليوم الواحد:** تعديل استعلامات `index` و `store` لدعم تخزين واسترجاع شفتي الوجبتين (`slot1` صباحي و `slot2` مسائي) لنفس الموظف ونفس اليوم دون أن يلغي أحدهما الآخر، بالاستفادة من الفهرس الفريد `['hr_employee_id', 'shift_date', 'hr_shift_id']`.
     - **الاحتساب المزدوج الدقيق في التغطية اليومية (`dailyCoverage`):** احتساب كلا الشفتين لموظف الوجبتين ضمن عدد الكوادر اليومية (مثلاً: احتسابه في الصباحي واحتسابه في المسائي) لتعكس الإحصاءات الواقع التشغيلي الحقيقي للمستشفى.

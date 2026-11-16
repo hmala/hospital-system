@@ -54,6 +54,16 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 222: إلغاء زر طلب تعزيز المواد لمخزن العمليات في شاشة تفاصيل العملية عند فراغ رصيد المخزن Remove OR Store Replenishment Request Button in Surgery Show on Empty Stock)
+
+### Done
+- **ترشيق حالة المخزن الفارغ ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إزالة زر `طلب تعزيز لمخزن العمليات` ورابط التحويل المخزني `stock-transfers.create` عند فراغ رصيد مخزن العمليات التابع.
+  * الاكتفاء بعرض تنبيه نظيف وموجز يفيد بعدم توفر رصيد قابل للصرف حالياً دون نقل مستخدم شاشة العمليات إلى أقسام أخرى.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-15 — المرحلة 221: جدول صرف المستلزمات المتعدد المباشر من مخزن العمليات التابع بزر تفاعلي مطابق للمختبر والأشعة Multi-Item Store Dispense Grid with Auto-Affiliated OR Store and Reveal Toggle)
 
 ### Done
