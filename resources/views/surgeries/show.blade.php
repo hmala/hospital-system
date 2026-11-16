@@ -42,6 +42,10 @@
         ?? 'غير محدد';
     $currentAnesthesiaType = $surgery->anesthesiaStation?->anesthesia_type ?? $surgery->anesthesia_type ?? '';
     $currentAnesthesiaNotes = $surgery->anesthesiaStation?->notes ?? '';
+    $isDiagnosed = ! empty(trim($surgery->diagnosis ?? ''));
+    $isAnesthesiaDocumented = ! empty(trim($currentAnesthesiaType ?? ''))
+        || ! empty(trim($currentAnesthesiaNotes ?? ''))
+        || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed');
 
     $shortTabLabels = [
         'detail_tests' => 'الفحوصات والتحاليل',
@@ -537,6 +541,34 @@
                     <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.8rem;">
                         <i class="fas fa-money-bill-wave me-1"></i>نقدي (كاش)
                     </span>
+                @endif
+
+                <div class="vr mx-1 d-none d-md-block" style="height: 22px; opacity: 0.25;"></div>
+
+                {{-- بادج حالة تشخيص الجراح اللوني: أحمر إذا لم يُشخص بعد / أخضر إذا تم التشخيص --}}
+                @if(!$isDiagnosed)
+                    <a href="#pane-detail_diagnosis" class="badge text-decoration-none px-2.5 py-1.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center gap-1.5" style="background-color: #fee2e2; color: #b91c1c; border: 1.5px solid #f87171; font-size: 0.82rem;" title="انقر للانتقال لقسم التشخيص">
+                        <i class="fas fa-times-circle text-danger"></i>
+                        <span>التشخيص: لم يُشخص بعد</span>
+                    </a>
+                @else
+                    <a href="#pane-detail_diagnosis" class="badge text-decoration-none px-2.5 py-1.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center gap-1.5" style="background-color: #dcfce7; color: #15803d; border: 1.5px solid #4ade80; font-size: 0.82rem;" title="انقر للانتقال لقسم التشخيص">
+                        <i class="fas fa-check-circle text-success"></i>
+                        <span>التشخيص: تم التشخيص</span>
+                    </a>
+                @endif
+
+                {{-- بادج حالة التخدير اللوني: برتقالي كهرماني إذا لم يُدخل بعد / أزرق نيلي إذا تم التوثيق --}}
+                @if(!$isAnesthesiaDocumented)
+                    <a href="#pane-detail_anesthesia" class="badge text-decoration-none px-2.5 py-1.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center gap-1.5" style="background-color: #ffedd5; color: #c2410c; border: 1.5px solid #fb923c; font-size: 0.82rem;" title="انقر للانتقال لتفاصيل التخدير">
+                        <i class="fas fa-hourglass-half" style="color: #ea580c;"></i>
+                        <span>التخدير: لم يُدخل بعد</span>
+                    </a>
+                @else
+                    <a href="#pane-detail_anesthesia" class="badge text-decoration-none px-2.5 py-1.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center gap-1.5" style="background-color: #e0f2fe; color: #0369a1; border: 1.5px solid #38bdf8; font-size: 0.82rem;" title="انقر للانتقال لتفاصيل التخدير">
+                        <i class="fas fa-syringe" style="color: #0284c7;"></i>
+                        <span>التخدير: تم التوثيق{{ $currentAnesthesiaType ? ' (' . $currentAnesthesiaType . ')' : '' }}</span>
+                    </a>
                 @endif
             </div>
         </div>
@@ -1213,8 +1245,12 @@
                                                             </span>
                                                         @endif
                                                         @if($currentAnesthesiaType)
-                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
                                                                 <i class="fas fa-syringe me-1"></i>التخدير: {{ $currentAnesthesiaType }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge text-white px-2 py-1" style="background-color: #ea580c;">
+                                                                <i class="fas fa-hourglass-half me-1"></i>التخدير: لم يُدخل بعد
                                                             </span>
                                                         @endif
                                                         @if($protocol)
@@ -1445,24 +1481,50 @@
                                         <input type="hidden" name="tab" value="detail_diagnosis">
                                 @endif
                                 <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                                        <h6 class="fw-bold text-primary mb-0">
-                                            <i class="fas fa-stethoscope me-2"></i>التشخيص الطبي وتوصيات الجراح
+                                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 flex-wrap gap-2">
+                                        <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                                            <i class="fas fa-stethoscope me-1"></i>
+                                            <span>التشخيص الطبي وتوصيات الجراح</span>
                                         </h6>
-                                        @if($canWriteDiagnosis)
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
-                                        @else
-                                            <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
-                                        @endif
+                                        <div class="d-flex align-items-center gap-2">
+                                            {{-- شارة حالة التشخيص اللوني الصريح: أحمر إذا لم يُشخص / أخضر إذا تم التشخيص --}}
+                                            @if(!$isDiagnosed)
+                                                <span class="badge bg-danger text-white py-1.5 px-2.5 rounded-pill shadow-xs fw-bold" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-times-circle me-1"></i>لم يُشخص بعد (بانتظار الجراح)
+                                                </span>
+                                            @else
+                                                <span class="badge bg-success text-white py-1.5 px-2.5 rounded-pill shadow-xs fw-bold" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-check-circle me-1"></i>تم التشخيص
+                                                </span>
+                                            @endif
+                                            @if($canWriteDiagnosis)
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-pen me-1"></i>متاح للتعديل</span>
+                                            @else
+                                                <span class="badge bg-secondary-subtle text-secondary border"><i class="fas fa-lock me-1"></i>للقراءة فقط</span>
+                                            @endif
+                                        </div>
                                     </div>
 
-                                    @if(!$canWriteDiagnosis)
-                                        <div class="alert alert-info border-info bg-info bg-opacity-10 py-2 mb-0 small">
-                                            <i class="fas fa-eye me-1"></i> هذا القسم للعرض فقط وفق صلاحيات دورك الوظيفي؛ يتم توثيق التشخيص والعلاجات من قِبَل الطبيب الجراح.
+                                    {{-- تنبيه حالة التشخيص اللوني الصريح (أحمر إذا لم يُشخص / أخضر إذا تم التشخيص) --}}
+                                    @if(!$isDiagnosed)
+                                        <div class="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 mb-0 rounded-3 text-danger fw-bold" style="background-color: #fef2f2; border: 1.5px solid #f87171 !important;">
+                                            <i class="fas fa-exclamation-triangle fa-lg flex-shrink-0"></i>
+                                            <div>
+                                                لم يتم إدخال التشخيص الطبي للعملية بعد (بانتظار توثيق الطبيب الجراح).
+                                            </div>
                                         </div>
-                                    @elseif($isSurgeryStaff && empty($surgery->diagnosis))
-                                        <div class="alert alert-warning border-warning bg-warning bg-opacity-10 py-2 mb-0 small">
-                                            <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إدخال التشخيص الطبي للعملية بعد.
+                                    @else
+                                        <div class="alert alert-success border-success d-flex align-items-center gap-2 py-2 px-3 mb-0 rounded-3 text-success fw-bold" style="background-color: #f0fdf4; border: 1.5px solid #86efac !important;">
+                                            <i class="fas fa-check-double fa-lg flex-shrink-0"></i>
+                                            <div>
+                                                تم توثيق التشخيص الطبي للعملية بنجاح من قِبل الطبيب الجراح.
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if(!$canWriteDiagnosis)
+                                        <div class="text-muted small px-1" style="font-size: 0.78rem;">
+                                            <i class="fas fa-info-circle me-1 text-primary"></i> هذا القسم للعرض فقط؛ يتم إدخال وتعديل التشخيص من قِبل الطبيب الجراح.
                                         </div>
                                     @endif
 
@@ -1473,12 +1535,23 @@
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12">
-                                                <div class="clin-field-card">
-                                                    <label for="diagnosis" class="form-label fw-bold text-dark small mb-1 d-flex align-items-center gap-1">
-                                                        <i class="fas fa-stethoscope text-primary"></i>
-                                                        <span>التشخيص الطبي للعملية</span>
-                                                    </label>
-                                                    <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="diagnosis" @if($canWriteDiagnosis) name="diagnosis" @else readonly disabled @endif rows="2" placeholder="أدخل التشخيص الطبي المفصل للمريض...">{{ old('diagnosis', $surgery->diagnosis) }}</textarea>
+                                                <div class="clin-field-card" style="{{ !$isDiagnosed ? 'border: 2px solid #ef4444; background: #fffafb;' : 'border: 1.5px solid #22c55e; background: #f0fdf4;' }}">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                        <label for="diagnosis" class="form-label fw-bold small mb-0 d-flex align-items-center gap-1 {{ !$isDiagnosed ? 'text-danger' : 'text-success' }}">
+                                                            <i class="fas fa-stethoscope"></i>
+                                                            <span>التشخيص الطبي للعملية</span>
+                                                        </label>
+                                                        @if(!$isDiagnosed)
+                                                            <span class="badge bg-danger text-white py-0.5 px-2 rounded-pill" style="font-size: 0.7rem;">
+                                                                <i class="fas fa-times me-1"></i>غير مُشخّص
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-success text-white py-0.5 px-2 rounded-pill" style="font-size: 0.7rem;">
+                                                                <i class="fas fa-check me-1"></i>مُشخّص
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <textarea class="form-control clin-compact-textarea {{ $canWriteDiagnosis ? '' : 'bg-light' }}" id="diagnosis" @if($canWriteDiagnosis) name="diagnosis" @else readonly disabled @endif rows="2" placeholder="أدخل التشخيص الطبي المفصل للمريض..." style="{{ !$isDiagnosed ? 'border-color: #fca5a5;' : 'border-color: #86efac;' }}">{{ old('diagnosis', $surgery->diagnosis) }}</textarea>
                                                 </div>
                                             </div>
                                             <div class="col-12">
@@ -1526,7 +1599,18 @@
                                         <i class="fas fa-user-md text-primary"></i>
                                         <span>الفريق الطبي وخطة التخدير والأجهزة الطبية</span>
                                     </h6>
-                                    <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        {{-- بادج حالة التخدير اللوني الصريح (برتقالي إذا لم يُدخل / أزرق نيلي إذا تم التوثيق) --}}
+                                        @if(!$isAnesthesiaDocumented)
+                                            <span class="badge py-1.5 px-2.5 rounded-pill shadow-xs fw-bold text-white" style="background-color: #ea580c; font-size: 0.8rem;">
+                                                <i class="fas fa-hourglass-half me-1"></i>لم يُدخل التخدير بعد
+                                            </span>
+                                        @else
+                                            <span class="badge py-1.5 px-2.5 rounded-pill shadow-xs fw-bold text-white" style="background-color: #0284c7; font-size: 0.8rem;">
+                                                <i class="fas fa-syringe me-1"></i>تم توثيق التخدير
+                                            </span>
+                                        @endif
+
                                         @if($user && $user->can('view anesthesia station') && $surgery->anesthesiaStation && $surgery->anesthesiaStation->status !== 'completed')
                                             <button type="button" class="btn btn-outline-success btn-sm px-3 rounded-pill fw-bold" onclick="completeAnesthesia({{ $surgery->id }})">
                                                 <i class="fas fa-check-double me-1"></i>اعتماد وإتمام محطة التخدير
@@ -1775,8 +1859,21 @@
                                             @endif
 
                                             <div class="d-flex flex-column gap-2.5 h-100">
-                                                <div class="fw-bold text-success small pb-1 border-bottom d-flex align-items-center justify-content-between">
-                                                    <span><i class="fas fa-syringe me-1"></i>خطة وتفاصيل التخدير</span>
+                                                <div class="fw-bold small pb-1 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="fw-bold" style="color: {{ !$isAnesthesiaDocumented ? '#ea580c' : '#0284c7' }};">
+                                                            <i class="fas fa-syringe me-1"></i>خطة وتفاصيل التخدير
+                                                        </span>
+                                                        @if(!$isAnesthesiaDocumented)
+                                                            <span class="badge text-white py-0.5 px-2 rounded-pill" style="background-color: #ea580c; font-size: 0.74rem;">
+                                                                <i class="fas fa-hourglass-half me-1"></i>لم يُدخل بعد
+                                                            </span>
+                                                        @else
+                                                            <span class="badge text-white py-0.5 px-2 rounded-pill" style="background-color: #0284c7; font-size: 0.74rem;">
+                                                                <i class="fas fa-check me-1"></i>تم التوثيق
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                     @if($canWriteAnesthesia)
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-2">تعديل</span>
                                                     @else
@@ -1784,10 +1881,30 @@
                                                     @endif
                                                 </div>
 
+                                                {{-- تنبيه حالة التخدير اللوني الصريح (برتقالي إذا لم يُدخل / أزرق نيلي إذا تم التوثيق) --}}
+                                                @if(!$isAnesthesiaDocumented)
+                                                    <div class="alert d-flex align-items-center gap-2 py-2 px-3 mb-0 rounded-3 fw-bold" style="background-color: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">
+                                                        <i class="fas fa-hourglass-start fa-lg flex-shrink-0"></i>
+                                                        <div>لم يتم إدخال نوع وخطة التخدير بعد (بانتظار طبيب التخدير).</div>
+                                                    </div>
+                                                @else
+                                                    <div class="alert d-flex align-items-center gap-2 py-2 px-3 mb-0 rounded-3 fw-bold" style="background-color: #f0f9ff; color: #0369a1; border: 1.5px solid #7dd3fc;">
+                                                        <i class="fas fa-check-circle fa-lg flex-shrink-0"></i>
+                                                        <div>
+                                                            تم توثيق تفاصيل وخطة التخدير بنجاح
+                                                            @if($currentAnesthesiaType)
+                                                                : <strong>{{ $currentAnesthesiaType }}</strong>
+                                                            @endif
+                                                            @if($primaryAnesthName && $primaryAnesthName !== 'غير محدد')
+                                                                — بإشراف {{ $primaryAnesthName }}
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @endif
+
                                                 @if(!$canWriteAnesthesia)
-                                                    <div class="alert alert-secondary border-secondary bg-white py-1.5 px-2 mb-0 small">
-                                                        <i class="fas fa-eye me-1"></i>
-                                                        قسم التخدير للعرض فقط وفق صلاحياتك؛ التوثيق لطبيب التخدير.
+                                                    <div class="text-muted small px-1" style="font-size: 0.78rem;">
+                                                        <i class="fas fa-info-circle me-1 text-primary"></i> قسم التخدير للعرض فقط؛ التوثيق لطبيب التخدير.
                                                     </div>
                                                 @endif
 
@@ -1798,7 +1915,7 @@
                                                         <div>
                                                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-1">
                                                                 <label for="anesthesia_type_input" class="form-label text-dark small fw-semibold mb-0">
-                                                                    <i class="fas fa-syringe text-success me-1"></i>نوع التخدير:
+                                                                    <i class="fas fa-syringe {{ !$isAnesthesiaDocumented ? 'text-warning-emphasis' : 'text-primary' }} me-1"></i>نوع التخدير:
                                                                 </label>
                                                                 @if($canWriteAnesthesia)
                                                                     <div class="d-flex flex-wrap gap-1">
@@ -1811,7 +1928,7 @@
                                                                 @endif
                                                             </div>
                                                             @if($canWriteAnesthesia)
-                                                                <input type="text" id="anesthesia_type_input" name="anesthesia_type" list="anesthesiaTypesList" class="form-control form-control-sm border-success-subtle" value="{{ old('anesthesia_type', $currentAnesthesiaType) }}" placeholder="مثال: تخدير عام (General Anesthesia)">
+                                                                <input type="text" id="anesthesia_type_input" name="anesthesia_type" list="anesthesiaTypesList" class="form-control form-control-sm" style="{{ !$isAnesthesiaDocumented ? 'border: 2px solid #fdba74; background: #fffdfb;' : 'border: 1.5px solid #38bdf8; background: #f0f9ff;' }}" value="{{ old('anesthesia_type', $currentAnesthesiaType) }}" placeholder="مثال: تخدير عام (General Anesthesia)">
                                                                 <datalist id="anesthesiaTypesList">
                                                                     <option value="تخدير عام (General Anesthesia)">
                                                                     <option value="تخدير نصفي (Spinal Anesthesia)">
@@ -1820,7 +1937,7 @@
                                                                     <option value="سديشن (Sedation)">
                                                                 </datalist>
                                                             @else
-                                                                <input type="text" class="form-control form-control-sm bg-light" value="{{ $currentAnesthesiaType ?: 'غير محدد' }}" readonly disabled>
+                                                                <input type="text" class="form-control form-control-sm" style="{{ !$isAnesthesiaDocumented ? 'background: #fff7ed; border: 1.5px solid #fdba74; color: #c2410c;' : 'background: #f0f9ff; border: 1.5px solid #7dd3fc; color: #0369a1;' }}" value="{{ $currentAnesthesiaType ?: 'لم يُحدد نوع التخدير بعد' }}" readonly disabled>
                                                             @endif
                                                         </div>
 
@@ -1828,10 +1945,10 @@
                                                         <div class="d-flex flex-column flex-grow-1">
                                                             <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
                                                                 <label for="anesthesia_notes" class="form-label text-dark small fw-semibold mb-0">
-                                                                    <i class="fas fa-notes-medical text-success me-1"></i>ملاحظات وتفاصيل طبيب التخدير:
+                                                                    <i class="fas fa-notes-medical {{ !$isAnesthesiaDocumented ? 'text-warning-emphasis' : 'text-primary' }} me-1"></i>ملاحظات وتفاصيل طبيب التخدير:
                                                                 </label>
                                                             </div>
-                                                            <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1 {{ $canWriteAnesthesia ? 'border-success-subtle' : 'bg-light' }}" rows="4" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
+                                                            <textarea id="anesthesia_notes" @if($canWriteAnesthesia) name="anesthesia_notes" @else readonly disabled @endif class="form-control clin-compact-textarea flex-grow-1" style="{{ !$isAnesthesiaDocumented ? 'border: 1.5px solid #fed7aa;' : 'border: 1.5px solid #bae6fd;' }}" rows="4" placeholder="سجل العلامات التخديرية، الأدوية المستخدمة، تقييم مجرى الهواء، وملاحظات الإفاقة...">{{ old('anesthesia_notes', $currentAnesthesiaNotes) }}</textarea>
                                                         </div>
                                                     </div>
 
