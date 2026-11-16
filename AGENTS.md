@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 226: إلغاء الكروت الإحصائية، إضافة فلاتر البحث والتواريخ وحالة المحطة، وضبط ازدواجية الحساب الموحد لصالة العمليات مقابل الحساب الخاص للجراح Surgeon Station Streamlining: Remove KPI Cards, Advanced Real-Time Filters, and Dual Account Architecture for Shared OR vs Personal Surgeon)
+
+### Done
+- **إلغاء الكروت الإحصائية الـ 4 ([resources/views/surgery-stations/surgeon/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+  * حذف الكروت الإحصائية الأربعة العلوية لتخفيف التراكم الرأسي وإبراز قائمة العمليات وأدوات البحث والتصفية مباشرة.
+- **شريط الفلاتر والبحث اللحظي المتقدم**:
+  * إضافة حقل بحث لحظي سريع بالاسم ورقم الملف والعملية مع فلترة فورية بالمتصفح (`client-side`) وتوافق تام مع الفلترة بالخادم (`server-side`).
+  * إضافة فلتر منسدل للأطباء الجراحين للحساب الموحد (`isSharedAccount`) وبادج خاص للأطباء ذوي الحسابات الفردية.
+  * فلتر حالة المحطة (الكل / بانتظار المعاينة / قيد المتابعة / مكتملة) وفلتر التاريخ مع أزرار سريعة (`اليوم` / `الكل`).
+- **ضبط منظومة نوعي الحسابات ([app/Http/Controllers/SurgeonStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+  * **الحساب الخاص بالجراح (Personal Surgeon)**: يعرض عملياته فقط ومحمي في `authorizeSurgeon` من فتح عمليات باقي الأطباء.
+  * **حساب صالة العمليات الموحد (`حساب الجراحين`)**: يعرض كافة العمليات لجميع الجراحين مع إمكانية الفلترة بصلاحية كاملة لفتح وتعديل المحطة دون أي حجب.
+- **التحقق الآلي وتنسيق الكود**:
+  * اختبار سيناريوهات الحسابين وتأكيد الحماية وصلاحيات العرض بنسبة 100%.
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-16 — المرحلة 225: جعل محطة الجراح الصفحة الرئيسية لحساب الجراحين وكافة أطباء الجراحة Surgeon Station as Default Landing and Home Page for Surgeons & Shared Account)
 
 ### Done
