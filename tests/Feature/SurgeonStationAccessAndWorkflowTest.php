@@ -201,4 +201,31 @@ class SurgeonStationAccessAndWorkflowTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_surgeon_and_surgeon_shared_account_are_redirected_to_surgeon_station_as_home(): void
+    {
+        // 1. الطبيب الجراح يتم توجيهه إلى محطة الجراح من / ومن /dashboard
+        $this->actingAs($this->surgeonUser)
+            ->get('/')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        $this->actingAs($this->surgeonUser)
+            ->get('/dashboard')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        // 2. مستخدم "حساب الجراحين" يتم توجيهه أيضاً إلى محطة الجراح
+        $sharedAccount = User::factory()->create([
+            'name' => 'حساب الجراحين',
+            'email' => 'gh@hospital.com',
+        ]);
+        $sharedAccount->assignRole('الجراح');
+
+        $this->actingAs($sharedAccount)
+            ->get('/')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        $this->actingAs($sharedAccount)
+            ->get('/dashboard')
+            ->assertRedirect(route('surgeon-station.index'));
+    }
 }

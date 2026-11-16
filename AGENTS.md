@@ -54,6 +54,17 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-16 — المرحلة 225: جعل محطة الجراح الصفحة الرئيسية لحساب الجراحين وكافة أطباء الجراحة Surgeon Station as Default Landing and Home Page for Surgeons & Shared Account)
+
+### Done
+- **تعيين محطة الجراح كواجهة هبوط رئيسية ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php))**:
+  * توجيه المستخدمين الذين يحملون دور `الجراح` أو `surgeon` أو الأطباء ذوي النوع `type === 'surgeon'` أو حساب `حساب الجراحين` مباشرة إلى محطة الجراح (`surgeon-station.index` على الرابط `http://127.0.0.1:8000/surgery-stations/surgeon`) فور تسجيل الدخول وعند التوجه للمسار الجذر `/` وعند طلب لوحة التحكم `/dashboard`.
+- **تحديث شريط التنقل الجانبي ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تخصيص رابط الرئيسية العلوي في السايدبار للجراحين وحساب الجراحين ليوجه مباشرة إلى `محطة الجراح (الرئيسية)` مع إبقاء المسارات السابقة للأطباء الاستشاريين وموظفي الضمان دون أي تعارض.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+  * إضافة اختبارات متخصصة تؤكد التوجيه المباشر لمحطة الجراح للجراحين ولحساب الجراحين واختبار حالات الاستشارية العادية.
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-16 — المرحلة 224: ترشيق قوائم الفريق الطبي، تصغير حجم الخط، وإلغاء شارات النوع المكررة بجانب الأسماء Compact Dropdown Typography & Role Badges Cleanup in Medical Team Selectors)
 
 ### Done

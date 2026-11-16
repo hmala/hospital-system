@@ -28,6 +28,11 @@ class LoginController extends Controller
     public function redirectTo()
     {
         $user = auth()->user();
+
+        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || $user->name === 'حساب الجراحين')) {
+            return route('surgeon-station.index');
+        }
+
         if ($user && $user->hasRole('doctor')) {
             return route('doctor.visits.index');
         }

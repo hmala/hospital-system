@@ -41,6 +41,10 @@ Route::get('/', function () {
             return redirect()->route('surgeries.index');
         }
 
+        if ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || $user->name === 'حساب الجراحين') {
+            return redirect()->route('surgeon-station.index');
+        }
+
         if ($user->hasRole('doctor')) {
             return redirect()->route('doctor.visits.index');
         }
