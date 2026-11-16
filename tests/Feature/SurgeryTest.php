@@ -606,12 +606,11 @@ class SurgeryTest extends TestCase
             $this->assertStringNotContainsString('<form', $innerFormHtml, "Nested <form> found inside #{$formId}");
         }
 
-        $showRes->assertSee('حفظ الفريق الطبي والتوقيت');
+        $showRes->assertSee('حفظ بيانات العملية');
         $showRes->assertSee('صرف من مخزن العمليات');
         $showRes->assertSee('قفازات جراحية معقمة 7.5');
         $showRes->assertDontSee('حفظ التشخيص والعلاجات');
-        $showRes->assertDontSee('حفظ تفاصيل التخدير');
-        $showRes->assertSee('id="addDeviceForm"', false);
+        $showRes->assertSee('inlineDeviceBadgeCount');
 
         // 2. Submit updateDetails as surgery_staff and assert persistence of allowed fields + computed duration
         $suppliesPayload = json_encode([
@@ -726,9 +725,8 @@ class SurgeryTest extends TestCase
             $res->assertStatus(200);
             $res->assertSee('id="tab-btn-detail_anesthesia"', false);
             $res->assertSee('id="detailAnesthesiaForm"', false);
-            $res->assertSee('حفظ تفاصيل التخدير');
+            $res->assertSee('حفظ بيانات العملية');
             $res->assertDontSee('حفظ التشخيص والعلاجات');
-            $res->assertDontSee('حفظ الفريق الطبي والتوقيت');
             $res->assertDontSee('حفظ المستلزمات الطبية');
 
             // Unauthorized scoped/unscoped writes return 403
@@ -797,10 +795,8 @@ class SurgeryTest extends TestCase
         $surgeonRes = $this->actingAs($surgeonUser)->get(route('surgeries.show', $surgery));
         $surgeonRes->assertStatus(200);
         $surgeonRes->assertSee('id="detailDiagnosisForm"', false);
-        $surgeonRes->assertSee('حفظ التشخيص والعلاجات');
+        $surgeonRes->assertSee('حفظ بيانات العملية');
         $surgeonRes->assertDontSee('id="detailAnesthesiaForm"', false);
-        $surgeonRes->assertDontSee('حفظ تفاصيل التخدير');
-        $surgeonRes->assertDontSee('حفظ الفريق الطبي والتوقيت');
 
         $this->actingAs($surgeonUser)->patch(route('surgeries.updateDetails', $surgery), [
             'tab' => 'detail_anesthesia',

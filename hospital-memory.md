@@ -2483,4 +2483,32 @@
     - اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` بنسبة 100%.
     - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
 
+- **المرحلة 232 (2026-11-16) — الهندسة المعمارية الذرية لتفكيك عناصر واجهة العملية والتحكم المستقل بكل معلومة وعنصر عبر مصفوفة الصلاحيات (Granular Modular Architecture for Surgery File UI Control via Tab Permissions Matrix)**:
+  * **تفكيك التداخلات الموروثة وإتاحة التحكم الفردي المستقل ([app/Models/SurgeryTabPermission.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTabPermission.php), [resources/views/surgeries/settings/tabs.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
+    - تفكيك التبويبات المركبة القديمة (`detail_team_timing`, `detail_supplies`) إلى 11 عنصراً ومفتاحاً معيارياً مستقلاً في `SurgeryTabPermission::DETAIL_TABS`:
+      1. `detail_tests`: الفحوصات والتحاليل (مخبرية وأشعة).
+      2. `detail_type`: نوع العملية والعمليات الإضافية.
+      3. `detail_diagnosis`: تشخيص الجراح وتوصياته والخطة السريرية.
+      4. `detail_medications`: الأدوية والعلاجات الموصوفة وجدول العلاج السريع.
+      5. `detail_anesthesia`: تفاصيل وخطة التخدير السريرية.
+      6. `detail_team`: الفريق الطبي المساعد (مساعد جراح، أطباء تخدير 1 و2، مساعد تخدير).
+      7. `detail_timing_location`: صالة العمليات ومدة وتوقيت العملية.
+      8. `detail_supplies`: صرف المستلزمات الطبية من مخزن العمليات التابع.
+      9. `detail_devices`: الأجهزة الطبية المستخدمة في العملية.
+      10. `detail_followups`: المتابعات السريرية للأطباء المقيمين.
+      11. `detail_badges`: شارات حالة التشخيص والتخدير الملونة بالترويسة العلوية لكارت المريض.
+    - ظهور كل عنصر كعمود مستقل بصلاحياته الثلاث (`🚫 مخفي`, `👁️ قراءة فقط`, `✍️ قراءة وإدخال`) لكل دور وظيفي في صفحة إعدادات التبويبات (`/surgery-stations/settings/tabs`).
+    - الحفاظ الكامل على التوافقية العكسية (Backward Compatibility) مع التعيينات القديمة وقيم مصفوفة الصلاحيات الافتراضية عبر `resolveEffectiveTabAccess` و`getDetailTabPermissions`.
+  * **ربط عناصر واجهة العملية بالمفاتيح المستقلة ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - **شارات الترويسة**: إحاطتها بشرط `detail_badges` مع ربط شارة التشخيص بـ `detail_diagnosis` وشارة التخدير بـ `detail_anesthesia`. تختفي فوراً وبشكل منفصل عند تحديدها كمخفية.
+    - **أزرار الشريط العلوي**: إحاطة زري صالة العمليات ومدة وتوقيت العملية بشرط `detail_timing_location`. إحاطة زر وجدول العلاجات السريعة بشرط `detail_medications`.
+    - **الأقسام الداخلية والأعمدة**: ربط قسم الفريق الطبي بـ `detail_team`، وربط قسم الأجهزة الطبية بـ `detail_devices`، مع جعل حقل ملاحظات التخدير يتمدد بالعرض الكامل (`col-12`) تلقائياً عند إخفاء قسم الأجهزة لتحقيق مظهر بصري متناسق.
+  * **تحديث منطق الحفظ ومعالجة الطلبات ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - تحديث `updateDetails` لدعم التبويبات الجديدة (`detail_medications`, `detail_team`, `detail_timing_location`, `detail_devices`) وفحص صلاحيات الكتابة الخاصة بكل حقل بدقة متناهية، مع دعم الطلبات المجمعة والمفردة دون أي تعارض.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryGranularTabControlTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+    - بناء 5 اختبارات ميزة متخصصة تؤكد: ظهور العناصر بالوضع الافتراضي، اختفاء شارات الترويسة عند إخفاء `detail_badges`، اختفاء زري الصالة والمدة عند إخفاء `detail_timing_location`، اختفاء جدول العلاجات عند إخفاء `detail_medications`، واختفاء كارت الأجهزة الطبية عند إخفاء `detail_devices` بنسبة نجاح 100% (`5 passed, 15 assertions`).
+    - اجتياز كامل حزمة اختبارات العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+    - اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` وتغيير الحالة والطباعة `SurgeryStatusPostOpAndPrintReportTest` بنسبة 100%.
+    - اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
 ... [truncated for diff preview]

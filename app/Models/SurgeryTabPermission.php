@@ -176,38 +176,66 @@ class SurgeryTabPermission extends Model
         ],
         'detail_diagnosis' => [
             'key' => 'detail_diagnosis',
-            'label' => 'التشخيص وخطة العلاج',
+            'label' => 'تشخيص الجراح وتوصياته',
             'icon' => 'fas fa-stethoscope',
             'color' => 'primary',
-            'description' => 'التشخيص الطبي للجراح وجدول الأدوية والعلاجات الموصوفة للعملية',
+            'description' => 'التشخيص الطبي للجراح ووصف التقنية الجراحية وتوصيات المتابعة',
+        ],
+        'detail_medications' => [
+            'key' => 'detail_medications',
+            'label' => 'الأدوية والعلاجات',
+            'icon' => 'fas fa-pills',
+            'color' => 'warning',
+            'description' => 'جدول الأدوية والمحاليل وقائمة العلاجات السريعة للعملية',
         ],
         'detail_anesthesia' => [
             'key' => 'detail_anesthesia',
-            'label' => 'تفاصيل التخدير',
+            'label' => 'تفاصيل وخطة التخدير',
             'icon' => 'fas fa-syringe',
             'color' => 'success',
-            'description' => 'توثيق نوع التخدير، أطباء التخدير، أوقات التخدير وملاحظات طبيب التخدير',
+            'description' => 'توثيق نوع وخطة التخدير وملاحظات طبيب التخدير وخطة الإفاقة',
         ],
-        'detail_team_timing' => [
-            'key' => 'detail_team_timing',
-            'label' => 'الفريق الطبي والتوقيت',
+        'detail_team' => [
+            'key' => 'detail_team',
+            'label' => 'الفريق الطبي المساعد',
             'icon' => 'fas fa-users-cog',
             'color' => 'warning',
-            'description' => 'تحديد صالة العمليات/الردهة والفريق الجراحي المساعد وتوقيت ومدة العملية',
+            'description' => 'تحديد مساعد الجراح، طبيب التخدير 1 و2، ومساعد التخدير',
+        ],
+        'detail_timing_location' => [
+            'key' => 'detail_timing_location',
+            'label' => 'صالة العمليات والمدة',
+            'icon' => 'fas fa-door-open',
+            'color' => 'danger',
+            'description' => 'تحديد صالة العمليات/الردهة ومدة وتوقيت الإجراء الجراحي',
         ],
         'detail_supplies' => [
             'key' => 'detail_supplies',
-            'label' => 'المستلزمات والأجهزة',
+            'label' => 'صرف المستلزمات الطبية',
             'icon' => 'fas fa-box-open',
             'color' => 'info',
-            'description' => 'تسجيل المستلزمات الطبية المطلوبة وربط الأجهزة الطبية المستخدمة في العملية',
+            'description' => 'جدول الصرف المباشر من مخزن صالة العمليات التابع',
+        ],
+        'detail_devices' => [
+            'key' => 'detail_devices',
+            'label' => 'الأجهزة الطبية المستخدمة',
+            'icon' => 'fas fa-microchip',
+            'color' => 'primary',
+            'description' => 'إسناد وربط الأجهزة الطبية والمعدات المستخدمة في العملية',
         ],
         'detail_followups' => [
             'key' => 'detail_followups',
-            'label' => 'المتابعات',
+            'label' => 'المتابعات السريرية',
             'icon' => 'fas fa-clipboard-list',
             'color' => 'secondary',
             'description' => 'سجل مرور ومتابعات الأطباء المقيمين الخاصة بالعملية',
+        ],
+        'detail_badges' => [
+            'key' => 'detail_badges',
+            'label' => 'شارات الحالة بالترويسة',
+            'icon' => 'fas fa-certificate',
+            'color' => 'secondary',
+            'description' => 'شارات حالة تشخيص الجراح وتوثيق التخدير الملونة في ترويسة كارت المريض',
         ],
     ];
 
@@ -307,73 +335,113 @@ class SurgeryTabPermission extends Model
                 'detail_tests' => self::ACCESS_WRITE,
                 'detail_type' => self::ACCESS_WRITE,
                 'detail_diagnosis' => self::ACCESS_WRITE,
+                'detail_medications' => self::ACCESS_WRITE,
                 'detail_anesthesia' => self::ACCESS_WRITE,
+                'detail_team' => self::ACCESS_WRITE,
+                'detail_timing_location' => self::ACCESS_WRITE,
                 'detail_team_timing' => self::ACCESS_WRITE,
                 'detail_supplies' => self::ACCESS_WRITE,
+                'detail_devices' => self::ACCESS_WRITE,
                 'detail_followups' => self::ACCESS_WRITE,
+                'detail_badges' => self::ACCESS_WRITE,
             ],
             'anesthesia' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_READ,
                 'detail_diagnosis' => self::ACCESS_READ,
+                'detail_medications' => self::ACCESS_READ,
                 'detail_anesthesia' => self::ACCESS_WRITE,
+                'detail_team' => self::ACCESS_READ,
+                'detail_timing_location' => self::ACCESS_READ,
                 'detail_team_timing' => self::ACCESS_READ,
                 'detail_supplies' => self::ACCESS_READ,
+                'detail_devices' => self::ACCESS_WRITE,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'doctor' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_WRITE,
                 'detail_diagnosis' => self::ACCESS_WRITE,
+                'detail_medications' => self::ACCESS_WRITE,
                 'detail_anesthesia' => self::ACCESS_READ,
+                'detail_team' => self::ACCESS_READ,
+                'detail_timing_location' => self::ACCESS_READ,
                 'detail_team_timing' => self::ACCESS_READ,
                 'detail_supplies' => self::ACCESS_READ,
+                'detail_devices' => self::ACCESS_READ,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'surgery_staff' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_WRITE,
                 'detail_diagnosis' => self::ACCESS_READ,
+                'detail_medications' => self::ACCESS_WRITE,
                 'detail_anesthesia' => self::ACCESS_READ,
+                'detail_team' => self::ACCESS_WRITE,
+                'detail_timing_location' => self::ACCESS_WRITE,
                 'detail_team_timing' => self::ACCESS_WRITE,
                 'detail_supplies' => self::ACCESS_WRITE,
+                'detail_devices' => self::ACCESS_WRITE,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'resident' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_READ,
                 'detail_diagnosis' => self::ACCESS_READ,
+                'detail_medications' => self::ACCESS_READ,
                 'detail_anesthesia' => self::ACCESS_READ,
+                'detail_team' => self::ACCESS_HIDDEN,
+                'detail_timing_location' => self::ACCESS_HIDDEN,
                 'detail_team_timing' => self::ACCESS_HIDDEN,
                 'detail_supplies' => self::ACCESS_READ,
+                'detail_devices' => self::ACCESS_HIDDEN,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'nurse' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_READ,
                 'detail_diagnosis' => self::ACCESS_READ,
+                'detail_medications' => self::ACCESS_READ,
                 'detail_anesthesia' => self::ACCESS_READ,
+                'detail_team' => self::ACCESS_HIDDEN,
+                'detail_timing_location' => self::ACCESS_HIDDEN,
                 'detail_team_timing' => self::ACCESS_HIDDEN,
                 'detail_supplies' => self::ACCESS_READ,
+                'detail_devices' => self::ACCESS_HIDDEN,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'surgery_coordinator' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_READ,
                 'detail_diagnosis' => self::ACCESS_READ,
+                'detail_medications' => self::ACCESS_READ,
                 'detail_anesthesia' => self::ACCESS_READ,
+                'detail_team' => self::ACCESS_READ,
+                'detail_timing_location' => self::ACCESS_READ,
                 'detail_team_timing' => self::ACCESS_READ,
                 'detail_supplies' => self::ACCESS_READ,
+                'detail_devices' => self::ACCESS_READ,
                 'detail_followups' => self::ACCESS_READ,
+                'detail_badges' => self::ACCESS_READ,
             ],
             'receptionist' => [
                 'detail_tests' => self::ACCESS_READ,
                 'detail_type' => self::ACCESS_READ,
                 'detail_diagnosis' => self::ACCESS_HIDDEN,
+                'detail_medications' => self::ACCESS_HIDDEN,
                 'detail_anesthesia' => self::ACCESS_HIDDEN,
+                'detail_team' => self::ACCESS_READ,
+                'detail_timing_location' => self::ACCESS_READ,
                 'detail_team_timing' => self::ACCESS_READ,
                 'detail_supplies' => self::ACCESS_HIDDEN,
+                'detail_devices' => self::ACCESS_HIDDEN,
                 'detail_followups' => self::ACCESS_HIDDEN,
+                'detail_badges' => self::ACCESS_HIDDEN,
             ],
         ];
     }
@@ -500,6 +568,18 @@ class SurgeryTabPermission extends Model
 
             foreach ($userRoles as $role) {
                 $perm = $permissions->where('role_name', $role)->where('tab_key', $tabKey)->first();
+                if (! $perm) {
+                    $fallbackKey = match ($tabKey) {
+                        'detail_medications' => 'detail_diagnosis',
+                        'detail_team' => 'detail_team_timing',
+                        'detail_timing_location' => 'detail_team_timing',
+                        'detail_devices' => 'detail_supplies',
+                        default => null,
+                    };
+                    if ($fallbackKey) {
+                        $perm = $permissions->where('role_name', $role)->where('tab_key', $fallbackKey)->first();
+                    }
+                }
                 if ($perm) {
                     $level = $perm->access_level;
                     $hasConfiguredRule = true;
@@ -555,7 +635,7 @@ class SurgeryTabPermission extends Model
     public static function getDetailTabPermissions(?User $user): array
     {
         $result = [];
-        $tabKeys = array_keys(self::DETAIL_TABS);
+        $tabKeys = array_merge(array_keys(self::DETAIL_TABS), ['detail_team_timing']);
 
         if (! $user) {
             foreach ($tabKeys as $key) {

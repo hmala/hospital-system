@@ -1322,12 +1322,23 @@ class SurgeryController extends Controller
         }
 
         $requestedTab = $request->input('tab');
-        $scopedTabs = ['detail_type', 'detail_diagnosis', 'detail_anesthesia', 'detail_team_timing', 'detail_supplies'];
+        $scopedTabs = [
+            'detail_type', 'detail_diagnosis', 'detail_medications',
+            'detail_anesthesia', 'detail_team_timing', 'detail_team',
+            'detail_timing_location', 'detail_supplies', 'detail_devices',
+        ];
         if ($requestedTab !== null && $requestedTab !== '') {
             if (! in_array($requestedTab, $scopedTabs, true)) {
                 abort(403, 'تبويب غير صالح للتحديث.');
             }
-            if (($detailPermissions[$requestedTab] ?? SurgeryTabPermission::ACCESS_HIDDEN) !== SurgeryTabPermission::ACCESS_WRITE) {
+            $targetLevel = $detailPermissions[$requestedTab]
+                ?? ($requestedTab === 'detail_team_timing' ? ($detailPermissions['detail_team'] ?? $detailPermissions['detail_timing_location'] ?? null) : null)
+                ?? ($requestedTab === 'detail_team' || $requestedTab === 'detail_timing_location' ? ($detailPermissions['detail_team_timing'] ?? null) : null)
+                ?? ($requestedTab === 'detail_medications' ? ($detailPermissions['detail_diagnosis'] ?? null) : null)
+                ?? ($requestedTab === 'detail_devices' ? ($detailPermissions['detail_supplies'] ?? null) : null)
+                ?? SurgeryTabPermission::ACCESS_HIDDEN;
+
+            if ($targetLevel !== SurgeryTabPermission::ACCESS_WRITE) {
                 abort(403, 'غير مصرح لك بتعديل هذا القسم.');
             }
         }
@@ -1375,19 +1386,29 @@ class SurgeryController extends Controller
         // Determine writable fields per tab permission
         $canWriteType = ($detailPermissions['detail_type'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteDiagnosis = ($detailPermissions['detail_diagnosis'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteMedications = ($detailPermissions['detail_medications'] ?? $detailPermissions['detail_diagnosis'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteAnesthesia = ($detailPermissions['detail_anesthesia'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteTeamTiming = ($detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteTeam = ($detailPermissions['detail_team'] ?? $detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteTimingLocation = ($detailPermissions['detail_timing_location'] ?? $detailPermissions['detail_team_timing'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
         $canWriteSupplies = ($detailPermissions['detail_supplies'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
+        $canWriteDevices = ($detailPermissions['detail_devices'] ?? $detailPermissions['detail_supplies'] ?? '') === SurgeryTabPermission::ACCESS_WRITE;
 
         if ($requestedTab === 'detail_type') {
             $allowedKeys = ['surgical_notes'];
         } elseif ($requestedTab === 'detail_diagnosis') {
             $allowedKeys = ['diagnosis', 'post_op_notes', 'notes', 'treatment_plan', 'follow_up_date', 'prescribed_medications'];
+        } elseif ($requestedTab === 'detail_medications') {
+            $allowedKeys = ['prescribed_medications'];
         } elseif ($requestedTab === 'detail_anesthesia') {
             $allowedKeys = ['anesthesia_type', 'anesthesia_position', 'asa_classification', 'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes'];
+        } elseif ($requestedTab === 'detail_team') {
+            $allowedKeys = ['doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name'];
+        } elseif ($requestedTab === 'detail_timing_location') {
+            $allowedKeys = ['location_id', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
         } elseif ($requestedTab === 'detail_team_timing') {
             $allowedKeys = ['location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
-        } elseif ($requestedTab === 'detail_supplies') {
+        } elseif ($requestedTab === 'detail_supplies' || $requestedTab === 'detail_devices') {
             $allowedKeys = ['supplies'];
         } else {
             // Unscoped PATCH: dynamically intersect with user's writable detail tabs
@@ -1398,8 +1419,11 @@ class SurgeryController extends Controller
             if ($canWriteDiagnosis) {
                 $allowedKeys = array_merge($allowedKeys, [
                     'diagnosis', 'post_op_notes', 'notes', 'treatment_plan', 'follow_up_date',
-                    'surgery_category', 'surgery_type_detail', 'surgical_complexity', 'surgical_notes', 'prescribed_medications', 'required_fluids',
+                    'surgery_category', 'surgery_type_detail', 'surgical_complexity', 'surgical_notes', 'required_fluids',
                 ]);
+            }
+            if ($canWriteMedications || $canWriteDiagnosis) {
+                $allowedKeys[] = 'prescribed_medications';
             }
             if ($canWriteAnesthesia) {
                 $allowedKeys = array_merge($allowedKeys, [
@@ -1407,13 +1431,17 @@ class SurgeryController extends Controller
                     'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes',
                 ]);
             }
-            if ($canWriteTeamTiming) {
+            if ($canWriteTeamTiming || $canWriteTeam) {
                 $allowedKeys = array_merge($allowedKeys, [
-                    'location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name',
-                    'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes',
+                    'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name',
                 ]);
             }
-            if ($canWriteSupplies) {
+            if ($canWriteTeamTiming || $canWriteTimingLocation) {
+                $allowedKeys = array_merge($allowedKeys, [
+                    'location_id', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes',
+                ]);
+            }
+            if ($canWriteSupplies || $canWriteDevices) {
                 $allowedKeys[] = 'supplies';
             }
             $allowedKeys = array_values(array_unique($allowedKeys));

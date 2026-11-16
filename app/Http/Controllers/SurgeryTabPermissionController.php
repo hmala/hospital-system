@@ -218,7 +218,8 @@ class SurgeryTabPermissionController extends Controller
 
         $tabKeys = array_merge(
             array_keys(SurgeryTabPermission::TABS),
-            array_keys(SurgeryTabPermission::DETAIL_TABS)
+            array_keys(SurgeryTabPermission::DETAIL_TABS),
+            ['detail_team_timing']
         );
         $updatedCount = 0;
 
@@ -233,6 +234,19 @@ class SurgeryTabPermissionController extends Controller
                         ['role_name' => $roleName, 'tab_key' => $tabKey],
                         ['access_level' => $level]
                     );
+
+                    // Support backward compatibility for legacy composite keys
+                    if ($tabKey === 'detail_team_timing') {
+                        SurgeryTabPermission::updateOrCreate(
+                            ['role_name' => $roleName, 'tab_key' => 'detail_team'],
+                            ['access_level' => $level]
+                        );
+                        SurgeryTabPermission::updateOrCreate(
+                            ['role_name' => $roleName, 'tab_key' => 'detail_timing_location'],
+                            ['access_level' => $level]
+                        );
+                    }
+
                     $updatedCount++;
                 }
             }
