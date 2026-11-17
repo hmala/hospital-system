@@ -302,7 +302,7 @@ class ClinicalStationMultiDrainTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('name="nursing_notes"', false);
         $response->assertSee('name="discharge_notes"', false);
-        $response->assertSee('name="nurse_id"', false);
+        $response->assertDontSee('name="nurse_id"', false);
         $response->assertSee('ملاحظات الرعاية التمريضية');
         $response->assertSee('تعليمات وملاحظات التخريج');
 
@@ -323,5 +323,6 @@ class ClinicalStationMultiDrainTest extends TestCase
         $this->assertNotNull($nursingStation);
         $this->assertEquals('المريض مستقر وتم تغيير الضماد الجراحي بنجاح', $nursingStation->nursing_notes);
         $this->assertEquals('مراجعة العيادة بعد أسبوع مع إكمال المضاد الحيوي', $nursingStation->discharge_notes);
+        $this->assertEquals($this->nurse->id, $nursingStation->nurse_id);
     }
 }

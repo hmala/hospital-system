@@ -1537,21 +1537,6 @@
                     {{-- =============================================================== --}}
                     @elseif($activeTab === 'nursing_care')
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-dark"><i class="fas fa-user-nurse text-primary me-1"></i> الممرض المسؤول عن الحالة:</label>
-                                @if($canWriteCurrentTab)
-                                    <select name="nurse_id" class="form-select rounded-3">
-                                        <option value="">-- اختر الممرض المسؤول --</option>
-                                        @foreach($nurses as $nurse)
-                                            <option value="{{ $nurse->id }}" {{ ($nursingStation?->nurse_id == $nurse->id) ? 'selected' : '' }}>
-                                                {{ $nurse->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                @else
-                                    <input type="text" class="form-control" readonly value="{{ $nursingStation?->nurse?->name ?? 'غير محدد' }}">
-                                @endif
-                            </div>
                             <div class="col-md-12">
                                 <label class="form-label fw-bold text-dark"><i class="fas fa-notes-medical text-primary me-1"></i> ملاحظات الرعاية التمريضية (Nursing Care Notes):</label>
                                 <textarea name="nursing_notes" class="form-control rounded-3" rows="4" 
