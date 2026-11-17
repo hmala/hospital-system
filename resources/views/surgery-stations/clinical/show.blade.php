@@ -1136,16 +1136,34 @@
                                                            title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'إدرار البول (ml)' }}"
                                                            placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
                                                 </td>
-                                                <td class="p-1 bg-warning bg-opacity-5">
-                                                    <input type="number" step="0.01" min="0" name="output_drain" id="grid_output_drain"
-                                                           class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
-                                                           value="{{ $canEditFluidsFlag ? old('output_drain') : '' }}"
-                                                           data-original=""
-                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
-                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
-                                                           {{ !$canEditFluidsFlag ? 'readonly' : '' }}
-                                                           title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'الدرنقة / المفجر (ml)' }}"
-                                                           placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
+                                                <td class="p-1 bg-warning bg-opacity-5 position-relative">
+                                                    <div class="d-flex align-items-center gap-1 justify-content-center">
+                                                        <input type="number" step="0.01" min="0" name="output_drain" id="grid_output_drain"
+                                                               class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
+                                                               value="{{ $canEditFluidsFlag ? old('output_drain') : '' }}"
+                                                               data-original=""
+                                                               data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                               data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
+                                                               {{ !$canEditFluidsFlag ? 'readonly' : '' }}
+                                                               title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'الدرنقة / المفجر (ml) - انقر لتفصيل الدرنقات' }}"
+                                                               placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}"
+                                                               style="min-width: 50px;">
+                                                        @if($canEditFluidsFlag)
+                                                            <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle"
+                                                                    id="btnOpenDrainModal"
+                                                                    title="تفصيل قراءات الدرنقات المتعددة لهذا المريض"
+                                                                    onclick="openDrainModal()"
+                                                                    style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                                <i class="fas fa-list-ol" style="font-size: 0.68rem;"></i>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                    <div id="drainBadgeIndicator" class="text-danger small mt-0.5 text-center d-none" style="font-size: 0.65rem; cursor: pointer;" onclick="openDrainModal()">
+                                                        <span class="badge bg-danger bg-opacity-15 text-danger border border-danger-subtle px-1 py-0.2" style="font-size: 0.62rem;">
+                                                            <i class="fas fa-layer-group me-0.5"></i> <span id="drainBadgeCount">0</span> درنقة
+                                                        </span>
+                                                    </div>
+                                                    <input type="hidden" name="drains_json" id="grid_drains_json" value="">
                                                 </td>
                                                 <td class="p-1 bg-warning bg-opacity-5">
                                                     <input type="number" step="0.01" min="0" name="output_gtube_ng" id="grid_output_gtube_ng"
@@ -1257,8 +1275,26 @@
                                                 <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
                                                     {{ !is_null($r->output_urine) ? (float) $r->output_urine : '--' }}
                                                 </td>
-                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
-                                                    {{ !is_null($r->output_drain) ? (float) $r->output_drain : '--' }}
+                                                <td class="bg-warning bg-opacity-5 fw-semibold text-danger text-center">
+                                                    @if(!is_null($r->output_drain))
+                                                        <div>{{ (float) $r->output_drain }}</div>
+                                                        @if($r->drains && $r->drains->count() > 0)
+                                                            @php
+                                                                $drainTooltip = $r->drains->map(fn($d) => ($d->drain_label ?: ('درنقة ' . $d->drain_number)) . ': ' . (float)$d->amount . ' ml')->implode(' | ');
+                                                            @endphp
+                                                            <div class="mt-0.5">
+                                                                <span class="badge bg-danger bg-opacity-15 text-danger border border-danger-subtle px-1 py-0.5 rounded-pill"
+                                                                      style="font-size: 0.62rem; cursor: pointer;"
+                                                                      title="{{ $drainTooltip }}"
+                                                                      data-bs-toggle="tooltip"
+                                                                      onclick='viewReadingDrainsModal(@json($r->drains), {{ (float)$r->output_drain }})'>
+                                                                    <i class="fas fa-eye me-0.5"></i> {{ $r->drains->count() }} درنقة
+                                                                </span>
+                                                            </div>
+                                                        @endif
+                                                    @else
+                                                        --
+                                                    @endif
                                                 </td>
                                                 <td class="bg-warning bg-opacity-5 fw-semibold text-danger">
                                                     {{ !is_null($r->output_gtube_ng) ? (float) $r->output_gtube_ng : '--' }}
@@ -3467,6 +3503,18 @@ window.loadReadingIntoTopForm = function(reading) {
     setFluidGridVal('grid_intake_blood', reading.intake_blood);
     setFluidGridVal('grid_output_urine', reading.output_urine);
     setFluidGridVal('grid_output_drain', reading.output_drain);
+    if (reading.drains && Array.isArray(reading.drains) && reading.drains.length > 0) {
+        window.currentReadingDrains = reading.drains.map(d => ({
+            drain_number: d.drain_number,
+            drain_label: d.drain_label || ('درنقة ' + d.drain_number),
+            amount: parseFloat(d.amount) || 0
+        }));
+    } else {
+        window.currentReadingDrains = [];
+    }
+    if (typeof window.updateDrainBadge === 'function') {
+        window.updateDrainBadge();
+    }
     setFluidGridVal('grid_output_gtube_ng', reading.output_gtube_ng);
     setFluidGridVal('grid_output_vomiting', reading.output_vomiting);
     setFluidGridVal('grid_output_stool', reading.output_stool);
@@ -3558,6 +3606,10 @@ window.cancelEditingReading = function() {
     resetGridVal('grid_intake_blood');
     resetGridVal('grid_output_urine');
     resetGridVal('grid_output_drain');
+    window.currentReadingDrains = [];
+    if (typeof window.updateDrainBadge === 'function') {
+        window.updateDrainBadge();
+    }
     resetGridVal('grid_output_gtube_ng');
     resetGridVal('grid_output_vomiting');
     resetGridVal('grid_output_stool');
@@ -4040,6 +4092,274 @@ function applyLabPackageSelection(select) {
         console.error('Error applying lab package:', e);
     }
 }
+</script>
+{{-- Multi-Drain Entry Modal --}}
+<div class="modal fade" id="drainDetailsModal" tabindex="-1" aria-labelledby="drainDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-danger text-white py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-white text-danger d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.95rem;">
+                        <i class="fas fa-procedures"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0 text-white" id="drainDetailsModalLabel">
+                            قراءات الدرنقات والمفجرات الجراحية
+                        </h6>
+                        <div class="text-white-50 small" style="font-size: 0.72rem;">تسجيل قراءة مستقلة لكل درنقة للمريض مع تجميع تلقائي</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-dark small">
+                        <i class="fas fa-list-ol text-danger me-1"></i> قائمة الدرنقات (غير محددة العدد):
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="addDrainRow()">
+                        <i class="fas fa-plus me-1"></i> إضافة درنقة
+                    </button>
+                </div>
+
+                <div id="drainModalRowsContainer" class="d-flex flex-column gap-2 mb-3" style="max-height: 280px; overflow-y: auto;">
+                    {{-- Dynamically populated rows --}}
+                </div>
+
+                <div class="p-3 bg-white rounded-3 border border-danger-subtle d-flex align-items-center justify-content-between shadow-xs">
+                    <div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">المجموع الكلي الخارج من الدرنقات:</div>
+                        <div class="fw-bold text-danger fs-5"><span id="drainModalTotalDisplay">0</span> ml</div>
+                    </div>
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill small">
+                        تلقائي لميزان السوائل
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top px-4 py-3 d-flex align-items-center justify-content-between">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm" onclick="applyDrainModalData()">
+                    <i class="fas fa-check me-1"></i> اعتماد وحفظ الإجمالي
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- View Drains Details Modal --}}
+<div class="modal fade" id="viewDrainDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-light border-bottom py-3 px-4">
+                <h6 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i class="fas fa-info-circle text-danger"></i> تفاصيل قراءات درنقات المريض
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <table class="table table-sm table-bordered align-middle text-center mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 45px;">#</th>
+                            <th>الدرنقة / الموقع</th>
+                            <th>الكمية الخارجة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewDrainDetailsTableBody">
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="2" class="text-end pe-3">الإجمالي الكلي:</td>
+                            <td class="text-danger" id="viewDrainDetailsTotal">0 ml</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="modal-footer bg-light border-0 py-2 justify-content-center">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+window.currentReadingDrains = [];
+
+window.openDrainModal = function() {
+    const container = document.getElementById('drainModalRowsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (window.currentReadingDrains && window.currentReadingDrains.length > 0) {
+        window.currentReadingDrains.forEach(d => {
+            window.addDrainRow(d.drain_label, d.amount);
+        });
+    } else {
+        const currentTotal = parseFloat(document.getElementById('grid_output_drain')?.value) || 0;
+        if (currentTotal > 0) {
+            window.addDrainRow('درنقة 1', currentTotal);
+        } else {
+            window.addDrainRow('درنقة 1', '');
+            window.addDrainRow('درنقة 2', '');
+        }
+    }
+
+    window.calculateDrainModalTotal();
+    const modalEl = document.getElementById('drainDetailsModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.addDrainRow = function(label = '', amount = '') {
+    const container = document.getElementById('drainModalRowsContainer');
+    if (!container) return;
+
+    const rowIdx = container.children.length + 1;
+    const defaultLabel = label || ('درنقة ' + rowIdx);
+
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-2 bg-white p-2 rounded-3 border drain-modal-row';
+    row.innerHTML = `
+        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-circle" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">
+            ${rowIdx}
+        </span>
+        <div class="flex-grow-1">
+            <input type="text" class="form-control form-control-sm drain-row-label" placeholder="اسم / موقع الدرنقة" value="${defaultLabel}">
+        </div>
+        <div style="width: 110px;">
+            <div class="input-group input-group-sm">
+                <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center fw-bold drain-row-amount" placeholder="0" value="${amount}" oninput="window.calculateDrainModalTotal()">
+                <span class="input-group-text px-1 text-muted" style="font-size: 0.65rem;">ml</span>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle" onclick="window.removeDrainRow(this)" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" title="حذف هذه الدرنقة">
+            <i class="fas fa-trash-alt" style="font-size: 0.7rem;"></i>
+        </button>
+    `;
+    container.appendChild(row);
+    window.calculateDrainModalTotal();
+};
+
+window.removeDrainRow = function(btn) {
+    const row = btn.closest('.drain-modal-row');
+    if (row) {
+        row.remove();
+        const container = document.getElementById('drainModalRowsContainer');
+        if (container) {
+            Array.from(container.children).forEach((r, idx) => {
+                const badge = r.querySelector('.badge');
+                if (badge) badge.textContent = (idx + 1);
+            });
+        }
+        window.calculateDrainModalTotal();
+    }
+};
+
+window.calculateDrainModalTotal = function() {
+    const rows = document.querySelectorAll('.drain-modal-row');
+    let total = 0;
+    rows.forEach(r => {
+        const inp = r.querySelector('.drain-row-amount');
+        const val = parseFloat(inp?.value) || 0;
+        total += val;
+    });
+    total = Math.round(total * 100) / 100;
+    const totalDisplay = document.getElementById('drainModalTotalDisplay');
+    if (totalDisplay) totalDisplay.textContent = total;
+    return total;
+};
+
+window.applyDrainModalData = function() {
+    const rows = document.querySelectorAll('.drain-modal-row');
+    const drains = [];
+    let total = 0;
+
+    rows.forEach((r, idx) => {
+        const labelInp = r.querySelector('.drain-row-label');
+        const amountInp = r.querySelector('.drain-row-amount');
+        const val = parseFloat(amountInp?.value);
+        const label = labelInp?.value?.trim() || ('درنقة ' + (idx + 1));
+
+        if (!isNaN(val) && val > 0) {
+            drains.push({
+                drain_number: idx + 1,
+                drain_label: label,
+                amount: Math.round(val * 100) / 100
+            });
+            total += val;
+        }
+    });
+
+    total = Math.round(total * 100) / 100;
+    window.currentReadingDrains = drains;
+
+    const drainInput = document.getElementById('grid_output_drain');
+    if (drainInput) {
+        drainInput.value = total > 0 ? total : '';
+    }
+
+    const drainsJsonInput = document.getElementById('grid_drains_json');
+    if (drainsJsonInput) {
+        drainsJsonInput.value = drains.length > 0 ? JSON.stringify(drains) : '';
+    }
+
+    window.updateDrainBadge();
+
+    if (typeof window.updateLiveFluidBalance === 'function') {
+        window.updateLiveFluidBalance();
+    }
+
+    const modalEl = document.getElementById('drainDetailsModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+};
+
+window.updateDrainBadge = function() {
+    const indicator = document.getElementById('drainBadgeIndicator');
+    const countSpan = document.getElementById('drainBadgeCount');
+    const drainsJsonInput = document.getElementById('grid_drains_json');
+
+    if (window.currentReadingDrains && window.currentReadingDrains.length > 0) {
+        if (countSpan) countSpan.textContent = window.currentReadingDrains.length;
+        if (indicator) indicator.classList.remove('d-none');
+        if (drainsJsonInput) drainsJsonInput.value = JSON.stringify(window.currentReadingDrains);
+    } else {
+        if (indicator) indicator.classList.add('d-none');
+        if (drainsJsonInput) drainsJsonInput.value = '';
+    }
+};
+
+window.viewReadingDrainsModal = function(drains, total) {
+    const tbody = document.getElementById('viewDrainDetailsTableBody');
+    const totalEl = document.getElementById('viewDrainDetailsTotal');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (Array.isArray(drains) && drains.length > 0) {
+        drains.forEach((d, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-muted small">${d.drain_number || (idx + 1)}</td>
+                <td class="fw-semibold text-dark">${d.drain_label || ('درنقة ' + (idx + 1))}</td>
+                <td class="text-danger fw-bold">${parseFloat(d.amount)} ml</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted">لا توجد تفاصيل درنقات مسجلة</td></tr>';
+    }
+
+    if (totalEl) totalEl.textContent = (total || 0) + ' ml';
+
+    const modalEl = document.getElementById('viewDrainDetailsModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
 </script>
 @endpush
 @endsection

@@ -54,6 +54,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-17 — المرحلة 236: دعم قراءات الدرنقات الجراحية المتعددة وغير المحدودة لكل مريض بجدول فرعي مستقل وتجميع تلقائي لميزان السوائل Multi-Drain Clinical Architecture with Dynamic Child Table, Live Fluid Balance Auto-Sum & Interactive Modal)
+
+### Done
+- **قاعدة البيانات وموديل الدرنقات ([database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php), [app/Models/ResidentStationReadingDrain.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationReadingDrain.php), [app/Models/ResidentStationReading.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationReading.php))**:
+  * إنشاء جدول فرعي مستقل `resident_station_reading_drains` يحفظ كل قراءة درنقة في سجل وعمود `amount` صريح مع رقم الدرنقة `drain_number` واسم/موقع الدرنقة `drain_label` ومفتاح أجنبي cascade مرتبط بالقراءة.
+  * ربط العلاقة `hasMany` باسم `drains` في موديل `ResidentStationReading` مع الترتيب برقم الدرنقة.
+- **كنترولر المحطة السريرية ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * إضافة دالتي المزامنة والاستخراج `parseDrainsFromRequest` و `syncReadingDrains`.
+  * دعم استلام الدرنقات كمصفوفة `drains` أو كسلسلة نصية `drains_json`، مع الحساب والتجميع التلقائي لمجموعها في `output_drain` وميزان السوائل `fluid_balance`.
+  * دعم التوافقية العكسية 100%: عند إرسال رقم وحيد في `output_drain` يتم تلقائياً إنشاء سجل درنقة مفرد لها في الجدول الفرعي.
+  * شمول `drains` و `drains_json` في فحص مدخلات السوائل `$hasFluidsInput` لضمان الحفظ والمزامنة حتى في حال عدم إدخال سوائل أخرى.
+  * تضمين العلاقة `drains` في الاستعلامات المسبقة (Eager Loading) لمنع مشكلة N+1.
+- **واجهة العلامات الحيوية والسوائل ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة زر أيقونة `[ 📋 ]` بجانب خانة الدرنقة يفتح نافذة منبثقة تفاعلية `#drainDetailsModal` لإضافة أي عدد مفتوح من الدرنقات (درنقة 1، درنقة 2، درنقة 3...) مع تسمية موقعها وإدخال كميتها بالـ ml وحساب المجموع لحظياً.
+  * إضافة شارة عدّاد تفاعلية أسفل الخانة تبين عدد الدرنقات المدخلة.
+  * عرض إجمالي الدرنقات في جدول القراءات التاريخية مع بادج ملون `[ 👁️ X درنقة ]` يعرض تفاصيل كل درنقة بالـ Tooltip ويفتح نافذة استعراض منبثقة `#viewDrainDetailsModal` عند النقر.
+  * تحديث `loadReadingIntoTopForm` و `cancelEditingReading` لتحميل ومسح بيانات الدرنقات بسلاسة تامة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * إنشاء حزمة اختبارات متخصصة تؤكد: حفظ درنقات متعددة كمصفوفة، حفظها كـ JSON، إنشاء سجل تلقائي للقيمة الفردية، تعديل الدرنقات، والحذف المتسلسل بنسبة نجاح 100% (`6 passed, 36 assertions`).
+  * اجتياز كامل حزمة اختبارات العمليات ومصفوفة الصلاحيات (`15 passed, 196 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات.
+
 ## Session log (2026-11-16 — المرحلة 235: تمكين حساب الجراحين العام من استعراض كافة العمليات بالصالة، فك تقييد إتمام صالة العمليات، والربط السلس بملف وسجل العملية Surgeon Station: Display All Active Operating Room Surgeries for Shared Surgeon Account, Remove Operation Theater Completed Constraint, and Streamline Direct Click-Through Navigation)
 
 ### Done

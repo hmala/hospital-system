@@ -127,6 +127,7 @@ class ClinicalStationController extends Controller
             'operationTheater',
             'room',
             'residentStations.readings.resident.user',
+            'residentStations.readings.drains',
             'residentStations.followUps',
             'nursingStation.nurse',
             'surgeonStation.surgeon.user',
@@ -154,7 +155,7 @@ class ClinicalStationController extends Controller
         }
 
         // Combined readings for vitals history and charts
-        $readings = $station ? $station->readings()->with(['resident.user', 'user'])->get() : collect();
+        $readings = $station ? $station->readings()->with(['resident.user', 'user', 'drains'])->get() : collect();
         $readingsAsc = $readings->sortBy('created_at');
 
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
@@ -275,7 +276,7 @@ class ClinicalStationController extends Controller
             $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
             $canEditFluids = $isAdmin || ($user && $user->hasRole('nurse'));
             $canManageClinicalExam = $isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor']) && ! $user->hasRole('nurse'));
-            $hasFluidsInput = $canEditFluids && $request->hasAny(self::FLUID_FIELDS);
+            $hasFluidsInput = $canEditFluids && ($request->hasAny(self::FLUID_FIELDS) || $request->has('drains') || $request->filled('drains_json'));
 
             if ($hasFluidsInput) {
                 $request->validate([
@@ -307,9 +308,9 @@ class ClinicalStationController extends Controller
 
             $hasAnyVitals = $hasAnyGridVitals || ($canManageClinicalExam && ! empty($vitalsData['clinical_examination']));
 
-            [$fluidsData, $anyFluidsGiven] = $hasFluidsInput
+            [$fluidsData, $anyFluidsGiven, $drainsList] = $hasFluidsInput
                 ? $this->prepareFluidsPayload($request)
-                : [[], false];
+                : [[], false, []];
             $fluidsChanged = $hasFluidsInput && $this->isFluidsChanged($station, $fluidsData);
 
             // إذا كان الطلب تعديلاً لقراءة تاريخية محددة تم تحميلها للأعلى
@@ -328,6 +329,10 @@ class ClinicalStationController extends Controller
                         ? array_merge($vitalsData, $fluidsData)
                         : $vitalsData;
                     $reading->update($readingUpdatePayload);
+
+                    if ($hasFluidsInput) {
+                        $this->syncReadingDrains($reading, $drainsList, $fluidsData['output_drain'] ?? null);
+                    }
 
                     $this->syncStationFromReadings($station, $surgery);
 
@@ -370,11 +375,15 @@ class ClinicalStationController extends Controller
                     $stationPayload = array_merge($stationPayload, $fluidsData);
                 }
 
-                $station->readings()->create(array_merge($createPayload, [
+                $newReading = $station->readings()->create(array_merge($createPayload, [
                     'user_id' => $user->id,
                     'resident_id' => $user->doctor?->id,
                     'notes' => $request->input('vital_notes'),
                 ]));
+
+                if ($shouldIncludeFluids) {
+                    $this->syncReadingDrains($newReading, $drainsList, $fluidsData['output_drain'] ?? null);
+                }
 
                 $station->update($stationPayload);
             } else {
@@ -388,11 +397,13 @@ class ClinicalStationController extends Controller
                     $station->update($fluidsData);
 
                     if ($anyFluidsGiven) {
-                        $station->readings()->create(array_merge($fluidsData, [
+                        $newReading = $station->readings()->create(array_merge($fluidsData, [
                             'user_id' => $user->id,
                             'resident_id' => $user->doctor?->id,
                             'notes' => $request->input('vital_notes') ?: 'تسجيل رصد السوائل',
                         ]));
+
+                        $this->syncReadingDrains($newReading, $drainsList, $fluidsData['output_drain'] ?? null);
                     }
                 }
             }
@@ -946,7 +957,7 @@ class ClinicalStationController extends Controller
         }
         $vitalsData = $request->only($vitalsFields);
 
-        if ($canEditFluids && $request->hasAny(self::FLUID_FIELDS)) {
+        if ($canEditFluids && ($request->hasAny(self::FLUID_FIELDS) || $request->has('drains') || $request->filled('drains_json'))) {
             $request->validate([
                 'intake_iv_fluids' => 'nullable|numeric|min:0',
                 'intake_oral' => 'nullable|numeric|min:0',
@@ -957,8 +968,9 @@ class ClinicalStationController extends Controller
                 'output_vomiting' => 'nullable|numeric|min:0',
                 'output_stool' => 'nullable|numeric|min:0',
             ]);
-            [$fluidsData] = $this->prepareFluidsPayload($request);
+            [$fluidsData, $anyFluidsGiven, $drainsList] = $this->prepareFluidsPayload($request);
             $reading->update(array_merge($vitalsData, $fluidsData));
+            $this->syncReadingDrains($reading, $drainsList, $fluidsData['output_drain'] ?? null);
         } else {
             $reading->update($vitalsData);
         }
@@ -998,16 +1010,88 @@ class ClinicalStationController extends Controller
     }
 
     /**
-     * استخراج وتنسيق حقول السوائل الـ 8 وحساب صافي التوازن المائي بدقة
+     * استخراج وتطبيع مصفوفة الدرنقات من الطلب
+     */
+    private function parseDrainsFromRequest(Request $request): array
+    {
+        $rawDrains = $request->input('drains');
+        if (empty($rawDrains) && $request->filled('drains_json')) {
+            $decoded = json_decode($request->input('drains_json'), true);
+            if (is_array($decoded)) {
+                $rawDrains = $decoded;
+            }
+        }
+
+        if (! is_array($rawDrains)) {
+            return [];
+        }
+
+        $parsed = [];
+        $index = 1;
+        foreach ($rawDrains as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $amount = $item['amount'] ?? null;
+            if ($amount === null || $amount === '' || ! is_numeric($amount)) {
+                continue;
+            }
+            $parsed[] = [
+                'drain_number' => (int) ($item['drain_number'] ?? $index),
+                'drain_label' => ! empty($item['drain_label']) ? trim($item['drain_label']) : ('درنقة '.$index),
+                'amount' => round((float) $amount, 2),
+            ];
+            $index++;
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * حفظ ومزامنة سجلات الدرنقات للقراءة
+     */
+    private function syncReadingDrains(ResidentStationReading $reading, array $drains, ?float $fallbackOutputDrain = null): void
+    {
+        $reading->drains()->delete();
+
+        if (! empty($drains)) {
+            foreach ($drains as $d) {
+                $reading->drains()->create([
+                    'drain_number' => $d['drain_number'],
+                    'drain_label' => $d['drain_label'],
+                    'amount' => $d['amount'],
+                ]);
+            }
+        } elseif ($fallbackOutputDrain !== null && $fallbackOutputDrain > 0) {
+            $reading->drains()->create([
+                'drain_number' => 1,
+                'drain_label' => 'الدرنقة',
+                'amount' => $fallbackOutputDrain,
+            ]);
+        }
+    }
+
+    /**
+     * استخراج وتنسيق حقول السوائل الـ 8 وحساب صافي التوازن المائي بدقة مع دعم الدرنقات المتعددة
      *
-     * @return array{0: array<string, float|null>, 1: bool}
+     * @return array{0: array<string, float|null>, 1: bool, 2: array}
      */
     private function prepareFluidsPayload(Request $request): array
     {
         $fluidsData = [];
         $anyFluidsGiven = false;
 
+        $drains = $this->parseDrainsFromRequest($request);
+        $drainsSum = ! empty($drains) ? round(collect($drains)->sum('amount'), 2) : null;
+
         foreach (self::FLUID_FIELDS as $field) {
+            if ($field === 'output_drain' && $drainsSum !== null) {
+                $fluidsData['output_drain'] = $drainsSum;
+                $anyFluidsGiven = true;
+
+                continue;
+            }
+
             $raw = $request->input($field);
             if ($raw !== null && $raw !== '' && is_numeric($raw)) {
                 $fluidsData[$field] = round((float) $raw, 2);
@@ -1031,7 +1115,7 @@ class ClinicalStationController extends Controller
             $fluidsData['fluid_balance'] = null;
         }
 
-        return [$fluidsData, $anyFluidsGiven];
+        return [$fluidsData, $anyFluidsGiven, $drains];
     }
 
     /**
