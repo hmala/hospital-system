@@ -75,6 +75,22 @@ class LoginController extends Controller
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
     {
+        $isAdminOrHeadNurse = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'head_nurse'])
+            || $user->can('manage nurse availability');
+
+        $isNurse = $user->hasAnyRole(['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض'])
+            || ($user->role ?? '') === 'nurse';
+
+        if (! $isAdminOrHeadNurse && $isNurse && ! $user->isNurseAvailableToday()) {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'عذراً، حسابك غير مدرج في جدول دوام التمريض لهذا اليوم. يرجى مراجعة مسؤول قسم التمريض لتفعيل دوامك.',
+            ]);
+        }
+
         $user->forceFill([
             'last_login_at' => now(),
             'last_activity_at' => now(),

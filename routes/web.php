@@ -232,6 +232,13 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/consultant-availability/{doctor}', [ConsultantAvailabilityController::class, 'updateAvailability'])->name('consultant-availability.update');
     Route::post('/consultant-availability/bulk-update', [ConsultantAvailabilityController::class, 'bulkUpdate'])->name('consultant-availability.bulk-update');
 
+    // إدارة جدول توفر ودوام التمريض وتوزيع الطوابق
+    Route::get('/nurse-availability', [\App\Http\Controllers\NurseAvailabilityController::class, 'index'])->name('nurse-availability.index');
+    Route::post('/nurse-availability/{nurse}/update-availability', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateAvailability'])->name('nurse-availability.update-availability');
+    Route::post('/nurse-availability/{nurse}/update-floor', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateFloor'])->name('nurse-availability.update-floor');
+    Route::post('/nurse-availability/{nurse}/update-shift', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateShift'])->name('nurse-availability.update-shift');
+    Route::post('/nurse-availability/bulk-update', [\App\Http\Controllers\NurseAvailabilityController::class, 'bulkUpdate'])->name('nurse-availability.bulk-update');
+
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');

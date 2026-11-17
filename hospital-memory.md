@@ -78,6 +78,23 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 240 (2026-11-17 — `main`) — نظام إدارة توفر وجدول دوام التمريض اليومي وتوزيع الطوابق وتقييد تسجيل الدخول (Nurse Availability & Daily Floor Scheduling Management System with Login Restriction)**:
+  * **قاعدة البيانات ونموذج التوفر ([database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php), [app/Models/NurseAvailability.php](file:///c:/wamp64/www/hospital-system/app/Models/NurseAvailability.php), [app/Models/User.php](file:///c:/wamp64/www/hospital-system/app/Models/User.php))**:
+    - إنشاء جدول مستقل `nurse_availabilities` لحفظ سجلات دوام وأرشيف التمريض اليومي (`user_id`, `date`, `is_available`, `assigned_floor`, `shift`, `notes`, `created_by`) مع قيد فريد يمنع التكرار لليوم الواحد.
+    - ربط العلاقات ودالة الفحص السريعة `isNurseAvailableToday()` في موديل `User`.
+  * **الكنترولر ومحرك التوفر ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php))**:
+    - بناء كنترولر متكامل مع فلاتر التاريخ والطوابق والبحث، واحتساب الإحصائيات (إجمالي الكادر، المتاحين بالدوام، خارج الدوام، نسبة التغطية).
+    - دعم التبديل اللحظي (AJAX Toggle Switch) للتوفر، وتحديث الطابق المخصص لليوم وربطه بمخزن الطابق تلقائياً، والتحكم الجماعي (تفعيل دوام الكل / إيقاف دوام الكل).
+  * **الواجهة وتجربة المستخدم ([resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - تصميم واجهة متطورة بكروت إحصائية علوية، مفاتيح تبديل سريعة، قوائم منسدلة فورية لاختيار الطابق والشفت مع إشعارات Toast تفاعلية.
+    - إضافة رابط `جدول دوام وتوفر التمريض` في القائمة الجانبية المخصصة للمدراء ومسؤولي التمريض.
+  * **حماية النظام وتقييد تسجيل الدخول ([app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Middleware/CheckNurseAvailability.php](file:///c:/wamp64/www/hospital-system/app/Http/Middleware/CheckNurseAvailability.php), [bootstrap/app.php](file:///c:/wamp64/www/hospital-system/bootstrap/app.php))**:
+    - قفل تسجيل الدخول لأي ممرض غير مسجل كمتوفر اليوم مع رسالة توجيهية صريحة.
+    - ميدلوير حماية استباقي يمنع أي إجراء في حال إيقاف دوام الممرض أثناء الشفت.
+  * **الصلاحيات والتحقق الآلي ([database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+    - إضافة دور `head_nurse` وصلاحية `manage nurse availability`.
+    - بناء 8 اختبارات ميزة متخصصة تؤكد كامل جوانب الميزة بنسبة نجاح 100% (`8 passed, 30 assertions`).
+
 - **المرحلة 239 (2026-11-17 — `main`) — الانتقال التلقائي الذكي للمرحلة السريرية وإلغاء أزرار التبديل اليدوية المربكة (Smart Auto Phase Transition & Header Badge in Clinical Station)**:
   * **الباك إند والتعرف الذكي ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
     - تطوير منطق تحديد المرحلة التلقائي (`$isPostOpReady`) ليفحص اكتمال صالة العمليات (`operationTheaterStation completed`)، أو اكتمال التخدير، أو اكتمال محطة ما قبل العملية، أو دخول المريض مرحلة الإفاقة/الانتهاء (`completed`/`recovery`).

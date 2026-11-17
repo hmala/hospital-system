@@ -143,6 +143,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view surgeon station',
             'view anesthesia station',
             'view nursing station',
+            'manage nurse availability',
             'manage medical devices',
             'view medical devices',
 
@@ -556,6 +557,25 @@ class RolesAndPermissionsSeeder extends Seeder
             // السماح للممرضين برؤية الباقات
             'view packages',
             'view nursing station',
+        ]);
+
+        // دور مدير قسم التمريض (Head Nurse)
+        $headNurseRole = Role::firstOrCreate(['name' => 'head_nurse']);
+        $headNurseRole->givePermissionTo([
+            'view patients',
+            'view visits',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+            'view lab tests',
+            'create lab tests',
+            'view radiology',
+            'create radiology',
+            'view packages',
+            'view nursing station',
+            'manage nurse availability',
+            'view resident station',
         ]);
 
         // دور الطبيب المقيم (Resident)

@@ -1617,6 +1617,14 @@
                         </li>
                         @endcan
 
+                        @if(auth()->check() && (auth()->user()->can('manage nurse availability') || auth()->user()->hasRole(['admin', 'head_nurse', 'hospital_admin'])))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('nurse-availability.*') ? 'active' : '' }}" href="{{ route('nurse-availability.index') }}">
+                                <i class="fas fa-clipboard-user text-info"></i><span> جدول دوام وتوفر التمريض</span>
+                            </a>
+                        </li>
+                        @endif
+
                         @can('manage rooms')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" href="{{ route('rooms.index') }}">
