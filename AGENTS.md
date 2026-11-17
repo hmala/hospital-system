@@ -54,6 +54,15 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-17 — المرحلة 237: استعادة حقول نموذج وملاحظات الرعاية التمريضية وتخريج المريض في المحطة السريرية Restore Nursing Care & Discharge Notes Tab Fields & Form Submission in Clinical Station)
+
+### Done
+- **معالجة حجب الحقول في الواجهة ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * حل مشكلة اختفاء حقول تبويب التمريض `tab=nursing_care`، حيث كان شرط غلاف النموذج المباشر يفحص `in_array($activeTab, ['history', 'vitals', 'plan', 'discharge'])` دون مفتاح `nursing_care`.
+  * إضافة مفتاح `'nursing_care'` إلى مصفوفة التحقق، مما مكّن نموذج التحديث من إظهار حقول اختيار الممرض المسؤول `nurse_id`، ملاحظات الرعاية التمريضية `nursing_notes`، وتعليمات وملاحظات التخريج `discharge_notes`، وزر الحفظ الموحد `[ 💾 حفظ التحديثات السريرية ]`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * إضافة اختبار ميزة شامل `test_nursing_care_tab_renders_notes_fields_and_saves()` يتحقق من استجابة HTTP 200 عند فتح التبويب، وظهور الحقول بالواجهة، وتأكيد نجاح عملية الحفظ والتحديث في جدول `nursing_stations` بنسبة نجاح 100% (`7 passed, 46 assertions`).
+
 ## Session log (2026-11-17 — المرحلة 236: دعم قراءات الدرنقات الجراحية المتعددة وغير المحدودة لكل مريض بجدول فرعي مستقل وتجميع تلقائي لميزان السوائل Multi-Drain Clinical Architecture with Dynamic Child Table, Live Fluid Balance Auto-Sum & Interactive Modal)
 
 ### Done

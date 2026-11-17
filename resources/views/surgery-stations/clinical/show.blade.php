@@ -775,7 +775,7 @@
             </div>
 
             {{-- Form for tabs that submit directly to update --}}
-            @if(in_array($activeTab, ['history', 'vitals', 'plan', 'discharge']))
+            @if(in_array($activeTab, ['history', 'vitals', 'plan', 'nursing_care', 'discharge']))
             <form action="{{ route('clinical-station.update', $surgery) }}" method="POST">
                 @csrf
                 @method('PATCH')

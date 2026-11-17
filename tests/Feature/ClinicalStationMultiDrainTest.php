@@ -290,4 +290,38 @@ class ClinicalStationMultiDrainTest extends TestCase
         $response->assertSee('id="grid_drains_json"', false);
         $response->assertSee('قراءات الدرنقات والمفجرات الجراحية');
     }
+
+    public function test_nursing_care_tab_renders_notes_fields_and_saves(): void
+    {
+        $response = $this->actingAs($this->nurse)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'phase' => 'pre_op',
+            'tab' => 'nursing_care',
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('name="nursing_notes"', false);
+        $response->assertSee('name="discharge_notes"', false);
+        $response->assertSee('name="nurse_id"', false);
+        $response->assertSee('ملاحظات الرعاية التمريضية');
+        $response->assertSee('تعليمات وملاحظات التخريج');
+
+        // Save nursing notes
+        $updateResponse = $this->actingAs($this->nurse)->patch(route('clinical-station.update', [
+            'surgery' => $this->surgery->id,
+            'phase' => 'pre_op',
+            'tab' => 'nursing_care',
+        ]), [
+            'active_tab' => 'nursing_care',
+            'nursing_notes' => 'المريض مستقر وتم تغيير الضماد الجراحي بنجاح',
+            'discharge_notes' => 'مراجعة العيادة بعد أسبوع مع إكمال المضاد الحيوي',
+        ]);
+
+        $updateResponse->assertRedirect();
+        $this->surgery->refresh();
+        $nursingStation = $this->surgery->nursingStation;
+        $this->assertNotNull($nursingStation);
+        $this->assertEquals('المريض مستقر وتم تغيير الضماد الجراحي بنجاح', $nursingStation->nursing_notes);
+        $this->assertEquals('مراجعة العيادة بعد أسبوع مع إكمال المضاد الحيوي', $nursingStation->discharge_notes);
+    }
 }

@@ -78,6 +78,13 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 237 (2026-11-17 — `main`) — استعادة حقول نموذج وملاحظات الرعاية التمريضية وتخريج المريض في المحطة السريرية (Restore Nursing Care & Discharge Notes Tab Fields & Form Submission in Clinical Station)**:
+  * **معالجة حجب الحقول في الواجهة ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - حل مشكلة اختفاء حقول تبويب التمريض `tab=nursing_care`، حيث كان شرط غلاف النموذج المباشر يفحص `in_array($activeTab, ['history', 'vitals', 'plan', 'discharge'])` مع خلوه من مفتاح `nursing_care`.
+    - تضمين مفتاح `'nursing_care'` ضمن مصفوفة التحقق مما مكّن نموذج التحديث من إظهار حقول اختيار الممرض المسؤول `nurse_id`، ملاحظات الرعاية التمريضية `nursing_notes`، وتعليمات وملاحظات التخريج `discharge_notes`، مع زر الحفظ السريري الموحد.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+    - إضافة اختبار ميزة شامل `test_nursing_care_tab_renders_notes_fields_and_saves()` يتحقق من استجابة HTTP 200 عند فتح التبويب، وظهور الحقول بالواجهة، وتأكيد نجاح عملية الحفظ والتحديث في جدول `nursing_stations` بنسبة نجاح 100% (`7 passed, 46 assertions`).
+
 - **المرحلة 236 (2026-11-17 — `main`) — دعم قراءات الدرنقات الجراحية المتعددة وغير المحدودة لكل مريض بجدول فرعي مستقل وتجميع تلقائي لميزان السوائل (Multi-Drain Clinical Architecture with Dynamic Child Table, Live Fluid Balance Auto-Sum & Interactive Modal)**:
   * **قاعدة البيانات وموديل الدرنقات ([database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php), [app/Models/ResidentStationReadingDrain.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationReadingDrain.php), [app/Models/ResidentStationReading.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationReading.php))**:
     - إنشاء جدول فرعي مستقل `resident_station_reading_drains` يحفظ كل قراءة درنقة في سجل وعمود `amount` صريح مع رقم الدرنقة `drain_number` واسم/موقع الدرنقة `drain_label` ومفتاح أجنبي cascade مرتبط بالقراءة.
