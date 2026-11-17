@@ -1136,34 +1136,30 @@
                                                            title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'إدرار البول (ml)' }}"
                                                            placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}">
                                                 </td>
-                                                <td class="p-1 bg-warning bg-opacity-5 position-relative">
-                                                    <div class="d-flex align-items-center gap-1 justify-content-center">
-                                                        <input type="number" step="0.01" min="0" name="output_drain" id="grid_output_drain"
-                                                               class="form-control form-control-sm text-center fw-bold fluid-grid-input {{ !$canEditFluidsFlag ? 'bg-light text-muted' : '' }}"
-                                                               value="{{ $canEditFluidsFlag ? old('output_drain') : '' }}"
-                                                               data-original=""
-                                                               data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
-                                                               data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}"
-                                                               {{ !$canEditFluidsFlag ? 'readonly' : '' }}
-                                                               title="{{ !$canEditFluidsFlag ? 'للقراءة فقط — التعديل لكادر التمريض والأدمن فقط' : 'الدرنقة / المفجر (ml) - انقر لتفصيل الدرنقات' }}"
-                                                               placeholder="{{ $canEditFluidsFlag ? '0' : '--' }}"
-                                                               style="min-width: 50px;">
-                                                        @if($canEditFluidsFlag)
-                                                            <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle"
-                                                                    id="btnOpenDrainModal"
-                                                                    title="تفصيل قراءات الدرنقات المتعددة لهذا المريض"
-                                                                    onclick="openDrainModal()"
-                                                                    style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                                                <i class="fas fa-list-ol" style="font-size: 0.68rem;"></i>
-                                                            </button>
-                                                        @endif
-                                                    </div>
-                                                    <div id="drainBadgeIndicator" class="text-danger small mt-0.5 text-center d-none" style="font-size: 0.65rem; cursor: pointer;" onclick="openDrainModal()">
-                                                        <span class="badge bg-danger bg-opacity-15 text-danger border border-danger-subtle px-1 py-0.2" style="font-size: 0.62rem;">
-                                                            <i class="fas fa-layer-group me-0.5"></i> <span id="drainBadgeCount">0</span> درنقة
-                                                        </span>
-                                                    </div>
+                                                <td class="p-1 bg-warning bg-opacity-5 position-relative text-center align-middle" style="min-width: 85px;">
+                                                    <input type="hidden" name="output_drain" id="grid_output_drain"
+                                                           class="fluid-grid-input"
+                                                           value="{{ $canEditFluidsFlag ? old('output_drain') : '' }}"
+                                                           data-original=""
+                                                           data-original-readonly="{{ !$canEditFluidsFlag ? '1' : '0' }}"
+                                                           data-fluid-editable="{{ $canEditFluidsFlag ? '1' : '0' }}">
                                                     <input type="hidden" name="drains_json" id="grid_drains_json" value="">
+
+                                                    @if($canEditFluidsFlag)
+                                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-1.5 rounded-pill text-nowrap fw-bold shadow-xs w-100"
+                                                                id="btnOpenDrainModal"
+                                                                onclick="openDrainModal()"
+                                                                title="إدخال وتفصيل قراءات درنقات المريض"
+                                                                style="font-size: 0.72rem; min-height: 28px;">
+                                                            <span id="drainButtonLabel">
+                                                                <i class="fas fa-plus-circle me-1"></i> الدرنقات
+                                                            </span>
+                                                        </button>
+                                                    @else
+                                                        <span class="badge bg-light text-muted border py-1.5 px-2 rounded-pill small" title="للقراءة فقط — التعديل للتمريض والأدمن">
+                                                            <span id="drainButtonLabel">--</span>
+                                                        </span>
+                                                    @endif
                                                 </td>
                                                 <td class="p-1 bg-warning bg-opacity-5">
                                                     <input type="number" step="0.01" min="0" name="output_gtube_ng" id="grid_output_gtube_ng"
@@ -4318,17 +4314,35 @@ window.applyDrainModalData = function() {
 };
 
 window.updateDrainBadge = function() {
-    const indicator = document.getElementById('drainBadgeIndicator');
-    const countSpan = document.getElementById('drainBadgeCount');
+    const btn = document.getElementById('btnOpenDrainModal');
+    const labelSpan = document.getElementById('drainButtonLabel');
     const drainsJsonInput = document.getElementById('grid_drains_json');
+    const drainInput = document.getElementById('grid_output_drain');
 
+    let total = 0;
     if (window.currentReadingDrains && window.currentReadingDrains.length > 0) {
-        if (countSpan) countSpan.textContent = window.currentReadingDrains.length;
-        if (indicator) indicator.classList.remove('d-none');
+        window.currentReadingDrains.forEach(d => { total += (parseFloat(d.amount) || 0); });
+        total = Math.round(total * 100) / 100;
         if (drainsJsonInput) drainsJsonInput.value = JSON.stringify(window.currentReadingDrains);
+        if (drainInput) drainInput.value = total > 0 ? total : '';
+
+        if (labelSpan) {
+            labelSpan.innerHTML = `<span class="fw-bold">${total} ml</span> <span class="badge bg-white text-danger rounded-pill px-1 ms-0.5" style="font-size:0.6rem;">${window.currentReadingDrains.length}</span> <i class="fas fa-pen ms-0.5" style="font-size:0.58rem;"></i>`;
+        }
+        if (btn) {
+            btn.className = 'btn btn-sm btn-danger py-1 px-1.5 rounded-pill text-nowrap fw-bold shadow-xs w-100';
+        }
     } else {
-        if (indicator) indicator.classList.add('d-none');
-        if (drainsJsonInput) drainsJsonInput.value = '';
+        const val = parseFloat(drainInput?.value) || 0;
+        if (val > 0) {
+            if (labelSpan) labelSpan.innerHTML = `<span class="fw-bold">${val} ml</span> <i class="fas fa-pen ms-0.5" style="font-size:0.58rem;"></i>`;
+            if (btn) btn.className = 'btn btn-sm btn-danger py-1 px-1.5 rounded-pill text-nowrap fw-bold shadow-xs w-100';
+        } else {
+            if (labelSpan) labelSpan.innerHTML = '<i class="fas fa-plus-circle me-1"></i> الدرنقات';
+            if (btn) btn.className = 'btn btn-sm btn-outline-danger py-1 px-1.5 rounded-pill text-nowrap fw-bold shadow-xs w-100';
+            if (drainsJsonInput) drainsJsonInput.value = '';
+            if (drainInput) drainInput.value = '';
+        }
     }
 };
 
