@@ -325,4 +325,27 @@ class ClinicalStationMultiDrainTest extends TestCase
         $this->assertEquals('مراجعة العيادة بعد أسبوع مع إكمال المضاد الحيوي', $nursingStation->discharge_notes);
         $this->assertEquals($this->nurse->id, $nursingStation->nurse_id);
     }
+
+    public function test_clinical_station_auto_detects_smart_phase_and_renders_badge(): void
+    {
+        // 1. Pending pre-op surgery automatically defaults to pre_op phase
+        $responsePreOp = $this->actingAs($this->nurse)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+        ]));
+
+        $responsePreOp->assertStatus(200);
+        $responsePreOp->assertSee('تحضير ما قبل العملية');
+        $responsePreOp->assertDontSee('class="clin-segmented-control"', false);
+
+        // 2. Completed surgery automatically defaults to post_op phase with archive link
+        $this->surgery->update(['status' => 'completed']);
+
+        $responsePostOp = $this->actingAs($this->nurse)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+        ]));
+
+        $responsePostOp->assertStatus(200);
+        $responsePostOp->assertSee('عناية ما بعد العملية (الرقود)');
+        $responsePostOp->assertSee('أرشيف ما قبل العملية');
+    }
 }

@@ -150,37 +150,6 @@
             border: 1px solid #e2e8f0;
         }
 
-        /* Segmented Control iOS / iPadOS Style */
-        .clin-segmented-control {
-            display: inline-flex;
-            align-items: center;
-            background: #f1f5f9;
-            padding: 3px;
-            border-radius: 999px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .clin-segment-item {
-            padding: 5px 14px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: #64748b;
-            text-decoration: none;
-            border-radius: 999px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-flex;
-            align-items: center;
-        }
-        .clin-segment-item:hover {
-            color: #0f172a;
-        }
-        .clin-segment-item.active {
-            background: #ffffff;
-            color: #2563eb !important;
-            font-weight: 800;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-        }
-
         /* Modern Status Badge with Colored Pulse Indicator */
         .badge-status-modern {
             display: inline-flex;
@@ -649,18 +618,37 @@
 
             </div>
 
-            {{-- Right Side: Phase Segmented Switcher & Clinical Status --}}
-            <div class="d-flex flex-wrap align-items-center gap-2.5 ms-auto ms-lg-0">
-                {{-- Apple / iPadOS Style Segmented Control --}}
-                <div class="clin-segmented-control" role="group">
-                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
-                       class="clin-segment-item {{ $currentPhase === 'pre_op' ? 'active' : '' }}">
-                        <i class="fas fa-arrow-circle-right me-1"></i> ما قبل العملية
-                    </a>
-                    <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
-                       class="clin-segment-item {{ $currentPhase === 'post_op' ? 'active' : '' }}">
-                        <i class="fas fa-check-circle me-1"></i> ما بعد العملية
-                    </a>
+            {{-- Right Side: Smart Active Clinical Phase & Status --}}
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto ms-lg-0">
+                {{-- Smart Phase Indicator & Subtle Switcher --}}
+                <div class="d-flex align-items-center gap-2">
+                    @if($currentPhase === 'pre_op')
+                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="المرحلة السريرية التلقائية الحالية">
+                            <i class="fas fa-hourglass-half text-primary"></i>
+                            <span>تحضير ما قبل العملية</span>
+                        </span>
+                        @if($postOpStation)
+                            <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
+                               title="الانتقال إلى مرحلة ما بعد العملية">
+                                <span>ما بعد العملية</span>
+                                <i class="fas fa-arrow-left fa-xs"></i>
+                            </a>
+                        @endif
+                    @else
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="المرحلة السريرية التلقائية الحالية">
+                            <i class="fas fa-procedures text-success"></i>
+                            <span>عناية ما بعد العملية (الرقود)</span>
+                        </span>
+                        @if($preOpStation)
+                            <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
+                               title="مراجعة سجل ما قبل العملية">
+                                <i class="fas fa-history fa-xs"></i>
+                                <span>أرشيف ما قبل العملية</span>
+                            </a>
+                        @endif
+                    @endif
                 </div>
 
                 {{-- Phase Status Modern Pill with Glowing Pulse Indicator --}}

@@ -56,8 +56,13 @@ class ClinicalStationController extends Controller
             ['status' => 'pending']
         );
 
+        $isPostOpReady = ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+            || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+            || ($preOpStation && $preOpStation->status === 'completed')
+            || in_array($surgery->status, ['completed', 'recovery']);
+
         $postOpStation = $surgery->residentStations()->where('phase', 'post_op')->first();
-        if (! $postOpStation && $surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed') {
+        if (! $postOpStation && $isPostOpReady) {
             $postOpStation = $surgery->residentStations()->create([
                 'phase' => 'post_op',
                 'status' => 'pending',
@@ -72,7 +77,7 @@ class ClinicalStationController extends Controller
             ]);
         }
 
-        // 3. Determine current phase
+        // 3. Determine current phase (with smart auto-detection)
         $requestedPhase = $request->query('phase');
         if ($requestedPhase === 'pre_op') {
             $currentPhase = 'pre_op';
@@ -81,11 +86,8 @@ class ClinicalStationController extends Controller
             $currentPhase = 'post_op';
             $station = $postOpStation ?? $preOpStation;
         } else {
-            // Auto detect
-            if (! $preOpStation || $preOpStation->status !== 'completed') {
-                $currentPhase = 'pre_op';
-                $station = $preOpStation;
-            } elseif ($postOpStation) {
+            // Smart auto-detect: if post-op stage reached, automatically default to post_op; otherwise pre_op
+            if ($postOpStation && $isPostOpReady) {
                 $currentPhase = 'post_op';
                 $station = $postOpStation;
             } else {
