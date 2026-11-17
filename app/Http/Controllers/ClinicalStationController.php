@@ -9,6 +9,7 @@ use App\Models\Package;
 use App\Models\RadiologyType;
 use App\Models\ResidentStationFollowUp;
 use App\Models\ResidentStationReading;
+use App\Models\ResidentStationReadingDrain;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
@@ -1089,6 +1090,12 @@ class ClinicalStationController extends Controller
                 $fluidsData['output_drain'] = $drainsSum;
                 $anyFluidsGiven = true;
 
+                continue;
+            }
+
+            if ($field === 'output_drain' && $drainsSum !== null) {
+                $fluidsData['output_drain'] = $drainsSum;
+                $anyFluidsGiven = true;
                 continue;
             }
 
