@@ -174,7 +174,7 @@ class NurseAvailabilityTest extends TestCase
         $this->assertAuthenticatedAs($this->nurse1);
     }
 
-    public function test_off_duty_nurse_is_blocked_from_logging_in(): void
+    public function test_off_duty_nurse_is_redirected_to_dedicated_off_duty_screen(): void
     {
         // Mark nurse2 as off duty today
         NurseAvailability::create([
@@ -191,8 +191,49 @@ class NurseAvailabilityTest extends TestCase
             'password' => $password,
         ]);
 
-        $response->assertSessionHasErrors('email');
-        $this->assertGuest();
+        $response->assertRedirect(route('nurse.off-duty'));
+
+        // Visit off-duty landing screen
+        $offDutyPage = $this->actingAs($this->nurse2)->get(route('nurse.off-duty'));
+        $offDutyPage->assertStatus(200);
+        $offDutyPage->assertSee('خارج جدول الدوام الرسمي لليوم');
+        $offDutyPage->assertSee('ممرضة فاطمة');
+        $offDutyPage->assertSee('فحص التفعيل والدخول للنظام');
+    }
+
+    public function test_off_duty_nurse_cannot_access_nursing_station_and_is_redirected_to_off_duty_screen(): void
+    {
+        NurseAvailability::create([
+            'user_id' => $this->nurse2->id,
+            'date' => today(),
+            'is_available' => false,
+        ]);
+
+        $response = $this->actingAs($this->nurse2)->get(route('nursing-station.index'));
+        $response->assertRedirect(route('nurse.off-duty'));
+    }
+
+    public function test_off_duty_nurse_can_recheck_access_and_enter_when_activated(): void
+    {
+        $availability = NurseAvailability::create([
+            'user_id' => $this->nurse2->id,
+            'date' => today(),
+            'is_available' => false,
+        ]);
+
+        // Still off duty: check access redirects back with warning
+        $check1 = $this->actingAs($this->nurse2)->get(route('nurse.check-access'));
+        $check1->assertRedirect(route('nurse.off-duty'));
+        $check1->assertSessionHas('warning');
+
+        // Supervisor activates nurse
+        $availability->update(['is_available' => true]);
+        $this->nurse2->refresh();
+
+        // Now check access succeeds and redirects to nursing station
+        $check2 = $this->actingAs($this->nurse2)->get(route('nurse.check-access'));
+        $check2->assertRedirect(route('nursing-station.index'));
+        $check2->assertSessionHas('success');
     }
 
     public function test_admin_is_never_blocked_by_nurse_schedule(): void

@@ -322,4 +322,49 @@ class NurseAvailabilityController extends Controller
         return redirect()->route('nurse-availability.index', ['date' => $date])
             ->with('success', "تم بنجاح {$actionText} لتاريخ {$date}.");
     }
+
+    /**
+     * Dedicated Off-Duty Landing Screen for nurses who are not scheduled today.
+     */
+    public function offDuty(Request $request): View|RedirectResponse
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        // If user is not restricted or is already marked as available today, redirect to normal workspace
+        if ($user->isNurseAvailableToday() || $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'head_nurse']) || $user->can('manage nurse availability')) {
+            return redirect()->route('nursing-station.index');
+        }
+
+        $todayRecord = $user->todayNurseAvailability;
+
+        return view('nurse-availability.off-duty', [
+            'nurse' => $user,
+            'todayRecord' => $todayRecord,
+            'todayDate' => today(),
+        ]);
+    }
+
+    /**
+     * Check if the supervisor has activated the nurse, and if so, grant entry.
+     */
+    public function checkAccess(Request $request): RedirectResponse
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if ($user->isNurseAvailableToday()) {
+            return redirect()->route('nursing-station.index')
+                ->with('success', 'أهلاً بك! تم تأكيد دوامك لليوم بنجاح.');
+        }
+
+        return redirect()->route('nurse.off-duty')
+            ->with('warning', 'ما زال حسابك غير مفعل ضمن جدول دوام اليوم. يرجى التواصل مع مسؤول قسم التمريض لتفعيل دوامك.');
+    }
 }

@@ -78,6 +78,19 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 241 (2026-11-18 — `main`) — واجهة الهبوط المخصصة والذكية للممرضين خارج جدول الدوام الرسمي مع التحقق وإعادة المحاولة الفورية (Dedicated Off-Duty Landing Screen for Unscheduled Nurses with Live Activation Check & Access Recovery)**:
+  * **شاشة الهبوط المخصصة ([resources/views/nurse-availability/off-duty.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
+    - استبدال رسالة التنبيه الحمراء لشاشة تسجيل الدخول بواجهة هبوط متكاملة، أنيقة ورسمية تحمل هوية النظام والمستشفى.
+    - عرض اسم الممرض، بريده، شارة `🔴 خارج جدول الدوام الرسمي لليوم`، وتاريخ اليوم الهجري/الميلادي المنسق.
+    - رسالة إرشادية طبية واضحة تفيد بعدم إدراج الحساب بجدول دوام اليوم، مع توجيه للتواصل مع مدير أو مشرف التمريض.
+    - زر تفاعلي ذكي `[ 🔄 فحص التفعيل والدخول للنظام ]` لتمكين الممرض من الدخول الفوري لمحطة التمريض بمجرد تفعيله من قبل المشرف دون الحاجة لإعادة كتابة البريد وكلمة المرور مجدداً، مع زر تسجيل خروج رسمي.
+  * **الكنترولر والميدلوير ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [app/Http/Middleware/CheckNurseAvailability.php](file:///c:/wamp64/www/hospital-system/app/Http/Middleware/CheckNurseAvailability.php), [app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php))**:
+    - إضافة مساري `nurse.off-duty` و `nurse.check-access` في ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php)).
+    - توجيه الممرض غير المداوم فور تسجيل الدخول إلى واجهة `nurse.off-duty`.
+    - تحديث وسيط الحماية لتثبيت الممرض غير المداوم داخل واجهة الهبوط ومنع وصوله لأي سجلات أو محطات سريرية مع استثناء مسارات الفحص والخروج.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+    - توسيع حزمة الاختبارات لتشمل 10 اختبارات ميزة تغطي التحويل لشاشة الهبوط، ومنع التسلل للمحطة، وإعادة الفحص والدخول السلس بنسبة نجاح 100% (`10 passed, 41 assertions`).
+
 - **المرحلة 240 (2026-11-17 — `main`) — نظام إدارة توفر وجدول دوام التمريض اليومي وتوزيع الطوابق وتقييد تسجيل الدخول (Nurse Availability & Daily Floor Scheduling Management System with Login Restriction)**:
   * **قاعدة البيانات ونموذج التوفر ([database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php), [app/Models/NurseAvailability.php](file:///c:/wamp64/www/hospital-system/app/Models/NurseAvailability.php), [app/Models/User.php](file:///c:/wamp64/www/hospital-system/app/Models/User.php))**:
     - إنشاء جدول مستقل `nurse_availabilities` لحفظ سجلات دوام وأرشيف التمريض اليومي (`user_id`, `date`, `is_available`, `assigned_floor`, `shift`, `notes`, `created_by`) مع قيد فريد يمنع التكرار لليوم الواحد.

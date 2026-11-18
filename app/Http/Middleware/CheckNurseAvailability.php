@@ -15,7 +15,7 @@ class CheckNurseAvailability
     {
         $user = auth()->user();
 
-        if (! $user || $request->routeIs('login', 'logout')) {
+        if (! $user || $request->routeIs('login', 'logout', 'nurse.off-duty', 'nurse.check-access')) {
             return $next($request);
         }
 
@@ -27,13 +27,7 @@ class CheckNurseAvailability
 
         if (! $isAdminOrHeadNurse && $isNurse) {
             if (! $user->isNurseAvailableToday()) {
-                auth()->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return redirect()->route('login')->withErrors([
-                    'email' => 'عذراً، حسابك غير مدرج في جدول دوام التمريض لهذا اليوم. يرجى مراجعة مسؤول قسم التمريض.',
-                ]);
+                return redirect()->route('nurse.off-duty');
             }
         }
 

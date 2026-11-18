@@ -238,6 +238,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/nurse-availability/{nurse}/update-floor', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateFloor'])->name('nurse-availability.update-floor');
     Route::post('/nurse-availability/{nurse}/update-shift', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateShift'])->name('nurse-availability.update-shift');
     Route::post('/nurse-availability/bulk-update', [\App\Http\Controllers\NurseAvailabilityController::class, 'bulkUpdate'])->name('nurse-availability.bulk-update');
+    Route::get('/nurse/off-duty', [\App\Http\Controllers\NurseAvailabilityController::class, 'offDuty'])->name('nurse.off-duty');
+    Route::get('/nurse/check-access', [\App\Http\Controllers\NurseAvailabilityController::class, 'checkAccess'])->name('nurse.check-access');
 
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');

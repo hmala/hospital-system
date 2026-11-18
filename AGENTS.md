@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 241: واجهة الهبوط المخصصة والذكية للممرضين خارج جدول الدوام الرسمي مع التحقق وإعادة المحاولة الفورية Dedicated Off-Duty Landing Screen for Unscheduled Nurses with Live Activation Check & Access Recovery)
+
+### Done
+- **شاشة الهبوط المخصصة ([resources/views/nurse-availability/off-duty.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
+  * استبدال رسالة التنبيه الحمراء لشاشة تسجيل الدخول بواجهة هبوط متكاملة، أنيقة ورسمية تحمل هوية النظام والمستشفى.
+  * عرض اسم الممرض، بريده، شارة `🔴 خارج جدول الدوام الرسمي لليوم`، وتاريخ اليوم المنسق.
+  * رسالة إرشادية طبية واضحة تفيد بعدم إدراج الحساب بجدول دوام اليوم، مع توجيه للتواصل مع مدير أو مشرف التمريض.
+  * زر تفاعلي ذكي `[ 🔄 فحص التفعيل والدخول للنظام ]` لتمكين الممرض من الدخول الفوري لمحطة التمريض بمجرد تفعيله من قبل المشرف دون الحاجة لإعادة كتابة البريد وكلمة المرور مجدداً، مع زر تسجيل خروج رسمي.
+- **الكنترولر والميدلوير ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [app/Http/Middleware/CheckNurseAvailability.php](file:///c:/wamp64/www/hospital-system/app/Http/Middleware/CheckNurseAvailability.php), [app/Http/Controllers/Auth/LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php))**:
+  * إضافة مساري `nurse.off-duty` و `nurse.check-access` في ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php)).
+  * توجيه الممرض غير المداوم فور تسجيل الدخول إلى واجهة `nurse.off-duty`.
+  * تحديث وسيط الحماية لتثبيت الممرض غير المداوم داخل واجهة الهبوط ومنع وصوله لأي سجلات أو محطات سريرية مع استثناء مسارات الفحص والخروج.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * توسيع حزمة الاختبارات لتشمل 10 اختبارات ميزة تغطي التحويل لشاشة الهبوط، ومنع التسلل للمحطة، وإعادة الفحص والدخول السلس بنسبة نجاح 100% (`10 passed, 41 assertions`).
+
 ## Session log (2026-11-17 — المرحلة 240: نظام إدارة توفر وجدول دوام التمريض اليومي وتوزيع الطوابق وتقييد تسجيل الدخول Nurse Availability & Daily Floor Scheduling Management System with Login Restriction)
 
 ### Done
