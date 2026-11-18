@@ -752,6 +752,14 @@
             color: #ffffff;
         }
         html[dir="ltr"] .lang-switch-pill { left: auto; right: 1.8rem; }
+        .lang-switch-pill .flag-icon {
+            width: 19px;
+            height: 13px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+            display: inline-block;
+        }
 
         .error-msg {
             margin-top: 0.35rem;
@@ -1046,8 +1054,13 @@
 
             <!-- Language Switcher -->
             <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="lang-switch-pill" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
-                <i class="fas fa-globe"></i>
-                <span>{{ app()->getLocale() === 'en' ? 'العربية' : 'EN' }}</span>
+                @if(app()->getLocale() === 'en')
+                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span>العربية</span>
+                @else
+                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span>English</span>
+                @endif
             </a>
 
             <!-- Live pill -->

@@ -128,4 +128,24 @@ class LocalizationTest extends TestCase
         $this->assertEquals('Periodic Follow-Up Log', __('سجل المتابعات الدورية'));
         $this->assertEquals('Medical Consultations Log', __('سجل الاستشارات الطبية'));
     }
+
+    public function test_language_switcher_renders_iraq_and_uk_flags_and_segmented_pill(): void
+    {
+        $this->assertFileExists(public_path('images/flags/iq.svg'));
+        $this->assertFileExists(public_path('images/flags/gb.svg'));
+
+        $iqSvg = file_get_contents(public_path('images/flags/iq.svg'));
+        $this->assertStringContainsString('الله أكبر', $iqSvg);
+
+        $gbSvg = file_get_contents(public_path('images/flags/gb.svg'));
+        $this->assertStringContainsString('#012169', $gbSvg);
+
+        $response = $this->withSession(['locale' => 'ar'])->get('/_test-locale');
+        $response->assertOk();
+        $response->assertSee('lang-switcher-pill', false);
+        $response->assertSee('images/flags/iq.svg', false);
+        $response->assertSee('images/flags/gb.svg', false);
+        $response->assertSee('عربي');
+        $response->assertSee('English');
+    }
 }

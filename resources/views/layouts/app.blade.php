@@ -331,6 +331,62 @@
         .sidebar-user span { display: block; color: #1d4ed8; }
         .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
         .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
+        /* ===== محول لغة النظام بالأعلام الرسمية (Language Switcher) ===== */
+        .lang-switcher-pill {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: 9999px;
+            padding: 3px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+            gap: 4px;
+            backdrop-filter: blur(4px);
+        }
+        .lang-switcher-pill .lang-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: #64748b;
+            transition: all 0.2s ease-in-out;
+        }
+        .lang-switcher-pill .lang-btn:hover {
+            color: #1e3a8a;
+            background: rgba(219, 234, 254, 0.6);
+        }
+        .lang-switcher-pill .lang-btn.active {
+            background: #2563eb;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+        .flag-icon {
+            width: 19px;
+            height: 13px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+            border: 0.5px solid rgba(0, 0, 0, 0.08);
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        .topbar-lang-toggle {
+            background: #ffffff;
+            border: 1px solid rgba(203, 213, 225, 0.8) !important;
+            transition: all 0.2s ease;
+        }
+        .topbar-lang-toggle:hover {
+            background: #f8fafc;
+            border-color: #3b82f6 !important;
+        }
         .home-link {
             display: inline-flex;
             align-items: center;
@@ -950,9 +1006,14 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1 shadow-xs" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
-                <i class="fas fa-globe"></i>
-                <span class="fw-bold small">{{ app()->getLocale() === 'en' ? 'عربي' : 'EN' }}</span>
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5 shadow-xs topbar-lang-toggle" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                @if(app()->getLocale() === 'en')
+                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span class="fw-bold small text-dark">عربي</span>
+                @else
+                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span class="fw-bold small text-dark">EN</span>
+                @endif
             </a>
             @if(Auth::check())
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
@@ -991,27 +1052,32 @@
                         <div class="sidebar-user">
                             @if(Auth::check())
                                 <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
-                                <div class="d-flex align-items-center justify-content-center gap-2 mt-1">
-                                    <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="badge text-decoration-none {{ app()->getLocale() === 'en' ? 'bg-primary text-white' : 'bg-primary-subtle text-primary border border-primary-subtle' }}" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
-                                        <i class="fas fa-globe me-1"></i> {{ app()->getLocale() === 'en' ? 'العربية' : 'English' }}
-                                    </a>
-                                    <span class="text-muted">|</span>
+                                <div class="mt-1">
                                     <a href="{{ route('logout') }}" class="logout-link text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                                         <i class="fas fa-sign-out-alt"></i> {{ __('تسجيل الخروج') }}
                                     </a>
                                 </div>
                             @else
                                 <div><i class="fas fa-tv text-primary me-1"></i> <span>{{ __('شاشة عرض عامة') }}</span></div>
-                                <div class="d-flex align-items-center justify-content-center gap-2 mt-1">
-                                    <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="badge text-decoration-none bg-primary-subtle text-primary border border-primary-subtle">
-                                        <i class="fas fa-globe me-1"></i> {{ app()->getLocale() === 'en' ? 'العربية' : 'English' }}
-                                    </a>
-                                    <span class="text-muted">|</span>
+                                <div class="mt-1">
                                     <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
                                         <i class="fas fa-sign-in-alt"></i> {{ __('تسجيل الدخول') }}
                                     </a>
                                 </div>
                             @endif
+                        </div>
+                        <!-- محول لغة النظام المتطور بالأعلام الرسمية -->
+                        <div class="px-3 pt-2 pb-1">
+                            <div class="lang-switcher-pill" title="{{ __('تبديل لغة النظام') }}">
+                                <a href="{{ route('lang.switch', 'ar') }}" class="lang-btn {{ app()->getLocale() === 'ar' ? 'active' : '' }}" title="اللغة العربية (العراق)">
+                                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                                    <span>عربي</span>
+                                </a>
+                                <a href="{{ route('lang.switch', 'en') }}" class="lang-btn {{ app()->getLocale() === 'en' ? 'active' : '' }}" title="English (UK)">
+                                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                                    <span>English</span>
+                                </a>
+                            </div>
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf
