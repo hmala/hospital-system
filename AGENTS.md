@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 242: استبدال تنبيه التوفر الداكن بنظام Toastr الطبي الناصع وتوحيد مصفوفة ومسميات أدوار التخدير ومشرف التمريض Medical Clean Toastr Migration & Role Permission Harmonization for Anesthesia and Head Nurse)
+
+### Done
+- **استبدال التنبيه الداكن بنظام Toastr الطبي ([resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php))**:
+  * إزالة خلفية `bg-dark text-white` السوداء تماماً من شاشة إدارة توفر التمريض.
+  * ربط الاستجابة الفورية عند التبديل بنظام المستشفى المعتمد `toastr.success` و `toastr.error` بألوان طبية فاتحة ومريحة للعين في أعلى الشاشة.
+  * تحديث كرت الـ Toast الاحتياطي بتصميم أبيض ناصع `bg-white text-dark border-success-subtle` وأيقونة نجاح خضراء.
+- **توحيد ومواءمة مصفوفة الصلاحيات والأدوار ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+  * إضافة الدورين `anesthesia` و `head_nurse` وأدوار التمريض والأطباء المتخصصين (`icu_nurse`, `nicu_nurse`, `icu_doctor`, `nicu_doctor`) إلى `getRoleLabel()` بأسماء عربية صريحة وأيقونات طبية.
+  * إدراج `anesthesia` ضمن فئة "الكوادر الطبية والجراحية" وإدراج `head_nurse` ضمن "الاستقبال والتمريض والطوارئ" في `getRoleCategory()`.
+  * إدراج صلاحية `manage nurse availability` في مصفوفة الصلاحيات لشاشات التعديل (`roles.edit`) مع تسمية عربية واضحة وشارة إدارة.
+  * مزامنة قاعدة البيانات لتمتلك أدوارهما كافة الصلاحيات المعتمدة واكتمال التحقق في `RolePermissionsMatrixTest` و `NurseAvailabilityTest`.
+
 ## Session log (2026-11-18 — المرحلة 241: واجهة الهبوط المخصصة والذكية للممرضين خارج جدول الدوام الرسمي مع التحقق وإعادة المحاولة الفورية Dedicated Off-Duty Landing Screen for Unscheduled Nurses with Live Activation Check & Access Recovery)
 
 ### Done

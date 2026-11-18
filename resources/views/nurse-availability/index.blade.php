@@ -347,15 +347,15 @@
     </div>
 </div>
 
-{{-- Toast Feedback Notification Container --}}
+{{-- Toast Feedback Notification Container (Medical Light Theme) --}}
 <div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1090;">
-    <div id="availabilityToast" class="toast align-items-center text-white bg-dark border-0 rounded-4 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body d-flex align-items-center gap-2">
-                <i class="fas fa-info-circle text-primary" id="toastIcon"></i>
-                <span id="toastMessage">تم الحفظ بنجاح</span>
+    <div id="availabilityToast" class="toast align-items-center bg-white border border-success border-opacity-50 text-dark rounded-4 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex align-items-center py-1">
+            <div class="toast-body d-flex align-items-center gap-2 px-3 py-2">
+                <i class="fas fa-check-circle text-success fs-5" id="toastIcon"></i>
+                <span id="toastMessage" class="fw-bold text-dark">تم الحفظ بنجاح</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>
@@ -372,9 +372,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const bsToast = toastEl ? new bootstrap.Toast(toastEl, { delay: 2500 }) : null;
 
     function showToast(message, isSuccess = true) {
+        if (typeof toastr !== 'undefined') {
+            if (isSuccess) {
+                toastr.success(message);
+            } else {
+                toastr.error(message);
+            }
+            return;
+        }
+
         if (!toastEl) return;
         toastMessage.textContent = message;
-        toastIcon.className = isSuccess ? 'fas fa-check-circle text-success' : 'fas fa-exclamation-triangle text-danger';
+        toastIcon.className = isSuccess ? 'fas fa-check-circle text-success fs-5' : 'fas fa-exclamation-triangle text-danger fs-5';
+        toastEl.className = isSuccess 
+            ? 'toast align-items-center bg-white border border-success border-opacity-50 text-dark rounded-4 shadow-lg' 
+            : 'toast align-items-center bg-white border border-danger border-opacity-50 text-dark rounded-4 shadow-lg';
         bsToast.show();
     }
 

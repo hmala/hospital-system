@@ -767,10 +767,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view patients',
             'view surgeries',
             'edit surgeries',
+            'control surgeries',
             'view anesthesia station',
             'view resident station',
             'view lab tests',
             'view radiology',
+            'view medical devices',
         ];
         $anesthesiaRole = Role::firstOrCreate(['name' => 'التخدير']);
         $anesthesiaRole->givePermissionTo($anesthesiaPermissions);

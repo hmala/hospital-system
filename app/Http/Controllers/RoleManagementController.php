@@ -43,7 +43,7 @@ class RoleManagementController extends Controller
     public static function getRoleCategory(string $roleName): array
     {
         return match ($roleName) {
-            'doctor', 'resident', 'الجراح', 'التخدير' => [
+            'doctor', 'resident', 'الجراح', 'التخدير', 'anesthesia', 'icu_doctor', 'nicu_doctor' => [
                 'key' => 'medical',
                 'name' => 'الكوادر الطبية والجراحية',
                 'icon' => 'user-md',
@@ -61,7 +61,7 @@ class RoleManagementController extends Controller
                 'icon' => 'flask',
                 'color' => 'info',
             ],
-            'receptionist', 'consultation_receptionist', 'inquiry_staff', 'emergency_staff', 'nurse' => [
+            'receptionist', 'consultation_receptionist', 'inquiry_staff', 'emergency_staff', 'nurse', 'head_nurse', 'icu_nurse', 'nicu_nurse' => [
                 'key' => 'reception_nursing',
                 'name' => 'الاستقبال والتمريض والطوارئ',
                 'icon' => 'ambulance',
@@ -96,7 +96,7 @@ class RoleManagementController extends Controller
             'doctor' => ['label' => 'طبيب استشاري', 'icon' => 'user-md', 'color' => 'success'],
             'resident' => ['label' => 'طبيب مقيم', 'icon' => 'user-graduate', 'color' => 'success'],
             'الجراح' => ['label' => 'طبيب جراح', 'icon' => 'user-md', 'color' => 'info'],
-            'التخدير' => ['label' => 'طبيب / مقيم تخدير', 'icon' => 'syringe', 'color' => 'warning'],
+            'التخدير', 'anesthesia' => ['label' => 'طبيب / مقيم تخدير (Anesthesia)', 'icon' => 'syringe', 'color' => 'warning'],
             'accountant' => ['label' => 'المحاسب المالي', 'icon' => 'calculator', 'color' => 'primary'],
             'cashier' => ['label' => 'كاشير الصندوق', 'icon' => 'cash-register', 'color' => 'success'],
             'patient' => ['label' => 'مريض', 'icon' => 'user-injured', 'color' => 'info'],
@@ -105,6 +105,11 @@ class RoleManagementController extends Controller
             'inquiry_staff' => ['label' => 'موظف استعلامات عامة', 'icon' => 'info-circle', 'color' => 'info'],
             'emergency_staff' => ['label' => 'كادر قسم الطوارئ', 'icon' => 'ambulance', 'color' => 'danger'],
             'nurse' => ['label' => 'كادر تمريضي', 'icon' => 'user-nurse', 'color' => 'success'],
+            'head_nurse' => ['label' => 'رئيس / مشرف التمريض (Head Nurse)', 'icon' => 'user-nurse', 'color' => 'success'],
+            'icu_nurse' => ['label' => 'ممرض العناية المركزة (ICU)', 'icon' => 'heartbeat', 'color' => 'danger'],
+            'nicu_nurse' => ['label' => 'ممرض قسم الخدج (NICU)', 'icon' => 'baby', 'color' => 'pink'],
+            'icu_doctor' => ['label' => 'طبيب العناية المركزة (ICU)', 'icon' => 'user-md', 'color' => 'danger'],
+            'nicu_doctor' => ['label' => 'طبيب قسم الخدج (NICU)', 'icon' => 'user-md', 'color' => 'pink'],
             'lab_staff' => ['label' => 'كادر المختبر والتحاليل', 'icon' => 'flask', 'color' => 'secondary'],
             'radiology_staff' => ['label' => 'كادر الأشعة والتصوير', 'icon' => 'x-ray', 'color' => 'secondary'],
             'radiology_general' => ['label' => 'فني أشعة عامة (X-Ray)', 'icon' => 'x-ray', 'color' => 'secondary'],
@@ -195,6 +200,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -287,6 +293,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $moduleOrder = self::getModuleOrder();
@@ -628,6 +635,7 @@ class RoleManagementController extends Controller
             'view surgeon station' => ['label' => 'دخول محطة الطبيب الجراح', 'action' => 'محطة', 'badge' => 'primary'],
             'view anesthesia station' => ['label' => 'دخول محطة طبيب التخدير', 'action' => 'محطة', 'badge' => 'warning'],
             'view nursing station' => ['label' => 'دخول محطة التمريض السريري', 'action' => 'محطة', 'badge' => 'success'],
+            'manage nurse availability' => ['label' => 'إدارة وتوزيع جدول دوام التمريض اليومي وتسكين الطوابق', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage rooms' => ['label' => 'إدارة غرف العمليات وأسرة الرقود', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage surgery tab permissions' => ['label' => 'إدارة وتخصيص صلاحيات تبويبات المحطة السريرية', 'action' => 'إدارة', 'badge' => 'primary'],
             'view medical devices' => ['label' => 'عرض دليل الأجهزة والمستلزمات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
@@ -787,7 +795,7 @@ class RoleManagementController extends Controller
         }
 
         // 7. Surgeries & Operating Theaters & Stations
-        if (str_contains($permissionName, 'surg') || str_contains($permissionName, 'station') || $permissionName === 'manage rooms' || str_contains($permissionName, 'device')) {
+        if (str_contains($permissionName, 'surg') || str_contains($permissionName, 'station') || $permissionName === 'manage rooms' || str_contains($permissionName, 'device') || $permissionName === 'manage nurse availability') {
             return 'surgeries';
         }
 
