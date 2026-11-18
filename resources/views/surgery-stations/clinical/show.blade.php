@@ -3574,21 +3574,22 @@
                                             <i class="fas fa-user-doctor text-primary me-1"></i> الطبيب الاستشاري المطلوب: <span class="text-danger">*</span>
                                         </label>
                                         <select name="doctor_id" id="consultationDoctorSelect" class="form-select rounded-3" required>
-                                            <option value="">-- اختر الطبيب الاستشاري من القائمة --</option>
-                                            @foreach($availableConsultantDoctors as $cDoc)
+                                            <option value="">-- اضغط لاختيار الطبيب الاستشاري المتاح اليوم --</option>
+                                            @forelse($availableConsultantDoctors as $cDoc)
                                                 @php
                                                     $cDocName = $cDoc->user?->name ?? "طبيب #{$cDoc->id}";
                                                     $cDocSpec = $cDoc->specialization ?? $cDoc->department?->name ?? 'استشاري';
                                                     $cDocFee = $cDoc->consultation_fee ?? 0;
-                                                    $isAvail = $cDoc->is_available_today;
                                                 @endphp
                                                 <option value="{{ $cDoc->id }}" 
                                                         data-specialty="{{ $cDocSpec }}" 
                                                         data-fee="{{ $cDocFee }}"
                                                         {{ old('doctor_id') == $cDoc->id ? 'selected' : '' }}>
-                                                    {{ $isAvail ? '🟢' : '⚪' }} د. {{ $cDocName }} — [{{ $cDocSpec }}] ({{ number_format($cDocFee) }} د.ع)
+                                                    🟢 د. {{ $cDocName }} — [{{ $cDocSpec }}] (الأجر: {{ number_format($cDocFee) }} د.ع)
                                                 </option>
-                                            @endforeach
+                                            @empty
+                                                <option disabled>لا يوجد أطباء استشاريين متوفرين اليوم في المستشفى</option>
+                                            @endforelse
                                         </select>
                                     </div>
 

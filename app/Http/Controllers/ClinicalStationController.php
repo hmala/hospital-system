@@ -210,7 +210,8 @@ class ClinicalStationController extends Controller
         $labPackages = Package::has('labTests')->with('labTests')->get();
         $availableConsultantDoctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
-            ->orderByDesc('is_available_today')
+            ->where('is_available_today', true)
+            ->orderBy('id')
             ->get();
 
         return view('surgery-stations.clinical.show', compact(
