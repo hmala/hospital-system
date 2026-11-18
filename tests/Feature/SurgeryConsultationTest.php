@@ -117,7 +117,8 @@ class SurgeryConsultationTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('طلبات الاستشارات الطبية التخصصية');
         $response->assertSee('طلب استشارة طبية جديدة');
-        $response->assertSee('consultationDoctorSelect', false);
+        $response->assertSee('consultation_doctor_id', false);
+        $response->assertSee('consultation_doctor_name', false);
         $response->assertSee('د. محمود استشاري قلب');
         $response->assertSee('Cardiology');
         $response->assertSee('35,000 د.ع');

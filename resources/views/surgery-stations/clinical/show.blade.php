@@ -3568,29 +3568,29 @@
                             <form action="{{ route('clinical-station.consultations.store', $surgery) }}" method="POST">
                                 @csrf
                                 <div class="row g-3">
-                                    {{-- Doctor Selection --}}
+                                    {{-- Doctor Selection (Anesthesia Style Searchable Dropdown) --}}
                                     <div class="col-md-5">
-                                        <label class="form-label small fw-bold text-dark">
+                                        <label for="consultation_doctor_name" class="form-label small fw-bold text-dark">
                                             <i class="fas fa-user-doctor text-primary me-1"></i> الطبيب الاستشاري المطلوب: <span class="text-danger">*</span>
                                         </label>
-                                        <select name="doctor_id" id="consultationDoctorSelect" class="form-select rounded-3" required>
-                                            <option value="">-- اضغط لاختيار الطبيب الاستشاري المتاح اليوم --</option>
-                                            @forelse($availableConsultantDoctors as $cDoc)
-                                                @php
-                                                    $cDocName = $cDoc->user?->name ?? "طبيب #{$cDoc->id}";
-                                                    $cDocSpec = $cDoc->specialization ?? $cDoc->department?->name ?? 'استشاري';
-                                                    $cDocFee = $cDoc->consultation_fee ?? 0;
-                                                @endphp
-                                                <option value="{{ $cDoc->id }}" 
-                                                        data-specialty="{{ $cDocSpec }}" 
-                                                        data-fee="{{ $cDocFee }}"
-                                                        {{ old('doctor_id') == $cDoc->id ? 'selected' : '' }}>
-                                                    🟢 د. {{ $cDocName }} — [{{ $cDocSpec }}] (الأجر: {{ number_format($cDocFee) }} د.ع)
-                                                </option>
-                                            @empty
-                                                <option disabled>لا يوجد أطباء استشاريين متوفرين اليوم في المستشفى</option>
-                                            @endforelse
-                                        </select>
+                                        <input type="hidden" id="consultation_doctor_id" name="doctor_id" value="{{ old('doctor_id') }}" required>
+                                        <div class="position-relative" id="consultantAutocompleteWrapper">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                <input type="text" id="consultation_doctor_name"
+                                                       class="form-control rounded-0"
+                                                       autocomplete="off"
+                                                       placeholder="اختيار أو بحث طبيب استشاري متاح اليوم..."
+                                                       value="">
+                                                <button type="button" class="btn btn-outline-secondary d-none" id="clearConsultDocBtn" title="مسح">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" id="toggleConsultDocMenuBtn" title="عرض القائمة">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                </button>
+                                            </div>
+                                            <div id="consultantDoctorsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 240px; overflow-y: auto; display: none; font-size: 0.85rem;"></div>
+                                        </div>
                                     </div>
 
                                     {{-- Specialty / Department --}}
@@ -4762,18 +4762,134 @@ window.viewReadingDrainsModal = function(drains, total) {
     }
 };
 
+window.consultantDoctorsData = {!! json_encode(collect($availableConsultantDoctors ?? [])->map(function($doc) {
+    return [
+        'id' => $doc->id,
+        'name' => 'د. ' . ($doc->user?->name ?? 'طبيب استشاري'),
+        'specialization' => $doc->specialization ?? $doc->department?->name ?? 'استشاري',
+        'fee' => (float)($doc->consultation_fee ?? 0),
+        'fee_formatted' => number_format($doc->consultation_fee ?? 0),
+    ];
+})->values(), JSON_UNESCAPED_UNICODE) !!};
+
 document.addEventListener('DOMContentLoaded', function() {
-    const docSelect = document.getElementById('consultationDoctorSelect');
+    const input = document.getElementById('consultation_doctor_name');
+    const hiddenInput = document.getElementById('consultation_doctor_id');
+    const menu = document.getElementById('consultantDoctorsMenu');
+    const clearBtn = document.getElementById('clearConsultDocBtn');
+    const toggleBtn = document.getElementById('toggleConsultDocMenuBtn');
     const specInput = document.getElementById('consultationSpecialtyInput');
     const feeInput = document.getElementById('consultationFeeInput');
-    if (docSelect) {
-        docSelect.addEventListener('change', function() {
-            const opt = this.options[this.selectedIndex];
-            if (opt && opt.value) {
-                if (specInput) specInput.value = opt.getAttribute('data-specialty') || '';
-                if (feeInput) feeInput.value = opt.getAttribute('data-fee') || '0';
+    const wrapper = document.getElementById('consultantAutocompleteWrapper');
+
+    if (!input || !menu || !hiddenInput) return;
+
+    function renderDoctorOptions(filterText = '') {
+        const query = (filterText || '').trim().toLowerCase();
+        const list = window.consultantDoctorsData || [];
+
+        let matched = list.filter(item => {
+            const name = (item.name || '').toLowerCase();
+            const spec = (item.specialization || '').toLowerCase();
+            return !query || name.includes(query) || spec.includes(query);
+        });
+
+        if (matched.length === 0) {
+            menu.innerHTML = '<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle me-1"></i>لا يوجد أطباء استشاريين متاحين اليوم مطابقين للبحث</div>';
+            menu.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        matched.forEach(item => {
+            const isSelected = String(hiddenInput.value) === String(item.id);
+            const selectedClass = isSelected ? 'bg-primary-subtle border-primary' : '';
+
+            html += `
+                <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2 px-3 consult-doctor-option-item ${selectedClass}" style="cursor: pointer;" data-doctor-id="${item.id}" data-doctor-name="${item.name.replace(/"/g, '&quot;')}" data-specialty="${(item.specialization || '').replace(/"/g, '&quot;')}" data-fee="${item.fee}">
+                    <div class="d-flex align-items-center gap-2 text-truncate">
+                        <i class="fas fa-user-md text-primary"></i>
+                        <div>
+                            <span class="fw-bold text-dark d-block text-truncate">${item.name}</span>
+                            <span class="text-muted small">${item.specialization}</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-success border border-success-subtle small">${item.fee_formatted} د.ع</span>
+                </div>
+            `;
+        });
+
+        menu.innerHTML = html;
+        menu.style.display = 'block';
+
+        menu.querySelectorAll('.consult-doctor-option-item').forEach(el => {
+            el.addEventListener('click', function() {
+                const id = this.getAttribute('data-doctor-id');
+                const name = this.getAttribute('data-doctor-name');
+                const specialty = this.getAttribute('data-specialty');
+                const fee = this.getAttribute('data-fee');
+                if (id) selectDoctor(id, name, specialty, fee);
+            });
+        });
+    }
+
+    function selectDoctor(id, name, specialty, fee) {
+        hiddenInput.value = id;
+        input.value = name;
+        if (specInput) specInput.value = specialty || '';
+        if (feeInput) feeInput.value = fee || '0';
+        if (clearBtn) clearBtn.classList.remove('d-none');
+        menu.style.display = 'none';
+    }
+
+    input.addEventListener('focus', function() {
+        renderDoctorOptions(this.value);
+    });
+
+    input.addEventListener('input', function() {
+        if (!this.value.trim()) {
+            hiddenInput.value = '';
+            if (clearBtn) clearBtn.classList.add('d-none');
+        }
+        renderDoctorOptions(this.value);
+    });
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+            } else {
+                renderDoctorOptions('');
+                input.focus();
             }
         });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            input.value = '';
+            hiddenInput.value = '';
+            if (specInput) specInput.value = '';
+            if (feeInput) feeInput.value = '0';
+            clearBtn.classList.add('d-none');
+            menu.style.display = 'none';
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (wrapper && !wrapper.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
+
+    if (hiddenInput.value) {
+        const found = (window.consultantDoctorsData || []).find(d => String(d.id) === String(hiddenInput.value));
+        if (found) {
+            input.value = found.name;
+            if (clearBtn) clearBtn.classList.remove('d-none');
+        }
     }
 });
 </script>
