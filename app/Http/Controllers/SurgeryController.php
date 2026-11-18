@@ -472,8 +472,9 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك باستعراض تفاصيل العمليات الجراحية');
         }
 
-        // منع الأطباء الاستشاريين من استعراض وتعديل العمليات
-        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant') {
+        // منع الأطباء الاستشاريين من استعراض وتعديل العمليات إلا إذا كان لديهم استشارة مطلوبة لهذه العملية
+        $isConsultantForSurgery = $user && $user->doctor && $surgery->consultations()->where('doctor_id', $user->doctor->id)->exists();
+        if ($user->hasRole('doctor') && $user->doctor && $user->doctor->type === 'consultant' && ! $isConsultantForSurgery) {
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم باستعراض العمليات الجراحية');
         }
 
@@ -496,6 +497,9 @@ class SurgeryController extends Controller
             'additionalOperations.surgicalOperation',
             'room',
             'location',
+            'consultations.doctor.user',
+            'consultations.requestedBy',
+            'consultations.respondedBy',
         ]);
         $patients = Patient::with('user')->get()->sortBy(function ($p) {
             return optional($p->user)->name ?? '';

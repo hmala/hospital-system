@@ -696,6 +696,7 @@
             'nursing_care' => 'التمريض',
             'inpatient_survey' => 'الاستبيان ⭐',
             'tests' => 'الفحوصات',
+            'consultations' => 'الاستشارات 🩺',
         ];
     @endphp
 
@@ -1542,7 +1543,7 @@
                 </div>
 
                 {{-- Action Footer for direct update forms (excluded from vitals since Row 1 has the unified Save button) --}}
-                @if(!in_array($activeTab, ['vitals', 'treatments', 'supplies', 'follow_up', 'inpatient_survey', 'tests']) && $canWriteCurrentTab)
+                @if(!in_array($activeTab, ['vitals', 'treatments', 'supplies', 'follow_up', 'inpatient_survey', 'tests', 'consultations']) && $canWriteCurrentTab)
                     <div class="{{ $isCompactFormTab ? 'py-2 px-3' : 'p-3' }} bg-light border-top d-flex align-items-center justify-content-between">
                         <span class="text-muted small">
                             <i class="fas fa-info-circle text-info me-1"></i> المحطة السريرية تحفظ البيانات فورياً وتزامنها مع ملف المريض وقسم التمريض.
@@ -3527,6 +3528,273 @@
                     </script>
                 </div>
             @endif
+
+            {{-- =============================================================== --}}
+            {{-- SPECIAL SUB-VIEW FOR MEDICAL CONSULTATIONS TAB --}}
+            {{-- =============================================================== --}}
+            @if($activeTab === 'consultations')
+                <div class="p-4">
+                    {{-- Tab Header with Statistics --}}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 bg-light rounded-4 border">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-lg rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="fas fa-user-md fa-lg"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark">طلبات الاستشارات الطبية التخصصية (Medical Consultations)</h5>
+                                <p class="text-muted small mb-0">إرسال وتوثيق طلبات الاستشارة السريرية للأطباء الاستشاريين والأخصائيين المتاحين</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary px-3 py-2 rounded-pill fs-7">
+                                إجمالي الاستشارات: {{ $surgery->consultations->count() }}
+                            </span>
+                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fs-7">
+                                قيد الانتظار: {{ $surgery->consultations->where('status', 'pending')->count() }}
+                            </span>
+                            <span class="badge bg-success px-3 py-2 rounded-pill fs-7">
+                                مكتملة وموثقة: {{ $surgery->consultations->where('status', 'completed')->count() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Form to Request a New Consultation --}}
+                    @if($canWriteCurrentTab)
+                        <div class="card rounded-4 border shadow-sm p-3 mb-4 bg-white">
+                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2 border-bottom pb-2">
+                                <i class="fas fa-file-signature text-primary"></i>
+                                <span>طلب استشارة طبية جديدة (New Consultation Request)</span>
+                            </h6>
+                            <form action="{{ route('clinical-station.consultations.store', $surgery) }}" method="POST">
+                                @csrf
+                                <div class="row g-3">
+                                    {{-- Doctor Selection --}}
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-user-doctor text-primary me-1"></i> الطبيب الاستشاري المطلوب: <span class="text-danger">*</span>
+                                        </label>
+                                        <select name="doctor_id" id="consultationDoctorSelect" class="form-select rounded-3" required>
+                                            <option value="">-- اختر الطبيب الاستشاري من القائمة --</option>
+                                            @foreach($availableConsultantDoctors as $cDoc)
+                                                @php
+                                                    $cDocName = $cDoc->user?->name ?? "طبيب #{$cDoc->id}";
+                                                    $cDocSpec = $cDoc->specialization ?? $cDoc->department?->name ?? 'استشاري';
+                                                    $cDocFee = $cDoc->consultation_fee ?? 0;
+                                                    $isAvail = $cDoc->is_available_today;
+                                                @endphp
+                                                <option value="{{ $cDoc->id }}" 
+                                                        data-specialty="{{ $cDocSpec }}" 
+                                                        data-fee="{{ $cDocFee }}"
+                                                        {{ old('doctor_id') == $cDoc->id ? 'selected' : '' }}>
+                                                    {{ $isAvail ? '🟢' : '⚪' }} د. {{ $cDocName }} — [{{ $cDocSpec }}] ({{ number_format($cDocFee) }} د.ع)
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    {{-- Specialty / Department --}}
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-hospital-user text-secondary me-1"></i> التخصص / العيادة:
+                                        </label>
+                                        <input type="text" name="specialty" id="consultationSpecialtyInput" class="form-control rounded-3" 
+                                               value="{{ old('specialty') }}" placeholder="يتم تحديده تلقائياً">
+                                    </div>
+
+                                    {{-- Priority --}}
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-flag text-warning me-1"></i> الأولوية: <span class="text-danger">*</span>
+                                        </label>
+                                        <select name="priority" class="form-select rounded-3" required>
+                                            <option value="routine" {{ old('priority', 'routine') === 'routine' ? 'selected' : '' }}>اعتيادية (Routine)</option>
+                                            <option value="urgent" {{ old('priority') === 'urgent' ? 'selected' : '' }}>عاجلة (Urgent)</option>
+                                            <option value="stat" {{ old('priority') === 'stat' ? 'selected' : '' }}>طارئة جداً (STAT)</option>
+                                        </select>
+                                    </div>
+
+                                    {{-- Consultation Fee --}}
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-receipt text-success me-1"></i> الأجر (د.ع):
+                                        </label>
+                                        <input type="number" step="500" min="0" name="fee" id="consultationFeeInput" class="form-control rounded-3" 
+                                               value="{{ old('fee', 0) }}">
+                                    </div>
+
+                                    {{-- Reason / Question --}}
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-clipboard-question text-info me-1"></i> سبب طلب الاستشارة والتشخيص المبدئي (Clinical Question & Reason): <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea name="reason" class="form-control rounded-3" rows="3" 
+                                                  placeholder="يرجى كتابة سبب طلب الاستشارة، الأعراض الحالية، والمطلوب من الطبيب الاستشاري بدقة..." required>{{ old('reason') }}</textarea>
+                                    </div>
+
+                                    {{-- Submit Button --}}
+                                    <div class="col-12 text-end">
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                            <i class="fas fa-paper-plane me-1"></i> إرسال طلب الاستشارة
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
+
+                    {{-- Consultations List --}}
+                    <div class="card rounded-4 border shadow-sm p-3 bg-white">
+                        <h6 class="fw-bold text-dark mb-3 d-flex align-items-center justify-content-between border-bottom pb-2">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="fas fa-history text-secondary"></i>
+                                <span>سجل الاستشارات الطبية للعملية (Consultations History)</span>
+                            </span>
+                            <span class="badge bg-light text-dark border">{{ $surgery->consultations->count() }} طلب</span>
+                        </h6>
+
+                        @if($surgery->consultations->isEmpty())
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-user-md fa-3x text-secondary opacity-25 mb-3"></i>
+                                <h6 class="fw-bold">لا توجد استشارات طبية مسجلة لهذه العملية</h6>
+                                <p class="small mb-0">يمكنك طلب استشارة تخصصية جديدة لأي طبيب استشاري متاح باستخدام النموذج أعلاه.</p>
+                            </div>
+                        @else
+                            <div class="d-flex flex-column gap-3">
+                                @foreach($surgery->consultations->sortByDesc('created_at') as $consultation)
+                                    <div class="card border rounded-3 overflow-hidden shadow-xs">
+                                        {{-- Header row --}}
+                                        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between py-2 px-3 gap-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge {{ $consultation->status_badge_class }} px-2.5 py-1">
+                                                    {{ $consultation->status_label }}
+                                                </span>
+                                                <span class="badge {{ $consultation->priority_badge_class }} px-2.5 py-1">
+                                                    {{ $consultation->priority_label }}
+                                                </span>
+                                                <span class="fw-bold text-dark">
+                                                    <i class="fas fa-user-doctor text-primary me-1"></i> د. {{ $consultation->doctor?->user?->name ?? 'طبيب غير محدد' }}
+                                                </span>
+                                                <span class="text-muted small">({{ $consultation->specialty }})</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if($consultation->fee > 0)
+                                                    <span class="badge bg-light text-success border border-success-subtle px-2 py-1">
+                                                        <i class="fas fa-coins me-1"></i> {{ number_format($consultation->fee) }} د.ع
+                                                    </span>
+                                                @endif
+                                                <span class="text-muted small">
+                                                    <i class="far fa-clock me-1"></i> {{ $consultation->created_at->format('Y-m-d h:i A') }}
+                                                </span>
+                                                <span class="text-muted small">
+                                                    بواسطة: {{ $consultation->requestedBy?->name ?? 'طاقم الرعاية' }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {{-- Body row --}}
+                                        <div class="card-body p-3">
+                                            {{-- Reason --}}
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small fw-bold mb-1">
+                                                    <i class="fas fa-question-circle text-info me-1"></i> سبب وطلب الاستشارة:
+                                                </label>
+                                                <div class="p-2.5 bg-light rounded-3 border text-dark">
+                                                    {{ $consultation->reason }}
+                                                </div>
+                                            </div>
+
+                                            {{-- If completed, show response & recommendations --}}
+                                            @if($consultation->status === 'completed')
+                                                <div class="p-3 bg-success bg-opacity-10 border border-success-subtle rounded-3 mb-2">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <span class="fw-bold text-success d-flex align-items-center gap-1.5">
+                                                            <i class="fas fa-check-circle"></i>
+                                                            <span>رد الطبيب الاستشاري (Consultant Findings & Diagnosis):</span>
+                                                        </span>
+                                                        @if($consultation->responded_at)
+                                                            <span class="small text-muted">
+                                                                <i class="far fa-clock me-1"></i> {{ $consultation->responded_at->format('Y-m-d h:i A') }}
+                                                                (بواسطة: {{ $consultation->respondedBy?->name ?? 'الاستشاري' }})
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <p class="mb-2 text-dark" style="white-space: pre-wrap;">{{ $consultation->consultant_response }}</p>
+
+                                                    @if($consultation->consultant_recommendations)
+                                                        <div class="border-top pt-2 mt-2">
+                                                            <span class="fw-bold text-success small d-block mb-1">
+                                                                <i class="fas fa-clipboard-list me-1"></i> التوصيات والخطة العلاجية:
+                                                            </span>
+                                                            <p class="mb-0 text-dark small" style="white-space: pre-wrap;">{{ $consultation->consultant_recommendations }}</p>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            {{-- If pending, action buttons: Respond & Cancel --}}
+                                            @if($consultation->status === 'pending')
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top">
+                                                    <div class="text-muted small">
+                                                        <i class="fas fa-hourglass-half text-warning me-1"></i> بانتظار مرور ومعاينة الطبيب الاستشاري وتوثيق التوصيات.
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        {{-- Respond Button (Toggles response collapse/form) --}}
+                                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold"
+                                                                data-bs-toggle="collapse" data-bs-target="#respondConsultationCollapse{{ $consultation->id }}">
+                                                            <i class="fas fa-stethoscope me-1"></i> توثيق رد الاستشاري
+                                                        </button>
+
+                                                        {{-- Cancel Button --}}
+                                                        <form action="{{ route('clinical-station.consultations.cancel', [$surgery, $consultation]) }}" method="POST"
+                                                              onsubmit="return confirm('هل أنت متأكد من إلغاء طلب الاستشارة هذا؟');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                                                <i class="fas fa-times me-1"></i> إلغاء الطلب
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Inline Response Form --}}
+                                                <div class="collapse mt-3" id="respondConsultationCollapse{{ $consultation->id }}">
+                                                    <div class="card card-body bg-light border-success-subtle rounded-3 p-3">
+                                                        <h6 class="fw-bold text-success mb-2">
+                                                            <i class="fas fa-notes-medical me-1"></i> توثيق رد وتوصيات الاستشاري: د. {{ $consultation->doctor?->user?->name }}
+                                                        </h6>
+                                                        <form action="{{ route('clinical-station.consultations.respond', [$surgery, $consultation]) }}" method="POST">
+                                                            @csrf
+                                                            <div class="mb-3">
+                                                                <label class="form-label small fw-bold text-dark">
+                                                                    رد ومعاينة الاستشاري (Clinical Findings & Opinion): <span class="text-danger">*</span>
+                                                                </label>
+                                                                <textarea name="consultant_response" class="form-control rounded-3" rows="3" 
+                                                                          placeholder="اكتب التقرير السريري والرأي الطبي للاستشاري..." required></textarea>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label small fw-bold text-dark">
+                                                                    الخطة والتوصيات العلاجية (Recommendations & Treatment Plan):
+                                                                </label>
+                                                                <textarea name="consultant_recommendations" class="form-control rounded-3" rows="2" 
+                                                                          placeholder="توصيات الأدوية، الإجراءات الإضافية، المتابعة..."></textarea>
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                                                                    <i class="fas fa-check-circle me-1"></i> اعتماد وحفظ رد الاستشارة
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     @endif
 </div>
@@ -4492,6 +4760,21 @@ window.viewReadingDrainsModal = function(drains, total) {
         modal.show();
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    const docSelect = document.getElementById('consultationDoctorSelect');
+    const specInput = document.getElementById('consultationSpecialtyInput');
+    const feeInput = document.getElementById('consultationFeeInput');
+    if (docSelect) {
+        docSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt && opt.value) {
+                if (specInput) specInput.value = opt.getAttribute('data-specialty') || '';
+                if (feeInput) feeInput.value = opt.getAttribute('data-fee') || '0';
+            }
+        });
+    }
+});
 </script>
 @endpush
 @endsection

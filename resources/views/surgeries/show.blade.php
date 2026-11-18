@@ -70,6 +70,7 @@
         'detail_supplies' => 'المستلزمات الطبية',
         'detail_devices' => 'الأجهزة الطبية',
         'detail_followups' => 'المتابعات',
+        'detail_consultations' => 'الاستشارات الطبية',
         'detail_badges' => 'شارات الحالة',
     ];
 @endphp
@@ -2462,6 +2463,93 @@
                             @else
                                 <div class="alert alert-info mb-0">
                                     <i class="fas fa-info-circle me-1"></i> لا توجد متابعات مسجلة بعد.
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- TAB: الاستشارات الطبية --}}
+            @if(isset($visibleTabs['detail_consultations']))
+                @php $allConsultations = ($surgery->consultations ?? collect())->sortByDesc('created_at'); @endphp
+                <div class="tab-pane fade {{ $activeTab === 'detail_consultations' ? 'show active' : '' }}" id="pane-detail_consultations" role="tabpanel" aria-labelledby="tab-btn-detail_consultations">
+                    <div class="card clin-tab-card">
+                        <div class="card-body p-3 p-md-4">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                                <h6 class="fw-bold text-primary mb-0">
+                                    <i class="fas fa-user-md me-2"></i>سجل الاستشارات الطبية ({{ $allConsultations->count() }})
+                                </h6>
+                                <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations']) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    <i class="fas fa-plus me-1"></i>طلب استشارة جديدة بالمحطة السريرية
+                                </a>
+                            </div>
+
+                            @if($allConsultations->count() > 0)
+                                <div class="d-flex flex-column gap-3">
+                                    @foreach($allConsultations as $consultation)
+                                        <div class="card border rounded-3 overflow-hidden shadow-xs">
+                                            <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between py-2 px-3 gap-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge {{ $consultation->status_badge_class }} px-2.5 py-1">
+                                                        {{ $consultation->status_label }}
+                                                    </span>
+                                                    <span class="badge {{ $consultation->priority_badge_class }} px-2.5 py-1">
+                                                        {{ $consultation->priority_label }}
+                                                    </span>
+                                                    <span class="fw-bold text-dark">
+                                                        <i class="fas fa-user-doctor text-primary me-1"></i> د. {{ $consultation->doctor?->user?->name ?? 'طبيب غير محدد' }}
+                                                    </span>
+                                                    <span class="text-muted small">({{ $consultation->specialty }})</span>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-3">
+                                                    @if($consultation->fee > 0)
+                                                        <span class="badge bg-light text-success border border-success-subtle px-2 py-1">
+                                                            <i class="fas fa-coins me-1"></i> {{ number_format($consultation->fee) }} د.ع
+                                                        </span>
+                                                    @endif
+                                                    <span class="text-muted small">
+                                                        <i class="far fa-clock me-1"></i> {{ $consultation->created_at->format('Y-m-d h:i A') }}
+                                                    </span>
+                                                    <span class="text-muted small">
+                                                        بواسطة: {{ $consultation->requestedBy?->name ?? 'طاقم الرعاية' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-3">
+                                                <div class="mb-2">
+                                                    <label class="form-label text-muted small fw-bold mb-1">سبب الاستشارة:</label>
+                                                    <div class="p-2.5 bg-light rounded-3 border text-dark">{{ $consultation->reason }}</div>
+                                                </div>
+                                                @if($consultation->status === 'completed')
+                                                    <div class="p-3 bg-success bg-opacity-10 border border-success-subtle rounded-3">
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <span class="fw-bold text-success"><i class="fas fa-check-circle me-1"></i>رد وتوصيات الطبيب الاستشاري:</span>
+                                                            @if($consultation->responded_at)
+                                                                <span class="small text-muted">{{ $consultation->responded_at->format('Y-m-d h:i A') }} ({{ $consultation->respondedBy?->name }})</span>
+                                                            @endif
+                                                        </div>
+                                                        <p class="mb-2 text-dark" style="white-space: pre-wrap;">{{ $consultation->consultant_response }}</p>
+                                                        @if($consultation->consultant_recommendations)
+                                                            <div class="border-top pt-2 mt-1">
+                                                                <span class="fw-bold text-success small d-block mb-1">الخطة والتوصيات:</span>
+                                                                <p class="mb-0 text-dark small" style="white-space: pre-wrap;">{{ $consultation->consultant_recommendations }}</p>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    <div class="text-muted small mt-2">
+                                                        <i class="fas fa-hourglass-half text-warning me-1"></i> بانتظار رد وتوصيات الاستشاري.
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-4 text-muted">
+                                    <i class="fas fa-user-md fa-2x opacity-25 mb-2"></i>
+                                    <p class="mb-0">لا توجد استشارات طبية مسجلة لهذه العملية</p>
                                 </div>
                             @endif
                         </div>

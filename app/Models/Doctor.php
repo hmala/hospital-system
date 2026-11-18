@@ -79,6 +79,11 @@ class Doctor extends Model
         return $this->signature_data_uri ?: ($this->signature ? route('doctors.signature', $this) : null);
     }
 
+    public function getNameAttribute(): ?string
+    {
+        return $this->user?->name;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -107,6 +112,11 @@ class Doctor extends Model
     public function nicuConsultations()
     {
         return $this->hasMany(NicuConsultation::class, 'doctor_id');
+    }
+
+    public function surgeryConsultations()
+    {
+        return $this->hasMany(SurgeryConsultation::class, 'doctor_id');
     }
 
     public function prescriptions()

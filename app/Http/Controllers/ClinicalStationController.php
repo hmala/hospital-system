@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
 use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\NursingStation;
@@ -12,6 +13,7 @@ use App\Models\ResidentStationReading;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
+use App\Models\SurgeryConsultation;
 use App\Models\SurgeryLabTest;
 use App\Models\SurgeryRadiologyTest;
 use App\Models\SurgeryTabPermission;
@@ -140,6 +142,10 @@ class ClinicalStationController extends Controller
             'surgeryTreatments.stockMovement',
             'labTests.labTest',
             'radiologyTests.radiologyType',
+            'consultations.doctor.user',
+            'consultations.doctor.department',
+            'consultations.requestedBy',
+            'consultations.respondedBy',
         ]);
 
         // Floor sub-store location for patient's room and available supply batches
@@ -202,6 +208,10 @@ class ClinicalStationController extends Controller
         $availableLabTests = LabTest::where('is_active', true)->orderBy('name')->get();
         $availableRadiologyTypes = RadiologyType::where('is_active', true)->orderBy('name')->get();
         $labPackages = Package::has('labTests')->with('labTests')->get();
+        $availableConsultantDoctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->orderByDesc('is_available_today')
+            ->get();
 
         return view('surgery-stations.clinical.show', compact(
             'surgery',
@@ -235,6 +245,7 @@ class ClinicalStationController extends Controller
             'availableLabTests',
             'availableRadiologyTypes',
             'labPackages',
+            'availableConsultantDoctors',
             'isAdmin'
         ));
     }
@@ -1448,5 +1459,167 @@ class ClinicalStationController extends Controller
 
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
             ->with('success', "تم حذف فحص الأشعة «{$radName}» بنجاح.");
+    }
+
+    /**
+     * Store a new medical consultation request for the surgery patient.
+     */
+    public function storeConsultation(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin
+            || (($userPermissions['consultations'] ?? '') === SurgeryTabPermission::ACCESS_WRITE)
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator']));
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بطلب استشارة طبية.');
+        }
+
+        $validated = $request->validate([
+            'doctor_id' => 'required|integer|exists:doctors,id',
+            'specialty' => 'nullable|string|max:150',
+            'reason' => 'required|string|max:2000',
+            'priority' => 'required|in:routine,urgent,stat',
+            'fee' => 'nullable|numeric|min:0',
+        ]);
+
+        $doctor = Doctor::with(['user', 'department'])->findOrFail($validated['doctor_id']);
+        $specialty = ! empty($validated['specialty'])
+            ? trim($validated['specialty'])
+            : ($doctor->specialization ?? $doctor->department?->name ?? 'استشارة طبية تخصصية');
+
+        $fee = isset($validated['fee']) && $validated['fee'] !== ''
+            ? (float) $validated['fee']
+            : (float) ($doctor->consultation_fee ?? 0);
+
+        $consultation = $surgery->consultations()->create([
+            'doctor_id' => $doctor->id,
+            'specialty' => $specialty,
+            'reason' => $validated['reason'],
+            'priority' => $validated['priority'],
+            'fee' => $fee,
+            'status' => 'pending',
+            'requested_by' => Auth::id(),
+        ]);
+
+        $doctorName = $doctor->user?->name ?? "دكتور #{$doctor->id}";
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'create',
+                'surgery',
+                "طلب استشارة طبية باسم ({$doctorName} - {$specialty}) للعملية #{$surgery->id} للمريض {$surgery->patient?->user?->name}",
+                $surgery
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "تم إرسال طلب الاستشارة الطبية بنجاح إلى د. {$doctorName}.",
+                'consultation' => $consultation->load(['doctor.user', 'doctor.department', 'requestedBy']),
+            ]);
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
+            ->with('success', "تم إرسال طلب الاستشارة الطبية بنجاح إلى د. {$doctorName}.");
+    }
+
+    /**
+     * Respond to a medical consultation request by the consultant doctor.
+     */
+    public function respondConsultation(Request $request, Surgery $surgery, SurgeryConsultation $consultation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canRespond = $isAdmin
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'consultant']))
+            || ($user && $user->doctor && $user->doctor->id === $consultation->doctor_id);
+
+        if (! $canRespond) {
+            abort(403, 'غير مصرح لك بتوثيق الرد على هذه الاستشارة الطبية.');
+        }
+
+        if ($consultation->surgery_id !== $surgery->id) {
+            abort(404, 'الاستشارة غير مرتبطة بهذه العملية.');
+        }
+
+        $validated = $request->validate([
+            'consultant_response' => 'required|string|max:3000',
+            'consultant_recommendations' => 'nullable|string|max:3000',
+        ]);
+
+        $consultation->update([
+            'consultant_response' => $validated['consultant_response'],
+            'consultant_recommendations' => $validated['consultant_recommendations'] ?? null,
+            'status' => 'completed',
+            'responded_by' => Auth::id(),
+            'responded_at' => now(),
+        ]);
+
+        $doctorName = $consultation->doctor?->user?->name ?? 'الطبيب الاستشاري';
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'update',
+                'surgery',
+                "توثيق رد الاستشارة الطبية (د. {$doctorName}) للعملية #{$surgery->id} للمريض {$surgery->patient?->user?->name}",
+                $surgery
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم اعتماد وتوثيق رد وتوصيات الطبيب الاستشاري بنجاح.',
+                'consultation' => $consultation->fresh(['doctor.user', 'requestedBy', 'respondedBy']),
+            ]);
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
+            ->with('success', 'تم اعتماد وتوثيق رد وتوصيات الطبيب الاستشاري بنجاح.');
+    }
+
+    /**
+     * Cancel a pending medical consultation.
+     */
+    public function cancelConsultation(Surgery $surgery, SurgeryConsultation $consultation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canCancel = $isAdmin
+            || ($consultation->requested_by === $user->id)
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator']));
+
+        if (! $canCancel) {
+            abort(403, 'غير مصرح لك بإلغاء هذا الطلب.');
+        }
+
+        if ($consultation->surgery_id !== $surgery->id) {
+            abort(404, 'الاستشارة غير مرتبطة بهذه العملية.');
+        }
+
+        if ($consultation->status === 'completed') {
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
+                ->with('error', 'لا يمكن إلغاء استشارة طبية تم الرد عليها مسبقاً.');
+        }
+
+        $consultation->update([
+            'status' => 'cancelled',
+        ]);
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'delete',
+                'surgery',
+                "إلغاء طلب استشارة طبية للعملية #{$surgery->id}",
+                $surgery
+            );
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
+            ->with('success', 'تم إلغاء طلب الاستشارة الطبية بنجاح.');
     }
 }

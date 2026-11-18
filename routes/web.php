@@ -816,6 +816,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/clinical/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteLabTest'])->name('clinical-station.lab-tests.delete');
         Route::post('/clinical/{surgery}/radiology-tests', [\App\Http\Controllers\ClinicalStationController::class, 'storeRadiologyTest'])->name('clinical-station.radiology-tests.store');
         Route::delete('/clinical/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteRadiologyTest'])->name('clinical-station.radiology-tests.delete');
+        Route::post('/clinical/{surgery}/consultations', [\App\Http\Controllers\ClinicalStationController::class, 'storeConsultation'])->name('clinical-station.consultations.store');
+        Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation'])->name('clinical-station.consultations.respond');
+        Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation'])->name('clinical-station.consultations.cancel');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
         Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
         Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');
