@@ -26,6 +26,15 @@ use Illuminate\Support\Facades\Route;
 // Ensure numeric IDs for {radiology} so '/radiology/types' isn't captured
 Route::pattern('radiology', '[0-9]+');
 
+// تبديل لغة النظام (عربي / إنجليزي)
+Route::get('/lang/{locale}', function (string $locale) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    return redirect()->back();
+})->name('lang.switch');
+
 Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();

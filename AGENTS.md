@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 246: التأسيس المعماري لدعم تعدد اللغات عربي وإنجليزي وتبديل الجلسة وتوافق القائمة الجانبية Multi-Language Localization Foundation with Instant AR/EN Switcher, SetLocale Middleware & LTR Sidebar Layout)
+
+### Done
+- **الوسيط ومحرك اللغة ([app/Http/Middleware/SetLocale.php](file:///c:/wamp64/www/hospital-system/app/Http/Middleware/SetLocale.php), [bootstrap/app.php](file:///c:/wamp64/www/hospital-system/bootstrap/app.php))**:
+  * بناء وسيط `SetLocale` لضبط لغة التطبيق النشطة `App::setLocale()` استناداً لقيمة الجلسة `session('locale', 'ar')` مع حصرها بالأكواد المعتمدة (`ar`, `en`) والعودة التلقائية للعربية عند أي قيمة غير صالحة.
+  * تسجيل الوسيط ضمن حزمة `$middleware->web(append: [SetLocale::class])`.
+- **المسار والقاموس المركزي ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+  * تسجيل مسار التبديل الفوري `GET /lang/{locale}` مع حفظ الاختيار بالجلسة والرجوع التلقائي للصفحة الحالية `redirect()->back()`.
+  * إنشاء قاموس الترجمة المركزي `lang/en.json` متضمناً أهم المصطلحات الطبية والإدارية (أقسام المستشفى، المحطات السريرية، الحالات، الإجراءات، الأزرار، والترويسات).
+- **واجهة المستخدم والقالب الأساسي ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * جعل اتجاه ولغة المستند ديناميكياً: `<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">`.
+  * إضافة أزرار وشارات تبديل اللغة التفاعلية في الترويسة العلوية للموبايل/التابلت (`#tabletTopbar`) وفي بطاقة هوية الموظف بالقائمة الجانبية (`sidebar-user`).
+  * ضبط هندسة وتنسيقات القائمة الجانبية بالكامل (Fixed Coordinates: `top: 0; bottom: 0; z-index: 1030`) وضبط اتجاهات ومحاذاة الشاشات الكبيرة والمحمولة (`left: 0` في LTR و `right: 0` في RTL) مع تدفق المحتوى الرئيسي `main-content` وتصحيح زاوية دوران سهم التوسع (`rotate(90deg)` في LTR).
+- **الاختبارات الآلية وتنسيق الكود ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * بناء 5 اختبارات ميزة آلية تغطي التحويل للإنجليزية، والعودة للعربية، وحماية المدخلات غير الصالحة، وعرض `dir="ltr"` والترجمات، وعرض `dir="rtl"` بنسبة نجاح 100% (`5 passed, 15 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-18 — المرحلة 245: نظام طلب وإدارة الاستشارات الطبية التخصصية السريرية للعمليات الجراحية باسم الطبيب وتوثيق الردود Medical Consultations Inpatient Order System by Consultant Doctor with Clinical Response & Recommendations Tracking)
 
 ### Done

@@ -147,7 +147,7 @@
     }
 @endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -690,6 +690,62 @@
             }
         }
 
+        /* ===== القائمة الجانبية: تثبيت الإحداثيات والطبقات بالكامل ===== */
+        .sidebar {
+            top: 0 !important;
+            bottom: 0 !important;
+            z-index: 1030 !important;
+        }
+        html[dir="rtl"] .sidebar,
+        html:not([dir="ltr"]) .sidebar {
+            right: 0 !important;
+            left: auto !important;
+        }
+
+        /* ===== دعم الواجهة باللغة الإنجليزية واتجاه LTR ===== */
+        html[dir="ltr"] .sidebar {
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: auto !important;
+            z-index: 1030 !important;
+            border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+            border-left: none !important;
+        }
+        @media (min-width: 1401px) and (hover: hover) and (pointer: fine) {
+            html[dir="ltr"] .main-content {
+                margin-left: 250px !important;
+                margin-right: 0 !important;
+                width: calc(100% - 250px) !important;
+            }
+        }
+        @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
+            html[dir="ltr"] .sidebar {
+                left: 0 !important;
+                right: auto !important;
+                transform: translateX(-100%) !important;
+                box-shadow: 8px 0 28px rgba(15, 23, 42, 0.22) !important;
+            }
+            html[dir="ltr"] body.sidebar-open .sidebar {
+                transform: translateX(0) !important;
+            }
+            html[dir="ltr"] .main-content {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                width: 100% !important;
+            }
+        }
+        html[dir="ltr"] body {
+            text-align: left;
+        }
+        html[dir="ltr"] .sidebar-user,
+        html[dir="ltr"] .sidebar-header {
+            text-align: center;
+        }
+        html[dir="ltr"] .sidebar-section-title.collapsed i.toggle-icon {
+            transform: rotate(90deg);
+        }
+
         /* حل جذري لمشكلة تجميد وحجب نوافذ المودل في Bootstrap بسبب backdrop-filter */
         .modal-backdrop {
             display: none !important;
@@ -894,6 +950,10 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1 shadow-xs" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                <i class="fas fa-globe"></i>
+                <span class="fw-bold small">{{ app()->getLocale() === 'en' ? 'عربي' : 'EN' }}</span>
+            </a>
             @if(Auth::check())
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
                     <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
@@ -931,14 +991,26 @@
                         <div class="sidebar-user">
                             @if(Auth::check())
                                 <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
-                                <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                                </a>
+                                <div class="d-flex align-items-center justify-content-center gap-2 mt-1">
+                                    <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="badge text-decoration-none {{ app()->getLocale() === 'en' ? 'bg-primary text-white' : 'bg-primary-subtle text-primary border border-primary-subtle' }}" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                                        <i class="fas fa-globe me-1"></i> {{ app()->getLocale() === 'en' ? 'العربية' : 'English' }}
+                                    </a>
+                                    <span class="text-muted">|</span>
+                                    <a href="{{ route('logout') }}" class="logout-link text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="fas fa-sign-out-alt"></i> {{ __('تسجيل الخروج') }}
+                                    </a>
+                                </div>
                             @else
-                                <div><i class="fas fa-tv text-primary me-1"></i> <span>شاشة عرض عامة</span></div>
-                                <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
-                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                                </a>
+                                <div><i class="fas fa-tv text-primary me-1"></i> <span>{{ __('شاشة عرض عامة') }}</span></div>
+                                <div class="d-flex align-items-center justify-content-center gap-2 mt-1">
+                                    <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="badge text-decoration-none bg-primary-subtle text-primary border border-primary-subtle">
+                                        <i class="fas fa-globe me-1"></i> {{ app()->getLocale() === 'en' ? 'العربية' : 'English' }}
+                                    </a>
+                                    <span class="text-muted">|</span>
+                                    <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
+                                        <i class="fas fa-sign-in-alt"></i> {{ __('تسجيل الدخول') }}
+                                    </a>
+                                </div>
                             @endif
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">

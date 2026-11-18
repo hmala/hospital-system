@@ -78,6 +78,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 246 (2026-11-18 — `main`) — التأسيس المعماري لدعم تعدد اللغات (عربي / إنجليزي) والتبديل الفوري واتجاه LTR/RTL (Multi-Language Localization Foundation with Instant AR/EN Switcher, SetLocale Middleware & LTR Sidebar Layout)**:
+  * **الوسيط ومحرك اللغة ([app/Http/Middleware/SetLocale.php](file:///c:/wamp64/www/hospital-system/app/Http/Middleware/SetLocale.php), [bootstrap/app.php](file:///c:/wamp64/www/hospital-system/bootstrap/app.php))**:
+    - بناء وسيط `SetLocale` لضبط لغة التطبيق النشطة `App::setLocale()` استناداً لقيمة الجلسة `session('locale', 'ar')` مع حصرها بالأكواد المعتمدة (`ar`, `en`) والعودة التلقائية للعربية عند أي قيمة غير صالحة.
+    - تسجيل الوسيط ضمن حزمة `$middleware->web(append: [SetLocale::class])`.
+  * **المسار والقاموس المركزي ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+    - تسجيل مسار التبديل الفوري `GET /lang/{locale}` مع حفظ الاختيار بالجلسة والرجوع التلقائي للصفحة الحالية `redirect()->back()`.
+    - إنشاء قاموس الترجمة المركزي `lang/en.json` متضمناً أهم المصطلحات الطبية والإدارية (أقسام المستشفى، المحطات السريرية، الحالات، الإجراءات، الأزرار، والترويسات).
+  * **واجهة المستخدم والقالب الأساسي ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - جعل اتجاه ولغة المستند ديناميكياً: `<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">`.
+    - إضافة أزرار وشارات تبديل اللغة التفاعلية في الترويسة العلوية للموبايل/التابلت (`#tabletTopbar`) وفي بطاقة هوية الموظف بالقائمة الجانبية (`sidebar-user`).
+    - ضبط هندسة وتنسيقات القائمة الجانبية بالكامل (Fixed Coordinates: `top: 0; bottom: 0; z-index: 1030`) وضبط اتجاهات ومحاذاة الشاشات الكبيرة والمحمولة (`left: 0` في LTR و `right: 0` في RTL) مع تدفق المحتوى الرئيسي `main-content` بسلاسة تامة.
+  * **الاختبارات الآلية وتنسيق الكود ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+    - بناء 5 اختبارات ميزة آلية تغطي التحويل للإنجليزية، والعودة للعربية، وحماية المدخلات غير الصالحة، وعرض `dir="ltr"` والترجمات، وعرض `dir="rtl"` بنسبة نجاح 100% (`5 passed, 15 assertions`).
+    - اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 - **المرحلة 245 (2026-11-18 — `main`) — نظام طلب وإدارة الاستشارات الطبية التخصصية السريرية للعمليات الجراحية باسم الطبيب وتوثيق الردود (Medical Consultations Inpatient Order System by Consultant Doctor with Clinical Response & Recommendations Tracking)**:
   * **قاعدة البيانات والنموذج ([database/migrations/2026_11_18_120000_create_surgery_consultations_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_18_120000_create_surgery_consultations_table.php), [app/Models/SurgeryConsultation.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryConsultation.php), [app/Models/Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [app/Models/Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php))**:
     - إنشاء جدول مستقل `surgery_consultations` متضمناً: معرف العملية `surgery_id`، معرف الطبيب الاستشاري `doctor_id`، التخصص `specialty`، سبب الاستشارة والتشخيص `reason`، درجة الأولوية `priority` (`routine`, `urgent`, `stat`)، حالة الاستشارة `status` (`pending`, `completed`, `cancelled`)، رد وتوصيات الاستشاري `consultant_response` و `consultant_recommendations`، أجر الاستشارة `fee`، مع توثيق هوية الطالب والرد والوقت (`requested_by`, `responded_by`, `responded_at`).
