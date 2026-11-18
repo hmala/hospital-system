@@ -126,7 +126,7 @@ class StaffRequestController extends Controller
             // show pending, in progress, and completed so that rows remain after completion
             $emergencyLabRequests = \App\Models\EmergencyLabRequest::with(['emergency', 'patient.user', 'labTests.references'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
-                ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'asc')
                 ->get();
         }
@@ -134,7 +134,7 @@ class StaffRequestController extends Controller
         if ($user->hasRole('radiology_staff') || $user->hasAnyRole(['radiology_echo', 'radiology_ultrasound', 'radiology_mri', 'radiology_general', 'admin'])) {
             $emergencyRadiologyRequests = \App\Models\EmergencyRadiologyRequest::with(['emergency', 'patient.user', 'radiologyTypes'])
                 ->whereIn('status', ['pending', 'in_progress', 'completed'])
-                ->orderByRaw("FIELD(priority, 'critical', 'urgent')")
+                ->orderByRaw("CASE WHEN priority = 'critical' THEN 1 WHEN priority = 'urgent' THEN 2 ELSE 3 END")
                 ->orderBy('requested_at', 'asc')
                 ->get();
         }

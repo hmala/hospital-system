@@ -8,10 +8,10 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-file-medical me-2"></i>
-                    تسجيل زيارة جديدة
+                    {{ __('تسجيل زيارة جديدة') }}
                 </h2>
                 <a href="{{ route('visits.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للقائمة
+                    <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-2"></i>{{ __("العودة للقائمة") }}
                 </a>
             </div>
         </div>
@@ -21,8 +21,8 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-success">
-                <h6><i class="fas fa-calendar-check me-2"></i>تحويل موعد إلى زيارة</h6>
-                <p class="mb-0">أنت تقوم بتحويل الموعد المحدد مسبقاً إلى زيارة طبية مسجلة.</p>
+                <h6><i class="fas fa-calendar-check me-2"></i>{{ __("تحويل موعد إلى زيارة") }}</h6>
+                <p class="mb-0">{{ __("أنت تقوم بتحويل الموعد المحدد مسبقاً إلى زيارة طبية مسجلة.") }}</p>
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">بيانات الزيارة</h5>
+                    <h5 class="mb-0">{{ __("بيانات الزيارة") }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('visits.store') }}">
@@ -46,19 +46,19 @@
                         <div class="row">
                             <!-- المريض -->
                             <div class="col-md-6 mb-3">
-                                <label for="patient_id" class="form-label">المريض *</label>
+                                <label for="patient_id" class="form-label">{{ __("المريض *") }}</label>
                                 @if($appointment)
                                     <input type="hidden" name="patient_id" value="{{ $appointment->patient_id }}">
-                                    <input type="text" class="form-control" value="{{ optional($appointment->patient->user)->name ?? 'غير معروف' }} - {{ optional($appointment->patient->user)->phone ?? 'غير متوفر' }}" readonly style="background-color: #1f7bd8;">
-                                    <small class="text-muted">مأخوذ من الموعد المحدد مسبقاً</small>
+                                    <input type="text" class="form-control" value="{{ optional($appointment->patient->user)->name ?? __('غير معروف') }} - {{ optional($appointment->patient->user)->phone ?? __('غير متوفر') }}" readonly style="background-color: #1f7bd8;">
+                                    <small class="text-muted">{{ __("مأخوذ من الموعد المحدد مسبقاً") }}</small>
                                 @else
                                     <select class="form-select @error('patient_id') is-invalid @enderror" 
                                             id="patient_id" name="patient_id" required>
-                                        <option value="">اختر المريض</option>
+                                        <option value="">{{ __("اختر المريض") }}</option>
                                         @foreach($patients as $patient)
                                             <option value="{{ $patient->id }}" 
                                                     {{ ($selectedPatient && $selectedPatient->id == $patient->id) ? 'selected' : (old('patient_id') == $patient->id ? 'selected' : '') }}>
-                                                {{ optional($patient->user)->name ?? 'غير معروف' }} - {{ optional($patient->user)->phone ?? 'غير متوفر' }}
+                                                {{ optional($patient->user)->name ?? __('غير معروف') }} - {{ optional($patient->user)->phone ?? __('غير متوفر') }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -70,18 +70,18 @@
 
                             <!-- الطبيب -->
                             <div class="col-md-6 mb-3">
-                                <label for="doctor_id" class="form-label">الطبيب *</label>
+                                <label for="doctor_id" class="form-label">{{ __("الطبيب *") }}</label>
                                 @if($appointment)
                                     <input type="hidden" name="doctor_id" value="{{ $appointment->doctor_id }}">
-                                    <input type="text" class="form-control" value="د. {{ $appointment->doctor?->user?->name ?? 'غير محدد' }} - {{ $appointment->doctor?->specialization ?? 'غير محدد' }}" readonly style="background-color: #e9ecef;">
+                                    <input type="text" class="form-control" value="{{ __("د.") }} {{ $appointment->doctor?->user?->name ?? __('غير محدد') }} - {{ $appointment->doctor?->specialization ?? __('غير محدد') }}" readonly style="background-color: #e9ecef;">
                                 @else
                                     <select class="form-select @error('doctor_id') is-invalid @enderror" 
                                             id="doctor_id" name="doctor_id" required>
-                                        <option value="">اختر الطبيب</option>
+                                        <option value="">{{ __("اختر الطبيب") }}</option>
                                         @foreach($doctors as $doctor)
                                             <option value="{{ $doctor->id }}" 
                                                     {{ old('doctor_id', $defaultDoctor) == $doctor->id ? 'selected' : '' }}>
-                                                د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
+                                                {{ __('د.') }} {{ optional($doctor->user)->name ?? __('غير معروف') }} - {{ $doctor->specialization }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -95,14 +95,14 @@
                         <div class="row">
                             <!-- العيادة -->
                             <div class="col-md-6 mb-3">
-                                <label for="department_id" class="form-label">العيادة *</label>
+                                <label for="department_id" class="form-label">{{ __("العيادة *") }}</label>
                                 @if($appointment)
                                     <input type="hidden" name="department_id" value="{{ $appointment->department_id }}">
                                     <input type="text" class="form-control" value="{{ $appointment->department->name }} - {{ $appointment->department->room_number }}" readonly style="background-color: #e9ecef;">
                                 @else
                                     <select class="form-select @error('department_id') is-invalid @enderror" 
                                             id="department_id" name="department_id" required>
-                                        <option value="">اختر العيادة</option>
+                                        <option value="">{{ __("اختر العيادة") }}</option>
                                         @foreach($departments as $department)
                                             <option value="{{ $department->id }}" 
                                                     {{ old('department_id', $defaultDepartment) == $department->id ? 'selected' : '' }}>
@@ -118,16 +118,16 @@
 
                             <!-- نوع الزيارة -->
                             <div class="col-md-6 mb-3">
-                                <label for="visit_type" class="form-label">نوع الزيارة *</label>
+                                <label for="visit_type" class="form-label">{{ __("نوع الزيارة *") }}</label>
                                 <select class="form-select @error('visit_type') is-invalid @enderror" 
                                         id="visit_type" name="visit_type" required>
-                                    <option value="">اختر نوع الزيارة</option>
-                                    <option value="checkup" {{ old('visit_type') == 'checkup' ? 'selected' : '' }}>كشف دوري</option>
-                                    <option value="followup" {{ old('visit_type') == 'followup' ? 'selected' : '' }}>متابعة</option>
-                                    <option value="emergency" {{ old('visit_type') == 'emergency' ? 'selected' : '' }}>طوارئ</option>
-                                    <option value="surgery" {{ old('visit_type') == 'surgery' ? 'selected' : '' }}>عملية جراحية</option>
-                                    <option value="lab" {{ old('visit_type') == 'lab' ? 'selected' : '' }}>مختبر</option>
-                                    <option value="radiology" {{ old('visit_type') == 'radiology' ? 'selected' : '' }}>أشعة</option>
+                                    <option value="">{{ __("اختر نوع الزيارة") }}</option>
+                                    <option value="checkup" {{ old('visit_type') == 'checkup' ? 'selected' : '' }}>{{ __("كشف دوري") }}</option>
+                                    <option value="followup" {{ old('visit_type') == 'followup' ? 'selected' : '' }}>{{ __("متابعة") }}</option>
+                                    <option value="emergency" {{ old('visit_type') == 'emergency' ? 'selected' : '' }}>{{ __("طوارئ") }}</option>
+                                    <option value="surgery" {{ old('visit_type') == 'surgery' ? 'selected' : '' }}>{{ __("عملية جراحية") }}</option>
+                                    <option value="lab" {{ old('visit_type') == 'lab' ? 'selected' : '' }}>{{ __("مختبر") }}</option>
+                                    <option value="radiology" {{ old('visit_type') == 'radiology' ? 'selected' : '' }}>{{ __("أشعة") }}</option>
                                 </select>
                                 @error('visit_type')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -138,7 +138,7 @@
                         <div class="row">
                             <!-- تاريخ الزيارة -->
                             <div class="col-md-6 mb-3">
-                                <label for="visit_date" class="form-label">تاريخ الزيارة *</label>
+                                <label for="visit_date" class="form-label">{{ __("تاريخ الزيارة *") }}</label>
                                 <input type="date" 
                                        class="form-control @error('visit_date') is-invalid @enderror" 
                                        id="visit_date" 
@@ -150,13 +150,13 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 @if($appointment)
-                                    <small class="text-muted">مأخوذ من الموعد المحدد مسبقاً</small>
+                                    <small class="text-muted">{{ __("مأخوذ من الموعد المحدد مسبقاً") }}</small>
                                 @endif
                             </div>
 
                             <!-- وقت الزيارة -->
                             <div class="col-md-6 mb-3">
-                                <label for="visit_time" class="form-label">وقت الزيارة *</label>
+                                <label for="visit_time" class="form-label">{{ __("وقت الزيارة *") }}</label>
                                 <input type="time" 
                                        class="form-control @error('visit_time') is-invalid @enderror" 
                                        id="visit_time" 
@@ -168,19 +168,19 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 @if($appointment)
-                                    <small class="text-muted">مأخوذ من الموعد المحدد مسبقاً</small>
+                                    <small class="text-muted">{{ __("مأخوذ من الموعد المحدد مسبقاً") }}</small>
                                 @endif
                             </div>
                         </div>
 
                         <!-- الشكوى الرئيسية -->
                         <div class="mb-3">
-                            <label for="chief_complaint" class="form-label">الشكوى الرئيسية *</label>
+                            <label for="chief_complaint" class="form-label">{{ __("الشكوى الرئيسية *") }}</label>
                             <textarea class="form-control @error('chief_complaint') is-invalid @enderror" 
                                       id="chief_complaint" 
                                       name="chief_complaint" 
                                       rows="3" 
-                                      placeholder="اذكر الشكوى الرئيسية للمريض..."
+                                      placeholder="{{ __("اذكر الشكوى الرئيسية للمريض...") }}"
                                       required>{{ old('chief_complaint', $defaultComplaint) }}</textarea>
                             @error('chief_complaint')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -192,10 +192,10 @@
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
-                                {{ $appointment ? 'تحويل إلى زيارة' : 'حفظ الزيارة' }}
+                                {{ $appointment ? __('تحويل إلى زيارة') : __('حفظ الزيارة') }}
                             </button>
                             <a href="{{ route('visits.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times me-2"></i>إلغاء
+                                <i class="fas fa-times me-2"></i>{{ __("إلغاء") }}
                             </a>
                         </div>
                     </form>
@@ -209,26 +209,26 @@
                 <div class="card-header bg-info text-white">
                     <h6 class="mb-0">
                         <i class="fas fa-info-circle me-2"></i>
-                        {{ $appointment ? 'معلومات الموعد' : 'معلومات مهمة' }}
+                        {{ $appointment ? __('معلومات الموعد') : __('معلومات مهمة') }}
                     </h6>
                 </div>
                 <div class="card-body">
                     @if($appointment)
                     <div class="alert alert-success">
-                        <h6>تفاصيل الموعد:</h6>
-                        <p class="mb-1"><strong>المريض:</strong> {{ optional($appointment->patient->user)->name ?? 'غير معروف' }}</p>
-                        <p class="mb-1"><strong>الطبيب:</strong> د. {{ $appointment->doctor?->user?->name ?? 'غير محدد' }}</p>
-                        <p class="mb-0"><strong>التاريخ:</strong> {{ $appointment->appointment_date ? $appointment->appointment_date->format('Y-m-d') : 'غير محدد' }}</p>
+                        <h6>{{ __("تفاصيل الموعد:") }}</h6>
+                        <p class="mb-1"><strong>{{ __("المريض:") }}</strong> {{ optional($appointment->patient->user)->name ?? __('غير معروف') }}</p>
+                        <p class="mb-1"><strong>{{ __("الطبيب:") }}</strong> {{ __("د.") }} {{ $appointment->doctor?->user?->name ?? __('غير محدد') }}</p>
+                        <p class="mb-0"><strong>{{ __("التاريخ:") }}</strong> {{ $appointment->appointment_date ? $appointment->appointment_date->format('Y-m-d') : __('غير محدد') }}</p>
                     </div>
                     @endif
                     
                     @if($selectedPatient && !$appointment)
                     <div class="alert alert-warning">
-                        <h6>معلومات المريض المحدد:</h6>
-                        <p class="mb-1"><strong>الاسم:</strong> {{ optional($selectedPatient->user)->name ?? 'غير معروف' }}</p>
-                        <p class="mb-1"><strong>العمر:</strong> {{ $selectedPatient->age }} سنة</p>
-                        <p class="mb-1"><strong>فصيلة الدم:</strong> {{ $selectedPatient->blood_type ?? '---' }}</p>
-                        <p class="mb-0"><strong>الحساسيات:</strong> {{ $selectedPatient->allergies ? Str::limit($selectedPatient->allergies, 50) : '---' }}</p>
+                        <h6>{{ __("معلومات المريض المحدد:") }}</h6>
+                        <p class="mb-1"><strong>{{ __("الاسم:") }}</strong> {{ optional($selectedPatient->user)->name ?? __('غير معروف') }}</p>
+                        <p class="mb-1"><strong>{{ __("العمر:") }}</strong> {{ $selectedPatient->age }} {{ __("سنة") }}</p>
+                        <p class="mb-1"><strong>{{ __("فصيلة الدم:") }}</strong> {{ $selectedPatient->blood_type ?? '---' }}</p>
+                        <p class="mb-0"><strong>{{ __("الحساسيات:") }}</strong> {{ $selectedPatient->allergies ? Str::limit($selectedPatient->allergies, 50) : '---' }}</p>
                     </div>
                     @endif
                 </div>

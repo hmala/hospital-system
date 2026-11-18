@@ -44,17 +44,17 @@
                     <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-3">
                         <div>
                             <h2 class="mb-1 fw-bold">
-                                <i class="fas fa-stethoscope me-3 text-cyan-300"></i>سجل زيارات العيادات والاستشارية
+                                <i class="fas fa-stethoscope me-3 text-cyan-300"></i>{{ __("سجل زيارات العيادات والاستشارية") }}
                             </h2>
-                            <p class="mb-0 opacity-75">الأرشيف المركزي لكشوفات المرضى، متابعة التشخيصات الطبية، وتحويلات العمليات الجراحية</p>
+                            <p class="mb-0 opacity-75">{{ __("الأرشيف المركزي لكشوفات المرضى، متابعة التشخيصات الطبية، وتحويلات العمليات الجراحية") }}</p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
                             <a href="{{ route('visits.export', request()->query()) }}" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
-                                <i class="fas fa-file-excel me-2 text-success"></i>تصدير إكسل
+                                <i class="fas fa-file-excel me-2 text-success"></i>{{ __("تصدير إكسل") }}
                             </a>
                             @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('create visits'))
                             <a href="{{ route('visits.create') }}" class="btn btn-primary bg-gradient border-0 fw-bold px-4 py-2 rounded-pill shadow-sm" style="background-color: #3b82f6;">
-                                <i class="fas fa-plus me-2"></i>تسجيل زيارة جديدة
+                                <i class="fas fa-plus me-2"></i>{{ __("تسجيل زيارة جديدة") }}
                             </a>
                             @endif
                         </div>
@@ -87,7 +87,7 @@
                         <i class="fas fa-history fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">إجمالي الزيارات</div>
+                        <div class="text-muted small fw-bold">{{ __("إجمالي الزيارات") }}</div>
                         <div class="fs-4 fw-bold text-dark">{{ number_format($stats['total']) }}</div>
                     </div>
                 </div>
@@ -100,7 +100,7 @@
                         <i class="fas fa-calendar-day fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">زيارات اليوم</div>
+                        <div class="text-muted small fw-bold">{{ __("زيارات اليوم") }}</div>
                         <div class="fs-4 fw-bold text-dark">{{ number_format($stats['today']) }}</div>
                     </div>
                 </div>
@@ -113,7 +113,7 @@
                         <i class="fas fa-check-double fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">مكتملة</div>
+                        <div class="text-muted small fw-bold">{{ __("مكتملة") }}</div>
                         <div class="fs-4 fw-bold text-dark">{{ number_format($stats['completed']) }}</div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                         <i class="fas fa-spinner fa-spin-pulse fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">قيد الفحص حالياً</div>
+                        <div class="text-muted small fw-bold">{{ __("قيد الفحص حالياً") }}</div>
                         <div class="fs-4 fw-bold text-dark">{{ number_format($stats['in_progress']) }}</div>
                     </div>
                 </div>
@@ -139,7 +139,7 @@
                         <i class="fas fa-procedures fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">تحويلات لعمليات بانتظار الحجز</div>
+                        <div class="text-muted small fw-bold">{{ __("تحويلات لعمليات بانتظار الحجز") }}</div>
                         <div class="fs-4 fw-bold text-danger">{{ number_format($stats['needs_surgery']) }}</div>
                     </div>
                 </div>
@@ -156,9 +156,9 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-dark">
                             <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                            زيارات تستوجب حجز عملية جراحية عاجلة ({{ $needsSurgeryVisits->count() }})
+                            {{ __("زيارات تستوجب حجز عملية جراحية عاجلة") }} ({{ $needsSurgeryVisits->count() }})
                         </h5>
-                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">تحتاج تنسيق العمليات</span>
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ __("تحتاج تنسيق العمليات") }}</span>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -167,12 +167,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-4">#</th>
-                                    <th>التاريخ</th>
-                                    <th>المريض</th>
-                                    <th>الطبيب المعالج</th>
-                                    <th>القسم</th>
-                                    <th>ملاحظات وتفاصيل العملية</th>
-                                    <th class="text-center pe-4">الإجراء</th>
+                                    <th>{{ __("التاريخ") }}</th>
+                                    <th>{{ __("المريض") }}</th>
+                                    <th>{{ __("الطبيب المعالج") }}</th>
+                                    <th>{{ __("القسم") }}</th>
+                                    <th>{{ __("ملاحظات وتفاصيل العملية") }}</th>
+                                    <th class="text-center pe-4">{{ __("الإجراء") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -184,26 +184,26 @@
                                     </td>
                                     <td>
                                         <a href="{{ route('patients.show', $nsVisit->patient_id) }}" class="fw-bold text-decoration-none text-primary">
-                                            {{ optional($nsVisit->patient->user)->name ?? 'غير معروف' }}
+                                            {{ optional($nsVisit->patient->user)->name ?? __('غير معروف') }}
                                         </a>
-                                        <div class="text-muted small">{{ optional($nsVisit->patient->user)->phone ?? 'لا يوجد هاتف' }}</div>
+                                        <div class="text-muted small">{{ optional($nsVisit->patient->user)->phone ?? __('لا يوجد هاتف') }}</div>
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-dark">د. {{ optional($nsVisit->doctor->user)->name ?? 'غير محدد' }}</span>
+                                        <span class="fw-bold text-dark">{{ __('د.') }} {{ optional($nsVisit->doctor->user)->name ?? __('غير محدد') }}</span>
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary bg-opacity-10 text-dark">{{ optional($nsVisit->department)->name ?? '-' }}</span>
                                     </td>
                                     <td>
-                                        <span class="text-danger fw-semibold">{{ Str::limit($nsVisit->surgery_notes, 80) ?: 'لم تدون تفاصيل' }}</span>
+                                        <span class="text-danger fw-semibold">{{ Str::limit($nsVisit->surgery_notes, 80) ?: __('لم تدون تفاصيل') }}</span>
                                     </td>
                                     <td class="text-center pe-4">
                                         <a href="{{ route('surgeries.create', ['visit_id' => $nsVisit->id, 'patient_id' => $nsVisit->patient_id, 'doctor_id' => $nsVisit->doctor_id, 'department_id' => $nsVisit->department_id]) }}" 
                                            class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
-                                            <i class="fas fa-procedures me-1"></i>حجز العملية الآن
+                                            <i class="fas fa-procedures me-1"></i>{{ __("حجز العملية الآن") }}
                                         </a>
                                         <a href="{{ route('visits.show', $nsVisit) }}" class="btn btn-sm btn-light border rounded-pill px-3 ms-1">
-                                            <i class="fas fa-eye me-1 text-muted"></i>عرض
+                                            <i class="fas fa-eye me-1 text-muted"></i>{{ __("عرض") }}
                                         </a>
                                     </td>
                                 </tr>
@@ -223,21 +223,21 @@
             <form method="GET" action="{{ route('visits.index') }}" class="row g-3 align-items-end">
                 <!-- البحث النصي -->
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted">بحث سريع:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("بحث سريع:") }}</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control border-start-0" placeholder="اسم المريض، الهاتف، الإضبارة...">
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control border-start-0" placeholder="{{ __("اسم المريض، الهاتف، الإضبارة...") }}">
                     </div>
                 </div>
 
                 <!-- الطبيب -->
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">الطبيب المعالج:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("الطبيب المعالج:") }}</label>
                     <select name="doctor_id" class="form-select">
-                        <option value="">-- كافة الأطباء --</option>
+                        <option value="">{{ __("-- كافة الأطباء --") }}</option>
                         @foreach($doctors as $doc)
                             <option value="{{ $doc->id }}" {{ request('doctor_id') == $doc->id ? 'selected' : '' }}>
-                                د. {{ optional($doc->user)->name }}
+                                {{ __("د.") }} {{ optional($doc->user)->name }}
                             </option>
                         @endforeach
                     </select>
@@ -245,9 +245,9 @@
 
                 <!-- العيادة / القسم -->
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">القسم / العيادة:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("القسم / العيادة:") }}</label>
                     <select name="department_id" class="form-select">
-                        <option value="">-- كافة العيادات --</option>
+                        <option value="">{{ __("-- كافة العيادات --") }}</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
                                 {{ $dept->name }}
@@ -258,34 +258,34 @@
 
                 <!-- حالة الزيارة -->
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">حالة الزيارة:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("حالة الزيارة:") }}</label>
                     <select name="status" class="form-select">
-                        <option value="">-- كافة الحالات --</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتملة</option>
-                        <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>قيد الفحص</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغاة</option>
+                        <option value="">{{ __("-- كافة الحالات --") }}</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>{{ __("مكتملة") }}</option>
+                        <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>{{ __("قيد الفحص") }}</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>{{ __("ملغاة") }}</option>
                     </select>
                 </div>
 
                 <!-- الحاجة لعملية -->
                 <div class="col-md-1">
-                    <label class="form-label small fw-bold text-muted">عملية؟</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("عملية؟") }}</label>
                     <select name="needs_surgery" class="form-select px-2">
-                        <option value="">الكل</option>
-                        <option value="1" {{ request('needs_surgery') === '1' ? 'selected' : '' }}>نعم</option>
-                        <option value="0" {{ request('needs_surgery') === '0' ? 'selected' : '' }}>لا</option>
+                        <option value="">{{ __("الكل") }}</option>
+                        <option value="1" {{ request('needs_surgery') === '1' ? 'selected' : '' }}>{{ __("نعم") }}</option>
+                        <option value="0" {{ request('needs_surgery') === '0' ? 'selected' : '' }}>{{ __("لا") }}</option>
                     </select>
                 </div>
 
                 <!-- من تاريخ -->
                 <div class="col-md-1">
-                    <label class="form-label small fw-bold text-muted">من تاريخ:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("من تاريخ:") }}</label>
                     <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control px-2">
                 </div>
 
                 <!-- إلى تاريخ -->
                 <div class="col-md-1">
-                    <label class="form-label small fw-bold text-muted">إلى تاريخ:</label>
+                    <label class="form-label small fw-bold text-muted">{{ __("إلى تاريخ:") }}</label>
                     <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control px-2">
                 </div>
 
@@ -293,11 +293,11 @@
                 <div class="col-12 d-flex justify-content-end gap-2 pt-2 border-top">
                     @if(request()->anyFilled(['search', 'doctor_id', 'department_id', 'status', 'needs_surgery', 'date_from', 'date_to', 'visit_type']))
                     <a href="{{ route('visits.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
-                        <i class="fas fa-undo me-1"></i>إلغاء الفلاتر
+                        <i class="fas fa-undo me-1"></i>{{ __("إلغاء الفلاتر") }}
                     </a>
                     @endif
                     <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        <i class="fas fa-filter me-1"></i>تطبيق الفلترة
+                        <i class="fas fa-filter me-1"></i>{{ __("تطبيق الفلترة") }}
                     </button>
                 </div>
             </form>
@@ -309,9 +309,9 @@
         <div class="card-header bg-white py-3 px-4 border-bottom">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold text-dark">
-                    <i class="fas fa-list-check text-primary me-2"></i>قائمة الزيارات
+                    <i class="fas fa-list-check text-primary me-2"></i>{{ __("قائمة الزيارات") }}
                 </h5>
-                <span class="text-muted small">عرض {{ $visits->firstItem() ?? 0 }} إلى {{ $visits->lastItem() ?? 0 }} من أصل {{ $visits->total() }} زيارة</span>
+                <span class="text-muted small">{{ __("عرض") }} {{ $visits->firstItem() ?? 0 }} {{ __("إلى") }} {{ $visits->lastItem() ?? 0 }} {{ __("من أصل") }} {{ $visits->total() }} {{ __("زيارة") }}</span>
             </div>
         </div>
         <div class="card-body p-0">
@@ -320,15 +320,15 @@
                     <thead>
                         <tr>
                             <th class="ps-4">#</th>
-                            <th>التاريخ والوقت</th>
-                            <th>المريض</th>
-                            <th>الطبيب المعالج</th>
-                            <th>العيادة</th>
-                            <th>نوع الزيارة</th>
-                            <th>الحالة</th>
-                            <th>الشكوى والأعراض</th>
-                            <th>التشخيص</th>
-                            <th class="text-center pe-4">الإجراءات</th>
+                            <th>{{ __("التاريخ والوقت") }}</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("الطبيب المعالج") }}</th>
+                            <th>{{ __("العيادة") }}</th>
+                            <th>{{ __("نوع الزيارة") }}</th>
+                            <th>{{ __("الحالة") }}</th>
+                            <th>{{ __("الشكوى والأعراض") }}</th>
+                            <th>{{ __("التشخيص") }}</th>
+                            <th class="text-center pe-4">{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -341,7 +341,7 @@
                             </td>
                             <td>
                                 <a href="{{ route('patients.show', $visit->patient_id) }}" class="fw-bold text-decoration-none text-primary">
-                                    {{ optional($visit->patient?->user)->name ?? 'غير معروف' }}
+                                    {{ optional($visit->patient?->user)->name ?? __('غير معروف') }}
                                 </a>
                                 <div class="text-muted small">
                                     <i class="fas fa-phone-alt me-1 text-muted" style="font-size: 0.75rem;"></i>{{ optional($visit->patient?->user)->phone ?? '-' }}
@@ -351,7 +351,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-bold text-dark">د. {{ optional($visit->doctor?->user)->name ?? 'غير محدد' }}</div>
+                                <div class="fw-bold text-dark">{{ __("د.") }} {{ optional($visit->doctor?->user)->name ?? __('غير محدد') }}</div>
                             </td>
                             <td>
                                 <span class="badge bg-secondary bg-opacity-10 text-dark">{{ optional($visit->department)->name ?? '-' }}</span>
@@ -383,25 +383,25 @@
                                 @endif
 
                                 @if($visit->needs_surgery)
-                                    <div><span class="badge bg-danger mt-1"><i class="fas fa-procedures me-1"></i>يحتاج عملية</span></div>
+                                    <div><span class="badge bg-danger mt-1"><i class="fas fa-procedures me-1"></i>{{ __("يحتاج عملية") }}</span></div>
                                 @endif
                             </td>
                             <td class="text-center pe-4">
                                 <div class="btn-group btn-group-sm">
                                     @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('view visits'))
-                                    <a href="{{ route('visits.show', $visit) }}" class="btn btn-outline-primary" title="عرض التفاصيل">
+                                    <a href="{{ route('visits.show', $visit) }}" class="btn btn-outline-primary" title="{{ __("عرض التفاصيل") }}">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @endif
 
                                     @if($visit->latestPrescription && \Illuminate\Support\Facades\Route::has('doctor.visits.prescription.print'))
-                                    <a href="{{ route('doctor.visits.prescription.print', $visit) }}" target="_blank" class="btn btn-outline-success" title="طباعة الوصفة الطبية">
+                                    <a href="{{ route('doctor.visits.prescription.print', $visit) }}" target="_blank" class="btn btn-outline-success" title="{{ __("طباعة الوصفة الطبية") }}">
                                         <i class="fas fa-print"></i>
                                     </a>
                                     @endif
 
                                     @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('edit visits'))
-                                    <a href="{{ route('visits.edit', $visit) }}" class="btn btn-outline-warning" title="تعديل">
+                                    <a href="{{ route('visits.edit', $visit) }}" class="btn btn-outline-warning" title="{{ __("تعديل") }}">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     @endif
@@ -412,8 +412,8 @@
                         <tr>
                             <td colspan="10" class="text-center text-muted py-5">
                                 <i class="fas fa-calendar-xmark fa-3x mb-3 text-secondary opacity-50"></i>
-                                <h6 class="fw-bold">لا توجد زيارات مسجلة تطابق خيارات البحث</h6>
-                                <p class="text-muted small mb-0">يمكنك تعديل خيارات الفلترة أو تسجيل زيارة جديدة</p>
+                                <h6 class="fw-bold">{{ __("لا توجد زيارات مسجلة تطابق خيارات البحث") }}</h6>
+                                <p class="text-muted small mb-0">{{ __("يمكنك تعديل خيارات الفلترة أو تسجيل زيارة جديدة") }}</p>
                             </td>
                         </tr>
                         @endforelse

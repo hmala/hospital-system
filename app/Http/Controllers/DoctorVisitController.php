@@ -41,10 +41,10 @@ class DoctorVisitController extends Controller
         $allVisits = Visit::where('doctor_id', $doctor->id)
             ->with(['patient.user', 'appointment.emergency'])
             ->orderByRaw("CASE 
-                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURDATE() THEN 1
-                WHEN DATE(visit_date) = CURDATE() THEN 2
-                WHEN status = 'completed' AND DATE(visit_date) < CURDATE() THEN 3
-                WHEN DATE(visit_date) > CURDATE() THEN 4
+                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURRENT_DATE THEN 1
+                WHEN DATE(visit_date) = CURRENT_DATE THEN 2
+                WHEN status = 'completed' AND DATE(visit_date) < CURRENT_DATE THEN 3
+                WHEN DATE(visit_date) > CURRENT_DATE THEN 4
                 ELSE 5
             END")
             ->orderBy('visit_date', 'desc')

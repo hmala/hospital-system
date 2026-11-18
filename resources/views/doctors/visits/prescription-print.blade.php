@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>وصفة طبية إلكترونية - {{ $prescription->prescription_number ?? 'RX-' . $visit->id }}</title>
+    <title>{{ __("وصفة طبية إلكترونية") }} - {{ $prescription->prescription_number ?? 'RX-' . $visit->id }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -124,11 +124,11 @@
 <div class="container py-3 no-print">
     <div class="d-flex justify-content-between align-items-center max-w-800 mx-auto" style="max-width: 800px;">
         <a href="{{ route('doctor.visits.show', $visit) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-right me-1"></i> العودة للكشف
+            <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __("العودة للكشف") }}
         </a>
         <div class="d-flex gap-2">
             <button onclick="window.print()" class="btn btn-primary btn-sm px-4">
-                <i class="fas fa-print me-1"></i> طباعة الوصفة (Ctrl+P)
+                <i class="fas fa-print me-1"></i> {{ __("طباعة الوصفة (Ctrl+P)") }}
             </button>
         </div>
     </div>
@@ -143,12 +143,12 @@
             <img src="{{ asset('images/لوغو.png') }}" alt="Logo" style="height: 50px; object-fit: contain;" onerror="this.src='{{ asset('images/hospital-logo.svg') }}';">
             <div>
                 <div class="fw-bold fs-5 text-primary">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
-                <div class="text-muted small">العيادات الاستشارية والتخصصية | E-Prescription</div>
+                <div class="text-muted small">{{ __("العيادات الاستشارية والتخصصية") }} | E-Prescription</div>
             </div>
         </div>
         <div class="col-5 text-start">
             <div class="fw-bold text-primary fs-6">{{ $prescription->prescription_number ?? ('RX-' . date('Ymd') . '-' . str_pad($visit->id, 4, '0', STR_PAD_LEFT)) }}</div>
-            <div class="text-muted small">التاريخ: {{ $visit->visit_date ? $visit->visit_date->format('Y/m/d') : date('Y/m/d') }}</div>
+            <div class="text-muted small">{{ __("التاريخ:") }} {{ $visit->visit_date ? $visit->visit_date->format('Y/m/d') : date('Y/m/d') }}</div>
         </div>
     </div>
 
@@ -156,19 +156,19 @@
     <div class="info-box">
         <div class="row g-2">
             <div class="col-6 col-md-3">
-                <span class="text-muted d-block small">اسم المريض:</span>
+                <span class="text-muted d-block small">{{ __("اسم المريض:") }}</span>
                 <strong>{{ optional($visit->patient)->user->name ?? 'مريض غير مسجل' }}</strong>
             </div>
             <div class="col-6 col-md-3">
-                <span class="text-muted d-block small">العمر / الجنس:</span>
-                <span>{{ optional($visit->patient)->age ? optional($visit->patient)->age . ' سنة' : '-' }} / {{ optional($visit->patient)->gender === 'female' ? 'أنثى' : 'ذكر' }}</span>
+                <span class="text-muted d-block small">{{ __("العمر / الجنس:") }}</span>
+                <span>{{ optional($visit->patient)->age ? optional($visit->patient)->age . ' ' . __('سنة') : '-' }} / {{ optional($visit->patient)->gender === 'female' ? __('أنثى') : __('ذكر') }}</span>
             </div>
             <div class="col-6 col-md-3">
-                <span class="text-muted d-block small">الطبيب المعالج:</span>
-                <strong>د. {{ optional($visit->doctor)->user->name ?? 'الطبيب الاستشاري' }}</strong>
+                <span class="text-muted d-block small">{{ __("الطبيب المعالج:") }}</span>
+                <strong>{{ __("د.") }} {{ optional($visit->doctor)->user->name ?? __("الطبيب الاستشاري") }}</strong>
             </div>
             <div class="col-6 col-md-3">
-                <span class="text-muted d-block small">التخصص / العيادة:</span>
+                <span class="text-muted d-block small">{{ __("التخصص / العيادة:") }}</span>
                 <span>{{ optional($visit->doctor)->specialization ?? 'استشارية' }}</span>
             </div>
         </div>
@@ -177,7 +177,7 @@
     <!-- التشخيص والعلامات إن وجدت -->
     @if($visit->diagnosis)
         <div class="mb-3 p-2 bg-light rounded border-start border-3 border-primary">
-            <span class="fw-bold text-primary"><i class="fas fa-stethoscope me-1"></i>التشخيص الطبي:</span>
+            <span class="fw-bold text-primary"><i class="fas fa-stethoscope me-1"></i>{{ __("التشخيص الطبي:") }}</span>
             <span class="ms-1">{{ is_array($visit->diagnosis) ? ($visit->diagnosis['description'] ?? json_encode($visit->diagnosis, JSON_UNESCAPED_UNICODE)) : $visit->diagnosis }}</span>
         </div>
     @endif
@@ -185,16 +185,16 @@
     <!-- جدول الأدوية الموصوفة -->
     <div class="d-flex align-items-center gap-2 mb-2">
         <span class="rx-symbol">℞</span>
-        <h6 class="fw-bold mb-0 text-dark">الأدوية الموصوفة (Medications)</h6>
+        <h6 class="fw-bold mb-0 text-dark">{{ __("الأدوية الموصوفة (Medications)") }}</h6>
     </div>
 
     <table class="table-meds">
         <thead>
             <tr>
                 <th style="width: 5%;">#</th>
-                <th style="width: 40%;">اسم الدواء والجرعة</th>
-                <th style="width: 15%;">التكرار</th>
-                <th style="width: 15%;">المدة</th>
+                <th style="width: 40%;">{{ __("اسم الدواء والجرعة") }}</th>
+                <th style="width: 15%;">{{ __("التكرار") }}</th>
+                <th style="width: 15%;">{{ __("المدة") }}</th>
                 <th style="width: 25%;">تعليمات الاستعمال</th>
             </tr>
         </thead>

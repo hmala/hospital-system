@@ -9,13 +9,13 @@
                 <div>
                     <h2>
                         <i class="fas fa-hospital-user me-2"></i>
-                        تعديل الحجز - الاستعلامات
+                        {{ __('تعديل الحجز - الاستعلامات') }}
                     </h2>
-                    <p class="text-muted">اختر نوع الخدمة المطلوبة للمريض</p>
+                    <p class="text-muted">{{ __('اختر نوع الخدمة المطلوبة للمريض') }}</p>
                 </div>
                 <a href="{{ route('visits.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    العودة
+                    <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i>
+                    {{ __('العودة') }}
                 </a>
             </div>
         </div>
@@ -35,38 +35,38 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-user-circle me-2"></i>
-                        بيانات المريض
+                        {{ __('بيانات المريض') }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
-                            <strong>الاسم:</strong>
-                            <p class="text-muted">{{ optional($visit->patient->user)->name ?? 'غير معروف' }}</p>
+                            <strong>{{ __("الاسم:") }}</strong>
+                            <p class="text-muted">{{ optional($visit->patient->user)->name ?? __("غير معروف") }}</p>
                         </div>
                         <div class="col-md-2">
-                            <strong>العمر:</strong>
-                            <p class="text-muted">{{ optional($visit->patient)->age ?? 'غير محدد' }} سنة</p>
+                            <strong>{{ __("العمر:") }}</strong>
+                            <p class="text-muted">{{ optional($visit->patient)->age ?? __("غير محدد") }} {{ __("سنة") }}</p>
                         </div>
                         <div class="col-md-2">
-                            <strong>الجنس:</strong>
+                            <strong>{{ __("الجنس:") }}</strong>
                             <p class="text-muted">
                                 @if(optional($visit->patient->user)->gender == 'male')
-                                    <i class="fas fa-mars text-primary"></i> ذكر
+                                    <i class="fas fa-mars text-primary"></i> {{ __("ذكر") }}
                                 @elseif(optional($visit->patient->user)->gender == 'female')
-                                    <i class="fas fa-venus text-danger"></i> أنثى
+                                    <i class="fas fa-venus text-danger"></i> {{ __("أنثى") }}
                                 @else
-                                    غير محدد
+                                    {{ __('غير محدد') }}
                                 @endif
                             </p>
                         </div>
                         <div class="col-md-3">
-                            <strong>رقم الهاتف:</strong>
-                            <p class="text-muted">{{ optional($visit->patient->user)->phone ?? 'غير متوفر' }}</p>
+                            <strong>{{ __("رقم الهاتف:") }}</strong>
+                            <p class="text-muted">{{ optional($visit->patient->user)->phone ?? __("غير متوفر") }}</p>
                         </div>
                         <div class="col-md-2">
-                            <strong>العنوان:</strong>
-                            <p class="text-muted">{{ optional($visit->patient->user)->address ?? 'غير متوفر' }}</p>
+                            <strong>{{ __("العنوان:") }}</strong>
+                            <p class="text-muted">{{ optional($visit->patient->user)->address ?? __("غير متوفر") }}</p>
                         </div>
                     </div>
                 </div>
@@ -79,8 +79,8 @@
         <div class="col-12">
             <h4 class="mb-3">
                 <i class="fas fa-list-check me-2"></i>
-                اختر نوع الخدمة المطلوبة
-                <small class="text-muted d-block mt-1">انقر على البطاقات لاختيار الخدمات (يمكن اختيار أكثر من خدمة)</small>
+                {{ __("اختر نوع الخدمة المطلوبة") }}
+                <small class="text-muted d-block mt-1">{{ __("انقر على البطاقات لاختيار الخدمات (يمكن اختيار أكثر من خدمة)") }}</small>
             </h4>
         </div>
     </div>
@@ -105,16 +105,16 @@
                         <div class="mb-3">
                             <i class="fas fa-flask fa-4x text-primary"></i>
                         </div>
-                        <h5 class="card-title">تحاليل طبية</h5>
+                        <h5 class="card-title">{{ __("تحاليل طبية") }}</h5>
                         <p class="card-text text-muted small">
-                            فحوصات مخبرية وتحاليل الدم والبول
+                            {{ __("فحوصات مخبرية وتحاليل الدم والبول") }}
                         </p>
                         <div class="departments-list small text-muted" style="display: none;">
-                            <span class="text-danger">لا توجد أقسام متاحة</span>
+                            <span class="text-danger">{{ __("لا توجد أقسام متاحة") }}</span>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-primary">محدد</span>
+                        <span class="badge bg-primary">{{ __("محدد") }}</span>
                     </div>
                 </div>
             </div>
@@ -126,16 +126,16 @@
                         <div class="mb-3">
                             <i class="fas fa-x-ray fa-4x text-info"></i>
                         </div>
-                        <h5 class="card-title">الأشعة</h5>
+                        <h5 class="card-title">{{ __("الأشعة") }}</h5>
                         <p class="card-text text-muted small">
-                            أشعة عادية، مقطعية، وتصوير بالرنين
+                            {{ __("أشعة عادية، مقطعية، وتصوير بالرنين") }}
                         </p>
                         <div class="departments-list small text-muted" style="display: none;">
-                            <span class="text-danger">لا توجد أقسام متاحة</span>
+                            <span class="text-danger">{{ __("لا توجد أقسام متاحة") }}</span>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-info">محدد</span>
+                        <span class="badge bg-info">{{ __("محدد") }}</span>
                     </div>
                 </div>
             </div>
@@ -147,16 +147,16 @@
                         <div class="mb-3">
                             <i class="fas fa-pills fa-4x text-success"></i>
                         </div>
-                        <h5 class="card-title">الصيدلية</h5>
+                        <h5 class="card-title">{{ __("الصيدلية") }}</h5>
                         <p class="card-text text-muted small">
-                            صرف أدوية ومستلزمات طبية
+                            {{ __("صرف أدوية ومستلزمات طبية") }}
                         </p>
                         <div class="departments-list small text-muted" style="display: none;">
-                            <span class="text-danger">لا توجد أقسام متاحة</span>
+                            <span class="text-danger">{{ __("لا توجد أقسام متاحة") }}</span>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-success">محدد</span>
+                        <span class="badge bg-success">{{ __("محدد") }}</span>
                     </div>
                 </div>
             </div>
@@ -168,16 +168,16 @@
                         <div class="mb-3">
                             <i class="fas fa-tint fa-4x text-danger"></i>
                         </div>
-                        <h5 class="card-title">مصرف الدم</h5>
+                        <h5 class="card-title">{{ __("مصرف الدم") }}</h5>
                         <p class="card-text text-muted small">
-                            طلب كروس ماتش أو تحضير وحدات دم
+                            {{ __("طلب كروس ماتش أو تحضير وحدات دم") }}
                         </p>
                         <div class="departments-list small text-muted" style="display: none;">
-                            <span class="text-danger">لا توجد أقسام متاحة</span>
+                            <span class="text-danger">{{ __("لا توجد أقسام متاحة") }}</span>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-danger">محدد</span>
+                        <span class="badge bg-danger">{{ __("محدد") }}</span>
                     </div>
                 </div>
             </div>
@@ -189,16 +189,16 @@
                         <div class="mb-3">
                             <i class="fas fa-stethoscope fa-4x text-warning"></i>
                         </div>
-                        <h5 class="card-title">كشف طبي</h5>
+                        <h5 class="card-title">{{ __("كشف طبي") }}</h5>
                         <p class="card-text text-muted small">
-                            حجز موعد للطبيب والاستشارة الطبية
+                            {{ __("حجز موعد للطبيب والاستشارة الطبية") }}
                         </p>
                         <div class="departments-list small text-muted" style="display: none;">
-                            <span class="text-danger">لا توجد أقسام متاحة</span>
+                            <span class="text-danger">{{ __("لا توجد أقسام متاحة") }}</span>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-center" style="display: none;">
-                        <span class="badge bg-warning">محدد</span>
+                        <span class="badge bg-warning">{{ __("محدد") }}</span>
                     </div>
                 </div>
             </div>
@@ -211,14 +211,14 @@
                             <div class="mb-3">
                                 <i class="fas fa-procedures fa-4x text-danger"></i>
                             </div>
-                            <h5 class="card-title text-dark">حجز عملية جراحية</h5>
+                            <h5 class="card-title text-dark">{{ __("حجز عملية جراحية") }}</h5>
                             <p class="card-text text-muted small">
-                                حجز موعد لإجراء عملية جراحية
+                                {{ __("حجز موعد لإجراء عملية جراحية") }}
                             </p>
                             <div class="mt-2">
                                 <span class="badge bg-danger">
                                     <i class="fas fa-external-link-alt me-1"></i>
-                                    انتقال لنموذج الحجز
+                                    {{ __("انتقال لنموذج الحجز") }}
                                 </span>
                             </div>
                         </div>
@@ -234,14 +234,14 @@
                             <div class="mb-3">
                                 <i class="fas fa-bed fa-4x text-info"></i>
                             </div>
-                            <h5 class="card-title text-dark">حجز رقود مبدئي</h5>
+                            <h5 class="card-title text-dark">{{ __("حجز رقود مبدئي") }}</h5>
                             <p class="card-text text-muted small">
-                                احجز سريراً للإقامة أو التحضير للعملية
+                                {{ __("احجز سريراً للإقامة أو التحضير للعملية") }}
                             </p>
                             <div class="mt-2">
                                 <span class="badge bg-info">
                                     <i class="fas fa-external-link-alt me-1"></i>
-                                    انتقال لنموذج الحجز
+                                    {{ __("انتقال لنموذج الحجز") }}
                                 </span>
                             </div>
                         </div>
@@ -257,14 +257,14 @@
                             <div class="mb-3">
                                 <i class="fas fa-baby fa-4x text-pink"></i>
                             </div>
-                            <h5 class="card-title text-dark">حجز حاضنة خدج</h5>
+                            <h5 class="card-title text-dark">{{ __("حجز حاضنة خدج") }}</h5>
                             <p class="card-text text-muted small">
-                                حجز حاضنة في قسم العناية المركزة بالخدج
+                                {{ __("حجز حاضنة في قسم العناية المركزة بالخدج") }}
                             </p>
                             <div class="mt-2">
                                 <span class="badge" style="background-color: #e91e63; color: white;">
                                     <i class="fas fa-external-link-alt me-1"></i>
-                                    انتقال لنموذج الحجز
+                                    {{ __("انتقال لنموذج الحجز") }}
                                 </span>
                             </div>
                         </div>
@@ -281,14 +281,14 @@
                                 <div class="mb-3">
                                     <i class="fas fa-heartbeat fa-4x text-danger"></i>
                                 </div>
-                                <h5 class="card-title text-dark fw-bold">حجز عناية مركزة (ICU)</h5>
+                                <h5 class="card-title text-dark fw-bold">{{ __("حجز عناية مركزة (ICU)") }}</h5>
                                 <p class="card-text text-muted small">
-                                    تسكين وحجز سرير عناية حرجة، عزل، أو عناية قلبية CCU
+                                    {{ __("تسكين وحجز سرير عناية حرجة، عزل، أو عناية قلبية CCU") }}
                                 </p>
                                 <div class="mt-2">
                                     <span class="badge bg-danger">
                                         <i class="fas fa-external-link-alt me-1"></i>
-                                        انتقال لنموذج الحجز
+                                        {{ __("انتقال لنموذج الحجز") }}
                                     </span>
                                 </div>
                             </div>
@@ -306,7 +306,7 @@
                         <div class="card-header bg-secondary text-white">
                             <h5 class="mb-0">
                                 <i class="fas fa-edit me-2"></i>
-                                تفاصيل الحجز
+                                {{ __('تفاصيل الحجز') }}
                             </h5>
                         </div>
                         <div class="card-body">
@@ -316,13 +316,13 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="description" class="form-label">
                                             <i class="fas fa-comment-medical me-1"></i>
-                                            وصف الحالة / التفاصيل <span class="text-danger general-required">*</span>
+                                            {{ __("وصف الحالة / التفاصيل") }} <span class="text-danger general-required">*</span>
                                         </label>
                                         <textarea class="form-control @error('chief_complaint') is-invalid @enderror"
                                                   id="description"
                                                   name="chief_complaint"
                                                   rows="4"
-                                                  placeholder="اكتب وصفاً تفصيلياً للحالة أو الخدمة المطلوبة...">{{ old('chief_complaint', $visit->chief_complaint) }}</textarea>
+                                                  placeholder="{{ __("اكتب وصفاً تفصيلياً للحالة أو الخدمة المطلوبة...") }}">{{ old('chief_complaint', $visit->chief_complaint) }}</textarea>
                                         @error('chief_complaint')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -331,18 +331,18 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="doctor_id" class="form-label">
                                             <i class="fas fa-user-md me-1"></i>
-                                            الطبيب <span class="text-danger checkup-required">*</span>
+                                            {{ __("الطبيب") }} <span class="text-danger checkup-required">*</span>
                                         </label>
                                         <select class="form-select @error('doctor_id') is-invalid @enderror"
                                                 id="doctor_id"
                                                 name="doctor_id">
-                                            <option value="">اختر الطبيب</option>
+                                            <option value="">{{ __("اختر الطبيب") }}</option>
                                             @foreach($doctors as $doctor)
                                                 <option value="{{ $doctor->id }}"
                                                         data-department="{{ $doctor->department_id }}"
                                                         {{ old('doctor_id', $visit->doctor_id) == $doctor->id ? 'selected' : '' }}>
-                                                    د. {{ optional($doctor->user)->name ?? 'غير معروف' }} - {{ $doctor->specialization }}
-                                                    ({{ $doctor->is_available_today ? 'متوفر' : 'غير متوفر' }})
+                                                    {{ __("د.") }} {{ optional($doctor->user)->name ?? __("غير معروف") }} - {{ $doctor->specialization }}
+                                                    ({{ $doctor->is_available_today ? __("متوفر") : __("غير متوفر") }})
                                                 </option>
                                             @endforeach
                                         </select>
@@ -359,12 +359,12 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="department_id" class="form-label">
                                             <i class="fas fa-clinic-medical me-1"></i>
-                                            العيادة <span class="text-danger">*</span>
+                                            {{ __("العيادة") }} <span class="text-danger">*</span>
                                         </label>
                                         <select class="form-select @error('department_id') is-invalid @enderror"
                                                 id="department_id"
                                                 name="department_id">
-                                            <option value="">اختر العيادة</option>
+                                            <option value="">{{ __("اختر العيادة") }}</option>
                                             @foreach($departments as $dept)
                                                 <option value="{{ $dept->id }}" {{ old('department_id', $visit->department_id) == $dept->id ? 'selected' : '' }}>
                                                     {{ $dept->name }}
@@ -379,7 +379,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="visit_date" class="form-label">
                                             <i class="fas fa-calendar me-1"></i>
-                                            تاريخ الحجز *
+                                            {{ __("تاريخ الحجز *") }}
                                         </label>
                                         <input type="date"
                                                class="form-control @error('visit_date') is-invalid @enderror"
@@ -397,7 +397,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="visit_time" class="form-label">
                                             <i class="fas fa-clock me-1"></i>
-                                            وقت الحجز *
+                                            {{ __("وقت الحجز *") }}
                                         </label>
                                         <input type="time"
                                                class="form-control @error('visit_time') is-invalid @enderror"
@@ -412,17 +412,17 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="visit_type" class="form-label">
                                             <i class="fas fa-tag me-1"></i>
-                                            نوع الحجز *
+                                            {{ __("نوع الحجز *") }}
                                         </label>
                                         <select class="form-select @error('visit_type') is-invalid @enderror"
                                                 id="visit_type"
                                                 name="visit_type">
-                                            <option value="checkup" {{ old('visit_type', $visit->visit_type) == 'checkup' ? 'selected' : '' }}>كشف دوري</option>
-                                            <option value="followup" {{ old('visit_type', $visit->visit_type) == 'followup' ? 'selected' : '' }}>متابعة</option>
-                                            <option value="emergency" {{ old('visit_type', $visit->visit_type) == 'emergency' ? 'selected' : '' }}>طوارئ</option>
-                                            <option value="surgery" {{ old('visit_type', $visit->visit_type) == 'surgery' ? 'selected' : '' }}>عملية جراحية</option>
-                                            <option value="lab" {{ old('visit_type', $visit->visit_type) == 'lab' ? 'selected' : '' }}>مختبر</option>
-                                            <option value="radiology" {{ old('visit_type', $visit->visit_type) == 'radiology' ? 'selected' : '' }}>أشعة</option>
+                                            <option value="checkup" {{ old('visit_type', $visit->visit_type) == 'checkup' ? 'selected' : '' }}>{{ __("كشف دوري") }}</option>
+                                            <option value="followup" {{ old('visit_type', $visit->visit_type) == 'followup' ? 'selected' : '' }}>{{ __("متابعة") }}</option>
+                                            <option value="emergency" {{ old('visit_type', $visit->visit_type) == 'emergency' ? 'selected' : '' }}>{{ __("طوارئ") }}</option>
+                                            <option value="surgery" {{ old('visit_type', $visit->visit_type) == 'surgery' ? 'selected' : '' }}>{{ __("عملية جراحية") }}</option>
+                                            <option value="lab" {{ old('visit_type', $visit->visit_type) == 'lab' ? 'selected' : '' }}>{{ __("مختبر") }}</option>
+                                            <option value="radiology" {{ old('visit_type', $visit->visit_type) == 'radiology' ? 'selected' : '' }}>{{ __("أشعة") }}</option>
                                         </select>
                                         @error('visit_type')
                                             <div class="invalid-feedback">{{ $message }}</div>
@@ -437,8 +437,8 @@
                                     <div class="col-12 mb-3">
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-2"></i>
-                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب تحاليل عام للمختبر.
-                                            سيقوم موظف المختبر لاحقاً بتحديد التحاليل المطلوبة بالتفصيل قبل الدفع.
+                                            <strong>{{ __("ملاحظة:") }}</strong> {{ __("سيتم إنشاء طلب تحاليل عام للمختبر.") }}
+                                            {{ __("سيقوم موظف المختبر لاحقاً بتحديد التحاليل المطلوبة بالتفصيل قبل الدفع.") }}
                                         </div>
                                     </div>
                                 </div>
@@ -450,8 +450,8 @@
                                     <div class="col-12 mb-3">
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-2"></i>
-                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب أشعة عام لقسم الأشعة.
-                                            سيقوم موظف الأشعة لاحقاً بتحديد نوع التصوير المطلوب قبل الدفع.
+                                            <strong>{{ __("ملاحظة:") }}</strong> {{ __("سيتم إنشاء طلب أشعة عام لقسم الأشعة.") }}
+                                            {{ __("سيقوم موظف الأشعة لاحقاً بتحديد نوع التصوير المطلوب قبل الدفع.") }}
                                         </div>
                                     </div>
                                 </div>
@@ -463,8 +463,8 @@
                                     <div class="col-12 mb-3">
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-2"></i>
-                                            <strong>ملاحظة:</strong> سيتم إنشاء طلب صرف أدوية للصيدلية.
-                                            يرجى التأكد من وجود وصفة طبية صالحة.
+                                            <strong>{{ __("ملاحظة:") }}</strong> {{ __("سيتم إنشاء طلب صرف أدوية للصيدلية.") }}
+                                            {{ __("يرجى التأكد من وجود وصفة طبية صالحة.") }}
                                         </div>
                                     </div>
                                 </div>
@@ -473,10 +473,10 @@
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                 <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <i class="fas fa-save me-2"></i>
-                                    <span id="submitBtnText">حفظ الحجز</span>
+                                    <span id="submitBtnText">{{ __("حفظ الحجز") }}</span>
                                 </button>
                                 <a href="{{ route('visits.index') }}" class="btn btn-secondary">
-                                    <i class="fas fa-times me-2"></i>إلغاء
+                                    <i class="fas fa-times me-2"></i>{{ __("إلغاء") }}
                                 </a>
                             </div>
                         </div>
@@ -586,18 +586,18 @@ function updateDetailsForm() {
     if (selectedTypes.length === 1) {
         const type = selectedTypes[0];
         if (type === 'checkup') {
-            submitBtnText.textContent = 'حفظ الحجز';
+            submitBtnText.textContent = '{{ __('حفظ الحجز') }}';
         } else if (type === 'lab') {
-            submitBtnText.textContent = 'طلب تحاليل';
+            submitBtnText.textContent = '{{ __('طلب تحاليل') }}';
         } else if (type === 'radiology') {
-            submitBtnText.textContent = 'طلب أشعة';
+            submitBtnText.textContent = '{{ __('طلب أشعة') }}';
         } else if (type === 'pharmacy') {
-            submitBtnText.textContent = 'طلب صيدلية';
+            submitBtnText.textContent = '{{ __('طلب صيدلية') }}';
         } else {
-            submitBtnText.textContent = 'حفظ الطلب';
+            submitBtnText.textContent = '{{ __('حفظ الطلب') }}';
         }
     } else {
-        submitBtnText.textContent = `حفظ ${selectedTypes.length} طلبات`;
+        submitBtnText.textContent = '{{ __("حفظ الطلبات") }} (' + selectedTypes.length + ')';
     }
 
     // التمرير السلس للنموذج
@@ -625,7 +625,7 @@ document.getElementById('doctor_id').addEventListener('change', function() {
 document.getElementById('requestForm').addEventListener('submit', function(e) {
     if (selectedTypes.length === 0) {
         e.preventDefault();
-        alert('يرجى اختيار نوع الخدمة أولاً');
+        alert('{{ __('يرجى اختيار نوع الخدمة أولاً') }}');
         return false;
     }
 
@@ -634,7 +634,7 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         const description = document.getElementById('description').value.trim();
         if (!description) {
             e.preventDefault();
-            alert('يرجى كتابة وصف للحالة');
+            alert('{{ __('يرجى كتابة وصف للحالة') }}');
             document.getElementById('description').focus();
             return false;
         }
@@ -647,14 +647,14 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
 
         if (!doctorId) {
             e.preventDefault();
-            alert('يرجى اختيار الطبيب');
+            alert('{{ __('يرجى اختيار الطبيب') }}');
             document.getElementById('doctor_id').focus();
             return false;
         }
 
         if (!departmentId) {
             e.preventDefault();
-            alert('يرجى اختيار العيادة');
+            alert('{{ __('يرجى اختيار العيادة') }}');
             document.getElementById('department_id').focus();
             return false;
         }
@@ -667,7 +667,7 @@ document.addEventListener('change', function(e) {
         const checkedCount = document.querySelectorAll('.lab-test-checkbox:checked').length;
         const counter = document.getElementById('labSelectedCount');
         if (checkedCount > 0) {
-            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> تم اختيار ${checkedCount} تحليل`;
+            counter.innerHTML = `<i class="fas fa-check-circle text-success"></i> ${checkedCount} {{ __("تحاليل مختارة") }}`;
         } else {
             counter.innerHTML = '';
         }

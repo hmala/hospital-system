@@ -355,13 +355,13 @@ body {
                 </div>
             </div>
             <div class="col-md-7">
-                <h2 class="mb-3 fw-bold">{{ $patient->user->name ?? 'المريض' }}</h2>
+                <h2 class="mb-3 fw-bold">{{ $patient->user->name ?? __('المريض') }}</h2>
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-id-card me-2"></i>
                             <div>
-                                <small class="d-block opacity-75">رقم المريض</small>
+                                <small class="d-block opacity-75">{{ __('رقم المريض') }}</small>
                                 <strong>P-{{ $patient->id }}</strong>
                             </div>
                         </div>
@@ -370,8 +370,8 @@ body {
                         <div class="d-flex align-items-center">
                             <i class="fas fa-birthday-cake me-2"></i>
                             <div>
-                                <small class="d-block opacity-75">العمر</small>
-                                <strong>{{ $patient->age ?? 'غير محدد' }} سنة</strong>
+                                <small class="d-block opacity-75">{{ __('العمر') }}</small>
+                                <strong>{{ $patient->age ?? __('غير محدد') }} {{ __('سنة') }}</strong>
                             </div>
                         </div>
                     </div>
@@ -379,8 +379,8 @@ body {
                         <div class="d-flex align-items-center">
                             <i class="fas fa-tint me-2"></i>
                             <div>
-                                <small class="d-block opacity-75">فصيلة الدم</small>
-                                <strong>{{ $patient->blood_type ?? 'غير محدد' }}</strong>
+                                <small class="d-block opacity-75">{{ __('فصيلة الدم') }}</small>
+                                <strong>{{ $patient->blood_type ?? __('غير محدد') }}</strong>
                             </div>
                         </div>
                     </div>
@@ -388,7 +388,7 @@ body {
                 @if($patient->allergies)
                 <div class="alert alert-danger mb-2 py-2 d-inline-block">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>حساسية:</strong> {{ $patient->allergies }}
+                    <strong>{{ __('حساسية:') }}</strong> {{ $patient->allergies }}
                 </div>
                 @endif
             </div>
@@ -397,7 +397,7 @@ body {
                     <div class="card-body">
                         <h6 class="mb-3">
                             <i class="fas fa-heartbeat me-2"></i>
-                            الأمراض المزمنة
+                            {{ __('الأمراض المزمنة') }}
                         </h6>
                         @if($patient->chronic_diseases)
                             {!! nl2br(e($patient->chronic_diseases)) !!}
@@ -411,50 +411,50 @@ body {
         </div>
         <div class="d-flex justify-content-end gap-2 mt-4">
             <button class="btn btn-light btn-custom" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>طباعة
+                <i class="fas fa-print me-2"></i>{{ __('طباعة') }}
             </button>
             <a href="{{ route('doctor.visits.index') }}" class="btn btn-outline-light btn-custom">
-                <i class="fas fa-arrow-right me-2"></i>رجوع
+                <i class="fas fa-arrow-right me-2"></i>{{ __('رجوع') }}
             </a>
         </div>
     </div>
 
     <!-- Filter Section -->
     <div class="filter-section">
-        <h5><i class="fas fa-filter me-2 text-primary"></i>فلتر السجل الطبي</h5>
+        <h5><i class="fas fa-filter me-2 text-primary"></i>{{ __('فلتر السجل الطبي') }}</h5>
         <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">
-                    <i class="fas fa-calendar me-1"></i>نطاق التاريخ
+                    <i class="fas fa-calendar me-1"></i>{{ __('نطاق التاريخ') }}
                 </label>
                 <select class="form-select" id="dateFilter">
-                    <option selected>الكل</option>
-                    <option>آخر شهر</option>
-                    <option>آخر 3 أشهر</option>
-                    <option>آخر 6 أشهر</option>
-                    <option>آخر سنة</option>
+                    <option selected>{{ __('الكل') }}</option>
+                    <option>{{ __('آخر شهر') }}</option>
+                    <option>{{ __('آخر 3 أشهر') }}</option>
+                    <option>{{ __('آخر 6 أشهر') }}</option>
+                    <option>{{ __('آخر سنة') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">
-                    <i class="fas fa-list me-1"></i>نوع الحدث
+                    <i class="fas fa-list me-1"></i>{{ __('نوع الحدث') }}
                 </label>
                 <select class="form-select" id="typeFilter">
-                    <option selected>الكل</option>
-                    <option>زيارات</option>
-                    <option>مختبر</option>
-                    <option>أشعة</option>
-                    <option>عمليات جراحية</option>
-                    <option>طوارئ</option>
-                    <option>تنويم</option>
+                    <option selected>{{ __('الكل') }}</option>
+                    <option>{{ __('زيارات') }}</option>
+                    <option>{{ __('مختبر') }}</option>
+                    <option>{{ __('أشعة') }}</option>
+                    <option>{{ __('عمليات جراحية') }}</option>
+                    <option>{{ __('طوارئ') }}</option>
+                    <option>{{ __('تنويم') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">
-                    <i class="fas fa-user-md me-1"></i>الطبيب
+                    <i class="fas fa-user-md me-1"></i>{{ __('الطبيب') }}
                 </label>
                 <select class="form-select" id="physicianFilter">
-                    <option selected>الكل</option>
+                    <option selected>{{ __('الكل') }}</option>
                     @foreach($timeline->pluck('doctor')->unique()->filter() as $doctor)
                         <option>{{ $doctor }}</option>
                     @endforeach
@@ -462,9 +462,9 @@ body {
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">
-                    <i class="fas fa-search me-1"></i>بحث
+                    <i class="fas fa-search me-1"></i>{{ __('بحث') }}
                 </label>
-                <input type="text" class="form-control" id="keywordSearch" placeholder="ابحث في الأحداث...">
+                <input type="text" class="form-control" id="keywordSearch" placeholder="{{ __('ابحث في الأحداث...') }}">
             </div>
         </div>
     </div>
@@ -472,7 +472,7 @@ body {
     <!-- Timeline Section -->
     <div class="timeline-title">
         <h3>
-            <i class="fas fa-stream me-2 text-primary"></i>الرحلة الطبية للمريض
+            <i class="fas fa-stream me-2 text-primary"></i>{{ __('الرحلة الطبية للمريض') }}
         </h3>
     </div>
 
@@ -492,7 +492,7 @@ body {
                     @endif
                     @if($event['type'] === 'lab')
                         <div class="text-end">
-                            <span class="badge bg-info">الأحدث</span>
+                            <span class="badge bg-info">{{ __('الأحدث') }}</span>
                         </div>
                     @endif
                 </div>
@@ -502,7 +502,7 @@ body {
                 </div>
                 
                 <div class="timeline-content">
-                    <span class="badge-custom bg-{{ $event['color'] ?? 'primary' }}">{{ $event['badge'] ?? 'حدث' }}</span>
+                    <span class="badge-custom bg-{{ $event['color'] ?? 'primary' }}">{{ $event['badge'] ?? __('حدث') }}</span>
                     <h5 class="mb-2 mt-2">{{ $event['title'] }}</h5>
                     @if(!empty($event['doctor']))
                         <div class="text-muted small mb-2">
@@ -518,16 +518,16 @@ body {
                     <div class="d-flex gap-2">
                         @if($event['link'])
                             <a href="{{ $event['link'] }}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-eye me-1"></i>عرض التفاصيل
+                                <i class="fas fa-eye me-1"></i>{{ __('عرض التفاصيل') }}
                             </a>
                         @endif
                         @if($event['type'] === 'lab')
                             <button class="btn btn-sm btn-outline-success">
-                                <i class="fas fa-file-medical me-1"></i>عرض التقرير
+                                <i class="fas fa-file-medical me-1"></i>{{ __('عرض التقرير') }}
                             </button>
                         @elseif($event['type'] === 'radiology')
                             <button class="btn btn-sm btn-outline-info">
-                                <i class="fas fa-image me-1"></i>عرض الصورة
+                                <i class="fas fa-image me-1"></i>{{ __('عرض الصورة') }}
                             </button>
                         @endif
                     </div>
@@ -539,8 +539,8 @@ body {
     @if($timeline->isEmpty())
         <div class="empty-state">
             <i class="fas fa-history fa-4x text-muted mb-3"></i>
-            <h5 class="text-muted">لا توجد سجلات طبية</h5>
-            <p class="text-muted mb-0">لم يتم تسجيل أي أحداث طبية لهذا المريض حتى الآن</p>
+            <h5 class="text-muted">{{ __('لا توجد سجلات طبية') }}</h5>
+            <p class="text-muted mb-0">{{ __('لم يتم تسجيل أي أحداث طبية لهذا المريض حتى الآن') }}</p>
         </div>
     @endif
 
@@ -548,17 +548,17 @@ body {
     <div class="quick-access-panel">
         <div class="card border-0">
             <div class="card-header">
-                <i class="fas fa-bolt me-2"></i>الوصول السريع
+                <i class="fas fa-bolt me-2"></i>{{ __('الوصول السريع') }}
             </div>
             <div class="list-group list-group-flush">
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-prescription text-success me-2"></i>آخر وصفة طبية
+                    <i class="fas fa-prescription text-success me-2"></i>{{ __('آخر وصفة طبية') }}
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-flask text-info me-2"></i>آخر نتيجة مختبر
+                    <i class="fas fa-flask text-info me-2"></i>{{ __('آخر نتيجة مختبر') }}
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-file-medical text-danger me-2"></i>ملخص الخروج
+                    <i class="fas fa-file-medical text-danger me-2"></i>{{ __('ملخص الخروج') }}
                 </a>
             </div>
         </div>
