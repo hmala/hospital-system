@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 243: إعادة تصميم وتطوير واجهة تعديل المستخدمين بتخطيط مزدوج ذكي وتصنيف مرئي للأدوار وبطاقة هوية الموظف Modern Redesign of User Edit Interface with Dual-Column Layout, Smart Categorized Roles Matrix, and Employee Profile Card)
+
+### Done
+- **إعادة بناء واجهة تعديل المستخدمين بالكامل ([resources/views/users/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/users/edit.blade.php))**:
+  * استبدال الترويسة الصفراء القديمة `bg-warning` بهوية طبية زرقاء فاخرة ناصعة وتخطيط ثنائي الأبعاد (4:8).
+  * إضافة بطاقة هوية الموظف الجانبية (Profile Sidebar Card) متضمنة صورة رمزية ملونة (Avatar)، شارة الحالة التشغيلية الفورية (نشط/معطل)، رقم المعرف `#ID`، ملخص الأدوار الحالية، وتواريخ الحساب.
+  * تصنيف مصفوفة الأدوار الـ 36 إلى مجموعات طبية وإدارية منظمة (الكوادر الطبية والجراحية، الاستقبال والتمريض والطوارئ، المحطات التشخيصية، المالية والكاشير، الصيدلية والمستودع، الإدارة والنظام) مع أزرار تحديد/إلغاء لكل قسم.
+  * إضافة محرك بحث لحظي سريع في الأدوار (Live Search) وفلترة البطاقات بنقرة زر مع عدّاد تفاعلي مباشر لعدد الأدوار المحددة.
+  * تصميم كروت أمان مستقلة لكلمة المرور مع زر إظهار/إخفاء كلمة المرور وتلميحات إرشادية.
+  * ربط أنيق لاختيار المخزن أو عهدة الطابق مع أيقونات إدخال عصرية (`input-group`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/UserEditModernViewTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserEditModernViewTest.php))**:
+  * بناء اختبارات ميزة متخصصة تؤكد فتح الشاشة بتصميمها الجديد، وتصنيف الأدوار، ونجاح التحديث بنسبة 100% (`2 passed, 16 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات.
+
 ## Session log (2026-11-18 — المرحلة 242: استبدال تنبيه التوفر الداكن بنظام Toastr الطبي الناصع وتوحيد مصفوفة ومسميات أدوار التخدير ومشرف التمريض Medical Clean Toastr Migration & Role Permission Harmonization for Anesthesia and Head Nurse)
 
 ### Done
