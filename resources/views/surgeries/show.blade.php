@@ -2429,7 +2429,30 @@
                                                     <td>{{ optional($followUp->follow_up_date)->format('Y-m-d') ?? '—' }}</td>
                                                     <td>{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>
                                                     <td>{{ $followUp->resident?->user?->full_name ?? $followUp->resident?->user?->name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
-                                                    <td>{!! nl2br(e($followUp->notes)) !!}</td>
+                                                    <td>
+                                                        @if(!empty($followUp->clinical_signs))
+                                                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                                                @foreach($followUp->clinical_signs as $sign)
+                                                                    @if($sign === 'oriented')
+                                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">Oriented (واعي)</span>
+                                                                    @elseif($sign === 'clear_chest')
+                                                                        <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle small">Clear chest (الصدر سليم)</span>
+                                                                    @elseif($sign === 'soft_abdomen')
+                                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">Soft abdomen (البطن رخو)</span>
+                                                                    @elseif($sign === 'urine_output')
+                                                                        <span class="badge bg-teal text-teal border border-teal-subtle small" style="color: #0f766e; background-color: #ccfbf1;">Urine output (إدرار البول)</span>
+                                                                    @elseif($sign === 'yellowish_discolouration')
+                                                                        <span class="badge bg-warning bg-opacity-15 text-dark border border-warning-subtle small">Yellowish discolouration (اصفرار)</span>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                        @if($followUp->other_notes)
+                                                            <div class="small"><strong>أخرى:</strong> {!! nl2br(e($followUp->other_notes)) !!}</div>
+                                                        @elseif(!empty($followUp->notes) && empty($followUp->clinical_signs))
+                                                            <div class="small">{!! nl2br(e($followUp->notes)) !!}</div>
+                                                        @endif
+                                                    </td>
                                                     <td class="text-muted small">{{ optional($followUp->created_at)->format('Y-m-d H:i') }}</td>
                                                 </tr>
                                             @endforeach

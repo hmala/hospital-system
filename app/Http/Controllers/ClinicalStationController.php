@@ -9,7 +9,6 @@ use App\Models\Package;
 use App\Models\RadiologyType;
 use App\Models\ResidentStationFollowUp;
 use App\Models\ResidentStationReading;
-use App\Models\ResidentStationReadingDrain;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
@@ -470,8 +469,48 @@ class ClinicalStationController extends Controller
         $validated = $request->validate([
             'follow_up_date' => 'required|date',
             'session' => 'nullable|string|in:morning,evening',
-            'notes' => 'required|string|max:2000',
+            'clinical_signs' => 'nullable|array',
+            'clinical_signs.*' => 'string|in:oriented,clear_chest,soft_abdomen,urine_output,yellowish_discolouration',
+            'other_notes' => 'nullable|string|max:2000',
+            'notes' => 'nullable|string|max:2000',
         ]);
+
+        $selectedSigns = $validated['clinical_signs'] ?? [];
+        $otherNotes = trim($validated['other_notes'] ?? ($validated['notes'] ?? ''));
+
+        if (empty($selectedSigns) && $otherNotes === '') {
+            return redirect()->back()->with('error', 'يرجى اختيار علامة سريرية واحدة على الأقل أو كتابة ملاحظات المتابعة.');
+        }
+
+        // Build compiled notes string with Positive and Negative clinical signs
+        $definitions = ResidentStationFollowUp::availableClinicalSigns();
+        $allKeys = array_keys($definitions);
+
+        $positiveSigns = array_values(array_intersect($allKeys, $selectedSigns));
+        $negativeSigns = array_values(array_diff($allKeys, $selectedSigns));
+
+        $positiveLabels = [];
+        foreach ($positiveSigns as $key) {
+            $positiveLabels[] = $definitions[$key]['en'].' ('.$definitions[$key]['ar'].')';
+        }
+
+        $negativeLabels = [];
+        foreach ($negativeSigns as $key) {
+            $negativeLabels[] = $definitions[$key]['en'].' ('.$definitions[$key]['ar'].')';
+        }
+
+        $notesSections = [];
+        if (! empty($positiveLabels)) {
+            $notesSections[] = '✓ Positive: '.implode(', ', $positiveLabels);
+        }
+        if (! empty($selectedSigns) && ! empty($negativeLabels)) {
+            $notesSections[] = '✗ Negative: '.implode(', ', $negativeLabels);
+        }
+        if ($otherNotes !== '') {
+            $notesSections[] = 'أخرى: '.$otherNotes;
+        }
+
+        $compiledNotes = implode("\n", $notesSections);
 
         $phase = $request->input('phase', 'pre_op');
         $station = $surgery->residentStations()->firstOrCreate(
@@ -488,7 +527,9 @@ class ClinicalStationController extends Controller
             'resident_name' => $userName,
             'follow_up_date' => $validated['follow_up_date'],
             'session' => $validated['session'] ?? 'morning',
-            'notes' => $validated['notes'],
+            'clinical_signs' => $selectedSigns,
+            'other_notes' => $otherNotes ?: null,
+            'notes' => $compiledNotes,
         ]);
 
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => 'follow_up'])
@@ -1098,6 +1139,7 @@ class ClinicalStationController extends Controller
             if ($field === 'output_drain' && $drainsSum !== null) {
                 $fluidsData['output_drain'] = $drainsSum;
                 $anyFluidsGiven = true;
+
                 continue;
             }
 

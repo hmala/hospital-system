@@ -3323,29 +3323,89 @@
                 <div class="p-4">
                     {{-- Form to add follow up entry --}}
                     @if($canWriteCurrentTab)
-                        <div class="card rounded-3 border p-3 mb-4 bg-light bg-opacity-50">
-                            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-plus-circle text-primary me-1"></i> إضافة قيد متابعة جديد (Daily Follow-Up Entry)</h6>
+                        <div class="card rounded-4 border shadow-sm p-3 mb-4 bg-light bg-opacity-25">
+                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-notes-medical text-primary"></i>
+                                <span>إضافة قيد متابعة سريري جديد (Daily Follow-Up Sheet)</span>
+                            </h6>
                             <form action="{{ route('clinical-station.follow-ups.store', $surgery) }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="phase" value="{{ $currentPhase }}">
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label small fw-semibold">تاريخ المرور والمتابعة:</label>
-                                        <input type="date" name="follow_up_date" class="form-control form-control-sm rounded-2" value="{{ date('Y-m-d') }}" required>
+                                        <label class="form-label small fw-bold text-dark">تاريخ المرور والمتابعة:</label>
+                                        <input type="date" name="follow_up_date" class="form-control form-control-sm rounded-3" value="{{ date('Y-m-d') }}" required>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small fw-semibold">الجولة / الدورية:</label>
-                                        <select name="session" class="form-select form-select-sm rounded-2">
-                                            <option value="morning">جولة صباحية (Morning)</option>
-                                            <option value="evening">جولة مسائية (Evening)</option>
+                                        <label class="form-label small fw-bold text-dark">الجولة / الدورية:</label>
+                                        <select name="session" class="form-select form-select-sm rounded-3">
+                                            <option value="morning">جولة صباحية (Morning Session)</option>
+                                            <option value="evening">جولة مسائية (Evening Session)</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-12">
-                                        <label class="form-label small fw-semibold">ملاحظات الطبيب / كادر المتابعة:</label>
-                                        <textarea name="notes" class="form-control rounded-2" rows="2" required placeholder="سجل تطور حالة المريض، تقييم الجرح، فحص البطن، خطة اليوم..."></textarea>
+
+                                    {{-- Clinical Checkboxes --}}
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-dark d-flex align-items-center gap-1.5 mb-2">
+                                            <i class="fas fa-stethoscope text-primary"></i>
+                                            <span>العلامات والتقييم السريري (Clinical Assessment Checkboxes):</span>
+                                        </label>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <!-- 1. Oriented -->
+                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                <input type="checkbox" name="clinical_signs[]" value="oriented" class="form-check-input clinical-sign-checkbox m-0">
+                                                <span class="fw-bold text-dark">Oriented</span>
+                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                </span>
+                                            </label>
+
+                                            <!-- 2. Clear chest -->
+                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                <input type="checkbox" name="clinical_signs[]" value="clear_chest" class="form-check-input clinical-sign-checkbox m-0">
+                                                <span class="fw-bold text-dark">Clear chest</span>
+                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                </span>
+                                            </label>
+
+                                            <!-- 3. Soft abdomen -->
+                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                <input type="checkbox" name="clinical_signs[]" value="soft_abdomen" class="form-check-input clinical-sign-checkbox m-0">
+                                                <span class="fw-bold text-dark">Soft abdomen</span>
+                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                </span>
+                                            </label>
+
+                                            <!-- 4. Urine output -->
+                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                <input type="checkbox" name="clinical_signs[]" value="urine_output" class="form-check-input clinical-sign-checkbox m-0">
+                                                <span class="fw-bold text-dark">Urine output</span>
+                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                </span>
+                                            </label>
+
+                                            <!-- 5. Yellowish discolouration -->
+                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                <input type="checkbox" name="clinical_signs[]" value="yellowish_discolouration" class="form-check-input clinical-sign-checkbox m-0">
+                                                <span class="fw-bold text-dark">Yellowish discolouration</span>
+                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-dark">
+                                            <i class="fas fa-comment-medical text-secondary me-1"></i> Others (أخرى / ملاحظات إضافية وتوصيات المقيم):
+                                        </label>
+                                        <textarea name="other_notes" class="form-control rounded-3" rows="2" placeholder="سجل أي علامات سريرية أخرى، تقييم الجرح، فحص السوائل، توجيهات اليوم..."></textarea>
                                     </div>
                                     <div class="col-12 text-end">
-                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-4 fw-bold">
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs">
                                             <i class="fas fa-save me-1"></i> حفظ قيد المتابعة
                                         </button>
                                     </div>
@@ -3355,22 +3415,68 @@
                     @endif
 
                     {{-- Follow-Up Timeline --}}
-                    <h6 class="fw-bold text-dark mb-3"><i class="fas fa-stream text-primary me-2"></i> سجل المتابعات الدورية السابقة</h6>
+                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="fas fa-stream text-primary"></i>
+                        <span>سجل المتابعات الدورية السابقة</span>
+                    </h6>
                     @forelse($followUps as $f)
-                        <div class="timeline-card">
+                        <div class="timeline-card p-3 mb-3 bg-white rounded-3 border shadow-xs">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <div>
-                                    <strong class="text-dark">{{ $f->session === 'morning' ? 'جولة صباحية (Morning)' : ($f->session === 'evening' ? 'جولة مسائية (Evening)' : $f->session) }}</strong>
-                                    <span class="text-muted ms-2 small">({{ $f->follow_up_date?->format('Y-m-d') }})</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-dark">{{ $f->session === 'morning' ? 'جولة صباحية (Morning Session)' : ($f->session === 'evening' ? 'جولة مسائية (Evening Session)' : $f->session) }}</strong>
+                                    <span class="text-muted small">({{ $f->follow_up_date?->format('Y-m-d') }})</span>
                                 </div>
                                 <span class="badge bg-primary bg-opacity-10 text-primary border small">
-                                    <i class="fas fa-user-edit me-1"></i> {{ $f->resident_name ?: 'كادر الرعاية' }}
+                                    <i class="fas fa-user-md me-1"></i> {{ $f->resident_name ?: ($f->resident?->user?->name ?? 'كادر المتابعة') }}
                                 </span>
                             </div>
-                            <div class="text-dark mb-1" style="font-size: 0.92rem; line-height: 1.6;">
-                                {{ $f->notes }}
-                            </div>
-                            <div class="text-muted" style="font-size: 0.72rem;">
+
+                            {{-- Structured Clinical Signs Badges (Positive & Negative) --}}
+                            @php
+                                $positiveSigns = $f->positive_signs;
+                                $negativeSigns = $f->negative_signs;
+                                $definitions = \App\Models\ResidentStationFollowUp::availableClinicalSigns();
+                            @endphp
+                            @if(!empty($positiveSigns) || !empty($f->clinical_signs))
+                                <div class="mb-2">
+                                    @if(!empty($positiveSigns))
+                                        <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1.5">
+                                            <span class="badge bg-success text-white small fw-bold px-2 py-0.5"><i class="fas fa-plus-circle me-1"></i> Positive:</span>
+                                            @foreach($positiveSigns as $sign)
+                                                @php $def = $definitions[$sign] ?? null; @endphp
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2.5 py-1 fw-bold">
+                                                    <i class="fas {{ $def['icon'] ?? 'fa-check-circle' }} me-1"></i> {{ $def['en'] ?? $sign }} (Positive)
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    @if(!empty($negativeSigns))
+                                        <div class="d-flex flex-wrap align-items-center gap-1.5 mb-1.5">
+                                            <span class="badge bg-danger text-white small fw-bold px-2 py-0.5"><i class="fas fa-minus-circle me-1"></i> Negative:</span>
+                                            @foreach($negativeSigns as $sign)
+                                                @php $def = $definitions[$sign] ?? null; @endphp
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2.5 py-1 fw-bold">
+                                                    <i class="fas fa-times-circle text-danger me-1"></i> {{ $def['en'] ?? $sign }} (Negative)
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
+                            {{-- Notes / Others --}}
+                            @if($f->other_notes)
+                                <div class="text-dark small mb-1" style="font-size: 0.92rem; line-height: 1.6;">
+                                    <strong>أخرى (Others):</strong> {!! nl2br(e($f->other_notes)) !!}
+                                </div>
+                            @elseif(!empty($f->notes) && empty($f->clinical_signs))
+                                <div class="text-dark mb-1" style="font-size: 0.92rem; line-height: 1.6;">
+                                    {!! nl2br(e($f->notes)) !!}
+                                </div>
+                            @endif
+
+                            <div class="text-muted mt-2 pt-1 border-top" style="font-size: 0.72rem;">
                                 وُثق بتاريخ: {{ $f->created_at->format('Y-m-d h:i A') }}
                             </div>
                         </div>
@@ -3380,6 +3486,45 @@
                             لا توجد قيود متابعة مسجلة للمريض حتى الآن.
                         </div>
                     @endforelse
+
+                    <script>
+                        (function() {
+                            function initClinicalPills() {
+                                var checkboxes = document.querySelectorAll('.clinical-sign-checkbox');
+                                checkboxes.forEach(function(chk) {
+                                    function updatePill(checkbox) {
+                                        var pill = checkbox.closest('.clinical-check-pill');
+                                        if (!pill) return;
+                                        var badge = pill.querySelector('.sign-status-badge');
+                                        if (checkbox.checked) {
+                                            pill.classList.remove('bg-white', 'border-secondary-subtle');
+                                            pill.classList.add('bg-success', 'bg-opacity-10', 'border-success');
+                                            if (badge) {
+                                                badge.className = 'sign-status-badge badge bg-success text-white px-2.5 py-1 fw-bold shadow-xs';
+                                                badge.innerHTML = '<i class="fas fa-plus-circle me-1"></i> Positive';
+                                            }
+                                        } else {
+                                            pill.classList.remove('bg-success', 'bg-opacity-10', 'border-success');
+                                            pill.classList.add('bg-white', 'border-secondary-subtle');
+                                            if (badge) {
+                                                badge.className = 'sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs';
+                                                badge.innerHTML = '<i class="fas fa-minus-circle me-1"></i> Negative';
+                                            }
+                                        }
+                                    }
+                                    chk.addEventListener('change', function() {
+                                        updatePill(this);
+                                    });
+                                    updatePill(chk);
+                                });
+                            }
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', initClinicalPills);
+                            } else {
+                                initClinicalPills();
+                            }
+                        })();
+                    </script>
                 </div>
             @endif
         </div>

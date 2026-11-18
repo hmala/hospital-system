@@ -78,6 +78,27 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 244 (2026-11-18 — `main`) — خانات تقييم العلامات السريرية الخمس بالإنجليزية مع التبديل التفاعلي الفوري بين Positive و Negative التلقائي (5 Clinical Signs Checkboxes with Instant English Positive/Negative Toggle in Resident Follow-Up Sheet)**:
+  * **قاعدة البيانات والنموذج ([database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php), [app/Models/ResidentStationFollowUp.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationFollowUp.php))**:
+    - إضافة عمودي `clinical_signs` (JSON) و `other_notes` (Text) إلى جدول `resident_station_follow_ups`.
+    - تعريف العلامات الخمس `availableClinicalSigns()`: `Oriented`، `Clear chest`، `Soft abdomen`، `Urine output`، `Yellowish discolouration`.
+    - تزويد النموذج بدوال `positive_signs` و `negative_signs` لاستخراج العلامات الإيجابية والسلبية بدقة.
+  * **الكنترولرات وتجميع الملاحظات ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [app/Http/Controllers/ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php))**:
+    - استلام العلامات المحددة وحفظها وتجميع الملاحظات بالإنجليزية الصريحة `✓ Positive:` و `✗ Negative:` للتوافق التام مع التقارير والطباعة.
+  * **الواجهات الأمامية وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [resources/views/surgery-stations/resident/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/show.blade.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+    - إضافة الخيارات الخمس في تبويب المتابعة للطبيب المقيم.
+    - الحالة الافتراضية (Default) بدون تضليل رمادي تظهر كشارة حمراء بارزة: `Negative` (`badge bg-danger text-white`).
+    - بمجرد وضع علامة الصح (جيك) تتحول الشارة فورياً وديناميكياً إلى خضراء بارزة: `Positive` (`badge bg-success text-white`) بالإنجليزية حصراً وبدون نصوص عربية.
+    - عرض سجلات المتابعة السابقة بتصنيف `Positive:` و `Negative:` واضح.
+  * **الاختبارات الآلية وتنسيق الكود ([tests/Feature/ResidentFollowUpClinicalSignsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentFollowUpClinicalSignsTest.php))**:
+    - اجتياز 5 اختبارات ميزة شاملة بنسبة 100% (`5 passed, 38 assertions`) وفحص `Laravel Pint`.
+
+- **المرحلة 243 (2026-11-18 — `main`) — إعادة تصميم وتطوير واجهة تعديل المستخدمين بتخطيط مزدوج ذكي وتصنيف مرئي للأدوار وبطاقة هوية الموظف (Modern Redesign of User Edit Interface with Dual-Column Layout, Smart Categorized Roles Matrix, and Employee Profile Card)**:
+  * بناء تخطيط مزدوج (4:8) مع بطاقة هوية الموظف الجانبية، وتصنيف الأدوار الـ 36 لمجموعات طبية وإدارية مع فلترة لحظية وبحث وعداد للأدوار، واجتياز `tests/Feature/UserEditModernViewTest.php`.
+
+- **المرحلة 242 (2026-11-18 — `main`) — استبدال تنبيه التوفر الداكن بنظام Toastr الطبي الناصع وتوحيد مصفوفة ومسميات أدوار التخدير ومشرف التمريض (Medical Clean Toastr Migration & Role Permission Harmonization for Anesthesia and Head Nurse)**:
+  * إزالة خلفية `bg-dark` من شاشة التوفر واستخدام Toastr الطبي الفاتح، ومواءمة دوري `anesthesia` و `head_nurse` وصلاحية `manage nurse availability` في المصفوفة.
+
 - **المرحلة 241 (2026-11-18 — `main`) — واجهة الهبوط المخصصة والذكية للممرضين خارج جدول الدوام الرسمي مع التحقق وإعادة المحاولة الفورية (Dedicated Off-Duty Landing Screen for Unscheduled Nurses with Live Activation Check & Access Recovery)**:
   * **شاشة الهبوط المخصصة ([resources/views/nurse-availability/off-duty.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
     - استبدال رسالة التنبيه الحمراء لشاشة تسجيل الدخول بواجهة هبوط متكاملة، أنيقة ورسمية تحمل هوية النظام والمستشفى.

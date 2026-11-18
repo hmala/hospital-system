@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 244: إضافة خانات تقييم العلامات السريرية الخمس بالإنجليزية مع التبديل التفاعلي الفوري بين Positive و Negative التلقائي 5 Clinical Signs Checkboxes with Instant English Positive/Negative Toggle in Resident Follow-Up Sheet)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php), [app/Models/ResidentStationFollowUp.php](file:///c:/wamp64/www/hospital-system/app/Models/ResidentStationFollowUp.php))**:
+  * إضافة عمودي `clinical_signs` (JSON) و `other_notes` (Text) إلى جدول `resident_station_follow_ups`.
+  * إضافة دالة تعريف العلامات السريرية الخمس `availableClinicalSigns()`: `Oriented`، `Clear chest`، `Soft abdomen`، `Urine output`، `Yellowish discolouration`.
+  * إضافة Accessors `positive_signs` و `negative_signs` لاستخراج العلامات الإيجابية والسلبية بدقة وتوافق تام.
+- **الكنترولرات وتجميع الملاحظات ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [app/Http/Controllers/ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php))**:
+  * استلام وحفظ مصفوفة العلامات المحددة كـ `Positive` وحفظ الملاحظات الإضافية `other_notes`.
+  * تجميع نصوص المتابعة باللغة الإنجليزية الصريحة `✓ Positive:` و `✗ Negative:` لضمان التوافقية العكسية 100% مع كافة الشاشات والتقارير والطباعة.
+- **الواجهات الأمامية وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [resources/views/surgery-stations/resident/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/show.blade.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة خيارات التقييم السريري الخمس في تبويب المتابعة للطبيب المقيم.
+  * الحالة الافتراضية (Default) قبل الاختيار تظهر بوضوح وبدون تضليل رمادي كشارة حمراء بارزة: `Negative` (`badge bg-danger text-white`).
+  * بمجرد وضع علامة الصح (وضع جيك) تتحول الشارة فورياً وديناميكياً إلى خضراء بارزة: `Positive` (`badge bg-success text-white`) بالإنجليزية حصراً وبدون نصوص عربية.
+  * عرض سجلات المتابعة المحفوظة في الخط الزمني والجداول بتصنيف `Positive:` و `Negative:` واضح ودقيق لكل علامة.
+- **الاختبارات الآلية وتنسيق الكود ([tests/Feature/ResidentFollowUpClinicalSignsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentFollowUpClinicalSignsTest.php))**:
+  * بناء 5 اختبارات ميزة شاملة تغطي ظهور شارات `Negative` الافتراضية، والحفظ بالكنترولرين، والتحقق، وعرض النتائج بنجاح 100% (`5 passed, 38 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
 ## Session log (2026-11-18 — المرحلة 243: إعادة تصميم وتطوير واجهة تعديل المستخدمين بتخطيط مزدوج ذكي وتصنيف مرئي للأدوار وبطاقة هوية الموظف Modern Redesign of User Edit Interface with Dual-Column Layout, Smart Categorized Roles Matrix, and Employee Profile Card)
 
 ### Done

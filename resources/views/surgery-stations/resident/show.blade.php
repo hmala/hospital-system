@@ -739,19 +739,109 @@
                             <div class="col-12">
                                 <div class="card border border-secondary-subtle shadow-sm rounded-3 mb-4">
                                     <div class="card-header bg-light bg-opacity-50 border-bottom py-2 px-3">
-                                        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-clipboard-list text-primary me-1"></i> سجل المتابعة</h6>
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-clipboard-list text-primary me-1"></i> سجل المتابعة اليومية للمقيم</h6>
                                     </div>
                                     <div class="card-body p-3">
+                                        <!-- Follow-up submission form -->
+                                        <div class="card rounded-3 border shadow-xs p-3 mb-4 bg-light bg-opacity-25">
+                                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                                                <i class="fas fa-notes-medical text-primary"></i>
+                                                <span>إضافة قيد متابعة سريري جديد (Daily Follow-Up Sheet)</span>
+                                            </h6>
+                                            <form action="{{ route('resident-station.follow-ups.store', $surgery) }}" method="POST">
+                                                @csrf
+                                                <div class="row g-3">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label small fw-bold text-dark">تاريخ المرور والمتابعة:</label>
+                                                        <input type="date" name="follow_up_date" class="form-control form-control-sm rounded-3" value="{{ date('Y-m-d') }}" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label small fw-bold text-dark">الجولة / الدورية:</label>
+                                                        <select name="session" class="form-select form-select-sm rounded-3">
+                                                            <option value="morning">جولة صباحية (Morning Session)</option>
+                                                            <option value="evening">جولة مسائية (Evening Session)</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {{-- Clinical Checkboxes --}}
+                                                    <div class="col-12">
+                                                        <label class="form-label small fw-bold text-dark d-flex align-items-center gap-1.5 mb-2">
+                                                            <i class="fas fa-stethoscope text-primary"></i>
+                                                            <span>العلامات والتقييم السريري (Clinical Assessment Checkboxes):</span>
+                                                        </label>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <!-- 1. Oriented -->
+                                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                                <input type="checkbox" name="clinical_signs[]" value="oriented" class="form-check-input clinical-sign-checkbox m-0">
+                                                                <span class="fw-bold text-dark">Oriented</span>
+                                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                                </span>
+                                                            </label>
+
+                                                            <!-- 2. Clear chest -->
+                                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                                <input type="checkbox" name="clinical_signs[]" value="clear_chest" class="form-check-input clinical-sign-checkbox m-0">
+                                                                <span class="fw-bold text-dark">Clear chest</span>
+                                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                                </span>
+                                                            </label>
+
+                                                            <!-- 3. Soft abdomen -->
+                                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                                <input type="checkbox" name="clinical_signs[]" value="soft_abdomen" class="form-check-input clinical-sign-checkbox m-0">
+                                                                <span class="fw-bold text-dark">Soft abdomen</span>
+                                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                                </span>
+                                                            </label>
+
+                                                            <!-- 4. Urine output -->
+                                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                                <input type="checkbox" name="clinical_signs[]" value="urine_output" class="form-check-input clinical-sign-checkbox m-0">
+                                                                <span class="fw-bold text-dark">Urine output</span>
+                                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                                </span>
+                                                            </label>
+
+                                                            <!-- 5. Yellowish discolouration -->
+                                                            <label class="clinical-check-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border border-secondary-subtle bg-white cursor-pointer shadow-xs user-select-none transition-all">
+                                                                <input type="checkbox" name="clinical_signs[]" value="yellowish_discolouration" class="form-check-input clinical-sign-checkbox m-0">
+                                                                <span class="fw-bold text-dark">Yellowish discolouration</span>
+                                                                <span class="sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs">
+                                                                    <i class="fas fa-minus-circle me-1"></i> Negative
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-12">
+                                                        <label class="form-label small fw-bold text-dark">
+                                                            <i class="fas fa-comment-medical text-secondary me-1"></i> Others (أخرى / ملاحظات إضافية وتوصيات المقيم):
+                                                        </label>
+                                                        <textarea name="other_notes" class="form-control rounded-3" rows="2" placeholder="سجل أي علامات سريرية أخرى، تقييم الجرح، فحص السوائل، توجيهات اليوم..."></textarea>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs">
+                                                            <i class="fas fa-save me-1"></i> حفظ قيد المتابعة
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+
                                         @php $residentFollowUps = $surgery->residentStationFollowUps->sortByDesc('created_at'); @endphp
-                                        <div class="table-responsive mb-4">
+                                        <div class="table-responsive mb-2">
                                             <table class="table table-bordered mb-0 align-middle">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th class="py-2">التاريخ</th>
-                                                        <th class="py-2">الوردية</th>
-                                                        <th class="py-2">المقيم</th>
-                                                        <th class="py-2">التوثيق</th>
-                                                        <th class="py-2">وقت التسجيل</th>
+                                                        <th class="py-2" style="width: 12%;">التاريخ</th>
+                                                        <th class="py-2" style="width: 10%;">الوردية</th>
+                                                        <th class="py-2" style="width: 18%;">المقيم</th>
+                                                        <th class="py-2">العلامات السريرية والتوثيق</th>
+                                                        <th class="py-2" style="width: 15%;">وقت التسجيل</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -760,7 +850,50 @@
                                                             <td class="text-dark">{{ $followUp->follow_up_date->format('Y-m-d') }}</td>
                                                             <td class="text-dark">{{ $followUp->session === 'morning' ? 'صباحاً' : 'مساءً' }}</td>
                                                             <td class="text-dark">{{ $followUp->resident?->user?->full_name ?? $followUp->resident_name ?? 'غير محدد' }}</td>
-                                                            <td class="text-dark">{!! nl2br(e($followUp->notes)) !!}</td>
+                                                            <td class="text-dark">
+                                                                @php
+                                                                    $positiveSigns = $followUp->positive_signs;
+                                                                    $negativeSigns = $followUp->negative_signs;
+                                                                    $definitions = \App\Models\ResidentStationFollowUp::availableClinicalSigns();
+                                                                @endphp
+                                                                @if(!empty($positiveSigns) || !empty($followUp->clinical_signs))
+                                                                    <div class="mb-1.5">
+                                                                        @if(!empty($positiveSigns))
+                                                                            <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+                                                                                <span class="badge bg-success text-white small fw-bold px-1.5 py-0.5" style="font-size:0.75rem;"><i class="fas fa-plus-circle me-1"></i> Positive (+ve):</span>
+                                                                                @foreach($positiveSigns as $sign)
+                                                                                    @php $def = $definitions[$sign] ?? null; @endphp
+                                                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-0.5" style="font-size:0.78rem;">
+                                                                                        <i class="fas {{ $def['icon'] ?? 'fa-check-circle' }} me-1"></i> {{ $def['en'] ?? $sign }}
+                                                                                    </span>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @endif
+
+                                                                        @if(!empty($negativeSigns))
+                                                                            <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+                                                                                <span class="badge bg-danger text-white small fw-bold px-1.5 py-0.5" style="font-size:0.75rem;"><i class="fas fa-minus-circle me-1"></i> Negative:</span>
+                                                                                @foreach($negativeSigns as $sign)
+                                                                                    @php $def = $definitions[$sign] ?? null; @endphp
+                                                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-0.5 fw-bold" style="font-size:0.78rem;">
+                                                                                        <i class="fas fa-times-circle text-danger me-1"></i> {{ $def['en'] ?? $sign }} (Negative)
+                                                                                    </span>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                @endif
+
+                                                                @if($followUp->other_notes)
+                                                                    <div class="small">
+                                                                        <strong>أخرى (Others):</strong> {!! nl2br(e($followUp->other_notes)) !!}
+                                                                    </div>
+                                                                @elseif(!empty($followUp->notes) && empty($followUp->clinical_signs))
+                                                                    <div class="small">
+                                                                        {!! nl2br(e($followUp->notes)) !!}
+                                                                    </div>
+                                                                @endif
+                                                            </td>
                                                             <td class="text-dark">{{ $followUp->created_at->format('Y-m-d H:i') }}</td>
                                                         </tr>
                                                     @empty
@@ -773,17 +906,49 @@
                                                 </tbody>
                                             </table>
                                         </div>
-
-                                        <div class="alert alert-info border-info bg-info bg-opacity-10 mb-0 rounded-3 d-flex align-items-center">
-                                            <i class="fas fa-info-circle me-2 fs-5 text-info"></i>
-                                            <div>
-                                                <strong>تنبيه:</strong> يتم تسجيل وتحديث المتابعة الدورية من قبل كادر التمريض في محطة التمريض.
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <script>
+                            (function() {
+                                function initResidentClinicalPills() {
+                                    var checkboxes = document.querySelectorAll('#follow-up-content .clinical-sign-checkbox');
+                                    checkboxes.forEach(function(chk) {
+                                        function updatePill(checkbox) {
+                                            var pill = checkbox.closest('.clinical-check-pill');
+                                            if (!pill) return;
+                                            var badge = pill.querySelector('.sign-status-badge');
+                                            if (checkbox.checked) {
+                                                pill.classList.remove('bg-white', 'border-secondary-subtle');
+                                                pill.classList.add('bg-success', 'bg-opacity-10', 'border-success');
+                                                if (badge) {
+                                                    badge.className = 'sign-status-badge badge bg-success text-white px-2.5 py-1 fw-bold shadow-xs';
+                                                    badge.innerHTML = '<i class="fas fa-plus-circle me-1"></i> Positive';
+                                                }
+                                            } else {
+                                                pill.classList.remove('bg-success', 'bg-opacity-10', 'border-success');
+                                                pill.classList.add('bg-white', 'border-secondary-subtle');
+                                                if (badge) {
+                                                    badge.className = 'sign-status-badge badge bg-danger text-white px-2.5 py-1 fw-bold shadow-xs';
+                                                    badge.innerHTML = '<i class="fas fa-minus-circle me-1"></i> Negative';
+                                                }
+                                            }
+                                        }
+                                        chk.addEventListener('change', function() {
+                                            updatePill(this);
+                                        });
+                                        updatePill(chk);
+                                    });
+                                }
+                                if (document.readyState === 'loading') {
+                                    document.addEventListener('DOMContentLoaded', initResidentClinicalPills);
+                                } else {
+                                    initResidentClinicalPills();
+                                }
+                            })();
+                        </script>
                     </div>
                 </fieldset>
             </div>
