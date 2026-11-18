@@ -208,11 +208,42 @@ class ClinicalStationController extends Controller
         $availableLabTests = LabTest::where('is_active', true)->orderBy('name')->get();
         $availableRadiologyTypes = RadiologyType::where('is_active', true)->orderBy('name')->get();
         $labPackages = Package::has('labTests')->with('labTests')->get();
+        $daysMap = [
+            'Saturday' => 'السبت',
+            'Sunday' => 'الأحد',
+            'Monday' => 'الاثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+        ];
+        $currentDayArabic = $daysMap[date('l')] ?? 'السبت';
+
         $availableConsultantDoctors = Doctor::with(['user', 'department'])
             ->where('is_active', true)
             ->where('is_available_today', true)
-            ->orderBy('id')
-            ->get();
+            ->where(function ($q) {
+                $q->where('type', 'consultant')
+                    ->orWhere('type', 'sonar')
+                    ->orWhere('specialization', 'LIKE', '%سونار%');
+            })
+            ->get()
+            ->filter(function ($doc) use ($currentDayArabic) {
+                return $doc->isWorkingOnDay($currentDayArabic);
+            })
+            ->values();
+
+        if ($availableConsultantDoctors->isEmpty()) {
+            $availableConsultantDoctors = Doctor::with(['user', 'department'])
+                ->where('is_active', true)
+                ->where('is_available_today', true)
+                ->where(function ($q) {
+                    $q->where('type', 'consultant')
+                        ->orWhere('type', 'sonar')
+                        ->orWhere('specialization', 'LIKE', '%سونار%');
+                })
+                ->get();
+        }
 
         return view('surgery-stations.clinical.show', compact(
             'surgery',
