@@ -11,23 +11,23 @@
                             <i class="fas fa-user-nurse fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="mb-0 fw-bold">محطة التمريض والرقود</h5>
-                            <small class="text-white-50">متابعة المرضى، إعطاء العلاجات، وسحب مستلزمات عهدة الطابق</small>
+                            <h5 class="mb-0 fw-bold">{{ __('محطة التمريض والرقود') }}</h5>
+                            <small class="text-white-50">{{ __('متابعة المرضى، إعطاء العلاجات، وسحب مستلزمات عهدة الطابق') }}</small>
                         </div>
                     </div>
 
                     {{-- شارات الطابق والعهدة المعتمدة --}}
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25 rounded-pill px-3 py-2 fs-6">
-                            <i class="fas fa-warehouse text-warning me-1"></i> {{ $currentLocation?->name ?? 'مخزن الطابق' }}
+                            <i class="fas fa-warehouse text-warning me-1"></i> {{ $currentLocation?->name ?? __('مخزن الطابق') }}
                         </span>
                         @if($isFloorCustodian)
                             <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-xs">
-                                <i class="fas fa-key me-1"></i> مسؤولة عهدة المخزن
+                                <i class="fas fa-key me-1"></i> {{ __('مسؤولة عهدة المخزن') }}
                             </span>
                         @else
                             <span class="badge bg-info bg-opacity-25 text-white border border-info border-opacity-50 rounded-pill px-3 py-2 fw-medium">
-                                <i class="fas fa-user-check me-1"></i> سحب وصرف تمريضي
+                                <i class="fas fa-user-check me-1"></i> {{ __('سحب وصرف تمريضي') }}
                             </span>
                         @endif
                     </div>
@@ -43,24 +43,24 @@
                     <!-- Floor Filter Bar (شريط تصفية الطوابق السريع) -->
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> الطابق:</span>
+                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> {{ __('الطابق:') }}</span>
                             <a href="{{ route('nursing-station.index', ['floor' => 'all']) }}" 
                                class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ empty($selectedFloor) ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
-                                كافة الطوابق
+                                {{ __('كافة الطوابق') }}
                             </a>
                             @foreach($availableFloors as $floorName)
                                 <a href="{{ route('nursing-station.index', ['floor' => $floorName]) }}" 
                                    class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ $selectedFloor === $floorName ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
                                     {{ $floorName }}
                                     @if($currentLocation && (str_contains($currentLocation->name, $floorName) || str_contains($floorName, $currentLocation->name)))
-                                        <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size: 0.7rem;">طابقك</span>
+                                        <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size: 0.7rem;">{{ __('طابقك') }}</span>
                                     @endif
                                 </a>
                             @endforeach
                         </div>
                         @if($selectedFloor)
                             <div class="text-muted small">
-                                <i class="fas fa-filter text-primary me-1"></i> يتم عرض مرضى <strong>{{ $selectedFloor }}</strong> حالياً
+                                <i class="fas fa-filter text-primary me-1"></i> {{ __('يتم عرض مرضى') }} <strong>{{ $selectedFloor }}</strong> {{ __('حالياً') }}
                             </div>
                         @endif
                     </div>
@@ -69,25 +69,25 @@
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm overflow-auto flex-nowrap" id="nursingTabs" role="tablist" style="width: fit-content; max-width: 100%;">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active rounded-pill fw-bold px-4 py-2 text-nowrap" id="pre-op-patients-tab" data-bs-toggle="tab" data-bs-target="#pre-op-patients" type="button" role="tab" aria-selected="true">
-                                <i class="fas fa-notes-medical me-1 text-primary"></i> حالات التهيئة قبل الصالة
+                                <i class="fas fa-notes-medical me-1 text-primary"></i> {{ __('حالات التهيئة قبل الصالة') }}
                                 <span class="badge bg-primary text-white rounded-pill ms-1.5">{{ $preOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="post-op-patients-tab" data-bs-toggle="tab" data-bs-target="#post-op-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-procedures me-1 text-info"></i> حالات المتابعة بعد الصالة
+                                <i class="fas fa-procedures me-1 text-info"></i> {{ __('حالات المتابعة بعد الصالة') }}
                                 <span class="badge bg-info text-white rounded-pill ms-1.5">{{ $postOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="completed-patients-tab" data-bs-toggle="tab" data-bs-target="#completed-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-archive me-1 text-success"></i> أرشيف الحالات المكتملة
+                                <i class="fas fa-archive me-1 text-success"></i> {{ __('أرشيف الحالات المكتملة') }}
                                 <span class="badge bg-success text-white rounded-pill ms-1.5">{{ $completedSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="floor-store-tab" data-bs-toggle="tab" data-bs-target="#floor-store" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-boxes me-1 text-warning"></i> مخزن وعُهدة الطابق
+                                <i class="fas fa-boxes me-1 text-warning"></i> {{ __('مخزن وعُهدة الطابق') }}
                                 <span class="badge bg-warning text-dark rounded-pill ms-1.5">{{ $stockBatches->count() }}</span>
                             </button>
                         </li>
@@ -100,13 +100,13 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="py-3">رقم الملف</th>
-                                            <th class="py-3">اسم المريض</th>
-                                            <th class="py-3">العملية</th>
-                                            <th class="py-3">التاريخ والوقت المحدد</th>
-                                            <th class="py-3">الممرض/ة المسؤول</th>
-                                            <th class="py-3">حالة المحطة</th>
-                                            <th class="py-3 text-center">الإجراءات</th>
+                                            <th class="py-3">{{ __('رقم الملف') }}</th>
+                                            <th class="py-3">{{ __('اسم المريض') }}</th>
+                                            <th class="py-3">{{ __('العملية') }}</th>
+                                            <th class="py-3">{{ __('التاريخ والوقت المحدد') }}</th>
+                                            <th class="py-3">{{ __('الممرض/ة المسؤول') }}</th>
+                                            <th class="py-3">{{ __('حالة المحطة') }}</th>
+                                            <th class="py-3 text-center">{{ __('الإجراءات') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>

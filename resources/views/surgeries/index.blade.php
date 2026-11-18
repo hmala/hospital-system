@@ -402,10 +402,10 @@
                 </div>
                 <div>
                     <h1 class="sg-title-main">
-                        سجل العمليات الجراحية
+                        {{ __('سجل العمليات الجراحية') }}
                         <span class="sg-badge-registry">Surgery Registry</span>
                     </h1>
-                    <p class="sg-subtitle">متابعة كافة العمليات الجراحية، الحالات النشطة، الأرشيف السريري وتفاصيل المرضى</p>
+                    <p class="sg-subtitle">{{ __('متابعة كافة العمليات الجراحية، الحالات النشطة، الأرشيف السريري وتفاصيل المرضى') }}</p>
                 </div>
             </div>
 
@@ -413,14 +413,14 @@
                 @canany(['manage surgery waiting list', 'view surgeries'])
                 <a href="{{ route('surgeries.waiting') }}" class="sg-btn-link-action">
                     <i class="fas fa-clock text-warning"></i>
-                    <span>قائمة الانتظار والصالات</span>
+                    <span>{{ __('قائمة الانتظار والصالات') }}</span>
                 </a>
                 @endcanany
 
                 @canany(['manage rooms', 'view occupancy'])
                 <a href="{{ route('rooms.index') }}" class="sg-btn-link-action">
                     <i class="fas fa-bed text-danger"></i>
-                    <span>إدارة الغرف</span>
+                    <span>{{ __('إدارة الغرف') }}</span>
                 </a>
                 @endcanany
             </div>
@@ -447,7 +447,7 @@
         <div class="sg-kpi-grid">
             <div class="sg-kpi-card kpi-total">
                 <div>
-                    <div class="sg-kpi-title">إجمالي العمليات المسجلة</div>
+                    <div class="sg-kpi-title">{{ __('إجمالي العمليات المسجلة') }}</div>
                     <div class="sg-kpi-num">{{ $stats->total ?? ($activeSurgeries->total() + $completedSurgeries->total()) }}</div>
                 </div>
                 <div class="sg-kpi-icon">
@@ -458,8 +458,8 @@
             <div class="sg-kpi-card kpi-active">
                 <div>
                     <div class="sg-kpi-title d-flex align-items-center">
-                        <span>العمليات النشطة (داخل المسار)</span>
-                        <span class="sg-pulse-dot" title="حالات نشطة جارية"></span>
+                        <span>{{ __('العمليات النشطة (داخل المسار)') }}</span>
+                        <span class="sg-pulse-dot" title="{{ __('حالات نشطة جارية') }}"></span>
                     </div>
                     <div class="sg-kpi-num text-success">
                         {{ $stats->active ?? $activeSurgeries->total() }}
@@ -472,7 +472,7 @@
 
             <div class="sg-kpi-card kpi-waiting">
                 <div>
-                    <div class="sg-kpi-title">بالانتظار والتحضير</div>
+                    <div class="sg-kpi-title">{{ __('بالانتظار والتحضير') }}</div>
                     <div class="sg-kpi-num text-primary">
                         {{ $stats->waiting ?? 0 }}
                     </div>
@@ -484,7 +484,7 @@
 
             <div class="sg-kpi-card kpi-completed">
                 <div>
-                    <div class="sg-kpi-title">المكتملة (خرجت من الصالة)</div>
+                    <div class="sg-kpi-title">{{ __('المكتملة (خرجت من الصالة)') }}</div>
                     <div class="sg-kpi-num text-primary">
                         {{ $stats->completed ?? $completedSurgeries->total() }}
                     </div>
@@ -496,7 +496,7 @@
 
             <div class="sg-kpi-card kpi-cancelled">
                 <div>
-                    <div class="sg-kpi-title">العمليات الملغاة</div>
+                    <div class="sg-kpi-title">{{ __('العمليات الملغاة') }}</div>
                     <div class="sg-kpi-num text-danger">
                         {{ $stats->cancelled ?? 0 }}
                     </div>
@@ -512,30 +512,30 @@
             <form method="GET" action="{{ route('surgeries.index') }}" class="row g-2 align-items-end">
                 <div class="col-lg-5 col-md-6">
                     <label for="search" class="sg-form-label">
-                        <i class="fas fa-search me-1 text-primary"></i> البحث السريع
+                        <i class="fas fa-search me-1 text-primary"></i> {{ __('البحث السريع') }}
                     </label>
                     <input type="text" class="form-control sg-input" id="search" name="search" 
                            value="{{ request('search') }}" 
-                           placeholder="ابحث بالمريض أو الطبيب أو نوع العملية...">
+                           placeholder="{{ __('ابحث بالمريض أو الطبيب أو نوع العملية...') }}">
                 </div>
 
                 <div class="col-lg-3 col-md-3">
                     <label for="status_filter" class="sg-form-label">
-                        <i class="fas fa-filter me-1 text-primary"></i> الحالة
+                        <i class="fas fa-filter me-1 text-primary"></i> {{ __('الحالة') }}
                     </label>
                     <select class="form-select sg-input" id="status_filter" name="status">
-                        <option value="">جميع الحالات</option>
-                        <option value="scheduled" {{ request('status') == 'scheduled' ? 'selected' : '' }}>مجدولة</option>
-                        <option value="waiting" {{ request('status') == 'waiting' ? 'selected' : '' }}>في الانتظار</option>
-                        <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>جارية</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتملة</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغاة</option>
+                        <option value="">{{ __('جميع الحالات') }}</option>
+                        <option value="scheduled" {{ request('status') == 'scheduled' ? 'selected' : '' }}>{{ __('مجدولة') }}</option>
+                        <option value="waiting" {{ request('status') == 'waiting' ? 'selected' : '' }}>{{ __('في الانتظار') }}</option>
+                        <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>{{ __('جارية') }}</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>{{ __('مكتملة') }}</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>{{ __('ملغاة') }}</option>
                     </select>
                 </div>
 
                 <div class="col-lg-2 col-md-3">
                     <label for="date_filter" class="sg-form-label">
-                        <i class="fas fa-calendar-day me-1 text-primary"></i> التاريخ
+                        <i class="fas fa-calendar-day me-1 text-primary"></i> {{ __('التاريخ') }}
                     </label>
                     <input type="date" class="form-control sg-input" id="date_filter" name="date" value="{{ request('date') }}">
                 </div>
@@ -543,10 +543,10 @@
                 <div class="col-lg-2 col-md-12">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary w-100 fw-bold" style="border-radius: 10px; padding: 8px 12px;">
-                            <i class="fas fa-search me-1"></i> بحث
+                            <i class="fas fa-search me-1"></i> {{ __('بحث') }}
                         </button>
                         @if(request('search') || request('status') || request('date'))
-                        <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary" style="border-radius: 10px; padding: 8px 14px;" title="إعادة تعيين">
+                        <a href="{{ route('surgeries.index') }}" class="btn btn-outline-secondary" style="border-radius: 10px; padding: 8px 14px;" title="{{ __('إعادة تعيين') }}">
                             <i class="fas fa-times"></i>
                         </a>
                         @endif
@@ -560,18 +560,18 @@
             <div class="sg-tabs-strip">
                 <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'active' ? 'active' : '' }}" id="btnTabActive" onclick="switchSurgeryTab('active')">
                     <i class="fas fa-clock text-success"></i>
-                    <span>العمليات النشطة (المجدولة والمنتظرة والجارية)</span>
+                    <span>{{ __('العمليات النشطة (المجدولة والمنتظرة والجارية)') }}</span>
                     <span class="sg-tab-pill-badge badge-active-color">{{ $activeSurgeries->total() }}</span>
                 </button>
                 <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'completed' ? 'active' : '' }}" id="btnTabCompleted" onclick="switchSurgeryTab('completed')">
                     <i class="fas fa-check-circle text-primary"></i>
-                    <span>العمليات المكتملة والملغاة (خرجت من الصالة)</span>
+                    <span>{{ __('العمليات المكتملة والملغاة (خرجت من الصالة)') }}</span>
                     <span class="sg-tab-pill-badge badge-completed-color">{{ $completedSurgeries->total() }}</span>
                 </button>
                 @if($canViewOrStoreTab)
                     <button type="button" class="sg-tab-btn {{ $activeIndexTab === 'or_store' ? 'active' : '' }}" id="btnTabOrStore" onclick="switchSurgeryTab('or_store')">
                         <i class="fas fa-warehouse text-warning"></i>
-                        <span>مخزن وعُهدة العمليات</span>
+                        <span>{{ __('مخزن وعُهدة العمليات') }}</span>
                         <span class="sg-tab-pill-badge badge-or-color">{{ $orStockBatches->count() }}</span>
                     </button>
                 @endif
@@ -581,11 +581,11 @@
                 <i class="fas fa-info-circle me-1 text-primary"></i>
                 <span id="tabCounterLabel">
                     @if($activeIndexTab === 'completed')
-                        عرض أرشيف وسجل العمليات الجراحية المكتملة والملغاة
+                        {{ __('عرض أرشيف وسجل العمليات الجراحية المكتملة والملغاة') }}
                     @elseif($activeIndexTab === 'or_store')
-                        جرد ومراقبة عهدة مخزن العمليات وحركات الصرف المباشر للعمليات
+                        {{ __('جرد ومراقبة عهدة مخزن العمليات وحركات الصرف المباشر للعمليات') }}
                     @else
-                        عرض العمليات النشطة حالياً داخل المستشفى
+                        {{ __('عرض العمليات النشطة حالياً داخل المستشفى') }}
                     @endif
                 </span>
             </div>
@@ -598,11 +598,11 @@
                     <table class="sg-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 10%;" title="حالة المريض في الصالة">الحالة</th>
-                                <th>المريض</th>
-                                <th>نوع العملية</th>
-                                <th>الطبيب الجراح</th>
-                                <th>رقم الغرفة</th>
+                                <th class="text-center" style="width: 10%;" title="{{ __('حالة المريض في الصالة') }}">{{ __('الحالة') }}</th>
+                                <th>{{ __('المريض') }}</th>
+                                <th>{{ __('نوع العملية') }}</th>
+                                <th>{{ __('الطبيب الجراح') }}</th>
+                                <th>{{ __('رقم الغرفة') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -649,11 +649,11 @@
                                     </a>
                                     <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
                                         @if($surgery->patient && $surgery->patient->age)
-                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} {{ __('سنة') }}</span>
                                         @endif
                                         @if($surgery->patient && $surgery->patient->gender)
                                             <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
-                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? __('ذكر') : __('أنثى') }}
                                             </span>
                                         @endif
                                         @if($phone)
@@ -669,9 +669,9 @@
                                             {{ $surgery->surgery_type }}
                                         </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? __('ضمان صحي') : __('ضمان قوى الأمن') }}">{{ __('ضمان') }}</span>
                                         @else
-                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ __('نقدي (كاش)') }}">{{ __('كاش') }}</span>
                                         @endif
                                     </div>
                                 </td>
@@ -680,11 +680,11 @@
                                         <i class="fas fa-user-md text-success"></i>
                                         <span class="fw-semibold">
                                             @if($surgery->doctor && $surgery->doctor->user)
-                                                د. {{ $surgery->doctor->user->name }}
+                                                {{ __('د.') }} {{ $surgery->doctor->user->name }}
                                             @elseif($surgery->surgeon_name)
-                                                {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">خارجي</span>
+                                                {{ $surgery->surgeon_name }} <span class="badge bg-light text-secondary border">{{ __('خارجي') }}</span>
                                             @else
-                                                <span class="text-muted">غير محدد</span>
+                                                <span class="text-muted">{{ __('غير محدد') }}</span>
                                             @endif
                                         </span>
                                     </div>
@@ -701,7 +701,7 @@
                                             @endif
                                         </span>
                                     @else
-                                        <span class="badge bg-light text-muted border">بدون غرفة</span>
+                                        <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
                                     @endif
                                 </td>
                             </tr>
@@ -710,7 +710,7 @@
                                 <td colspan="5">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-procedures fa-3x mb-3 text-secondary"></i>
-                                        <div class="fw-bold fs-5">لا توجد عمليات نشطة حالياً مطابقة للبحث</div>
+                                        <div class="fw-bold fs-5">{{ __('لا توجد عمليات نشطة حالياً مطابقة للبحث') }}</div>
                                     </div>
                                 </td>
                             </tr>
@@ -723,7 +723,7 @@
                 @if($activeSurgeries->hasPages())
                 <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="text-muted small">
-                        عرض {{ $activeSurgeries->firstItem() }} إلى {{ $activeSurgeries->lastItem() }} من أصل {{ $activeSurgeries->total() }} عملية نشطة
+                        {{ __('عرض') }} {{ $activeSurgeries->firstItem() }} {{ __('إلى') }} {{ $activeSurgeries->lastItem() }} {{ __('من أصل') }} {{ $activeSurgeries->total() }} {{ __('عملية نشطة') }}
                     </div>
                     <div>
                         {{ $activeSurgeries->links() }}
@@ -740,11 +740,11 @@
                     <table class="sg-table">
                         <thead>
                             <tr>
-                                <th>حالة المريض في الصالة</th>
-                                <th>المريض</th>
-                                <th>نوع العملية</th>
-                                <th>الطبيب الجراح</th>
-                                <th>رقم الغرفة</th>
+                                <th>{{ __('حالة المريض في الصالة') }}</th>
+                                <th>{{ __('المريض') }}</th>
+                                <th>{{ __('نوع العملية') }}</th>
+                                <th>{{ __('الطبيب الجراح') }}</th>
+                                <th>{{ __('رقم الغرفة') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -791,11 +791,11 @@
                                     </a>
                                     <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
                                         @if($surgery->patient && $surgery->patient->age)
-                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} سنة</span>
+                                            <span class="badge bg-white text-muted border px-1.5 py-0.5" style="font-size: 0.72rem;">{{ $surgery->patient->age }} {{ __('سنة') }}</span>
                                         @endif
                                         @if($surgery->patient && $surgery->patient->gender)
                                             <span class="badge bg-light text-secondary border px-1.5 py-0.5" style="font-size: 0.72rem;">
-                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                                {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? __('ذكر') : __('أنثى') }}
                                             </span>
                                         @endif
                                         @if($phone)
@@ -811,9 +811,9 @@
                                             {{ $surgery->surgery_type }}
                                         </span>
                                         @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? 'ضمان صحي' : 'ضمان قوى الأمن' }}">ضمان</span>
+                                            <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ $surgery->insurance_type === 'hi' ? __('ضمان صحي') : __('ضمان قوى الأمن') }}">{{ __('ضمان') }}</span>
                                         @else
-                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="نقدي (كاش)">كاش</span>
+                                            <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;" title="{{ __('نقدي (كاش)') }}">{{ __('كاش') }}</span>
                                         @endif
                                     </div>
                                 </td>
@@ -822,7 +822,7 @@
                                         <i class="fas fa-user-md text-secondary"></i>
                                         <span class="fw-semibold">
                                             @if($surgery->doctor && $surgery->doctor->user)
-                                                د. {{ $surgery->doctor->user->name }}
+                                                {{ __('د.') }} {{ $surgery->doctor->user->name }}
                                             @elseif($surgery->surgeon_name)
                                                 {{ $surgery->surgeon_name }}
                                             @else
@@ -843,7 +843,7 @@
                                             @endif
                                         </span>
                                     @else
-                                        <span class="badge bg-light text-muted border">بدون غرفة</span>
+                                        <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
                                     @endif
                                 </td>
                             </tr>
@@ -854,7 +854,7 @@
                                 <td colspan="5">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-archive fa-3x mb-3 text-secondary"></i>
-                                        <div class="fw-bold fs-5">لا توجد عمليات مكتملة أو مؤرشفة مطابقة للبحث</div>
+                                        <div class="fw-bold fs-5">{{ __('لا توجد عمليات مكتملة أو مؤرشفة مطابقة للبحث') }}</div>
                                     </div>
                                 </td>
                             </tr>
@@ -867,7 +867,7 @@
                 @if($completedSurgeries->hasPages())
                 <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="text-muted small">
-                        عرض {{ $completedSurgeries->firstItem() }} إلى {{ $completedSurgeries->lastItem() }} من أصل {{ $completedSurgeries->total() }} عملية مؤرشفة
+                        {{ __('عرض') }} {{ $completedSurgeries->firstItem() }} {{ __('إلى') }} {{ $completedSurgeries->lastItem() }} {{ __('من أصل') }} {{ $completedSurgeries->total() }} {{ __('عملية مؤرشفة') }}
                     </div>
                     <div>
                         {{ $completedSurgeries->links() }}

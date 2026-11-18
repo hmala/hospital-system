@@ -25,32 +25,32 @@
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h4 class="fw-bold mb-0 text-white">محطة الطبيب الجراح</h4>
+                            <h4 class="fw-bold mb-0 text-white">{{ __('محطة الطبيب الجراح') }}</h4>
                             @if($isSharedAccount)
                                 <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
-                                    <i class="fas fa-hospital me-1"></i> صالة العمليات - الحساب الموحد لكافة الجراحين
+                                    <i class="fas fa-hospital me-1"></i> {{ __('صالة العمليات - الحساب الموحد لكافة الجراحين') }}
                                 </span>
                             @else
                                 <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 px-2.5 py-1 rounded-pill small">
-                                    <i class="fas fa-user-md me-1"></i> د. {{ auth()->user()->name }} (حساب خاص)
+                                    <i class="fas fa-user-md me-1"></i> {{ __('د.') }} {{ auth()->user()->name }} ({{ __('حساب خاص') }})
                                 </span>
                             @endif
                         </div>
                         <p class="text-white-50 mb-0 small mt-1">
                             @if($isSharedAccount)
-                                استعراض كافة عمليات صالة العمليات، تعيين ومتابعة الأطباء الجراحين، وتوثيق القرارات السريرية والتوجيهات للمقيمين
+                                {{ __('استعراض كافة عمليات صالة العمليات، تعيين ومتابعة الأطباء الجراحين، وتوثيق القرارات السريرية والتوجيهات للمقيمين') }}
                             @else
-                                متابعة وتوثيق العمليات الجراحية الخاصة بك وتوثيق الخطة العلاجية والتوجيهات السريرية
+                                {{ __('متابعة وتوثيق العمليات الجراحية الخاصة بك وتوثيق الخطة العلاجية والتوجيهات السريرية') }}
                             @endif
                         </p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-light btn-sm fw-semibold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-procedures me-1"></i> لوحة الصالات
+                        <i class="fas fa-procedures me-1"></i> {{ __('لوحة الصالات') }}
                     </a>
                     <a href="{{ route('surgeon-station.index') }}" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-sync-alt me-1"></i> تحديث فوري
+                        <i class="fas fa-sync-alt me-1"></i> {{ __('تحديث فوري') }}
                     </a>
                 </div>
             </div>
@@ -83,10 +83,10 @@
                         </span>
                         <input type="text" name="search" id="filterSearch" value="{{ request('search') }}"
                                class="form-control form-control-sm border-start-0 ps-0"
-                               placeholder="بحث باسم المريض، رقم الملف، العملية..."
+                               placeholder="{{ __('بحث باسم المريض، رقم الملف، العملية...') }}"
                                autocomplete="off">
                         @if(request('search'))
-                            <button type="button" class="btn btn-outline-secondary border-start-0" onclick="clearSearch()" title="مسح">
+                            <button type="button" class="btn btn-outline-secondary border-start-0" onclick="clearSearch()" title="{{ __('مسح') }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         @endif
@@ -97,11 +97,11 @@
                 @if($isSharedAccount)
                     <div class="col-6 col-md-3 col-lg-2">
                         <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
-                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب جراح</option>
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب جراح') }}</option>
                             @foreach($surgeons as $surgeon)
                                 <option value="{{ $surgeon->id }}" {{ request('doctor_id') == $surgeon->id ? 'selected' : '' }}>
-                                    {{ $surgeon->user?->name ?? 'طبيب #'.$surgeon->id }}
+                                    {{ $surgeon->user?->name ?? __('طبيب') . ' #' . $surgeon->id }}
                                 </option>
                             @endforeach
                         </select>
@@ -109,13 +109,13 @@
                 @else
                     <div class="col-6 col-md-3 col-lg-2">
                         <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
                             @if(auth()->user()->doctor)
                                 <option value="{{ auth()->user()->doctor->id }}" {{ request('doctor_id') == auth()->user()->doctor->id ? 'selected' : '' }}>
-                                    ⭐ د. {{ auth()->user()->name }} (عملياتي)
+                                    {{ __('د.') }} {{ auth()->user()->name }} ({{ __('عملياتي') }})
                                 </option>
                             @endif
-                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب جراح</option>
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب جراح') }}</option>
                         </select>
                     </div>
                 @endif
@@ -123,10 +123,10 @@
                 {{-- Status Filter --}}
                 <div class="col-6 col-md-3 col-lg-2">
                     <select name="status" id="filterStatus" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="all">⚡ كل الحالات</option>
-                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>⏳ بانتظار المعاينة</option>
-                        <option value="in_progress" {{ request('status') === 'in_progress' ? 'selected' : '' }}>🔄 قيد المتابعة</option>
-                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>✅ مكتملة ومُعتمدة</option>
+                        <option value="all">{{ __('كل الحالات') }}</option>
+                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>{{ __('بانتظار المعاينة') }}</option>
+                        <option value="in_progress" {{ request('status') === 'in_progress' ? 'selected' : '' }}>{{ __('قيد المتابعة') }}</option>
+                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>{{ __('مكتملة ومُعتمدة') }}</option>
                     </select>
                 </div>
 
@@ -134,12 +134,12 @@
                 <div class="col-12 col-md-4 col-lg-3">
                     <div class="input-group input-group-sm">
                         <input type="date" name="date" id="filterDate" value="{{ request('date') }}"
-                               class="form-control form-control-sm" title="تاريخ العملية" onchange="this.form.submit()">
-                        <button type="button" class="btn btn-sm {{ request('date') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('today')" title="عمليات اليوم">
-                            اليوم
+                               class="form-control form-control-sm" title="{{ __('تاريخ العملية') }}" onchange="this.form.submit()">
+                        <button type="button" class="btn btn-sm {{ request('date') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('today')" title="{{ __('عمليات اليوم') }}">
+                            {{ __('اليوم') }}
                         </button>
-                        <button type="button" class="btn btn-sm {{ !request('date') || request('date') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('all')" title="عرض كل التواريخ">
-                            الكل
+                        <button type="button" class="btn btn-sm {{ !request('date') || request('date') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('all')" title="{{ __('عرض كل التواريخ') }}">
+                            {{ __('الكل') }}
                         </button>
                     </div>
                 </div>
@@ -147,11 +147,11 @@
                 {{-- Action & Reset Buttons --}}
                 <div class="col-12 col-md-auto ms-auto d-flex align-items-center gap-1.5">
                     <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 shadow-xs">
-                        <i class="fas fa-filter me-1"></i> تصفية
+                        <i class="fas fa-filter me-1"></i> {{ __('تصفية') }}
                     </button>
                     @if(request()->hasAny(['search', 'doctor_id', 'status', 'date']))
-                        <a href="{{ route('surgeon-station.index') }}" class="btn btn-light btn-sm border text-secondary shadow-xs" title="إعادة ضبط الفلاتر">
-                            <i class="fas fa-redo me-1"></i> ضبط
+                        <a href="{{ route('surgeon-station.index') }}" class="btn btn-light btn-sm border text-secondary shadow-xs" title="{{ __('إعادة ضبط الفلاتر') }}">
+                            <i class="fas fa-redo me-1"></i> {{ __('ضبط') }}
                         </a>
                     @endif
                 </div>
@@ -164,10 +164,10 @@
         <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                 <i class="fas fa-list-alt text-primary"></i>
-                قائمة العمليات المحالة لمحطة الجراح
+                {{ __('قائمة العمليات المحالة لمحطة الجراح') }}
             </h5>
             <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold" id="casesCountBadge">
-                عرض {{ $surgeries->count() }} حالة
+                {{ __('عرض') }} {{ $surgeries->count() }} {{ __('حالة') }}
             </span>
         </div>
         <div class="card-body p-0">
@@ -175,12 +175,12 @@
                 <table class="table table-hover align-middle mb-0" id="surgeriesTable" style="font-size: 0.92rem;">
                     <thead class="bg-light text-secondary text-uppercase fw-semibold" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                         <tr>
-                            <th class="ps-4 py-3">المريض</th>
-                            <th class="py-3">العملية الجراحية</th>
-                            <th class="py-3">موعد العملية</th>
-                            <th class="py-3">الطبيب الجراح</th>
-                            <th class="py-3 text-center">حالة المحطة</th>
-                            <th class="pe-4 py-3 text-center">الإجراءات</th>
+                            <th class="ps-4 py-3">{{ __('المريض') }}</th>
+                            <th class="py-3">{{ __('العملية الجراحية') }}</th>
+                            <th class="py-3">{{ __('موعد العملية') }}</th>
+                            <th class="py-3">{{ __('الطبيب الجراح') }}</th>
+                            <th class="py-3 text-center">{{ __('حالة المحطة') }}</th>
+                            <th class="pe-4 py-3 text-center">{{ __('الإجراءات') }}</th>
                         </tr>
                     </thead>
                     <tbody class="border-top-0">

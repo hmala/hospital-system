@@ -25,32 +25,32 @@
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h4 class="fw-bold mb-0 text-white">محطة طبيب التخدير</h4>
+                            <h4 class="fw-bold mb-0 text-white">{{ __('محطة طبيب التخدير') }}</h4>
                             @if($isSharedAccount)
                                 <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
-                                    <i class="fas fa-hospital me-1"></i> صالة العمليات - الحساب الموحد لكافة أطباء التخدير
+                                    <i class="fas fa-hospital me-1"></i> {{ __('صالة العمليات - الحساب الموحد لكافة أطباء التخدير') }}
                                 </span>
                             @else
                                 <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 px-2.5 py-1 rounded-pill small">
-                                    <i class="fas fa-user-md me-1"></i> د. {{ auth()->user()->name }} (حساب خاص)
+                                    <i class="fas fa-user-md me-1"></i> {{ __('د.') }} {{ auth()->user()->name }} ({{ __('حساب خاص') }})
                                 </span>
                             @endif
                         </div>
                         <p class="text-white-50 mb-0 small mt-1">
                             @if($isSharedAccount)
-                                استعراض كافة عمليات صالة العمليات، تعيين أطباء التخدير، وتوثيق الإجراءات والمتابعة السريرية
+                                {{ __('استعراض كافة عمليات صالة العمليات، تعيين أطباء التخدير، وتوثيق الإجراءات والمتابعة السريرية') }}
                             @else
-                                متابعة وتوثيق إجراءات التخدير الخاصة بك بعد الصالة وتحديد بروتوكول الإفاقة والمتابعة السريرية
+                                {{ __('متابعة وتوثيق إجراءات التخدير الخاصة بك بعد الصالة وتحديد بروتوكول الإفاقة والمتابعة السريرية') }}
                             @endif
                         </p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-light btn-sm fw-semibold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-procedures me-1"></i> لوحة الصالات
+                        <i class="fas fa-procedures me-1"></i> {{ __('لوحة الصالات') }}
                     </a>
                     <a href="{{ route('anesthesia-station.index') }}" class="btn btn-info text-white btn-sm fw-bold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-sync-alt me-1"></i> تحديث فوري
+                        <i class="fas fa-sync-alt me-1"></i> {{ __('تحديث فوري') }}
                     </a>
                 </div>
             </div>
@@ -83,10 +83,10 @@
                         </span>
                         <input type="text" name="search" id="filterSearch" value="{{ request('search') }}"
                                class="form-control form-control-sm border-start-0 ps-0"
-                               placeholder="بحث باسم المريض، رقم الملف، العملية..."
+                               placeholder="{{ __('بحث باسم المريض، رقم الملف، العملية...') }}"
                                autocomplete="off">
                         @if(request('search'))
-                            <button type="button" class="btn btn-outline-secondary border-start-0" onclick="clearSearch()" title="مسح">
+                            <button type="button" class="btn btn-outline-secondary border-start-0" onclick="clearSearch()" title="{{ __('مسح') }}">
                                 <i class="fas fa-times"></i>
                             </button>
                         @endif
@@ -97,11 +97,11 @@
                 @if($isSharedAccount)
                     <div class="col-6 col-md-3 col-lg-3">
                         <select name="anesthesiologist_id" id="filterAnesthesiologist" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
-                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب تخدير</option>
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
+                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب تخدير') }}</option>
                             @foreach($anesthesiologists as $doctor)
                                 <option value="{{ $doctor->id }}" {{ request('anesthesiologist_id') == $doctor->id ? 'selected' : '' }}>
-                                    {{ $doctor->user?->name ?? 'طبيب تخدير #'.$doctor->id }}
+                                    {{ $doctor->user?->name ?? __('طبيب تخدير') . ' #' . $doctor->id }}
                                 </option>
                             @endforeach
                         </select>
@@ -109,13 +109,13 @@
                 @else
                     <div class="col-6 col-md-3 col-lg-3">
                         <select name="anesthesiologist_id" id="filterAnesthesiologist" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">👨‍⚕️ كل العمليات بالصالة</option>
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
                             @if(auth()->user()->doctor)
                                 <option value="{{ auth()->user()->doctor->id }}" {{ request('anesthesiologist_id') == auth()->user()->doctor->id ? 'selected' : '' }}>
-                                    ⭐ د. {{ auth()->user()->name }} (عملياتي)
+                                    {{ __('د.') }} {{ auth()->user()->name }} ({{ __('عملياتي') }})
                                 </option>
                             @endif
-                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>⚠️ بانتظار تعيين طبيب تخدير</option>
+                            <option value="unassigned" {{ request('anesthesiologist_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب تخدير') }}</option>
                         </select>
                     </div>
                 @endif
@@ -124,12 +124,12 @@
                 <div class="col-12 col-md-4 col-lg-3">
                     <div class="input-group input-group-sm">
                         <input type="date" name="date" id="filterDate" value="{{ request('date') }}"
-                               class="form-control form-control-sm" title="تاريخ العملية" onchange="this.form.submit()">
-                        <button type="button" class="btn btn-sm {{ request('date') === 'today' ? 'btn-info text-white' : 'btn-outline-secondary' }}" onclick="filterQuickDate('today')" title="عمليات اليوم">
-                            اليوم
+                               class="form-control form-control-sm" title="{{ __('تاريخ العملية') }}" onchange="this.form.submit()">
+                        <button type="button" class="btn btn-sm {{ request('date') === 'today' ? 'btn-info text-white' : 'btn-outline-secondary' }}" onclick="filterQuickDate('today')" title="{{ __('عمليات اليوم') }}">
+                            {{ __('اليوم') }}
                         </button>
-                        <button type="button" class="btn btn-sm {{ !request('date') || request('date') === 'all' ? 'btn-info text-white' : 'btn-outline-secondary' }}" onclick="filterQuickDate('all')" title="عرض كل التواريخ">
-                            الكل
+                        <button type="button" class="btn btn-sm {{ !request('date') || request('date') === 'all' ? 'btn-info text-white' : 'btn-outline-secondary' }}" onclick="filterQuickDate('all')" title="{{ __('عرض كل التواريخ') }}">
+                            {{ __('الكل') }}
                         </button>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
                 {{-- Action & Reset Buttons --}}
                 <div class="col-12 col-md-auto ms-auto d-flex align-items-center gap-1.5">
                     <button type="submit" class="btn btn-info text-white btn-sm fw-bold px-3 shadow-xs">
-                        <i class="fas fa-filter me-1"></i> تصفية
+                        <i class="fas fa-filter me-1"></i> {{ __('تصفية') }}
                     </button>
                     @if(request()->hasAny(['search', 'anesthesiologist_id', 'date']))
                         <a href="{{ route('anesthesia-station.index') }}" class="btn btn-light btn-sm border text-secondary shadow-xs" title="إعادة ضبط الفلاتر">
@@ -157,7 +157,7 @@
                 قائمة العمليات بمحطة التخدير
             </h5>
             <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold" id="casesCountBadge">
-                عرض {{ $surgeries->count() }} حالة
+                {{ __('عرض') }} {{ $surgeries->count() }} {{ __('حالة') }}
             </span>
         </div>
         <div class="card-body p-0">
@@ -165,10 +165,10 @@
                 <table class="table table-hover align-middle mb-0" id="anesthesiaTable" style="font-size: 0.92rem;">
                     <thead class="bg-light text-secondary text-uppercase fw-semibold" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                         <tr>
-                            <th class="ps-4 py-3">المريض</th>
-                            <th class="py-3">العملية الجراحية</th>
-                            <th class="py-3">موعد العملية</th>
-                            <th class="pe-4 py-3">طبيب التخدير</th>
+                            <th class="ps-4 py-3">{{ __('المريض') }}</th>
+                            <th class="py-3">{{ __('العملية الجراحية') }}</th>
+                            <th class="py-3">{{ __('موعد العملية') }}</th>
+                            <th class="pe-4 py-3">{{ __('طبيب التخدير') }}</th>
                         </tr>
                     </thead>
                     <tbody class="border-top-0">

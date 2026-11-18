@@ -517,18 +517,18 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ route('surgeries.index') }}" class="text-decoration-none">إدارة العمليات</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('surgeries.waiting') }}" class="text-decoration-none">قائمة الانتظار اليومية</a></li>
-                <li class="breadcrumb-item active" aria-current="page">المحطة السريرية الموحدة (#{{ $surgery->id }})</li>
+                <li class="breadcrumb-item"><a href="{{ route('surgeries.waiting') }}" class="text-decoration-none">{{ __('قائمة الانتظار اليومية') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ __('المحطة السريرية الموحدة') }} (#{{ $surgery->id }})</li>
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-2">
             @can('manage surgery tab permissions')
-                <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3" title="تخصيص صلاحيات التبويبات">
-                    <i class="fas fa-sliders-h me-1"></i> ضبط صلاحيات التبويبات
+                <a href="{{ route('surgery-stations.tab-settings.index') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3" title="{{ __('تخصيص صلاحيات التبويبات') }}">
+                    <i class="fas fa-sliders-h me-1"></i> {{ __('ضبط صلاحيات التبويبات') }}
                 </a>
             @endcan
             <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fas fa-arrow-right me-1"></i> العودة للجدول
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __('العودة للجدول') }}
             </a>
         </div>
     </div>
@@ -564,17 +564,17 @@
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->name ?? 'غير محدد' }}</h3>
+                            <h3 class="clin-patient-name mb-0">{{ $surgery->patient?->name ?? __('غير محدد') }}</h3>
                             <span class="badge-modern-code">
                                 #{{ $surgery->patient?->patient_id ?? 'N/A' }}
                             </span>
                         </div>
                         <div class="d-flex align-items-center gap-2 text-muted small mt-1">
                             <span class="badge-modern-sub">
-                                <i class="fas fa-birthday-cake me-1 text-primary"></i> {{ $surgery->patient?->age ? $surgery->patient->age . ' سنة' : 'العمر غير مسجل' }}
+                                <i class="fas fa-birthday-cake me-1 text-primary"></i> {{ $surgery->patient?->age ? $surgery->patient->age . ' ' . __('سنة') : __('العمر غير مسجل') }}
                             </span>
                             <span class="badge-modern-sub">
-                                <i class="fas fa-venus-mars me-1 text-info"></i> {{ $surgery->patient?->gender === 'male' ? 'ذكر' : 'أنثى' }}
+                                <i class="fas fa-venus-mars me-1 text-info"></i> {{ $surgery->patient?->gender === 'male' ? __('ذكر') : __('أنثى') }}
                             </span>
                         </div>
                     </div>
@@ -586,14 +586,14 @@
                 {{-- Pillar 2: Procedure & Doctor --}}
                 <div>
                     <div class="clin-meta-label">
-                        <i class="fas fa-procedures text-primary me-1"></i> العملية الجراحية
+                        <i class="fas fa-procedures text-primary me-1"></i> {{ __('العملية الجراحية') }}
                     </div>
                     <div class="fw-bold text-dark fs-6 text-truncate" style="max-width: 260px;" title="{{ $surgery->surgery_name }}">
                         {{ $surgery->surgery_name }}
                     </div>
                     <div class="text-secondary small mt-0.5 d-flex align-items-center gap-1.5">
                         <span class="badge-doctor-chip">
-                            <i class="fas fa-user-md text-success me-1"></i> د. {{ $surgery->doctor?->name ?? 'غير محدد' }}
+                            <i class="fas fa-user-md text-success me-1"></i> {{ __('د.') }} {{ $surgery->doctor?->name ?? __('غير محدد') }}
                         </span>
                     </div>
                 </div>
@@ -604,11 +604,11 @@
                 {{-- Pillar 3: Location & Time --}}
                 <div>
                     <div class="clin-meta-label">
-                        <i class="fas fa-map-marker-alt text-warning me-1"></i> الموقع والجدولة
+                        <i class="fas fa-map-marker-alt text-warning me-1"></i> {{ __('الموقع والجدولة') }}
                     </div>
                     <div class="d-flex align-items-center gap-2 mt-0.5">
                         <span class="badge-room-chip">
-                            <i class="fas fa-door-open me-1 text-amber"></i> {{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? 'غير مخصصة' }}
+                            <i class="fas fa-door-open me-1 text-amber"></i> {{ $surgery->operationTheater?->name ?? $surgery->room?->room_number ?? __('غير مخصصة') }}
                         </span>
                         <span class="badge-time-chip">
                             <i class="far fa-clock me-1 text-secondary"></i> {{ $surgery->scheduled_time ? $surgery->scheduled_time->format('h:i A') : '--:--' }}
@@ -623,29 +623,29 @@
                 {{-- Smart Phase Indicator & Subtle Switcher --}}
                 <div class="d-flex align-items-center gap-2">
                     @if($currentPhase === 'pre_op')
-                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="المرحلة السريرية التلقائية الحالية">
+                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية التلقائية الحالية') }}">
                             <i class="fas fa-hourglass-half text-primary"></i>
-                            <span>تحضير ما قبل العملية</span>
+                            <span>{{ __('تحضير ما قبل العملية') }}</span>
                         </span>
                         @if($postOpStation)
                             <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
                                class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
-                               title="الانتقال إلى مرحلة ما بعد العملية">
-                                <span>ما بعد العملية</span>
-                                <i class="fas fa-arrow-left fa-xs"></i>
+                               title="{{ __('الانتقال إلى مرحلة ما بعد العملية') }}">
+                                <span>{{ __('ما بعد العملية') }}</span>
+                                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} fa-xs"></i>
                             </a>
                         @endif
                     @else
-                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="المرحلة السريرية التلقائية الحالية">
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية التلقائية الحالية') }}">
                             <i class="fas fa-procedures text-success"></i>
-                            <span>عناية ما بعد العملية (الرقود)</span>
+                            <span>{{ __('عناية ما بعد العملية (الرقود)') }}</span>
                         </span>
                         @if($preOpStation)
                             <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
                                class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
-                               title="مراجعة سجل ما قبل العملية">
+                               title="{{ __('مراجعة سجل ما قبل العملية') }}">
                                 <i class="fas fa-history fa-xs"></i>
-                                <span>أرشيف ما قبل العملية</span>
+                                <span>{{ __('أرشيف ما قبل العملية') }}</span>
                             </a>
                         @endif
                     @endif
@@ -656,25 +656,25 @@
                     @if($station && $station->status === 'completed')
                         <span class="badge-status-modern badge-status-completed">
                             <span class="status-pulse-dot bg-success"></span>
-                            مكتملة
+                            {{ __('مكتملة') }}
                         </span>
                     @elseif($station && $station->status === 'in_progress')
                         <span class="badge-status-modern badge-status-progress">
                             <span class="status-pulse-dot bg-warning"></span>
-                            قيد المتابعة
+                            {{ __('قيد المتابعة') }}
                         </span>
                     @else
                         <span class="badge-status-modern badge-status-waiting">
                             <span class="status-pulse-dot bg-secondary"></span>
-                            بالانتظار
+                            {{ __('بالانتظار') }}
                         </span>
                     @endif
 
                     @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
-                        <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
+                        <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.') }}')">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 shadow-xs fw-semibold" style="font-size: 0.78rem;" title="تخريج المريض وإخلاء السرير">
-                                <i class="fas fa-sign-out-alt me-1"></i> تخريج من الغرفة
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 shadow-xs fw-semibold" style="font-size: 0.78rem;" title="{{ __('تخريج المريض وإخلاء السرير') }}">
+                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج من الغرفة') }}
                             </button>
                         </form>
                     @endif
@@ -687,16 +687,16 @@
     {{-- Tabs Navigation Bar (Responsive Tablet Grid - Zero Scroll Auto-Fit) --}}
     @php
         $shortTabLabels = [
-            'history' => 'السيرة',
-            'vitals' => 'العلامات والسوائل',
-            'plan' => 'الخطة',
-            'follow_up' => 'المتابعة',
-            'treatments' => 'الأدوية',
-            'supplies' => 'المستلزمات',
-            'nursing_care' => 'التمريض',
-            'inpatient_survey' => 'الاستبيان ⭐',
-            'tests' => 'الفحوصات',
-            'consultations' => 'الاستشارات 🩺',
+            'history' => __('السيرة'),
+            'vitals' => __('العلامات والسوائل'),
+            'plan' => __('الخطة'),
+            'follow_up' => __('المتابعة'),
+            'treatments' => __('الأدوية'),
+            'supplies' => __('المستلزمات'),
+            'nursing_care' => __('التمريض'),
+            'inpatient_survey' => __('الاستبيان'),
+            'tests' => __('الفحوصات'),
+            'consultations' => __('الاستشارات'),
         ];
     @endphp
 
@@ -706,13 +706,13 @@
                 <li class="clin-tab-item" role="presentation">
                     <a class="clin-nav-tab {{ $activeTab === $tKey ? 'active' : '' }}" 
                        href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}"
-                       title="{{ $tMeta['label'] }}">
+                       title="{{ __($tMeta['label']) }}">
                         <i class="{{ $tMeta['icon'] }} small"></i>
-                        <span>{{ $shortTabLabels[$tKey] ?? $tMeta['label'] }}</span>
+                        <span>{{ $shortTabLabels[$tKey] ?? __($tMeta['label']) }}</span>
                         @if($tMeta['can_write'])
-                            <span class="badge-perm-dot badge-perm-write" title="صلاحية إدخال وتعديل"><i class="fas fa-pen"></i></span>
+                            <span class="badge-perm-dot badge-perm-write" title="{{ __('صلاحية إدخال وتعديل') }}"><i class="fas fa-pen"></i></span>
                         @else
-                            <span class="badge-perm-dot badge-perm-read" title="صلاحية قراءة فقط"><i class="fas fa-eye"></i></span>
+                            <span class="badge-perm-dot badge-perm-read" title="{{ __('صلاحية قراءة فقط') }}"><i class="fas fa-eye"></i></span>
                         @endif
                     </a>
                 </li>
@@ -729,8 +729,8 @@
     @if(!$currentTabMeta)
         <div class="alert alert-warning text-center p-5 rounded-4 shadow-sm">
             <i class="fas fa-lock fa-3x text-warning mb-3"></i>
-            <h5 class="fw-bold">لا تملك صلاحية الوصول لأي تبويب في هذه المحطة</h5>
-            <p class="text-muted mb-0">يرجى مراجعة إدارة المستشفى لمنحك الصلاحيات المناسبة لدورك الوظيفي.</p>
+            <h5 class="fw-bold">{{ __('لا تملك صلاحية الوصول لأي تبويب في هذه المحطة') }}</h5>
+            <p class="text-muted mb-0">{{ __('يرجى مراجعة إدارة المستشفى لمنحك الصلاحيات المناسبة لدورك الوظيفي.') }}</p>
         </div>
     @else
         <div class="pane-card mb-4">
@@ -744,20 +744,20 @@
                         <i class="{{ $currentTabMeta['icon'] }} {{ $isCompactFormTab ? '' : 'fa-lg' }}"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-dark {{ $isCompactFormTab ? 'fs-6' : '' }}">{{ $currentTabMeta['label'] }}</h5>
+                        <h5 class="mb-0 fw-bold text-dark {{ $isCompactFormTab ? 'fs-6' : '' }}">{{ __($currentTabMeta['label']) }}</h5>
                         @if(!$isCompactFormTab)
-                            <p class="text-muted small mb-0">{{ $currentTabMeta['description'] }}</p>
+                            <p class="text-muted small mb-0">{{ __($currentTabMeta['description']) }}</p>
                         @endif
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     @if($canWriteCurrentTab)
                         <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-bold small">
-                            <i class="fas fa-edit me-1"></i> إدخال وتعديل متاح بحسابك
+                            <i class="fas fa-edit me-1"></i> {{ __('إدخال وتعديل متاح بحسابك') }}
                         </span>
                     @else
                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-bold small">
-                            <i class="fas fa-eye me-1"></i> وضع القراءة والاطلاع فقط
+                            <i class="fas fa-eye me-1"></i> {{ __('وضع القراءة والاطلاع فقط') }}
                         </span>
                     @endif
                 </div>

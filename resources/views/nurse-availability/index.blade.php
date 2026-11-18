@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'جدول توفر ودوام التمريض وتوزيع الطوابق')
+@section('title', __('جدول توفر ودوام التمريض وتوزيع الطوابق'))
 
 @push('styles')
 <style>
@@ -67,8 +67,8 @@
                     <i class="fas fa-user-nurse fa-2x"></i>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-0 text-dark">جدول توفر ودوام التمريض اليومي</h3>
-                    <p class="text-muted small mb-0">تحديد الممرضين المتاحين اليوم بالدوام، توزيع الطوابق، وضبط صلاحيات دخول النظام</p>
+                    <h3 class="fw-bold mb-0 text-dark">{{ __('جدول توفر ودوام التمريض اليومي') }}</h3>
+                    <p class="text-muted small mb-0">{{ __('تحديد الممرضين المتاحين اليوم بالدوام، توزيع الطوابق، وضبط صلاحيات دخول النظام') }}</p>
                 </div>
             </div>
         </div>
@@ -76,8 +76,8 @@
         {{-- Date Navigation Picker --}}
         <div class="d-flex align-items-center gap-2 bg-white p-2 rounded-4 border shadow-sm">
             <a href="{{ route('nurse-availability.index', ['date' => \Carbon\Carbon::parse($selectedDate)->subDay()->toDateString(), 'floor' => $floorFilter, 'status' => $statusFilter]) }}" 
-               class="btn btn-sm btn-light rounded-pill px-3" title="اليوم السابق">
-                <i class="fas fa-chevron-right"></i>
+               class="btn btn-sm btn-light rounded-pill px-3" title="{{ __('اليوم السابق') }}">
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-chevron-left' : 'fa-chevron-right' }}"></i>
             </a>
 
             <form method="GET" action="{{ route('nurse-availability.index') }}" class="d-flex align-items-center gap-2" id="dateFilterForm">
@@ -92,14 +92,14 @@
             </form>
 
             <a href="{{ route('nurse-availability.index', ['date' => \Carbon\Carbon::parse($selectedDate)->addDay()->toDateString(), 'floor' => $floorFilter, 'status' => $statusFilter]) }}" 
-               class="btn btn-sm btn-light rounded-pill px-3" title="اليوم التالي">
-                <i class="fas fa-chevron-left"></i>
+               class="btn btn-sm btn-light rounded-pill px-3" title="{{ __('اليوم التالي') }}">
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-chevron-right' : 'fa-chevron-left' }}"></i>
             </a>
 
             @if($selectedDate !== today()->toDateString())
                 <a href="{{ route('nurse-availability.index', ['date' => today()->toDateString(), 'floor' => $floorFilter, 'status' => $statusFilter]) }}" 
                    class="btn btn-sm btn-primary rounded-pill px-3">
-                    العودة لليوم
+                    {{ __('العودة لليوم') }}
                 </a>
             @endif
         </div>
@@ -110,7 +110,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-chip d-flex align-items-center justify-content-between">
                 <div>
-                    <span class="text-muted small fw-bold d-block">إجمالي الكادر التمريضي</span>
+                    <span class="text-muted small fw-bold d-block">{{ __('إجمالي الكادر التمريضي') }}</span>
                     <h3 class="fw-bold mb-0 text-dark mt-1">{{ $totalNurses }}</h3>
                 </div>
                 <div class="rounded-circle bg-light text-primary p-3">
@@ -122,7 +122,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-chip d-flex align-items-center justify-content-between border-success border-opacity-25 bg-success bg-opacity-10">
                 <div>
-                    <span class="text-success small fw-bold d-block">المتاحين بالدوام اليوم</span>
+                    <span class="text-success small fw-bold d-block">{{ __('المتاحين بالدوام اليوم') }}</span>
                     <h3 class="fw-bold mb-0 text-success mt-1" id="statAvailableCount">{{ $availableCount }}</h3>
                 </div>
                 <div class="rounded-circle bg-success text-white p-3 shadow-xs">
@@ -134,7 +134,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-chip d-flex align-items-center justify-content-between border-danger border-opacity-25 bg-danger bg-opacity-10">
                 <div>
-                    <span class="text-danger small fw-bold d-block">خارج الدوام (مغلق)</span>
+                    <span class="text-danger small fw-bold d-block">{{ __('خارج الدوام (مغلق)') }}</span>
                     <h3 class="fw-bold mb-0 text-danger mt-1" id="statOffDutyCount">{{ $offDutyCount }}</h3>
                 </div>
                 <div class="rounded-circle bg-danger text-white p-3 shadow-xs">
@@ -146,7 +146,7 @@
         <div class="col-6 col-md-3">
             <div class="stat-chip d-flex align-items-center justify-content-between border-info border-opacity-25 bg-info bg-opacity-10">
                 <div>
-                    <span class="text-info small fw-bold d-block">نسبة تغطية الشفت</span>
+                    <span class="text-info small fw-bold d-block">{{ __('نسبة تغطية الشفت') }}</span>
                     <h3 class="fw-bold mb-0 text-info mt-1" id="statCoverageRate">{{ $coverageRate }}%</h3>
                 </div>
                 <div class="rounded-circle bg-info text-white p-3 shadow-xs">

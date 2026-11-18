@@ -290,13 +290,13 @@
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2">
-                        <h4 class="mb-0 fw-bolder text-dark" style="font-size: 1.35rem; color: #0f172a;">جدول وقائمة انتظار العمليات الجراحية</h4>
+                        <h4 class="mb-0 fw-bolder text-dark" style="font-size: 1.35rem; color: #0f172a;">{{ __('جدول وقائمة انتظار العمليات الجراحية') }}</h4>
                         <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">OR Flight Board</span>
                     </div>
                     <div class="text-muted small mt-1">
-                        متابعة وتحديث حالات العمليات، الصالات المخصصة، والمواعيد
+                        {{ __('متابعة وتحديث حالات العمليات، الصالات المخصصة، والمواعيد') }}
                         <span class="mx-1">•</span>
-                        <span class="text-dark fw-semibold"><i class="far fa-clock text-primary me-0.5"></i> التوقيت المباشر للمركز</span>
+                        <span class="text-dark fw-semibold"><i class="far fa-clock text-primary me-0.5"></i> {{ __('التوقيت المباشر للمركز') }}</span>
                     </div>
                 </div>
             </div>
@@ -304,21 +304,21 @@
             <div class="d-flex flex-wrap align-items-center gap-2">
                 @can('create surgeries')
                 <a href="{{ route('surgeries.create') }}" class="btn rounded-pill px-3 py-2 fw-bold text-white shadow-sm" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
-                    <i class="fas fa-plus me-1"></i> حجز عملية جديدة
+                    <i class="fas fa-plus me-1"></i> {{ __('حجز عملية جديدة') }}
                 </a>
                 @endcan
 
-                <div class="d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-pill bg-white border shadow-sm text-nowrap" style="font-size: 0.8rem;" title="حالة الاتصال والمزامنة اللحظية">
+                <div class="d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-pill bg-white border shadow-sm text-nowrap" style="font-size: 0.8rem;" title="{{ __('حالة الاتصال والمزامنة اللحظية') }}">
                     <span class="sg-pulse-dot" id="liveSyncPulseIndicator" style="width: 7px; height: 7px; background: #10b981;"></span>
-                    <span class="fw-bold text-success" id="liveSyncStatusText">مزامنة حية</span>
+                    <span class="fw-bold text-success" id="liveSyncStatusText">{{ __('مزامنة حية') }}</span>
                 </div>
 
-                <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="عرض مخصص لشاشات الـ TV وممرات العمليات">
-                    <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">شاشة العرض (TV)</span>
+                <button type="button" class="btn btn-outline-dark bg-white rounded-pill px-3 py-2 shadow-sm fw-semibold" id="btnToggleTvMode" onclick="toggleTvDisplayMode()" title="{{ __('عرض مخصص لشاشات الـ TV وممرات العمليات') }}">
+                    <i class="fas fa-tv me-1 text-primary"></i> <span id="tvModeText">{{ __('شاشة العرض (TV)') }}</span>
                 </button>
 
-                <button type="button" class="btn btn-light border rounded-pill px-3 py-2 shadow-sm text-dark fw-bold" onclick="refreshFlightBoardLive(true);" title="تحديث فوري لجدول العمليات">
-                    <i class="fas fa-rotate me-1 text-primary"></i> تحديث
+                <button type="button" class="btn btn-light border rounded-pill px-3 py-2 shadow-sm text-dark fw-bold" onclick="refreshFlightBoardLive(true);" title="{{ __('تحديث فوري لجدول العمليات') }}">
+                    <i class="fas fa-rotate me-1 text-primary"></i> {{ __('تحديث') }}
                 </button>
             </div>
         </div>
@@ -350,12 +350,12 @@
                                 <i class="fas fa-clock" style="font-size: 0.9rem;"></i>
                             </span>
                             <div>
-                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">١. قبل دخول الصالة (بالانتظار)</h6>
-                                <small class="text-muted" style="font-size: 0.74rem;">المرضى المجدولون وبانتظار الدخول لصالة العمليات</small>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">{{ __('1. قبل دخول الصالة (بالانتظار)') }}</h6>
+                                <small class="text-muted" style="font-size: 0.74rem;">{{ __('المرضى المجدولون وبانتظار الدخول لصالة العمليات') }}</small>
                             </div>
                         </div>
                         <span class="badge rounded-pill px-3 py-1.5 fw-bold shadow-xs" style="background: #f59e0b; color: #1e293b; font-size: 0.82rem;">
-                            {{ $waitingSurgeriesList->count() }} بالانتظار
+                            {{ $waitingSurgeriesList->count() }} {{ __('بالانتظار') }}
                         </span>
                     </div>
                     <div class="card-body p-0">
@@ -363,13 +363,13 @@
                             <table class="or-master-table mb-0">
                                 <thead>
                                     <tr>
-                                        <th class="text-center" style="width: 10%;" title="حالة المريض في الصالة">الحالة</th>
-                                        <th style="width: 23%;">المريض</th>
-                                        <th class="text-center" style="width: 9%;">العمر</th>
-                                        <th class="text-center" style="width: 8%;">الجنس</th>
-                                        <th style="width: 22%;">نوع العملية</th>
-                                        <th style="width: 15%;">الطبيب الجراح</th>
-                                        <th style="width: 13%;">رقم الغرفة</th>
+                                        <th class="text-center" style="width: 10%;" title="{{ __('حالة المريض في الصالة') }}">{{ __('الحالة') }}</th>
+                                        <th style="width: 23%;">{{ __('المريض') }}</th>
+                                        <th class="text-center" style="width: 9%;">{{ __('العمر') }}</th>
+                                        <th class="text-center" style="width: 8%;">{{ __('الجنس') }}</th>
+                                        <th style="width: 22%;">{{ __('نوع العملية') }}</th>
+                                        <th style="width: 15%;">{{ __('الطبيب الجراح') }}</th>
+                                        <th style="width: 13%;">{{ __('رقم الغرفة') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -469,8 +469,8 @@
                                         <td colspan="7" class="text-center py-5 text-muted">
                                             <div class="py-3">
                                                 <i class="fas fa-check-circle fa-2x mb-2 text-warning opacity-50 d-block"></i>
-                                                <div class="fw-bold fs-6 text-dark">لا يوجد مرضى بانتظار الدخول حالياً</div>
-                                                <div class="small text-muted mt-1">جميع المرضى إما داخل الصالة أو اكتملت عملياتهم</div>
+                                                <div class="fw-bold fs-6 text-dark">{{ __('لا يوجد مرضى بانتظار الدخول حالياً') }}</div>
+                                                <div class="small text-muted mt-1">{{ __('جميع المرضى إما داخل الصالة أو اكتملت عملياتهم') }}</div>
                                             </div>
                                         </td>
                                     </tr>
@@ -491,13 +491,13 @@
                                 <i class="fas fa-procedures" style="font-size: 0.9rem;"></i>
                             </span>
                             <div>
-                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">٢. داخل صالة العمليات (جارية الآن)</h6>
-                                <small class="text-muted" style="font-size: 0.74rem;">العمليات الجراحية النشطة الجارية داخل الصالات حالياً</small>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.98rem;">{{ __('2. داخل صالة العمليات (جارية الآن)') }}</h6>
+                                <small class="text-muted" style="font-size: 0.74rem;">{{ __('العمليات الجراحية النشطة الجارية داخل الصالات حالياً') }}</small>
                             </div>
                         </div>
                         <span class="badge rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1" style="background: #0284c7; color: #fff; font-size: 0.82rem;">
                             <span class="sg-pulse-dot me-1"></span>
-                            {{ $inProgressSurgeriesList->count() }} جارية بالصالة
+                            {{ $inProgressSurgeriesList->count() }} {{ __('جارية بالصالة') }}
                         </span>
                     </div>
                     <div class="card-body p-0">
@@ -505,13 +505,13 @@
                             <table class="or-master-table mb-0">
                                 <thead>
                                     <tr>
-                                        <th class="text-center" style="width: 10%;" title="حالة المريض في الصالة">الحالة</th>
-                                        <th style="width: 23%;">المريض</th>
-                                        <th class="text-center" style="width: 9%;">العمر</th>
-                                        <th class="text-center" style="width: 8%;">الجنس</th>
-                                        <th style="width: 22%;">نوع العملية</th>
-                                        <th style="width: 15%;">الطبيب الجراح</th>
-                                        <th style="width: 13%;">رقم الغرفة</th>
+                                        <th class="text-center" style="width: 10%;" title="{{ __('حالة المريض في الصالة') }}">{{ __('الحالة') }}</th>
+                                        <th style="width: 23%;">{{ __('المريض') }}</th>
+                                        <th class="text-center" style="width: 9%;">{{ __('العمر') }}</th>
+                                        <th class="text-center" style="width: 8%;">{{ __('الجنس') }}</th>
+                                        <th style="width: 22%;">{{ __('نوع العملية') }}</th>
+                                        <th style="width: 15%;">{{ __('الطبيب الجراح') }}</th>
+                                        <th style="width: 13%;">{{ __('رقم الغرفة') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -618,8 +618,8 @@
                                         <td colspan="7" class="text-center py-5 text-muted">
                                             <div class="py-3">
                                                 <i class="fas fa-procedures fa-2x mb-2 text-primary opacity-50 d-block"></i>
-                                                <div class="fw-bold fs-6 text-dark">لا توجد عمليات جارية داخل الصالة حالياً</div>
-                                                <div class="small text-muted mt-1">عند بدء أي عملية من تفاصيلها ستظهر هنا مباشرة</div>
+                                                <div class="fw-bold fs-6 text-dark">{{ __('لا توجد عمليات جارية داخل الصالة حالياً') }}</div>
+                                                <div class="small text-muted mt-1">{{ __('عند بدء أي عملية من تفاصيلها ستظهر هنا مباشرة') }}</div>
                                             </div>
                                         </td>
                                     </tr>

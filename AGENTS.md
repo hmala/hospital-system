@@ -54,6 +54,30 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-18 — المرحلة 247: الترجمة الشاملة الدقيقة 100% لواجهة تفاصيل العمليات ولوحة التحكم والشاشات التمهيدية وتوسيع القاموس لـ 822 مفتاحاً Comprehensive Granular Localization for Surgery Show Details, Core Layout, Dashboard & Pre-Op Stations with 822 Keys & Automated Feature Tests)
+
+### Done
+- **واجهة تفاصيل العملية الجراحية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تعريب وترجمة كاملة وشاملة 100% بنظام `__()` دون استثناء أي عنصر لكافة الأقسام الـ 11:
+    1. شريط الإحصائيات العلوي وحالة العملية (Pre-Op, Intra-Op, Post-Op) والموقع ومؤقت المدة.
+    2. كرت التشخيص الطبي وتوصيات الجراح وخطة العملية.
+    3. جدول وأعضاء الفريق الجراحي الخمسة ومحدد الدور والأطباء.
+    4. خطة التخدير وملاحظات التقييم وأنواعه وأدويته.
+    5. المستلزمات الطبية المصروفة من عهدة العمليات مع نظام الصرف متعدد المواد المحدث.
+    6. قائمة الأجهزة الطبية المستخدمة.
+    7. الفحوصات المخبرية وتحاليل الدم المطلوبة ونتائجها.
+    8. الفحوصات الشعاعية والسونار وملفات الـ PDF.
+    9. متابعات وسجل الطبيب المقيم والعلامات السريرية الخمسة.
+    10. الاستشارات الطبية التخصصية السريرية وأجورها وتوصيات الاستشاري.
+    11. مودالات تغيير الموعد والإلغاء وتأكيد الإجراءات ورسائل الجافاسكريبت.
+- **شاشات الملاحة ولوحة التحكم والتسجيل ومحطات العمليات ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php), [resources/views/dashboard.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/dashboard.blade.php), [resources/views/auth/login.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/auth/login.blade.php), [resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php), [resources/views/surgeries/waiting.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgery-stations/anesthesia/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php), [resources/views/surgery-stations/surgeon/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php), [resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php), [resources/views/nurse-availability/off-duty.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
+  * تعريب عناصر القائمة الجانبية والتنقل، إحصائيات لوحة التحكم، شاشة الدخول وبطاقة التوفر خارج الدوام، ومحطات العمليات التمهيدية لضمان بيئة عمل ثنائية اللغة متناسقة.
+- **القاموس المركزي المحدث ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+  * توسيع القاموس من 526 مفتاحاً إلى 822 مفتاح ترجمة طبي وإداري دقيق دون أي تكرار وبفحص تحقق صفري للأخطاء.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeryShowLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryShowLocalizationTest.php), [tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * بناء اختبار ميزة متخصص `SurgeryShowLocalizationTest` للتحقق التلقائي من ترجمة عناوين وتفاصيل وحقول ومصفوفات شاشة `/surgeries/{id}` بجلستي العربية والإنجليزية.
+  * اجتياز جميع اختبارات التعريب وحزمة اختبارات العمليات (`36 passed, 227 assertions`) بنسبة نجاح 100%.
+
 ## Session log (2026-11-18 — المرحلة 246: التأسيس المعماري لدعم تعدد اللغات عربي وإنجليزي وتبديل الجلسة وتوافق القائمة الجانبية Multi-Language Localization Foundation with Instant AR/EN Switcher, SetLocale Middleware & LTR Sidebar Layout)
 
 ### Done

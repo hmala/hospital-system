@@ -6,7 +6,7 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-header bg-gradient bg-primary text-white p-3 rounded-top-4 d-flex align-items-center">
-                    <h5 class="mb-0 fs-5"><i class="fas fa-user-graduate me-2"></i> محطة الطبيب المقيم</h5>
+                    <h5 class="mb-0 fs-5"><i class="fas fa-user-graduate me-2"></i> {{ __('محطة الطبيب المقيم') }}</h5>
                 </div>
                 <div class="card-body p-4">
                     @if(session('success'))
@@ -34,19 +34,19 @@
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm" id="residentTabs" role="tablist" style="width: fit-content;">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active rounded-pill fw-bold px-4 py-2" id="pre-op-patients-tab" data-bs-toggle="tab" data-bs-target="#pre-op-patients" type="button" role="tab" aria-selected="true">
-                                <i class="fas fa-notes-medical me-1 text-primary"></i> حالات التهيئة قبل الصالة
+                                <i class="fas fa-notes-medical me-1 text-primary"></i> {{ __('حالات التهيئة قبل الصالة') }}
                                 <span class="badge bg-primary text-white rounded-pill ms-1.5">{{ $preOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2" id="post-op-patients-tab" data-bs-toggle="tab" data-bs-target="#post-op-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-procedures me-1 text-info"></i> حالات المتابعة بعد الصالة
+                                <i class="fas fa-procedures me-1 text-info"></i> {{ __('حالات المتابعة بعد الصالة') }}
                                 <span class="badge bg-info text-white rounded-pill ms-1.5">{{ $postOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2" id="completed-patients-tab" data-bs-toggle="tab" data-bs-target="#completed-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-archive me-1 text-success"></i> أرشيف الحالات المكتملة
+                                <i class="fas fa-archive me-1 text-success"></i> {{ __('أرشيف الحالات المكتملة') }}
                                 <span class="badge bg-success text-white rounded-pill ms-1.5">{{ $completedSurgeries->count() }}</span>
                             </button>
                         </li>
@@ -59,13 +59,13 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="py-3">رقم الملف</th>
-                                            <th class="py-3">اسم المريض</th>
-                                            <th class="py-3">العملية</th>
-                                            <th class="py-3">التاريخ والوقت المحدد</th>
-                                            <th class="py-3">الطبيب المقيم</th>
-                                            <th class="py-3">حالة المحطة</th>
-                                            <th class="py-3 text-center">الإجراءات</th>
+                                            <th class="py-3">{{ __('رقم الملف') }}</th>
+                                            <th class="py-3">{{ __('اسم المريض') }}</th>
+                                            <th class="py-3">{{ __('العملية') }}</th>
+                                            <th class="py-3">{{ __('التاريخ والوقت المحدد') }}</th>
+                                            <th class="py-3">{{ __('الطبيب المقيم') }}</th>
+                                            <th class="py-3">{{ __('حالة المحطة') }}</th>
+                                            <th class="py-3 text-center">{{ __('الإجراءات') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>

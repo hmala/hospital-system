@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول | MEDIX ERP - Hospital Management System</title>
+    <title>{{ __('تسجيل الدخول') }} | MEDIX ERP - Hospital Management System</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -723,6 +723,36 @@
         }
         .eye-btn:hover { color: #ffffff; }
 
+        html[dir="ltr"] .field-icon { right: auto; left: 1.1rem; }
+        html[dir="ltr"] .field-input { padding: 0.88rem 2.8rem 0.88rem 3rem; }
+        html[dir="ltr"] .eye-btn { left: auto; right: 1rem; }
+
+        .lang-switch-pill {
+            position: absolute;
+            top: 1.8rem;
+            left: 1.8rem;
+            z-index: 10;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.85rem;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-decoration: none;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+        .lang-switch-pill:hover {
+            background: rgba(255,255,255,0.24);
+            transform: translateY(-1px);
+            color: #ffffff;
+        }
+        html[dir="ltr"] .lang-switch-pill { left: auto; right: 1.8rem; }
+
         .error-msg {
             margin-top: 0.35rem;
             display: flex;
@@ -930,7 +960,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-stethoscope"></i>
                         </div>
-                        <span class="feature-chip-title">العيادات الاستشارية</span>
+                        <span class="feature-chip-title">{{ __('العيادات الاستشارية') }}</span>
                         <span class="feature-chip-sub">Clinics</span>
                     </div>
 
@@ -938,7 +968,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-truck-medical"></i>
                         </div>
-                        <span class="feature-chip-title">طوارئ وحوادث 24/7</span>
+                        <span class="feature-chip-title">{{ __('طوارئ وحوادث 24/7') }}</span>
                         <span class="feature-chip-sub">Emergency</span>
                     </div>
 
@@ -946,7 +976,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-procedures"></i>
                         </div>
-                        <span class="feature-chip-title">العمليات الجراحية</span>
+                        <span class="feature-chip-title">{{ __('العمليات الجراحية') }}</span>
                         <span class="feature-chip-sub">Surgeries</span>
                     </div>
 
@@ -954,7 +984,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-flask-vial"></i>
                         </div>
-                        <span class="feature-chip-title">المختبر والتحاليل</span>
+                        <span class="feature-chip-title">{{ __('المختبر والتحاليل') }}</span>
                         <span class="feature-chip-sub">Laboratory</span>
                     </div>
 
@@ -962,7 +992,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-x-ray"></i>
                         </div>
-                        <span class="feature-chip-title">الأشعة والسونار</span>
+                        <span class="feature-chip-title">{{ __('الأشعة والسونار') }}</span>
                         <span class="feature-chip-sub">Radiology</span>
                     </div>
 
@@ -970,12 +1000,12 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-cash-register"></i>
                         </div>
-                        <span class="feature-chip-title">الصندوق والمالية</span>
+                        <span class="feature-chip-title">{{ __('الصندوق والمالية') }}</span>
                         <span class="feature-chip-sub">Cashier & Treasury</span>
                     </div>
                 </div>
 
-                <div class="bottom-tagline">منظومة ذكية متكاملة لإدارة المستشفيات والمراكز التخصصية</div>
+                <div class="bottom-tagline">{{ __('منظومة ذكية متكاملة لإدارة المستشفيات والمراكز التخصصية') }}</div>
             </div>
         </div>
 
@@ -1014,10 +1044,16 @@
                 <div class="white-sparkle-node node-5"></div>
             </div>
 
+            <!-- Language Switcher -->
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="lang-switch-pill" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                <i class="fas fa-globe"></i>
+                <span>{{ app()->getLocale() === 'en' ? 'العربية' : 'EN' }}</span>
+            </a>
+
             <!-- Live pill -->
             <div class="live-pill">
                 <span class="dot"></span>
-                <span>النظام يعمل · Healthcare. Simplified.</span>
+                <span>{{ __('النظام يعمل · Healthcare. Simplified.') }}</span>
             </div>
 
             <div class="login-box">
@@ -1039,8 +1075,8 @@
                                   fill="url(#fingerprintGrad)"/>
                         </svg>
                     </div>
-                    <h1 class="card-title">تسجيل الدخول</h1>
-                    <p class="card-subtitle">بوابة النفاذ السريرية والمالية الموحدة</p>
+                    <h1 class="card-title">{{ __('تسجيل الدخول') }}</h1>
+                    <p class="card-subtitle">{{ __('بوابة النفاذ السريرية والمالية الموحدة') }}</p>
                 </div>
 
                 <form method="POST" action="{{ route('login') }}" autocomplete="on" id="login-form">
@@ -1057,7 +1093,7 @@
                                    required
                                    autocomplete="email"
                                    autofocus
-                                   placeholder="البريد الإلكتروني أو اسم المستخدم">
+                                   placeholder="{{ __('البريد الإلكتروني أو اسم المستخدم') }}">
                             <i class="fas fa-at field-icon"></i>
                         </div>
                         @error('email')
@@ -1077,9 +1113,9 @@
                                    name="password"
                                    required
                                    autocomplete="current-password"
-                                   placeholder="كلمة المرور">
+                                   placeholder="{{ __('كلمة المرور') }}">
                             <i class="fas fa-lock field-icon"></i>
-                            <button type="button" class="eye-btn" onclick="togglePwd()" title="إظهار/إخفاء">
+                            <button type="button" class="eye-btn" onclick="togglePwd()" title="{{ __('إظهار/إخفاء') }}">
                                 <i class="fas fa-eye" id="pwd-icon"></i>
                             </button>
                         </div>
@@ -1096,22 +1132,22 @@
                         <label class="remember-label">
                             <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
                             <span class="chk"><i class="fas fa-check"></i></span>
-                            <span>تذكرني</span>
+                            <span>{{ __('تذكرني') }}</span>
                         </label>
                         @if (Route::has('password.request'))
-                            <a class="forgot-link" href="{{ route('password.request') }}">نسيت كلمة المرور؟</a>
+                            <a class="forgot-link" href="{{ route('password.request') }}">{{ __('نسيت كلمة المرور؟') }}</a>
                         @endif
                     </div>
 
                     <!-- Submit -->
                     <button type="submit" class="btn-login" id="btn-submit">
-                        <span>دخول إلى المنظومة</span>
-                        <i class="fas fa-arrow-left"></i>
+                        <span>{{ __('دخول إلى المنظومة') }}</span>
+                        <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }}"></i>
                     </button>
                 </form>
 
                 <a href="mailto:support@medixerp.com" class="help-link">
-                    هل تواجه صعوبة في الدخول؟ تواصل مع الدعم الفني
+                    {{ __('هل تواجه صعوبة في الدخول؟ تواصل مع الدعم الفني') }}
                 </a>
 
                 <div class="right-tagline">Technology for a Healthier Tomorrow</div>
@@ -1131,7 +1167,7 @@
         </div>
         <div class="loader-text-wrapper">
             <div class="loader-text">
-                جاري التحقق والدخول للمنظومة<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+                {{ __('جاري التحقق والدخول للمنظومة') }}<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
         </div>
     </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خارج جدول الدوام الرسمي | قسم التمريض</title>
+    <title>{{ __('خارج جدول الدوام الرسمي') }} | {{ __('قسم التمريض') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -229,14 +229,14 @@
         {{-- Avatar & Badge --}}
         <div class="avatar-wrap">
             <i class="fas fa-user-nurse"></i>
-            <div class="badge-pulse" title="خارج الدوام"></div>
+            <div class="badge-pulse" title="{{ __('خارج الدوام') }}"></div>
         </div>
 
         {{-- Status Pill --}}
         <div>
             <span class="status-pill">
                 <i class="fas fa-ban"></i>
-                <span>خارج جدول الدوام الرسمي لليوم</span>
+                <span>{{ __('خارج جدول الدوام الرسمي لليوم') }}</span>
             </span>
         </div>
 
@@ -251,33 +251,39 @@
         <div class="notice-box">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                 <i class="far fa-calendar-alt text-primary" style="color: #2563eb;"></i>
-                <strong>تاريخ اليوم:</strong> {{ \Carbon\Carbon::parse($todayDate)->translatedFormat('l، d F Y') }}
+                <strong>{{ __('تاريخ اليوم:') }}</strong> {{ \Carbon\Carbon::parse($todayDate)->translatedFormat('l، d F Y') }}
             </div>
             <p style="margin-bottom: 0;">
-                أهلاً بك زميلنا العزيز، حسابك غير مدرج حالياً ضمن جدول دوام الكادر التمريضي المعتمد لهذا اليوم.
+                {{ __('أهلاً بك زميلنا العزيز، حسابك غير مدرج حالياً ضمن جدول دوام الكادر التمريضي المعتمد لهذا اليوم.') }}
             </p>
             <p style="margin-top: 6px; font-size: 0.85rem; color: #64748b; margin-bottom: 0;">
-                <i class="fas fa-info-circle me-1 text-secondary"></i> إذا كان لديك شفت فعلي أو تكليف بتبديل دوام، يرجى مراجعة مسؤول قسم التمريض لإضافتك لجدول التوفر وتحديد طابقك لفتح النظام فوراً.
+                <i class="fas fa-info-circle me-1 text-secondary"></i> {{ __('إذا كان لديك شفت فعلي أو تكليف بتبديل دوام، يرجى مراجعة مسؤول قسم التمريض لإضافتك لجدول التوفر وتحديد طابقك لفتح النظام فوراً.') }}
             </p>
         </div>
 
         {{-- Primary Action: Re-check & Enter --}}
         <a href="{{ route('nurse.check-access') }}" class="btn-check">
             <i class="fas fa-sync-alt fa-spin-hover"></i>
-            <span>فحص التفعيل والدخول للنظام</span>
+            <span>{{ __('فحص التفعيل والدخول للنظام') }}</span>
         </a>
         <p style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 1.25rem;">
-            إذا قام المشرف بتفعيلك الآن، انقر للتحقق والدخول مباشرة دون الحاجة لكتابة كلمة المرور مجدداً.
+            {{ __('إذا قام المشرف بتفعيلك الآن، انقر للتحقق والدخول مباشرة دون الحاجة لكتابة كلمة المرور مجدداً.') }}
         </p>
 
-        {{-- Secondary Action: Logout --}}
-        <form method="POST" action="{{ route('logout') }}" id="logoutForm">
-            @csrf
-            <button type="submit" class="btn-logout">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>تسجيل الخروج</span>
-            </button>
-        </form>
+        {{-- Secondary Action: Logout & Language Switch --}}
+        <div style="display: flex; gap: 8px; margin-bottom: 0.5rem;">
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn-logout" style="width: auto; padding: 0.75rem 1.1rem;">
+                <i class="fas fa-globe"></i>
+                <span>{{ app()->getLocale() === 'en' ? 'عربي' : 'EN' }}</span>
+            </a>
+            <form method="POST" action="{{ route('logout') }}" id="logoutForm" style="flex: 1;">
+                @csrf
+                <button type="submit" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>{{ __('تسجيل الخروج') }}</span>
+                </button>
+            </form>
+        </div>
 
     </div>
 
