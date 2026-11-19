@@ -3650,6 +3650,7 @@
     "طلب خدمة علاج فيزيائي وتأهيل سريري (Physiotherapy Request)": "Physiotherapy & Clinical Rehabilitation Request",
     "طلب مباشر من الطبيب المقيم يُرحل فوراً إلى كشف حساب الكاشير بسعر مبدئي 60,000 د.ع قابل للتعديل": "Direct resident doctor order routed immediately to cashier statement with an initial price of 60,000 IQD (editable)",
     "السعر المبدئي: 60,000 د.ع (قابل للتعديل لدى الكاشير)": "Initial Price: 60,000 IQD (Editable at cashier)",
+    "تسعير معتمد: 60,000 د.ع للجلسة (تُسدد وتعدل لدى الكاشير)": "Approved Price: 60,000 IQD / session (Payable & adjustable at cashier)",
     "عدد الجلسات:": "Sessions Count:",
     "سعر الجلسة (د.ع):": "Session Price (IQD):",
     "التوصية السريرية والتشخيص (ملاحظات الجلسة):": "Clinical Recommendation & Diagnosis (Session Notes):",

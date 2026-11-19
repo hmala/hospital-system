@@ -3660,7 +3660,7 @@
                                 </div>
                             </div>
                             <span class="badge rounded-pill px-3 py-1.5" style="background: #ccfbf1; color: #0f766e; font-weight: 700;">
-                                <i class="fas fa-receipt me-1"></i> {{ __("السعر المبدئي: 60,000 د.ع (قابل للتعديل لدى الكاشير)") }}
+                                <i class="fas fa-tag me-1"></i> {{ __("تسعير معتمد: 60,000 د.ع للجلسة (تُسدد وتعدل لدى الكاشير)") }}
                             </span>
                         </div>
                         <div class="card-body p-4">
@@ -3668,22 +3668,13 @@
                                 <form action="{{ route('clinical-station.physiotherapy.store', $surgery) }}" method="POST" class="mb-4 p-3 rounded-3" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
                                     @csrf
                                     <div class="row g-3 align-items-end">
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <label class="form-label small fw-bold text-dark">
                                                 <i class="fas fa-list-ol text-primary me-1"></i> {{ __("عدد الجلسات:") }} <span class="text-danger">*</span>
                                             </label>
-                                            <input type="number" name="sessions" class="form-control rounded-3 fw-bold text-center" min="1" max="20" value="1" required id="physioSessionsInput">
+                                            <input type="number" name="sessions" class="form-control rounded-3 fw-bold text-center" min="1" max="30" value="1" required id="physioSessionsInput">
                                         </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold text-dark">
-                                                <i class="fas fa-tag text-success me-1"></i> {{ __("سعر الجلسة (د.ع):") }}
-                                            </label>
-                                            <div class="input-group">
-                                                <input type="number" step="500" min="0" name="unit_price" class="form-control rounded-start-3 fw-bold text-end" value="60000" id="physioPriceInput">
-                                                <span class="input-group-text bg-white small text-muted">{{ __("د.ع") }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-7">
                                             <label class="form-label small fw-bold text-dark">
                                                 <i class="fas fa-clipboard-check text-info me-1"></i> {{ __("التوصية السريرية والتشخيص (ملاحظات الجلسة):") }}
                                             </label>

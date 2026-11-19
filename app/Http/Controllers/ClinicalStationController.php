@@ -1677,7 +1677,6 @@ class ClinicalStationController extends Controller
 
         $validated = $request->validate([
             'sessions' => 'required|integer|min:1|max:30',
-            'unit_price' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -1687,10 +1686,9 @@ class ClinicalStationController extends Controller
             })
             ->first();
 
-        $defaultPrice = $physioService ? (float) $physioService->default_price : 60000.00;
-        $unitPrice = isset($validated['unit_price']) && $validated['unit_price'] !== ''
-            ? (float) $validated['unit_price']
-            : $defaultPrice;
+        $unitPrice = $physioService && (float) $physioService->default_price > 0
+            ? (float) $physioService->default_price
+            : 60000.00;
 
         $sessions = (int) $validated['sessions'];
         $totalAmount = $unitPrice * $sessions;
