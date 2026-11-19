@@ -20,10 +20,14 @@ class HrEmployeeAction extends Model
         'status',
         'created_by',
         'hr_payroll_cycle_id',
+        'cancelled_by',
+        'cancelled_at',
+        'cancellation_reason',
     ];
 
     protected $casts = [
         'action_date' => 'date',
+        'cancelled_at' => 'datetime',
         'applied_effect_value' => 'decimal:2',
         'financial_amount' => 'decimal:2',
     ];
@@ -46,5 +50,15 @@ class HrEmployeeAction extends Model
     public function payrollCycle()
     {
         return $this->belongsTo(HrPayrollCycle::class, 'hr_payroll_cycle_id');
+    }
+
+    public function cancelledBy()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
     }
 }

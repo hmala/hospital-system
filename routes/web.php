@@ -1096,6 +1096,8 @@ Route::middleware(['auth'])->group(function () {
 
         // سجل العقوبات والمكافآت للموظف
         Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
+        Route::post('employees/actions/{action}/cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'cancelAction'])->name('employees.actions.cancel');
+        Route::post('employees/actions/{action}/restore', [\App\Http\Controllers\HR\HrEmployeeController::class, 'restoreAction'])->name('employees.actions.restore');
         Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
 
         // طباعة باجة وهوية الموظف (ID Badge)

@@ -23,7 +23,7 @@ class HrEmployeeController extends Controller
         $this->middleware('permission:edit employees')->only(['edit', 'update']);
         $this->middleware('permission:delete employees')->only(['destroy']);
         $this->middleware('permission:manage hr documents')->only(['uploadDocument', 'downloadDocument', 'destroyDocument']);
-        $this->middleware('permission:manage hr actions')->only(['storeAction', 'destroyAction']);
+        $this->middleware('permission:manage hr actions')->only(['storeAction', 'destroyAction', 'cancelAction', 'restoreAction']);
         $this->middleware('permission:print employee badges')->only(['badge']);
     }
 
@@ -468,14 +468,53 @@ class HrEmployeeController extends Controller
         return redirect()->route('hr.employees.show', $employee->id)->with('success', 'تم تسجيل الإجراء (العقوبة/المكافأة) بنجاح.');
     }
 
+    public function cancelAction(\Illuminate\Http\Request $request, \App\Models\HrEmployeeAction $action)
+    {
+        if ($action->status === 'processed') {
+            return back()->with('error', 'لا يمكن إلغاء إجراء تم ترحيله بالفعل في مسير الرواتب.');
+        }
+
+        $action->update([
+            'status' => 'cancelled',
+            'cancelled_by' => auth()->id(),
+            'cancelled_at' => now(),
+            'cancellation_reason' => $request->input('cancellation_reason') ?: 'إلغاء إداري',
+        ]);
+
+        return back()->with('success', 'تم إلغاء الإجراء بنجاح مع الاحتفاظ به في الأرشيف والسجل الرسمي للموظف.');
+    }
+
+    public function restoreAction(\App\Models\HrEmployeeAction $action)
+    {
+        if ($action->status !== 'cancelled') {
+            return back()->with('error', 'هذا الإجراء غير ملغي.');
+        }
+
+        $action->update([
+            'status' => 'pending',
+            'cancelled_by' => null,
+            'cancelled_at' => null,
+            'cancellation_reason' => null,
+        ]);
+
+        return back()->with('success', 'تم استعادة الإجراء وإعادة تفعيله بنجاح.');
+    }
+
     public function destroyAction(\App\Models\HrEmployeeAction $action)
     {
         if ($action->status == 'processed') {
             return back()->with('error', 'لا يمكن حذف إجراء تم ترحيله بالفعل في مسير الرواتب.');
         }
-        $action->delete();
 
-        return back()->with('success', 'تم حذف الإجراء بنجاح.');
+        // إلغاء الإجراء بدلاً من حذفه نهائياً للحفاظ على السجل الإداري
+        $action->update([
+            'status' => 'cancelled',
+            'cancelled_by' => auth()->id(),
+            'cancelled_at' => now(),
+            'cancellation_reason' => 'تم الإلغاء عبر الحذف',
+        ]);
+
+        return back()->with('success', 'تم إلغاء الإجراء بنجاح وحفظه في الأرشيف والسجل.');
     }
 
     /**

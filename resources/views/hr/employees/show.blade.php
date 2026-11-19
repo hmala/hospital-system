@@ -896,16 +896,20 @@
                                             <th>التأثير المالي (د.ع)</th>
                                             <th>حالة الترحيل للراتب</th>
                                             <th>مسجل بواسطة</th>
-                                            <th>حذف</th>
+                                            <th>الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody class="small">
-                                        @forelse($employee->actions()->latest('action_date')->get() as $action)
-                                            <tr>
-                                                <td>{{ $action->action_date->format('Y-m-d') }}</td>
+                                        @forelse($employee->actions()->with(['actionSetting', 'creator', 'cancelledBy', 'payrollCycle'])->latest('action_date')->get() as $action)
+                                            <tr class="{{ $action->isCancelled() ? 'table-light text-muted' : '' }}">
                                                 <td>
-                                                    @if($action->actionSetting->category == 'penalty')
-                                                        <span class="badge bg-danger"><i class="fas fa-minus-circle"></i> عقوبة</span>
+                                                    <span class="{{ $action->isCancelled() ? 'text-decoration-line-through text-muted' : '' }}">{{ $action->action_date->format('Y-m-d') }}</span>
+                                                </td>
+                                                <td>
+                                                    @if($action->isCancelled())
+                                                        <span class="badge bg-secondary bg-opacity-75"><i class="fas fa-ban"></i> {{ $action->actionSetting->category == 'penalty' ? 'خصم/عقوبة' : ($action->actionSetting->category == 'bonus' ? 'مكافأة' : 'إنذار') }}</span>
+                                                    @elseif($action->actionSetting->category == 'penalty')
+                                                        <span class="badge bg-danger"><i class="fas fa-minus-circle"></i> عقوبة / خصم</span>
                                                     @elseif($action->actionSetting->category == 'bonus')
                                                         <span class="badge bg-success"><i class="fas fa-plus-circle"></i> مكافأة</span>
                                                     @else
@@ -913,20 +917,33 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-start">
-                                                    <strong>{{ $action->actionSetting->title }}</strong><br>
-                                                    <span class="text-muted">{{ Str::limit($action->reason, 40) }}</span>
-                                                </td>
-                                                <td>
-                                                    @if($action->financial_amount == 0)
-                                                        <span class="text-muted">بدون تأثير مالي</span>
-                                                    @elseif($action->financial_amount > 0)
-                                                        <span class="text-success fw-bold">+{{ number_format($action->financial_amount, 0) }}</span>
-                                                    @else
-                                                        <span class="text-danger fw-bold">{{ number_format($action->financial_amount, 0) }}</span>
+                                                    <strong class="{{ $action->isCancelled() ? 'text-muted text-decoration-line-through' : '' }}">{{ $action->actionSetting->title ?? '—' }}</strong><br>
+                                                    <span class="text-muted">{{ Str::limit($action->reason, 50) }}</span>
+                                                    @if($action->isCancelled())
+                                                        <div class="mt-1 small text-danger bg-danger bg-opacity-10 p-1 rounded-2" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-ban me-1"></i>
+                                                            <strong>أُلغي بواسطة:</strong> {{ $action->cancelledBy->name ?? 'المسؤول' }}
+                                                            @if($action->cancelled_at) ({{ $action->cancelled_at->format('Y-m-d H:i') }}) @endif
+                                                            @if($action->cancellation_reason) — <em>السبب: {{ $action->cancellation_reason }}</em> @endif
+                                                        </div>
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    @if($action->status == 'pending')
+                                                    @if($action->isCancelled())
+                                                        <del class="text-muted">{{ number_format(abs($action->financial_amount), 0) }} د.ع</del>
+                                                        <br><span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">ملغي - لا يؤثر</span>
+                                                    @elseif($action->financial_amount == 0)
+                                                        <span class="text-muted">بدون تأثير مالي</span>
+                                                    @elseif($action->financial_amount > 0)
+                                                        <span class="text-success fw-bold">+{{ number_format($action->financial_amount, 0) }} د.ع</span>
+                                                    @else
+                                                        <span class="text-danger fw-bold">{{ number_format($action->financial_amount, 0) }} د.ع</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($action->isCancelled())
+                                                        <span class="badge bg-secondary text-white"><i class="fas fa-ban me-1"></i> ملغي ومؤرشف</span>
+                                                    @elseif($action->status == 'pending')
                                                         <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> بانتظار الراتب</span>
                                                     @else
                                                         <span class="badge bg-success"><i class="fas fa-check-double"></i> مُرحّل ({{ $action->payrollCycle->cycle_month ?? '' }})</span>
@@ -935,15 +952,51 @@
                                                 <td>{{ $action->creator->name ?? 'النظام' }}</td>
                                                 <td>
                                                     @if($action->status == 'pending')
-                                                    <form action="{{ route('hr.employees.actions.destroy', $action->id) }}" method="POST" class="d-inline-block">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('هل أنت متأكد من الحذف؟')">
-                                                            <i class="fas fa-trash"></i>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" data-bs-toggle="modal" data-bs-target="#cancelActionModal{{ $action->id }}" title="إلغاء الخصم/المكافأة مع حفظها في السجل">
+                                                            <i class="fas fa-ban me-1"></i> إلغاء
                                                         </button>
-                                                    </form>
+
+                                                        <!-- Modal تأكيد الإلغاء والأرشفة -->
+                                                        <div class="modal fade" id="cancelActionModal{{ $action->id }}" tabindex="-1" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered">
+                                                                <div class="modal-content border-0 shadow">
+                                                                    <form action="{{ route('hr.employees.actions.cancel', $action->id) }}" method="POST">
+                                                                        @csrf
+                                                                        <div class="modal-header bg-danger bg-opacity-10 py-2">
+                                                                            <h6 class="modal-title fw-bold text-danger"><i class="fas fa-ban me-2"></i> تأكيد إلغاء الإجراء وأرشفته</h6>
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                        </div>
+                                                                        <div class="modal-body text-start p-3">
+                                                                            <div class="alert alert-light border small mb-3">
+                                                                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                                                                <strong>ملاحظة:</strong> لن يتم حذف هذا الإجراء نهائياً، بل سيبقى محفوظاً في السجل الرسمي للموظف مع وسمه كـ <strong>"ملغي"</strong>، وسيتم استبعاده تماماً من مسير الرواتب.
+                                                                            </div>
+                                                                            <div class="mb-2">
+                                                                                <strong>نوع الإجراء:</strong> {{ $action->actionSetting->title ?? '—' }} ({{ $action->actionSetting->category == 'penalty' ? 'خصم/عقوبة' : 'مكافأة' }})<br>
+                                                                                <strong>المبلغ:</strong> {{ number_format(abs($action->financial_amount), 0) }} د.ع
+                                                                            </div>
+                                                                            <div class="mt-3">
+                                                                                <label class="form-label fw-bold small">سبب الإلغاء (اختياري / للتوثيق):</label>
+                                                                                <input type="text" name="cancellation_reason" class="form-control form-control-sm" placeholder="مثال: تسوية إدارية، قرار الإدارة، خطأ في الإدخال...">
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="modal-footer bg-light py-2">
+                                                                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">تراجع</button>
+                                                                            <button type="submit" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-ban me-1"></i> تأكيد الإلغاء والأرشفة</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @elseif($action->isCancelled())
+                                                        <form action="{{ route('hr.employees.actions.restore', $action->id) }}" method="POST" class="d-inline-block">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-sm btn-outline-success border-0 py-1 px-2" onclick="return confirm('استعادة هذا الإجراء وإعادة تفعيله ليُدرج في الراتب القادم؟')" title="استعادة الإجراء وإعادة تفعيله">
+                                                                <i class="fas fa-undo me-1"></i> استعادة
+                                                            </button>
+                                                        </form>
                                                     @else
-                                                        <i class="fas fa-lock text-muted" title="لا يمكن حذفه لأنه مرحّل للرواتب"></i>
+                                                        <i class="fas fa-lock text-muted" title="لا يمكن إلغاؤه لأنه مرحّل للرواتب"></i>
                                                     @endif
                                                 </td>
                                             </tr>
