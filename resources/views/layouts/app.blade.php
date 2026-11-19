@@ -344,33 +344,37 @@
             }
         }
         .lang-dropdown-btn {
-            background: rgba(255, 255, 255, 0.94);
-            border: 1px solid rgba(59, 130, 246, 0.28);
+            background: rgba(219, 234, 254, 0.72);
+            border: none;
             border-radius: 9999px;
-            padding: 3px 9px;
-            font-size: 0.72rem;
+            padding: 4px 10px;
+            font-size: 0.75rem;
             font-weight: 700;
             color: #1e3a8a;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-            backdrop-filter: blur(8px);
+            box-shadow: none;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             transition: all 0.2s ease;
             text-decoration: none;
         }
         .lang-dropdown-btn:hover, .lang-dropdown-btn:focus {
-            background: #ffffff;
-            border-color: #2563eb;
+            background: rgba(219, 234, 254, 0.96);
             color: #1d4ed8;
-            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22);
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.12);
+            transform: translateY(-1px);
         }
         .lang-dropdown-menu {
+            background: rgba(239, 246, 255, 0.98);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.22);
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
-            padding: 4px;
+            border: none;
+            box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.16);
+            padding: 5px;
             min-width: 145px;
             font-size: 0.78rem;
             z-index: 1055;
@@ -378,20 +382,21 @@
         .lang-dropdown-menu .dropdown-item {
             border-radius: 8px;
             padding: 6px 10px;
-            font-weight: 600;
-            color: #334155;
+            font-weight: 700;
+            color: #1e3a8a;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.15s ease;
         }
         .lang-dropdown-menu .dropdown-item:hover {
-            background: rgba(219, 234, 254, 0.6);
+            background: #dbeafe;
             color: #1d4ed8;
         }
         .lang-dropdown-menu .dropdown-item.active {
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
         }
         .flag-icon {
             width: 19px;

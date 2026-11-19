@@ -163,13 +163,13 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('surgeries.index') }}" class="text-decoration-none">إدارة العمليات</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('surgeries.waiting') }}" class="text-decoration-none">قائمة الانتظار</a></li>
-                <li class="breadcrumb-item active" aria-current="page">مصفوفة صلاحيات التبويبات</li>
+                <li class="breadcrumb-item"><a href="{{ route('surgeries.index') }}" class="text-decoration-none">{{ __('إدارة العمليات') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('surgeries.waiting') }}" class="text-decoration-none">{{ __('قائمة الانتظار') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ __('مصفوفة صلاحيات التبويبات') }}</li>
             </ol>
         </nav>
         <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-            <i class="fas fa-arrow-right me-1"></i> العودة لقائمة العمليات
+            <i class="fas fa-arrow-right me-1"></i> {{ __('العودة لقائمة العمليات') }}
         </a>
     </div>
 
@@ -192,7 +192,7 @@
 
     @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0 text-center px-5 position-relative mb-3" role="alert">
-            <div class="fw-bold mb-1">تعذر تنفيذ الطلب:</div>
+            <div class="fw-bold mb-1">{{ __('تعذر تنفيذ الطلب:') }}</div>
             @foreach($errors->all() as $err)
                 <div class="small">{{ $err }}</div>
             @endforeach
@@ -210,10 +210,10 @@
                 </div>
                 <div>
                     <h4 class="mb-1 fw-bold" style="color: #0f172a;">
-                        مصفوفة صلاحيات تبويبات المحطة السريرية الموحدة
+                        {{ __('مصفوفة صلاحيات تبويبات المحطة السريرية الموحدة') }}
                     </h4>
                     <p class="mb-0 text-muted small">
-                        إدارة مركزية لظهور وصلاحيات التبويبات لكل دور وظيفي أو محطة إضافية في المحطة السريرية وملف العملية.
+                        {{ __('إدارة مركزية لظهور وصلاحيات التبويبات لكل دور وظيفي أو محطة إضافية في المحطة السريرية وملف العملية.') }}
                     </p>
                 </div>
             </div>
@@ -224,13 +224,13 @@
                         data-bs-toggle="modal"
                         data-bs-target="#addMatrixRoleModal"
                         {{ !$hasAnyAvailableRoles ? 'disabled' : '' }}>
-                    <i class="fas fa-user-plus me-1"></i> إضافة دور / محطة
+                    <i class="fas fa-user-plus me-1"></i> {{ __('إضافة دور / محطة') }}
                 </button>
-                <form action="{{ route('surgery-stations.tab-settings.reset') }}" method="POST" class="mb-0" onsubmit="return confirm('هل أنت متأكد من استعادة الضبط الافتراضي للمصفوفة الطبية؟');">
+                <form action="{{ route('surgery-stations.tab-settings.reset') }}" method="POST" class="mb-0" onsubmit="return confirm('{{ __('هل أنت متأكد من استعادة الضبط الافتراضي للمصفوفة الطبية؟') }}');">
                     @csrf
                     <input type="hidden" name="active_matrix" id="resetActiveMatrixInput" value="{{ $activeMatrix }}">
                     <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold">
-                        <i class="fas fa-undo me-1"></i> استعادة الضبط الطبي الافتراضي
+                        <i class="fas fa-undo me-1"></i> {{ __('استعادة الضبط الطبي الافتراضي') }}
                     </button>
                 </form>
             </div>
@@ -239,19 +239,19 @@
         {{-- Legend Bar --}}
         <div class="bg-light px-4 py-2 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="small fw-bold text-secondary me-1">مستويات الصلاحية:</span>
+                <span class="small fw-bold text-secondary me-1">{{ __('مستويات الصلاحية:') }}</span>
                 <span class="level-pill-badge bg-secondary bg-opacity-10 text-secondary border">
-                    🚫 <strong>مخفي (Hidden):</strong> لا يظهر التبويب
+                    🚫 <strong>{{ __('مخفي (Hidden):') }}</strong> {{ __('لا يظهر التبويب') }}
                 </span>
                 <span class="level-pill-badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
-                    👁️ <strong>قراءة فقط (Read):</strong> اطلاع دون تعديل
+                    👁️ <strong>{{ __('قراءة فقط (Read):') }}</strong> {{ __('اطلاع دون تعديل') }}
                 </span>
                 <span class="level-pill-badge bg-success bg-opacity-10 text-success border border-success-subtle">
-                    ✍️ <strong>قراءة وإدخال (Write):</strong> إدخال وحفظ كامل
+                    ✍️ <strong>{{ __('قراءة وإدخال (Write):') }}</strong> {{ __('إدخال وحفظ كامل') }}
                 </span>
             </div>
             <span class="badge bg-dark-subtle text-dark border px-3 py-2 rounded-pill small">
-                <i class="fas fa-shield-alt text-primary me-1"></i> مدير النظام يملك صلاحية كاملة تلقائياً
+                <i class="fas fa-shield-alt text-primary me-1"></i> {{ __('مدير النظام يملك صلاحية كاملة تلقائياً') }}
             </span>
         </div>
 
@@ -268,7 +268,7 @@
                             aria-selected="{{ $activeMatrix === 'clinical' ? 'true' : 'false' }}"
                             onclick="activateMatrixTab('clinical', true)">
                         <i class="fas fa-stethoscope text-primary"></i>
-                        <span>المحطة السريرية الموحدة</span>
+                        <span>{{ __('المحطة السريرية الموحدة') }}</span>
                         <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark matrix-tab-count">{{ count($clinicalRoles) }}</span>
                     </button>
                 </li>
@@ -282,7 +282,7 @@
                             aria-selected="{{ $activeMatrix === 'detail' ? 'true' : 'false' }}"
                             onclick="activateMatrixTab('detail', true)">
                         <i class="fas fa-procedures text-success"></i>
-                        <span>ملف العملية وصالة العمليات</span>
+                        <span>{{ __('ملف العملية وصالة العمليات') }}</span>
                         <code class="small bg-light px-1 rounded text-muted">/surgeries/{id}</code>
                         <span class="badge rounded-pill bg-secondary bg-opacity-25 text-dark matrix-tab-count">{{ count($detailRoles) }}</span>
                     </button>
@@ -291,7 +291,7 @@
 
             <div class="small text-muted d-flex align-items-center gap-2">
                 <i class="fas fa-layer-group text-secondary"></i>
-                <span>يتم حفظ كل تبويب بشكل مستقل دون الحاجة للتمرير الطويل.</span>
+                <span>{{ __('يتم حفظ كل تبويب بشكل مستقل دون الحاجة للتمرير الطويل.') }}</span>
             </div>
         </div>
 
@@ -304,7 +304,7 @@
                  aria-labelledby="btnTabClinical">
                 <div class="px-4 py-2 bg-white border-bottom small text-secondary">
                     <i class="fas fa-info-circle text-primary me-1"></i>
-                    تتحكم هذه المصفوفة بتبويبات شاشة التمريض والمقيم والطبيب في المحطة السريرية الموحدة (<code>/clinical-station/{id}</code>).
+                    {{ __('تتحكم هذه المصفوفة بتبويبات شاشة التمريض والمقيم والطبيب في المحطة السريرية الموحدة (') }}<code>/clinical-station/{id}</code>).
                 </div>
 
                 <form action="{{ route('surgery-stations.tab-settings.update') }}" method="POST">
@@ -315,7 +315,7 @@
                             <thead>
                                 <tr>
                                     <th class="tab-col-header text-start px-3" style="min-width: 240px;">
-                                        <i class="fas fa-user-tag text-primary me-1"></i> الدور السريري / الوظيفي
+                                        <i class="fas fa-user-tag text-primary me-1"></i> {{ __('الدور السريري / الوظيفي') }}
                                     </th>
                                     @foreach($tabs as $tabKey => $tabMeta)
                                         <th class="tab-col-header" title="{{ $tabMeta['description'] }}">
@@ -358,18 +358,18 @@
                                                         <div class="fw-bold text-dark">
                                                             {{ $roleLabel }}
                                                             @if($isCustomRole)
-                                                                <span class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size: 0.68rem;">مضاف</span>
+                                                                <span class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size: 0.68rem;">{{ __('مضاف') }}</span>
                                                             @endif
                                                         </div>
-                                                        <div class="text-muted small" style="font-size: 0.75rem;">الكود: <code>{{ $roleKey }}</code></div>
+                                                        <div class="text-muted small" style="font-size: 0.75rem;">{{ __('الكود:') }} <code>{{ $roleKey }}</code></div>
                                                     </div>
                                                 </div>
                                                 @if($isCustomRole)
                                                     <button type="submit"
                                                             form="remove-clinical-{{ md5($roleKey) }}"
                                                             class="btn btn-sm btn-outline-danger rounded-circle"
-                                                            title="إزالة هذا الدور من المصفوفة"
-                                                            onclick="return confirm('إزالة صلاحيات الدور {{ $roleKey }} من مصفوفة المحطة السريرية؟');">
+                                                            title="{{ __('إزالة هذا الدور من المصفوفة') }}"
+                                                            onclick="return confirm('{{ __('إزالة صلاحيات هذا الدور من مصفوفة المحطة السريرية؟') }}');">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 @endif
@@ -385,7 +385,7 @@
                                             <td class="text-center p-2">
                                                 @if($isRoleAdmin)
                                                     <span class="badge bg-success bg-opacity-25 text-success border border-success-subtle px-3 py-2 rounded-3 fw-bold small">
-                                                        <i class="fas fa-check-double me-1"></i> إدخال كامل (ثابت)
+                                                        <i class="fas fa-check-double me-1"></i> {{ __('إدخال كامل (ثابت)') }}
                                                     </span>
                                                     <input type="hidden" name="permissions[{{ $roleKey }}][{{ $tabKey }}]" value="write">
                                                 @else
@@ -394,9 +394,9 @@
                                                             data-level="{{ $currentLevel }}"
                                                             onchange="updateSelectColor(this)"
                                                             style="max-width: 140px;">
-                                                        <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>🚫 مخفي</option>
-                                                        <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>👁️ قراءة فقط</option>
-                                                        <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>✍️ قراءة وإدخال</option>
+                                                        <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>{{ __('🚫 مخفي') }}</option>
+                                                        <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>{{ __('👁️ قراءة فقط') }}</option>
+                                                        <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>{{ __('✍️ قراءة وإدخال') }}</option>
                                                     </select>
                                                 @endif
                                             </td>
@@ -409,10 +409,10 @@
 
                     <div class="p-3 bg-white border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-muted small">
-                            <i class="fas fa-info-circle text-info me-1"></i> يتم تطبيق التعديلات فور الحفظ على كافة شاشات المحطة السريرية.
+                            <i class="fas fa-info-circle text-info me-1"></i> {{ __('يتم تطبيق التعديلات فور الحفظ على كافة شاشات المحطة السريرية.') }}
                         </span>
                         <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
-                            <i class="fas fa-save me-1"></i> حفظ صلاحيات المحطة السريرية
+                            <i class="fas fa-save me-1"></i> {{ __('حفظ صلاحيات المحطة السريرية') }}
                         </button>
                     </div>
                 </form>
@@ -425,8 +425,8 @@
                  aria-labelledby="btnTabDetail">
                 <div class="px-4 py-2 bg-white border-bottom small text-secondary">
                     <i class="fas fa-shield-alt text-success me-1"></i>
-                    <strong>مصفوفة صلاحيات ملف العملية وصالة العمليات:</strong>
-                    أي دور أو محطة تضاف هنا وتُمنح تبويباً واحداً غير مخفي (قراءة أو إدخال) يُسمح لها بالدخول إلى <code>/surgeries/{id}</code> تلقائياً.
+                    <strong>{{ __('مصفوفة صلاحيات ملف العملية وصالة العمليات:') }}</strong>
+                    {{ __('أي دور أو محطة تضاف هنا وتُمنح تبويباً واحداً غير مخفي (قراءة أو إدخال) يُسمح لها بالدخول إلى') }} <code>/surgeries/{id}</code> {{ __('تلقائياً.') }}
                 </div>
 
                 <form action="{{ route('surgery-stations.tab-settings.update') }}" method="POST">
@@ -437,7 +437,7 @@
                             <thead>
                                 <tr>
                                     <th class="tab-col-header text-start px-3" style="min-width: 240px;">
-                                        <i class="fas fa-user-md text-success me-1"></i> الدور / الكادر في العملية
+                                        <i class="fas fa-user-md text-success me-1"></i> {{ __('الدور / الكادر في العملية') }}
                                     </th>
                                     @foreach($detailTabs as $tabKey => $tabMeta)
                                         <th class="tab-col-header" title="{{ $tabMeta['description'] }}">
@@ -478,18 +478,18 @@
                                                         <div class="fw-bold text-dark">
                                                             {{ $roleLabel }}
                                                             @if($isCustomRole)
-                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.68rem;">مضاف</span>
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.68rem;">{{ __('مضاف') }}</span>
                                                             @endif
                                                         </div>
-                                                        <div class="text-muted small" style="font-size: 0.75rem;">الكود: <code>{{ $roleKey }}</code></div>
+                                                        <div class="text-muted small" style="font-size: 0.75rem;">{{ __('الكود:') }} <code>{{ $roleKey }}</code></div>
                                                     </div>
                                                 </div>
                                                 @if($isCustomRole)
                                                     <button type="submit"
                                                             form="remove-detail-{{ md5($roleKey) }}"
                                                             class="btn btn-sm btn-outline-danger rounded-circle"
-                                                            title="إزالة هذا الدور من مصفوفة ملف العملية"
-                                                            onclick="return confirm('إزالة صلاحيات الدور {{ $roleKey }} من مصفوفة ملف العملية؟');">
+                                                            title="{{ __('إزالة هذا الدور من مصفوفة ملف العملية') }}"
+                                                            onclick="return confirm('{{ __('إزالة صلاحيات هذا الدور من مصفوفة ملف العملية؟') }}');">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 @endif
@@ -508,9 +508,9 @@
                                                         data-level="{{ $currentLevel }}"
                                                         onchange="updateSelectColor(this)"
                                                         style="max-width: 145px;">
-                                                    <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>🚫 مخفي</option>
-                                                    <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>👁️ قراءة فقط</option>
-                                                    <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>✍️ قراءة وإدخال</option>
+                                                    <option value="hidden" {{ $currentLevel === 'hidden' ? 'selected' : '' }}>{{ __('🚫 مخفي') }}</option>
+                                                    <option value="read" {{ $currentLevel === 'read' ? 'selected' : '' }}>{{ __('👁️ قراءة فقط') }}</option>
+                                                    <option value="write" {{ $currentLevel === 'write' ? 'selected' : '' }}>{{ __('✍️ قراءة وإدخال') }}</option>
                                                 </select>
                                             </td>
                                         @endforeach
@@ -522,10 +522,10 @@
 
                     <div class="p-3 bg-white border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-muted small">
-                            <i class="fas fa-shield-alt text-success me-1"></i> يدعم حساب التخدير تلقائياً سواء أُنشئ بدور <code>التخدير</code> أو كطبيب تخدير <code>anesthesiologist</code>، ويدعم <code>doctor</code> دور <code>الجراح</code> تلقائياً.
+                            <i class="fas fa-shield-alt text-success me-1"></i> {{ __('يدعم حساب التخدير تلقائياً سواء أُنشئ بدور') }} <code>{{ __('التخدير') }}</code> {{ __('أو كطبيب تخدير') }} <code>anesthesiologist</code>{{ __('، ويدعم') }} <code>doctor</code> {{ __('دور') }} <code>{{ __('الجراح') }}</code> {{ __('تلقائياً.') }}
                         </span>
                         <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm">
-                            <i class="fas fa-save me-1"></i> حفظ صلاحيات ملف العملية
+                            <i class="fas fa-save me-1"></i> {{ __('حفظ صلاحيات ملف العملية') }}
                         </button>
                     </div>
                 </form>
@@ -567,7 +567,7 @@
                     <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                         <i class="fas fa-user-plus"></i>
                     </span>
-                    <span>إضافة دور أو محطة للصلاحيات</span>
+                    <span>{{ __('إضافة دور أو محطة للصلاحيات') }}</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -577,7 +577,7 @@
                 <div class="modal-body p-4">
                     {{-- Step 1: Select Matrix --}}
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-secondary mb-2">1. اختر الشاشة / المصفوفة المستهدفة:</label>
+                        <label class="form-label fw-bold small text-secondary mb-2">{{ __('1. اختر الشاشة / المصفوفة المستهدفة:') }}</label>
                         <div class="row g-2">
                             <div class="col-6">
                                 <input type="radio"
@@ -590,8 +590,8 @@
                                 <label class="choice-card-label w-100 h-100" for="modalMatrixClinical">
                                     <i class="fas fa-stethoscope text-primary fa-lg"></i>
                                     <div>
-                                        <div class="fw-bold small text-dark">المحطة السريرية</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">متاح: {{ count($availableClinicalRoles) }} دور</div>
+                                        <div class="fw-bold small text-dark">{{ __('المحطة السريرية') }}</div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">{{ __('متاح:') }} {{ count($availableClinicalRoles) }} {{ __('دور') }}</div>
                                     </div>
                                 </label>
                             </div>
@@ -606,8 +606,8 @@
                                 <label class="choice-card-label w-100 h-100" for="modalMatrixDetail">
                                     <i class="fas fa-procedures text-success fa-lg"></i>
                                     <div>
-                                        <div class="fw-bold small text-dark">ملف العملية</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">متاح: {{ count($availableDetailRoles) }} دور</div>
+                                        <div class="fw-bold small text-dark">{{ __('ملف العملية') }}</div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">{{ __('متاح:') }} {{ count($availableDetailRoles) }} {{ __('دور') }}</div>
                                     </div>
                                 </label>
                             </div>
@@ -616,35 +616,35 @@
 
                     {{-- Step 2: Select Role / Station --}}
                     <div class="mb-3">
-                        <label for="modalRoleSelect" class="form-label fw-bold small text-secondary mb-2">2. اختر الدور الوظيفي أو المحطة:</label>
+                        <label for="modalRoleSelect" class="form-label fw-bold small text-secondary mb-2">{{ __('2. اختر الدور الوظيفي أو المحطة:') }}</label>
                         <select name="role_name" id="modalRoleSelect" class="form-select" required>
-                            <option value="">-- اختر دوراً أو محطة --</option>
+                            <option value="">{{ __('-- اختر دوراً أو محطة --') }}</option>
                         </select>
                         <div id="modalNoRolesHint" class="form-text text-danger d-none mt-1">
-                            جميع الأدوار المتاحة مضافة مسبقاً في هذه المصفوفة.
+                            {{ __('جميع الأدوار المتاحة مضافة مسبقاً في هذه المصفوفة.') }}
                         </div>
                     </div>
 
                     {{-- Step 3: Default Starting Level --}}
                     <div>
-                        <label class="form-label fw-bold small text-secondary mb-2">3. الصلاحية المبدئية لجميع التبويبات:</label>
+                        <label class="form-label fw-bold small text-secondary mb-2">{{ __('3. الصلاحية المبدئية لجميع التبويبات:') }}</label>
                         <div class="row g-2">
                             <div class="col-4">
                                 <input type="radio" class="btn-check choice-card-input" name="default_level" id="lvlRead" value="read" checked>
                                 <label class="choice-card-label justify-content-center text-center py-2 px-1" for="lvlRead">
-                                    <span class="small fw-bold text-primary">👁️ قراءة فقط</span>
+                                    <span class="small fw-bold text-primary">{{ __('👁️ قراءة فقط') }}</span>
                                 </label>
                             </div>
                             <div class="col-4">
                                 <input type="radio" class="btn-check choice-card-input" name="default_level" id="lvlHidden" value="hidden">
                                 <label class="choice-card-label justify-content-center text-center py-2 px-1" for="lvlHidden">
-                                    <span class="small fw-bold text-secondary">🚫 مخفي</span>
+                                    <span class="small fw-bold text-secondary">{{ __('🚫 مخفي') }}</span>
                                 </label>
                             </div>
                             <div class="col-4">
                                 <input type="radio" class="btn-check choice-card-input" name="default_level" id="lvlWrite" value="write">
                                 <label class="choice-card-label justify-content-center text-center py-2 px-1" for="lvlWrite">
-                                    <span class="small fw-bold text-success">✍️ إدخال كامل</span>
+                                    <span class="small fw-bold text-success">{{ __('✍️ إدخال كامل') }}</span>
                                 </label>
                             </div>
                         </div>
@@ -652,9 +652,9 @@
                 </div>
 
                 <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
                     <button type="submit" id="modalSubmitAddRoleBtn" class="btn btn-primary rounded-pill px-4 fw-bold">
-                        <i class="fas fa-plus-circle me-1"></i> إضافة وتفعيل
+                        <i class="fas fa-plus-circle me-1"></i> {{ __('إضافة وتفعيل') }}
                     </button>
                 </div>
             </form>
@@ -686,7 +686,7 @@ function syncModalRolesForMatrix(matrixType) {
     select.innerHTML = '';
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = '-- اختر دوراً أو محطة --';
+    placeholder.textContent = @json(__('-- اختر دوراً أو محطة --'));
     select.appendChild(placeholder);
 
     entries.forEach(([roleKey, roleLabel]) => {

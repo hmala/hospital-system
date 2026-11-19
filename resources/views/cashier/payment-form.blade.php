@@ -69,12 +69,12 @@
                 <div class="d-flex align-items-center">
                     <i class="fas fa-exclamation-triangle fs-4 text-warning me-2"></i>
                     <div>
-                        <strong class="text-dark">أجور الخدمة غير محددة (0 د.ع)</strong>
-                        <span class="text-muted ms-2 small">يرجى كتابة المبلغ المستلم يدوياً.</span>
+                        <strong class="text-dark">{{ __("أجور الخدمة غير محددة (0 د.ع)") }}</strong>
+                        <span class="text-muted ms-2 small">{{ __("يرجى كتابة المبلغ المستلم يدوياً.") }}</span>
                     </div>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#doctorFeeErrorModal">
-                    عرض سبب التنبيه
+                    {{ __('عرض سبب التنبيه') }}
                 </button>
             </div>
         </div>
@@ -91,12 +91,12 @@
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <h4 class="fw-bold mb-0 text-white">{{ optional(optional($patient)->user)->name ?? 'مريض غير محدد' }}</h4>
-                            <span class="badge bg-primary px-2 py-1 rounded-pill">موعد #{{ $appointment->id }}</span>
+                            <h4 class="fw-bold mb-0 text-white">{{ optional(optional($patient)->user)->name ?? __('مريض غير محدد') }}</h4>
+                            <span class="badge bg-primary px-2 py-1 rounded-pill">{{ __('موعد') }} #{{ $appointment->id }}</span>
                         </div>
                         <div class="text-white-50 small d-flex flex-wrap gap-3">
-                            <span><i class="fas fa-id-card me-1"></i>{{ $patient->national_id ?? 'بدون رقم هوية' }}</span>
-                            <span><i class="fas fa-phone me-1"></i>{{ optional(optional($patient)->user)->phone ?? 'بدون هاتف' }}</span>
+                            <span><i class="fas fa-id-card me-1"></i>{{ $patient->national_id ?? __('بدون رقم هوية') }}</span>
+                            <span><i class="fas fa-phone me-1"></i>{{ optional(optional($patient)->user)->phone ?? __('بدون هاتف') }}</span>
                             <span><i class="fas fa-clock me-1"></i>{{ $appointment->appointment_date ? $appointment->appointment_date->format('Y-m-d H:i') : '' }}</span>
                         </div>
                     </div>
@@ -122,7 +122,7 @@
 
                 <!-- زر الرجوع -->
                 <a href="{{ route('cashier.index') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">
-                    <i class="fas fa-arrow-right me-1"></i> قائمة الانتظار
+                    <i class="fas fa-arrow-right me-1"></i> {{ __("قائمة الانتظار") }}
                 </a>
             </div>
         </div>
@@ -142,14 +142,14 @@
                         <div class="row g-3 mb-4 text-center" id="live_pricing_summary">
                             <div class="col-md-4">
                                 <div class="p-3 rounded-3 border bg-light">
-                                    <span class="text-muted small d-block mb-1">السعر المعتمد للخدمة</span>
+                                    <span class="text-muted small d-block mb-1">{{ __("السعر المعتمد للخدمة") }}</span>
                                     <h4 class="fw-bold mb-0 text-dark" id="display_approved_price">0 د.ع</h4>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="p-3 rounded-3 border bg-primary bg-opacity-10 border-primary">
                                     <span class="text-primary fw-bold small d-block mb-1">
-                                        <i class="fas fa-shield-alt me-1"></i>تغطية الضمان (ذمة)
+                                        <i class="fas fa-shield-alt me-1"></i>{{ __("تغطية الضمان (ذمة)") }}
                                     </span>
                                     <h4 class="fw-bold mb-0 text-primary" id="display_insurance_share">0 د.ع</h4>
                                 </div>
@@ -157,7 +157,7 @@
                             <div class="col-md-4">
                                 <div class="p-3 rounded-3 border bg-success bg-opacity-10 border-success shadow-sm">
                                     <span class="text-success fw-bold small d-block mb-1">
-                                        <i class="fas fa-hand-holding-usd me-1"></i>المطلوب من المريض
+                                        <i class="fas fa-hand-holding-usd me-1"></i>{{ __("المطلوب من المريض") }}
                                     </span>
                                     <h4 class="fw-bold mb-0 text-success" id="display_patient_share">0 د.ع</h4>
                                 </div>
@@ -169,16 +169,16 @@
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="fas fa-file-medical-alt text-primary fs-5"></i>
-                                    <h6 class="fw-bold text-dark mb-0">حالة التغطية والضمان الصحي</h6>
+                                    <h6 class="fw-bold text-dark mb-0">{{ __("حالة التغطية والضمان الصحي") }}</h6>
                                 </div>
                                 
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge {{ $defaultInsurance !== 'none' ? 'bg-success' : 'bg-secondary' }} px-3 py-2 fs-7" id="copayBadge">
-                                        {{ $defaultInsurance === 'hi' ? 'مشمول بالضمان الصحي الوطني' : ($defaultInsurance === 'moi' ? 'مشمول بضمان الداخلية' : 'دفع نقدي كامل (100%)') }}
+                                        {{ $defaultInsurance === 'hi' ? __('مشمول بالضمان الصحي الوطني') : ($defaultInsurance === 'moi' ? __('مشمول بضمان الداخلية') : __('دفع نقدي كامل (100%)')) }}
                                     </span>
                                     @if($defaultInsurance !== 'none')
                                         <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
-                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
+                                            <i class="fas fa-lock me-1"></i>{{ __("مثبتة آلياً ومحمية") }}
                                         </span>
                                     @endif
                                 </div>
@@ -189,24 +189,24 @@
                                 <div class="col-md-6" id="insurance_type_wrapper">
                                     @if($defaultInsurance !== 'none')
                                         <div class="p-2 px-3 rounded-2 bg-white border text-secondary small d-flex justify-content-between align-items-center" id="locked_insurance_display">
-                                            <span>جهة التغطية: <strong class="text-dark">{{ $defaultInsurance === 'hi' ? 'هيئة الضمان الصحي الوطني (HI)' : 'ضمان قوى الأمن الداخلي' }}</strong></span>
+                                            <span>{{ __('جهة التغطية:') }} <strong class="text-dark">{{ $defaultInsurance === 'hi' ? __('هيئة الضمان الصحي الوطني (HI)') : __('ضمان قوى الأمن الداخلي') }}</strong></span>
                                             <i class="fas fa-check-circle text-success"></i>
                                             <input type="hidden" name="insurance_type" id="insurance_type" value="{{ $defaultInsurance }}">
                                         </div>
                                     @else
                                         <select class="form-select" id="insurance_type" name="insurance_type">
-                                            <option value="none" selected>بدون ضمان (دفع نقدي كامل 100%)</option>
-                                            <option value="moi">ضمان قوى الأمن الداخلي (وزارة الداخلية)</option>
-                                            <option value="hi">هيئة الضمان الصحي الوطني</option>
+                                            <option value="none" selected>{{ __("بدون ضمان (دفع نقدي كامل 100%)") }}</option>
+                                            <option value="moi">{{ __("ضمان قوى الأمن الداخلي (وزارة الداخلية)") }}</option>
+                                            <option value="hi">{{ __("هيئة الضمان الصحي الوطني") }}</option>
                                         </select>
                                     @endif
                                 </div>
 
                                 <div class="col-md-6" id="insurance_card_col" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
                                     <div class="input-group">
-                                        <span class="input-group-text bg-white small text-muted"><i class="fas fa-id-badge me-1"></i>رقم البطاقة / الدفتر:</span>
+                                        <span class="input-group-text bg-white small text-muted"><i class="fas fa-id-badge me-1"></i>{{ __("رقم البطاقة / الدفتر:") }}</span>
                                         <input type="text" class="form-control" id="insurance_card_no" name="insurance_card_no" 
-                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="أدخل رقم الهوية" readonly>
+                                               value="{{ old('insurance_card_no', $defaultCardNo) }}" placeholder="{{ __("أدخل رقم الهوية") }}" readonly>
                                     </div>
                                 </div>
 
@@ -215,10 +215,10 @@
                                         <div class="p-2 rounded-2 bg-info bg-opacity-10 border border-info border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2 small">
                                             <span class="text-dark">
                                                 <i class="fas fa-layer-group text-primary me-1"></i>
-                                                الفئة المعتمدة: <strong>{{ $hiCategory->name }} ({{ $hiCategory->code }})</strong> — نسبة التحمل: <strong class="text-primary fs-7">{{ (float)$hiCategory->consultation_copay }}%</strong>
+                                                {{ __('الفئة المعتمدة:') }} <strong>{{ $hiCategory->name }} ({{ $hiCategory->code }})</strong> — {{ __('نسبة التحمل:') }} <strong class="text-primary fs-7">{{ (float)$hiCategory->consultation_copay }}%</strong>
                                             </span>
                                             @if($hiCategory->requires_thermal_stamp)
-                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>{{ __("شرط الختم الحراري (0%)") }}</span>
                                             @endif
                                         </div>
                                     </div>
@@ -228,11 +228,10 @@
                                     <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <i class="fas fa-percentage text-primary"></i>
-                                            <span class="small text-muted">نسبة التحمل المقررة رسمياً على المريض: <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
+                                            <span class="small text-muted">{{ __('نسبة التحمل المقررة رسمياً على المريض:') }} <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
                                         </div>
                                         <span class="text-muted small">
-                                            <i class="fas fa-shield-alt text-success me-1"></i>
-                                            مقفلة ومحددة آلياً وفق فئة المريض الرسمية
+                                            <i class="fas fa-shield-alt text-success me-1"></i> {{ __("مقفلة ومحددة آلياً وفق فئة المريض الرسمية") }}
                                         </span>
                                     </div>
                                     <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
@@ -242,14 +241,14 @@
 
                         <!-- 3. طريقة الدفع (نقدي / إلكتروني فقط) -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-muted mb-2">طريقة تحصيل حصة المريض *</label>
+                            <label class="form-label fw-bold small text-muted mb-2">{{ __("طريقة تحصيل حصة المريض *") }}</label>
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <input type="radio" class="btn-check" name="payment_method" id="payment_cash" value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
                                     <label class="btn btn-outline-success w-100 p-3 rounded-3 text-start d-flex align-items-center justify-content-between payment-method-card" for="payment_cash">
                                         <div>
                                             <div class="fw-bold fs-6">💵 نقدي (Cash)</div>
-                                            <small class="text-muted">استلام المبلغ نقداً في الصندوق</small>
+                                            <small class="text-muted">{{ __("استلام المبلغ نقداً في الصندوق") }}</small>
                                         </div>
                                         <i class="fas fa-check-circle check-icon fs-5"></i>
                                     </label>
@@ -258,8 +257,8 @@
                                     <input type="radio" class="btn-check" name="payment_method" id="payment_card" value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
                                     <label class="btn btn-outline-primary w-100 p-3 rounded-3 text-start d-flex align-items-center justify-content-between payment-method-card" for="payment_card">
                                         <div>
-                                            <div class="fw-bold fs-6">💳 دفع إلكتروني (POS / Card)</div>
-                                            <small class="text-muted">بطاقة مصرفية أو جهاز الدفع</small>
+                                            <div class="fw-bold fs-6">{{ __("💳 دفع إلكتروني (POS / Card)") }}</div>
+                                            <small class="text-muted">{{ __("بطاقة مصرفية أو جهاز الدفع") }}</small>
                                         </div>
                                         <i class="fas fa-check-circle check-icon fs-5"></i>
                                     </label>
@@ -273,10 +272,10 @@
                         <!-- 4. ملاحظات إضافية اختيارية -->
                         <div class="mb-2">
                             <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#notesCollapse" role="button">
-                                <i class="fas fa-comment-alt me-1"></i> إضافة ملاحظة على السند (اختياري)
+                                <i class="fas fa-comment-alt me-1"></i> {{ __("إضافة ملاحظة على السند (اختياري)") }}
                             </a>
                             <div class="collapse mt-2" id="notesCollapse">
-                                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي ملاحظة للمحاسبة أو الإيصال...">{{ old('notes') }}</textarea>
+                                <textarea name="notes" class="form-control" rows="2" placeholder="{{ __("اكتب أي ملاحظة للمحاسبة أو الإيصال...") }}">{{ old('notes') }}</textarea>
                             </div>
                         </div>
 
@@ -289,7 +288,7 @@
                 <div class="card border-0 shadow-sm rounded-4 bg-white h-100 d-flex flex-column justify-content-between p-4">
                     <div>
                         <div class="text-center pb-3 mb-3 border-bottom">
-                            <span class="text-muted small d-block mb-1">المبلغ الصافي المطلوب قبضه</span>
+                            <span class="text-muted small d-block mb-1">{{ __("المبلغ الصافي المطلوب قبضه") }}</span>
                             <div class="input-group input-group-lg justify-content-center">
                                 <input type="number" 
                                        name="amount" 
@@ -301,14 +300,14 @@
                                        style="max-width: 240px; border-radius: 12px;"
                                        readonly
                                        required>
-                                <span class="input-group-text bg-success text-white fw-bold rounded-3 ms-2">د.ع</span>
+                                <span class="input-group-text bg-success text-white fw-bold rounded-3 ms-2">{{ __("د.ع") }}</span>
                             </div>
                             @error('amount')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                             <div class="mt-2">
                                 <span class="badge bg-secondary-subtle text-secondary border">
-                                    <i class="fas fa-lock me-1"></i>محسوب آلياً ومطابق للوصل
+                                    <i class="fas fa-lock me-1"></i>{{ __("محسوب آلياً ومطابق للوصل") }}
                                 </span>
                             </div>
                         </div>
@@ -316,20 +315,20 @@
                         <!-- ملخص سريع للعملية -->
                         <div class="bg-light p-3 rounded-3 mb-4 small">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">نوع الخدمة:</span>
+                                <span class="text-muted">{{ __("نوع الخدمة:") }}</span>
                                 <strong class="text-dark">{{ $serviceCategory }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">الطبيب:</span>
+                                <span class="text-muted">{{ __("الطبيب:") }}</span>
                                 <strong class="text-dark">{{ $doctor ? optional($doctor->user)->name : 'عام' }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">الجهة الضامنة:</span>
-                                <strong class="text-dark">{{ $defaultInsurance !== 'none' ? ($defaultInsurance === 'hi' ? 'الضمان الصحي' : 'الداخلية') : 'نقدي 100%' }}</strong>
+                                <span class="text-muted">{{ __("الجهة الضامنة:") }}</span>
+                                <strong class="text-dark">{{ $defaultInsurance !== 'none' ? ($defaultInsurance === 'hi' ? __('الضمان الصحي') : __('الداخلية')) : __('نقدي 100%') }}</strong>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span class="text-muted">الإيصال:</span>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">تلقائي فور الدفع</span>
+                                <span class="text-muted">{{ __("الإيصال:") }}</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">{{ __("تلقائي فور الدفع") }}</span>
                             </div>
                         </div>
                     </div>
@@ -338,14 +337,14 @@
                     <div>
                         <div id="insuranceErrorAlert" class="alert alert-danger d-none fw-bold small mb-2 text-center" style="font-size: 0.85rem;">
                             <i class="fas fa-ban me-1"></i>
-                            <span id="insuranceErrorText">لا يمكن التسديد! الطبيب/الخدمة غير مشمول بهذا الضمان أو أن التسعيرة غير مدخلة.</span>
+                            <span id="insuranceErrorText">{{ __("لا يمكن التسديد! الطبيب/الخدمة غير مشمول بهذا الضمان أو أن التسعيرة غير مدخلة.") }}</span>
                         </div>
                         <button type="submit" id="submitPaymentBtn" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" style="font-size: 1.15rem;">
                             <i class="fas fa-print fs-5"></i>
-                            <span>تأكيد القبض وإصدار الوصل</span>
+                            <span>{{ __("تأكيد القبض وإصدار الوصل") }}</span>
                         </button>
                         <small class="text-center text-muted d-block mt-2">
-                            <i class="fas fa-bolt text-warning me-1"></i> يُحدث طابور الطبيب تلقائياً بالدخول
+                            <i class="fas fa-bolt text-warning me-1"></i> {{ __("يُحدث طابور الطبيب تلقائياً بالدخول") }}
                         </small>
                     </div>
                 </div>
@@ -360,17 +359,15 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header bg-danger text-white rounded-top-4">
                 <h5 class="modal-title fw-bold" id="doctorFeeErrorModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>أجور الكشف غير محددة
+                    <i class="fas fa-exclamation-triangle me-2"></i>{{ __("أجور الكشف غير محددة") }}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <h6 class="fw-bold text-dark mb-2" id="modalErrorTitle">لم يتم تسجيل تسعيرة لهذا الطبيب</h6>
-                <p class="text-muted small mb-3" id="modalErrorMessage">
-                    يرجى كتابة المبلغ المستحق المطلوب قبضه يدوياً في خانة المبلغ.
-                </p>
+                <h6 class="fw-bold text-dark mb-2" id="modalErrorTitle">{{ __("لم يتم تسجيل تسعيرة لهذا الطبيب") }}</h6>
+                <p class="text-muted small mb-3" id="modalErrorMessage">{{ __("يرجى كتابة المبلغ المستحق المطلوب قبضه يدوياً في خانة المبلغ.") }}</p>
                 <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-dismiss="modal" onclick="focusAmountInput()">
-                    إدخال المبلغ يدوياً
+                    {{ __('إدخال المبلغ يدوياً') }}
                 </button>
             </div>
         </div>

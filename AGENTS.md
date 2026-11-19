@@ -54,6 +54,26 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-19 — المرحلة 254: التعريب والترجمة الشاملة الدقيقة 100% لشاشات العمليات الأساسية وإدارة الحجوزات ولوحة الصالات والتقرير المطبوع ومصفوفة الصلاحيات مع توسيع القاموس لـ 3,611 مفتاحاً واجتياز حزم الاختبارات بنسبة 100% Comprehensive 100% Granular Localization for Core Surgeries, Booking, Flight Board, Surgical Report Print, Tab Permissions Matrix with 3,611 Dictionary Keys & 100% Automated Tests Pass)
+
+### Done
+- **التعريب والترجمة الدقيقة 100% لشاشات العمليات الأساسية الثمانية (8 Blade Views)**:
+  * `resources/views/surgeries/index.blade.php`: تعريب كامل لسجل العمليات، مؤشرات الـ KPIs، الفلاتر، الشارات السريرية، جدول مخزن وعهدة العمليات (`or_store`) بكافة تفاصيل الوجبات وتواريخ الانتهاء والتنبيهات.
+  * `resources/views/surgeries/waiting.blade.php`: تعريب شامل لقائمة الانتظار وصالات العمليات (Flight Board)، الصالات السريرية، مودال إضافة صالة جديدة، وتنبيهات الجافاسكريبت والمزامنة اللحظية.
+  * `resources/views/surgeries/create.blade.php`: تعريب 100% لشاشة حجز عملية جديدة، بيانات المريض، الطبيب الجراح والمرسل، جدول العمليات متعددة الإجراءات، اختيار الغرف والإقامة، وإضافة الأطباء.
+  * `resources/views/surgeries/edit.blade.php`: تعريب ترويسة تعديل حجز العملية، المسار التأميني، استعراض الوثائق، وتعديل العمليات والغرف.
+  * `resources/views/surgeries/print.blade.php`: تقرير جراحي رسمي ثنائي اللغة ديناميكي (`dir="rtl"` / `dir="ltr"`)، تعريب كافة الحقول، توقيع الجراح، التخدير، وختم صالة العمليات.
+  * `resources/views/surgeries/control.blade.php`: تعريب لوحة تحكم العمليات الجراحية وقائمة الانتظار السريعة وأزرار التنقل.
+  * `resources/views/surgeries/settings/tabs.blade.php`: معالجة خطأ التركيب اللغوي `ParseError` بإزالة كافة التداخلات غير القانونية لوسوم Blade، تنظيف وسوم الحذف والتأكيد، وتعريب مصفوفة الصلاحيات بالكامل.
+  * `resources/views/surgeries/show.blade.php`: تدقيق وتأكيد تعريب تفاصيل العملية وتبويباتها.
+- **القاموس المركزي المحدث ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+  * توسيع القاموس المركزي من 3,129 إلى **3,611 مفتاح ترجمة طبي وإداري وسريري دقيق** بنسبة مطابقة 100% وصفرية الأخطاء المفتاحية.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeriesLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeriesLocalizationTest.php), [tests/Feature/SurgeryGranularTabControlTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+  * اجتياز حزمة `SurgeriesLocalizationTest` بنجاح 100% (`7 passed, 76 assertions`).
+  * اجتياز حزمة `SurgeryGranularTabControlTest` بنجاح 100% (`7 passed, 26 assertions`).
+  * إجمالي توكيدات الاختبارات الناجحة: **102 توكيد برمجي (Assertions)**.
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
 ## Session log (2026-11-19 — المرحلة 253: التعريب والترجمة الشاملة الدقيقة 100% لمحطات التشخيص المخبرية والشعاعية ودليل الأسعار وفحوصات العمليات الجراحية وتوسيع القاموس لـ 3,129 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Laboratory, Radiology, Pricing Catalog & Surgery Diagnostics across 31 Blade Views with 3,129 Dictionary Keys & Automated Feature Tests)
 
 ### Done

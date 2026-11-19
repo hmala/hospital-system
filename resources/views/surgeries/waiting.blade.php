@@ -401,14 +401,14 @@
                                             {!! $badgeHtml !!}
                                         </td>
                                         <td>
-                                            <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1 fw-bold text-decoration-none text-nowrap" style="font-size: 0.9rem;" title="فتح ملف وتفاصيل العملية">
+                                            <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1 fw-bold text-decoration-none text-nowrap" style="font-size: 0.9rem;" title="{{ __('فتح ملف وتفاصيل العملية') }}">
                                                 <i class="{{ $patientIcon }} fs-6"></i>
                                                 <span class="{{ $patientColor }} text-truncate" style="max-width: 155px;">{{ $patientName }}</span>
                                             </a>
                                         </td>
                                         <td class="text-center">
                                             @if($surgery->patient && $surgery->patient->age)
-                                                <span class="badge bg-white text-dark border px-1.5 py-0.5 fw-bold shadow-xs text-nowrap" style="font-size: 0.74rem;">{{ $surgery->patient->age }} سنة</span>
+                                                <span class="badge bg-white text-dark border px-1.5 py-0.5 fw-bold shadow-xs text-nowrap" style="font-size: 0.74rem;">{{ $surgery->patient->age }} {{ __('سنة') }}</span>
                                             @else
                                                 <span class="text-muted small">-</span>
                                             @endif
@@ -416,7 +416,7 @@
                                         <td class="text-center">
                                             @if($surgery->patient && $surgery->patient->gender)
                                                 <span class="badge bg-light text-secondary border px-1.5 py-0.5 fw-semibold shadow-xs text-nowrap" style="font-size: 0.74rem;">
-                                                    {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                                    {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? __('ذكر') : __('أنثى') }}
                                                 </span>
                                             @else
                                                 <span class="text-muted small">-</span>
@@ -428,9 +428,9 @@
                                                     {{ $surgery->surgery_type }}
                                                 </span>
                                                 @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                                    <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">ضمان</span>
+                                                    <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">{{ __('ضمان') }}</span>
                                                 @else
-                                                    <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">كاش</span>
+                                                    <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">{{ __('كاش') }}</span>
                                                 @endif
                                             </div>
                                         </td>
@@ -439,11 +439,11 @@
                                                 <i class="fas fa-user-md text-success"></i>
                                                 <span class="fw-semibold small text-truncate" style="max-width: 125px;">
                                                     @if($surgery->doctor && $surgery->doctor->user)
-                                                        د. {{ $surgery->doctor->user->name }}
+                                                        {{ __('د.') }} {{ $surgery->doctor->user->name }}
                                                     @elseif($surgery->surgeon_name)
                                                         {{ $surgery->surgeon_name }}
                                                     @else
-                                                        <span class="text-muted">غير محدد</span>
+                                                        <span class="text-muted">{{ __('غير محدد') }}</span>
                                                     @endif
                                                 </span>
                                             </div>
@@ -460,7 +460,7 @@
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">بدون غرفة</span>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">{{ __('بدون غرفة') }}</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -544,7 +544,7 @@
                                         </td>
                                         <td>
                                             <div class="d-inline-flex align-items-center gap-1 text-nowrap">
-                                                <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1 fw-bold text-decoration-none text-nowrap" style="font-size: 0.9rem;" title="فتح ملف وتفاصيل العملية">
+                                                <a href="{{ route('surgeries.show', $surgery) }}" class="d-inline-flex align-items-center gap-1 fw-bold text-decoration-none text-nowrap" style="font-size: 0.9rem;" title="{{ __('فتح ملف وتفاصيل العملية') }}">
                                                     <i class="{{ $patientIcon }} fs-6"></i>
                                                     <span class="{{ $patientColor }} text-truncate" style="max-width: 140px;">{{ $patientName }}</span>
                                                 </a>
@@ -557,7 +557,7 @@
                                         </td>
                                         <td class="text-center">
                                             @if($surgery->patient && $surgery->patient->age)
-                                                <span class="badge bg-white text-dark border px-1.5 py-0.5 fw-bold shadow-xs text-nowrap" style="font-size: 0.74rem;">{{ $surgery->patient->age }} سنة</span>
+                                                <span class="badge bg-white text-dark border px-1.5 py-0.5 fw-bold shadow-xs text-nowrap" style="font-size: 0.74rem;">{{ $surgery->patient->age }} {{ __('سنة') }}</span>
                                             @else
                                                 <span class="text-muted small">-</span>
                                             @endif
@@ -565,7 +565,7 @@
                                         <td class="text-center">
                                             @if($surgery->patient && $surgery->patient->gender)
                                                 <span class="badge bg-light text-secondary border px-1.5 py-0.5 fw-semibold shadow-xs text-nowrap" style="font-size: 0.74rem;">
-                                                    {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? 'ذكر' : 'أنثى' }}
+                                                    {{ in_array($surgery->patient->gender, ['male', 'ذكر']) ? __('ذكر') : __('أنثى') }}
                                                 </span>
                                             @else
                                                 <span class="text-muted small">-</span>
@@ -577,9 +577,9 @@
                                                     {{ $surgery->surgery_type }}
                                                 </span>
                                                 @if($surgery->insurance_type && $surgery->insurance_type !== 'none')
-                                                    <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">ضمان</span>
+                                                    <span class="badge bg-success-subtle text-success border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">{{ __('ضمان') }}</span>
                                                 @else
-                                                    <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">كاش</span>
+                                                    <span class="badge bg-light text-secondary border py-0 px-1.5 rounded-pill text-nowrap" style="font-size: 0.65rem;">{{ __('كاش') }}</span>
                                                 @endif
                                             </div>
                                         </td>
@@ -588,11 +588,11 @@
                                                 <i class="fas fa-user-md text-success"></i>
                                                 <span class="fw-semibold small text-truncate" style="max-width: 125px;">
                                                     @if($surgery->doctor && $surgery->doctor->user)
-                                                        د. {{ $surgery->doctor->user->name }}
+                                                        {{ __('د.') }} {{ $surgery->doctor->user->name }}
                                                     @elseif($surgery->surgeon_name)
                                                         {{ $surgery->surgeon_name }}
                                                     @else
-                                                        <span class="text-muted">غير محدد</span>
+                                                        <span class="text-muted">{{ __('غير محدد') }}</span>
                                                     @endif
                                                 </span>
                                             </div>
@@ -609,7 +609,7 @@
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">بدون غرفة</span>
+                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">{{ __('بدون غرفة') }}</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -634,28 +634,28 @@
     </div>
 </div>
 
-{{-- Small Modal ONLY for adding a new Operation Theater (فقط لإضافة صالة جديدة) --}}
+{{-- Small Modal ONLY for adding a new Operation Theater (فقط ل{{ __('إضافة صالة جديدة') }}) --}}
 <div class="modal fade" id="newTheaterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-header border-bottom-0 pb-1 pt-3 px-3">
                 <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-1.5">
                     <i class="fas fa-door-closed text-primary"></i>
-                    إضافة صالة جديدة
+                    {{ __('إضافة صالة جديدة') }}
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-1 px-3 pb-3">
                 <input type="hidden" id="activeSurgeryIdForNewTheater">
                 <div class="mb-3">
-                    <label class="form-label small text-muted mb-1 fw-semibold">اسم الصالة</label>
-                    <input type="text" id="newTheaterNameModalInput" class="form-control form-control-sm rounded-3 py-1.5" placeholder="مثلاً: صالة 4، صالة القسطرة...">
+                    <label class="form-label small text-muted mb-1 fw-semibold">{{ __('اسم الصالة') }}</label>
+                    <input type="text" id="newTheaterNameModalInput" class="form-control form-control-sm rounded-3 py-1.5" placeholder="{{ __('مثلاً: صالة 4، صالة القسطرة...') }}">
                     <div id="newTheaterModalError" class="text-danger small mt-1 d-none"></div>
                 </div>
                 <div class="d-flex justify-content-end gap-1.5 pt-2 border-top">
-                    <button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
                     <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" id="btnSaveTheaterFromModal">
-                        <i class="fas fa-check me-1"></i> حفظ الصالة
+                        <i class="fas fa-check me-1"></i> {{ __('حفظ الصالة') }}
                     </button>
                 </div>
             </div>
@@ -712,7 +712,7 @@ function inlineSaveTheater(selectEl, surgeryId) {
                 setTimeout(() => msgEl.classList.add('d-none'), 2500);
             }
         } else {
-            alert(data.message || 'حدث خطأ أثناء حفظ الصالة');
+            alert(data.message || @json(__('حدث خطأ أثناء حفظ الصالة')));
         }
     })
     .catch(() => alert('تعذر الاتصال بالسيرفر'));
@@ -745,7 +745,7 @@ function inlineSaveTime(inputEl, surgeryId) {
                 setTimeout(() => msgEl.classList.add('d-none'), 2500);
             }
         } else {
-            alert(data.message || 'حدث خطأ أثناء حفظ الوقت');
+            alert(data.message || @json(__('حدث خطأ أثناء حفظ الوقت')));
         }
     })
     .catch(() => alert('تعذر الاتصال بالسيرفر'));
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const targetSurgeryId = document.getElementById('activeSurgeryIdForNewTheater').value;
 
             if (!name) {
-                errDiv.textContent = 'يرجى كتابة اسم الصالة';
+                errDiv.textContent = @json(__('يرجى كتابة اسم الصالة'));
                 errDiv.classList.remove('d-none');
                 return;
             }
@@ -812,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 btnSaveTheater.disabled = false;
-                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ الصالة';
+                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> {{ __('حفظ الصالة') }}';
 
                 if (data.success && data.theater) {
                     // Append option to all theater selects on the page
@@ -831,14 +831,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     if (newTheaterModalInstance) newTheaterModalInstance.hide();
                 } else {
-                    errDiv.textContent = data.message || 'حدث خطأ أثناء إضافة الصالة';
+                    errDiv.textContent = data.message || @json(__('حدث خطأ أثناء إضافة الصالة'));
                     errDiv.classList.remove('d-none');
                 }
             })
             .catch(() => {
                 btnSaveTheater.disabled = false;
-                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> حفظ الصالة';
-                errDiv.textContent = 'تعذر الاتصال بالسيرفر';
+                btnSaveTheater.innerHTML = '<i class="fas fa-check me-1"></i> {{ __('حفظ الصالة') }}';
+                errDiv.textContent = @json(__('تعذر الاتصال بالسيرفر'));
                 errDiv.classList.remove('d-none');
             });
         });
@@ -895,7 +895,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const statusText = document.getElementById('liveSyncStatusText');
 
         if (isManual && statusText) {
-            statusText.textContent = 'جاري التحديث...';
+            statusText.textContent = @json(__('جاري التحديث...'));
         }
 
         try {
@@ -938,7 +938,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } finally {
             isRefreshingLiveBoard = false;
             if (statusText) {
-                statusText.textContent = 'مزامنة حية';
+                statusText.textContent = @json(__('مزامنة حية'));
             }
         }
     }
@@ -995,7 +995,7 @@ function toggleTvDisplayMode() {
     const isTv = document.body.classList.contains('tv-display-active');
     const tvText = document.getElementById('tvModeText');
     if (tvText) {
-        tvText.textContent = isTv ? 'خروج من وضع الـ TV' : 'شاشة العرض (TV)';
+        tvText.textContent = isTv ? @json(__('خروج من وضع الـ TV')) : @json(__('شاشة العرض (TV)'));
     }
     if (isTv && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});

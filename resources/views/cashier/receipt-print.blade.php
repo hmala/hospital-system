@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إيصال دفع - {{ $payment->receipt_number }}</title>
+    <title>{{ __('إيصال دفع') }} - {{ $payment->receipt_number }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,8 +18,8 @@
         }
 
         body {
-            direction: rtl;
-            text-align: right;
+            direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             background-color: #f3f4f6;
             padding: 20px 10px;
             font-size: 13px;
@@ -165,7 +165,7 @@
         }
 
         .items-table .col-service {
-            text-align: right;
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             font-weight: 800;
         }
 
@@ -213,7 +213,7 @@
         }
 
         .footer-amount-box .box-label {
-            text-align: right;
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             width: 60%;
         }
 
@@ -267,8 +267,8 @@
 </head>
 <body>
     <div class="no-print">
-        <button type="button" class="btn-print" onclick="doPrint()">🖨️ طباعة الإيصال</button>
-        <button type="button" class="btn-back" onclick="window.close(); if(!window.closed) window.history.back();">⬅️ إغلاق / عودة</button>
+        <button type="button" class="btn-print" onclick="doPrint()">{{ __('🖨️ طباعة الإيصال') }}</button>
+        <button type="button" class="btn-back" onclick="window.close(); if(!window.closed) window.history.back();">{{ __('⬅️ إغلاق / عودة') }}</button>
     </div>
 
     <div class="thermal-ticket">
@@ -276,15 +276,15 @@
         <div class="header-box">
             <img src="{{ asset('images/hospital-logo.svg') }}" class="header-logo" alt="Logo" onerror="this.style.display='none';">
             <div class="header-titles">
-                <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
-                <div class="en-title">Al-Kafaat Hospital</div>
+                <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? __('مستشفى الكفاءات الأهلي') }}</div>
+                <div class="en-title">{{ \App\Models\Hospital::first()?->en_name ?? 'Al-Kafaat Hospital' }}</div>
             </div>
             <div style="width: 36px;"></div>
         </div>
 
         @if((float)$payment->amount < 0)
             <div style="text-align: center; background: #000; color: #fff; padding: 4px; font-weight: 900; font-size: 13px; margin: 6px 0; border-radius: 3px;">
-                ⚠️ سند استرجاع مالي (REFUND)
+                {{ __('⚠️ سند استرجاع مالي (REFUND)') }}
             </div>
         @endif
 
@@ -699,26 +699,26 @@
         <div class="meta-group">
             <div class="meta-row">
                 <span class="meta-val-number">{{ $receiptNum }}</span>
-                <span class="meta-label">الرقم</span>
+                <span class="meta-label">{{ __('الرقم') }}</span>
             </div>
             <div class="meta-row">
                 <span class="meta-val-date">{{ $dateFormatted }}</span>
-                <span class="meta-label">التاريخ</span>
+                <span class="meta-label">{{ __('التاريخ') }}</span>
             </div>
         </div>
 
         <!-- Patient and Doctor Line -->
         <div class="patient-doctor-row">
-            اسم المريض: <strong>{{ $patientName }}</strong>
+            {{ __('اسم المريض:') }} <strong>{{ $patientName }}</strong>
             @if($payment->incubatorReservation)
-                <br>الحاضنة: <span>#{{ $payment->incubatorReservation->incubator?->incubator_number ?? ($payment->incubatorReservation->incubator?->name ?? $payment->incubatorReservation->incubator_id) }}</span>
+                <br>{{ __('الحاضنة:') }} <span>#{{ $payment->incubatorReservation->incubator?->incubator_number ?? ($payment->incubatorReservation->incubator?->name ?? $payment->incubatorReservation->incubator_id) }}</span>
             @endif
             @if($doctorName)
-                <br>الطبيب: <span>د. {{ $doctorName }}</span>
+                <br>{{ __('الطبيب:') }} <span>{{ __('د.') }} {{ $doctorName }}</span>
             @endif
             @if($payment->insurance_type && $payment->insurance_type !== 'none')
                 <div style="font-size: 11px; font-weight: 700; color: #000; margin-top: 2px;">
-                    التغطية: {{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن' }}
+                    {{ __('التغطية:') }} {{ $payment->insurance_type === 'hi' ? __('الضمان الصحي الوطني') : __('ضمان قوى الأمن') }}
                 </div>
             @endif
         </div>
@@ -727,9 +727,9 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th class="col-service">الخدمة الطبية</th>
-                    <th class="col-qty">عدد</th>
-                    <th class="col-price">المبلغ</th>
+                    <th class="col-service">{{ __('الخدمة الطبية') }}</th>
+                    <th class="col-qty">{{ __('عدد') }}</th>
+                    <th class="col-price">{{ __('المبلغ') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -750,7 +750,7 @@
                 @if($payment->discount_amount > 0)
                     <tr>
                         <td colspan="2" class="col-service" style="color: #000; font-weight: 800;">
-                            خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                            {{ __('خصم خاص (:pct%)', ['pct' => (float)$payment->discount_percentage]) }}
                             @if($payment->discount_reason)
                                 <span style="font-size: 10px; font-weight: normal;"> - {{ $payment->discount_reason }}</span>
                             @endif
@@ -760,7 +760,7 @@
                 @endif
 
                 <tr class="total-row">
-                    <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? 'المبلغ المسترجع للمريض' : 'المبلغ المدفوع' }}</td>
+                    <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? __('المبلغ المسترجع للمريض') : __('المبلغ المدفوع') }}</td>
                     <td class="total-val">{{ number_format(abs((float)$payment->amount), 0) }}</td>
                 </tr>
             </tbody>
@@ -769,13 +769,13 @@
         <!-- Bottom Payment Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">{{ (float)$payment->amount < 0 ? 'طريقة الاسترجاع:' : 'طريقة الدفع:' }} 
+                <td class="box-label">{{ (float)$payment->amount < 0 ? __('طريقة الاسترجاع:') : __('طريقة الدفع:') }} 
                     @if($payment->payment_method === 'split')
-                        دفع مركب (كاش: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }})
+                        {{ __('دفع مركب (كاش: :cash | بطاقة: :card)', ['cash' => number_format((float)($payment->cash_amount ?? 0), 0), 'card' => number_format((float)($payment->card_amount ?? 0), 0)]) }}
                     @elseif($payment->payment_method === 'card')
-                        دفع إلكتروني (POS)
+                        {{ __('دفع إلكتروني (POS)') }}
                     @else
-                        نقدي (Cash)
+                        {{ __('نقدي (Cash)') }}
                     @endif
                 </td>
                 <td class="box-val">{{ number_format(abs((float)$payment->amount), 0) }} IQD</td>
@@ -791,9 +791,9 @@
             <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; text-align: center;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;" onerror="this.closest('.qr-box')?.remove();">
-                    <div style="text-align: right; font-size: 10px; font-weight: 800; line-height: 1.3;">
-                        <span>📱 امسح الرمز بهاتفك</span><br>
-                        <span style="color: #0088cc;">لمتابعة الدور واستلام نداء التيليجرام</span><br>
+                    <div style="text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }}; font-size: 10px; font-weight: 800; line-height: 1.3;">
+                        <span>{{ __('📱 امسح الرمز بهاتفك') }}</span><br>
+                        <span style="color: #0088cc;">{{ __('لمتابعة الدور واستلام نداء التيليجرام') }}</span><br>
                         <small style="color: #555;">@Kafathospitalbot</small>
                     </div>
                 </div>
@@ -802,12 +802,12 @@
 
         @if($payment->notes)
             <div style="font-size: 11px; margin-top: 5px; padding: 3px; border: 1px dashed #ccc;">
-                <strong>ملاحظة:</strong> {{ $payment->notes }}
+                <strong>{{ __('ملاحظة:') }}</strong> {{ $payment->notes }}
             </div>
         @endif
 
         <div class="footer-meta">
-            <span>الكاشير: {{ $payment->cashier->name ?? 'النظام' }}</span>
+            <span>{{ __('الكاشير:') }} {{ $payment->cashier->name ?? __('النظام') }}</span>
             <span style="margin-right: 15px;">{{ ($payment->paid_at ?? now())->format('H:i') }}</span>
         </div>
     </div>

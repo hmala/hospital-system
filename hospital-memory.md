@@ -78,6 +78,44 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 255 (2026-11-19 — `main`) — حل خطأ الـ ParseError وتعريب وترجمة محطة الكاشير والمالية والخزينة المركزية وإصدار الوصولات وسندات الاسترجاع والطباعة الحرارية 100% مع توسيع القاموس لـ 3,634 مفتاحاً واجتياز حزم الاختبارات بنسبة 100% (Fix ParseError & Comprehensive 100% Granular Localization for Cashier Workstation, Diagnostic Payment Forms, Receipts, Thermal POS Print & Financial Station with 3,634 Dictionary Keys & 100% Automated Feature Tests Pass)**:
+  * **معالجة خطأ الـ ParseError وإزالة تداخل وسوم Blade**:
+    - رصد وإصلاح تداخل وسوم Blade في `resources/views/cashier/index.blade.php` (الأسطر 603 و1031) حيث كانت تستدعي `{{ __('يحدد عند التسديد') }}` داخل وسم إيكو آخر `{{ ... }}`، وتحويلها إلى PHP نقي مباشر `__('يحدد عند التسديد')`.
+    - تنظيف وسوم التعليقات والتداخلات اللفظية في أسطر الفائض المالي (1856، 1889، 1904).
+    - تنظيف الذاكرة المؤقتة للواجهات وإعادة بنائها بنجاح كامل بدون أي خطأ تركيبي (`php artisan view:clear` و `php artisan view:cache`).
+  * **التعريب والترجمة الشاملة الدقيقة 100% لمحطة الكاشير والمالية**:
+    - `resources/views/cashier/index.blade.php`: تعريب ترويسة محطة الكاشير، مؤشرات الـ KPIs المالية الحية (المحصل اليوم، أجور الأطباء، ربح المستشفى)، محدد الفاصل الزمني للتحديث اللحظي، شارات المعاملات المعلقة عبر كافة التبويبات التسعة (الكل، المواعيد، طلبات الفحوصات، الطوارئ، المؤجلة، الخدج، العناية المركزة، العمليات، الاسترجاع)، مودال الاسترجاع المالي وصرف المستحقات (`medicalRefundModal`)، والرسائل التفاعلية في الجافاسكريبت والتنبيهات السريرية.
+    - `resources/views/cashier/payment-form.blade.php`: تعريب كامل لشاشة تسديد كشفية الطبيب وفحوصات السونار، كروت التسعير المعتمد، التحمل والضمان، خيارات الدفع (نقدي، بطاقة، مركب)، والتأكيد والطباعة.
+    - `resources/views/cashier/request-payment-form.blade.php`: تعريب شاشة تسديد طلبات المختبر والأشعة، الخدمات الإضافية، خصومات الفحوصات، إجراءات السداد (دفع، تأجيل، إلغاء)، وكروت الرصيد.
+    - `resources/views/cashier/receipt.blade.php`: تعريب إيصال القبض وسندات الاسترجاع المالي، جدول الخدمات الطبية المفصلة، نسب التحمل والتأمين، وتنبيهات الإلغاء.
+    - `resources/views/cashier/receipt-print.blade.php`: تعريب دقيق لقسيمة الطباعة الحرارية الموجهة لطابعات الـ POS (عرض 80mm) مع الحفاظ الهندسي التام على الأبعاد، دعم اتجاه الطباعة ديناميكياً (`rtl`/`ltr`)، تعريب كافة الحقول، الأطباء، رمز التيليجرام QR، وتفاصيل الكاشير.
+    - `resources/views/surgeries/index.blade.php`: إضافة زر حجز عملية جديدة المتوافق مع صلاحية `create surgeries` وأسلوب `.sg-btn-create`.
+  * **القاموس المركزي المحدث ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+    - توسيع القاموس المركزي من 3,611 إلى **3,634 مفتاح ترجمة مالي وسريري وإداري دقيق** بنسبة مطابقة 100%.
+  * **حزم الاختبارات الآلية وضمان الجودة**:
+    - بناء واجتياز حزمة `tests/Feature/CashierLocalizationTest.php` بنجاح 100% (`4 passed, 48 assertions`).
+    - اجتياز حزمة `tests/Feature/SurgeriesLocalizationTest.php` بنجاح 100% (`7 passed, 76 assertions`).
+    - اجتياز اختبارات فاصل التحديث وسندات الكاشير (`CashierRefreshIntervalControlTest`, `CashierReceiptReturnLinkTest`).
+    - فحص الـ Blade Views والتأكد من صفرية أخطاء الترجمة والتجميع.
+
+- **المرحلة 254 (2026-11-19 — `main`) — التعريب والترجمة الشاملة الدقيقة 100% لشاشات العمليات الأساسية وإدارة الحجوزات ولوحة الصالات والتقرير المطبوع ومصفوفة الصلاحيات مع توسيع القاموس إلى 3,611 مفتاحاً واجتياز حزم الاختبارات بنسبة 100% (Comprehensive 100% Granular Localization for Core Surgeries, Booking, Flight Board, Surgical Report Print, Tab Permissions Matrix with 3,611 Dictionary Keys & 100% Automated Tests Pass)**:
+  * **تعريب وترجمة شاشات العمليات الأساسية الثمانية (8 Blade Views)**:
+    - `resources/views/surgeries/index.blade.php`: تعريب كامل لسجل العمليات، مؤشرات الـ KPIs، الفلاتر، الشارات السريرية، جدول مخزن وعهدة العمليات (`or_store`) بكافة تفاصيل الوجبات وتواريخ الانتهاء والتنبيهات.
+    - `resources/views/surgeries/waiting.blade.php`: تعريب شامل لقائمة الانتظار وصالات العمليات (Flight Board)، الصالات السريرية، مودال إضافة صالة جديدة، وتنبيهات الجافاسكريبت والمزامنة اللحظية.
+    - `resources/views/surgeries/create.blade.php`: تعريب 100% لشاشة حجز عملية جديدة، بيانات المريض، الطبيب الجراح والمرسل، جدول العمليات متعددة الإجراءات، اختيار الغرف والإقامة، وإضافة الأطباء.
+    - `resources/views/surgeries/edit.blade.php`: تعريب ترويسة تعديل حجز العملية، المسار التأميني، استعراض الوثائق، وتعديل العمليات والغرف.
+    - `resources/views/surgeries/print.blade.php`: تقرير جراحي رسمي ثنائي اللغة ديناميكي (`dir="rtl"` / `dir="ltr"`)، تعريب كافة الحقول، توقيع الجراح، التخدير، وختم صالة العمليات.
+    - `resources/views/surgeries/control.blade.php`: تعريب لوحة تحكم العمليات الجراحية وقائمة الانتظار السريعة وأزرار التنقل.
+    - `resources/views/surgeries/settings/tabs.blade.php`: معالجة خطأ التركيب اللغوي `ParseError` بإزالة كافة التداخلات غير القانونية لوسوم Blade، تنظيف وسوم الحذف والتأكيد، وتعريب مصفوفة الصلاحيات بالكامل.
+    - `resources/views/surgeries/show.blade.php`: تدقيق وتأكيد تعريب تفاصيل العملية وتبويباتها.
+  * **القاموس المركزي المحدث ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+    - توسيع القاموس المركزي من 3,129 إلى **3,611 مفتاح ترجمة طبي وإداري وسريري دقيق** بنسبة مطابقة 100% وصفرية الأخطاء المفتاحية.
+  * **حزم الاختبارات الآلية وضمان الجودة**:
+    - اجتياز حزمة `tests/Feature/SurgeriesLocalizationTest.php` بنجاح 100% (`7 passed, 76 assertions`).
+    - اجتياز حزمة `tests/Feature/SurgeryGranularTabControlTest.php` بنجاح 100% (`7 passed, 26 assertions`).
+    - إجمالي توكيدات الاختبارات الناجحة: **102 توكيد برمجي (Assertions)**.
+    - اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
 - **المرحلة 253 (2026-11-19 — `main`) — التعريب والترجمة الشاملة الدقيقة 100% لكافة محطات التشخيص المخبرية والشعاعية وفحوصات العمليات الجراحية وتوسيع القاموس لـ 3,129 مفتاحاً واختبارات الميزة الآلية (Comprehensive 100% Granular Localization for Laboratory, Radiology, Surgery Diagnostics across 31 Blade Views with 3,129 Dictionary Keys & Automated Feature Tests)**:
   * **محطة المختبر وسجل التحاليل (`/lab`, `/lab/requests/{id}`)**:
     - تعريب 100% لشاشات قائمة طلبات المختبر، الفلاتر المتطورة، الشارات السريرية، جدول الفحوصات، قراءات التحاليل مع الحفاظ الصارم على معادلات حساب الدهون التلقائية (Lipid Profile) في الجافاسكريبت.

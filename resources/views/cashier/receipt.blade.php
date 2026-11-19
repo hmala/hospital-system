@@ -8,31 +8,31 @@
             <h4 class="fw-bold mb-1 text-dark">
                 @if((float)$payment->amount < 0)
                     <i class="fas fa-undo text-danger me-2"></i>
-                    سند استرجاع مالي رسمي (Refund Voucher)
+                    {{ __('سند استرجاع مالي رسمي (Refund Voucher)') }}
                 @else
                     <i class="fas fa-receipt text-success me-2"></i>
-                    إيصال قبض رسمي
+                    {{ __('إيصال قبض رسمي') }}
                 @endif
             </h4>
-            <span class="text-muted small">رقم الإيصال: <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
+            <span class="text-muted small">{{ __("رقم الإيصال:") }} <strong class="text-dark">{{ $payment->receipt_number }}</strong></span>
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
             @if($payment->isVoided())
                 <span class="badge bg-danger fs-6 d-flex align-items-center px-3 py-2 rounded-pill shadow-sm">
-                    <i class="fas fa-ban me-1"></i> وصل ملغى ومبطل ({{ $payment->void_type === 'rebill' ? 'أُعيد فتحه للتصحيح' : 'استرداد مالي' }})
+                    <i class="fas fa-ban me-1"></i> {{ __('وصل ملغى ومبطل') }} ({{ $payment->void_type === 'rebill' ? __('أُعيد فتحه للتصحيح') : __('استرداد مالي') }})
                 </span>
             @elseif($payment->paid_at)
                 @can('void payment receipt')
                     <a href="{{ route('cashier.payments.void.form', $payment->id) }}" class="btn btn-outline-danger px-3 rounded-pill shadow-sm">
-                        <i class="fas fa-undo-alt me-1"></i> إبطال الوصل / إعادة فتح للتصحيح
+                        <i class="fas fa-undo-alt me-1"></i> {{ __("إبطال الوصل / إعادة فتح للتصحيح") }}
                     </a>
                 @endcan
             @endif
             <a href="{{ route('cashier.receipt.print', $payment->id) }}" class="btn btn-primary px-4 rounded-pill shadow-sm" target="_blank">
-                <i class="fas fa-print me-1"></i> طباعة الوصل
+                <i class="fas fa-print me-1"></i> {{ __("طباعة الوصل") }}
             </a>
             <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-3 rounded-pill">
-                <i class="fas fa-arrow-right me-1"></i> العودة للكاشير
+                <i class="fas fa-arrow-right me-1"></i> {{ __("العودة للكاشير") }}
             </a>
         </div>
     </div>
@@ -43,12 +43,12 @@
                 <i class="fas fa-exclamation-triangle fs-4"></i>
             </div>
             <div>
-                <h6 class="fw-bold mb-1 text-danger">تنبيه رقابي: هذا الوصل تم إبطاله رسمياً وغير معتمد مالياً</h6>
+                <h6 class="fw-bold mb-1 text-danger">{{ __("تنبيه رقابي: هذا الوصل تم إبطاله رسمياً وغير معتمد مالياً") }}</h6>
                 <div class="small text-dark">
-                    <strong>تاريخ الإبطال:</strong> {{ $payment->voided_at?->format('Y-m-d H:i:s') }} |
-                    <strong>بواسطة:</strong> {{ $payment->voidedBy?->name ?? 'المشرف الإداري' }} |
-                    <strong>نوع الإجراء:</strong> {{ $payment->void_type === 'rebill' ? 'إعادة فتح في الكاشير للتسديد الصحيح' : 'إلغاء واسترداد نقدي' }} <br>
-                    <strong>سبب الإلغاء:</strong> <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">{{ $payment->void_reason }}</span>
+                    <strong>{{ __("تاريخ الإبطال:") }}</strong> {{ $payment->voided_at?->format('Y-m-d H:i:s') }} |
+                    <strong>{{ __("بواسطة:") }}</strong> {{ $payment->voidedBy?->name ?? 'المشرف الإداري' }} |
+                    <strong>{{ __("نوع الإجراء:") }}</strong> {{ $payment->void_type === 'rebill' ? __('إعادة فتح في الكاشير للتسديد الصحيح') : __('إلغاء واسترداد نقدي') }} <br>
+                    <strong>{{ __("سبب الإلغاء:") }}</strong> <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">{{ $payment->void_reason }}</span>
                 </div>
             </div>
         </div>
@@ -510,17 +510,17 @@
                 <div class="p-4 border-bottom text-center" style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                         <div class="text-start">
-                            <h5 class="fw-bold text-dark mb-0">مستشفى الكفاءات الأهلي</h5>
-                            <small class="text-muted">قسم الصندوق والحسابات الطبية</small>
+                            <h5 class="fw-bold text-dark mb-0">{{ __("مستشفى الكفاءات الأهلي") }}</h5>
+                            <small class="text-muted">{{ __("قسم الصندوق والحسابات الطبية") }}</small>
                         </div>
                         <div class="text-end">
                             @if($isRefund)
                                 <span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">
-                                    <i class="fas fa-undo me-1"></i> تم الاسترجاع والصرف للمريض
+                                    <i class="fas fa-undo me-1"></i> {{ __("تم الاسترجاع والصرف للمريض") }}
                                 </span>
                             @else
                                 <span class="badge bg-success px-3 py-2 fs-6 rounded-pill">
-                                    <i class="fas fa-check-circle me-1"></i> تم القبض بنجاح
+                                    <i class="fas fa-check-circle me-1"></i> {{ __("تم القبض بنجاح") }}
                                 </span>
                             @endif
                         </div>
@@ -528,15 +528,15 @@
 
                     <div class="p-3 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
-                            <span class="text-muted small d-block">رقم السند:</span>
+                            <span class="text-muted small d-block">{{ __("رقم السند:") }}</span>
                             <strong class="text-primary fs-5">{{ $payment->receipt_number }}</strong>
                         </div>
                         <div>
-                            <span class="text-muted small d-block">تاريخ ووقت القبض:</span>
+                            <span class="text-muted small d-block">{{ __("تاريخ ووقت القبض:") }}</span>
                             <strong class="text-dark">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d h:i A') : now()->format('Y-m-d h:i A') }}</strong>
                         </div>
                         <div>
-                            <span class="text-muted small d-block">أمين الصندوق (الكاشير):</span>
+                            <span class="text-muted small d-block">{{ __("أمين الصندوق (الكاشير):") }}</span>
                             <strong class="text-dark">{{ optional($payment->cashier)->name ?? 'النظام' }}</strong>
                         </div>
                     </div>
@@ -547,29 +547,29 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <div class="p-3 rounded-3 border bg-light h-100">
-                                <span class="text-muted small d-block mb-1"><i class="fas fa-user text-primary me-1"></i>بيانات المريض:</span>
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-user text-primary me-1"></i>{{ __("بيانات المريض:") }}</span>
                                 <h6 class="fw-bold mb-1 text-dark">{{ $pname }}</h6>
                                 <div class="text-muted small">
-                                    <span>الهوية: <strong>{{ $pid }}</strong></span> | 
-                                    <span>الهاتف: <strong>{{ $pphone }}</strong></span>
+                                    <span>{{ __("الهوية:") }} <strong>{{ $pid }}</strong></span> | 
+                                    <span>{{ __("الهاتف:") }} <strong>{{ $pphone }}</strong></span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="p-3 rounded-3 border bg-light h-100">
-                                <span class="text-muted small d-block mb-1"><i class="fas fa-shield-alt text-success me-1"></i>التغطية والضمان:</span>
+                                <span class="text-muted small d-block mb-1"><i class="fas fa-shield-alt text-success me-1"></i>{{ __("التغطية والضمان:") }}</span>
                                 @if($isInsured)
                                     <div class="d-flex align-items-center gap-2 mb-1">
-                                        <span class="badge bg-success">{{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن الداخلي' }}</span>
-                                        <span class="badge bg-light text-dark border">تحمل المريض: {{ number_format($copayPct, 0) }}%</span>
+                                        <span class="badge bg-success">{{ $payment->insurance_type === 'hi' ? __('الضمان الصحي الوطني') : __('ضمان قوى الأمن الداخلي') }}</span>
+                                        <span class="badge bg-light text-dark border">{{ __('تحمل المريض:') }} {{ number_format($copayPct, 0) }}%</span>
                                     </div>
                                     @if($payment->insurance_card_no)
-                                        <small class="text-muted">رقم البطاقة/الدفتر: <strong class="text-dark">{{ $payment->insurance_card_no }}</strong></small>
+                                        <small class="text-muted">{{ __("رقم البطاقة/الدفتر:") }} <strong class="text-dark">{{ $payment->insurance_card_no }}</strong></small>
                                     @endif
                                 @else
-                                    <h6 class="fw-bold mb-0 text-secondary">دفع نقدي كامل (خاص / 100%)</h6>
-                                    <small class="text-muted">غير مشمول بالتغطية التأمينية</small>
+                                    <h6 class="fw-bold mb-0 text-secondary">{{ __("دفع نقدي كامل (خاص / 100%)") }}</h6>
+                                    <small class="text-muted">{{ __("غير مشمول بالتغطية التأمينية") }}</small>
                                 @endif
                             </div>
                         </div>
@@ -582,13 +582,13 @@
                                 <thead class="table-light text-muted small">
                                     <tr>
                                         <th width="40" class="text-center">#</th>
-                                        <th>الخدمة / الفحص</th>
-                                        <th>الطبيب / القسم</th>
-                                        <th width="120" class="text-end">السعر المعتمد</th>
+                                        <th>{{ __("الخدمة / الفحص") }}</th>
+                                        <th>{{ __("الطبيب / القسم") }}</th>
+                                        <th width="120" class="text-end">{{ __("السعر المعتمد") }}</th>
                                         @if($isInsured)
-                                            <th width="120" class="text-end text-primary">حصة الضمان</th>
+                                            <th width="120" class="text-end text-primary">{{ __("حصة الضمان") }}</th>
                                         @endif
-                                        <th width="130" class="text-end text-success">المقبوض من المريض</th>
+                                        <th width="130" class="text-end text-success">{{ __("المقبوض من المريض") }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -617,7 +617,7 @@
                         <div class="row align-items-center g-3 text-center text-md-start">
                             <div class="col-md-6">
                                 <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
-                                    <span class="text-muted small">طريقة الدفع:</span>
+                                    <span class="text-muted small">{{ __("طريقة الدفع:") }}</span>
                                     <span class="badge bg-white text-dark border px-3 py-2 fs-7 fw-bold">
                                         @if($payment->payment_method === 'split')
                                             🔄 دفع مركب (نقداً: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} د.ع | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }} د.ع)
@@ -630,7 +630,7 @@
                                 </div>
                                 @if($payment->notes)
                                     <div class="text-muted small mt-2">
-                                        <i class="fas fa-comment-alt me-1"></i>ملاحظات: {{ $payment->notes }}
+                                        <i class="fas fa-comment-alt me-1"></i>{{ __("ملاحظات:") }} {{ $payment->notes }}
                                     </div>
                                 @endif
                             </div>
@@ -638,13 +638,13 @@
                             <div class="col-md-6 text-md-end">
                                 @if($isInsured)
                                     <div class="text-muted small mb-1">
-                                        إجمالي التسعيرة: {{ number_format($totalApprovedSum) }} د.ع | تغطية الضمان: <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
+                                        {{ __("إجمالي التسعيرة:") }} {{ number_format($totalApprovedSum) }} د.ع | {{ __("تغطية الضمان:") }} <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
                                     </div>
                                 @elseif($payment->discount_amount > 0)
                                     <div class="text-muted small mb-1">
-                                        إجمالي الفاتورة: {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} د.ع |
+                                        {{ __("إجمالي الفاتورة:") }} {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} د.ع |
                                         <span class="text-danger fw-bold">
-                                            <i class="fas fa-tags me-1"></i> خصم خاص ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} د.ع
+                                            <i class="fas fa-tags me-1"></i> {{ __("خصم خاص") }} ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} د.ع
                                         </span>
                                         @if($payment->discount_reason)
                                             <span class="text-muted small">({{ $payment->discount_reason }})</span>
@@ -652,7 +652,7 @@
                                     </div>
                                 @endif
                                 <div class="d-inline-block bg-white p-2 px-4 rounded-3 border {{ $isRefund ? 'border-danger' : 'border-success' }} shadow-sm">
-                                    <span class="text-muted small d-block">{{ $isRefund ? 'المبلغ المسترجع للمريض:' : 'المبلغ المقبوض نقداً من المريض:' }}</span>
+                                    <span class="text-muted small d-block">{{ $isRefund ? __('المبلغ المسترجع للمريض:') : __('المبلغ المقبوض نقداً من المريض:') }}</span>
                                     <span class="fs-3 fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}">{{ number_format($totalPatientSum) }} د.ع</span>
                                 </div>
                             </div>
@@ -661,8 +661,8 @@
 
                     <!-- تذييل الوصل الرسمي -->
                     <div class="text-center pt-2 border-top text-muted small">
-                        <p class="mb-1">هذا الإيصال سند مالي رسمي صادر إلكترونياً ولا يحتاج إلى ختم يدوي إضافي ما لم يُطلب رسمياً.</p>
-                        <small class="text-muted">مستشفى الكفاءات الأهلي — نتمنى لكم دوام الصحة والعافية</small>
+                        <p class="mb-1">{{ __("هذا الإيصال سند مالي رسمي صادر إلكترونياً ولا يحتاج إلى ختم يدوي إضافي ما لم يُطلب رسمياً.") }}</p>
+                        <small class="text-muted">{{ __("مستشفى الكفاءات الأهلي — نتمنى لكم دوام الصحة والعافية") }}</small>
                     </div>
 
                 </div>

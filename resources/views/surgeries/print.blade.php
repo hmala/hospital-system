@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
         $patient = $surgery->patient;
         $patientUser = $patient?->user;
-        $patientName = $patientUser?->name ?? 'مريض غير محدد';
+        $patientName = $patientUser?->name ?? __('مريض غير محدد');
         $patientPhone = $patientUser?->phone ?? $patient?->phone ?? '—';
         $patientAge = $patient?->age ?? '—';
-        $patientGender = $patient?->gender === 'male' ? 'ذكر' : ($patient?->gender === 'female' ? 'أنثى' : '—');
+        $patientGender = $patient?->gender === 'male' ? __('ذكر') : ($patient?->gender === 'female' ? __('أنثى') : '—');
         $patientMedNo = $patient?->medical_number ?? ($patient?->id ? '#' . $patient->id : '—');
 
         $insuranceType = $surgery->insurance_type ?? $patient?->insurance_type ?? 'none';
@@ -64,11 +64,11 @@
             : asset('images/1.jpg');
 
         $statusLabel = match($surgery->status) {
-            'completed' => 'مكتملة (Post-Op)',
-            'in_progress' => 'جارية داخل الصالة (Intra-Op)',
-            'waiting' => 'في قائمة الانتظار (Pre-Op)',
-            'scheduled' => 'مجدولة (Scheduled)',
-            'cancelled' => 'ملغاة (Cancelled)',
+            'completed' => __('مكتملة (Post-Op)'),
+            'in_progress' => __('جارية داخل الصالة (Intra-Op)'),
+            'waiting' => __('في قائمة الانتظار (Pre-Op)'),
+            'scheduled' => __('مجدولة (Scheduled)'),
+            'cancelled' => __('ملغاة (Cancelled)'),
             default => $surgery->status,
         };
         $statusColor = match($surgery->status) {
@@ -79,13 +79,13 @@
             default => '#475569',
         };
 
-        $roomName = $surgery->room ? ('غرفة ' . $surgery->room->room_number) : ($surgery->location?->name ?? 'صالة العمليات');
+        $roomName = $surgery->room ? (__('غرفة') . ' ' . $surgery->room->room_number) : ($surgery->location?->name ?? __('صالة العمليات'));
         $additionalOps = $surgery->additionalOperations ?? collect();
         $treatments = ($surgery->surgeryTreatments ?? collect())->where('item_type', \App\Models\SurgeryTreatment::TYPE_MEDICATION);
         $devices = $surgery->medicalDevices ?? collect();
     @endphp
 
-    <title>تقرير العملية الجراحية - OR-#{{ $surgery->id }} - {{ $patientName }}</title>
+    <title>{{ __('تقرير العملية الجراحية') }} - OR-#{{ $surgery->id }} - {{ $patientName }}</title>
 
     <!-- Google Fonts Cairo & Tajawal -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -104,8 +104,8 @@
         }
 
         body {
-            direction: rtl;
-            text-align: right;
+            direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
+            text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
             background-color: #f1f5f9;
             padding: 20px 10px;
             font-size: 11.5px;
@@ -663,11 +663,11 @@
     <div class="no-print">
         <div class="action-group">
             <span style="font-weight: 800; color: #005a9c; font-size: 13.5px;">
-                <i class="fas fa-file-medical me-1"></i> استمارة التقرير الجراحي المعتمد للعملية
+                <i class="fas fa-file-medical me-1"></i> {{ __('استمارة التقرير الجراحي المعتمد للعملية') }}
             </span>
             <span style="color: #cbd5e1;">|</span>
             <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                {{ $isInsured ? '🛡️ مريض مسجل بالضمان الصحي' : '💵 حساب نقدي (كاش)' }}
+                {{ $isInsured ? __('🛡️ مريض مسجل بالضمان الصحي') : __('💵 حساب نقدي (كاش)') }}
             </span>
             <span style="color: #cbd5e1;">|</span>
             <span style="font-weight: 700; color: {{ $statusColor }};">
@@ -676,13 +676,13 @@
         </div>
         <div class="action-group">
             <button class="btn btn-print" onclick="window.print()">
-                <i class="fas fa-print"></i> طباعة التقرير (Print)
+                <i class="fas fa-print"></i> {{ __('طباعة التقرير (Print)') }}
             </button>
             <button class="btn btn-pdf" onclick="window.print()">
-                <i class="fas fa-file-pdf"></i> حفظ كـ PDF
+                <i class="fas fa-file-pdf"></i> {{ __('حفظ كـ PDF') }}
             </button>
             <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-back">
-                <i class="fas fa-arrow-right"></i> رجوع للعملية
+                <i class="fas fa-arrow-right"></i> {{ __('رجوع للعملية') }}
             </a>
         </div>
     </div>
@@ -698,8 +698,8 @@
                 <div class="report-header">
                     <div class="header-hospital-ar">
                         <h2>{{ $hospitalNameAr }}</h2>
-                        <h4>قسم العمليات الجراحية والتخدير</h4>
-                        <p>جناح العمليات الكبرى • التقرير الجراحي المعتمد</p>
+                        <h4>{{ __('قسم العمليات الجراحية والتخدير') }}</h4>
+                        <p>{{ __('جناح العمليات الكبرى • التقرير الجراحي المعتمد') }}</p>
                     </div>
                     <div class="header-logo">
                         <img src="{!! $hospitalLogoSrc !!}" 
@@ -716,7 +716,7 @@
 
                 <!-- 2. Document Title Banner -->
                 <div class="document-title-banner">
-                    <h3>تقرير العملية الجراحية المعتمد (Operative & Surgical Report)</h3>
+                    <h3>{{ __('تقرير العملية الجراحية المعتمد (Operative & Surgical Report)') }}</h3>
                     <div class="banner-badges">
                         <span class="report-code-badge">OR-#{{ $surgery->id }}</span>
                         <span class="report-status-badge">{{ $statusLabel }}</span>
@@ -727,38 +727,38 @@
                 <div class="patient-card">
                     <div class="patient-grid">
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-user text-secondary me-1"></i> اسم المريض:</span>
+                            <span class="p-label"><i class="fas fa-user text-secondary me-1"></i> {{ __('اسم المريض:') }}</span>
                             <span class="p-val" style="color: #005a9c; font-size: 12px;">{{ $patientName }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-birthday-cake text-secondary me-1"></i> العمر والجنس:</span>
-                            <span class="p-val">{{ $patientAge }} سنة • {{ $patientGender }}</span>
+                            <span class="p-label"><i class="fas fa-birthday-cake text-secondary me-1"></i> {{ __('العمر والجنس:') }}</span>
+                            <span class="p-val">{{ $patientAge }} {{ __('سنة') }} • {{ $patientGender }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-hashtag text-secondary me-1"></i> رقم الملف / القيد:</span>
+                            <span class="p-label"><i class="fas fa-hashtag text-secondary me-1"></i> {{ __('رقم الملف / القيد:') }}</span>
                             <span class="p-val" style="direction: ltr; text-align: right;">{{ $patientMedNo }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-phone text-secondary me-1"></i> رقم الهاتف:</span>
+                            <span class="p-label"><i class="fas fa-phone text-secondary me-1"></i> {{ __('رقم الهاتف:') }}</span>
                             <span class="p-val" style="direction: ltr; text-align: right;">{{ $patientPhone }}</span>
                         </div>
 
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-shield-alt text-secondary me-1"></i> التغطية المالية:</span>
+                            <span class="p-label"><i class="fas fa-shield-alt text-secondary me-1"></i> {{ __('التغطية المالية:') }}</span>
                             <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                                {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                                {{ $isInsured ? __('🛡️ الضمان الصحي') : __('💵 حساب نقدي') }}
                             </span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-door-open text-secondary me-1"></i> الموقع / الصالة:</span>
+                            <span class="p-label"><i class="fas fa-door-open text-secondary me-1"></i> {{ __('الموقع / الصالة:') }}</span>
                             <span class="p-val">{{ $roomName }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-calendar-alt text-secondary me-1"></i> تاريخ وموعد العملية:</span>
+                            <span class="p-label"><i class="fas fa-calendar-alt text-secondary me-1"></i> {{ __('تاريخ وموعد العملية:') }}</span>
                             <span class="p-val">{{ $scheduledDate }} • {{ $scheduledTime }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-clock text-secondary me-1"></i> توقيت الإجراء:</span>
+                            <span class="p-label"><i class="fas fa-clock text-secondary me-1"></i> {{ __('توقيت الإجراء:') }}</span>
                             <span class="p-val">
                                 @if($surgeryStartFormatted || $surgeryEndFormatted)
                                     {{ $surgeryStartFormatted ?: '—' }} إلى {{ $surgeryEndFormatted ?: '—' }}
@@ -776,25 +776,25 @@
                     <div class="section-header">
                         <div class="section-header-title">
                             <i class="fas fa-user-md"></i>
-                            <span>الفريق الطبي والجراحي المشرف (Surgical & Anesthesia Team)</span>
+                            <span>{{ __('الفريق الطبي والجراحي المشرف (Surgical & Anesthesia Team)') }}</span>
                         </div>
                     </div>
                     <div class="section-body">
                         <div class="team-grid">
                             <div class="team-member">
-                                <span class="team-role">الطبيب الجراح الرئيسي:</span>
-                                <span class="team-name" style="color: #005a9c;">د. {{ $surgeonName }}</span>
+                                <span class="team-role">{{ __('الطبيب الجراح الرئيسي:') }}</span>
+                                <span class="team-name" style="color: #005a9c;">{{ __('د.') }} {{ $surgeonName }}</span>
                             </div>
                             <div class="team-member">
-                                <span class="team-role">مساعد الجراح:</span>
+                                <span class="team-role">{{ __('مساعد الجراح:') }}</span>
                                 <span class="team-name">{{ $surgicalAssistantName ?: '—' }}</span>
                             </div>
                             <div class="team-member">
-                                <span class="team-role">طبيب التخدير المشرف:</span>
-                                <span class="team-name" style="color: #0284c7;">د. {{ $primaryAnesthName }}</span>
+                                <span class="team-role">{{ __('طبيب التخدير المشرف:') }}</span>
+                                <span class="team-name" style="color: #0284c7;">{{ __('د.') }} {{ $primaryAnesthName }}</span>
                             </div>
                             <div class="team-member">
-                                <span class="team-role">مساعد / كادر التخدير:</span>
+                                <span class="team-role">{{ __('مساعد / كادر التخدير:') }}</span>
                                 <span class="team-name">
                                     {{ $secondaryAnesthName ? ('د. ' . $secondaryAnesthName) : ($anesthesiaAssistantName ?: '—') }}
                                 </span>
@@ -808,27 +808,27 @@
                     <div class="section-header">
                         <div class="section-header-title">
                             <i class="fas fa-procedures"></i>
-                            <span>الإجراء الجراحي والعمليات المنفذة (Surgical Procedures)</span>
+                            <span>{{ __('الإجراء الجراحي والعمليات المنفذة (Surgical Procedures)') }}</span>
                         </div>
                         <span style="font-size: 10px; font-weight: 700; color: #64748b;">
-                            التصنيف: <strong>{{ $surgery->surgery_classification ?? 'عملية كبرى' }}</strong>
+                            {{ __('التصنيف:') }} <strong>{{ $surgery->surgery_classification ?? __('عملية كبرى') }}</strong>
                         </span>
                     </div>
                     <div class="section-body">
                         <div style="font-size: 12px; font-weight: 800; color: #005a9c; margin-bottom: 4px;">
                             <i class="fas fa-check-circle text-success me-1"></i>
-                            العملية الأساسية: {{ $surgery->surgery_type ?? $surgery->surgicalOperation?->name ?? 'غير محدد' }}
+                            {{ __('العملية الأساسية:') }} {{ $surgery->surgery_type ?? $surgery->surgicalOperation?->name ?? __('غير محدد') }}
                         </div>
 
                         @if($additionalOps->count() > 0)
                             <div style="margin-top: 6px;">
-                                <div style="font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 3px;">عمليات وإجراءات جراحية إضافية منفذة:</div>
+                                <div style="font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 3px;">{{ __('عمليات وإجراءات جراحية إضافية منفذة:') }}</div>
                                 <table class="report-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 35%;">اسم العملية الإضافية</th>
-                                            <th style="width: 25%;">التصنيف</th>
-                                            <th>ملاحظات وتفاصيل الجراح</th>
+                                            <th style="width: 35%;">{{ __('اسم العملية الإضافية') }}</th>
+                                            <th style="width: 25%;">{{ __('التصنيف') }}</th>
+                                            <th>{{ __('ملاحظات وتفاصيل الجراح') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -853,25 +853,25 @@
                         <div class="section-header">
                             <div class="section-header-title">
                                 <i class="fas fa-stethoscope text-primary"></i>
-                                <span>التشخيص الطبي والتوصيات الجراحية</span>
+                                <span>{{ __('التشخيص الطبي والتوصيات الجراحية') }}</span>
                             </div>
                         </div>
                         <div class="section-body">
                             <div class="highlight-box-blue">
-                                <div class="highlight-title">التشخيص الطبي للجراح (Surgeon Diagnosis):</div>
-                                <div class="highlight-text">{{ $surgery->diagnosis ?: 'لم يُسجل تشخيص بعد' }}</div>
+                                <div class="highlight-title">{{ __('التشخيص الطبي للجراح (Surgeon Diagnosis):') }}</div>
+                                <div class="highlight-text">{{ $surgery->diagnosis ?: __('لم يُسجل تشخيص بعد') }}</div>
                             </div>
 
                             @if($surgery->description)
                                 <div class="highlight-box-amber">
-                                    <div class="highlight-title">الوصف والتقنية الجراحية (Operative Technique):</div>
+                                    <div class="highlight-title">{{ __('الوصف والتقنية الجراحية (Operative Technique):') }}</div>
                                     <div class="highlight-text">{{ $surgery->description }}</div>
                                 </div>
                             @endif
 
                             @if($surgery->doctor_recommendation)
                                 <div class="highlight-box-green">
-                                    <div class="highlight-title">توصيات الجراح وخطة المتابعة:</div>
+                                    <div class="highlight-title">{{ __('توصيات الجراح وخطة المتابعة:') }}</div>
                                     <div class="highlight-text">{{ $surgery->doctor_recommendation }}</div>
                                 </div>
                             @endif
@@ -883,25 +883,25 @@
                         <div class="section-header">
                             <div class="section-header-title">
                                 <i class="fas fa-syringe text-info"></i>
-                                <span>توثيق وخطة التخدير (Anesthesia Protocol)</span>
+                                <span>{{ __('توثيق وخطة التخدير (Anesthesia Protocol)') }}</span>
                             </div>
                         </div>
                         <div class="section-body">
                             <div class="highlight-box-blue">
-                                <div class="highlight-title">نوع التخدير المعتمد (Anesthesia Type):</div>
+                                <div class="highlight-title">{{ __('نوع التخدير المعتمد (Anesthesia Type):') }}</div>
                                 <div class="highlight-text" style="font-weight: 800; color: #0284c7;">
-                                    {{ $currentAnesthesiaType ?: 'لم يُحدد نوع التخدير' }}
+                                    {{ $currentAnesthesiaType ?: __('لم يُحدد نوع التخدير') }}
                                 </div>
                             </div>
 
                             <div class="highlight-box-amber">
-                                <div class="highlight-title">ملاحظات التخدير وتقييم الإفاقة:</div>
-                                <div class="highlight-text">{{ $currentAnesthesiaNotes ?: 'لم تُسجل ملاحظات تخدير خاصة' }}</div>
+                                <div class="highlight-title">{{ __('ملاحظات التخدير وتقييم الإفاقة:') }}</div>
+                                <div class="highlight-text">{{ $currentAnesthesiaNotes ?: __('لم تُسجل ملاحظات تخدير خاصة') }}</div>
                             </div>
 
                             @if($devices->count() > 0)
                                 <div style="margin-top: 4px; font-size: 10px; color: #475569;">
-                                    <strong>الأجهزة الطبية المستخدمة:</strong>
+                                    <strong>{{ __('الأجهزة الطبية المستخدمة:') }}</strong>
                                     {{ $devices->pluck('name')->join('، ') }}
                                 </div>
                             @endif
@@ -915,17 +915,17 @@
                         <div class="section-header">
                             <div class="section-header-title">
                                 <i class="fas fa-pills text-danger"></i>
-                                <span>الأدوية والعلاجات المصروفة أثناء العملية (Medications Administered)</span>
+                                <span>{{ __('الأدوية والعلاجات المصروفة أثناء العملية (Medications Administered)') }}</span>
                             </div>
                         </div>
                         <div class="section-body" style="padding: 4px 10px;">
                             <table class="report-table">
                                 <thead>
                                     <tr>
-                                        <th>الدواء / المحلول</th>
-                                        <th>الجرعة</th>
-                                        <th>طريقة الإعطاء</th>
-                                        <th>التعليمات والتوقيت</th>
+                                        <th>{{ __('الدواء / المحلول') }}</th>
+                                        <th>{{ __('الجرعة') }}</th>
+                                        <th>{{ __('طريقة الإعطاء') }}</th>
+                                        <th>{{ __('التعليمات والتوقيت') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -947,25 +947,25 @@
                 <div class="auth-block">
                     <div class="auth-cell">
                         <div class="sig-empty-line">
-                            <span>توقيع الطبيب الجراح</span>
+                            <span>{{ __('توقيع الطبيب الجراح') }}</span>
                         </div>
-                        <div class="sig-title">د. {{ $surgeonName }}</div>
-                        <div class="sig-subtitle">الطبيب الجراح المشرف</div>
+                        <div class="sig-title">{{ __('د.') }} {{ $surgeonName }}</div>
+                        <div class="sig-subtitle">{{ __('الطبيب الجراح المشرف') }}</div>
                     </div>
 
                     <div class="auth-cell">
                         <div class="sig-empty-line">
-                            <span>توقيع طبيب التخدير</span>
+                            <span>{{ __('توقيع طبيب التخدير') }}</span>
                         </div>
-                        <div class="sig-title">د. {{ $primaryAnesthName }}</div>
-                        <div class="sig-subtitle">أخصائي التخدير والعناية المركزة</div>
+                        <div class="sig-title">{{ __('د.') }} {{ $primaryAnesthName }}</div>
+                        <div class="sig-subtitle">{{ __('أخصائي التخدير والعناية المركزة') }}</div>
                     </div>
 
                     <div class="auth-cell">
                         <div class="stamp-circle-box">
                             <i class="fas fa-stamp" style="font-size: 16px; margin-bottom: 2px;"></i>
-                            <span>ختم صالة العمليات</span>
-                            <span style="font-size: 7px; color: #64748b;">معتمد رسمياً</span>
+                            <span>{{ __('ختم صالة العمليات') }}</span>
+                            <span style="font-size: 7px; color: #64748b;">{{ __('معتمد رسمياً') }}</span>
                         </div>
                     </div>
 
@@ -984,12 +984,12 @@
             <!-- 9. Official Footer -->
             <div class="report-footer">
                 <div>
-                    <span>رقم ترخيص المستشفى: <strong>{{ $licenseNumber }}</strong></span>
+                    <span>{{ __('رقم ترخيص المستشفى:') }} <strong>{{ $licenseNumber }}</strong></span>
                 </div>
                 <div class="footer-contacts">
                     <span><i class="fas fa-map-marker-alt me-1"></i> {{ $hospitalAddress }}</span>
                     <span><i class="fas fa-phone me-1"></i> {{ $hospitalPhone }}</span>
-                    <span><i class="fas fa-clock me-1"></i> طُبع في: {{ now()->format('Y-m-d H:i') }}</span>
+                    <span><i class="fas fa-clock me-1"></i> {{ __('طُبع في:') }} {{ now()->format('Y-m-d H:i') }}</span>
                 </div>
             </div>
 

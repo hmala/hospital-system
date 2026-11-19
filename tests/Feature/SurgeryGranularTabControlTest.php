@@ -205,4 +205,23 @@ class SurgeryGranularTabControlTest extends TestCase
         $response2->assertStatus(200);
         $response2->assertDontSee('id="treatmentsDropdownWrapper"', false);
     }
+
+    public function test_surgery_station_tab_settings_page_renders_without_syntax_error(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('surgery-stations.tab-settings.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('مصفوفة صلاحيات تبويبات المحطة السريرية الموحدة');
+        $response->assertSee('إدارة مركزية لظهور وصلاحيات التبويبات لكل دور وظيفي أو محطة إضافية في المحطة السريرية وملف العملية.');
+
+        // Test in English locale as well
+        $responseEn = $this->actingAs($this->adminUser)
+            ->withSession(['locale' => 'en'])
+            ->get(route('surgery-stations.tab-settings.index'));
+
+        $responseEn->assertStatus(200);
+        $responseEn->assertSee('Unified Clinical Station Tab Permissions Matrix');
+        $responseEn->assertSee('Centralized management of tab visibility and permissions');
+    }
 }

@@ -410,6 +410,12 @@
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                @can('create surgeries')
+                <a href="{{ route('surgeries.create') }}" class="sg-btn-create">
+                    <i class="fas fa-plus me-1"></i> {{ __('حجز عملية جديدة') }}
+                </a>
+                @endcan
+
                 @canany(['manage surgery waiting list', 'view surgeries'])
                 <a href="{{ route('surgeries.waiting') }}" class="sg-btn-link-action">
                     <i class="fas fa-clock text-warning"></i>
@@ -890,24 +896,24 @@
                             <div>
                                 <h6 class="mb-1 fw-bold text-dark">دولاب ومخزن: {{ $orCurrentLocation->name }}</h6>
                                 <p class="text-muted small mb-0 d-flex flex-wrap align-items-center gap-2">
-                                    <span>المسؤول عن العهدة:</span>
+                                    <span>{{ __('المسؤول عن العهدة:') }}</span>
                                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5">
-                                        <i class="fas fa-check-circle me-1"></i> حسابك مخول بالطلب والصرف
+                                        <i class="fas fa-check-circle me-1"></i> {{ __('حسابك مخول بالطلب والصرف') }}
                                     </span>
-                                    <span>• إجمالي المواد المتوفرة: <strong class="text-primary">{{ $orStockBatches->sum('current_qty') }}</strong> وحدة</span>
+                                    <span>{{ __('• إجمالي المواد المتوفرة:') }} <strong class="text-primary">{{ $orStockBatches->sum('current_qty') }}</strong> {{ __('وحدة') }}</span>
                                 </p>
                             </div>
                         </div>
 
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <a href="{{ route('stock-transfers.create', ['to_location_id' => $orCurrentLocation->id]) }}" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm text-dark">
-                                <i class="fas fa-plus-circle me-1"></i> + طلب تعزيز مواد
+                                <i class="fas fa-plus-circle me-1"></i> {{ __('+ طلب تعزيز مواد') }}
                             </a>
                             <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $orCurrentLocation->id, 'from_surgery' => 1]) }}" class="btn btn-outline-danger rounded-pill px-3 py-2 fw-bold shadow-xs">
-                                <i class="fas fa-undo-alt me-1"></i> إرجاع عهدة للمخزن الرئيسي
+                                <i class="fas fa-undo-alt me-1"></i> {{ __('إرجاع عهدة للمخزن الرئيسي') }}
                             </a>
                             <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 shadow-xs">
-                                <i class="fas fa-history me-1"></i> سجل الطلبيات
+                                <i class="fas fa-history me-1"></i> {{ __('سجل الطلبيات') }}
                             </a>
                         </div>
                     </div>
@@ -920,7 +926,7 @@
                             <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="fas fa-boxes text-primary fs-5"></i>
-                                    <h6 class="mb-0 fw-bold text-dark">المستلزمات والأدوية المتوفرة في عهدة العمليات</h6>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ __('المستلزمات والأدوية المتوفرة في عهدة العمليات') }}</h6>
                                 </div>
                                 <span class="badge bg-primary text-white rounded-pill px-3 py-1" id="orStockItemsCountBadge">{{ $orStockBatches->count() }} مادة</span>
                             </div>
@@ -931,19 +937,19 @@
                                     <div class="col-md-5">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                                            <input type="text" id="orStockSearchInput" class="form-control bg-white border-start-0 ps-0" placeholder="بحث باسم المادة، الباركود، أو رقم الوجبة...">
+                                            <input type="text" id="orStockSearchInput" class="form-control bg-white border-start-0 ps-0" placeholder="{{ __('بحث باسم المادة، الباركود، أو رقم الوجبة...') }}">
                                             <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" id="clearOrStockSearch" style="display:none;">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
                                     </div>
                                     <div class="col-md-7 d-flex align-items-center gap-1 flex-wrap justify-content-md-end">
-                                        <span class="text-muted small me-1">تصفية:</span>
-                                        <button type="button" class="btn btn-xs btn-dark rounded-pill px-2 py-1 or-stock-filter-btn active" data-filter="all">الكل</button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="supplies">🩹 مستلزمات</button>
-                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="medicines">💊 أدوية/أخرى</button>
-                                        <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="low">⚠️ نفاد</button>
-                                        <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="expiring">⏳ قريبة الانتهاء</button>
+                                        <span class="text-muted small me-1">{{ __('تصفية:') }}</span>
+                                        <button type="button" class="btn btn-xs btn-dark rounded-pill px-2 py-1 or-stock-filter-btn active" data-filter="all">{{ __('الكل') }}</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="supplies">{{ __('🩹 مستلزمات') }}</button>
+                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="medicines">{{ __('💊 أدوية/أخرى') }}</button>
+                                        <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="low">{{ __('⚠️ نفاد') }}</button>
+                                        <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-1 or-stock-filter-btn" data-filter="expiring">{{ __('⏳ قريبة الانتهاء') }}</button>
                                     </div>
                                 </div>
                             </div>
@@ -953,12 +959,12 @@
                                     <table class="table table-hover align-middle mb-0" id="orStockTable">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="py-2 px-3">المادة / المستلزم</th>
-                                                <th class="py-2 text-center">الرصيد الحالي</th>
-                                                <th class="py-2 text-center">تاريخ الصلاحية</th>
-                                                <th class="py-2 text-center">رقم الوجبة</th>
-                                                <th class="py-2 text-center">الحالة</th>
-                                                <th class="py-2 text-center" style="width: 100px;">إجراء</th>
+                                                <th class="py-2 px-3">{{ __('المادة / المستلزم') }}</th>
+                                                <th class="py-2 text-center">{{ __('الرصيد الحالي') }}</th>
+                                                <th class="py-2 text-center">{{ __('تاريخ الصلاحية') }}</th>
+                                                <th class="py-2 text-center">{{ __('رقم الوجبة') }}</th>
+                                                <th class="py-2 text-center">{{ __('الحالة') }}</th>
+                                                <th class="py-2 text-center" style="width: 100px;">{{ __('إجراء') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody id="orStockTableBody">
@@ -1002,17 +1008,17 @@
                                                     </td>
                                                     <td class="text-center">
                                                         @if($isLowStock)
-                                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-1">شارف على النفاد</span>
+                                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-1">{{ __('شارف على النفاد') }}</span>
                                                         @else
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">متوفر</span>
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">{{ __('متوفر') }}</span>
                                                         @endif
                                                     </td>
                                                     <td class="text-center">
                                                         @if($isOperationCustodian)
                                                             <a href="{{ route('stock-transfers.returns.create', ['from_location_id' => $orCurrentLocation->id, 'batch_id' => $batch->id, 'from_surgery' => 1]) }}"
                                                                class="btn btn-sm btn-outline-warning rounded-pill px-2 py-1 fw-bold text-nowrap shadow-xs"
-                                                               title="إرجاع هذه الوجبة للمخزن الرئيسي">
-                                                                <i class="fas fa-undo-alt me-1"></i> إرجاع
+                                                               title="{{ __('إرجاع هذه الوجبة للمخزن الرئيسي') }}">
+                                                                <i class="fas fa-undo-alt me-1"></i> {{ __('إرجاع') }}
                                                             </a>
                                                         @else
                                                             <span class="text-muted small">-</span>
@@ -1026,7 +1032,7 @@
                                                         <p class="mb-0 fw-semibold">لا يوجد رصيد مواد مسجل في {{ $orCurrentLocation->name }} حالياً</p>
                                                         @if($isOperationCustodian)
                                                             <a href="{{ route('stock-transfers.create', ['to_location_id' => $orCurrentLocation->id]) }}" class="btn btn-sm btn-warning rounded-pill mt-3 fw-bold text-dark">
-                                                                <i class="fas fa-plus-circle me-1"></i> اطلب أول شحنة تعزيز من المخزن الرئيسي
+                                                                <i class="fas fa-plus-circle me-1"></i> {{ __('اطلب أول شحنة تعزيز من المخزن الرئيسي') }}
                                                             </a>
                                                         @endif
                                                     </td>
@@ -1035,7 +1041,7 @@
                                             <tr id="noMatchingOrStockRow" style="display: none;">
                                                 <td colspan="6" class="text-center py-4 text-muted">
                                                     <i class="fas fa-search fa-2x mb-2 text-secondary opacity-50"></i>
-                                                    <p class="mb-0 fw-semibold">لا توجد مواد تطابق معايير البحث والتصفية المحددة.</p>
+                                                    <p class="mb-0 fw-semibold">{{ __('لا توجد مواد تطابق معايير البحث والتصفية المحددة.') }}</p>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -1050,9 +1056,9 @@
                         <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
                             <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
                                 <h6 class="mb-0 fw-bold text-dark">
-                                    <i class="fas fa-history text-info me-2"></i> سجل حركات مخزن العمليات
+                                    <i class="fas fa-history text-info me-2"></i> {{ __('سجل حركات مخزن العمليات') }}
                                 </h6>
-                                <span class="badge bg-info text-white rounded-pill px-2 py-1 small">مباشر</span>
+                                <span class="badge bg-info text-white rounded-pill px-2 py-1 small">{{ __('مباشر') }}</span>
                             </div>
                             <div class="card-body p-3">
                                 @if($orRecentMovements->count())
@@ -1061,10 +1067,10 @@
                                             <div class="list-group-item px-0 py-2 border-bottom">
                                                 <div class="d-flex justify-content-between align-items-start gap-2">
                                                     <div>
-                                                        <div class="fw-bold text-dark small">{{ $mv->batch?->product?->name ?? 'مادة مخزنية' }}</div>
+                                                        <div class="fw-bold text-dark small">{{ $mv->batch?->product?->name ?? __('مادة مخزنية') }}</div>
                                                         <small class="text-muted d-block">
                                                             <i class="fas fa-user text-primary me-1"></i>
-                                                            بواسطة: <strong>{{ $mv->user?->full_name ?? $mv->user?->name ?? 'كادر العمليات' }}</strong>
+                                                            {{ __('بواسطة:') }} <strong>{{ $mv->user?->full_name ?? $mv->user?->name ?? __('كادر العمليات') }}</strong>
                                                         </small>
                                                         @if($mv->surgery)
                                                             <small class="text-primary d-block">
@@ -1196,7 +1202,7 @@
             }
 
             if (countBadge) {
-                countBadge.textContent = visibleCount + ' مادة';
+                countBadge.textContent = visibleCount + ' ' + @json(__('مادة'));
             }
         }
 
