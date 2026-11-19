@@ -241,4 +241,90 @@ class CashierLocalizationTest extends TestCase
         $responseAr->assertSee('الخدمة الطبية');
         $responseAr->assertSee('المبلغ المدفوع');
     }
+
+    public function test_cashier_report_print_renders_department_grouped_table_and_summary_box(): void
+    {
+        $admin = User::factory()->create(['name' => 'Cashier Supervisor', 'email' => 'supervisor@hospital.com']);
+        $admin->assignRole('admin');
+
+        $hospital = Hospital::create([
+            'name' => 'Central Hospital',
+            'owner_name' => 'Dr. Director',
+            'license_number' => 'LIC-PRINT-01',
+            'phone' => '07700000088',
+            'email' => 'print@hospital.com',
+            'address' => 'Baghdad',
+        ]);
+
+        $patUser = User::factory()->create(['name' => 'Haider Ali']);
+        $patient = Patient::create([
+            'user_id' => $patUser->id,
+            'patient_id' => 'P-PRINT-01',
+            'name' => 'Haider Ali',
+            'gender' => 'male',
+            'age' => 35,
+        ]);
+
+        // 1. Surgery Payment
+        Payment::create([
+            'patient_id' => $patient->id,
+            'cashier_id' => $admin->id,
+            'amount' => 1500000,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'payment_type' => 'surgery',
+            'paid_at' => now(),
+            'receipt_number' => '45601',
+            'description' => 'عملية استئصال المرارة بالمنظار',
+        ]);
+
+        // 2. Lab Payment (Card)
+        Payment::create([
+            'patient_id' => $patient->id,
+            'cashier_id' => $admin->id,
+            'amount' => 50000,
+            'payment_method' => 'card',
+            'payment_status' => 'paid',
+            'payment_type' => 'lab',
+            'paid_at' => now(),
+            'receipt_number' => '45602',
+            'description' => 'تحليل CBC و بايوكيميستري',
+        ]);
+
+        // 3. Refunded Payment
+        Payment::create([
+            'patient_id' => $patient->id,
+            'cashier_id' => $admin->id,
+            'amount' => 25000,
+            'payment_method' => 'cash',
+            'payment_status' => 'cancelled',
+            'payment_type' => 'emergency',
+            'paid_at' => now(),
+            'voided_at' => now(),
+            'voided_by' => $admin->id,
+            'void_type' => 'refund',
+            'void_reason' => 'إلغاء المريض قبل الفحص',
+            'receipt_number' => '45603',
+            'description' => 'رسوم طوارئ مسترجعة',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('cashier.report', ['print' => '1']));
+
+        $response->assertStatus(200);
+        $response->assertSee('كشف حساب يومية الصندوق ومقبوضات الكاشير');
+        $response->assertSee('ت الوصل');
+        $response->assertSee('الخدمة الطبية');
+        $response->assertSee('القسم');
+        $response->assertSee('المجموع');
+        $response->assertSee('المجموع الكلي للمقبوضات');
+        $response->assertSee('الاسترجاعات المدفوعة من صندوق القبض بموجب النماذج');
+        $response->assertSee('ملخص الصندوق');
+        $response->assertSee('مجموع المبالغ المقبوضة');
+        $response->assertSee('(-) مجموع المبالغ المسترجعة');
+        $response->assertSee('(-) المبالغ المقبوضة إلكترونياً (POS / بطاقة)');
+        $response->assertSee('صافي الصندوق (الرصيد النقدي الفعلي بالدرج)');
+        $response->assertSee('Haider Ali');
+        $response->assertSee('45601');
+    }
 }

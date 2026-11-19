@@ -2669,10 +2669,68 @@ class CashierController extends Controller
 
         // إذا كان الطلب طباعة
         if ($request->query('print') == '1') {
-            $payments = $query->orderBy('paid_at', 'desc')->get();
+            $payments = $query->orderBy('paid_at', 'asc')->get();
+
+            // 1. استعلام الاسترجاعات المالية الصادرة في نفس النطاق الزمني والكاشير
+            $refundsQuery = \App\Models\Payment::with(['patient.user', 'cashier', 'voidedBy'])
+                ->where(function ($q) {
+                    $q->where('void_type', 'refund')
+                        ->orWhereNotNull('voided_at');
+                });
+
+            if ($fromDate) {
+                $refundsQuery->whereDate('voided_at', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $refundsQuery->whereDate('voided_at', '<=', $toDate);
+            }
+            if (! $canViewAllCashiers) {
+                $refundsQuery->where(function ($q) use ($user) {
+                    $q->where('voided_by', $user->id)
+                        ->orWhere('cashier_id', $user->id);
+                });
+            } elseif ($cashierId) {
+                $refundsQuery->where(function ($q) use ($cashierId) {
+                    $q->where('voided_by', $cashierId)
+                        ->orWhere('cashier_id', $cashierId);
+                });
+            }
+
+            $refunds = $refundsQuery->orderBy('voided_at', 'asc')->get();
+            $totalRefunds = (float) $refunds->sum('amount');
+
+            // 2. حساب المبالغ الإلكترونية (بطاقة + حصة البطاقة في الدفع المركب)
+            $electronicAmount = 0.0;
+            $cashAmount = 0.0;
+            foreach ($payments as $p) {
+                if ($p->payment_method === 'card') {
+                    $electronicAmount += (float) $p->amount;
+                } elseif ($p->payment_method === 'split') {
+                    $cardPart = (float) ($p->card_amount ?? 0);
+                    $electronicAmount += $cardPart;
+                    $cashAmount += (float) ($p->cash_amount ?? ($p->amount - $cardPart));
+                } else {
+                    $cashAmount += (float) $p->amount;
+                }
+            }
+
+            // صافي النقد الفعلي في الصندوق
+            $netCash = max(0, $cashAmount - $totalRefunds);
+
+            // 3. تجميع الوصولات حسب الأقسام
+            $groupedPayments = $payments->groupBy(function ($payment) {
+                return $payment->payment_type_name ?: 'أخرى';
+            });
+
+            // اسم الكاشير المستعلم عنه
+            $selectedCashier = $cashierId
+                ? \App\Models\User::find($cashierId)
+                : (! $canViewAllCashiers ? $user : null);
 
             return view('cashier.report-print', compact(
-                'payments', 'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
+                'payments', 'groupedPayments', 'refunds', 'totalRefunds', 'electronicAmount', 'cashAmount', 'netCash',
+                'selectedCashier',
+                'totalAmount', 'totalInsuranceShare', 'totalPatientShare', 'totalCount', 'typeBreakdown',
                 'fromDate', 'toDate', 'paymentType', 'paymentMethod', 'insuranceType', 'search', 'range', 'cashierId', 'cashiers', 'canViewAllCashiers'
             ));
         }
