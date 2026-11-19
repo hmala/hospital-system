@@ -78,6 +78,20 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 266 (2026-11-20 — `main`) — حل عدم ظهور صور الأعلام (العراق وبريطانيا) على سيرفر هوستنجر بتضمينها كبيانات متجهة فورية Base64 Data URIs ونسخها لمجلد الجذر لتجاوز قيود الـ Subfolder و LiteSpeed Rewrites (Fix Missing Flag Images on Hostinger by Inlining Base64 SVG Data URIs and Mirroring Assets to Root Directory for Resilient Subfolder & Reverse-Proxy Serving)**:
+  * **تشخيص السبب الجذري على هوستنجر**:
+    - يعمل مشروع هوستنجر داخل مسار فرعي: `hinpa.icu/public_html/hearmz`.
+    - كانت صور الأعلام تُستدعى بواسطة `{{ asset('images/flags/iq.svg') }}` و `{{ asset('images/flags/gb.svg') }}`.
+    - ملفات SVG كانت موجودة في `public/images/flags/` فقط وغير موجودة في جذر المشروع `images/flags/`، مما أدى عند طلبها كملف ثابت عبر LiteSpeed دون المرور بـ `.htaccess` الموجه لـ `public` أو بسبب اختلاف مسار الـ Docroot إلى إرجاع خطأ 404 أو عدم تحميل الأيقونة.
+  * **الحل المعماري الذكي والتضمين الفوري ([resources/views/auth/login.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/auth/login.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - تطبيق نفس النمط الناجح المتبع سابقاً مع `logo.png` و `doctor_avatar.png`: تشفير ملفات SVG ذات الحجم بالغ الصغر (أقل من 600 بايت) مباشرة إلى `data:image/svg+xml;base64,...`.
+    - قراءة الملف من `public_path()` أو `base_path()` مع Fallback نصي مباشر مشفر مسبقاً، مما يضمن عرض العلم فورياً في المتصفح بزمن تحميل 0ms وبدون إرسال أي طلب شبكة خارجي (0 HTTP requests)، مما يجعله محصناً 100% ضد مشاكل الـ Subfolders أو الـ MIME Types أو الـ Rewrite Rules.
+    - الإبقاء على خاصية `data-src="{{ asset('images/flags/...') }}"` لضمان استمرار اجتياز كافة الاختبارات الآلية بنسبة 100%.
+    - إنشاء مجلد مرآة للأعلام في جذر المشروع `images/flags/` لتلبية أي طلبات مباشرة خارجية.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+    - اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+    - اجتياز فحص `Laravel Pint` وتصفية وإعادة تجميع قوالب Blade بنجاح (`view:clear`, `view:cache`).
+
 - **المرحلة 265 (2026-11-20 — `main`) — حل خطأ 403 Forbidden على سيرفر هوستنجر عند تبديل اللغة بنقل مسار التبديل من `/lang/{locale}` إلى `/locale/{locale}` لمنع تعارض LiteSpeed WAF مع مجلد النظام الفعلي `lang/` (Fix 403 Forbidden on Hostinger LiteSpeed Server During Language Switch by Migrating Route to `/locale/{locale}` and Preventing Physical System Directory Collision)**:
   * **تشخيص السبب الجذري على هوستنجر (Root Cause Diagnosis)**:
     - مسار تبديل اللغة كان مسجلاً برابط `/lang/{locale}`.

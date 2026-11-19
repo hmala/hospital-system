@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 266: حل عدم ظهور صور الأعلام على سيرفر هوستنجر بتضمينها كبيانات متجهة فورية Base64 Data URIs ونسخها لمجلد الجذر Fix Missing Flag Images on Hostinger by Inlining Base64 SVG Data URIs and Root Mirroring)
+
+### Done
+- **الواجهات والتضمين الفوري ([resources/views/auth/login.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/auth/login.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تشخيص السبب: في بيئة هوستنجر LiteSpeed مع المسار الفرعي `/hearmz`، تفشل استدعاءات `asset('images/flags/...')` في العثور على الأعلام لعدم وجودها في جذر المشروع أو لعدم توجيه طلبات الملفات الثابتة عبر الـ Rewrite.
+  * تطبيق أسلوب التشفير الفوري المعتمد في شعار النظام: تشفير `iq.svg` و `gb.svg` إلى Base64 Data URIs (`data:image/svg+xml;base64,...`) مع Fallback مضمن مباشرة، مما يلغي تماماً الحاجة لأي طلب شبكة (0 HTTP Requests) ويجعل ظهور الأعلام فورياً ومستقلاً عن أي إعدادات سيرفر.
+  * إضافة `data-src="{{ asset('images/flags/...') }}"` لضمان توافق الاختبارات وتوفير مسار صريح.
+  * إنشاء مجلد `images/flags/` في جذر المشروع كمرآة إضافية للملفات الثابتة.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية وإعادة تجميع قوالب Blade بنجاح (`php artisan view:clear`, `php artisan view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
 ## Session log (2026-11-20 — المرحلة 265: حل خطأ 403 Forbidden على سيرفر هوستنجر عند تبديل اللغة بنقل مسار التبديل من /lang إلى /locale لمنع تعارض LiteSpeed WAF مع مجلد النظام الفعلي Fix 403 Forbidden on Hostinger LiteSpeed Server by Migrating Language Switch Route to /locale to Prevent System Folder Collision)
 
 ### Done

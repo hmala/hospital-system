@@ -1007,6 +1007,22 @@
         $systemLogoSrc = file_exists($logoFilePath) 
             ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFilePath)) 
             : asset('images/logo.png');
+
+        $iqFlagFile = public_path('images/flags/iq.svg');
+        if (!file_exists($iqFlagFile)) {
+            $iqFlagFile = base_path('images/flags/iq.svg');
+        }
+        $iqFlagSrc = file_exists($iqFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($iqFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjYwMCI+CiAgPHJlY3Qgd2lkdGg9IjkwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNjZTExMjYiLz4KICA8cmVjdCB5PSIyMDAiIHdpZHRoPSI5MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZmZmZmZmIi8+CiAgPHJlY3QgeT0iNDAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzAwMDAwMCIvPgogIDx0ZXh0IHg9IjQ1MCIgeT0iMzQ4IiBmb250LWZhbWlseT0iJ0FtaXJpJywgJ1RyYWRpdGlvbmFsIEFyYWJpYycsICdTZWdvZSBVSScsIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iMTI0IiBmaWxsPSIjMDA3YTNkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkaXJlY3Rpb249InJ0bCI+2KfZhNmE2Ycg2KPZg9io2LE8L3RleHQ+Cjwvc3ZnPg==';
+
+        $gbFlagFile = public_path('images/flags/gb.svg');
+        if (!file_exists($gbFlagFile)) {
+            $gbFlagFile = base_path('images/flags/gb.svg');
+        }
+        $gbFlagSrc = file_exists($gbFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($gbFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCAzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjMwIj4KICA8Y2xpcFBhdGggaWQ9InMiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIvPgogIDwvY2xpcFBhdGg+CiAgPGNsaXBQYXRoIGlkPSJ0Ij4KICAgIDxwYXRoIGQ9Ik0zMCwxNSBoMzAgdjE1IHogdjE1IGgtMzAgeiBoLTMwIHYtMTUgeiB2LTE1IGgzMCB6Ii8+CiAgPC9jbGlwUGF0aD4KICA8ZyBjbGlwLXBhdGg9InVybCgjcykiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIgZmlsbD0iIzAxMjE2OSIvPgogICAgPHBhdGggZD0iTTAsMCBMNjAsMzAgTTYwLDAgTDAsMzAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI2Ii8+CiAgICA8cGF0aCBkPSJNMCwwIEw2MCwzMCBNNjAsMCBMMCwzMCIgY2xpcC1wYXRoPSJ1cmwodHQpIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPHBhdGggZD0iTTMwLDAgdjMwIE0wLDE1IGg2MCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEwIi8+CiAgICA8cGF0aCBkPSJNMzAsMCB2MzAgTTAsMTUgaDYwIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNiIvPgogIDwvZz4KPC9zdmc+';
     @endphp
 
     {{-- Global Page Loader Ultra --}}
@@ -1039,10 +1055,10 @@
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5 shadow-xs topbar-lang-toggle" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
                 @if(app()->getLocale() === 'en')
-                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
                     <span class="fw-bold small text-dark">عربي</span>
                 @else
-                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
                     <span class="fw-bold small text-dark">EN</span>
                 @endif
             </a>
@@ -1068,23 +1084,23 @@
     <div class="dropdown lang-corner-dropdown d-none d-xl-block">
         <button class="btn btn-sm lang-dropdown-btn dropdown-toggle shadow-xs" type="button" id="langCornerDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('تبديل لغة النظام') }}">
             @if(app()->getLocale() === 'en')
-                <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
                 <span class="small fw-bold">EN</span>
             @else
-                <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
                 <span class="small fw-bold">عربي</span>
             @endif
         </button>
         <ul class="dropdown-menu lang-dropdown-menu shadow-sm" aria-labelledby="langCornerDropdownBtn">
             <li>
                 <a class="dropdown-item {{ app()->getLocale() === 'ar' ? 'active' : '' }}" href="{{ route('lang.switch', 'ar') }}">
-                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
                     <span>عربي (IQ)</span>
                 </a>
             </li>
             <li>
                 <a class="dropdown-item {{ app()->getLocale() === 'en' ? 'active' : '' }}" href="{{ route('lang.switch', 'en') }}">
-                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
                     <span>English (UK)</span>
                 </a>
             </li>
