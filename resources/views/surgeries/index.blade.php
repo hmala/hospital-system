@@ -609,6 +609,7 @@
                                 <th>{{ __('نوع العملية') }}</th>
                                 <th>{{ __('الطبيب الجراح') }}</th>
                                 <th>{{ __('رقم الغرفة') }}</th>
+                                <th class="text-center" style="width: 90px;">{{ __('الإجراءات') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -710,10 +711,27 @@
                                         <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
                                     @endif
                                 </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex gap-1 align-items-center">
+                                        @can('edit surgeries')
+                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 py-1 rounded-2 shadow-xs" title="{{ __('تعديل الحجز') }}">
+                                                <i class="fas fa-edit text-warning"></i>
+                                            </a>
+                                        @endcan
+
+                                        @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed' && !$isOtCompleted)
+                                            @canany(['delete surgeries', 'cancel surgeries'])
+                                                <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-2 shadow-xs" title="{{ __('إلغاء العملية') }}" onclick="confirmCancelSurgery(event, '{{ route('surgeries.cancel', $surgery) }}', '{{ addslashes($patientName) }}')">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            @endcanany
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-procedures fa-3x mb-3 text-secondary"></i>
                                         <div class="fw-bold fs-5">{{ __('لا توجد عمليات نشطة حالياً مطابقة للبحث') }}</div>
@@ -751,6 +769,7 @@
                                 <th>{{ __('نوع العملية') }}</th>
                                 <th>{{ __('الطبيب الجراح') }}</th>
                                 <th>{{ __('رقم الغرفة') }}</th>
+                                <th class="text-center" style="width: 90px;">{{ __('الإجراءات') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -852,12 +871,31 @@
                                         <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
                                     @endif
                                 </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex gap-1 align-items-center">
+                                        @can('edit surgeries')
+                                            <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 py-1 rounded-2 shadow-xs" title="{{ __('تعديل الحجز') }}">
+                                                <i class="fas fa-edit text-warning"></i>
+                                            </a>
+                                        @endcan
+
+                                        @can('delete surgeries')
+                                            <form action="{{ route('surgeries.destroy', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من حذف سجل هذه العملية نهائياً؟') }}');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-2 shadow-xs" title="{{ __('حذف السجل') }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
                             </tr>
 
 
                             @empty
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="text-center py-5 text-muted">
                                         <i class="fas fa-archive fa-3x mb-3 text-secondary"></i>
                                         <div class="fw-bold fs-5">{{ __('لا توجد عمليات مكتملة أو مؤرشفة مطابقة للبحث') }}</div>
@@ -1114,7 +1152,37 @@
 
 
 
+{{-- Hidden Form for Cancellation --}}
+<form id="cancelSurgeryConfirmForm" method="POST" style="display: none;">
+    @csrf
+    <input type="hidden" name="cancellation_reason" id="cancel_reason_input" value="">
+</form>
+
 <script>
+    window.confirmCancelSurgery = function(event, route, title) {
+        if (event) event.preventDefault();
+        const message = @js(__('هل أنت متأكد من إلغاء العملية الجراحية للمريض:')) + ' ' + title + '؟';
+        if (!window.confirm(message)) {
+            return false;
+        }
+
+        const reason = window.prompt(@js(__('يرجى إدخال سبب إلغاء العملية (اختياري):')), '');
+        if (reason === null) {
+            return false;
+        }
+
+        const form = document.getElementById('cancelSurgeryConfirmForm');
+        const reasonInput = document.getElementById('cancel_reason_input');
+        if (form && route) {
+            form.action = route;
+            if (reasonInput) {
+                reasonInput.value = reason.trim();
+            }
+            form.submit();
+        }
+        return true;
+    };
+
     function switchSurgeryTab(tabName) {
         const btnActive = document.getElementById('btnTabActive');
         const btnCompleted = document.getElementById('btnTabCompleted');

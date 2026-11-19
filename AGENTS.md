@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 264: إعادة زري تعديل وإلغاء العملية الجراحية حصراً في جدول العمليات مع ربطهما بصلاحيات واجهة الأدوار Restore Dedicated Edit and Cancel Action Buttons in Surgeries Table Gated by Roles & Permissions)
+
+### Done
+- **جدول العمليات الجراحية ([resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * إضافة عمود الإجراءات (`الإجراءات`) بعرض مقتضب ومناسب (`90px`).
+  * حصر الأزرار حصراً في زري **تعديل** و **إلغاء**:
+    1. **زر التعديل**: محكوم بصلاحية `@can('edit surgeries')` وينقل لصفحة تعديل حجز العملية.
+    2. **زر الإلغاء**: محكوم بصلاحية `@canany(['delete surgeries', 'cancel surgeries'])` للعمليات النشطة، يفتح نافذة التأكيد مع سبب الإلغاء ويرسل إلى مسار `surgeries.cancel`.
+  * إزالة أزرار العرض والطباعة من الجدول التزاماً بطلب المستخدم.
+- **الكنترولر ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحديث دالة `cancel()` لتقبل صلاحية `cancel surgeries` بجانب `delete surgeries` و `control surgeries`.
+- **التدقيق وضمان الجودة**:
+  * التحقق من تجميع قوالب Blade بنجاح عبر `php artisan view:cache`.
+  * تدقيق التنسيق عبر `Laravel Pint`.
+
 ## Session log (2026-11-20 — المرحلة 263: تسعير استشارات الأطباء السريرية بـ 50,000 د.ع افتراضياً مع تحكم الكاشير، معاملتها كالطوارئ خارج الضمان 100% نقداً، وإعادة هندسة تبويب الاستشارات بمحطة العمليات السريرية بعزل الملغاة وفصل العلاج الفيزيائي Clinical Consultations Emergency-Style 100% Patient Self-Pay Billing at 50,000 IQD Default, Cashier Pricing Control, and Clinical Station Tab Redesign with Sub-Pills, Active Consultations Filter & Dedicated Cancelled Archive)
 
 ### Done

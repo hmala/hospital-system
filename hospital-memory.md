@@ -78,6 +78,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 264 (2026-11-20 — `main`) — إعادة زري تعديل وإلغاء العملية الجراحية حصراً في جدول العمليات مع ربطهما بصلاحيات واجهة الأدوار (Restore Dedicated Edit and Cancel Action Buttons in Surgeries Table Gated by Roles & Permissions)**:
+  * **جدول العمليات ([resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+    - إضافة عمود الإجراءات (`الإجراءات`) بعرض مقتضب (`90px`).
+    - حصر الأزرار حصراً في زري **تعديل** و **إلغاء** وحذف زري العرض والطباعة التزاماً بطلب المستخدم.
+    - زر التعديل يظهر فقط بشرط `@can('edit surgeries')`.
+    - زر الإلغاء يظهر فقط بشرط `@canany(['delete surgeries', 'cancel surgeries'])` مع نافذة التأكيد وإدخال سبب الإلغاء.
+  * **الكنترولر ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - السماح لصلاحية `cancel surgeries` بالوصول لدالة الإلغاء بجانب `delete surgeries`.
+
 - **المرحلة 263 (2026-11-20 — `main`) — تسعير استشارات الأطباء السريرية بـ 50,000 د.ع افتراضياً مع تحكم الكاشير، معاملتها كالطوارئ (100% على المريض وخارج تغطية الضمان)، وإعادة هندسة تبويب الاستشارات بمحطة العمليات السريرية بعزل الملغاة في أرشيف مخصص وفصل العلاج الفيزيائي في تبويب مستقل (Clinical Consultations Emergency-Style 100% Patient Self-Pay Billing at 50,000 IQD Default, Cashier Pricing Control, and Clinical Station Tab Redesign with Sub-Pills, Active Consultations Filter & Dedicated Cancelled Archive)**:
   * **السياسة المالية والتسعير المعتمد (معاملة كاستشارات الطوارئ 100% نقداً على المريض)**:
     - اعتماد تسعير مبدئي قدره **50,000 د.ع** لطلب الاستشارة الطبية بمحطة العمليات السريرية مع حقل إدخال وتحكم مرن للكاشير في استمارة الدفع.

@@ -1217,7 +1217,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || (! $user->can('delete surgeries') && ! $user->can('control surgeries')))) {
+        if (! $isAdmin && (! $user || (! $user->can('delete surgeries') && ! $user->can('cancel surgeries') && ! $user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإلغاء العملية');
         }
 
