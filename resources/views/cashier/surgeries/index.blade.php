@@ -165,8 +165,15 @@
                                 $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                 $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
                                 
-                                // رسوم الغرفة
-                                $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
+                                // التأمين ونسبة التحمل للمريض
+                                $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                $isIns = in_array($sIns, ['hi', 'moi']);
+
+                                // رسوم الغرفة وحساب الإقامة الفندقية التراكمية
+                                $stayDetails = $surgery->calculateStayDetails();
+                                $isStayIns = $isIns && ($stayDetails['is_insurance_calculated'] ?? false);
+                                $targetRoomFee = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                                $roomFee = $isCancelled ? 0 : $targetRoomFee;
                                 $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                 $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
                                 
@@ -324,7 +331,15 @@
                                                         $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                                         $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
 
-                                                        $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
+                                                        // التأمين ونسبة التحمل للمريض
+                                                        $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                                        $isIns = in_array($sIns, ['hi', 'moi']);
+
+                                                        // رسوم الغرفة وحساب الإقامة الفندقية التراكمية
+                                                        $stayDetails = $surgery->calculateStayDetails();
+                                                        $isStayIns = $isIns && ($stayDetails['is_insurance_calculated'] ?? false);
+                                                        $targetRoomFee = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                                                        $roomFee = $isCancelled ? 0 : $targetRoomFee;
                                                         $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                                         $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
 
@@ -334,10 +349,6 @@
                                                             if ($extra->is_package_included) return 0;
                                                             return (float)($extra->total_amount ?? 0);
                                                         });
-
-                                                        // التأمين ونسبة التحمل للمريض
-                                                        $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
-                                                        $isIns = in_array($sIns, ['hi', 'moi']);
                                                         $labCopayPct = match($sIns) {
                                                             'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
                                                             'moi' => (float)($patient?->copay_percentage ?? 15),

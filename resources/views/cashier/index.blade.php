@@ -88,6 +88,14 @@
                             <span>{{ __("تدقيق الملغيات") }}</span>
                         </a>
                     @endcanany
+
+                    @if($canSurgeries ?? true)
+                        <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-3 shadow-sm d-flex align-items-center gap-1" title="{{ __("الانتقال إلى كاشير العمليات المتقدم") }}" target="_blank">
+                            <i class="fas fa-procedures text-danger"></i>
+                            <span>{{ __("كاشير العمليات المتقدم") }}</span>
+                            <i class="fas fa-external-link-alt small ms-1"></i>
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>
@@ -203,7 +211,7 @@
                                 $requestsCount = ($canMedicalRequests && isset($pendingMedicalRequests)) ? $pendingMedicalRequests->total() : 0;
                                 $postponedCount = ($canMedicalRequests && isset($postponedMedicalRequests)) ? $postponedMedicalRequests->total() : ($postponedRequestsCount ?? 0);
                                 $emergencyCount = ($canEmergency && isset($pendingEmergencyPayments)) ? $pendingEmergencyPayments->total() : 0;
-                                $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount + ($pendingSurgeriesCount ?? 0);
+                                $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount;
                             @endphp
 
                             @if(($pendingRefundCount ?? 0) > 0)
@@ -311,11 +319,11 @@
                                                 </button>
                                             </li>
                                             @if($canSurgeries ?? true)
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill {{ ($pendingSurgeriesCount ?? 0) > 0 ? 'text-danger' : '' }}" id="tab-surgeries-btn" data-bs-toggle="pill" data-bs-target="#tab-surgeries" type="button" role="tab">
-                                                    <i class="fas fa-procedures me-1 text-danger"></i> {{ __("العمليات الجراحية") }}
-                                                    <span class="badge {{ ($pendingSurgeriesCount ?? 0) > 0 ? 'bg-danger' : 'bg-secondary' }} ms-1 rounded-pill">{{ $pendingSurgeriesCount ?? 0 }}</span>
-                                                </button>
+                                            <li class="nav-item ms-auto" role="presentation">
+                                                <a href="{{ route('cashier.surgeries.index') }}" class="nav-link fw-bold px-3 py-1-5 rounded-pill text-danger border border-danger-subtle bg-danger-subtle" title="{{ __("الانتقال إلى كاشير العمليات المتقدم") }}" target="_blank">
+                                                    <i class="fas fa-procedures me-1 text-danger"></i> {{ __("كاشير العمليات المتقدم") }}
+                                                    <i class="fas fa-external-link-alt small ms-1"></i>
+                                                </a>
                                             </li>
                                             @endif
                                             <li class="nav-item" role="presentation">
@@ -661,60 +669,7 @@
                                                                 @endforeach
                                                             @endif
 
-                                                            {{-- العمليات الجراحية والفحوصات --}}
-                                                            @if($canSurgeries ?? true)
-                                                                @foreach($pendingSurgeriesList ?? [] as $surg)
-                                                                    @php
-                                                                        $patientName = $surg->patient?->user?->name ?? 'غير محدد';
-                                                                        $patientId = $surg->patient?->national_id ?? '---';
-                                                                        $phone = $surg->patient?->user?->phone ?? '-';
-                                                                        $doctorName = $surg->doctor?->user?->name ?? $surg->surgeon_name ?? 'غير محدد';
-                                                                        $department = $surg->department?->name ?? 'العمليات';
-                                                                        $insType = $surg->insurance_type ?? $surg->patient?->insurance_type ?? 'none';
-                                                                        $isIns = in_array($insType, ['hi', 'moi']);
-                                                                        $pendingLabCount = $surg->labTests->where('payment_status', '!=', 'paid')->count();
-                                                                        $pendingRadCount = $surg->radiologyTests->where('payment_status', '!=', 'paid')->count();
-                                                                        $pendingExtraCount = $surg->extraServices->where('payment_status', '!=', 'paid')->count();
-                                                                    @endphp
-                                                                    <tr class="pending-all-row" data-type="surgery" data-finance="{{ $isIns ? 'insurance' : 'cash' }}">
-                                                                        <td><strong class="text-danger">#{{ $surg->id }}</strong></td>
-                                                                        <td>
-                                                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">
-                                                                                <i class="fas fa-procedures me-1"></i> {{ __("عملية") }}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            <div class="fw-bold text-dark">{{ $patientName }}</div>
-                                                                            <small class="text-muted">ملف: #{{ $patientId }} • {{ $phone }}</small>
-                                                                        </td>
-                                                                        <td>
-                                                                            <div class="fw-bold text-dark">{{ $surg->surgery_type }}</div>
-                                                                            <small class="text-muted">{{ $department }} • {{ $doctorName }}</small>
-                                                                            @if($pendingLabCount > 0)
-                                                                                <span class="badge bg-warning-subtle text-dark border border-warning px-1.5 py-0.5 rounded-pill" style="font-size: 0.7rem;">
-                                                                                    <i class="fas fa-flask text-danger"></i> {{ $pendingLabCount }} {{ __("تحاليل معلقة") }}
-                                                                                </span>
-                                                                            @endif
-                                                                            @if($pendingRadCount > 0)
-                                                                                <span class="badge bg-info-subtle text-dark border border-info px-1.5 py-0.5 rounded-pill" style="font-size: 0.7rem;">
-                                                                                    <i class="fas fa-x-ray text-primary"></i> {{ $pendingRadCount }} {{ __("أشعة معلقة") }}
-                                                                                </span>
-                                                                            @endif
-                                                                        </td>
-                                                                        <td class="text-end">
-                                                                            <span class="text-danger fw-bold">{{ __('معلق بالكاشير') }}</span>
-                                                                        </td>
-                                                                        <td>
-                                                                            {{ $surg->scheduled_date ? \Carbon\Carbon::parse($surg->scheduled_date)->format('Y-m-d') : ($surg->created_at ? $surg->created_at->format('Y-m-d') : '-') }}
-                                                                        </td>
-                                                                        <td class="text-center">
-                                                                            <a href="{{ route('cashier.surgeries.payment.form', $surg->id) }}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm">
-                                                                                <i class="fas fa-cash-register me-1"></i> تسديد
-                                                                            </a>
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            @endif
+
                                                         </tbody>
                                                     </table>
                                                 </div>
@@ -740,9 +695,10 @@
                                                             </button>
                                                         @endif
                                                         @if($canSurgeries ?? true)
-                                                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-surgeries-btn').click()">
-                                                                <i class="fas fa-procedures me-1"></i> {{ __("العمليات") }} ({{ $pendingSurgeriesCount ?? 0 }})
-                                                            </button>
+                                                            <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1" target="_blank">
+                                                                <i class="fas fa-procedures me-1"></i> {{ __("كاشير العمليات المتقدم") }}
+                                                                <i class="fas fa-external-link-alt small ms-1"></i>
+                                                            </a>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -1485,105 +1441,7 @@
                                             @endif
                                         </div>
 
-                                        <!-- تبويب العمليات الجراحية المعلقة (Surgeries Inpatient Folios & Tests) -->
-                                        <div class="tab-pane fade" id="tab-surgeries" role="tabpanel">
-                                            @if(isset($pendingSurgeriesList) && count($pendingSurgeriesList) > 0)
-                                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                    <div>
-                                                        <strong class="text-dark"><i class="fas fa-procedures text-danger me-1"></i> {{ __("العمليات الجراحية والفحوصات المعلقة") }}</strong>
-                                                        <span class="text-muted small d-block">{{ __("قائمة العمليات الجراحية التي بذمتها أتعاب جراحة، أو إقامة، أو تحاليل مخبرية وأشعة مضافة حديثاً بانتظار التحصيل.") }}</span>
-                                                    </div>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" target="_blank">
-                                                            <i class="fas fa-external-link-alt me-1"></i> {{ __('كاشير العمليات المتقدم') }}
-                                                        </a>
-                                                        <span class="badge bg-danger fs-7 px-3 py-2">
-                                                            <i class="fas fa-procedures me-1"></i> {{ count($pendingSurgeriesList) }} {{ __("عملية معلقة") }}
-                                                        </span>
-                                                    </div>
-                                                </div>
 
-                                                <div class="table-responsive">
-                                                    <table class="table table-hover align-middle mb-0">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th>{{ __("# العملية") }}</th>
-                                                                <th>{{ __("المريض") }}</th>
-                                                                <th>{{ __("نوع العملية والجراح") }}</th>
-                                                                <th>{{ __("البنود المعلقة") }}</th>
-                                                                <th class="text-center">{{ __("الإجراء المالي") }}</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            @foreach($pendingSurgeriesList as $surg)
-                                                                @php
-                                                                    $patientName = $surg->patient?->user?->name ?? 'غير محدد';
-                                                                    $phone = $surg->patient?->user?->phone ?? '-';
-                                                                    $docName = $surg->doctor?->user?->name ?? $surg->surgeon_name ?? 'غير محدد';
-                                                                    $pendingLabCount = $surg->labTests->where('payment_status', '!=', 'paid')->count();
-                                                                    $pendingRadCount = $surg->radiologyTests->where('payment_status', '!=', 'paid')->count();
-                                                                    $pendingExtraCount = $surg->extraServices->where('payment_status', '!=', 'paid')->count();
-                                                                    $isSurgeryFeeUnpaid = in_array($surg->payment_status, ['pending', 'partial', 'partially_paid']);
-                                                                @endphp
-                                                                <tr>
-                                                                    <td>
-                                                                        <strong>#{{ $surg->id }}</strong>
-                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">ملف: #{{ $surg->patient?->national_id ?: $surg->patient_id }}</span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <div class="fw-bold text-dark">{{ $patientName }}</div>
-                                                                        <small class="text-muted"><i class="fas fa-phone-alt me-1"></i>{{ $phone }}</small>
-                                                                    </td>
-                                                                    <td>
-                                                                        <div class="fw-bold text-dark">{{ $surg->surgery_type }}</div>
-                                                                        <small class="text-muted"><i class="fas fa-user-md me-1"></i>{{ $docName }}</small>
-                                                                    </td>
-                                                                    <td>
-                                                                        <div class="d-flex flex-wrap gap-1">
-                                                                            @if($isSurgeryFeeUnpaid)
-                                                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill small">
-                                                                                    <i class="fas fa-procedures me-1"></i> {{ __("أتعاب عملية") }}
-                                                                                </span>
-                                                                            @endif
-                                                                            @if($pendingLabCount > 0)
-                                                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 rounded-pill small">
-                                                                                    <i class="fas fa-flask text-danger"></i> {{ $pendingLabCount }} {{ __("تحاليل مخبرية معلقة") }}
-                                                                                </span>
-                                                                            @endif
-                                                                            @if($pendingRadCount > 0)
-                                                                                <span class="badge bg-info-subtle text-dark border border-info px-2 py-1 rounded-pill small">
-                                                                                    <i class="fas fa-x-ray text-primary"></i> {{ $pendingRadCount }} فحوصات {{ __("أشعة معلقة") }}
-                                                                                </span>
-                                                                            @endif
-                                                                            @if($pendingExtraCount > 0)
-                                                                                <span class="badge bg-secondary-subtle text-dark border border-secondary px-2 py-1 rounded-pill small">
-                                                                                    <i class="fas fa-plus-circle me-1"></i> {{ $pendingExtraCount }} {{ __("خدمات إضافية") }}
-                                                                                </span>
-                                                                            @endif
-                                                                            @if(!$isSurgeryFeeUnpaid && $pendingLabCount === 0 && $pendingRadCount === 0 && $pendingExtraCount === 0)
-                                                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1 rounded-pill small">
-                                                                                    <i class="fas fa-check-circle me-1"></i> {{ __("تسوية إقامة / فروقات") }}
-                                                                                </span>
-                                                                            @endif
-                                                                        </div>
-                                                                    </td>
-                                                                    <td class="text-center">
-                                                                        <a href="{{ route('cashier.surgeries.payment.form', $surg->id) }}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm">
-                                                                            <i class="fas fa-cash-register me-1"></i> {{ __("تسديد وسند قبض") }}
-                                                                        </a>
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            @else
-                                                <div class="text-center py-5">
-                                                    <i class="fas fa-procedures fa-3x text-muted opacity-50 mb-3"></i>
-                                                    <p class="text-muted mb-0">{{ __('لا توجد عمليات جراحية أو تحاليل عمليات معلقة مالياً حالياً.') }}</p>
-                                                </div>
-                                            @endif
-                                        </div>
 
                                         <!-- تبويب مستحقات الاسترجاع (Refunds) -->
                                         <div class="tab-pane fade" id="tab-refunds" role="tabpanel">

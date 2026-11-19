@@ -483,57 +483,11 @@ class CashierController extends Controller
 
         $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount + $pendingCcuRefundCount;
 
-        // جلب العمليات الجراحية المعلقة (أتعاب عملية، إقامة، أو تحاليل/أشعة/خدمات معلقة غير مسددة)
+        // كاشير العمليات المتقدم يدار في شاشة تخصصية منفصلة (cashier.surgeries.index)
         $canSurgeries = $isAdmin || ($user && ($user->can('view cashier surgeries') || $user->can('process surgery payments')));
-        $surgeriesQuery = Surgery::with([
-            'patient.user',
-            'doctor.user',
-            'department',
-            'surgicalOperation',
-            'room',
-            'labTests.labTest',
-            'radiologyTests.radiologyType',
-            'extraServices',
-        ])->where(function ($query) {
-            $query->where(function ($q) {
-                $q->where('billing_status', '!=', 'pending_review')
-                    ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-                    ->where(function ($subQ) {
-                        $subQ->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
-                            ->orWhereRaw('surgery_fee_paid_amount > (surgery_fee + (select COALESCE(sum(fee), 0) from surgery_additional_operations where surgery_additional_operations.surgery_id = surgeries.id))')
-                            ->orWhereRaw('room_fee_paid_amount > room_fee')
-                            ->orWhereHas('labTests', function ($lq) {
-                                $lq->where('payment_status', '!=', 'paid');
-                            })
-                            ->orWhereHas('radiologyTests', function ($rq) {
-                                $rq->where('payment_status', '!=', 'paid');
-                            })
-                            ->orWhereHas('extraServices', function ($eq) {
-                                $eq->where('payment_status', '!=', 'paid');
-                            });
-                    });
-            })
-                ->orWhere(function ($q) {
-                    $q->where('status', 'cancelled')
-                        ->where(function ($subQ) {
-                            $subQ->where('surgery_fee_paid_amount', '>', 0)
-                                ->orWhere('room_fee_paid_amount', '>', 0);
-                        });
-                });
-        });
-
-        if ($search) {
-            $surgeriesQuery->where(function ($q) use ($search) {
-                $q->where('id', $search)
-                    ->orWhere('surgery_type', 'like', "%{$search}%")
-                    ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
-                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%")->orWhere('medical_number', 'like', "%{$search}%"));
-            });
-        }
-
-        $pendingSurgeriesList = $surgeriesQuery->orderByDesc('scheduled_date')->get();
-        $pendingSurgeriesCount = $pendingSurgeriesList->count();
-        $todayStats['pending_surgeries_count'] = $pendingSurgeriesCount;
+        $pendingSurgeriesList = collect();
+        $pendingSurgeriesCount = 0;
+        $todayStats['pending_surgeries_count'] = 0;
 
         // استخدام اسم مختلف لتجنب التعارض
         $pendingMedicalRequests = $pendingRequests;
@@ -4225,6 +4179,9 @@ class CashierController extends Controller
                 $surgeryUpdates = [];
                 if ($roomFeePaidThisTime > 0) {
                     $surgeryUpdates['room_fee_paid_amount'] = ($surgery->room_fee_paid_amount ?? 0) + $roomFeePaidThisTime;
+                }
+                if (isset($targetRoomFee) && $targetRoomFee > 0) {
+                    $surgeryUpdates['room_fee'] = $targetRoomFee;
                 }
                 if ($isRoomPackageIncluded) {
                     $surgeryUpdates['is_room_package_included'] = true;

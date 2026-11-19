@@ -3638,6 +3638,142 @@
                         </div>
                     @endif
 
+                    {{-- 2. Physical Therapy (العلاج الفيزيائي) Request Section --}}
+                    @php
+                        $physioOrders = $surgery->extraServices->filter(function($srv) {
+                            return str_contains($srv->name, 'فيزيائ') 
+                                || str_contains($srv->name, 'طبيعي') 
+                                || str_contains(strtolower($srv->name), 'physio')
+                                || ($srv->service && ($srv->service->code === 'PHYS-01' || str_contains($srv->service->name, 'فيزيائ')));
+                        });
+                    @endphp
+
+                    <div class="card rounded-4 border shadow-sm mb-4 bg-white overflow-hidden" style="border-color: #cbd5e1 !important;">
+                        <div class="card-header bg-light border-bottom py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded-circle p-2 d-inline-flex align-items-center justify-content-center text-white" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); width: 36px; height: 36px;">
+                                    <i class="fas fa-hand-holding-medical"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">{{ __("طلب خدمة علاج فيزيائي وتأهيل سريري (Physiotherapy Request)") }}</h6>
+                                    <small class="text-muted">{{ __("طلب مباشر من الطبيب المقيم يُرحل فوراً إلى كشف حساب الكاشير بسعر مبدئي 60,000 د.ع قابل للتعديل") }}</small>
+                                </div>
+                            </div>
+                            <span class="badge rounded-pill px-3 py-1.5" style="background: #ccfbf1; color: #0f766e; font-weight: 700;">
+                                <i class="fas fa-receipt me-1"></i> {{ __("السعر المبدئي: 60,000 د.ع (قابل للتعديل لدى الكاشير)") }}
+                            </span>
+                        </div>
+                        <div class="card-body p-4">
+                            @if($canWriteCurrentTab)
+                                <form action="{{ route('clinical-station.physiotherapy.store', $surgery) }}" method="POST" class="mb-4 p-3 rounded-3" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                                    @csrf
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-list-ol text-primary me-1"></i> {{ __("عدد الجلسات:") }} <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" name="sessions" class="form-control rounded-3 fw-bold text-center" min="1" max="20" value="1" required id="physioSessionsInput">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-tag text-success me-1"></i> {{ __("سعر الجلسة (د.ع):") }}
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" step="500" min="0" name="unit_price" class="form-control rounded-start-3 fw-bold text-end" value="60000" id="physioPriceInput">
+                                                <span class="input-group-text bg-white small text-muted">{{ __("د.ع") }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-clipboard-check text-info me-1"></i> {{ __("التوصية السريرية والتشخيص (ملاحظات الجلسة):") }}
+                                            </label>
+                                            <input type="text" name="notes" class="form-control rounded-3" placeholder="{{ __('مثال: تأهيل حركي وتمارين تنفسية بعد العملية، تخفيف وذمة...') }}" value="{{ __('جلسة علاج فيزيائي وتأهيل بتوصية الطبيب المقيم') }}">
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            <button type="submit" class="btn text-white w-100 rounded-pill py-2 fw-bold shadow-sm" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);">
+                                                <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال للكاشير") }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            @endif
+
+                            {{-- سجل طلبات العلاج الفيزيائي الحالية للعملية --}}
+                            @if($physioOrders->isEmpty())
+                                <div class="text-center py-3 text-muted">
+                                    <i class="fas fa-spa fa-2x opacity-25 mb-2 d-block"></i>
+                                    <span class="small">{{ __("لم يتم تسجيل أي طلب علاج فيزيائي لهذه العملية حتى الآن.") }}</span>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>{{ __("الخدمة والبيان") }}</th>
+                                                <th class="text-center">{{ __("الجلسات") }}</th>
+                                                <th class="text-end">{{ __("سعر الجلسة") }}</th>
+                                                <th class="text-end">{{ __("المبلغ المطلوب") }}</th>
+                                                <th class="text-center">{{ __("حالة الكاشير") }}</th>
+                                                <th>{{ __("التأريخ والطالب") }}</th>
+                                                @if($canWriteCurrentTab)
+                                                    <th class="text-center" style="width: 80px;">{{ __("إجراء") }}</th>
+                                                @endif
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($physioOrders as $pOrder)
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-bold text-dark d-flex align-items-center gap-1.5">
+                                                            <i class="fas fa-spa text-teal" style="color: #0d9488;"></i>
+                                                            <span>{{ $pOrder->name }}</span>
+                                                        </div>
+                                                        @if($pOrder->notes)
+                                                            <small class="text-muted d-block mt-0.5"><i class="fas fa-info-circle me-1"></i>{{ $pOrder->notes }}</small>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center fw-bold">{{ $pOrder->quantity }}</td>
+                                                    <td class="text-end">{{ number_format($pOrder->price, 0) }} {{ __("د.ع") }}</td>
+                                                    <td class="text-end fw-bold text-success">{{ number_format($pOrder->total_amount, 0) }} {{ __("د.ع") }}</td>
+                                                    <td class="text-center">
+                                                        @if($pOrder->payment_status === 'paid')
+                                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __("مسدد في الكاشير") }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill" title="{{ __('يمكن للكاشير تعديل السعر عند السداد') }}">
+                                                                <i class="fas fa-clock me-1 text-warning"></i> {{ __("معلق بالكاشير (قابل للتعديل)") }}
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="small">
+                                                        <div>{{ $pOrder->created_at ? $pOrder->created_at->format('Y-m-d H:i') : '-' }}</div>
+                                                        <small class="text-muted">{{ $pOrder->createdBy?->name ?? __('النظام') }}</small>
+                                                    </td>
+                                                    @if($canWriteCurrentTab)
+                                                        <td class="text-center">
+                                                            @if($pOrder->payment_status !== 'paid')
+                                                                <form action="{{ route('clinical-station.physiotherapy.cancel', [$surgery, $pOrder]) }}" method="POST" onsubmit="return confirm('{{ __('هل أنت متأكد من إلغاء طلب العلاج الفيزيائي هذا؟') }}');">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 shadow-xs" title="{{ __('إلغاء الطلب') }}">
+                                                                        <i class="fas fa-trash-alt me-1"></i> {{ __("إلغاء") }}
+                                                                    </button>
+                                                                </form>
+                                                            @else
+                                                                <span class="text-muted small">-</span>
+                                                            @endif
+                                                        </td>
+                                                    @endif
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     {{-- Consultations List --}}
                     <div class="card rounded-4 border shadow-sm p-3 bg-white">
                         <h6 class="fw-bold text-dark mb-3 d-flex align-items-center justify-content-between border-bottom pb-2">

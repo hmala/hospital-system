@@ -828,6 +828,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/clinical/{surgery}/consultations', [\App\Http\Controllers\ClinicalStationController::class, 'storeConsultation'])->name('clinical-station.consultations.store');
         Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation'])->name('clinical-station.consultations.respond');
         Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation'])->name('clinical-station.consultations.cancel');
+        Route::post('/clinical/{surgery}/physiotherapy', [\App\Http\Controllers\ClinicalStationController::class, 'storePhysiotherapy'])->name('clinical-station.physiotherapy.store');
+        Route::delete('/clinical/{surgery}/physiotherapy/{extraService}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelPhysiotherapy'])->name('clinical-station.physiotherapy.cancel');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
         Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
         Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');

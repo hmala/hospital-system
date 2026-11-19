@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Doctor;
+use App\Models\HospitalExtraService;
 use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\NursingStation;
@@ -14,6 +15,7 @@ use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
 use App\Models\SurgeryConsultation;
+use App\Models\SurgeryExtraService;
 use App\Models\SurgeryLabTest;
 use App\Models\SurgeryRadiologyTest;
 use App\Models\SurgeryTabPermission;
@@ -146,6 +148,8 @@ class ClinicalStationController extends Controller
             'consultations.doctor.department',
             'consultations.requestedBy',
             'consultations.respondedBy',
+            'extraServices.service',
+            'extraServices.createdBy',
         ]);
 
         // Floor sub-store location for patient's room and available supply batches
@@ -1653,5 +1657,116 @@ class ClinicalStationController extends Controller
 
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
             ->with('success', 'تم إلغاء طلب الاستشارة الطبية بنجاح.');
+    }
+
+    /**
+     * Store a new physiotherapy / physical therapy request for the surgery patient.
+     */
+    public function storePhysiotherapy(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin
+            || (($userPermissions['consultations'] ?? '') === SurgeryTabPermission::ACCESS_WRITE)
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator']));
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بطلب علاج فيزيائي.');
+        }
+
+        $validated = $request->validate([
+            'sessions' => 'required|integer|min:1|max:30',
+            'unit_price' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $physioService = HospitalExtraService::where('category', 'medical')
+            ->where(function ($q) {
+                $q->where('name', 'like', '%فيزيائ%')->orWhere('name', 'like', '%طبيعي%');
+            })
+            ->first();
+
+        $defaultPrice = $physioService ? (float) $physioService->default_price : 60000.00;
+        $unitPrice = isset($validated['unit_price']) && $validated['unit_price'] !== ''
+            ? (float) $validated['unit_price']
+            : $defaultPrice;
+
+        $sessions = (int) $validated['sessions'];
+        $totalAmount = $unitPrice * $sessions;
+
+        $serviceName = 'علاج فيزيائي';
+        if ($sessions > 1) {
+            $serviceName .= " ({$sessions} جلسات)";
+        }
+
+        $extraService = $surgery->extraServices()->create([
+            'service_id' => $physioService?->id,
+            'name' => $serviceName,
+            'price' => $unitPrice,
+            'quantity' => $sessions,
+            'total_amount' => $totalAmount,
+            'notes' => $validated['notes'] ?? 'جلسة علاج فيزيائي وتأهيل بتوصية الطبيب المقيم',
+            'payment_status' => 'pending',
+            'created_by' => Auth::id(),
+        ]);
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'create',
+                'surgery',
+                "طلب خدمة علاج فيزيائي (عدد الجلسات: {$sessions} - المبلغ: {$totalAmount} د.ع) للعملية #{$surgery->id} للمريض {$surgery->patient?->user?->name}",
+                $surgery
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تسجيل وإرسال طلب العلاج الفيزيائي بنجاح إلى كشف الكاشير.',
+                'extra_service' => $extraService,
+            ]);
+        }
+
+        return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
+            ->with('success', 'تم تسجيل وإرسال طلب العلاج الفيزيائي بنجاح بقيمة '.number_format($totalAmount, 0).' د.ع وأُدرج ضمن كشف الكاشير (قابل للتعديل).');
+    }
+
+    /**
+     * Cancel / Delete a pending physiotherapy request before cashier checkout.
+     */
+    public function cancelPhysiotherapy(Request $request, Surgery $surgery, SurgeryExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $userPermissions = SurgeryTabPermission::getUserTabPermissions($user);
+        $canWrite = $isAdmin
+            || (($userPermissions['consultations'] ?? '') === SurgeryTabPermission::ACCESS_WRITE)
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator']));
+
+        if (! $canWrite) {
+            abort(403, 'غير مصرح لك بإلغاء طلب العلاج الفيزيائي.');
+        }
+
+        if ($extraService->surgery_id !== $surgery->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه العملية.');
+        }
+
+        if ($extraService->payment_status === 'paid') {
+            return back()->with('error', 'لا يمكن إلغاء خدمة مسددة مالياً في الكاشير.');
+        }
+
+        $extraService->delete();
+
+        if (class_exists(UserActivityLogger::class)) {
+            UserActivityLogger::log(
+                'delete',
+                'surgery',
+                "إلغاء طلب علاج فيزيائي للعملية #{$surgery->id}",
+                $surgery
+            );
+        }
+
+        return back()->with('success', 'تم إلغاء طلب العلاج الفيزيائي بنجاح.');
     }
 }
