@@ -182,7 +182,7 @@
     </div>
 
     <!-- Main Table Card -->
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card border-0 shadow-sm rounded-3">
         <div class="table-responsive roster-table-wrapper" style="max-height: 72vh;">
             <form action="{{ route('hr.schedules.store') }}" method="POST" id="rosterForm">
                 @csrf
@@ -248,18 +248,24 @@
 
                                             <!-- Row Menu -->
                                             <div class="dropdown no-print">
-                                                <button class="btn btn-sm btn-light border-0 py-0 px-1 text-muted" type="button" data-bs-toggle="dropdown">
+                                                <button class="btn btn-sm btn-light border-0 py-0 px-1 text-muted" 
+                                                        type="button" 
+                                                        data-bs-toggle="dropdown" 
+                                                        data-bs-popper-config='{"strategy":"fixed"}'
+                                                        data-bs-boundary="viewport"
+                                                        aria-expanded="false"
+                                                        title="إجراءات تعبئة أسبوع الموظف">
                                                     <i class="fas fa-ellipsis-v" style="font-size: 0.7rem;"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
-                                                    <li><h6 class="dropdown-header py-1 small">تعبئة سريعة لـ {{ Str::words($emp->full_name, 2, '') }}</h6></li>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 small" style="min-width: 220px; max-height: 320px; overflow-y: auto; z-index: 1065;">
+                                                    <li><h6 class="dropdown-header py-1 small fw-bold text-dark border-bottom pb-1 mb-1"><i class="fas fa-user-clock text-primary me-1"></i> {{ Str::words($emp->full_name, 2, '') }}</h6></li>
                                                     @if($emp->defaultShift)
-                                                        <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $emp->default_shift_id }}', '{{ $emp->defaultShift->color_code }}', {{ $isSplit ? "'".$emp->second_shift_id."'" : 'null' }}, {{ $isSplit ? "'".($emp->secondShift->color_code ?? '')."'" : 'null' }})"><i class="fas fa-magic text-primary me-2"></i>تطبيق الشفت الدائم</a></li>
+                                                        <li><a class="dropdown-item py-1 text-primary fw-semibold" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $emp->default_shift_id }}', '{{ $emp->defaultShift->color_code }}', {{ $isSplit ? "'".$emp->second_shift_id."'" : 'null' }}, {{ $isSplit ? "'".($emp->secondShift->color_code ?? '')."'" : 'null' }})"><i class="fas fa-magic me-2"></i>تطبيق الشفت الدائم</a></li>
                                                     @endif
                                                     @foreach($shifts as $sh)
                                                         <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '{{ $sh->id }}', '{{ $sh->color_code }}', null, null)"><i class="fas fa-clock me-2" style="color: {{ $sh->color_code }}"></i>تعبئة الكل بـ {{ $sh->name }}</a></li>
                                                     @endforeach
-                                                    <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', 'off', '#6c757d', 'off', '#6c757d')"><i class="fas fa-coffee text-secondary me-2"></i>تعبئة الكل راحة (Off)</a></li>
+                                                    <li><a class="dropdown-item py-1 text-secondary" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', 'off', '#6c757d', 'off', '#6c757d')"><i class="fas fa-coffee me-2"></i>تعبئة الكل راحة (Off)</a></li>
                                                     <li><hr class="dropdown-divider my-1"></li>
                                                     <li><a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="fillEmployeeRow('{{ $emp->id }}', '', '', '', '')"><i class="fas fa-eraser me-2"></i>مسح أسبوع الموظف</a></li>
                                                 </ul>
@@ -679,6 +685,16 @@
         transform: scale(1.06);
         font-weight: bold;
     }
+    .roster-emp-row.dropdown-active {
+        position: relative;
+        z-index: 1050 !important;
+    }
+    .roster-emp-row.dropdown-active .roster-emp-cell {
+        z-index: 1055 !important;
+    }
+    .roster-emp-cell .dropdown-menu {
+        z-index: 1065 !important;
+    }
 
     /* Print Styles */
     @media print {
@@ -1006,6 +1022,24 @@
                 document.getElementById('emList').innerHTML = '<li class="list-group-item text-danger py-2">حدث خطأ في الاتصال.</li>';
             });
     }
+
+    // Dynamic z-index elevation when row menu dropdown opens
+    document.addEventListener('show.bs.dropdown', function (e) {
+        var row = e.target.closest ? e.target.closest('.roster-emp-row') : null;
+        if (row) {
+            row.classList.add('dropdown-active');
+            var cell = row.querySelector('.roster-emp-cell');
+            if (cell) cell.style.zIndex = '1055';
+        }
+    });
+    document.addEventListener('hidden.bs.dropdown', function (e) {
+        var row = e.target.closest ? e.target.closest('.roster-emp-row') : null;
+        if (row) {
+            row.classList.remove('dropdown-active');
+            var cell = row.querySelector('.roster-emp-cell');
+            if (cell) cell.style.zIndex = '5';
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', function() {
         checkFatigue();
