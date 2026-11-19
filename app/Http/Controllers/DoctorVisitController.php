@@ -10,6 +10,7 @@ use App\Models\PrescribedMedication;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\Request as MedicalRequest;
+use App\Models\SurgeryConsultation;
 use App\Models\User;
 use App\Models\UserLabTestGroup;
 use App\Models\UserLabTestStat;
@@ -33,8 +34,9 @@ class DoctorVisitController extends Controller
             $todayVisits = collect();
             $upcomingVisits = collect();
             $appointments = collect();
+            $inpatientConsultations = collect();
 
-            return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments'))->with('error', 'بيانات الطبيب غير مكتملة');
+            return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments', 'inpatientConsultations'))->with('error', 'بيانات الطبيب غير مكتملة');
         }
 
         // جميع الزيارات (الحالية والسابقة) - مرتبة حسب الأولوية
@@ -88,7 +90,26 @@ class DoctorVisitController extends Controller
             ->limit(50)
             ->get();
 
-        return view('doctors.visits.index', compact('doctor', 'allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
+        // استشارات العمليات والرقود الموجهة لهذا الطبيب (المعلقة والمكتملة فقط، مع استبعاد الملغاة)
+        $inpatientConsultations = SurgeryConsultation::where('doctor_id', $doctor->id)
+            ->where('status', '!=', 'cancelled')
+            ->whereHas('surgery', function ($sq) {
+                $sq->where('status', '!=', 'cancelled');
+            })
+            ->with([
+                'surgery.patient.user',
+                'surgery.patient.healthInsuranceCategory',
+                'surgery.room',
+                'surgery.doctor.user',
+                'requestedBy',
+                'respondedBy',
+            ])
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('doctors.visits.index', compact('doctor', 'allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits', 'inpatientConsultations'));
     }
 
     public function convertAppointmentToVisit(Appointment $appointment)

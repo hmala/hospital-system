@@ -248,15 +248,26 @@
         return (float)($extra->total_amount ?? 0);
     });
 
+    // استشارات سريرية معلقة ومدفوعة
+    $pendingConsultations = $isCancelled ? collect() : $surgery->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
+    $paidConsultations = $surgery->consultations->where('payment_status', 'paid');
+    $pendingConsultationsFee = $isCancelled ? 0 : $pendingConsultations->sum('fee');
+    $paidConsultationsFee = $paidConsultations->sum(function($c) {
+        if ($c->is_package_included) {
+            return 0;
+        }
+        return (float)($c->fee ?? 0);
+    });
+
     // تفاصيل مدفوعات الصندوق والتأمين
     $patientPaidCash = (float) $surgery->payments->sum('amount');
     $insurancePaidAmount = (float) $surgery->payments->sum('insurance_share');
 
-    // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً والخدمات الإضافية)
-    $hasPendingItems = ($remainingSurgeryFee > 0) || ($remainingRoomFee > 0) || ($pendingLabTests->count() > 0) || ($pendingRadiologyTests->count() > 0) || ($pendingExtraServices->count() > 0);
-    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
-    $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
-    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee);
+    // المبالغ (تشمل رسوم الغرفة وتعتمد على المبالغ المدفوعة جزئياً والخدمات الإضافية والاستشارات)
+    $hasPendingItems = ($remainingSurgeryFee > 0) || ($remainingRoomFee > 0) || ($pendingLabTests->count() > 0) || ($pendingRadiologyTests->count() > 0) || ($pendingExtraServices->count() > 0) || ($pendingConsultations->count() > 0);
+    $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee + $pendingConsultationsFee);
+    $paidAmount = $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee + $paidConsultationsFee;
+    $totalAmount = $isCancelled ? 0 : ($totalSurgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee + $pendingConsultationsFee + $paidConsultationsFee);
 @endphp
 
 <div class="container-fluid">
@@ -559,6 +570,26 @@
                                                 <span class="badge bg-info text-dark">مشمول بالباقة (0 د.ع)</span>
                                             @else
                                                 {{ number_format($extraService->total_amount ?? 0, 0) }}
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>مدفوع</span>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+
+                                    @foreach($paidConsultations as $consultation)
+                                    <tr class="table-success">
+                                        <td>
+                                            <i class="fas fa-user-md text-success me-2"></i>
+                                            استشارة طبية
+                                        </td>
+                                        <td>د. {{ $consultation->doctor?->user?->name ?? 'طبيب استشاري' }} ({{ $consultation->specialty ?: 'استشارة تخصصية' }})</td>
+                                        <td class="text-end">
+                                            @if($consultation->is_package_included)
+                                                <span class="badge bg-info text-dark">مشمول بالباقة (0 د.ع)</span>
+                                            @else
+                                                {{ number_format($consultation->fee ?? 0, 0) }}
                                             @endif
                                         </td>
                                         <td class="text-center">
@@ -1594,6 +1625,140 @@
                                                 <td colspan="2"></td>
                                             </tr>
                                         @endif
+
+                                        <!-- استشارات الأطباء الاختصاص والسريرية المعلقة -->
+                                        @if($pendingConsultations->count() > 0)
+                                            <tr class="table-primary bg-opacity-25">
+                                                <td class="text-center">
+                                                    <input type="checkbox" 
+                                                           class="form-check-input" 
+                                                           id="selectAllConsultations" 
+                                                           checked 
+                                                           onchange="toggleSelectAllConsultations()">
+                                                </td>
+                                                <td colspan="5" class="py-2.5">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 26px; height: 26px;">
+                                                                <i class="fas fa-user-md fa-xs"></i>
+                                                            </div>
+                                                            <strong class="text-primary fs-6">
+                                                                استشارات الأطباء الاختصاص والسريرية ({{ $pendingConsultations->count() }})
+                                                            </strong>
+                                                        </div>
+                                                        <span class="badge bg-white text-primary border small">
+                                                            <i class="fas fa-stethoscope me-1"></i>طلب استشاري من المقيم
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @foreach($pendingConsultations as $consultation)
+                                                @php
+                                                    $cFee = (float)$consultation->fee;
+                                                    $doctorName = $consultation->doctor?->user?->name ?? 'طبيب استشاري';
+                                                    $specialtyName = $consultation->specialty ?: ($consultation->doctor?->department?->name ?? 'استشارة تخصصية');
+                                                @endphp
+                                                <tr class="align-middle item-row" data-item-group="consultation" data-item-id="{{ $consultation->id }}">
+                                                    <td class="text-center">
+                                                        <input type="checkbox" 
+                                                               class="form-check-input payment-item consultation-item" 
+                                                               name="pay_consultations[]" 
+                                                               value="{{ $consultation->id }}"
+                                                               data-base-price="{{ $cFee }}"
+                                                               data-moi-price="{{ $cFee }}"
+                                                               data-hi-price="{{ $cFee }}"
+                                                               data-item-type="consultation"
+                                                               checked>
+                                                    </td>
+                                                    <td class="ps-3">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="rounded-circle p-2 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                                <i class="fas fa-user-md small"></i>
+                                                            </div>
+                                                            <div>
+                                                                <span class="fw-bold text-dark">د. {{ $doctorName }}</span>
+                                                                <div class="small text-muted mt-1">
+                                                                    <span class="badge bg-light text-primary border me-1">{{ $specialtyName }}</span>
+                                                                    <span class="badge {{ $consultation->priorityBadgeClass() }} me-1">{{ $consultation->priorityLabel() }}</span>
+                                                                    @if($consultation->reason)
+                                                                        <span><i class="fas fa-comment-medical me-1 text-info"></i>{{ Str::limit($consultation->reason, 45) }}</span>
+                                                                    @endif
+                                                                </div>
+                                                                <div class="package-badge-container mt-1">
+                                                                    <span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0-5">
+                                                                        <i class="fas fa-coins me-1"></i>أتعاب استشارة منفصلة
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                                            <input type="number" 
+                                                                   class="form-control form-control-sm text-end fw-bold consultation-price-input" 
+                                                                   name="consultation_prices[{{ $consultation->id }}]" 
+                                                                   value="{{ (int)$cFee }}" 
+                                                                   min="0" 
+                                                                   step="1000" 
+                                                                   data-id="{{ $consultation->id }}"
+                                                                   style="width: 110px;"
+                                                                   title="أتعاب الاستشارة (يمكن تعديلها)">
+                                                            <span class="small text-muted">د.ع</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end fw-bold text-success fs-6 row-patient-share">
+                                                        {{ number_format($cFee, 0) }} د.ع
+                                                    </td>
+                                                    <td class="text-end text-muted fw-bold row-insurance-share">
+                                                        0 د.ع
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <div class="segmented-control-pills" style="max-width: 160px;">
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_consult_{{ $consultation->id }}" 
+                                                                       id="consult_inc_{{ $consultation->id }}" 
+                                                                       value="1" 
+                                                                       autocomplete="off">
+                                                                <label class="segmented-pill-label pill-included" for="consult_inc_{{ $consultation->id }}" title="مشمول ضمن باقة العملية (0 د.ع)">
+                                                                    <i class="fas fa-box-open"></i>
+                                                                    <span>مشمول</span>
+                                                                </label>
+
+                                                                <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
+                                                                       name="pkg_radio_consult_{{ $consultation->id }}" 
+                                                                       id="consult_sep_{{ $consultation->id }}" 
+                                                                       value="0" 
+                                                                       checked autocomplete="off">
+                                                                <label class="segmented-pill-label pill-unbundled" for="consult_sep_{{ $consultation->id }}" title="غير مشمول - منفصل">
+                                                                    <i class="fas fa-coins"></i>
+                                                                    <span>منفصل</span>
+                                                                </label>
+                                                                
+                                                                <input type="checkbox" class="package-inclusion-switch d-none" 
+                                                                       name="package_included[consultation][{{ $consultation->id }}]" 
+                                                                       id="pkg_incl_consult_{{ $consultation->id }}" 
+                                                                       value="1">
+                                                            </div>
+                                                            <button type="button" 
+                                                                    class="btn btn-outline-danger btn-sm p-1 rounded-circle delete-consultation-btn d-inline-flex align-items-center justify-content-center" 
+                                                                    style="width: 28px; height: 28px;"
+                                                                    data-url="{{ route('cashier.surgeries.consultations.cancel', [$surgery, $consultation]) }}"
+                                                                    data-name="استشارة د. {{ $doctorName }}"
+                                                                    title="إلغاء طلب الاستشارة من الكاشير">
+                                                                <i class="fas fa-trash-alt small"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            <tr class="table-light">
+                                                <td></td>
+                                                <td colspan="2" class="text-end"><strong>مجموع استشارات الأطباء:</strong></td>
+                                                <td class="text-end"><strong id="pending_consultations_fee_display">{{ number_format($pendingConsultationsFee, 0) }} د.ع</strong></td>
+                                                <td colspan="2"></td>
+                                            </tr>
+                                        @endif
                                     </tbody>
                                     <tfoot>
                                         <!-- المجموع الإجمالي المعتمد والمحدد -->
@@ -1956,17 +2121,20 @@ document.addEventListener('DOMContentLoaded', function() {
         let labCopayPct = 100;
         let radCopayPct = 100;
         let ecgCopayPct = 100;
+        let consultCopayPct = 100;
 
         if (currentInsType === 'hi') {
             surgeryCopayPct = hiCopays.surgery;
             labCopayPct = hiCopays.lab;
             radCopayPct = hiCopays.radiology;
             ecgCopayPct = hiCopays.ecg;
+            consultCopayPct = (hiCopays && hiCopays.consultation) ? hiCopays.consultation : (hiCopays.clinic || hiCopays.surgery || 15);
         } else if (currentInsType === 'moi') {
             surgeryCopayPct = moiCopay;
             labCopayPct = moiCopay;
             radCopayPct = moiCopay;
             ecgCopayPct = moiCopay;
+            consultCopayPct = moiCopay;
         }
 
         // 1. Surgery Fee portion
@@ -2086,10 +2254,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (insDisp) insDisp.textContent = '0 د.ع';
         }
 
-        // 3. Other items: Lab Tests, Radiology, Extra Services
+        // 3. Other items: Lab Tests, Radiology, Extra Services, Consultations
         let currentLabTotal = 0;
         let currentRadTotal = 0;
         let currentExtraTotal = 0;
+        let currentConsultationTotal = 0;
 
         document.querySelectorAll('.item-row').forEach(function(row) {
             const itemCheckbox = row.querySelector('.payment-item');
@@ -2101,8 +2270,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const isCheckedForPay = itemCheckbox.checked;
             const isPkgIncluded = pkgSwitch ? pkgSwitch.checked : false;
-            const itemType = itemCheckbox.dataset.itemType; // 'lab', 'radiology', 'extra'
-            const priceInput = row.querySelector('.extra-service-price-input');
+            const itemType = itemCheckbox.dataset.itemType; // 'lab', 'radiology', 'extra', 'consultation'
+            const priceInput = row.querySelector('.extra-service-price-input') || row.querySelector('.consultation-price-input');
             let basePrice = parseFloat(itemCheckbox.dataset.basePrice) || 0;
             if (priceInput && !isNaN(parseFloat(priceInput.value))) {
                 basePrice = Math.max(0, parseFloat(priceInput.value));
@@ -2219,6 +2388,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong>';
                         }
                     }
+                } else if (itemType === 'consultation') {
+                    if (isIns) {
+                        itemApproved = basePrice;
+                        itemPatientShare = Math.round(itemApproved * (consultCopayPct / 100));
+                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
+                    } else {
+                        itemApproved = basePrice;
+                        itemPatientShare = basePrice;
+                        itemInsuranceShare = 0;
+                    }
+
+                    if (priceCell) {
+                        if (isIns) {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong><br><small class="text-muted">(تحمل ' + consultCopayPct + '%)</small>';
+                        } else {
+                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' د.ع</strong>';
+                        }
+                    }
                 }
             }
 
@@ -2250,6 +2437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (itemType === 'lab') currentLabTotal += itemPatientShare;
                 if (itemType === 'radiology') currentRadTotal += itemPatientShare;
                 if (itemType === 'extra') currentExtraTotal += itemPatientShare;
+                if (itemType === 'consultation') currentConsultationTotal += itemPatientShare;
             } else {
                 if (!isPkgIncluded && itemPatientShare > 0) {
                     unselectedDeferredAmount += itemPatientShare;
@@ -2263,6 +2451,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (radTotalDisplay) radTotalDisplay.textContent = numberFormat(currentRadTotal) + ' د.ع';
         const extraTotalDisplay = document.getElementById('pending_extra_services_fee_display');
         if (extraTotalDisplay) extraTotalDisplay.textContent = numberFormat(currentExtraTotal) + ' د.ع';
+        const consultTotalDisplay = document.getElementById('pending_consultations_fee_display');
+        if (consultTotalDisplay) consultTotalDisplay.textContent = numberFormat(currentConsultationTotal) + ' د.ع';
 
         const doctorDeductionsDisplay = document.getElementById('totalDoctorDeductionsDisplay');
         if (doctorDeductionsDisplay) {
@@ -2393,6 +2583,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGroupCheckbox('lab-test-item', 'selectAllLab');
         updateGroupCheckbox('radiology-test-item', 'selectAllRadiology');
         updateGroupCheckbox('extra-service-item', 'selectAllExtraServices');
+        updateGroupCheckbox('consultation-item', 'selectAllConsultations');
         updateSplitUI();
     }
 
@@ -2540,9 +2731,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectAllLab = document.getElementById('selectAllLab');
         const selectAllRadiology = document.getElementById('selectAllRadiology');
         const selectAllExtra = document.getElementById('selectAllExtraServices');
+        const selectAllConsult = document.getElementById('selectAllConsultations');
         if (selectAllLab) selectAllLab.checked = true;
         if (selectAllRadiology) selectAllRadiology.checked = true;
         if (selectAllExtra) selectAllExtra.checked = true;
+        if (selectAllConsult) selectAllConsult.checked = true;
         calculateSelectedAmount();
     }
 
@@ -2553,9 +2746,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectAllLab = document.getElementById('selectAllLab');
         const selectAllRadiology = document.getElementById('selectAllRadiology');
         const selectAllExtra = document.getElementById('selectAllExtraServices');
+        const selectAllConsult = document.getElementById('selectAllConsultations');
         if (selectAllLab) selectAllLab.checked = false;
         if (selectAllRadiology) selectAllRadiology.checked = false;
         if (selectAllExtra) selectAllExtra.checked = false;
+        if (selectAllConsult) selectAllConsult.checked = false;
         calculateSelectedAmount();
     }
 
@@ -2582,6 +2777,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         calculateSelectedAmount();
     }
+
+    window.toggleSelectAllConsultations = function() {
+        const selectAllConsult = document.getElementById('selectAllConsultations');
+        if (selectAllConsult) {
+            document.querySelectorAll('.consultation-item').forEach(function(item) {
+                item.checked = selectAllConsult.checked;
+            });
+            calculateSelectedAmount();
+        }
+    };
+
+    document.querySelectorAll('.consultation-price-input').forEach(function(input) {
+        input.addEventListener('input', calculateSelectedAmount);
+        input.addEventListener('change', calculateSelectedAmount);
+    });
 
     // إضافة مستمعي الأحداث
     document.getElementById('selectAllBtn').addEventListener('click', selectAll);
@@ -2866,8 +3076,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // تأكيد وحذف العناصر المعلقة (تحاليل، أشعة، خدمات إضافية)
-    document.querySelectorAll('.delete-surgery-item-btn, .delete-extra-service-btn').forEach(btn => {
+    // تأكيد وحذف العناصر المعلقة (تحاليل، أشعة، خدمات إضافية، استشارات)
+    document.querySelectorAll('.delete-surgery-item-btn, .delete-extra-service-btn, .delete-consultation-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const url = this.getAttribute('data-url');

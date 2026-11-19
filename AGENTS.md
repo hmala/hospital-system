@@ -54,6 +54,46 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 263: تسعير استشارات الأطباء السريرية بـ 50,000 د.ع افتراضياً مع تحكم الكاشير، معاملتها كالطوارئ خارج الضمان 100% نقداً، وإعادة هندسة تبويب الاستشارات بمحطة العمليات السريرية بعزل الملغاة وفصل العلاج الفيزيائي Clinical Consultations Emergency-Style 100% Patient Self-Pay Billing at 50,000 IQD Default, Cashier Pricing Control, and Clinical Station Tab Redesign with Sub-Pills, Active Consultations Filter & Dedicated Cancelled Archive)
+
+### Done
+- **السياسة المالية والتسعير المعتمد (معاملة كاستشارات الطوارئ 100% نقداً على المريض)**:
+  * تحديد السعر المبدئي للاستشارة الطبية السريرية بـ **50,000 د.ع** مع إتاحة التحكم الكامل والمرن لموظف الصندوق في شاشة تسديد العمليات لتعديل السعر بحرية.
+  * عزل استشارات الأطباء عن تغطية وخصومات الضمان الصحي (HI / MOI) تماماً مثل الطوارئ: يتحمل المريض كامل أجور الاستشارة نقداً (100% Patient Share) وتكون حصة الضمان 0 د.ع دائماً.
+  * تحديث دوال الاحتساب المالي بالجافاسكريبت والباك إند في `CashierController@processSurgeryPayment` و `payment-form.blade.php` و `index.blade.php`.
+- **إعادة هندسة وتنظيم تبويب الاستشارات بمحطة العمليات السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة نظام تبويبات فرعية أنيق (Sub-navigation Pills):
+    1. **استشارات الأطباء الاختصاص:** يعرض حصراً الاستشارات النشطة (معلقة / مكتملة) مع استبعاد تام لكافة الطلبات الملغاة السابقة.
+    2. **العلاج الفيزيائي والتأهيل:** قسم مخصص ومستقل يضم نموذج طلب الجلسات الجديد وجدول الجلسات السريرية وحالة تسديدها بالكاشير.
+    3. **أرشيف الطلبات الملغاة:** يظهر تلقائياً كزر أرشيف هادئ في أقصى اليسار يضم جدولاً مقتضباً بالاستشارات الملغاة لأغراض التدقيق مع الحفاظ على صفاء الشاشة الرئيسية.
+  * إضافة زر واضح وأنيق `[+ طلب استشارة جديدة]` في الترويسة يفتح ويغلق نموذج الطلب بمرونة (Collapse)، مع حالة فارغة مشجعة وجمالية عند عدم وجود استشارات نشطة.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة اختبارات كاشير العمليات والخدمات السريرية بنجاح 100% (`6 passed, 30 assertions`).
+  * اجتياز اختبار تجميع وصلاحية قوالب Blade بنسبة 100% (`php artisan view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 262: الربط الكامل لاستشارات الأطباء الاختصاص والسريرية بين محطة العمليات السريرية ولوحة تحكم الطبيب وكاشير العمليات مع دعم الإلغاء وحصانة الروابط Full Inpatient & Surgery Medical Consultations Integration: Doctor Workstation Inbox & Modal Response, Surgeries Cashier Billing & Package Inclusion, Cancellation Support, and Direct Route Aliases)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_19_233000_add_payment_and_billing_fields_to_surgery_consultations_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_19_233000_add_payment_and_billing_fields_to_surgery_consultations_table.php), [app/Models/SurgeryConsultation.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryConsultation.php))**:
+  * إضافة حقول السداد والمالية لجدول `surgery_consultations`: `payment_status`, `payment_id`, `is_package_included`, `patient_share`, `insurance_share`.
+  * تحديث مصفوفة `$fillable` و `$casts` بالنموذج مع علاقة `payment()` ودوال `isPaid()`, `isPending()`, `isCompleted()`.
+- **لوحة تحكم ومحطة الطبيب الاستشاري ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php), [resources/views/doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php))**:
+  * استعلام وتمرير استشارات الرقود والعمليات الموجهة للطبيب مع استبعاد الملغاة (`where('status', '!=', 'cancelled')`).
+  * شريط تنبيه علوي مميز يظهر فور وجود استشارات معلقة بانتظار الرد مع زر انتقال مباشر.
+  * تبويب مخصص `#inpatient-pane` ("استشارات الرقود والعمليات") بعداد ديناميكي مع جدول متكامل يوضح تفاصيل المريض، العملية، الغرفة، المقيم الطالب، الأولوية، وحالة الدفع.
+  * مودال توثيق الرأي السريري والتوصيات الطبية ومودال استعراض الرد المعتمد مع إعادة التوجيه التلقائية للتبويب نفسه (`?tab=inpatient`).
+- **محطة كاشير العمليات واستمارة التسديد ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * تضمين الاستشارات المعلقة في شرط العمليات المعلقة بالكاشير (`orWhereHas('consultations', ...)`).
+  * إدراج قسم الاستشارات في استمارة الدفع مع مربعات اختيار السداد، إدخال أسعار مرن، شرائح الشمول بالباقة الجراحية، واحتساب نسب تحمل الضمان الصحي.
+  * قيد الاستحقاق المالي للطبيب الاستشاري تلقائياً في `DoctorDue` و `ConsultationRevenue` عند الدفع.
+  * تمكين الكاشير من إلغاء طلبات الاستشارة مباشرة (`cancelSurgeryConsultation`) مع حذف سطر الاستشارة فورا بالـ AJAX وتحديث المجاميع.
+- **مسارات التوثيق المباشرة وحصانة الرابط ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * تسجيل مسار مباشر متطابق `POST /clinical/{surgery}/consultations/{consultation}/respond` بجانب المسار المسبوق بـ `surgery-stations` لمنع أي خطأ 404 نهائياً بغض النظر عن حالة الكاش لدى المتصفح.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة اختبارات كاشير العمليات والخدمات السريرية بنجاح 100% (`6 passed, 30 assertions`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
 ## Session log (2026-11-19 — المرحلة 261: إعادة هندسة تقرير مقبوضات ووصولات الكاشير المطبوع بهوامش 15mm وفواصل الأقسام وجداول المطابقة النقدية Re-engineering Cashier Payments Print Report with Balanced 15mm Margins, Department Page-Breaks, Subtotals, Refunds Table & Cash Drawer Reconciliation)
 
 ### Done

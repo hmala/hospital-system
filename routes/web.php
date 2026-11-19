@@ -429,6 +429,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryExtraService'])->name('surgeries.extra-services.remove');
         Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
         Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
+        Route::delete('/surgeries/{surgery}/consultations/{consultation}', [\App\Http\Controllers\CashierController::class, 'cancelSurgeryConsultation'])->name('surgeries.consultations.cancel');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
@@ -754,6 +755,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
     Route::post('/surgeries/{surgery}/quick-update-schedule', [SurgeryController::class, 'quickUpdateSchedule'])->name('surgeries.quick-update-schedule');
+
+    // مسارات مباشرة لتوثيق وإلغاء الاستشارات السريرية من لوحة تحكم الطبيب أو الرابط المباشر
+    Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation']);
+    Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation']);
 
     // محطات العمليات
     Route::prefix('surgery-stations')->group(function () {

@@ -1614,6 +1614,16 @@ class ClinicalStationController extends Controller
             ]);
         }
 
+        if ($request->filled('redirect_to')) {
+            return redirect($request->input('redirect_to'))
+                ->with('success', 'تم اعتماد وتوثيق رد وتوصيات الطبيب الاستشاري بنجاح.');
+        }
+
+        if (url()->previous() && ! str_contains(url()->previous(), 'clinical')) {
+            return redirect()->back()
+                ->with('success', 'تم اعتماد وتوثيق رد وتوصيات الطبيب الاستشاري بنجاح.');
+        }
+
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'consultations'])
             ->with('success', 'تم اعتماد وتوثيق رد وتوصيات الطبيب الاستشاري بنجاح.');
     }
@@ -1627,7 +1637,8 @@ class ClinicalStationController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         $canCancel = $isAdmin
             || ($consultation->requested_by === $user->id)
-            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator']));
+            || ($user && $user->hasAnyRole(['doctor', 'surgeon', 'resident', 'surgery_coordinator', 'cashier']))
+            || ($user && $user->can('process surgery payments'));
 
         if (! $canCancel) {
             abort(403, 'غير مصرح لك بإلغاء هذا الطلب.');

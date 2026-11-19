@@ -20,6 +20,11 @@ class SurgeryConsultation extends Model
         'consultant_response',
         'consultant_recommendations',
         'fee',
+        'payment_status',
+        'payment_id',
+        'is_package_included',
+        'patient_share',
+        'insurance_share',
         'requested_by',
         'responded_by',
         'responded_at',
@@ -27,6 +32,9 @@ class SurgeryConsultation extends Model
 
     protected $casts = [
         'fee' => 'decimal:2',
+        'patient_share' => 'decimal:2',
+        'insurance_share' => 'decimal:2',
+        'is_package_included' => 'boolean',
         'responded_at' => 'datetime',
     ];
 
@@ -38,6 +46,11 @@ class SurgeryConsultation extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
     }
 
     public function requestedBy(): BelongsTo
@@ -58,6 +71,11 @@ class SurgeryConsultation extends Model
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->payment_status === 'paid';
     }
 
     public function priorityLabel(): string

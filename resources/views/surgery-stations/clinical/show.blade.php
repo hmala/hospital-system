@@ -3525,396 +3525,540 @@
             @endif
 
             {{-- =============================================================== --}}
-            {{-- SPECIAL SUB-VIEW FOR MEDICAL CONSULTATIONS TAB --}}
+            {{-- SPECIAL SUB-VIEW FOR MEDICAL CONSULTATIONS & PHYSIOTHERAPY TAB --}}
             {{-- =============================================================== --}}
             @if($activeTab === 'consultations')
+                @php
+                    $allConsultations = $surgery->consultations;
+                    $activeConsultations = $allConsultations->where('status', '!=', 'cancelled')->sortByDesc('created_at');
+                    $cancelledConsultations = $allConsultations->where('status', 'cancelled')->sortByDesc('created_at');
+                    $pendingCount = $activeConsultations->where('status', 'pending')->count();
+                    $completedCount = $activeConsultations->where('status', 'completed')->count();
+                    $cancelledCount = $cancelledConsultations->count();
+
+                    $physioOrders = $surgery->extraServices->filter(function($srv) {
+                        return str_contains($srv->name, 'فيزيائ') 
+                            || str_contains($srv->name, 'طبيعي') 
+                            || str_contains(strtolower($srv->name), 'physio')
+                            || ($srv->service && ($srv->service->code === 'PHYS-01' || str_contains($srv->service->name, 'فيزيائ')));
+                    });
+                @endphp
+
                 <div class="p-4">
-                    {{-- Tab Header with Statistics --}}
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 bg-light rounded-4 border">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="avatar-lg rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                <i class="fas fa-user-md fa-lg"></i>
-                            </div>
-                            <div>
-                                <h5 class="fw-bold mb-0 text-dark">{{ __("طلبات الاستشارات الطبية التخصصية (Medical Consultations)") }}</h5>
-                                <p class="text-muted small mb-0">{{ __("إرسال وتوثيق طلبات الاستشارة السريرية للأطباء الاستشاريين والأخصائيين المتاحين") }}</p>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary px-3 py-2 rounded-pill fs-7">
-                                {{ __("إجمالي الاستشارات:") }} {{ $surgery->consultations->count() }}
-                            </span>
-                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fs-7">
-                                {{ __("قيد الانتظار:") }} {{ $surgery->consultations->where('status', 'pending')->count() }}
-                            </span>
-                            <span class="badge bg-success px-3 py-2 rounded-pill fs-7">
-                                {{ __("مكتملة وموثقة:") }} {{ $surgery->consultations->where('status', 'completed')->count() }}
-                            </span>
-                        </div>
-                    </div>
-
-                    {{-- Form to Request a New Consultation --}}
-                    @if($canWriteCurrentTab)
-                        <div class="card rounded-4 border shadow-sm p-3 mb-4 bg-white">
-                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2 border-bottom pb-2">
-                                <i class="fas fa-file-signature text-primary"></i>
-                                <span>{{ __("طلب استشارة طبية جديدة (New Consultation Request)") }}</span>
-                            </h6>
-                            <form action="{{ route('clinical-station.consultations.store', $surgery) }}" method="POST">
-                                @csrf
-                                <div class="row g-3">
-                                    {{-- Doctor Selection (Anesthesia Style Searchable Dropdown) --}}
-                                    <div class="col-md-5">
-                                        <label for="consultation_doctor_name" class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-user-doctor text-primary me-1"></i> {{ __("الطبيب الاستشاري المطلوب: ") }}<span class="text-danger">*</span>
-                                        </label>
-                                        <input type="hidden" id="consultation_doctor_id" name="doctor_id" value="{{ old('doctor_id') }}" required>
-                                        <div class="position-relative" id="consultantAutocompleteWrapper">
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
-                                                <input type="text" id="consultation_doctor_name"
-                                                       class="form-control rounded-0"
-                                                       autocomplete="off"
-                                                       placeholder="{{ __('اختيار أو بحث طبيب استشاري متاح اليوم...') }}"
-                                                       value="">
-                                                <button type="button" class="btn btn-outline-secondary d-none" id="clearConsultDocBtn" title="{{ __("مسح") }}">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" id="toggleConsultDocMenuBtn" title="{{ __("عرض القائمة") }}">
-                                                    <i class="fas fa-chevron-down"></i>
-                                                </button>
-                                            </div>
-                                            <div id="consultantDoctorsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 240px; overflow-y: auto; display: none; font-size: 0.85rem;"></div>
-                                        </div>
-                                    </div>
-
-                                    {{-- Specialty / Department --}}
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-hospital-user text-secondary me-1"></i> {{ __("التخصص / العيادة:") }}
-                                        </label>
-                                        <input type="text" name="specialty" id="consultationSpecialtyInput" class="form-control rounded-3" 
-                                               value="{{ old('specialty') }}" placeholder="{{ __('يتم تحديده تلقائياً') }}">
-                                    </div>
-
-                                    {{-- Priority --}}
-                                    <div class="col-md-2">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-flag text-warning me-1"></i> {{ __("الأولوية: ") }}<span class="text-danger">*</span>
-                                        </label>
-                                        <select name="priority" class="form-select rounded-3" required>
-                                            <option value="routine" {{ old('priority', 'routine') === 'routine' ? 'selected' : '' }}>{{ __("اعتيادية (Routine)") }}</option>
-                                            <option value="urgent" {{ old('priority') === 'urgent' ? 'selected' : '' }}>{{ __("عاجلة (Urgent)") }}</option>
-                                            <option value="stat" {{ old('priority') === 'stat' ? 'selected' : '' }}>{{ __("طارئة جداً (STAT)") }}</option>
-                                        </select>
-                                    </div>
-
-                                    {{-- Consultation Fee --}}
-                                    <div class="col-md-2">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-receipt text-success me-1"></i> {{ __("الأجر (د.ع):") }}
-                                        </label>
-                                        <input type="number" step="500" min="0" name="fee" id="consultationFeeInput" class="form-control rounded-3" 
-                                               value="{{ old('fee', 0) }}">
-                                    </div>
-
-                                    {{-- Reason / Question --}}
-                                    <div class="col-12">
-                                        <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-clipboard-question text-info me-1"></i> {{ __("سبب طلب الاستشارة والتشخيص المبدئي (Clinical Question & Reason): ") }}<span class="text-danger">*</span>
-                                        </label>
-                                        <textarea name="reason" class="form-control rounded-3" rows="3" 
-                                                  placeholder="{{ __('يرجى كتابة سبب طلب الاستشارة، الأعراض الحالية، والمطلوب من الطبيب الاستشاري بدقة...') }}" required>{{ old('reason') }}</textarea>
-                                    </div>
-
-                                    {{-- Submit Button --}}
-                                    <div class="col-12 text-end">
-                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                                            <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال طلب الاستشارة") }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    @endif
-
-                    {{-- 2. Physical Therapy (العلاج الفيزيائي) Request Section --}}
-                    @php
-                        $physioOrders = $surgery->extraServices->filter(function($srv) {
-                            return str_contains($srv->name, 'فيزيائ') 
-                                || str_contains($srv->name, 'طبيعي') 
-                                || str_contains(strtolower($srv->name), 'physio')
-                                || ($srv->service && ($srv->service->code === 'PHYS-01' || str_contains($srv->service->name, 'فيزيائ')));
-                        });
-                    @endphp
-
-                    <div class="card rounded-4 border shadow-sm mb-4 bg-white overflow-hidden" style="border-color: #cbd5e1 !important;">
-                        <div class="card-header bg-light border-bottom py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="rounded-circle p-2 d-inline-flex align-items-center justify-content-center text-white" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); width: 36px; height: 36px;">
-                                    <i class="fas fa-hand-holding-medical"></i>
+                    {{-- 1. Sub-navigation Pills (فصل الاستشارات الطبية عن العلاج الفيزيائي والأرشيف) --}}
+                    <ul class="nav nav-pills gap-2 mb-4 p-2 bg-light rounded-4 border align-items-center" id="consultSubTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                                    id="pill-medical-consult-tab" data-bs-toggle="pill" data-bs-target="#pill-medical-consult" 
+                                    type="button" role="tab" aria-controls="pill-medical-consult" aria-selected="true">
+                                <i class="fas fa-user-md text-primary"></i>
+                                <span>{{ __("استشارات الأطباء الاختصاص") }}</span>
+                                <span class="badge {{ $pendingCount > 0 ? 'bg-warning text-dark' : 'bg-primary' }} rounded-pill px-2">
+                                    {{ $activeConsultations->count() }}
                                 </span>
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-0">{{ __("طلب خدمة علاج فيزيائي وتأهيل سريري (Physiotherapy Request)") }}</h6>
-                                    <small class="text-muted">{{ __("طلب مباشر من الطبيب المقيم يُرحل فوراً إلى كشف حساب الكاشير بسعر مبدئي 60,000 د.ع قابل للتعديل") }}</small>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
+                                    id="pill-physiotherapy-tab" data-bs-toggle="pill" data-bs-target="#pill-physiotherapy" 
+                                    type="button" role="tab" aria-controls="pill-physiotherapy" aria-selected="false">
+                                <i class="fas fa-hand-holding-medical text-teal" style="color: #0d9488;"></i>
+                                <span>{{ __("العلاج الفيزيائي والتأهيل") }}</span>
+                                <span class="badge text-white rounded-pill px-2" style="background-color: #0d9488;">
+                                    {{ $physioOrders->count() }}
+                                </span>
+                            </button>
+                        </li>
+                        @if($cancelledCount > 0)
+                            <li class="nav-item ms-auto" role="presentation">
+                                <button class="nav-link rounded-pill text-muted px-3 py-2 d-flex align-items-center gap-1.5" 
+                                        id="pill-cancelled-consult-tab" data-bs-toggle="pill" data-bs-target="#pill-cancelled-consult" 
+                                        type="button" role="tab" aria-controls="pill-cancelled-consult" aria-selected="false"
+                                        title="{{ __('عرض الاستشارات التي تم إلغاؤها سابقاً') }}">
+                                    <i class="fas fa-archive"></i>
+                                    <span class="small">{{ __("أرشيف الملغاة") }}</span>
+                                    <span class="badge bg-secondary rounded-pill">{{ $cancelledCount }}</span>
+                                </button>
+                            </li>
+                        @endif
+                    </ul>
+
+                    {{-- 2. Tab Content Panes --}}
+                    <div class="tab-content" id="consultSubTabsContent">
+
+                        {{-- ============================================================== --}}
+                        {{-- PANE 1: MEDICAL CONSULTATIONS (الاستشارات الطبية التخصصية) --}}
+                        {{-- ============================================================== --}}
+                        <div class="tab-pane fade show active" id="pill-medical-consult" role="tabpanel" aria-labelledby="pill-medical-consult-tab">
+                            
+                            {{-- Action Bar & Stats --}}
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 p-3 bg-white rounded-4 border shadow-sm">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-md rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                        <i class="fas fa-stethoscope fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">{{ __("استشارات الأطباء السريرية للعملية") }}</h6>
+                                        <small class="text-muted">{{ __("طلب استشارة أخصائي، الردود الطبية، والتوصيات السريرية") }}</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-warning text-dark px-2.5 py-1.5 rounded-pill small">
+                                        <i class="fas fa-clock me-1"></i>{{ __("معلقة:") }} {{ $pendingCount }}
+                                    </span>
+                                    <span class="badge bg-success px-2.5 py-1.5 rounded-pill small">
+                                        <i class="fas fa-check-circle me-1"></i>{{ __("موثقة:") }} {{ $completedCount }}
+                                    </span>
+                                    @if($canWriteCurrentTab)
+                                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-xs ms-2"
+                                                data-bs-toggle="collapse" data-bs-target="#newConsultationCollapse" aria-expanded="{{ $activeConsultations->isEmpty() ? 'true' : 'false' }}">
+                                            <i class="fas fa-plus me-1"></i> {{ __("طلب استشارة جديدة") }}
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
-                            <span class="badge rounded-pill px-3 py-1.5" style="background: #ccfbf1; color: #0f766e; font-weight: 700;">
-                                <i class="fas fa-tag me-1"></i> {{ __("تسعير معتمد: 60,000 د.ع للجلسة (تُسدد وتعدل لدى الكاشير)") }}
-                            </span>
-                        </div>
-                        <div class="card-body p-4">
+
+                            {{-- Request Form (Collapsible, open by default only if no active consultations exist) --}}
                             @if($canWriteCurrentTab)
-                                <form action="{{ route('clinical-station.physiotherapy.store', $surgery) }}" method="POST" class="mb-4 p-3 rounded-3" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
-                                    @csrf
-                                    <div class="row g-3 align-items-end">
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold text-dark">
-                                                <i class="fas fa-list-ol text-primary me-1"></i> {{ __("عدد الجلسات:") }} <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="number" name="sessions" class="form-control rounded-3 fw-bold text-center" min="1" max="30" value="1" required id="physioSessionsInput">
+                                <div class="collapse {{ $activeConsultations->isEmpty() ? 'show' : '' }} mb-4" id="newConsultationCollapse">
+                                    <div class="card rounded-4 border shadow-sm p-4 bg-white" style="border-top: 3px solid #0284c7 !important;">
+                                        <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                                <i class="fas fa-paper-plane text-primary"></i>
+                                                <span>{{ __("إرسال طلب استشارة طبية جديدة") }}</span>
+                                            </h6>
+                                            <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse" data-bs-target="#newConsultationCollapse" aria-label="Close"></button>
                                         </div>
-                                        <div class="col-md-7">
-                                            <label class="form-label small fw-bold text-dark">
-                                                <i class="fas fa-clipboard-check text-info me-1"></i> {{ __("التوصية السريرية والتشخيص (ملاحظات الجلسة):") }}
-                                            </label>
-                                            <input type="text" name="notes" class="form-control rounded-3" placeholder="{{ __('مثال: تأهيل حركي وتمارين تنفسية بعد العملية، تخفيف وذمة...') }}" value="{{ __('جلسة علاج فيزيائي وتأهيل بتوصية الطبيب المقيم') }}">
-                                        </div>
-                                        <div class="col-md-2 text-end">
-                                            <button type="submit" class="btn text-white w-100 rounded-pill py-2 fw-bold shadow-sm" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);">
-                                                <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال للكاشير") }}
+
+                                        <form action="{{ route('clinical-station.consultations.store', $surgery) }}" method="POST">
+                                            @csrf
+                                            <div class="row g-3">
+                                                {{-- Doctor Selection --}}
+                                                <div class="col-md-5">
+                                                    <label for="consultation_doctor_name" class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-user-doctor text-primary me-1"></i> {{ __("الطبيب الاستشاري المطلوب:") }} <span class="text-danger">*</span>
+                                                    </label>
+                                                    <input type="hidden" id="consultation_doctor_id" name="doctor_id" value="{{ old('doctor_id') }}" required>
+                                                    <div class="position-relative" id="consultantAutocompleteWrapper">
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-light text-primary"><i class="fas fa-user-md"></i></span>
+                                                            <input type="text" id="consultation_doctor_name"
+                                                                   class="form-control rounded-0"
+                                                                   autocomplete="off"
+                                                                   placeholder="{{ __('اختيار أو بحث طبيب استشاري متاح اليوم...') }}"
+                                                                   value="">
+                                                            <button type="button" class="btn btn-outline-secondary d-none" id="clearConsultDocBtn" title="{{ __("مسح") }}">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-primary" id="toggleConsultDocMenuBtn" title="{{ __("عرض القائمة") }}">
+                                                                <i class="fas fa-chevron-down"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div id="consultantDoctorsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 240px; overflow-y: auto; display: none; font-size: 0.85rem;"></div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Specialty / Clinic --}}
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-hospital-user text-secondary me-1"></i> {{ __("التخصص / العيادة:") }}
+                                                    </label>
+                                                    <input type="text" name="specialty" id="consultationSpecialtyInput" class="form-control rounded-3" 
+                                                           value="{{ old('specialty') }}" placeholder="{{ __('يتم تحديده تلقائياً') }}">
+                                                </div>
+
+                                                {{-- Priority --}}
+                                                <div class="col-md-2">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-flag text-warning me-1"></i> {{ __("الأولوية:") }} <span class="text-danger">*</span>
+                                                    </label>
+                                                    <select name="priority" class="form-select rounded-3" required>
+                                                        <option value="routine" {{ old('priority', 'routine') === 'routine' ? 'selected' : '' }}>{{ __("اعتيادية (Routine)") }}</option>
+                                                        <option value="urgent" {{ old('priority') === 'urgent' ? 'selected' : '' }}>{{ __("عاجلة (Urgent)") }}</option>
+                                                        <option value="stat" {{ old('priority') === 'stat' ? 'selected' : '' }}>{{ __("طارئة جداً (STAT)") }}</option>
+                                                    </select>
+                                                </div>
+
+                                                {{-- Fee --}}
+                                                <div class="col-md-2">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-receipt text-success me-1"></i> {{ __("الأجر (د.ع):") }}
+                                                    </label>
+                                                    <input type="number" step="1000" min="0" name="fee" id="consultationFeeInput" class="form-control rounded-3 fw-bold text-success" 
+                                                           value="{{ old('fee', 50000) }}">
+                                                    <div class="form-text text-muted" style="font-size: 10px;">
+                                                        {{ __('مبدئياً 50,000 د.ع (كامل على المريض كالطوارئ)') }}
+                                                    </div>
+                                                </div>
+
+                                                {{-- Reason --}}
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-clipboard-question text-info me-1"></i> {{ __("سبب طلب الاستشارة والتشخيص المبدئي:") }} <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea name="reason" class="form-control rounded-3" rows="2" 
+                                                              placeholder="{{ __('اكتب سبب طلب الاستشارة، الأعراض، والمطلوب من الطبيب الاستشاري بدقة...') }}" required>{{ old('reason') }}</textarea>
+                                                </div>
+
+                                                {{-- Actions --}}
+                                                <div class="col-12 text-end">
+                                                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3 me-2" data-bs-toggle="collapse" data-bs-target="#newConsultationCollapse">
+                                                        {{ __("إلغاء") }}
+                                                    </button>
+                                                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs">
+                                                        <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال الطلب للاستشاري والكاشير") }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Active Consultations List --}}
+                            @if($activeConsultations->isEmpty())
+                                <div class="card rounded-4 border shadow-sm p-5 text-center bg-white">
+                                    <div class="avatar-lg rounded-circle bg-light text-muted d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-user-md fa-2x opacity-50"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1">{{ __("لا توجد استشارات طبية نشطة حالياً") }}</h6>
+                                    <p class="text-muted small mb-3">
+                                        {{ __("لم يتم تسجيل أي طلب استشارة نشط لهذه العملية، أو تم إلغاء جميع الطلبات السابقة.") }}
+                                    </p>
+                                    @if($canWriteCurrentTab)
+                                        <div>
+                                            <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs" 
+                                                    data-bs-toggle="collapse" data-bs-target="#newConsultationCollapse">
+                                                <i class="fas fa-plus me-1"></i> {{ __("إرسال طلب استشارة جديد الآن") }}
                                             </button>
                                         </div>
-                                    </div>
-                                </form>
-                            @endif
-
-                            {{-- سجل طلبات العلاج الفيزيائي الحالية للعملية --}}
-                            @if($physioOrders->isEmpty())
-                                <div class="text-center py-3 text-muted">
-                                    <i class="fas fa-spa fa-2x opacity-25 mb-2 d-block"></i>
-                                    <span class="small">{{ __("لم يتم تسجيل أي طلب علاج فيزيائي لهذه العملية حتى الآن.") }}</span>
+                                    @endif
                                 </div>
                             @else
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>{{ __("الخدمة والبيان") }}</th>
-                                                <th class="text-center">{{ __("الجلسات") }}</th>
-                                                <th class="text-end">{{ __("سعر الجلسة") }}</th>
-                                                <th class="text-end">{{ __("المبلغ المطلوب") }}</th>
-                                                <th class="text-center">{{ __("حالة الكاشير") }}</th>
-                                                <th>{{ __("التأريخ والطالب") }}</th>
-                                                @if($canWriteCurrentTab)
-                                                    <th class="text-center" style="width: 80px;">{{ __("إجراء") }}</th>
-                                                @endif
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($physioOrders as $pOrder)
-                                                <tr>
-                                                    <td>
-                                                        <div class="fw-bold text-dark d-flex align-items-center gap-1.5">
-                                                            <i class="fas fa-spa text-teal" style="color: #0d9488;"></i>
-                                                            <span>{{ $pOrder->name }}</span>
-                                                        </div>
-                                                        @if($pOrder->notes)
-                                                            <small class="text-muted d-block mt-0.5"><i class="fas fa-info-circle me-1"></i>{{ $pOrder->notes }}</small>
-                                                        @endif
-                                                    </td>
-                                                    <td class="text-center fw-bold">{{ $pOrder->quantity }}</td>
-                                                    <td class="text-end">{{ number_format($pOrder->price, 0) }} {{ __("د.ع") }}</td>
-                                                    <td class="text-end fw-bold text-success">{{ number_format($pOrder->total_amount, 0) }} {{ __("د.ع") }}</td>
-                                                    <td class="text-center">
-                                                        @if($pOrder->payment_status === 'paid')
-                                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill">
-                                                                <i class="fas fa-check-circle me-1"></i> {{ __("مسدد في الكاشير") }}
-                                                            </span>
-                                                        @else
-                                                            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill" title="{{ __('يمكن للكاشير تعديل السعر عند السداد') }}">
-                                                                <i class="fas fa-clock me-1 text-warning"></i> {{ __("معلق بالكاشير (قابل للتعديل)") }}
-                                                            </span>
-                                                        @endif
-                                                    </td>
-                                                    <td class="small">
-                                                        <div>{{ $pOrder->created_at ? $pOrder->created_at->format('Y-m-d H:i') : '-' }}</div>
-                                                        <small class="text-muted">{{ $pOrder->createdBy?->name ?? __('النظام') }}</small>
-                                                    </td>
-                                                    @if($canWriteCurrentTab)
-                                                        <td class="text-center">
-                                                            @if($pOrder->payment_status !== 'paid')
-                                                                <form action="{{ route('clinical-station.physiotherapy.cancel', [$surgery, $pOrder]) }}" method="POST" onsubmit="return confirm('{{ __('هل أنت متأكد من إلغاء طلب العلاج الفيزيائي هذا؟') }}');">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 shadow-xs" title="{{ __('إلغاء الطلب') }}">
-                                                                        <i class="fas fa-trash-alt me-1"></i> {{ __("إلغاء") }}
-                                                                    </button>
-                                                                </form>
-                                                            @else
-                                                                <span class="text-muted small">-</span>
-                                                            @endif
-                                                        </td>
+                                <div class="d-flex flex-column gap-3">
+                                    @foreach($activeConsultations as $consultation)
+                                        <div class="card rounded-4 border shadow-sm overflow-hidden bg-white">
+                                            {{-- Header --}}
+                                            <div class="card-header bg-light border-bottom py-2.5 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="badge {{ $consultation->status_badge_class }} px-2.5 py-1 rounded-pill">
+                                                        {{ $consultation->status_label }}
+                                                    </span>
+                                                    <span class="badge {{ $consultation->priority_badge_class }} px-2.5 py-1 rounded-pill">
+                                                        {{ $consultation->priority_label }}
+                                                    </span>
+                                                    <strong class="text-dark fs-6">
+                                                        <i class="fas fa-user-doctor text-primary me-1"></i> {{ __('د.') }} {{ $consultation->doctor?->user?->name ?? __('طبيب غير محدد') }}
+                                                    </strong>
+                                                    <span class="badge bg-light text-primary border">{{ $consultation->specialty }}</span>
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    @if($consultation->isPaid())
+                                                        <span class="badge bg-success-subtle text-success border border-success rounded-pill px-2.5 py-1">
+                                                            <i class="fas fa-check-circle me-1"></i>{{ number_format($consultation->fee, 0) }} د.ع ({{ __('مسدد') }})
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2.5 py-1" title="{{ __('خارج الضمان - يسدد نقداً لدى الكاشير') }}">
+                                                            <i class="fas fa-coins me-1 text-warning"></i>{{ number_format($consultation->fee > 0 ? $consultation->fee : 50000, 0) }} د.ع ({{ __('معلق بالكاشير') }})
+                                                        </span>
                                                     @endif
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                                    <small class="text-muted">
+                                                        <i class="far fa-clock me-1"></i>{{ $consultation->created_at?->diffForHumans() }}
+                                                    </small>
+                                                </div>
+                                            </div>
+
+                                            {{-- Body --}}
+                                            <div class="card-body p-3">
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <div class="p-2.5 bg-light rounded-3 border">
+                                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                                <small class="text-muted fw-bold">
+                                                                    <i class="fas fa-comment-medical text-primary me-1"></i>{{ __("سبب الاستشارة وسؤال المقيم:") }}
+                                                                </small>
+                                                                <small class="text-muted">
+                                                                    {{ __("الطالب:") }} <strong>{{ $consultation->requestedBy?->name ?? __('المقيم') }}</strong>
+                                                                </small>
+                                                            </div>
+                                                            <div class="text-dark small" style="white-space: pre-wrap;">{{ $consultation->reason }}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- If Completed: Show Findings & Recommendations --}}
+                                                    @if($consultation->status === 'completed')
+                                                        <div class="col-12">
+                                                            <div class="p-3 rounded-3 border bg-success bg-opacity-10 border-success-subtle">
+                                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                                    <span class="fw-bold text-success d-flex align-items-center gap-1.5">
+                                                                        <i class="fas fa-check-circle"></i>
+                                                                        <span>{{ __("تقرير ورأي الطبيب الاستشاري (Consultant Findings):") }}</span>
+                                                                    </span>
+                                                                    @if($consultation->responded_at)
+                                                                        <small class="text-muted">
+                                                                            <i class="far fa-clock me-1"></i>{{ $consultation->responded_at->format('Y-m-d h:i A') }}
+                                                                            ({{ __("بواسطة:") }} {{ $consultation->respondedBy?->name ?? __('الاستشاري') }})
+                                                                        </small>
+                                                                    @endif
+                                                                </div>
+                                                                <p class="mb-2 text-dark small" style="white-space: pre-wrap;">{{ $consultation->consultant_response }}</p>
+
+                                                                @if($consultation->consultant_recommendations)
+                                                                    <div class="border-top border-success-subtle pt-2 mt-2">
+                                                                        <strong class="text-success small d-block mb-1">
+                                                                            <i class="fas fa-clipboard-list me-1"></i>{{ __("التوصيات والخطة العلاجية:") }}
+                                                                        </strong>
+                                                                        <p class="mb-0 text-dark small" style="white-space: pre-wrap;">{{ $consultation->consultant_recommendations }}</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+
+                                                {{-- Actions for Pending Consultation --}}
+                                                @if($consultation->status === 'pending')
+                                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top">
+                                                        <div class="text-muted small">
+                                                            <i class="fas fa-hourglass-half text-warning me-1"></i> {{ __("الطلب معلق بانتظار مرور الطبيب الاستشاري وتوثيق الرد السريري.") }}
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold"
+                                                                    data-bs-toggle="collapse" data-bs-target="#respondConsultationCollapse{{ $consultation->id }}">
+                                                                <i class="fas fa-stethoscope me-1"></i> {{ __("توثيق رد الاستشاري") }}
+                                                            </button>
+
+                                                            <form action="{{ route('clinical-station.consultations.cancel', [$surgery, $consultation]) }}" method="POST"
+                                                                  onsubmit="return confirm('{{ __('هل أنت متأكد من إلغاء طلب الاستشارة هذا؟') }}');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                                                    <i class="fas fa-times me-1"></i> {{ __("إلغاء الطلب") }}
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Collapse Response Form --}}
+                                                    <div class="collapse mt-3" id="respondConsultationCollapse{{ $consultation->id }}">
+                                                        <div class="card card-body bg-light border-success-subtle rounded-3 p-3">
+                                                            <h6 class="fw-bold text-success mb-2">
+                                                                <i class="fas fa-notes-medical me-1"></i> {{ __("توثيق رد وتوصيات الاستشاري: د. ") }}{{ $consultation->doctor?->user?->name }}
+                                                            </h6>
+                                                            <form action="{{ route('clinical-station.consultations.respond', [$surgery, $consultation]) }}" method="POST">
+                                                                @csrf
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-bold text-dark">
+                                                                        {{ __("رد ومعاينة الاستشاري (Clinical Findings & Opinion): ") }}<span class="text-danger">*</span>
+                                                                    </label>
+                                                                    <textarea name="consultant_response" class="form-control rounded-3" rows="3" 
+                                                                              placeholder="{{ __('اكتب التقرير السريري والرأي الطبي للاستشاري...') }}" required></textarea>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-bold text-dark">
+                                                                        {{ __("الخطة والتوصيات العلاجية (Recommendations & Treatment Plan):") }}
+                                                                    </label>
+                                                                    <textarea name="consultant_recommendations" class="form-control rounded-3" rows="2" 
+                                                                              placeholder="{{ __('توصيات الأدوية، الإجراءات الإضافية، المتابعة...') }}"></textarea>
+                                                                </div>
+                                                                <div class="text-end">
+                                                                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                                                                        <i class="fas fa-check-circle me-1"></i> {{ __("اعتماد وحفظ رد الاستشارة") }}
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             @endif
                         </div>
-                    </div>
 
-                    {{-- Consultations List --}}
-                    <div class="card rounded-4 border shadow-sm p-3 bg-white">
-                        <h6 class="fw-bold text-dark mb-3 d-flex align-items-center justify-content-between border-bottom pb-2">
-                            <span class="d-flex align-items-center gap-2">
-                                <i class="fas fa-history text-secondary"></i>
-                                <span>{{ __("سجل الاستشارات الطبية للعملية (Consultations History)") }}</span>
-                            </span>
-                            <span class="badge bg-light text-dark border">{{ $surgery->consultations->count() }} {{ __("طلب") }}</span>
-                        </h6>
-
-                        @if($surgery->consultations->isEmpty())
-                            <div class="text-center py-5 text-muted">
-                                <i class="fas fa-user-md fa-3x text-secondary opacity-25 mb-3"></i>
-                                <h6 class="fw-bold">{{ __("لا توجد استشارات طبية مسجلة لهذه العملية") }}</h6>
-                                <p class="small mb-0">{{ __("يمكنك طلب استشارة تخصصية جديدة لأي طبيب استشاري متاح باستخدام النموذج أعلاه.") }}</p>
-                            </div>
-                        @else
-                            <div class="d-flex flex-column gap-3">
-                                @foreach($surgery->consultations->sortByDesc('created_at') as $consultation)
-                                    <div class="card border rounded-3 overflow-hidden shadow-xs">
-                                        {{-- Header row --}}
-                                        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between py-2 px-3 gap-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="badge {{ $consultation->status_badge_class }} px-2.5 py-1">
-                                                    {{ $consultation->status_label }}
-                                                </span>
-                                                <span class="badge {{ $consultation->priority_badge_class }} px-2.5 py-1">
-                                                    {{ $consultation->priority_label }}
-                                                </span>
-                                                <span class="fw-bold text-dark">
-                                                    <i class="fas fa-user-doctor text-primary me-1"></i> {{ __('د.') }} {{ $consultation->doctor?->user?->name ?? __('طبيب غير محدد') }}
-                                                </span>
-                                                <span class="text-muted small">({{ $consultation->specialty }})</span>
-                                            </div>
-                                            <div class="d-flex align-items-center gap-3">
-                                                @if($consultation->fee > 0)
-                                                    <span class="badge bg-light text-success border border-success-subtle px-2 py-1">
-                                                        <i class="fas fa-coins me-1"></i> {{ number_format($consultation->fee) }} {{ __('د.ع') }}
-                                                    </span>
-                                                @endif
-                                                <span class="text-muted small">
-                                                    <i class="far fa-clock me-1"></i> {{ $consultation->created_at->format('Y-m-d h:i A') }}
-                                                </span>
-                                                <span class="text-muted small">
-                                                    {{ __("بواسطة:") }} {{ $consultation->requestedBy?->name ?? __("طاقم الرعاية") }}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {{-- Body row --}}
-                                        <div class="card-body p-3">
-                                            {{-- Reason --}}
-                                            <div class="mb-3">
-                                                <label class="form-label text-muted small fw-bold mb-1">
-                                                    <i class="fas fa-question-circle text-info me-1"></i> {{ __("سبب وطلب الاستشارة:") }}
-                                                </label>
-                                                <div class="p-2.5 bg-light rounded-3 border text-dark">
-                                                    {{ $consultation->reason }}
-                                                </div>
-                                            </div>
-
-                                            {{-- If completed, show response & recommendations --}}
-                                            @if($consultation->status === 'completed')
-                                                <div class="p-3 bg-success bg-opacity-10 border border-success-subtle rounded-3 mb-2">
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <span class="fw-bold text-success d-flex align-items-center gap-1.5">
-                                                            <i class="fas fa-check-circle"></i>
-                                                            <span>{{ __("رد الطبيب الاستشاري (Consultant Findings & Diagnosis):") }}</span>
-                                                        </span>
-                                                        @if($consultation->responded_at)
-                                                            <span class="small text-muted">
-                                                                <i class="far fa-clock me-1"></i> {{ $consultation->responded_at->format('Y-m-d h:i A') }}
-                                                                ({{ __("بواسطة:") }} {{ $consultation->respondedBy?->name ?? __("الاستشاري") }})
-                                                            </span>
-                                                        @endif
-                                                    </div>
-                                                    <p class="mb-2 text-dark" style="white-space: pre-wrap;">{{ $consultation->consultant_response }}</p>
-
-                                                    @if($consultation->consultant_recommendations)
-                                                        <div class="border-top pt-2 mt-2">
-                                                            <span class="fw-bold text-success small d-block mb-1">
-                                                                <i class="fas fa-clipboard-list me-1"></i> {{ __("التوصيات والخطة العلاجية:") }}
-                                                            </span>
-                                                            <p class="mb-0 text-dark small" style="white-space: pre-wrap;">{{ $consultation->consultant_recommendations }}</p>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @endif
-
-                                            {{-- If pending, action buttons: Respond & Cancel --}}
-                                            @if($consultation->status === 'pending')
-                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top">
-                                                    <div class="text-muted small">
-                                                        <i class="fas fa-hourglass-half text-warning me-1"></i> {{ __("بانتظار مرور ومعاينة الطبيب الاستشاري وتوثيق التوصيات.") }}
-                                                    </div>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        {{-- Respond Button (Toggles response collapse/form) --}}
-                                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold"
-                                                                data-bs-toggle="collapse" data-bs-target="#respondConsultationCollapse{{ $consultation->id }}">
-                                                            <i class="fas fa-stethoscope me-1"></i> {{ __("توثيق رد الاستشاري") }}
-                                                        </button>
-
-                                                        {{-- Cancel Button --}}
-                                                        <form action="{{ route('clinical-station.consultations.cancel', [$surgery, $consultation]) }}" method="POST"
-                                                              onsubmit="return confirm('{{ __('هل أنت متأكد من إلغاء طلب الاستشارة هذا؟') }}');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                                                                <i class="fas fa-times me-1"></i> {{ __("إلغاء الطلب") }}
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Inline Response Form --}}
-                                                <div class="collapse mt-3" id="respondConsultationCollapse{{ $consultation->id }}">
-                                                    <div class="card card-body bg-light border-success-subtle rounded-3 p-3">
-                                                        <h6 class="fw-bold text-success mb-2">
-                                                            <i class="fas fa-notes-medical me-1"></i> {{ __("توثيق رد وتوصيات الاستشاري: د. ") }}{{ $consultation->doctor?->user?->name }}
-                                                        </h6>
-                                                        <form action="{{ route('clinical-station.consultations.respond', [$surgery, $consultation]) }}" method="POST">
-                                                            @csrf
-                                                            <div class="mb-3">
-                                                                <label class="form-label small fw-bold text-dark">
-                                                                    {{ __("رد ومعاينة الاستشاري (Clinical Findings & Opinion): ") }}<span class="text-danger">*</span>
-                                                                </label>
-                                                                <textarea name="consultant_response" class="form-control rounded-3" rows="3" 
-                                                                          placeholder="{{ __('اكتب التقرير السريري والرأي الطبي للاستشاري...') }}" required></textarea>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label small fw-bold text-dark">
-                                                                    {{ __("الخطة والتوصيات العلاجية (Recommendations & Treatment Plan):") }}
-                                                                </label>
-                                                                <textarea name="consultant_recommendations" class="form-control rounded-3" rows="2" 
-                                                                          placeholder="{{ __('توصيات الأدوية، الإجراءات الإضافية، المتابعة...') }}"></textarea>
-                                                            </div>
-                                                            <div class="text-end">
-                                                                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
-                                                                    <i class="fas fa-check-circle me-1"></i> {{ __("اعتماد وحفظ رد الاستشارة") }}
-                                                                </button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            @endif
+                        {{-- ============================================================== --}}
+                        {{-- PANE 2: PHYSIOTHERAPY (العلاج الفيزيائي والتأهيل) --}}
+                        {{-- ============================================================== --}}
+                        <div class="tab-pane fade" id="pill-physiotherapy" role="tabpanel" aria-labelledby="pill-physiotherapy-tab">
+                            <div class="card rounded-4 border shadow-sm mb-4 bg-white overflow-hidden" style="border-color: #cbd5e1 !important;">
+                                <div class="card-header bg-light border-bottom py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="rounded-circle p-2 d-inline-flex align-items-center justify-content-center text-white" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); width: 36px; height: 36px;">
+                                            <i class="fas fa-hand-holding-medical"></i>
+                                        </span>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">{{ __("طلب خدمة علاج فيزيائي وتأهيل سريري (Physiotherapy Request)") }}</h6>
+                                            <small class="text-muted">{{ __("طلب مباشر من الطبيب المقيم يُرحل فوراً إلى كشف حساب الكاشير بسعر مبدئي 60,000 د.ع قابل للتعديل") }}</small>
                                         </div>
                                     </div>
-                                @endforeach
+                                    <span class="badge rounded-pill px-3 py-1.5" style="background: #ccfbf1; color: #0f766e; font-weight: 700;">
+                                        <i class="fas fa-tag me-1"></i> {{ __("تسعير معتمد: 60,000 د.ع للجلسة (تُسدد وتعدل لدى الكاشير)") }}
+                                    </span>
+                                </div>
+                                <div class="card-body p-4">
+                                    @if($canWriteCurrentTab)
+                                        <form action="{{ route('clinical-station.physiotherapy.store', $surgery) }}" method="POST" class="mb-4 p-3 rounded-3" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                                            @csrf
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-list-ol text-primary me-1"></i> {{ __("عدد الجلسات:") }} <span class="text-danger">*</span>
+                                                    </label>
+                                                    <input type="number" name="sessions" class="form-control rounded-3 fw-bold text-center" min="1" max="30" value="1" required id="physioSessionsInput">
+                                                </div>
+                                                <div class="col-md-7">
+                                                    <label class="form-label small fw-bold text-dark">
+                                                        <i class="fas fa-clipboard-check text-info me-1"></i> {{ __("التوصية السريرية والتشخيص (ملاحظات الجلسة):") }}
+                                                    </label>
+                                                    <input type="text" name="notes" class="form-control rounded-3" placeholder="{{ __('مثال: تأهيل حركي وتمارين تنفسية بعد العملية، تخفيف وذمة...') }}" value="{{ __('جلسة علاج فيزيائي وتأهيل بتوصية الطبيب المقيم') }}">
+                                                </div>
+                                                <div class="col-md-2 text-end">
+                                                    <button type="submit" class="btn text-white w-100 rounded-pill py-2 fw-bold shadow-sm" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);">
+                                                        <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال للكاشير") }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    @endif
+
+                                    {{-- سجل طلبات العلاج الفيزيائي الحالية للعملية --}}
+                                    @if($physioOrders->isEmpty())
+                                        <div class="text-center py-4 text-muted">
+                                            <i class="fas fa-spa fa-2x opacity-25 mb-2 d-block"></i>
+                                            <span class="small">{{ __("لم يتم تسجيل أي طلب علاج فيزيائي لهذه العملية حتى الآن.") }}</span>
+                                        </div>
+                                    @else
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>{{ __("الخدمة والبيان") }}</th>
+                                                        <th class="text-center">{{ __("الجلسات") }}</th>
+                                                        <th class="text-end">{{ __("سعر الجلسة") }}</th>
+                                                        <th class="text-end">{{ __("المبلغ المطلوب") }}</th>
+                                                        <th class="text-center">{{ __("حالة الكاشير") }}</th>
+                                                        <th>{{ __("التأريخ والطالب") }}</th>
+                                                        @if($canWriteCurrentTab)
+                                                            <th class="text-center" style="width: 80px;">{{ __("إجراء") }}</th>
+                                                        @endif
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($physioOrders as $pOrder)
+                                                        <tr>
+                                                            <td>
+                                                                <div class="fw-bold text-dark d-flex align-items-center gap-1.5">
+                                                                    <i class="fas fa-spa text-teal" style="color: #0d9488;"></i>
+                                                                    <span>{{ $pOrder->name }}</span>
+                                                                </div>
+                                                                @if($pOrder->notes)
+                                                                    <small class="text-muted d-block mt-0.5"><i class="fas fa-info-circle me-1"></i>{{ $pOrder->notes }}</small>
+                                                                @endif
+                                                            </td>
+                                                            <td class="text-center fw-bold">{{ $pOrder->quantity }}</td>
+                                                            <td class="text-end">{{ number_format($pOrder->price, 0) }} {{ __("د.ع") }}</td>
+                                                            <td class="text-end fw-bold text-success">{{ number_format($pOrder->total_amount, 0) }} {{ __("د.ع") }}</td>
+                                                            <td class="text-center">
+                                                                @if($pOrder->payment_status === 'paid')
+                                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill">
+                                                                        <i class="fas fa-check-circle me-1"></i> {{ __("مسدد في الكاشير") }}
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill" title="{{ __('يمكن للكاشير تعديل السعر عند السداد') }}">
+                                                                        <i class="fas fa-clock me-1 text-warning"></i> {{ __("معلق بالكاشير (قابل للتعديل)") }}
+                                                                    </span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="small">
+                                                                <div>{{ $pOrder->created_at ? $pOrder->created_at->format('Y-m-d H:i') : '-' }}</div>
+                                                                <small class="text-muted">{{ $pOrder->createdBy?->name ?? __('النظام') }}</small>
+                                                            </td>
+                                                            @if($canWriteCurrentTab)
+                                                                <td class="text-center">
+                                                                    @if($pOrder->payment_status !== 'paid')
+                                                                        <form action="{{ route('clinical-station.physiotherapy.cancel', [$surgery, $pOrder]) }}" method="POST" onsubmit="return confirm('{{ __('هل أنت متأكد من إلغاء طلب العلاج الفيزيائي هذا؟') }}');">
+                                                                            @csrf
+                                                                            @method('DELETE')
+                                                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 shadow-xs" title="{{ __('إلغاء الطلب') }}">
+                                                                                <i class="fas fa-trash-alt me-1"></i> {{ __("إلغاء") }}
+                                                                            </button>
+                                                                        </form>
+                                                                    @else
+                                                                        <span class="text-muted small">-</span>
+                                                                    @endif
+                                                                </td>
+                                                            @endif
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- ============================================================== --}}
+                        {{-- PANE 3: CANCELLED CONSULTATIONS ARCHIVE (أرشيف الطلبات الملغاة) --}}
+                        {{-- ============================================================== --}}
+                        @if($cancelledCount > 0)
+                            <div class="tab-pane fade" id="pill-cancelled-consult" role="tabpanel" aria-labelledby="pill-cancelled-consult-tab">
+                                <div class="card rounded-4 border shadow-sm p-4 bg-white">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-archive text-secondary"></i>
+                                            <h6 class="fw-bold text-dark mb-0">{{ __("سجل الاستشارات الطبية الملغاة (Cancelled Requests)") }}</h6>
+                                        </div>
+                                        <span class="badge bg-secondary-subtle text-secondary border rounded-pill">{{ $cancelledCount }} {{ __("طلب ملغي") }}</span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>{{ __("الطبيب المطلوب") }}</th>
+                                                    <th>{{ __("العيادة / التخصص") }}</th>
+                                                    <th>{{ __("الأولوية والأجر") }}</th>
+                                                    <th>{{ __("سبب الاستشارة الملغاة") }}</th>
+                                                    <th>{{ __("تأريخ الطلب والإلغاء") }}</th>
+                                                    <th class="text-center">{{ __("الحالة") }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($cancelledConsultations as $cConsult)
+                                                    <tr class="opacity-75">
+                                                        <td>
+                                                            <strong class="text-dark">د. {{ $cConsult->doctor?->user?->name ?? __('طبيب استشاري') }}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-light text-secondary border">{{ $cConsult->specialty }}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge {{ $cConsult->priority_badge_class }} me-1">{{ $cConsult->priority_label }}</span>
+                                                            <small class="text-muted">{{ number_format($cConsult->fee, 0) }} د.ع</small>
+                                                        </td>
+                                                        <td class="text-truncate" style="max-width: 250px;" title="{{ $cConsult->reason }}">
+                                                            <span class="text-muted small">{{ Str::limit($cConsult->reason, 60) }}</span>
+                                                        </td>
+                                                        <td class="small text-muted">
+                                                            <div>{{ $cConsult->created_at?->format('Y-m-d H:i') }}</div>
+                                                            <div>{{ __("بواسطة:") }} {{ $cConsult->requestedBy?->name ?? __('النظام') }}</div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1">
+                                                                <i class="fas fa-ban me-1"></i> {{ __("ملغية") }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         @endif
+
                     </div>
                 </div>
             @endif
@@ -4889,8 +5033,8 @@ window.consultantDoctorsData = {!! json_encode(collect($availableConsultantDocto
         'id' => $doc->id,
         'name' => __('د.') . ' ' . ($doc->user?->name ?? __('طبيب استشاري')),
         'specialization' => $doc->specialization ?? $doc->department?->name ?? __('طبيب استشاري'),
-        'fee' => (float)($doc->consultation_fee ?? 0),
-        'fee_formatted' => number_format($doc->consultation_fee ?? 0),
+        'fee' => 50000,
+        'fee_formatted' => number_format(50000),
     ];
 })->values(), JSON_UNESCAPED_UNICODE) !!};
 

@@ -229,16 +229,25 @@
                                     if ($test->is_package_included) return 0;
                                     return (float)($test->radiologyType?->base_price ?? 0);
                                 });
+
+                                // استشارات (غير مشمولة بالضمان كالطوارئ - كامل المبلغ على المريض)
+                                $pendingConsultationsFee = $isCancelled ? 0 : $surgery->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum(function($c) {
+                                    return (float)($c->fee > 0 ? $c->fee : 50000);
+                                });
+                                $paidConsultationsFee = $surgery->consultations->where('payment_status', 'paid')->sum(function($c) {
+                                    if ($c->is_package_included) return 0;
+                                    return (float)($c->fee ?? 0);
+                                });
                                 
                                 $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
                                 if ($isCancelled) {
                                     $patientRefundAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                     $patientPaidAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                 } else {
-                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee;
-                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee;
+                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee + $pendingConsultationsFee;
+                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee + $paidConsultationsFee;
                                 }
-                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee;
+                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee + $pendingConsultationsFee + $paidConsultationsFee;
                             }
                         @endphp
                         <div class="accordion-item">
@@ -390,12 +399,21 @@
                                                             return (float)($test->radiologyType?->base_price ?? 0);
                                                         });
 
+                                                        // استشارات (غير مشمولة بالضمان كالطوارئ - كامل المبلغ على المريض)
+                                                        $pendingConsultationsFee = $isCancelled ? 0 : $surgery->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum(function($c) {
+                                                            return (float)($c->fee > 0 ? $c->fee : 50000);
+                                                        });
+                                                        $paidConsultationsFee = $surgery->consultations->where('payment_status', 'paid')->sum(function($c) {
+                                                            if ($c->is_package_included) return 0;
+                                                            return (float)($c->fee ?? 0);
+                                                        });
+
                                                         $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
                                                         $paidAmount = $isCancelled 
                                                             ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount))
-                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee);
-                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee);
-                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee;
+                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee + $paidConsultationsFee);
+                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee + $pendingConsultationsFee);
+                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee + $pendingConsultationsFee + $paidConsultationsFee;
                                                         
                                                         if ($isCancelled) {
                                                             $excessAmount = $paidAmount;
