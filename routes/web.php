@@ -27,13 +27,35 @@ use Illuminate\Support\Facades\Route;
 Route::pattern('radiology', '[0-9]+');
 
 // تبديل لغة النظام (عربي / إنجليزي)
+// تم اعتماد مسار /locale/{locale} لتجنب تعارض /lang مع مجلد النظام الفعلي lang/ على سيرفرات هوستنجر LiteSpeed (حل خطأ 403 Forbidden)
+Route::get('/locale/{locale}', function (string $locale, \Illuminate\Http\Request $request) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    $referer = $request->header('referer');
+    if ($referer && ! str_contains($referer, '/locale/') && ! str_contains($referer, '/lang/')) {
+        return redirect()->to($referer);
+    }
+
+    return redirect()->back(fallback: '/');
+})->name('lang.switch');
+
+// مسارات بديلة متوافقة
 Route::get('/lang/{locale}', function (string $locale) {
     if (in_array($locale, ['ar', 'en'])) {
         session(['locale' => $locale]);
     }
 
-    return redirect()->back();
-})->name('lang.switch');
+    return redirect()->back(fallback: '/');
+});
+Route::get('/set-locale/{locale}', function (string $locale) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    return redirect()->back(fallback: '/');
+});
 
 Route::get('/', function () {
     if (Auth::check()) {

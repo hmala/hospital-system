@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 265: حل خطأ 403 Forbidden على سيرفر هوستنجر عند تبديل اللغة بنقل مسار التبديل من /lang إلى /locale لمنع تعارض LiteSpeed WAF مع مجلد النظام الفعلي Fix 403 Forbidden on Hostinger LiteSpeed Server by Migrating Language Switch Route to /locale to Prevent System Folder Collision)
+
+### Done
+- **المسارات والباك إند ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * تشخيص الخطأ: عند النقر على تبديل اللغة في هوستنجر، كان الطلب يُرسل إلى `/lang/en`؛ ولأن جذر المشروع يحتوي على مجلد حقيقي اسمه `lang/`، يقوم جدار حماية LiteSpeed Web Server و ModSecurity في هوستنجر باعتراض الطلب باعتباره محاولة تصفح لمجلد نظام حساس ومحمي أو يعامله `.htaccess` كدليل فيزيائي (`RewriteCond %{REQUEST_FILENAME} !-d`) بدون `index.php`، فيظهر خطأ `403 Forbidden: Access to this resource on the server is denied!`.
+  * تحويل المسار الرسمي لـ `lang.switch` إلى `Route::get('/locale/{locale}', ...)` الذي لا يطابق أي مجلد فيزيائي في السيرفر.
+  * تدريع إعادة التوجيه `redirect()->back(fallback: '/')` مع التحقق من الهيدر `referer`.
+  * توفير مسارات بديلة (`/set-locale/{locale}`, `/lang/{locale}`) للتوافقية.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * تحديث واجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية الكاش بنجاح (`php artisan route:clear`, `php artisan view:clear`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
 ## Session log (2026-11-20 — المرحلة 264: إعادة زري تعديل وإلغاء العملية الجراحية حصراً في جدول العمليات مع ربطهما بصلاحيات واجهة الأدوار Restore Dedicated Edit and Cancel Action Buttons in Surgeries Table Gated by Roles & Permissions)
 
 ### Done

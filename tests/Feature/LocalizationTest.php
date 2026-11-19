@@ -19,7 +19,7 @@ class LocalizationTest extends TestCase
 
     public function test_can_switch_locale_to_english(): void
     {
-        $response = $this->get('/lang/en');
+        $response = $this->get('/locale/en');
 
         $response->assertRedirect();
         $response->assertSessionHas('locale', 'en');
@@ -27,7 +27,7 @@ class LocalizationTest extends TestCase
 
     public function test_can_switch_locale_to_arabic(): void
     {
-        $response = $this->withSession(['locale' => 'en'])->get('/lang/ar');
+        $response = $this->withSession(['locale' => 'en'])->get('/locale/ar');
 
         $response->assertRedirect();
         $response->assertSessionHas('locale', 'ar');

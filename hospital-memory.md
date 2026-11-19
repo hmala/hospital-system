@@ -78,6 +78,19 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 265 (2026-11-20 — `main`) — حل خطأ 403 Forbidden على سيرفر هوستنجر عند تبديل اللغة بنقل مسار التبديل من `/lang/{locale}` إلى `/locale/{locale}` لمنع تعارض LiteSpeed WAF مع مجلد النظام الفعلي `lang/` (Fix 403 Forbidden on Hostinger LiteSpeed Server During Language Switch by Migrating Route to `/locale/{locale}` and Preventing Physical System Directory Collision)**:
+  * **تشخيص السبب الجذري على هوستنجر (Root Cause Diagnosis)**:
+    - مسار تبديل اللغة كان مسجلاً برابط `/lang/{locale}`.
+    - نظراً لأن مشروع لارافيل يحتوي على مجلد حقيقي في الجذر باسم `lang/` (ملفات الترجمة)، فإن سيرفرات هوستنجر (LiteSpeed Web Server و ModSecurity WAF) تعترض الطلب كـ Directory Traversal أو محاولة تصفح لمجلد نظام محمي ممنوع الوصول إليه مباشرة دون المرور بـ `index.php`، أو يفشل شرط الـ Rewrite `!-d` في ملف `.htaccess` فتُرجع استجابة `403 Forbidden - Access to this resource on the server is denied!`.
+  * **الحل الجذري ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - تغيير مسار التبديل الأساسي المربوط باسم `lang.switch` إلى: `Route::get('/locale/{locale}', ...)` وهو مسار افتراضي لا يطابق أي مجلد فيزيائي في النظام.
+    - تدريع الـ Referer لمنع أي حلقات تحويل مغلقة أو أخطاء توجيه: `redirect()->back(fallback: '/')`.
+    - الإبقاء على مسارات بديلة إضافية (`/set-locale/{locale}`, `/lang/{locale}`) كـ Aliases للمرونة.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+    - تحديث اختبارات التبديل للتحقق من `/locale/en` و `/locale/ar`.
+    - اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+    - اجتياز فحص `Laravel Pint` وتصفية الكاش (`route:clear`, `view:clear`).
+
 - **المرحلة 264 (2026-11-20 — `main`) — إعادة زري تعديل وإلغاء العملية الجراحية حصراً في جدول العمليات مع ربطهما بصلاحيات واجهة الأدوار (Restore Dedicated Edit and Cancel Action Buttons in Surgeries Table Gated by Roles & Permissions)**:
   * **جدول العمليات ([resources/views/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
     - إضافة عمود الإجراءات (`الإجراءات`) بعرض مقتضب (`90px`).
