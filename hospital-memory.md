@@ -78,6 +78,26 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 261 (2026-11-19 — `main`) — تطوير ومعايرة طباعة كشف يومية ومقبوضات الصندوق للكاشير بهيكلية الأقسام المستقلة وفواصل الصفحات وجداول الاسترجاعات والمطابقة النقدية (Standardize Cashier Payments Print Report Layout with Department Page-Breaks, Sub-Totals, Refunds Table, and Drawer Cash Reconciliation)**:
+  * **معايرة الأبعاد وفواصل الصفحات ([resources/views/cashier/report-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/report-print.blade.php))**:
+    - ضبط هوامش صفحة الطباعة في `@page` بهوامش قياسية مريحة ومتناسقة (15mm من الأعلى والأسفل، 12mm من الجوانب) تمنع التصاق الجداول وتوفر مسافات هوامش تنفسية ممتازة.
+    - فصل كل قسم طبي/إداري ليبدأ في صفحة طباعة جديدة ومستقلة (`dept-page-break`) مع ترويسة مصغرة للقسم وتوثيق اسم المستشفى والكاشير والتاريخ في أعلى كل صفحة.
+    - زيادة الحشوة الداخلية للخلايا (`padding: 7px 6px`) مع ارتفاع سطر متناسق (`line-height: 1.45`) وحدود شبكية تدقيقية واضحة ومقروءة.
+  * **مطابقة هيكلية الجدول مع الكشف المعتمد**:
+    - توزيع الأعمدة من اليمين لليسار: `الرقم (رقم الوصل)` | `ت الوصل` | `اسم المريض` | `المستخدم (الكاشير)` | `السعر (د.ع)` | `الخدمة الطبية (البيان)` | `القسم`.
+    - إدراج صف المجموع الفرعي لكل قسم (`المجموع: X,XXX د.ع`) مع عدد الوصولات.
+  * **صفحة المطابقة والتسوية الختامية المستقلة (`final-summary-page`)**:
+    - جدول ملخص إيرادات الأقسام ومجموع المقبوضات الكلي ونسب التوزيع.
+    - جدول الاسترجاعات المدفوعة من صندوق القبض بموجب النماذج مع بيان السبب ومجموع الاسترجاعات.
+    - جدول ملخص الصندوق التدقيقي: (مجموع المقبوضات - الاسترجاعات - المقبوض إلكترونياً = صافي الصندوق النقدي الفعلي بالدرج).
+    - قسم التواقيع الرسمية الثلاثية وتذييل الاعتماد.
+  * **كنترولر الكاشير ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+    - في `report()`: دعم فرز وتجميع الوصولات للأقسام، واستعلام الاسترجاعات لنفس الفترة والكاشير، واحتساب المقبوضات الإلكترونية وصافي النقد الفعلي.
+  * **الترجمة والاختبارات الآلية ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json), [tests/Feature/CashierLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierLocalizationTest.php))**:
+    - إضافة مفاتيح الترجمة لكافة بنود التقرير والملخص والاسترجاعات.
+    - اجتياز اختبارات `CashierLocalizationTest` بنجاح 100% (`5 passed, 63 assertions`).
+    - اجتياز فحص `Laravel Pint`.
+
 - **المرحلة 260 (2026-11-19 — `main`) — تحويل حذف الخصومات والمكافآت إلى إلغاء إداري مع الاحتفاظ بالأرشفة والسجل وعزل التأثير المالي عن الرواتب (Transform HR Employee Actions Deletion into Soft Administrative Cancellation with Audit Archiving, Financial Isolation from Payroll, and Restoration Support)**:
   * **قاعدة البيانات والنموذج ([database/migrations/2026_11_19_210500_add_cancellation_fields_to_hr_employee_actions_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_19_210500_add_cancellation_fields_to_hr_employee_actions_table.php), [app/Models/HrEmployeeAction.php](file:///c:/get/hospital-system/app/Models/HrEmployeeAction.php))**:
     - إضافة حقول التوثيق والتدقيق للأرشفة الإدارية: `cancelled_by` (المشرف الملغي)، `cancelled_at` (توقيت الإلغاء)، و `cancellation_reason` (سبب الإلغاء).

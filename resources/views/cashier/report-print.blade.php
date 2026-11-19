@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كشف مقبوضات ووصولات الكاشير المعتمد - طباعة</title>
+    <title>{{ __('كشف مقبوضات ووصولات الكاشير المعتمد - طباعة') }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -16,55 +16,53 @@
         $watermarkSrc = $hospitalLogoSrc;
 
         $totalInsurance = (float) ($totalInsuranceShare ?? $payments->sum('insurance_share'));
+        $groupedData = $groupedPayments ?? $payments->groupBy(fn($p) => $p->payment_type_name ?: __('أخرى'));
     @endphp
     <style>
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #fff;
-            color: #212529;
+            background-color: #cbd5e1;
+            color: #1e293b;
             font-size: 11px;
             margin: 0;
-            padding: 0;
-            line-height: 1.4;
-            position: relative;
+            padding: 20px 0;
+            line-height: 1.45;
         }
 
-        /* Distinct & Clear Center Watermark Repeating on All Pages */
+        /* حاوية التقرير للشاشة */
+        .report-content-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 210mm;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            box-sizing: border-box;
+        }
+
+        /* العلامة المائية الرسمية الثابتة في سنتر كل ورقة مطبوعة */
         .report-watermark {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 480px;
-            height: 480px;
+            width: 440px;
+            height: 440px;
             background-repeat: no-repeat;
             background-position: center center;
             background-size: contain;
-            opacity: 0.15; /* وضوح بارز ومميز في منتصف كل صفحة */
+            opacity: 0.12;
             pointer-events: none;
             z-index: 0;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
 
-        .report-content-wrapper {
-            position: relative;
-            z-index: 1;
-            width: 95%;
-            max-width: 280mm;
-            margin: 0 auto;
-            padding-bottom: 8mm;
-        }
-
-        .report-header-container {
-            padding-top: 10mm;
-            margin-bottom: 12px;
-        }
-
-        /* Standard 3-Zone Hospital Header */
+        /* ترويسة المستشفى الرسمية الثلاثية */
         .header-box {
             border-bottom: 2px solid #005a9c;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
             margin-bottom: 10px;
         }
         .header-hospital-ar {
@@ -72,20 +70,20 @@
             flex: 1;
         }
         .header-hospital-ar h2 {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 900;
             color: #005a9c;
             margin: 0 0 2px 0;
             line-height: 1.2;
         }
         .header-hospital-ar h4 {
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 800;
             color: #0284c7;
             margin: 0 0 1px 0;
         }
         .header-hospital-ar p {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 600;
             margin: 0;
@@ -96,8 +94,8 @@
             padding: 0 10px;
         }
         .header-logo img {
-            max-width: 110px;
-            max-height: 80px;
+            max-width: 105px;
+            max-height: 75px;
             object-fit: contain;
         }
         .header-hospital-en {
@@ -106,38 +104,45 @@
             flex: 1;
         }
         .header-hospital-en h2 {
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 900;
             color: #005a9c;
             margin: 0 0 2px 0;
             line-height: 1.2;
         }
         .header-hospital-en h4 {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 800;
             color: #0284c7;
             margin: 0 0 1px 0;
         }
         .header-hospital-en p {
-            font-size: 9.5px;
+            font-size: 9px;
             color: #64748b;
             font-weight: 600;
             margin: 0;
         }
 
-        /* Document Title Banner */
+        /* ترويسة مصغرة تتكرر أعلى كل قسم جديد في الصفحة الجديدة */
+        .dept-repeat-header {
+            border-bottom: 1.5px solid #005a9c;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }
+
+        /* شريط عنوان المستند الموحد */
         .document-title-banner {
             background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%);
             color: #ffffff;
-            padding: 7px 14px;
-            border-radius: 6px;
+            padding: 6px 12px;
+            border-radius: 5px;
             margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .banner-title {
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 800;
             color: #ffffff;
         }
@@ -149,66 +154,18 @@
         .report-badge {
             background: rgba(255, 255, 255, 0.2);
             color: #ffffff;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
-            padding: 3px 10px;
-            border-radius: 20px;
+            padding: 2px 8px;
+            border-radius: 15px;
         }
 
         .summary-card {
             background-color: #f8fafc;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin-bottom: 10px;
-        }
-
-        /* Fixed Layout Table Architecture with Transparent Cells for Watermark */
-        .table-print {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            background-color: transparent !important;
-        }
-        .table-print thead {
-            display: table-header-group; /* يضمن تكرار عناوين الأعمدة فقط في كل صفحة */
-        }
-        .table-print tfoot {
-            display: table-row-group; /* يمنع تكرار المجموع في كل صفحة ويحصره في نهاية التقرير */
-        }
-        .table-print tr {
-            page-break-inside: avoid;
-            break-inside: avoid;
-            background-color: transparent !important;
-        }
-        .table-print th.col-header {
-            background-color: #f1f5f9 !important;
-            color: #1e293b;
-            font-weight: 800;
-            border: 1.5px solid #64748b;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 11px;
-            white-space: nowrap;
-        }
-        .table-print td {
-            border: 1px solid #94a3b8;
-            padding: 7px 6px;
-            text-align: center;
-            font-size: 11px;
-            line-height: 1.45;
-            vertical-align: middle;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            background-color: transparent !important; /* شفاف حتى تظهر العلامة المائية بوضوح */
-        }
-
-        .table-group-subtotal td {
-            background-color: #f8fafc !important;
-            border-top: 2px solid #005a9c !important;
-            border-bottom: 2px solid #475569 !important;
-            font-weight: 800;
-            padding: 8px 6px;
+            border-radius: 5px;
+            padding: 6px 10px;
+            margin-bottom: 12px;
         }
 
         .dept-title-banner {
@@ -217,61 +174,101 @@
             border-right: 5px solid #005a9c;
             padding: 6px 12px;
             border-radius: 4px;
+            margin-bottom: 8px;
         }
 
-        .dept-repeat-header {
-            border-bottom: 1.5px solid #005a9c;
-            padding-bottom: 5px;
-            margin-bottom: 12px;
+        /* الجداول التدقيقية المقروءة والشفافة لظهور العلامة المائية */
+        .table-print {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            background-color: transparent !important;
         }
-
-        .dept-page-break {
-            page-break-before: always !important;
-            break-before: page !important;
-            padding-top: 5mm;
+        .table-print thead {
+            display: table-header-group;
         }
-
-        .final-summary-page {
-            page-break-before: always !important;
-            break-before: page !important;
-            padding-top: 5mm;
+        .table-print tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .table-print th.col-header {
+            background-color: #f1f5f9 !important;
+            color: #0f172a;
+            font-weight: 800;
+            border: 1.5px solid #64748b;
+            padding: 7px 5px;
+            text-align: center;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .table-print td {
+            border: 1px solid #94a3b8;
+            padding: 6px 5px;
+            text-align: center;
+            font-size: 10.5px;
+            line-height: 1.4;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            background-color: transparent !important;
+        }
+        .table-group-subtotal td {
+            background-color: #f8fafc !important;
+            border-top: 2px solid #005a9c !important;
+            border-bottom: 2px solid #475569 !important;
+            font-weight: 800;
+            padding: 7px 5px;
         }
 
         .summary-drawer-table td, .summary-drawer-table th {
             border: 1.5px solid #005a9c !important;
         }
 
+        /* فواصل الصفحات لكل قسم مستقل والصفحة الختامية */
+        .dept-page-break {
+            page-break-before: always;
+            break-before: page;
+            margin-top: 20px;
+        }
+        .final-summary-page {
+            page-break-before: always;
+            break-before: page;
+            margin-top: 20px;
+        }
+
+        /* إعدادات الطباعة الحقيقية المتناسقة الهندسية */
         @media print {
-            .no-print {
-                display: none !important;
-            }
-            @page {
-                size: A4 portrait;
-                margin: 0 !important; /* يلغي تلقائياً الرؤوس والتذييلات الافتراضية للمتصفح (رابط الموقع وعنوان الصفحة) */
-            }
             body {
+                background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                background-color: #fff !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
             }
             .report-content-wrapper {
                 width: 100% !important;
                 max-width: 100% !important;
-                padding: 12mm 12mm 15mm 12mm !important;
+                padding: 0 !important;
                 margin: 0 !important;
-                box-sizing: border-box !important;
+                box-shadow: none !important;
+                background: transparent !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 15mm 12mm 15mm 12mm !important; /* هوامش متناسقة مريحة تضمن تباعد الجداول عن حواف الورقة علوياً وسفلياً */
             }
             .dept-page-break {
                 page-break-before: always !important;
                 break-before: page !important;
-                padding-top: 14mm !important; /* مسافة علوية تنفسية مريحة في بداية كل ورقة جديدة تمنع الالتصاق بالحافة */
+                margin-top: 0 !important;
             }
             .final-summary-page {
                 page-break-before: always !important;
                 break-before: page !important;
-                padding-top: 14mm !important;
+                margin-top: 0 !important;
             }
             .table-print th.col-header {
                 background-color: #f1f5f9 !important;
@@ -293,7 +290,7 @@
             }
             .report-watermark {
                 display: block !important;
-                opacity: 0.15 !important;
+                opacity: 0.12 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -302,128 +299,125 @@
 </head>
 <body onload="window.print()">
 
-<!-- العلامة المائية للنظام واضحة في سنتر كل صفحة مطبوعة -->
-<div class="report-watermark" style="background-image: url('{!! $watermarkSrc !!}');"></div>
-
-<div class="report-content-wrapper">
-    <!-- أزرار التحكم العلوية (تختفي عند الطباعة) -->
-    <div class="no-print d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
+<!-- أزرار التحكم العلوية للشاشة وتنبيه إعدادات الطباعة (تختفي تلقائياً عند الطباعة) -->
+<div class="no-print mx-auto mb-3" style="max-width: 210mm;">
+    <div class="d-flex justify-content-between align-items-center p-3 bg-white rounded border shadow-sm mb-2">
         <div>
-            <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>معاينة طباعة كشف مقبوضات الكاشير</h5>
-            <small class="text-muted d-block mt-1">
-                تم حجب رابط المتصفح التلقائي نهائياً، وضبط تباعد الجدول العلوي، وتوضيح العلامة المائية في منتصف الصفحات.
+            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-print me-2 text-primary"></i>{{ __('معاينة طباعة كشف حساب يومية الصندوق') }}</h6>
+            <small class="text-muted d-block mt-0.5">
+                {{ __('تم ضبط الأبعاد بهوامش متناسقة 15mm وبدء كل قسم في ورقة مستقلة مع جداول المطابقة.') }}
             </small>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-2 rounded-pill small">
-                <i class="fas fa-check-circle me-1"></i> العلامة المائية مفعلة (15%)
-            </span>
             <button onclick="window.print()" class="btn btn-primary btn-sm px-4 fw-bold">
-                <i class="fas fa-print me-1"></i> طباعة الآن
+                <i class="fas fa-print me-1"></i> {{ __('طباعة الآن') }}
             </button>
             <button onclick="window.close()" class="btn btn-outline-secondary btn-sm px-3">
-                <i class="fas fa-times me-1"></i> إغلاق
+                <i class="fas fa-times me-1"></i> {{ __('إغلاق') }}
             </button>
         </div>
     </div>
-
-    <!-- الترويسة الرسمية المعتمدة (تظهر في رأس التقرير) -->
-    <div class="report-header-container">
-        <div class="header-box">
-            <div class="d-flex justify-content-between align-items-center">
-                <!-- الجانب الأيمن (عربي) -->
-                <div class="header-hospital-ar">
-                    <h2>مستشفى الكفاءات الأهلي</h2>
-                    <h4>قسم الحسابات المالية والتدقيق</h4>
-                    <p>إدارة الصناديق والمقبوضات المركزية المعتمدة</p>
-                </div>
-
-                <!-- المنتصف (الشعار الرسمي) -->
-                <div class="header-logo">
-                    <img src="{!! $hospitalLogoSrc !!}" 
-                         alt="Hospital Logo" 
-                         class="hospital-logo-img" 
-                         onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';" 
-                         style="max-height: 80px; max-width: 120px; object-fit: contain;">
-                </div>
-
-                <!-- الجانب الأيسر (إنجليزي) -->
-                <div class="header-hospital-en">
-                    <h2>Al-Kafa'at Private Hospital</h2>
-                    <h4>Finance & Cashier Audit Dept</h4>
-                    <p>Central Revenue & Cash Management Unit</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- شريط عنوان المستند الموحد (Document Title Banner) -->
-        <div class="document-title-banner">
-            <div class="banner-title">
-                <i class="fas fa-file-invoice-dollar me-2"></i>
-                <span>{{ __('كشف حساب يومية الصندوق ومقبوضات الكاشير') }} (Cashier Daily Drawer Statement)</span>
-            </div>
-            <div class="banner-meta">
-                <span class="report-badge">
-                    <i class="fas fa-user-circle me-1"></i>
-                    {{ __('المستخدم:') }} {{ $selectedCashier ? $selectedCashier->name : ($cashierId ? (\App\Models\User::find($cashierId)?->name ?? __('كافة الصناديق')) : __('كافة الصناديق')) }}
-                </span>
-                <span class="report-badge">
-                    <i class="fas fa-calendar-alt me-1"></i>
-                    @if($fromDate && $toDate)
-                        {{ $fromDate == $toDate ? $fromDate : ($fromDate . ' إلى ' . $toDate) }}
-                    @elseif($fromDate)
-                        {{ __('من تاريخ:') }} {{ $fromDate }}
-                    @elseif($toDate)
-                        {{ __('إلى تاريخ:') }} {{ $toDate }}
-                    @else
-                        {{ now()->format('Y/m/d') }}
-                    @endif
-                </span>
-                <span class="report-badge">
-                    <i class="fas fa-clock me-1"></i>
-                    {{ now()->format('Y-m-d H:i') }}
-                </span>
-            </div>
-        </div>
-
-        <!-- ملخص مالي سريع متكرر -->
-        <div class="summary-card">
-            <div class="row text-center gy-1 align-items-center">
-                <div class="col-3 border-end">
-                    <span class="text-muted small d-block" style="font-size: 11px;">{{ __('المقبوضات المحصلة (المريض)') }}</span>
-                    <strong class="text-success fs-6">{{ number_format($totalAmount, 0) }} {{ __('د.ع') }}</strong>
-                </div>
-                <div class="col-3 border-end">
-                    <span class="text-muted small d-block" style="font-size: 11px;">{{ __('إجمالي مطالبات الضمان') }}</span>
-                    <strong class="text-primary fs-6">{{ number_format($totalInsurance, 0) }} {{ __('د.ع') }}</strong>
-                </div>
-                <div class="col-3 border-end">
-                    <span class="text-muted small d-block" style="font-size: 11px;">{{ __('عدد الوصولات المصدرة') }}</span>
-                    <strong class="text-dark fs-6">{{ number_format($totalCount) }} {{ __('وصل') }}</strong>
-                </div>
-                <div class="col-3">
-                    <span class="text-muted small d-block" style="font-size: 11px;">{{ __('القسم / الصندوق') }}</span>
-                    <strong class="text-secondary small">{{ $paymentType ? (\App\Models\Payment::PAYMENT_TYPES[$paymentType] ?? $paymentType) : __('كافة الأقسام') }}</strong>
-                </div>
-            </div>
+    
+    <!-- بطاقة إرشادية للمستخدم عن كيفية إخفاء رابط وتاريخ المتصفح نهائياً -->
+    <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center gap-2 border-info shadow-sm">
+        <i class="fas fa-lightbulb text-warning fa-lg flex-shrink-0"></i>
+        <div>
+            <strong class="text-dark">{{ __('لإخفاء رابط وعنوان وتاريخ المتصفح أعلى وأسفل الورقة:') }}</strong>
+            <span class="text-dark">{{ __('في نافذة الطباعة > اضغط "المزيد من الإعدادات" (More settings) > قم بإلغاء تحديد خيار "الرؤوس والتذييلات" (Headers and footers).') }}</span>
         </div>
     </div>
+</div>
 
-    <!-- أقسام المقبوضات: كل قسم في جدول مستقل وبداية صفحة جديدة نظيفة -->
-    @php $groupedData = $groupedPayments ?? $payments->groupBy(fn($p) => $p->payment_type_name ?: __('أخرى')); @endphp
+<!-- العلامة المائية الرسمية للنظام تتكرر في سنتر كل ورقة مطبوعة -->
+<div class="report-watermark" style="background-image: url('{!! $watermarkSrc !!}');"></div>
+
+<div class="report-content-wrapper">
+
+    {{-- حلقة توليد صفحات الأقسام: كل قسم يبدأ في ورقة مستقلة --}}
     @forelse($groupedData as $departmentName => $deptPayments)
         @php
             $deptTotal = $deptPayments->sum('amount');
         @endphp
-        <div class="dept-report-section @if(!$loop->first) dept-page-break @endif mb-4">
-            @if(!$loop->first)
-                {{-- ترويسة مصغرة للورقة الجديدة تضمن توثيق اسم المستشفى وتاريخ الكشف واسم الكاشير --}}
+        <div class="{{ $loop->first ? 'dept-first-block' : 'dept-page-break' }}">
+            @if($loop->first)
+                {{-- ترويسة المستشفى الرسمية الكاملة تظهر في الصفحة الأولى --}}
+                <div class="header-box">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="header-hospital-ar">
+                            <h2>{{ __('مستشفى الكفاءات الأهلي') }}</h2>
+                            <h4>{{ __('قسم الحسابات المالية والتدقيق') }}</h4>
+                            <p>{{ __('إدارة الصناديق والمقبوضات المركزية المعتمدة') }}</p>
+                        </div>
+                        <div class="header-logo">
+                            <img src="{!! $hospitalLogoSrc !!}" alt="Hospital Logo" onerror="this.onerror=null; this.src='{{ asset('images/1.jpg') }}';">
+                        </div>
+                        <div class="header-hospital-en">
+                            <h2>Al-Kafa'at Private Hospital</h2>
+                            <h4>Finance & Cashier Audit Dept</h4>
+                            <p>Central Revenue & Cash Management Unit</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- شريط العنوان والبيانات الوصفية --}}
+                <div class="document-title-banner">
+                    <div class="banner-title">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>
+                        <span>{{ __('كشف حساب يومية الصندوق ومقبوضات الكاشير') }}</span>
+                    </div>
+                    <div class="banner-meta">
+                        <span class="report-badge">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ __('المستخدم:') }} {{ $selectedCashier ? $selectedCashier->name : ($cashierId ? (\App\Models\User::find($cashierId)?->name ?? __('كافة الصناديق')) : __('كافة الصناديق')) }}
+                        </span>
+                        <span class="report-badge">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            @if($fromDate && $toDate)
+                                {{ $fromDate == $toDate ? $fromDate : ($fromDate . ' إلى ' . $toDate) }}
+                            @elseif($fromDate)
+                                {{ __('من:') }} {{ $fromDate }}
+                            @elseif($toDate)
+                                {{ __('إلى:') }} {{ $toDate }}
+                            @else
+                                {{ now()->format('Y/m/d') }}
+                            @endif
+                        </span>
+                        <span class="report-badge">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ now()->format('h:i A') }}
+                        </span>
+                    </div>
+                </div>
+
+                {{-- ملخص سريع للمؤشرات --}}
+                <div class="summary-card">
+                    <div class="row text-center gy-1 align-items-center">
+                        <div class="col-3 border-end">
+                            <span class="text-muted small d-block" style="font-size: 10px;">{{ __('إجمالي المقبوضات') }}</span>
+                            <strong class="text-success" style="font-size: 12.5px;">{{ number_format($totalAmount, 0) }} {{ __('د.ع') }}</strong>
+                        </div>
+                        <div class="col-3 border-end">
+                            <span class="text-muted small d-block" style="font-size: 10px;">{{ __('مطالبات الضمان') }}</span>
+                            <strong class="text-primary" style="font-size: 12.5px;">{{ number_format($totalInsurance, 0) }} {{ __('د.ع') }}</strong>
+                        </div>
+                        <div class="col-3 border-end">
+                            <span class="text-muted small d-block" style="font-size: 10px;">{{ __('عدد الوصولات') }}</span>
+                            <strong class="text-dark" style="font-size: 12.5px;">{{ number_format($totalCount) }} {{ __('وصل') }}</strong>
+                        </div>
+                        <div class="col-3">
+                            <span class="text-muted small d-block" style="font-size: 10px;">{{ __('الأقسام المشمولة') }}</span>
+                            <strong class="text-secondary small">{{ $paymentType ? (\App\Models\Payment::PAYMENT_TYPES[$paymentType] ?? $paymentType) : __('كافة الأقسام') }}</strong>
+                        </div>
+                    </div>
+                </div>
+            @else
+                {{-- ترويسة مصغرة للورقات اللاحقة --}}
                 <div class="dept-repeat-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
-                        <img src="{!! $hospitalLogoSrc !!}" style="height: 26px; width: auto;" alt="Logo">
-                        <strong class="text-dark" style="font-size: 11.5px;">{{ __('مستشفى الكفاءات الأهلي — كشف حساب يومية الصندوق') }}</strong>
+                        <img src="{!! $hospitalLogoSrc !!}" style="height: 24px; width: auto;" alt="Logo">
+                        <strong class="text-dark" style="font-size: 11px;">{{ __('مستشفى الكفاءات الأهلي — كشف حساب يومية الصندوق') }}</strong>
                     </div>
-                    <div class="text-muted small" style="font-size: 10.5px;">
+                    <div class="text-muted small" style="font-size: 10px;">
                         <span>{{ __('المستخدم:') }} <strong>{{ $selectedCashier ? $selectedCashier->name : ($cashierId ? (\App\Models\User::find($cashierId)?->name ?? __('كافة الصناديق')) : __('كافة الصناديق')) }}</strong></span>
                         <span class="mx-2">|</span>
                         <span>{{ __('التاريخ:') }} <strong>{{ $fromDate ?? now()->format('Y/m/d') }}</strong></span>
@@ -431,16 +425,17 @@
                 </div>
             @endif
 
-            {{-- شريط عنوان القسم المعني مع شارة عدد وصولاته --}}
-            <div class="dept-title-banner mb-2 d-flex justify-content-between align-items-center">
+            {{-- شريط عنوان القسم المعني مع عدد وصولاته --}}
+            <div class="dept-title-banner d-flex justify-content-between align-items-center">
                 <span class="fw-bold text-dark" style="font-size: 12px;">
-                    <i class="fas fa-layer-group text-primary me-2"></i> {{ $departmentName }}
+                    <i class="fas fa-layer-group text-primary me-1.5"></i> {{ $departmentName }}
                 </span>
                 <span class="badge bg-secondary font-monospace" style="font-size: 10.5px; padding: 4px 8px;">
                     {{ number_format($deptPayments->count()) }} {{ __('وصل') }}
                 </span>
             </div>
 
+            {{-- جدول مقبوضات هذا القسم --}}
             <table class="table-print mb-2">
                 <thead>
                     <tr>
@@ -474,9 +469,9 @@
                             <td class="text-center fw-semibold text-secondary small">{{ $departmentName }}</td>
                         </tr>
                     @endforeach
-                    {{-- صف مجموع القسم --}}
+                    {{-- صف مجموع القسم مطابق للكشف الأصلي --}}
                     <tr class="table-group-subtotal">
-                        <td colspan="4" class="text-center fw-bold" style="background-color: #f1f5f9; color: #005a9c; font-size: 11.5px;">
+                        <td colspan="4" class="text-center fw-bold" style="background-color: #f1f5f9; color: #005a9c; font-size: 11px;">
                             {{ __('المجموع') }}
                         </td>
                         <td class="text-end fw-bold text-dark font-monospace" style="font-size: 12px; background-color: #e2e8f0; padding-left: 8px;">
@@ -488,6 +483,11 @@
                     </tr>
                 </tbody>
             </table>
+
+            {{-- تذييل صفحة القسم --}}
+            <div class="text-center text-muted mb-3" style="font-size: 9.5px; border-top: 1px dashed #cbd5e1; padding-top: 5px;">
+                <span>{{ __('مستشفى الكفاءات الأهلي — كشف حساب يومية الصندوق') }} | {{ __('القسم:') }} <strong>{{ $departmentName }}</strong></span>
+            </div>
         </div>
     @empty
         <div class="text-center py-5 text-muted">
@@ -496,211 +496,170 @@
         </div>
     @endforelse
 
-    {{-- صفحة المطابقة والتسوية الختامية (تبدأ في صفحة جديدة نظيفة ومستقلة) --}}
+    {{-- صفحة المطابقة والتسوية الختامية المستقلة (Final Summary Page) --}}
     @if($payments->count() > 0)
     <div class="final-summary-page">
         {{-- ترويسة مصغرة للورقة الختامية --}}
         <div class="dept-repeat-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
-                <img src="{!! $hospitalLogoSrc !!}" style="height: 28px; width: auto;" alt="Logo">
+                <img src="{!! $hospitalLogoSrc !!}" style="height: 26px; width: auto;" alt="Logo">
                 <strong class="text-dark fs-6">{{ __('مستشفى الكفاءات الأهلي — المطابقة الختامية للصندوق') }}</strong>
             </div>
-            <div class="text-muted small" style="font-size: 10.5px;">
+            <div class="text-muted small" style="font-size: 10px;">
                 <span>{{ __('المستخدم:') }} <strong>{{ $selectedCashier ? $selectedCashier->name : ($cashierId ? (\App\Models\User::find($cashierId)?->name ?? __('كافة الصناديق')) : __('كافة الصناديق')) }}</strong></span>
                 <span class="mx-2">|</span>
                 <span>{{ __('التاريخ:') }} <strong>{{ $fromDate ?? now()->format('Y/m/d') }}</strong></span>
             </div>
         </div>
 
-        {{-- جدول ملخص إيرادات الأقسام المعتمدة --}}
-        <div class="document-title-banner mb-2" style="background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%); padding: 6px 14px;">
-            <div class="banner-title" style="font-size: 12px;">
-                <i class="fas fa-list-check me-2"></i>
-                <span>{{ __('ملخص إيرادات الأقسام والمجموع الكلي للمقبوضات') }}</span>
-            </div>
-            <div class="banner-meta">
-                <span class="report-badge" style="font-size: 10.5px;">{{ number_format($totalCount) }} {{ __('إجمالي الوصولات') }}</span>
-            </div>
-        </div>
+        <div class="row g-3">
+            {{-- جدول إجماليات الأقسام المعتمدة --}}
+            <div class="col-7">
+                <div class="border rounded p-2 bg-white">
+                    <h6 class="fw-bold text-primary mb-2" style="font-size: 12px;">
+                        <i class="fas fa-layer-group me-1"></i> {{ __('إيرادات الأقسام ومطابقة المجموع') }}
+                    </h6>
+                    <table class="table table-sm table-bordered mb-0" style="font-size: 11px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>{{ __('القسم الطبي / الإيراد') }}</th>
+                                <th class="text-center">{{ __('عدد الوصولات') }}</th>
+                                <th class="text-end">{{ __('المجموع (د.ع)') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $grandSum = 0; @endphp
+                            @foreach($groupedData as $dName => $dRows)
+                                @php 
+                                    $dSum = $dRows->sum('amount'); 
+                                    $grandSum += $dSum;
+                                @endphp
+                                <tr>
+                                    <td class="text-center font-monospace">{{ $loop->iteration }}</td>
+                                    <td class="fw-bold">{{ $dName }}</td>
+                                    <td class="text-center font-monospace">{{ number_format($dRows->count()) }}</td>
+                                    <td class="text-end font-monospace fw-bold">{{ number_format($dSum, 0) }}</td>
+                                </tr>
+                            @endforeach
+                            <tr class="table-secondary fw-black">
+                                <td colspan="2" class="text-center">{{ __('المجموع الكلي للمقبوضات') }}</td>
+                                <td class="text-center font-monospace">{{ number_format($totalCount) }}</td>
+                                <td class="text-end font-monospace text-primary" style="font-size: 12px;">{{ number_format($grandSum, 0) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-        <table class="table-print mb-4">
-            <thead>
-                <tr>
-                    <th class="col-header" style="width: 8%;">#</th>
-                    <th class="col-header" style="text-align: right; width: 44%;">{{ __('القسم / التبويب') }}</th>
-                    <th class="col-header" style="width: 20%;">{{ __('عدد الوصولات') }}</th>
-                    <th class="col-header" style="width: 28%; text-align: end;">{{ __('إجمالي الإيراد المحصل') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($groupedData as $dName => $dItems)
-                    <tr>
-                        <td class="text-center font-monospace">{{ $loop->iteration }}</td>
-                        <td style="text-align: right; font-weight: 700;">{{ $dName }}</td>
-                        <td class="text-center font-monospace">{{ number_format($dItems->count()) }} {{ __('وصل') }}</td>
-                        <td class="text-end fw-bold font-monospace" style="padding-left: 12px;">
-                            {{ number_format($dItems->sum('amount'), 0) }} {{ __('د.ع') }}
-                        </td>
-                    </tr>
-                @endforeach
-                <tr style="background-color: #e2e8f0; font-weight: 900; border-top: 2.5px solid #005a9c; font-size: 13px;">
-                    <td colspan="2" class="text-center" style="color: #005a9c; padding: 10px;">
-                        {{ __('المجموع الكلي للمقبوضات') }}
-                    </td>
-                    <td class="text-center font-monospace" style="color: #005a9c;">
-                        {{ number_format($totalCount) }} {{ __('وصل') }}
-                    </td>
-                    <td class="text-end font-monospace text-success fw-bold" style="font-size: 13.5px; padding-left: 12px;">
-                        {{ number_format($totalAmount, 0) }} {{ __('د.ع') }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                {{-- جدول سندات الاسترجاع إن وجدت --}}
+                @php
+                    $refundItems = $refunds ?? $refundRecords ?? collect();
+                @endphp
+                @if($refundItems->count() > 0)
+                <div class="border rounded p-2 bg-white mt-3">
+                    <h6 class="fw-bold text-danger mb-2" style="font-size: 12px;">
+                        <i class="fas fa-undo-alt me-1"></i> {{ __('الاسترجاعات المدفوعة من صندوق القبض بموجب النماذج') }} ({{ $refundItems->count() }})
+                    </h6>
+                    <table class="table table-sm table-bordered mb-0" style="font-size: 10.5px;">
+                        <thead class="table-danger text-danger">
+                            <tr>
+                                <th>{{ __('رقم السند') }}</th>
+                                <th>{{ __('المريض') }}</th>
+                                <th>{{ __('السبب') }}</th>
+                                <th class="text-end">{{ __('المبلغ المسترجع') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($refundItems as $rf)
+                            <tr>
+                                <td class="font-monospace text-center">#{{ $rf->id }}</td>
+                                <td>{{ $rf->patient_name ?? ($rf->patient?->name ?? '-') }}</td>
+                                <td class="text-muted small">{{ Str::limit($rf->void_reason ?? __('استرجاع نقدي'), 25) }}</td>
+                                <td class="text-end font-monospace text-danger fw-bold">-{{ number_format($rf->amount, 0) }}</td>
+                            </tr>
+                            @endforeach
+                            <tr class="table-danger fw-bold">
+                                <td colspan="3" class="text-center">{{ __('إجمالي المبالغ المسترجعة') }}</td>
+                                <td class="text-end font-monospace text-danger">{{ number_format($totalRefunds ?? 0, 0) }} {{ __('د.ع') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+            </div>
 
-        {{-- جدول الاسترجاعات المدفوعة من صندوق القبض بموجب النماذج (مطابق للصفحة 4 من الكشف الأصلي) --}}
-        @if(isset($refunds) && $refunds->isNotEmpty())
-            <div class="mb-4" style="page-break-inside: avoid; break-inside: avoid;">
-                <div class="document-title-banner mb-2" style="background: linear-gradient(90deg, #9f1239 0%, #e11d48 100%); padding: 6px 12px;">
-                    <div class="banner-title" style="font-size: 12px;">
-                        <i class="fas fa-undo-alt me-2"></i>
-                        <span>{{ __('الاسترجاعات المدفوعة من صندوق القبض بموجب النماذج') }}</span>
-                    </div>
-                    <div class="banner-meta">
-                        <span class="report-badge" style="font-size: 10.5px;">{{ $refunds->count() }} {{ __('سند استرجاع') }}</span>
+            {{-- بطاقة تسوية وملخص الصندوق مطابقة تماماً للمستند الأصلي --}}
+            <div class="col-5">
+                <div class="border border-2 border-primary rounded p-3 bg-white shadow-sm">
+                    <h6 class="fw-black text-center text-primary mb-3 pb-2 border-bottom" style="font-size: 13px;">
+                        <i class="fas fa-cash-register me-1"></i> {{ __('ملخص الصندوق') }} ({{ __('المطابقة المحاسبية') }})
+                    </h6>
+                    <table class="table table-sm table-borderless summary-drawer-table mb-2" style="font-size: 11px;">
+                        <tbody>
+                            <tr>
+                                <td class="py-1.5 text-secondary">{{ __('مجموع المبالغ المقبوضة') }}:</td>
+                                <td class="py-1.5 text-end font-monospace fw-bold text-dark">{{ number_format($totalAmount, 0) }} {{ __('د.ع') }}</td>
+                            </tr>
+                            @if(($totalRefunds ?? 0) > 0)
+                            <tr class="text-danger">
+                                <td class="py-1.5">{{ __('(-) مجموع المبالغ المسترجعة') }}:</td>
+                                <td class="py-1.5 text-end font-monospace fw-bold">-{{ number_format($totalRefunds, 0) }} {{ __('د.ع') }}</td>
+                            </tr>
+                            @endif
+                            @if(($electronicAmount ?? 0) > 0)
+                            <tr class="text-primary">
+                                <td class="py-1.5">{{ __('(-) المبالغ المقبوضة إلكترونياً (POS / بطاقة)') }}:</td>
+                                <td class="py-1.5 text-end font-monospace fw-bold">-{{ number_format($electronicAmount, 0) }} {{ __('د.ع') }}</td>
+                            </tr>
+                            @endif
+                            @if($totalInsurance > 0)
+                            <tr class="text-info text-dark">
+                                <td class="py-1.5">{{ __('مطالبات الضمان التأميني') }}:</td>
+                                <td class="py-1.5 text-end font-monospace fw-bold">{{ number_format($totalInsurance, 0) }} {{ __('د.ع') }}</td>
+                            </tr>
+                            @endif
+                            <tr class="border-top border-2 border-success bg-light">
+                                <td class="py-2 fw-black text-success" style="font-size: 12px;">{{ __('صافي الصندوق (الرصيد النقدي الفعلي بالدرج)') }}:</td>
+                                <td class="py-2 text-end font-monospace fw-black text-success" style="font-size: 13px;">
+                                    {{ number_format($netCash ?? ($totalAmount - ($totalRefunds ?? 0) - ($electronicAmount ?? 0)), 0) }} {{ __('د.ع') }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="text-center bg-light p-2 rounded border">
+                        <small class="text-muted d-block" style="font-size: 10px;">{{ __('المطابقة الحسابية') }}</small>
+                        <strong class="text-primary font-monospace" style="font-size: 12.5px;">
+                            {{ number_format($netCash ?? ($totalAmount - ($totalRefunds ?? 0) - ($electronicAmount ?? 0)), 0) }} {{ __('دينار عراقي') }}
+                        </strong>
                     </div>
                 </div>
-                <table class="table-print mb-2">
-                    <thead>
-                        <tr>
-                            <th class="col-header" style="width: 10%;">{{ __('الرقم (ر.وصل)') }}</th>
-                            <th class="col-header" style="width: 12%;">{{ __('تاريخ الاسترجاع') }}</th>
-                            <th class="col-header" style="width: 23%; text-align: right;">{{ __('اسم المريض') }}</th>
-                            <th class="col-header" style="width: 11%;">{{ __('ص. القبض') }}</th>
-                            <th class="col-header" style="width: 13%; text-align: end;">{{ __('المبلغ المسترجع') }}</th>
-                            <th class="col-header" style="width: 18%; text-align: right;">{{ __('الخدمة الطبية') }}</th>
-                            <th class="col-header" style="width: 13%;">{{ __('القسم') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($refunds as $ref)
-                            @php
-                                $refPatient = $ref->patient_name;
-                                $refService = $ref->service_details_text;
-                                $refCashier = optional($ref->voidedBy)->name ?? optional($ref->cashier)->name ?? __('النظام');
-                                $refReceipt = $ref->original_receipt_number ?: ($ref->receipt_number ?: ('#' . $ref->id));
-                                $refDate = $ref->voided_at ? $ref->voided_at->format('Y/m/d') : $ref->created_at->format('Y/m/d');
-                            @endphp
-                            <tr>
-                                <td class="font-monospace text-center fw-bold">{{ $refReceipt }}</td>
-                                <td class="font-monospace text-center">{{ $refDate }}</td>
-                                <td style="text-align: right; font-weight: 600;">{{ $refPatient }}</td>
-                                <td class="text-center">{{ $refCashier }}</td>
-                                <td class="text-end fw-bold text-danger font-monospace" style="padding-left: 8px;">
-                                    {{ number_format($ref->amount, 0) }}
-                                </td>
-                                <td style="text-align: right;">{{ $refService }}</td>
-                                <td class="text-center text-secondary small">{{ $ref->payment_type_name }}</td>
-                            </tr>
-                        @endforeach
-                        <tr style="background-color: #fee2e2; font-weight: 800; border-top: 1.5px solid #be123c;">
-                            <td colspan="4" class="text-center text-danger" style="font-size: 12px; padding: 7px;">
-                                {{ __('مجموع الاسترجاعات') }}
-                            </td>
-                            <td class="text-end font-monospace text-danger fw-bold" style="font-size: 12.5px; padding-left: 8px;">
-                                {{ number_format($totalRefunds ?? 0, 0) }}
-                            </td>
-                            <td colspan="2" class="text-start pe-3 text-muted small">
-                                ({{ $refunds->count() }} {{ __('سند استرجاع') }})
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        @endif
-
-        {{-- جدول ملخص الصندوق (مطابق تماماً لما في الصفحة 4 من الكشف المرفق) --}}
-        <div class="row justify-content-center mt-3 mb-4" style="page-break-inside: avoid; break-inside: avoid;">
-            <div class="col-8 col-md-6">
-                <table class="table-print summary-drawer-table" style="border: 2px solid #005a9c; margin: 0 auto; width: 100%;">
-                    <thead>
-                        <tr style="background-color: #005a9c; color: #fff;">
-                            <th colspan="2" class="text-center py-2 fw-bold" style="font-size: 13px; letter-spacing: 0.5px;">
-                                <i class="fas fa-cash-register me-1"></i> {{ __('ملخص الصندوق') }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="fw-bold py-2 px-3 text-start" style="width: 55%; font-size: 11.5px; background-color: #f8fafc;">
-                                {{ __('مجموع المبالغ المقبوضة') }}
-                            </td>
-                            <td class="fw-bold text-end font-monospace px-3 py-2 text-dark" style="width: 45%; font-size: 12.5px;">
-                                {{ number_format($totalAmount, 0) }} {{ __('د.ع') }}
-                            </td>
-                        </tr>
-                        @if(($totalRefunds ?? 0) > 0)
-                        <tr>
-                            <td class="fw-bold py-2 px-3 text-start text-danger" style="font-size: 11.5px; background-color: #fff1f2;">
-                                {{ __('(-) مجموع المبالغ المسترجعة') }}
-                            </td>
-                            <td class="fw-bold text-end font-monospace px-3 py-2 text-danger" style="font-size: 12.5px;">
-                                {{ number_format($totalRefunds, 0) }} {{ __('د.ع') }}
-                            </td>
-                        </tr>
-                        @endif
-                        @if(($electronicAmount ?? 0) > 0)
-                        <tr>
-                            <td class="fw-bold py-2 px-3 text-start text-primary" style="font-size: 11.5px; background-color: #f0f9ff;">
-                                {{ __('(-) المبالغ المقبوضة إلكترونياً (POS / بطاقة)') }}
-                            </td>
-                            <td class="fw-bold text-end font-monospace px-3 py-2 text-primary" style="font-size: 12.5px;">
-                                {{ number_format($electronicAmount, 0) }} {{ __('د.ع') }}
-                            </td>
-                        </tr>
-                        @endif
-                        <tr style="background-color: #ecfdf5; border-top: 2px solid #059669;">
-                            <td class="fw-black py-2.5 px-3 text-start text-success" style="font-size: 12.5px;">
-                                {{ __('صافي الصندوق (الرصيد النقدي الفعلي بالدرج)') }}
-                            </td>
-                            <td class="fw-black text-end font-monospace px-3 py-2.5 text-success" style="font-size: 13.5px;">
-                                {{ number_format($netCash ?? ($totalAmount - ($totalRefunds ?? 0) - ($electronicAmount ?? 0)), 0) }} {{ __('د.ع') }}
-                            </td>
-                        </tr>
-                        <tr style="background-color: #f1f5f9; border-top: 1.5px solid #cbd5e1;">
-                            <td class="fw-bold py-2 px-3 text-start text-dark" style="font-size: 12px;">
-                                {{ __('المجموع النهائي المعتمد') }}
-                            </td>
-                            <td class="fw-bold text-end font-monospace px-3 py-2 text-dark" style="font-size: 13px;">
-                                {{ number_format($netCash ?? ($totalAmount - ($totalRefunds ?? 0) - ($electronicAmount ?? 0)), 0) }} {{ __('د.ع') }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
 
-        <!-- قسم التواقيع والاعتماد في نهاية التقرير -->
-        <div class="row mt-4 pt-3" style="page-break-inside: avoid; break-inside: avoid;">
+        {{-- قسم التواقيع والاعتماد --}}
+        <div class="row mt-4 pt-4 border-top" style="page-break-inside: avoid; break-inside: avoid;">
             <div class="col-4 text-center">
-                <p class="fw-bold mb-4">{{ __('أمين الصندوق (الكاشير)') }}</p>
-                <p class="text-muted">........................................</p>
+                <p class="fw-bold mb-4" style="font-size: 11.5px;">{{ __('أمين الصندوق (الكاشير)') }}</p>
+                <p class="text-muted small">........................................</p>
             </div>
             <div class="col-4 text-center">
-                <p class="fw-bold mb-4">{{ __('المحاسب المالي') }}</p>
-                <p class="text-muted">........................................</p>
+                <p class="fw-bold mb-4" style="font-size: 11.5px;">{{ __('المحاسب المالي') }}</p>
+                <p class="text-muted small">........................................</p>
             </div>
             <div class="col-4 text-center">
-                <p class="fw-bold mb-4">{{ __('مدير الحسابات / التدقيق') }}</p>
-                <p class="text-muted">........................................</p>
+                <p class="fw-bold mb-4" style="font-size: 11.5px;">{{ __('مدير الحسابات / التدقيق') }}</p>
+                <p class="text-muted small">........................................</p>
             </div>
         </div>
 
-        <!-- تذييل المستند الرسمي المعتمد للنظام -->
-        <div class="text-center text-muted small mt-3" style="font-size: 9.5px; page-break-inside: avoid; break-inside: avoid;">
+        {{-- تذييل المستند الرسمي --}}
+        <div class="text-center text-muted mt-3" style="font-size: 9px; page-break-inside: avoid; break-inside: avoid;">
             <span>{{ __('منظومة مستشفى الكفاءات الأهلي الطبية المعتمدة — كشف مالي رسمي ومطابق محاسبياً صادر إلكترونياً') }}</span>
         </div>
     </div>
     @endif
+
+</div>
 
 </body>
 </html>
