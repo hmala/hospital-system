@@ -247,7 +247,7 @@
             }
             @page {
                 size: A4 portrait;
-                margin: 15mm 12mm 15mm 12mm !important; /* مسافات علوية وسفلية وجانبية متناسقة ومريحة تمنع الالتصاق */
+                margin: 0 !important; /* يلغي تلقائياً الرؤوس والتذييلات الافتراضية للمتصفح (رابط الموقع وعنوان الصفحة) */
             }
             body {
                 padding: 0 !important;
@@ -256,6 +256,23 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
+            .report-content-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 12mm 12mm 15mm 12mm !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+            }
+            .dept-page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+                padding-top: 14mm !important; /* مسافة علوية تنفسية مريحة في بداية كل ورقة جديدة تمنع الالتصاق بالحافة */
+            }
+            .final-summary-page {
+                page-break-before: always !important;
+                break-before: page !important;
+                padding-top: 14mm !important;
+            }
             .table-print th.col-header {
                 background-color: #f1f5f9 !important;
                 -webkit-print-color-adjust: exact !important;
@@ -263,14 +280,6 @@
             }
             .table-print td {
                 background-color: transparent !important;
-            }
-            .dept-page-break {
-                page-break-before: always !important;
-                break-before: page !important;
-            }
-            .final-summary-page {
-                page-break-before: always !important;
-                break-before: page !important;
             }
             .document-title-banner {
                 background: #005a9c !important;
