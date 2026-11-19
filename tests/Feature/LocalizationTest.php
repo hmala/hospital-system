@@ -142,7 +142,8 @@ class LocalizationTest extends TestCase
 
         $response = $this->withSession(['locale' => 'ar'])->get('/_test-locale');
         $response->assertOk();
-        $response->assertSee('lang-switcher-pill', false);
+        $response->assertSee('lang-corner-dropdown', false);
+        $response->assertSee('langCornerDropdownBtn', false);
         $response->assertSee('images/flags/iq.svg', false);
         $response->assertSee('images/flags/gb.svg', false);
         $response->assertSee('عربي');

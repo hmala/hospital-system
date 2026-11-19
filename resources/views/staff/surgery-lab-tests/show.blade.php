@@ -90,29 +90,29 @@ if (!function_exists('getSurgeryTestUnit')) {
                     <div>
                         <div class="d-flex align-items-center gap-2">
                             <h5 class="mb-0 fw-bold text-dark">
-                                طلب تحاليل العملية #SURG-{{ $surgery?->id ?? $test->id }}
+                                {{ __("طلب تحاليل العملية") }} #SURG-{{ $surgery?->id ?? $test->id }}
                             </h5>
                             @if(!$hasTests)
-                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="العملية بانتظار تحديد باقة الفحوصات">
-                                    <i class="fas fa-hourglass-half me-1 text-warning"></i> بانتظار تحديد الفحوصات
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="{{ __("العملية بانتظار تحديد باقة الفحوصات") }}">
+                                    <i class="fas fa-hourglass-half me-1 text-warning"></i> {{ __("بانتظار تحديد الفحوصات") }}
                                 </span>
                             @elseif($isAllCompleted)
                                 <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
-                                    <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                    <i class="fas fa-check-circle me-1"></i> {{ __("مكتمل ومعتمد") }}
                                 </span>
                             @elseif($allSurgeryTests->where('status', 'in_progress')->count() > 0)
-                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="الطلب محفوظ كمسودة قيد الفحص بالمختبر">
-                                    <i class="fas fa-edit me-1 text-warning"></i> مسودة قيد الفحص
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" title="{{ __("الطلب محفوظ كمسودة قيد الفحص بالمختبر") }}">
+                                    <i class="fas fa-edit me-1 text-warning"></i> {{ __("مسودة قيد الفحص") }}
                                 </span>
                             @else
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2">
-                                    <i class="fas fa-vial me-1"></i> بانتظار الفحص
+                                    <i class="fas fa-vial me-1"></i> {{ __("بانتظار الفحص") }}
                                 </span>
                             @endif
                         </div>
                         <small class="text-muted">
                             <i class="fas fa-calendar-alt me-1"></i>
-                            موعد العملية: {{ $surgery?->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : 'غير محدد' }}
+                            {{ __("موعد العملية:") }} {{ $surgery?->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : __("غير محدد") }}
                             @if($surgery?->scheduled_time)
                                 • {{ date('h:i A', strtotime($surgery->scheduled_time)) }}
                             @endif
@@ -122,8 +122,8 @@ if (!function_exists('getSurgeryTestUnit')) {
 
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     @if($hasTests)
-                        <a href="{{ route('staff.surgery-lab-tests.print', $test) }}" target="_blank" class="btn btn-outline-dark fw-bold shadow-sm px-3" title="طباعة تقرير النتائج">
-                            <i class="fas fa-print me-1 text-primary"></i> طباعة {{ $isAllCompleted ? 'التقرير' : 'طلب التحاليل' }}
+                        <a href="{{ route('staff.surgery-lab-tests.print', $test) }}" target="_blank" class="btn btn-outline-dark fw-bold shadow-sm px-3" title="{{ __("طباعة تقرير النتائج") }}">
+                            <i class="fas fa-print me-1 text-primary"></i> {{ __("طباعة") }} {{ $isAllCompleted ? __("التقرير") : __("طلب التحاليل") }}
                         </a>
 
                         @if($patientPhone)
@@ -137,26 +137,26 @@ if (!function_exists('getSurgeryTestUnit')) {
                                 $waText = urlencode("مرحباً {$patientName}، تقرير نتائج تحاليل العملية الجراحية في مستشفى الكفاءات الأهلي جاهز. يمكنك معاينة التقرير عبر الرابط: {$printUrl}");
                                 $waShareUrl = "https://wa.me/{$cleanPhone}?text={$waText}";
                             @endphp
-                            <a href="{{ $waShareUrl }}" target="_blank" class="btn fw-bold shadow-sm px-3 text-white" style="background-color: #25d366; border-color: #20ba5a;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
-                                <i class="fab fa-whatsapp me-1"></i> إرسال النتيجة عبر واتساب
+                            <a href="{{ $waShareUrl }}" target="_blank" class="btn fw-bold shadow-sm px-3 text-white" style="background-color: #25d366; border-color: #20ba5a;" title="{{ __('إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب') }}">
+                                <i class="fab fa-whatsapp me-1"></i> {{ __("إرسال النتيجة عبر واتساب") }}
                             </a>
                         @endif
 
-                        <button type="submit" form="surgeryLabResultForm" name="action" value="draft" class="btn btn-warning text-dark fw-bold shadow-sm px-3 border-warning" title="حفظ النتائج والمدخلات كمسودة في المختبر">
-                            <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                        <button type="submit" form="surgeryLabResultForm" name="action" value="draft" class="btn btn-warning text-dark fw-bold shadow-sm px-3 border-warning" title="{{ __("حفظ النتائج والمدخلات كمسودة في المختبر") }}">
+                            <i class="fas fa-save me-1"></i> {{ __("حفظ مؤقت (مسودة)") }}
                         </button>
 
-                        <button type="submit" form="surgeryLabResultForm" name="action" value="complete" class="btn btn-success fw-bold shadow-sm px-3" title="اعتماد النتائج نهائياً وإرسالها لطبيب وصالة العمليات">
-                            <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال
+                        <button type="submit" form="surgeryLabResultForm" name="action" value="complete" class="btn btn-success fw-bold shadow-sm px-3" title="{{ __("اعتماد النتائج نهائياً وإرسالها لطبيب وصالة العمليات") }}">
+                            <i class="fas fa-paper-plane me-1"></i> {{ __("اعتماد نهائي وإرسال") }}
                         </button>
 
-                        <a href="#appendTestsSection" class="btn btn-outline-secondary" title="إضافة تحاليل إضافية">
-                            <i class="fas fa-plus-circle me-1"></i> إضافة تحاليل
+                        <a href="#appendTestsSection" class="btn btn-outline-secondary" title="{{ __("إضافة تحاليل إضافية") }}">
+                            <i class="fas fa-plus-circle me-1"></i> {{ __("إضافة تحاليل") }}
                         </a>
                     @endif
 
                     <a href="{{ route('staff.surgery-lab-tests.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> القائمة
+                        <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} me-1"></i> {{ __("العودة للقائمة") }}
                     </a>
                 </div>
             </div>
@@ -194,11 +194,11 @@ if (!function_exists('getSurgeryTestUnit')) {
                 <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-id-card text-primary"></i>
-                        <h6 class="mb-0 fw-bold">بيانات المريض والعملية الجراحية</h6>
+                        <h6 class="mb-0 fw-bold">{{ __("بيانات المريض والعملية الجراحية") }}</h6>
                     </div>
                     <div>
                         <span class="badge bg-primary-subtle text-primary font-monospace fw-bold">
-                            ملف: #{{ $patient?->national_id ?: ($patient?->id ?? $surgery?->patient_id) }}
+                            {{ __("ملف:") }} #{{ $patient?->national_id ?: ($patient?->id ?? $surgery?->patient_id) }}
                         </span>
                     </div>
                 </div>
@@ -211,8 +211,8 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">اسم المريض</small>
-                                    <strong class="text-dark fs-6">{{ $patientUser?->name ?? 'غير محدد' }}</strong>
+                                    <small class="text-muted d-block">{{ __("اسم المريض") }}</small>
+                                    <strong class="text-dark fs-6">{{ $patientUser?->name ?? __('غير محدد') }}</strong>
                                 </div>
                             </div>
                         </div>
@@ -224,20 +224,20 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas fa-phone-alt"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">رقم الهاتف</small>
+                                    <small class="text-muted d-block">{{ __("رقم الهاتف") }}</small>
                                     @if($patientPhone)
                                         <div class="d-flex align-items-center gap-1">
-                                            <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="انقر للاتصال">
+                                            <a href="tel:{{ $patientPhone }}" class="text-dark fw-bold text-decoration-none font-monospace fs-6" dir="ltr" title="{{ __("انقر للاتصال") }}">
                                                 {{ $patientPhone }}
                                             </a>
                                             @if(!empty($waShareUrl))
-                                                <a href="{{ $waShareUrl }}" target="_blank" class="badge rounded-pill text-white text-decoration-none px-2 py-1 ms-1 shadow-2xs" style="background-color: #25d366; font-size: 0.70rem;" title="مراسلة المريض عبر واتساب">
-                                                    <i class="fab fa-whatsapp"></i> واتساب
+                                                <a href="{{ $waShareUrl }}" target="_blank" class="badge rounded-pill text-white text-decoration-none px-2 py-1 ms-1 shadow-2xs" style="background-color: #25d366; font-size: 0.70rem;" title="{{ __("مراسلة المريض عبر واتساب") }}">
+                                                    <i class="fab fa-whatsapp"></i> {{ __("واتساب") }}
                                                 </a>
                                             @endif
                                         </div>
                                     @else
-                                        <span class="text-muted small">غير مسجل</span>
+                                        <span class="text-muted small">{{ __("غير مسجل") }}</span>
                                     @endif
                                 </div>
                             </div>
@@ -250,10 +250,10 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas {{ $patientGender === 'female' ? 'fa-venus text-danger' : 'fa-mars text-primary' }}"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">العمر / الجنس</small>
+                                    <small class="text-muted d-block">{{ __("العمر / الجنس") }}</small>
                                     <strong class="text-dark">
-                                        {{ $patientAge ? ($patientAge . ' سنة') : 'غير محدد' }} / 
-                                        {{ $patientGender === 'male' ? 'ذكر' : ($patientGender === 'female' ? 'أنثى' : 'غير محدد') }}
+                                        {{ $patientAge ? ($patientAge . ' ' . __('سنة')) : __('غير محدد') }} / 
+                                        {{ $patientGender === 'male' ? __('ذكر') : ($patientGender === 'female' ? __('أنثى') : __('غير محدد')) }}
                                     </strong>
                                 </div>
                             </div>
@@ -266,13 +266,13 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas fa-bed"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">الموقع والردهة</small>
+                                    <small class="text-muted d-block">{{ __("الموقع والردهة") }}</small>
                                     @if($surgery?->room)
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 font-monospace fw-bold" style="font-size: 0.8rem;">
-                                            غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor ?? 'الطابق' }})
+                                            {{ __("غرفة") }} {{ $surgery->room->room_number }} ({{ $surgery->room->floor ?? __("الطابق") }})
                                         </span>
                                     @else
-                                        <span class="badge bg-light text-muted border">لم تسند غرفة</span>
+                                        <span class="badge bg-light text-muted border">{{ __("لم تسند غرفة") }}</span>
                                     @endif
                                 </div>
                             </div>
@@ -285,11 +285,11 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas fa-user-md"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">الجراح والعملية</small>
+                                    <small class="text-muted d-block">{{ __("الجراح والعملية") }}</small>
                                     <strong class="text-dark d-block text-truncate" style="max-width: 140px;">
-                                        د. {{ optional($doctorUser)->name ?? 'غير محدد' }}
+                                        {{ (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . (optional($doctorUser)->name ?? __("غير محدد")) }}
                                     </strong>
-                                    <small class="text-muted d-block text-truncate" style="max-width: 140px;">{{ $surgery?->surgery_type ?? 'عملية جراحية' }}</small>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 140px;">{{ $surgery?->surgery_type ?? __('عملية جراحية') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -301,14 +301,14 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <i class="fas fa-cash-register"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">حالة الدفع</small>
+                                    <small class="text-muted d-block">{{ __("حالة الدفع") }}</small>
                                     @if(($surgery?->surgery_fee_paid === 'paid') || ($allSurgeryTests->where('payment_status', 'paid')->count() > 0))
                                         <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> مسدد
+                                            <i class="fas fa-check-circle me-1"></i> {{ __("مسدد") }}
                                         </span>
                                     @else
                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
-                                            <i class="fas fa-clock me-1"></i> غير مسدد ⚠️
+                                            <i class="fas fa-clock me-1"></i> {{ __("غير مسدد") }} ⚠️
                                         </span>
                                     @endif
                                 </div>
@@ -327,11 +327,11 @@ if (!function_exists('getSurgeryTestUnit')) {
                 <div class="card-header bg-primary-subtle text-primary border-bottom d-flex justify-content-between align-items-center py-2 px-3">
                     <h6 class="mb-0 fw-bold">
                         <i class="fas fa-plus-circle text-primary me-2"></i>
-                        {{ !$hasTests ? 'تحديد واختيار التحاليل المطلوبة لهذه العملية' : 'إضافة تحاليل إضافية إلى هذه العملية' }}
+                        {{ !$hasTests ? __('تحديد واختيار التحاليل المطلوبة لهذه العملية') : __('إضافة تحاليل إضافية إلى هذه العملية') }}
                     </h6>
                     @if($hasTests)
                         <a href="{{ route('staff.surgery-lab-tests.show', $test) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
-                            <i class="fas fa-times me-1"></i> إغلاق
+                            <i class="fas fa-times me-1"></i> {{ __("إغلاق") }}
                         </a>
                     @endif
                 </div>
@@ -353,7 +353,7 @@ if (!function_exists('getSurgeryTestUnit')) {
 
                         <div class="alert alert-info py-2 px-3 mb-3 small">
                             <i class="fas fa-info-circle me-1"></i>
-                            {{ !$hasTests ? 'هذه العملية بانتظار تحديد الفحوصات. يمكنك اختيار باقة طبية كاملة (بكج) أو اختيار من مجموعات المفضلات أو تحديد الفحوصات يدوياً ثم الضغط على زر الحفظ.' : 'سيتم إدراج التحاليل المختارة أو الباقة الطبية إلى العملية الحالية مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.' }}
+                            {{ !$hasTests ? __('هذه العملية بانتظار تحديد الفحوصات. يمكنك اختيار باقة طبية كاملة (بكج) أو اختيار من مجموعات المفضلات أو تحديد الفحوصات يدوياً ثم الضغط على زر الحفظ.') : __('سيتم إدراج التحاليل المختارة أو الباقة الطبية إلى العملية الحالية مباشرة دون حذف أي من التحاليل المسجلة مسبقاً.') }}
                         </div>
 
                         {{-- 1. قسم باقات المختبر الطبية (البكجات Packages) في صف أفقي قابل للتمرير --}}
@@ -361,9 +361,9 @@ if (!function_exists('getSurgeryTestUnit')) {
                         <div class="mb-3 p-3 bg-light rounded border border-primary border-opacity-25 shadow-xs">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold small text-primary d-flex align-items-center gap-1">
-                                    <i class="fas fa-boxes text-primary"></i> باقات المختبر الطبية (البكجات Packages):
+                                    <i class="fas fa-boxes text-primary"></i> {{ __("باقات المختبر الطبية (البكجات Packages):") }}
                                 </span>
-                                <span class="text-muted small" style="font-size: 0.72rem;">اختر باقة لإضافة تحاليلها وسعرها دفعة واحدة</span>
+                                <span class="text-muted small" style="font-size: 0.72rem;">{{ __("اختر باقة لإضافة تحاليلها وسعرها دفعة واحدة") }}</span>
                             </div>
                             <!-- عرض الباقات في صف واحد أفقي أنيق -->
                             <div class="d-flex flex-nowrap gap-2 overflow-auto py-1 px-1 mb-2" style="scrollbar-width: thin;">
@@ -380,20 +380,20 @@ if (!function_exists('getSurgeryTestUnit')) {
                                             <strong class="text-dark small text-truncate" title="{{ $pkg->name }}" style="max-width: 140px;">
                                                 <i class="fas fa-box text-primary me-1"></i>{{ $pkg->name }}
                                             </strong>
-                                            <span class="badge bg-primary text-white" style="font-size: 0.68rem;">{{ count($pkgTestIds) }} تحاليل</span>
+                                            <span class="badge bg-primary text-white" style="font-size: 0.68rem;">{{ count($pkgTestIds) }} {{ __("تحاليل") }}</span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-auto pt-1 border-top">
                                             <span class="fw-bold text-success small" style="font-size: 0.8rem;">{{ number_format($pkg->price) }} IQD</span>
                                             <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 fw-bold select-package-btn" style="font-size: 0.7rem;">
-                                                <i class="fas fa-check me-1"></i> اختيار
+                                                <i class="fas fa-check me-1"></i> {{ __("اختيار") }}
                                             </button>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
                             <div id="selectedPackageAlert" class="alert alert-success py-1 px-3 mt-1 mb-2 small d-none d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-check-circle me-1"></i> تم اختيار باقة: <strong id="selectedPackageName"></strong> وتم تفعيل تحاليلها في القائمة.</span>
-                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" id="clearSelectedPackage">إلغاء الباقة</button>
+                                <span><i class="fas fa-check-circle me-1"></i> {{ __("تم اختيار باقة:") }} <strong id="selectedPackageName"></strong> {{ __("وتم تفعيل تحاليلها في القائمة.") }}</span>
+                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" id="clearSelectedPackage">{{ __("إلغاء الباقة") }}</button>
                             </div>
                         </div>
                         @endif
@@ -402,7 +402,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                         @if(isset($userGroups) && $userGroups->count() > 0)
                         <div class="mb-3">
                             <span class="fw-bold small text-dark d-block mb-1">
-                                <i class="fas fa-layer-group text-warning me-1"></i> مجموعات المفضلات الخاصة بي:
+                                <i class="fas fa-layer-group text-warning me-1"></i> {{ __("مجموعات المفضلات الخاصة بي:") }}
                             </span>
                             <div class="d-flex flex-wrap gap-1">
                                 @foreach($userGroups as $group)
@@ -412,7 +412,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                     <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2 group-select-btn" 
                                             data-test-ids="{{ json_encode($grpTestIds) }}" 
                                             style="font-size: 0.8rem;" 
-                                            title="تحديد كافة تحاليل هذه المجموعة">
+                                            title="{{ __("تحديد كافة تحاليل هذه المجموعة") }}">
                                         <i class="fas fa-star text-warning me-1"></i>{{ $group->name }}
                                         <span class="badge bg-secondary-subtle text-dark ms-1">({{ count($grpTestIds) }})</span>
                                     </button>
@@ -424,7 +424,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                         {{-- 3. مفضلاتي الفردية --}}
                         @if($favorites->isNotEmpty())
                         <div class="mb-3">
-                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> مفضلاتي الفردية:</span>
+                            <span class="fw-bold small text-dark d-block mb-1"><i class="fas fa-star text-warning me-1"></i> {{ __("مفضلاتي الفردية:") }}</span>
                             <div class="d-flex flex-wrap gap-1">
                                 @foreach($favorites as $stat)
                                     @php
@@ -444,7 +444,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                         <!-- شريط البحث السريع في التحاليل -->
                         <div class="input-group input-group-sm mb-2">
                             <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" id="appendTestSearch" placeholder="ابحث عن تحليل بالاسم أو الكود لإضافته...">
+                            <input type="text" class="form-control" id="appendTestSearch" placeholder="{{ __("ابحث عن تحليل بالاسم أو الكود لإضافته...") }}">
                             <button class="btn btn-outline-secondary" type="button" id="clearAppendSearch"><i class="fas fa-times"></i></button>
                         </div>
 
@@ -458,7 +458,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                             @foreach($allLabTests as $cat => $tests)
                                 <div class="mb-2 append-test-group">
                                     <h6 class="text-primary border-bottom pb-1 small fw-bold">
-                                        <i class="fas fa-folder-open me-1"></i>{{ $cat ?: 'فحوصات عامة' }}
+                                        <i class="fas fa-folder-open me-1"></i>{{ $cat ?: __('فحوصات عامة') }}
                                     </h6>
                                     <div class="row g-1">
                                         @foreach($tests as $t)
@@ -475,7 +475,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                                             <small class="text-muted font-monospace">({{ $t->code }})</small>
                                                         @endif
                                                         @if(in_array($t->id, $currentTestIds))
-                                                            <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">موجود</span>
+                                                            <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">{{ __("موجود") }}</span>
                                                         @endif
                                                     </label>
                                                 </div>
@@ -488,11 +488,11 @@ if (!function_exists('getSurgeryTestUnit')) {
 
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="text-muted small">
-                                تم اختيار: <strong id="selectedTestsCounter" class="text-primary font-monospace">0</strong> تحليل
+                                {{ __("تم اختيار:") }} <strong id="selectedTestsCounter" class="text-primary font-monospace">0</strong> {{ __("تحليل") }}
                             </span>
                             <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-xs">
                                 <i class="fas fa-save me-1"></i>
-                                {{ !$hasTests ? 'تأكيد التحاليل المختارة والبدء بإدخال النتائج' : 'إضافة التحاليل المختارة إلى العملية' }}
+                                {{ !$hasTests ? __('تأكيد التحاليل المختارة والبدء بإدخال النتائج') : __('إضافة التحاليل المختارة إلى العملية') }}
                             </button>
                         </div>
                     </form>
@@ -509,10 +509,10 @@ if (!function_exists('getSurgeryTestUnit')) {
                 <div class="card-header bg-transparent text-dark border-bottom d-flex justify-content-between align-items-center py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-table fs-5 text-primary"></i>
-                        <h6 class="mb-0 fw-bold">جدول النتائج والمديات المرجعية ({{ $allSurgeryTests->count() }} فحص)</h6>
+                        <h6 class="mb-0 fw-bold">{{ __("جدول النتائج والمديات المرجعية") }} ({{ $allSurgeryTests->count() }} {{ __("فحص") }})</h6>
                     </div>
                     <div>
-                        <span class="badge bg-primary-subtle text-primary fw-bold font-monospace">{{ $allSurgeryTests->count() }} فحوصات</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold font-monospace">{{ $allSurgeryTests->count() }} {{ __("فحوصات") }}</span>
                     </div>
                 </div>
 
@@ -528,11 +528,11 @@ if (!function_exists('getSurgeryTestUnit')) {
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-center" style="width: 40px;">#</th>
-                                        <th>اسم الفحص الطبي</th>
-                                        <th style="width: 200px;">النتيجة (Value)</th>
-                                        <th style="width: 80px;">الوحدة</th>
-                                        <th style="width: 150px;">المدى المرجعي</th>
-                                        <th style="width: 110px;" class="text-center">الحالة (Flag)</th>
+                                        <th>{{ __("اسم الفحص الطبي") }}</th>
+                                        <th style="width: 200px;">{{ __("النتيجة (Value)") }}</th>
+                                        <th style="width: 80px;">{{ __("الوحدة") }}</th>
+                                        <th style="width: 150px;">{{ __("المدى المرجعي") }}</th>
+                                        <th style="width: 110px;" class="text-center">{{ __("الحالة (Flag)") }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -568,7 +568,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                                         <strong class="text-dark">{{ $testName }}</strong>
                                                         @if($tObj->code)
                                                             <small class="text-muted font-monospace d-block" style="font-size: 0.7rem;">
-                                                                كود: {{ $tObj->code }}
+                                                                {{ __("كود:") }} {{ $tObj->code }}
                                                             </small>
                                                         @endif
                                                     </div>
@@ -581,7 +581,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                                        class="form-control form-control-sm test-value font-monospace fw-bold"
                                                        name="test_results[{{ $surgeryTest->id }}][value]"
                                                        value="{{ old('test_results.' . $surgeryTest->id . '.value', $surgeryTest->result) }}"
-                                                       placeholder="أدخل القيمة..."
+                                                       placeholder="{{ __("أدخل القيمة...") }}"
                                                        tabindex="{{ $index + 1 }}"
                                                        data-test="{{ $testName }}">
                                                 <input type="hidden" name="test_results[{{ $surgeryTest->id }}][unit]" value="{{ $unitDisplay }}">
@@ -603,7 +603,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                                             <!-- الحالة الحية (Flag) -->
                                             <td class="text-center">
                                                 <span class="result-flag font-monospace" id="flag-{{ $index }}">
-                                                    <span class="badge bg-secondary-subtle text-muted">غير محدد</span>
+                                                    <span class="badge bg-secondary-subtle text-muted">{{ __("غير محدد") }}</span>
                                                 </span>
                                             </td>
                                         </tr>
@@ -616,20 +616,20 @@ if (!function_exists('getSurgeryTestUnit')) {
                         <div class="p-3 bg-light border-top d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-primary-subtle text-primary p-2 rounded-circle"><i class="fas fa-chart-pie"></i></span>
-                                <strong class="text-dark small">ملخص نتائج الفحوصات:</strong>
+                                <strong class="text-dark small">{{ __("ملخص نتائج الفحوصات:") }}</strong>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-3 small fw-bold">
                                 <span class="text-success d-inline-flex align-items-center gap-1">
-                                    <i class="fas fa-check-circle"></i> <span id="normal-count">0</span> طبيعي
+                                    <i class="fas fa-check-circle"></i> <span id="normal-count">0</span> {{ __("طبيعي") }}
                                 </span>
                                 <span class="text-danger d-inline-flex align-items-center gap-1">
-                                    <i class="fas fa-arrow-up"></i> <span id="high-count">0</span> مرتفع
+                                    <i class="fas fa-arrow-up"></i> <span id="high-count">0</span> {{ __("مرتفع") }}
                                 </span>
                                 <span class="text-warning d-inline-flex align-items-center gap-1">
-                                    <i class="fas fa-arrow-down"></i> <span id="low-count">0</span> منخفض
+                                    <i class="fas fa-arrow-down"></i> <span id="low-count">0</span> {{ __("منخفض") }}
                                 </span>
                                 <span class="text-muted d-inline-flex align-items-center gap-1">
-                                    <i class="fas fa-question-circle"></i> <span id="pending-count">{{ $allSurgeryTests->count() }}</span> غير مكتمل
+                                    <i class="fas fa-question-circle"></i> <span id="pending-count">{{ $allSurgeryTests->count() }}</span> {{ __("غير مكتمل") }}
                                 </span>
                             </div>
                         </div>
@@ -637,24 +637,24 @@ if (!function_exists('getSurgeryTestUnit')) {
                         <!-- حقل الملاحظات النصية -->
                         <div class="p-3 bg-white border-top">
                             <label for="notes" class="form-label small fw-bold text-dark">
-                                <i class="fas fa-comment-medical text-primary me-1"></i> ملاحظات المختبر حول نتائج العملية:
+                                <i class="fas fa-comment-medical text-primary me-1"></i> {{ __("ملاحظات المختبر حول نتائج العملية:") }}
                             </label>
-                            <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2" placeholder="اكتب أي ملاحظات أو تفسيرات موجهة لصالة العمليات أو طبيب التخدير...">{{ old('notes', $test->notes) }}</textarea>
+                            <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2" placeholder="{{ __("اكتب أي ملاحظات أو تفسيرات موجهة لصالة العمليات أو طبيب التخدير...") }}">{{ old('notes', $test->notes) }}</textarea>
                         </div>
 
                         <!-- أزرار الحفظ السفلية -->
                         <div class="p-3 bg-light border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
                             <div>
                                 <a href="#appendTestsSection" class="btn btn-outline-primary btn-sm px-3 rounded-pill">
-                                    <i class="fas fa-plus-circle me-1"></i> إضافة تحاليل أخرى
+                                    <i class="fas fa-plus-circle me-1"></i> {{ __("إضافة تحاليل") }} أخرى
                                 </a>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <button type="submit" name="action" value="draft" class="btn btn-warning text-dark btn-sm fw-bold px-3 py-1.5 rounded-pill shadow-xs border-warning">
-                                    <i class="fas fa-save me-1"></i> حفظ مؤقت (مسودة)
+                                    <i class="fas fa-save me-1"></i> {{ __("حفظ مؤقت (مسودة)") }}
                                 </button>
                                 <button type="submit" name="action" value="complete" class="btn btn-success btn-sm fw-bold px-4 py-1.5 rounded-pill shadow-xs">
-                                    <i class="fas fa-paper-plane me-1"></i> اعتماد نهائي وإرسال
+                                    <i class="fas fa-paper-plane me-1"></i> {{ __("اعتماد نهائي وإرسال") }}
                                 </button>
                             </div>
                         </div>
@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (btn) {
                     btn.classList.remove('btn-primary', 'text-white');
                     btn.classList.add('btn-outline-primary');
-                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار';
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> {{ __("اختيار") }}';
                 }
             });
 
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btn) {
                 btn.classList.add('btn-primary', 'text-white');
                 btn.classList.remove('btn-outline-primary');
-                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> تم اختيارها';
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> {{ __("تم اختيارها") }}';
             }
 
             document.getElementById('selectedPackageId').value = pkgId;
@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (btn) {
                     btn.classList.remove('btn-primary', 'text-white');
                     btn.classList.add('btn-outline-primary');
-                    btn.innerHTML = '<i class="fas fa-check me-1"></i> اختيار';
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> {{ __("اختيار") }}';
                 }
             });
             document.getElementById('selectedPackageAlert').classList.add('d-none');
@@ -824,19 +824,19 @@ document.addEventListener('DOMContentLoaded', function () {
         row.classList.remove('table-danger', 'table-warning', 'table-success');
 
         if (val === '') {
-            if (flag) flag.innerHTML = '<span class="badge bg-secondary-subtle text-muted">غير مكتمل</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-secondary-subtle text-muted">{{ __("غير مكتمل") }}</span>';
             return 'pending';
         }
 
         const lower = val.toLowerCase();
         if (lower === 'positive' || lower === 'موجب' || lower === 'pos' || lower === '+') {
             row.classList.add('table-danger');
-            if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ موجب (غير طبيعي)</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ {{ __("موجب (غير طبيعي)") }}</span>';
             return 'high';
         }
         if (lower === 'negative' || lower === 'سالب' || lower === 'neg' || lower === '-' || lower === 'normal' || lower === 'طبيعي') {
             row.classList.add('table-success');
-            if (flag) flag.innerHTML = '<span class="badge bg-success">✓ سالب (طبيعي)</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-success">✓ {{ __("سالب (طبيعي)") }}</span>';
             return 'normal';
         }
 
@@ -844,23 +844,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const { min: refMin, max: refMax } = parseRangeValues(row);
 
         if (isNaN(numeric) || (refMin === null && refMax === null)) {
-            if (flag) flag.innerHTML = '<span class="badge bg-info-subtle text-dark">تم الإدخال</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-info-subtle text-dark">{{ __("تم الإدخال") }}</span>';
             return 'unknown';
         }
 
         if (refMin !== null && numeric < refMin) {
             row.classList.add('table-warning');
-            if (flag) flag.innerHTML = '<span class="badge bg-warning text-dark">↓ منخفض</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-warning text-dark">↓ {{ __("منخفض") }}</span>';
             return 'low';
         }
         if (refMax !== null && numeric > refMax) {
             row.classList.add('table-danger');
-            if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ مرتفع</span>';
+            if (flag) flag.innerHTML = '<span class="badge bg-danger">↑ {{ __("مرتفع") }}</span>';
             return 'high';
         }
 
         row.classList.add('table-success');
-        if (flag) flag.innerHTML = '<span class="badge bg-success">✓ طبيعي</span>';
+        if (flag) flag.innerHTML = '<span class="badge bg-success">✓ {{ __("طبيعي") }}</span>';
         return 'normal';
     }
 

@@ -129,10 +129,10 @@
     @php
         $nicuRes = $request->incubatorReservation;
         $p = $request->visit?->patient ?? $nicuRes?->patient;
-        $pName = $nicuRes ? $nicuRes->baby_title : ($p?->name ?? $p?->user?->name ?? 'غير محدد');
-        $docName = $nicuRes ? ($nicuRes->doctor?->user?->name ?? 'طبيب الخدج المشرف') : ($request->visit?->doctor?->user?->name ?? 'الاستشارية');
-        $deptName = $nicuRes ? 'قسم الخدج والحاضنات (NICU)' : ($request->visit?->department?->name ?? 'العيادات الاستشارية');
-        $radNames = $request->radiology_names ?: [$request->description ?: 'فحص تصوير'];
+        $pName = $nicuRes ? $nicuRes->baby_title : ($p?->name ?? $p?->user?->name ?? __('غير محدد'));
+        $docName = $nicuRes ? ($nicuRes->doctor?->user?->name ?? __('طبيب الخدج المشرف')) : ($request->visit?->doctor?->user?->name ?? __('الاستشارية'));
+        $deptName = $nicuRes ? __('قسم الخدج والحاضنات (NICU)') : ($request->visit?->department?->name ?? __('العيادات الاستشارية'));
+        $radNames = $request->radiology_names ?: [$request->description ?: __('فحص تصوير')];
         $details = is_string($request->details) ? (json_decode($request->details, true) ?? []) : ($request->details ?? []);
         $images = $resultData['images'] ?? [];
         $hasResult = !empty($resultData['findings']) || $request->status === 'completed';
@@ -146,15 +146,15 @@
             </div>
             <div>
                 <h4 class="mb-0 fw-bold text-dark" style="letter-spacing: -0.3px;">
-                    تقرير الفحص الإشعاعي والتصوير الطبي
+                    {{ __("تقرير الفحص الإشعاعي والتصوير الطبي") }}
                 </h4>
                 <div class="d-flex align-items-center gap-2 text-muted small mt-1">
-                    <span>طلب رقم <strong class="text-dark">#{{ $request->id }}</strong></span>
+                    <span>{{ __("طلب رقم") }} <strong class="text-dark">#{{ $request->id }}</strong></span>
                     <span>•</span>
                     <span>{{ $request->created_at->format('Y-m-d H:i') }}</span>
                     <span>•</span>
                     <span class="badge {{ $request->status === 'completed' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-info-subtle text-info border border-info-subtle' }} px-2 py-1">
-                        {{ $request->status === 'completed' ? 'مكتمل ومعتمد' : ($request->status === 'in_progress' ? 'قيد الفحص الآن' : $request->status_text) }}
+                        {{ $request->status === 'completed' ? __("مكتمل ومعتمد") : ($request->status === 'in_progress' ? __("قيد الفحص الآن") : $request->status_text) }}
                     </span>
                 </div>
             </div>
@@ -163,14 +163,14 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             @if($request->isDirectExternal() && !in_array($request->status, ['completed', 'cancelled']))
                 <button type="button" class="btn btn-outline-danger px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#cancelExternalRadModal">
-                    <i class="fas fa-ban me-1"></i> إلغاء الطلب الخارجي
+                    <i class="fas fa-ban me-1"></i> {{ __("إلغاء الطلب الخارجي") }}
                 </button>
             @endif
             <a href="{{ route('radiology-staff.print', $request) }}" target="_blank" class="btn {{ $hasResult ? 'btn-outline-success' : 'btn-outline-primary' }} px-3 py-2 fw-semibold">
-                <i class="fas fa-print me-1"></i> {{ $hasResult ? 'طباعة التقرير الطبي المعتمد' : 'معاينة / طباعة استمارة التقرير' }}
+                <i class="fas fa-print me-1"></i> {{ $hasResult ? __("طباعة التقرير الطبي المعتمد") : __("معاينة / طباعة استمارة التقرير") }}
             </a>
             <a href="{{ route('radiology-staff.index') }}" class="btn btn-light border px-3 py-2 text-secondary fw-semibold">
-                <i class="fas fa-arrow-right me-1"></i> العودة لطابور الفحص
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __("العودة لطابور الفحص") }}
             </a>
         </div>
     </div>
@@ -203,11 +203,11 @@
                         <div class="fw-bold text-dark fs-6">{{ $pName }}</div>
                         <div class="text-muted small">
                             @if($nicuRes)
-                                <span class="badge bg-secondary-subtle text-dark border">{{ $nicuRes->incubator?->name ?? ('حاضنة #' . $nicuRes->incubator_id) }}</span>
-                                <span>• {{ $nicuRes->days_count }} يوم بالحاضنة</span>
+                                <span class="badge bg-secondary-subtle text-dark border">{{ $nicuRes->incubator?->name ?? (__('حاضنة #') . $nicuRes->incubator_id) }}</span>
+                                <span>• {{ $nicuRes->days_count }} {{ __('يوم بالحاضنة') }}</span>
                             @else
-                                {{ $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : '') }}
-                                @if($p?->age) <span>• {{ $p->age }} سنة</span> @endif
+                                {{ $p?->gender === 'male' ? __('ذكر') : ($p?->gender === 'female' ? __('أنثى') : '') }}
+                                @if($p?->age) <span>• {{ $p->age }} {{ __('سنة') }}</span> @endif
                                 @if($p?->medical_number) <span class="font-monospace text-secondary ms-1">#{{ $p->medical_number }}</span> @endif
                             @endif
                         </div>
@@ -216,30 +216,30 @@
             </div>
 
             <div class="col-lg-3 col-md-6">
-                <div class="text-muted small mb-1"><i class="fas fa-user-md text-secondary me-1"></i> الطبيب المحول</div>
-                <div class="fw-semibold text-dark">د. {{ $docName }}</div>
+                <div class="text-muted small mb-1"><i class="fas fa-user-md text-secondary me-1"></i> {{ __("الطبيب المحول") }}</div>
+                <div class="fw-semibold text-dark">{{ __("د.") }} {{ $docName }}</div>
                 <div class="text-muted" style="font-size: 0.75rem;">{{ $deptName }}</div>
             </div>
 
             <div class="col-lg-2 col-sm-6">
-                <div class="text-muted small mb-1"><i class="fas fa-money-bill-wave text-secondary me-1"></i> الرسوم المالية</div>
+                <div class="text-muted small mb-1"><i class="fas fa-money-bill-wave text-secondary me-1"></i> {{ __("الرسوم المالية") }}</div>
                 @if($nicuRes)
                     <span class="badge bg-info-subtle text-primary border border-info-subtle px-2 py-1">
-                        <i class="fas fa-file-invoice-dollar me-1"></i> حساب الإقامة (الخدج)
+                        <i class="fas fa-file-invoice-dollar me-1"></i> {{ __("حساب الإقامة (الخدج)") }}
                     </span>
                 @elseif($request->payment_status === 'paid')
                     <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                        <i class="fas fa-check-circle me-1"></i> مسدد
+                        <i class="fas fa-check-circle me-1"></i> {{ __("مسدد") }}
                     </span>
                 @else
                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                        <i class="fas fa-clock me-1"></i> غير مسدد
+                        <i class="fas fa-clock me-1"></i> {{ __("غير مسدد") }}
                     </span>
                 @endif
             </div>
 
             <div class="col-lg-3 col-sm-6 text-lg-end">
-                <div class="text-muted small mb-1">الفحوصات المقررة</div>
+                <div class="text-muted small mb-1">{{ __("الفحوصات المقررة") }}</div>
                 <div class="d-flex flex-wrap gap-1 justify-content-lg-end align-items-center">
                     @php
                         $radTypeIds = (array)($details['radiology_type_ids'] ?? $details['radiology_types'] ?? []);
@@ -253,15 +253,15 @@
                             <form action="{{ route('radiology-staff.remove-type', [$request, $rt]) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="حذف هذا الفحص من الفاتورة" onclick="return confirm('هل أنت متأكد من حذف فحص ({{ $rt->name }}) من طلب المريض؟ سيتم تحديث الفاتورة فورياً.');">
+                                <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2 d-inline-flex align-items-center gap-1" title="{{ __("حذف هذا الفحص من الفاتورة") }}" onclick="return confirm('{{ __("هل أنت متأكد من حذف هذا الفحص من طلب المريض؟ سيتم تحديث الفاتورة فورياً.") }}');">
                                     <span style="font-size: 0.75rem;">{{ $rt->name }}{{ $targetName ? ' ['.$targetName.']' : '' }}</span>
                                     <i class="fas fa-times" style="font-size: 0.7rem;"></i>
                                 </button>
                             </form>
                         @endforeach
-                        <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="إضافة فحص إضافي إلى الطلب">
+                        <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="{{ __("إضافة فحص إضافي إلى الطلب") }}">
                             <i class="fas fa-plus-circle"></i>
-                            <span style="font-size: 0.75rem;">إضافة فحص</span>
+                            <span style="font-size: 0.75rem;">{{ __("إضافة فحص") }}</span>
                         </a>
                     @else
                         @foreach($radNames as $rn)
@@ -270,9 +270,9 @@
                             </span>
                         @endforeach
                         @if($request->payment_status !== 'paid')
-                            <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="إضافة فحص إضافي إلى الطلب">
+                            <a href="{{ route('radiology-staff.show', [$request, 'append' => 1]) }}#selectRadiologyTypeForm" class="btn btn-xs btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1" title="{{ __("إضافة فحص إضافي إلى الطلب") }}">
                                 <i class="fas fa-plus-circle"></i>
-                                <span style="font-size: 0.75rem;">إضافة فحص</span>
+                                <span style="font-size: 0.75rem;">{{ __("إضافة فحص") }}</span>
                             </a>
                         @endif
                     @endif
@@ -289,7 +289,7 @@
                 </div>
                 <div>
                     <h6 class="fw-bold text-dark mb-1">
-                        <i class="fas fa-user-md text-warning me-1"></i> ملاحظات وتوجيهات الطبيب المحول:
+                        <i class="fas fa-user-md text-warning me-1"></i> {{ __("ملاحظات وتوجيهات الطبيب المحول:") }}
                     </h6>
                     <div class="text-dark fw-semibold fs-6">
                         {{ $request->doctor_notes }}
@@ -303,12 +303,12 @@
         $showAppend = request()->query('append') == '1';
         $needsSelection = ($request->status === 'pending_service_selection') || empty($request->radiology_names) || $showAppend;
         $roleNameAr = match($userCategory) {
-            'radiology', 'general' => 'الأشعة العادية (X-Ray)',
-            'ultrasound' => 'السونار (Ultrasound)',
-            'mri' => 'الرنين المغناطيسي (MRI)',
-            'ct' => 'المفراس الحلزوني (CT Scan)',
-            'echo' => 'الإيكو (Echocardiogram)',
-            default => 'الأشعة والتصوير الطبي'
+            'radiology', 'general' => __('الأشعة العادية (X-Ray)'),
+            'ultrasound' => __('السونار (Ultrasound)'),
+            'mri' => __('الرنين المغناطيسي (MRI)'),
+            'ct' => __('المفراس الحلزوني (CT Scan)'),
+            'echo' => __('الإيكو (Echocardiogram)'),
+            default => __('الأشعة والتصوير الطبي')
         };
     @endphp
 
@@ -321,22 +321,22 @@
                         <i class="fas fa-search-plus fs-6"></i>
                     </span>
                     <div>
-                        <h6 class="fw-bold text-dark mb-0">{{ $showAppend ? 'إضافة فحوصات إضافية لطلب الأشعة' : 'تحديد نوع الفحص الإشعاعي المطلوب' }}</h6>
+                        <h6 class="fw-bold text-dark mb-0">{{ $showAppend ? __("إضافة فحوصات إضافية لطلب الأشعة") : __("تحديد نوع الفحص الإشعاعي المطلوب") }}</h6>
                         <small class="text-muted">
-                            القسم المختص: <strong class="text-primary">{{ $roleNameAr }}</strong>
+                            {{ __("القسم المختص:") }} <strong class="text-primary">{{ $roleNameAr }}</strong>
                             <span class="mx-1">•</span>
-                            <span>إجمالي الفحوصات: {{ $availableRadiologyTypes->count() }} فحص</span>
+                            <span>{{ __("إجمالي الفحوصات:") }} {{ $availableRadiologyTypes->count() }} {{ __("فحص") }}</span>
                         </small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     @if($showAppend)
                         <a href="{{ route('radiology-staff.show', $request) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
-                            <i class="fas fa-times me-1"></i> إغلاق
+                            <i class="fas fa-times me-1"></i> {{ __("إغلاق") }}
                         </a>
                     @else
                         <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
-                            <i class="fas fa-exclamation-triangle me-1"></i> بانتظار تحديد الفحص للدفع
+                            <i class="fas fa-exclamation-triangle me-1"></i> {{ __("بانتظار تحديد الفحص للدفع") }}
                         </span>
                     @endif
                 </div>
@@ -355,8 +355,8 @@
                             <i class="fas fa-search"></i>
                         </span>
                         <input type="text" id="radiologyFilterSearch" class="form-control border-start-0 py-2 fs-6" 
-                               placeholder="اكتب اسم الفحص بالعربي أو الإنجليزي أو الكود لاختياره مباشرة..." autocomplete="off">
-                        <button class="btn btn-outline-secondary px-3" type="button" id="clearRadFilter">مسح</button>
+                               placeholder="{{ __("اكتب اسم الفحص بالعربي أو الإنجليزي أو الكود لاختياره مباشرة...") }}" autocomplete="off">
+                        <button class="btn btn-outline-secondary px-3" type="button" id="clearRadFilter">{{ __("مسح") }}</button>
                     </div>
 
                     <!-- القائمة المنسدلة للنتائج المباشرة أثناء الكتابة (Live Search Dropdown) -->
@@ -372,12 +372,12 @@
                 <div class="p-2 rounded-2 bg-light border mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="small fw-bold text-dark">
-                            <i class="fas fa-check-double text-success me-1"></i> الفحوصات المختارة للطلب:
+                            <i class="fas fa-check-double text-success me-1"></i> {{ __("الفحوصات المختارة للطلب:") }}
                         </span>
-                        <span class="small text-muted" id="totalPriceDisplay">الإجمالي: 0 د.ع</span>
+                        <span class="small text-muted" id="totalPriceDisplay">{{ __("الإجمالي: 0 د.ع") }}</span>
                     </div>
                     <div id="selectedBadgesContainer" class="d-flex flex-wrap gap-2 py-1 align-items-center">
-                        <span class="text-muted small fst-italic" id="noSelectedText">لم يتم اختيار أي فحص بعد. ابحث في الحقل أعلاه لاختيار الفحص.</span>
+                        <span class="text-muted small fst-italic" id="noSelectedText">{{ __("لم يتم اختيار أي فحص بعد. ابحث في الحقل أعلاه لاختيار الفحص.") }}</span>
                     </div>
                     <!-- حقول الـ Hidden inputs للفحوصات المختارة -->
                     <div id="hiddenInputsContainer"></div>
@@ -386,10 +386,10 @@
                 <!-- زر الحفظ والتأكيد للكاشير -->
                 <div class="d-flex justify-content-between align-items-center pt-1">
                     <small class="text-muted">
-                        <i class="fas fa-info-circle me-1 text-info"></i> بمجرد التأكيد، سيتم إنشاء قيد السعر تلقائياً ويتوجه المريض للكاشير.
+                        <i class="fas fa-info-circle me-1 text-info"></i> {{ __("بمجرد التأكيد، سيتم إنشاء قيد السعر تلقائياً ويتوجه المريض للكاشير.") }}
                     </small>
                     <button type="submit" class="btn btn-primary px-4 py-2 fw-bold shadow-sm" id="submitRadSelectionBtn" disabled>
-                        <i class="fas fa-check-circle me-1"></i> حفظ وتأكيد الفحوصات وتحويل للكاشير
+                        <i class="fas fa-check-circle me-1"></i> {{ __("حفظ وتأكيد الفحوصات وتحويل للكاشير") }}
                     </button>
                 </div>
             </form>
@@ -409,30 +409,30 @@
                     
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label for="findings" class="form-label fw-bold text-dark mb-0">
-                            <i class="fas fa-file-medical-alt text-primary me-1"></i> المشاهدات والنتائج الإشعاعية (Findings)
+                            <i class="fas fa-file-medical-alt text-primary me-1"></i> {{ __("المشاهدات والنتائج الإشعاعية (Findings)") }}
                         </label>
-                        <span class="text-muted small">نص التقرير الطبي المعتمد</span>
+                        <span class="text-muted small">{{ __("نص التقرير الطبي المعتمد") }}</span>
                     </div>
 
-                    <textarea name="findings" id="findings" class="form-control calm-textarea mb-3" rows="9" placeholder="أدخل تفاصيل المشاهدات والتقرير السريري هنا..." required>{{ old('findings', $resultData['findings'] ?? '') }}</textarea>
+                    <textarea name="findings" id="findings" class="form-control calm-textarea mb-3" rows="9" placeholder="{{ __("أدخل تفاصيل المشاهدات والتقرير السريري هنا...") }}" required>{{ old('findings', $resultData['findings'] ?? '') }}</textarea>
 
                     <!-- Quiet Quick Templates Chips -->
                     <div class="mb-4">
                         <div class="text-muted small mb-2 d-flex align-items-center gap-1">
-                            <i class="fas fa-magic text-secondary"></i> قوالب وعبارات سريعة بنقرة واحدة:
+                            <i class="fas fa-magic text-secondary"></i> {{ __("قوالب وعبارات سريعة بنقرة واحدة:") }}
                         </div>
                         <div class="d-flex flex-wrap gap-2">
                             <button type="button" class="template-chip" data-text="Normal study with no significant pathological findings or focal abnormalities detected.">
-                                <i class="fas fa-check text-success"></i> فحص سليم طبيعي (Normal)
+                                <i class="fas fa-check text-success"></i> {{ __("فحص سليم طبيعي (Normal)") }}
                             </button>
                             <button type="button" class="template-chip" data-text="Ultrasound examination reveals normal liver size and homogeneous echotexture. Gallbladder is well distended, thin-walled, with no calculi. Both kidneys show normal size and corticomedullary differentiation without hydronephrosis or stones. Spleen and urinary bladder are normal.">
-                                <i class="fas fa-wave-square text-info"></i> سونار بطن وحوض سليم (Abdomen Normal)
+                                <i class="fas fa-wave-square text-info"></i> {{ __("سونار بطن وحوض سليم (Abdomen Normal)") }}
                             </button>
                             <button type="button" class="template-chip" data-text="Chest X-Ray reveals clear lung fields bilaterally. Cardiothoracic ratio is within normal limits. Both costophrenic angles are sharp and clear. No evidence of pneumothorax or pleural effusion.">
-                                <i class="fas fa-lungs text-primary"></i> أشعة صدر سليمة (Chest Normal)
+                                <i class="fas fa-lungs text-primary"></i> {{ __("أشعة صدر سليمة (Chest Normal)") }}
                             </button>
                             <button type="button" class="template-chip" data-text="Significant findings observed requiring close clinical correlation and recommended follow-up.">
-                                <i class="fas fa-exclamation-triangle text-warning"></i> ملاحظات غير طبيعية (Abnormal)
+                                <i class="fas fa-exclamation-triangle text-warning"></i> {{ __("ملاحظات غير طبيعية (Abnormal)") }}
                             </button>
                         </div>
                     </div>
@@ -440,15 +440,15 @@
                     <div class="row g-3 pt-3 border-top">
                         <div class="col-md-6">
                             <label for="impression" class="form-label small fw-bold text-dark mb-1">
-                                <i class="fas fa-brain text-secondary me-1"></i> الانطباع التشخيصي (Impression)
+                                <i class="fas fa-brain text-secondary me-1"></i> {{ __("الانطباع التشخيصي (Impression)") }}
                             </label>
-                            <input type="text" name="impression" id="impression" class="form-control calm-input" placeholder="مثال: Normal Abdominal Ultrasound" value="{{ old('impression', $resultData['impression'] ?? '') }}">
+                            <input type="text" name="impression" id="impression" class="form-control calm-input" placeholder="{{ __("مثال: Normal Abdominal Ultrasound") }}" value="{{ old('impression', $resultData['impression'] ?? '') }}">
                         </div>
                         <div class="col-md-6">
                             <label for="recommendations" class="form-label small fw-bold text-dark mb-1">
-                                <i class="fas fa-lightbulb text-secondary me-1"></i> التوصيات والمتابعة (Recommendations)
+                                <i class="fas fa-lightbulb text-secondary me-1"></i> {{ __("التوصيات والمتابعة (Recommendations)") }}
                             </label>
-                            <input type="text" name="recommendations" id="recommendations" class="form-control calm-input" placeholder="مثال: Routine follow-up" value="{{ old('recommendations', $resultData['recommendations'] ?? '') }}">
+                            <input type="text" name="recommendations" id="recommendations" class="form-control calm-input" placeholder="{{ __("مثال: Routine follow-up") }}" value="{{ old('recommendations', $resultData['recommendations'] ?? '') }}">
                         </div>
                     </div>
 
@@ -461,32 +461,32 @@
                 <!-- Status & Decision -->
                 <div class="calm-card p-3 mb-3">
                     <h6 class="fw-bold text-dark mb-3">
-                        <i class="fas fa-cog text-secondary me-1"></i> حالة الطلب والاعتماد
+                        <i class="fas fa-cog text-secondary me-1"></i> {{ __("حالة الطلب والاعتماد") }}
                     </h6>
 
                     <div class="mb-3">
-                        <label for="status" class="form-label small text-muted mb-1">تحديث الحالة:</label>
+                        <label for="status" class="form-label small text-muted mb-1">{{ __("تحديث الحالة:") }}</label>
                         <select name="status" id="status" class="form-select calm-input fw-semibold">
-                            <option value="completed" {{ $request->status === 'completed' ? 'selected' : (!in_array($request->status, ['in_progress']) ? 'selected' : '') }}>🟢 مكتمل واعتماد التقرير</option>
-                            <option value="in_progress" {{ $request->status === 'in_progress' ? 'selected' : '' }}>🔵 قيد الفحص داخل الغرفة</option>
-                            <option value="pending" {{ $request->status === 'pending' ? 'selected' : '' }}>⏳ بالانتظار</option>
+                            <option value="completed" {{ $request->status === 'completed' ? 'selected' : (!in_array($request->status, ['in_progress']) ? 'selected' : '') }}>🟢 {{ __("مكتمل واعتماد التقرير") }}</option>
+                            <option value="in_progress" {{ $request->status === 'in_progress' ? 'selected' : '' }}>🔵 {{ __("قيد الفحص داخل الغرفة") }}</option>
+                            <option value="pending" {{ $request->status === 'pending' ? 'selected' : '' }}>⏳ {{ __("بالانتظار") }}</option>
                         </select>
                     </div>
 
                     <div class="text-muted small mb-1">
-                        الطبيب الإشعاعي: <strong>{{ $resultData['radiologist'] ?? auth()->user()->name }}</strong>
+                        {{ __("الطبيب الإشعاعي:") }} <strong>{{ $resultData['radiologist'] ?? auth()->user()->name }}</strong>
                     </div>
                 </div>
 
                 <!-- Attach Images / PDF -->
                 <div class="calm-card p-3 mb-3">
                     <h6 class="fw-bold text-dark mb-2">
-                        <i class="fas fa-images text-secondary me-1"></i> صور ومرفقات الفحص
+                        <i class="fas fa-images text-secondary me-1"></i> {{ __("صور ومرفقات الفحص") }}
                     </h6>
 
                     <div class="file-drop-area mb-2">
                         <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
-                        <div class="small fw-semibold text-dark">اختر صور الفحص أو تقرير الجهاز</div>
+                        <div class="small fw-semibold text-dark">{{ __("اختر صور الفحص أو تقرير الجهاز") }}</div>
                         <small class="text-muted d-block mb-2" style="font-size: 0.72rem;">JPG, PNG, DICOM, PDF</small>
                         <input type="file" name="images[]" id="images" class="form-control form-control-sm" multiple accept=".dcm,.dicom,.pdf,.jpg,.jpeg,.png,.tiff">
                     </div>
@@ -498,7 +498,7 @@
                     <!-- Existing Images List -->
                     @if(count($images) > 0)
                         <div class="mt-3 pt-2 border-top">
-                            <small class="text-muted d-block mb-2">المرفقات الحالية ({{ count($images) }}):</small>
+                            <small class="text-muted d-block mb-2">{{ __("المرفقات الحالية") }} ({{ count($images) }}):</small>
                             <div class="row g-2">
                                 @foreach($images as $img)
                                     @php
@@ -514,7 +514,7 @@
                                                 <div class="py-2 text-secondary"><i class="fas fa-file-pdf text-danger"></i></div>
                                             @endif
                                             <a href="{{ $imgUrl }}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 0.7rem;">
-                                                <i class="fas fa-eye"></i> معاينة
+                                                <i class="fas fa-eye"></i> {{ __("معاينة") }}
                                             </a>
                                         </div>
                                     </div>
@@ -526,7 +526,7 @@
 
                 <!-- Primary Action Button -->
                 <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-3 shadow-sm" style="background-color: #0284c7; border-color: #0284c7; border-radius: 10px;">
-                    <i class="fas fa-check-circle me-2"></i> حفظ واعتماد التقرير
+                    <i class="fas fa-check-circle me-2"></i> {{ __("حفظ واعتماد التقرير") }}
                 </button>
 
             </div>
@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (findingsTextarea.value.trim() === '') {
                 findingsTextarea.value = templateText;
             } else {
-                if (confirm('هل تريد استبدال النص الحالي بالقالب المختار؟')) {
+                if (confirm('{{ __('هل تريد استبدال النص الحالي بالقالب المختار؟') }}')) {
                     findingsTextarea.value = templateText;
                 }
             }
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (noSelectedText) noSelectedText.classList.remove('d-none');
             selectedBadgesContainer.appendChild(noSelectedText);
             if (submitRadBtn) submitRadBtn.disabled = true;
-            if (totalPriceDisplay) totalPriceDisplay.textContent = 'الإجمالي: 0 د.ع';
+            if (totalPriceDisplay) totalPriceDisplay.textContent = '{{ __('الإجمالي: 0 د.ع') }}';
             return;
         }
 
@@ -635,9 +635,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="text-start">
                     <span class="fw-bold">${item.name}</span>
                     <span class="text-muted small mx-1 font-monospace">(${item.code})</span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 ms-1">${item.price.toLocaleString()} د.ع</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 ms-1">${item.price.toLocaleString()} {{ __('د.ع') }}</span>
                 </div>
-                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none remove-rad-btn" data-id="${id}" title="إزالة الفحص">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none remove-rad-btn" data-id="${id}" title="{{ __('إزالة الفحص') }}">
                     <i class="fas fa-times-circle fs-6"></i>
                 </button>
             `;
@@ -652,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (totalPriceDisplay) {
-            totalPriceDisplay.innerHTML = `الإجمالي: <strong class="text-success">${totalPrice.toLocaleString()} د.ع</strong> (${selectedRadTypes.size} فحص)`;
+            totalPriceDisplay.innerHTML = `{{ __('الإجمالي:') }} <strong class="text-success">${totalPrice.toLocaleString()} {{ __('د.ع') }}</strong> (${selectedRadTypes.size} {{ __('فحص') }})`;
         }
 
         if (submitRadBtn) {
@@ -695,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (matches.length === 0) {
             dropdownList.innerHTML = `
                 <div class="p-3 text-center text-muted small">
-                    <i class="fas fa-search-minus me-1 text-secondary"></i> لا توجد فحوصات إشعاعية تطابق "<strong>${radSearchInput.value}</strong>" في قسمك
+                    <i class="fas fa-search-minus me-1 text-secondary"></i> {{ __("لا توجد فحوصات إشعاعية تطابق") }} "<strong>${radSearchInput.value}</strong>" {{ __("في قسمك") }}
                 </div>
             `;
             radDropdown.classList.remove('d-none');
@@ -718,8 +718,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div class="text-end">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle">${t.price.toLocaleString()} د.ع</span>
-                    ${isAlreadySelected ? '<span class="badge bg-secondary ms-1 small">محدد</span>' : ''}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">${t.price.toLocaleString()} {{ __('د.ع') }}</span>
+                    ${isAlreadySelected ? '<span class="badge bg-secondary ms-1 small">{{ __('محدد') }}</span>' : ''}
                 </div>
             `;
 
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title fw-bold">
-                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء طلب الأشعة والتصوير الخارجي
+                    <i class="fas fa-exclamation-triangle me-2"></i> {{ __("تأكيد إلغاء طلب الأشعة والتصوير الخارجي") }}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -781,20 +781,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 @csrf
                 <div class="modal-body p-4 text-end">
                     <p class="fs-6 text-dark mb-2">
-                        هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض <strong class="text-danger">{{ $pName }}</strong>؟
+                        {{ __("هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض") }} <strong class="text-danger">{{ $pName }}</strong>{{ app()->getLocale() === "en" ? "?" : "؟" }}
                     </p>
                     <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
-                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                        <i class="fas fa-info-circle me-1"></i> {{ __("سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.") }}
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
-                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                        <label class="form-label fw-semibold small text-muted">{{ __("سبب الإلغاء (اختياري):") }}</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="{{ __("مثال: رغبة المريض، مغادرة المستشفى...") }}" value="{{ __("إلغاء الطلب الخارجي بطلب من المريض") }}">
                     </div>
                 </div>
                 <div class="modal-footer bg-light justify-content-between">
-                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">{{ __("تراجع") }}</button>
                     <button type="submit" class="btn btn-danger fw-bold px-4">
-                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                        <i class="fas fa-check me-1"></i> {{ __("نعم، إلغاء الطلب الآن") }}
                     </button>
                 </div>
             </form>

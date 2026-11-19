@@ -12,24 +12,24 @@
                 <div class="d-flex align-items-center gap-2">
                     <h4 class="mb-0 fw-bold text-dark">{{ $group->name }}</h4>
                     @if($group->department === 'nicu')
-                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="fas fa-baby me-1"></i> قسم الخدج (NICU)</span>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="fas fa-baby me-1"></i>{{ __("قسم الخدج (NICU)") }}</span>
                     @else
-                        <span class="badge bg-light text-secondary border"><i class="fas fa-stethoscope me-1"></i> عيادات واستشارية</span>
+                        <span class="badge bg-light text-secondary border"><i class="fas fa-stethoscope me-1"></i>{{ __("عيادات واستشارية") }}</span>
                     @endif
                     @if($group->is_public)
-                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="fas fa-globe me-1"></i> عامة للقسم</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="fas fa-globe me-1"></i>{{ __("عامة للقسم") }}</span>
                     @endif
                 </div>
-                <p class="text-muted small mb-0">{{ $group->description ?: 'مجموعة التحاليل المفضلة للطبيب' }}</p>
+                <p class="text-muted small mb-0">{{ $group->description ?: __('مجموعة التحاليل المفضلة للطبيب') }}</p>
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('lab-tests.groups.index', ['department' => $group->department]) }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-right me-1"></i> العودة للمجموعات
+                <i class="fas fa-arrow-right me-1"></i> {{ __("العودة للمجموعات") }}
             </a>
             <button type="submit" form="groupTestsForm" class="btn btn-primary btn-sm px-3 shadow-sm">
-                <i class="fas fa-save me-1"></i> حفظ التحاليل (<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
+                <i class="fas fa-save me-1"></i>{{ __("حفظ التحاليل (") }}<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
             </button>
         </div>
     </div>
@@ -53,7 +53,7 @@
                     <div class="col-md-5 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0 bg-light" id="labSearchInput" placeholder="بحث سريع بالاسم أو الكود (مثال: CBC, Sugar, TSH)..." autocomplete="off">
+                            <input type="text" class="form-control border-start-0 bg-light" id="labSearchInput" placeholder="{{ __("بحث سريع بالاسم أو الكود (مثال: CBC, Sugar, TSH)...") }}" autocomplete="off">
                             <button class="btn btn-outline-secondary d-none" type="button" id="clearSearchBtn"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
@@ -62,15 +62,15 @@
                     <div class="col-md-7 col-12 d-flex flex-wrap justify-content-md-end align-items-center gap-2">
                         <div class="btn-group btn-group-sm" role="group">
                             <button type="button" class="btn btn-outline-primary" id="btnSelectAll">
-                                <i class="fas fa-check-double me-1"></i> تحديد المعروض
+                                <i class="fas fa-check-double me-1"></i> {{ __("تحديد المعروض") }}
                             </button>
                             <button type="button" class="btn btn-outline-secondary" id="btnUnselectAll">
-                                <i class="fas fa-times me-1"></i> إلغاء المعروض
+                                <i class="fas fa-times me-1"></i> {{ __("إلغاء المعروض") }}
                             </button>
                         </div>
 
                         <button type="button" class="btn btn-sm btn-outline-info" id="filterSelectedOnlyToggle">
-                            <i class="fas fa-filter me-1"></i> عرض المحددة فقط (<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
+                            <i class="fas fa-filter me-1"></i>{{ __("عرض المحددة فقط (") }}<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
                         </button>
                     </div>
                 </div>
@@ -79,7 +79,7 @@
                 <div class="category-pills-wrapper mt-3 pt-2 border-top">
                     <div class="d-flex align-items-center gap-1 overflow-x-auto pb-1" id="categoryTabsList" style="white-space: nowrap;">
                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 cat-pill-btn active" data-category="ALL">
-                            الكل <span class="badge bg-white text-primary ms-1" id="allTestsCount">0</span>
+                            {{ __("الكل") }} <span class="badge bg-white text-primary ms-1" id="allTestsCount">0</span>
                         </button>
                         @foreach($labTests as $catName => $tests)
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 cat-pill-btn" data-category="{{ $catName }}">
@@ -96,10 +96,10 @@
             <div class="card-body p-2 px-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="small fw-bold text-dark">
-                        <i class="fas fa-check-circle text-success me-1"></i> التحاليل المختارة حالياً في المجموعة (<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
+                        <i class="fas fa-check-circle text-success me-1"></i>{{ __("التحاليل المختارة حالياً في المجموعة (") }}<span class="selected-count-badge">{{ count($selectedTestIds) }}</span>)
                     </span>
                     <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="btnClearAllSelected">
-                        <i class="fas fa-trash-alt me-1"></i> إفراغ الكل
+                        <i class="fas fa-trash-alt me-1"></i> {{ __("إفراغ الكل") }}
                     </button>
                 </div>
                 <div class="d-flex flex-wrap gap-1" id="selectedChipsContainer" style="max-height: 120px; overflow-y: auto;">
@@ -113,7 +113,7 @@
             <div class="card-body p-3">
                 <div id="noResultsAlert" class="text-center py-5 d-none">
                     <i class="fas fa-search fa-3x text-muted mb-2"></i>
-                    <h6 class="text-muted">لا توجد تحاليل مطابقة للبحث أو القسم المختار</h6>
+                    <h6 class="text-muted">{{ __("لا توجد تحاليل مطابقة للبحث أو القسم المختار") }}</h6>
                 </div>
 
                 <div class="row g-2" id="testsGrid">
@@ -167,16 +167,16 @@
         <!-- Floating Bottom Action Bar -->
         <div class="sticky-bottom bg-white p-3 rounded-top-3 shadow-lg border border-bottom-0 d-flex justify-content-between align-items-center" style="z-index: 1020; margin: 0 -15px -15px -15px;">
             <div class="d-flex align-items-center gap-2">
-                <span class="fw-bold text-dark">المجموع:</span>
+                <span class="fw-bold text-dark">{{ __("المجموع:") }}</span>
                 <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">
-                    <span class="selected-count-badge">{{ count($selectedTestIds) }}</span> تحليل محدد
+                    <span class="selected-count-badge">{{ count($selectedTestIds) }}</span> {{ __("تحليل محدد") }}
                 </span>
             </div>
 
             <div class="d-flex gap-2">
-                <a href="{{ route('lab-tests.groups.index') }}" class="btn btn-light border">إلغاء</a>
+                <a href="{{ route('lab-tests.groups.index') }}" class="btn btn-light border">{{ __("إلغاء") }}</a>
                 <button type="submit" class="btn btn-primary px-4 fw-bold">
-                    <i class="fas fa-save me-1"></i> حفظ المجموعة
+                    <i class="fas fa-save me-1"></i> {{ __("حفظ المجموعة") }}
                 </button>
             </div>
         </div>

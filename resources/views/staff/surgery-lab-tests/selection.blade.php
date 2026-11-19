@@ -7,10 +7,10 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-flask me-2"></i>
-                    العمليات التي تحتاج اختيار تحاليل
+                    {{ __("العمليات التي تحتاج اختيار تحاليل") }}
                 </h2>
                 <a href="{{ route('staff.surgery-lab-tests.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>عودة إلى طلبات المختبر
+                    <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} me-1"></i>{{ __("عودة إلى طلبات المختبر") }}
                 </a>
             </div>
         </div>
@@ -20,32 +20,32 @@
         <div class="card-header bg-light">
             <h6 class="mb-0">
                 <i class="fas fa-search me-2"></i>
-                البحث والتصفية
+                {{ __("البحث والتصفية") }}
             </h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('staff.surgery-lab-tests.selection') }}" class="row g-3">
                 <div class="col-md-4">
-                    <label for="search" class="form-label">بحث</label>
+                    <label for="search" class="form-label">{{ __("بحث") }}</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="ابحث باسم المريض أو نوع العملية...">
+                        <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="{{ __("ابحث باسم المريض أو نوع العملية...") }}">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <label for="date_from" class="form-label">من تاريخ</label>
+                    <label for="date_from" class="form-label">{{ __("من تاريخ") }}</label>
                     <input type="date" class="form-control" id="date_from" name="date_from" value="{{ request('date_from') }}">
                 </div>
                 <div class="col-md-2">
-                    <label for="date_to" class="form-label">إلى تاريخ</label>
+                    <label for="date_to" class="form-label">{{ __("إلى تاريخ") }}</label>
                     <input type="date" class="form-control" id="date_to" name="date_to" value="{{ request('date_to') }}">
                 </div>
                 <div class="col-md-4 d-flex align-items-end justify-content-end">
                     <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search me-1"></i>بحث
+                        <i class="fas fa-search me-1"></i>{{ __("بحث") }}
                     </button>
-                    <a href="{{ route('staff.surgery-lab-tests.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-undo me-1"></i>إعادة تعيين
+                    <a href="{{ route('staff.surgery-lab-tests.selection') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo me-1"></i>{{ __("إعادة تعيين") }}
                     </a>
                 </div>
             </form>
@@ -56,7 +56,7 @@
         <div class="card-header bg-primary text-white">
             <h6 class="mb-0">
                 <i class="fas fa-list me-2"></i>
-                العمليات الجراحية التي تحتاج اختيار تحاليل
+                {{ __("العمليات الجراحية التي تحتاج اختيار تحاليل") }}
             </h6>
         </div>
         <div class="card-body">
@@ -66,11 +66,11 @@
                     <thead class="table-dark">
                         <tr>
                             <th class="text-center" style="width: 60px;">#</th>
-                            <th>المريض</th>
-                            <th>نوع العملية</th>
-                            <th>تاريخ العملية</th>
-                            <th class="text-center">الحالة</th>
-                            <th class="text-center" style="width: 170px;">الإجراءات</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("نوع العملية") }}</th>
+                            <th>{{ __("تاريخ العملية") }}</th>
+                            <th class="text-center">{{ __("الحالة") }}</th>
+                            <th class="text-center" style="width: 170px;">{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,12 +78,12 @@
                         <tr>
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
-                                <div class="fw-bold">{{ optional($surgery->patient->user)->name ?? 'غير معروف' }}</div>
+                                <div class="fw-bold">{{ optional($surgery->patient->user)->name ?? __('غير معروف') }}</div>
                                 <div class="text-muted">ID: {{ $surgery->patient_id }}</div>
                             </td>
                             <td>{{ $surgery->surgery_type }}</td>
                             <td>
-                                {{ optional($surgery->scheduled_date)->format('Y-m-d') ?? 'غير محدد' }}
+                                {{ optional($surgery->scheduled_date)->format('Y-m-d') ?? __('غير محدد') }}
                                 <br>
                                 <small class="text-muted">{{ optional($surgery->scheduled_time)->format('H:i') ?? '-' }}</small>
                             </td>
@@ -96,7 +96,7 @@
                                 <form action="{{ route('staff.surgery-lab-tests.create-selection', $surgery) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-check-square me-1"></i>اختر التحاليل
+                                        <i class="fas fa-check-square me-1"></i>{{ __("اختر التحاليل") }}
                                     </button>
                                 </form>
                             </td>
@@ -110,7 +110,7 @@
             </div>
             @else
             <div class="alert alert-info">
-                لا توجد الآن عمليات تحتاج اختيار تحاليل مختبر.
+                {{ __("لا توجد الآن عمليات تحتاج اختيار تحاليل مختبر.") }}
             </div>
             @endif
         </div>

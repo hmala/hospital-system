@@ -54,6 +54,50 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-19 — المرحلة 253: التعريب والترجمة الشاملة الدقيقة 100% لمحطات التشخيص المخبرية والشعاعية ودليل الأسعار وفحوصات العمليات الجراحية وتوسيع القاموس لـ 3,129 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Laboratory, Radiology, Pricing Catalog & Surgery Diagnostics across 31 Blade Views with 3,129 Dictionary Keys & Automated Feature Tests)
+
+### Done
+- **محطة المختبر وسجل التحاليل المخبرية ([resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php), [resources/views/lab/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/show.blade.php))**:
+  * تعريب وترجمة كاملة لكافة الحقول، الفلاتر، الشارات السريرية، شاشات إدخال وتدقيق النتائج، مع الحفاظ الدقيق على معادلات حساب الدهون التلقائية (Lipid Profile) في الجافاسكريبت.
+- **محطة الأشعة والسونار والإيكو وإدارة الكادر ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php), [resources/views/radiology-staff/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/show.blade.php), [resources/views/radiology/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/index.blade.php), [resources/views/radiology/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/create.blade.php), [resources/views/radiology/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/show.blade.php), [resources/views/radiology/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology/print.blade.php), [resources/views/radiology/types/*](file:///c:/wamp64/www/hospital-system/resources/views/radiology/types/index.blade.php))**:
+  * تعريب محطة الكادر وتبويبات الأقسام الأربعة، بطاقات الطوارئ، القوالب الطبية الجاهزة والعبارات السريعة، ومعاينة التقارير، ودليل أنواع الأشعة.
+  * تعريب نظام النطق الصوتي الآلي (Web Speech API) للاستدعاء الصوتي على المرضى ثنائي اللغة.
+- **دليل وأسعار وإعدادات الفحوصات المخبرية ([resources/views/lab-tests/*](file:///c:/wamp64/www/hospital-system/resources/views/lab-tests/index.blade.php))**:
+  * تعريب دليل التحاليل، بطاقات الفحوصات، أسعار التأمين ونسب التحمل، والنطاقات المرجعية العمرية والجنسية، والمجموعات الفرعية للتحاليل عبر 8 شاشات تفصيلية.
+- **محطة فحوصات أشعة وسونار العمليات الجراحية ([resources/views/staff/surgery-radiology-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-radiology-tests/index.blade.php), [resources/views/staff/surgery-radiology-tests/selection.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-radiology-tests/selection.blade.php), [resources/views/staff/surgery-radiology-tests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-radiology-tests/show.blade.php), [resources/views/staff/surgery-radiology-tests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-radiology-tests/print.blade.php))**:
+  * تعريب وترجمة كاملة لشاشات طلبات الأشعة للعمليات، شاشة الاختيار، إدخال تقرير الأشعة والصور، ونموذج التقرير الطبي المطبوع ثنائي اللغة.
+- **محطة الفحوصات المخبرية للعمليات الجراحية ([resources/views/staff/surgery-lab-tests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/index.blade.php), [resources/views/staff/surgery-lab-tests/selection.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/selection.blade.php), [resources/views/staff/surgery-lab-tests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/show.blade.php), [resources/views/staff/surgery-lab-tests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/staff/surgery-lab-tests/print.blade.php))**:
+  * تعريب وترجمة كاملة لشاشات الإحصائيات، اختيار العملية، إدخال واعتماد نتائج المختبر وحزم التحاليل، ومشاركة النتائج عبر واتساب، ونموذج الطباعة الرسمي.
+- **القاموس المركزي المحدث ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+  * توسيع القاموس إلى **3,129 مفتاح ترجمة طبي وإداري وسريري دقيق** بنسبة مطابقة 100%.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/DiagnosticLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DiagnosticLocalizationTest.php))**:
+  * بناء واجتياز حزمة اختبارات شاملة `DiagnosticLocalizationTest` بنجاح 100% (`6 passed, 80 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد.
+
+## Session log (2026-11-19 — المرحلة 252: تنظيف ترويسة القائمة بالكامل وتثبيت محول لغة مصغر في الزاوية العلوية المعاكسة للقائمة ديناميكياً Dynamic Opposite-Corner Micro Dropdown Language Switcher with Clean Sidebar Header)
+
+### Done
+- **تنظيف القائمة الجانبية وإعادة الشعار لوضعه الصافي ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إزالة أي عناصر أو أزرار دخيلة من ترويسة القائمة (`.sidebar-header`) ليبقى الشعار وهوية المستخدم في المنتصف بنظافة كاملة.
+- **تثبيت المنسدلة المصغرة في الزاوية المعاكسة للقائمة ديناميكياً (`.lang-corner-dropdown`)**:
+  * استخدام الخاصية المنطقية `inset-inline-end: 20px; top: 10px;` ليتحرك الزر المنسدل تلقائياً عكس جهة القائمة:
+    * في العربية (القائمة على اليمين) ⬅️ زر اللغة في **أعلى اليسار بالزاوية** (`left: 20px`).
+    * في الإنجليزية (القائمة على اليسار) ⬅️ زر اللغة في **أعلى اليمين بالزاوية** (`right: 20px`).
+  * زر مصغر بارتفاع 28px فقط (`[ 🇮🇶 عربي ▾ ]` / `[ 🇬🇧 EN ▾ ]`) بخلفية زجاجية معتمة وظل ناعم.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * اجتياز كامل حزمة `LocalizationTest` بنسبة 100% (`9 passed, 72 assertions`).
+
+## Session log (2026-11-19 — المرحلة 251: تحرير القائمة الجانبية بالكامل ونقل محول اللغة بالأعلام إلى الزاوية العلوية الثابتة Decoupling Language Switcher from Sidebar to Floating Top Corner Widget)
+
+### Done
+- **فصل محول اللغة عن القائمة الجانبية ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * حذف محول اللغة من القائمة الجانبية نهائياً لتحرير كامل المساحة والارتفاع لروابط الأقسام بدون أي تأثير بصري أو تزاحم.
+  * تحويله إلى ويدجت عائم ثابت أعلى الشاشة (`.floating-lang-pill`): في الزاوية العلوية اليسرى في RTL (`left: 24px`)، والزاوية العلوية اليمنى في LTR (`right: 24px`) مع خلفية زجاجية أنيقة وظل ناعم وعلمي العراق وبريطانيا.
+  * إخفاؤه تلقائياً في شاشات التابلت/الموبايل للاكتفاء بالشريط المدمج `#tabletTopbar`.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * فحص وتأكيد ظهور `.floating-lang-pill` والأعلام المتجهة `iq.svg` و `gb.svg`.
+  * اجتياز كامل حزمة `LocalizationTest` بنسبة 100% (`9 passed, 72 assertions`).
+
 ## Session log (2026-11-19 — المرحلة 250: التعريب والترجمة الشاملة الدقيقة 100% لعيادات الاستشارية ومحطة الطبيب وسجل الطلبات الطبية والسجل التاريخي للمريض مع تنبيه الفحوصات المعلقة وتوسيع القاموس لـ 1,871 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Outpatient Visits, Doctor Workstation, Medical Orders & Tests History with Pending Tests Alert & 1,871 Dictionary Keys)
 
 ### Done

@@ -297,7 +297,7 @@
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 1);
         }
-        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; position: relative; }
         .sidebar-header img,
         .sidebar-header .logo-badge { 
             background: transparent; 
@@ -331,41 +331,67 @@
         .sidebar-user span { display: block; color: #1d4ed8; }
         .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
         .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
-        /* ===== محول لغة النظام بالأعلام الرسمية (Language Switcher) ===== */
-        .lang-switcher-pill {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.85);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-            border-radius: 9999px;
-            padding: 3px;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-            gap: 4px;
-            backdrop-filter: blur(4px);
+        /* ===== محول لغة النظام في الزاوية العلوية المعاكسة للقائمة ===== */
+        .lang-corner-dropdown {
+            position: fixed;
+            top: 10px;
+            inset-inline-end: 20px;
+            z-index: 1045;
         }
-        .lang-switcher-pill .lang-btn {
-            flex: 1;
+        @media (max-width: 1400px) {
+            .lang-corner-dropdown {
+                display: none !important;
+            }
+        }
+        .lang-dropdown-btn {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(59, 130, 246, 0.28);
+            border-radius: 9999px;
+            padding: 3px 9px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #1e3a8a;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 5px 8px;
-            border-radius: 9999px;
-            font-size: 0.78rem;
-            font-weight: 700;
+            gap: 5px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
             text-decoration: none;
-            color: #64748b;
-            transition: all 0.2s ease-in-out;
         }
-        .lang-switcher-pill .lang-btn:hover {
-            color: #1e3a8a;
+        .lang-dropdown-btn:hover, .lang-dropdown-btn:focus {
+            background: #ffffff;
+            border-color: #2563eb;
+            color: #1d4ed8;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22);
+        }
+        .lang-dropdown-menu {
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.22);
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
+            padding: 4px;
+            min-width: 145px;
+            font-size: 0.78rem;
+            z-index: 1055;
+        }
+        .lang-dropdown-menu .dropdown-item {
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+        .lang-dropdown-menu .dropdown-item:hover {
             background: rgba(219, 234, 254, 0.6);
+            color: #1d4ed8;
         }
-        .lang-switcher-pill .lang-btn.active {
+        .lang-dropdown-menu .dropdown-item.active {
             background: #2563eb;
             color: #ffffff !important;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
         }
         .flag-icon {
             width: 19px;
@@ -1033,6 +1059,33 @@
     <!-- تظليل الخلفية عند فتح القائمة على التابلت -->
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
+    <!-- محول لغة منسدل مصغر في الزاوية العلوية المعاكسة للقائمة -->
+    <div class="dropdown lang-corner-dropdown d-none d-xl-block">
+        <button class="btn btn-sm lang-dropdown-btn dropdown-toggle shadow-xs" type="button" id="langCornerDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('تبديل لغة النظام') }}">
+            @if(app()->getLocale() === 'en')
+                <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                <span class="small fw-bold">EN</span>
+            @else
+                <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                <span class="small fw-bold">عربي</span>
+            @endif
+        </button>
+        <ul class="dropdown-menu lang-dropdown-menu shadow-sm" aria-labelledby="langCornerDropdownBtn">
+            <li>
+                <a class="dropdown-item {{ app()->getLocale() === 'ar' ? 'active' : '' }}" href="{{ route('lang.switch', 'ar') }}">
+                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span>عربي (IQ)</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item {{ app()->getLocale() === 'en' ? 'active' : '' }}" href="{{ route('lang.switch', 'en') }}">
+                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span>English (UK)</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <div class="container-fluid">
         <div class="row">
             <!-- الشريط الجانبي -->
@@ -1065,19 +1118,6 @@
                                     </a>
                                 </div>
                             @endif
-                        </div>
-                        <!-- محول لغة النظام المتطور بالأعلام الرسمية -->
-                        <div class="px-3 pt-2 pb-1">
-                            <div class="lang-switcher-pill" title="{{ __('تبديل لغة النظام') }}">
-                                <a href="{{ route('lang.switch', 'ar') }}" class="lang-btn {{ app()->getLocale() === 'ar' ? 'active' : '' }}" title="اللغة العربية (العراق)">
-                                    <img src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
-                                    <span>عربي</span>
-                                </a>
-                                <a href="{{ route('lang.switch', 'en') }}" class="lang-btn {{ app()->getLocale() === 'en' ? 'active' : '' }}" title="English (UK)">
-                                    <img src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
-                                    <span>English</span>
-                                </a>
-                            </div>
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf

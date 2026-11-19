@@ -9,15 +9,15 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-x-ray me-2 text-primary"></i>
-                    إدارة قسم الأشعة
+                    {{ __("إدارة قسم الأشعة") }}
                 </h2>
                 <div class="d-flex gap-2 align-items-center">
                     <span class="badge bg-success">
-                        <i class="fas fa-circle fa-xs me-1"></i> مباشر
+                        <i class="fas fa-circle fa-xs me-1"></i> {{ __("مباشر") }}
                     </span>
                     @can('create radiology')
                     <a href="{{ route('radiology.create') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>طلب إشعة جديد
+                        <i class="fas fa-plus me-1"></i>{{ __("طلب إشعة جديد") }}
                     </a>
                     @endcan
                 </div>
@@ -47,32 +47,32 @@
                 <ul class="nav nav-pills gap-2" id="radiologyTabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active bg-primary text-white fw-bold" id="all-tab" data-bs-toggle="pill" data-bs-target="#tab-all" type="button">
-                            <i class="fas fa-list me-1"></i> جميع الطلبات 
+                            <i class="fas fa-list me-1"></i> {{ __("جميع الطلبات") }} 
                             <span class="badge bg-white text-primary ms-1">{{ $requests->total() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link bg-light text-dark fw-bold" id="pending-tab" data-bs-toggle="pill" data-bs-target="#tab-pending" type="button">
-                            <i class="fas fa-clock me-1 text-warning"></i> بانتظار الإجراء
+                            <i class="fas fa-clock me-1 text-warning"></i> {{ __("بانتظار الإجراء") }}
                             <span class="badge bg-warning text-dark ms-1">{{ $requests->where('status', 'pending')->count() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link bg-light text-dark fw-bold" id="progress-tab" data-bs-toggle="pill" data-bs-target="#tab-progress" type="button">
-                            <i class="fas fa-play me-1 text-info"></i> قيد التنفيذ
+                            <i class="fas fa-play me-1 text-info"></i> {{ __("قيد التنفيذ") }}
                             <span class="badge bg-info text-white ms-1">{{ $requests->where('status', 'in_progress')->count() }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link bg-light text-dark fw-bold" id="completed-tab" data-bs-toggle="pill" data-bs-target="#tab-completed" type="button">
-                            <i class="fas fa-check-circle me-1 text-success"></i> المكتملة
+                            <i class="fas fa-check-circle me-1 text-success"></i> {{ __("المكتملة") }}
                             <span class="badge bg-success text-white ms-1">{{ $requests->where('status', 'completed')->count() }}</span>
                         </button>
                     </li>
                     @if(isset($emergencyRadiologyRequests) && $emergencyRadiologyRequests->count() > 0)
                     <li class="nav-item">
                         <button class="nav-link bg-light text-dark fw-bold" id="emergency-tab" data-bs-toggle="pill" data-bs-target="#tab-emergency" type="button">
-                            <i class="fas fa-ambulance me-1 text-danger"></i> طوارئ
+                            <i class="fas fa-ambulance me-1 text-danger"></i> {{ __("طوارئ") }}
                             <span class="badge bg-danger text-white ms-1">{{ $emergencyRadiologyRequests->count() }}</span>
                         </button>
                     </li>
@@ -83,7 +83,7 @@
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <div class="input-group" style="min-width: 260px;">
                         <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="radiologyTableSearch" class="form-control border-start-0" placeholder="بحث سريع بالمريض أو نوع الفحص...">
+                        <input type="text" id="radiologyTableSearch" class="form-control border-start-0" placeholder="{{ __("بحث سريع بالمريض أو نوع الفحص...") }}">
                     </div>
                 </div>
             </div>
@@ -98,10 +98,10 @@
                 <div class="card-header bg-danger bg-opacity-10 text-danger d-flex justify-content-between align-items-center py-3">
                     <h5 class="mb-0 fw-bold">
                         <i class="fas fa-ambulance me-2"></i>
-                        طلبات أشعة الطوارئ العاجلة
+                        {{ __("طلبات أشعة الطوارئ العاجلة") }}
                         <span class="badge bg-danger ms-2">{{ $emergencyRadiologyRequests->whereIn('status', ['pending', 'in_progress'])->count() }}</span>
                     </h5>
-                    <small class="fw-bold">يرجى المعالجة فوراً</small>
+                    <small class="fw-bold">{{ __("يرجى المعالجة فوراً") }}</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -109,12 +109,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th style="width: 50px;">#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>أنواع الأشعة</th>
-                                    <th>الأولوية</th>
-                                    <th>الحالة</th>
-                                    <th>وقت الطلب</th>
-                                    <th style="width: 100px;">الإجراء</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("أنواع الأشعة") }}</th>
+                                    <th>{{ __("الأولوية") }}</th>
+                                    <th>{{ __("الحالة") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th style="width: 100px;">{{ __("الإجراء") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -124,13 +124,13 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold; font-size: 1.1rem;">
-                                                {{ mb_substr(optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? 'ط', 0, 1) }}
+                                                {{ mb_substr(optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? __('ط'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong class="text-dark">{{ optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? 'مريض طوارئ' }}</strong>
+                                                <strong class="text-dark">{{ optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? __('مريض طوارئ') }}</strong>
                                                 <br>
                                                 <small class="text-muted">
-                                                    <i class="fas fa-phone-alt fa-xs me-1"></i>{{ optional($emRequest->patient)->user->phone ?? $emRequest->emergency->phone ?? 'لا يوجد رقم' }}
+                                                    <i class="fas fa-phone-alt fa-xs me-1"></i>{{ optional($emRequest->patient)->user->phone ?? $emRequest->emergency->phone ?? __('لا يوجد رقم') }}
                                                 </small>
                                             </div>
                                         </div>
@@ -159,11 +159,11 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('staff.emergency-radiology.show', $emRequest) }}" class="btn btn-primary px-3 shadow-sm" title="عرض وإجراء الفحص">
-                                                <i class="fas fa-eye me-1"></i> عرض
+                                            <a href="{{ route('staff.emergency-radiology.show', $emRequest) }}" class="btn btn-primary px-3 shadow-sm" title="{{ __("عرض وإجراء الفحص") }}">
+                                                <i class="fas fa-eye me-1"></i> {{ __("عرض") }}
                                             </a>
                                             @if($emRequest->status == 'completed')
-                                            <a href="{{ route('staff.emergency-radiology.print', $emRequest) }}" target="_blank" class="btn btn-success" title="طباعة">
+                                            <a href="{{ route('staff.emergency-radiology.print', $emRequest) }}" target="_blank" class="btn btn-success" title="{{ __("طباعة") }}">
                                                 <i class="fas fa-print"></i>
                                             </a>
                                             @endif
@@ -188,9 +188,9 @@
                 <div class="card-header bg-white py-3 border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-dark">
-                            <i class="fas fa-th-list me-2 text-primary"></i>قائمة طلبات الفحص الإشعاعي
+                            <i class="fas fa-th-list me-2 text-primary"></i>{{ __("قائمة طلبات الفحص الإشعاعي") }}
                         </h5>
-                        <span class="text-muted small">إجمالي السجلات: {{ $requests->total() }}</span>
+                        <span class="text-muted small">{{ __("إجمالي السجلات:") }} {{ $requests->total() }}</span>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -199,13 +199,13 @@
                             <thead class="table-light">
                                 <tr>
                                     <th style="width: 50px;">#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>نوع الفحص الإشعاعي</th>
-                                    <th>الطبيب المحول</th>
-                                    <th>الأولوية</th>
-                                    <th>الحالة</th>
-                                    <th>وقت الطلب</th>
-                                    <th style="width: 110px;">الإجراءات</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("نوع الفحص الإشعاعي") }}</th>
+                                    <th>{{ __("الطبيب المحول") }}</th>
+                                    <th>{{ __("الأولوية") }}</th>
+                                    <th>{{ __("الحالة") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th style="width: 110px;">{{ __("الإجراءات") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -215,20 +215,20 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 42px; height: 42px; font-weight: bold; font-size: 1.15rem; min-width: 42px;">
-                                                {{ mb_substr($request->patient->user->name ?? '؟', 0, 1) }}
+                                                {{ mb_substr($request->patient->user->name ?? __('؟'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong class="text-dark fs-6">{{ $request->patient->user->name ?? 'مريض غير معروف' }}</strong>
+                                                <strong class="text-dark fs-6">{{ $request->patient->user->name ?? __('مريض غير معروف') }}</strong>
                                                 <br>
                                                 <small class="text-muted">
-                                                    <i class="fas fa-phone-alt fa-xs me-1"></i>{{ $request->patient->user->phone ?? 'لا يوجد رقم' }}
+                                                    <i class="fas fa-phone-alt fa-xs me-1"></i>{{ $request->patient->user->phone ?? __('لا يوجد رقم') }}
                                                 </small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary mb-1">
-                                            {{ $request->radiologyType->category ?? 'أشعة عامة' }}
+                                            {{ $request->radiologyType->category ?? __('أشعة عامة') }}
                                         </span>
                                         <br>
                                         <strong class="text-primary">{{ $request->radiologyType->name ?? '-' }}</strong>
@@ -238,11 +238,11 @@
                                     <td>
                                         @if($request->doctor)
                                             <span class="badge bg-light text-dark border">
-                                                <i class="fas fa-user-md me-1 text-success"></i>د. {{ $request->doctor->user->name }}
+                                                <i class="fas fa-user-md me-1 text-success"></i>{{ __("د.") }} {{ $request->doctor->user->name }}
                                             </span>
                                         @else
                                             <span class="badge bg-light text-muted border">
-                                                <i class="fas fa-hospital me-1"></i>من الاستعلامات
+                                                <i class="fas fa-hospital me-1"></i>{{ __("من الاستعلامات") }}
                                             </span>
                                         @endif
                                     </td>
@@ -265,19 +265,19 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm shadow-sm">
-                                            <a href="{{ route('radiology.show', $request) }}" class="btn btn-primary px-3" title="عرض التفاصيل وإجراء الفحص">
-                                                <i class="fas fa-eye me-1"></i> عرض
+                                            <a href="{{ route('radiology.show', $request) }}" class="btn btn-primary px-3" title="{{ __("عرض التفاصيل وإجراء الفحص") }}">
+                                                <i class="fas fa-eye me-1"></i> {{ __("عرض") }}
                                             </a>
 
                                             @if($request->status === 'completed' && $request->result)
-                                            <a href="{{ route('radiology.print', $request) }}" target="_blank" class="btn btn-success" title="طباعة التقرير">
+                                            <a href="{{ route('radiology.print', $request) }}" target="_blank" class="btn btn-success" title="{{ __("طباعة التقرير") }}">
                                                 <i class="fas fa-print"></i>
                                             </a>
                                             @endif
 
                                             @can('edit radiology')
                                                 @if($request->status === 'pending')
-                                                <a href="{{ route('radiology.edit', $request) }}" class="btn btn-warning" title="تعديل">
+                                                <a href="{{ route('radiology.edit', $request) }}" class="btn btn-warning" title="{{ __("تعديل") }}">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                                 @endif
@@ -286,7 +286,7 @@
                                                 @if($request->status === 'pending')
                                                 <form action="{{ route('radiology.destroy', $request) }}" method="POST" class="d-inline">
                                                     @csrf @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger" title="حذف" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب؟')">
+                                                    <button type="submit" class="btn btn-danger" title="{{ __("حذف") }}" onclick="return confirm('{{ __('هل أنت متأكد من حذف هذا الطلب؟') }}')">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -299,7 +299,7 @@
                                 <tr>
                                     <td colspan="8" class="text-center text-muted py-5">
                                         <i class="fas fa-x-ray fa-4x mb-3 text-secondary opacity-50"></i>
-                                        <h5 class="fw-bold">لا توجد طلبات أشعة مسجلة حالياً</h5>
+                                        <h5 class="fw-bold">{{ __("لا توجد طلبات أشعة مسجلة حالياً") }}</h5>
                                     </td>
                                 </tr>
                                 @endforelse
@@ -321,7 +321,7 @@
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-warning bg-opacity-10 py-3 border-bottom">
                     <h5 class="mb-0 fw-bold text-dark">
-                        <i class="fas fa-clock text-warning me-2"></i>طلبات بانتظار الإجراء
+                        <i class="fas fa-clock text-warning me-2"></i>{{ __("طلبات بانتظار الإجراء") }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -330,12 +330,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>نوع الفحص</th>
-                                    <th>الطبيب</th>
-                                    <th>الأولوية</th>
-                                    <th>وقت الطلب</th>
-                                    <th>الإجراء</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("نوع الفحص") }}</th>
+                                    <th>{{ __("الطبيب") }}</th>
+                                    <th>{{ __("الأولوية") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th>{{ __("الإجراء") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -345,26 +345,26 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold;">
-                                                {{ mb_substr($request->patient->user->name ?? '؟', 0, 1) }}
+                                                {{ mb_substr($request->patient->user->name ?? __('؟'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong>{{ $request->patient->user->name ?? 'مريض غير معروف' }}</strong><br>
+                                                <strong>{{ $request->patient->user->name ?? __('مريض غير معروف') }}</strong><br>
                                                 <small class="text-muted">{{ $request->patient->user->phone ?? '-' }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td><strong class="text-primary">{{ $request->radiologyType->name ?? '-' }}</strong></td>
-                                    <td>{{ $request->doctor ? 'د. ' . $request->doctor->user->name : 'الاستعلامات' }}</td>
+                                    <td>{{ $request->doctor ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $request->doctor->user->name : __('الاستعلامات') }}</td>
                                     <td><span class="badge bg-{{ $request->priority_color }}">{{ $request->priority_text }}</span></td>
                                     <td>{{ $request->requested_date->format('Y-m-d H:i') }}</td>
                                     <td>
                                         <a href="{{ route('radiology.show', $request) }}" class="btn btn-sm btn-primary px-3">
-                                            <i class="fas fa-eye me-1"></i> عرض
+                                            <i class="fas fa-eye me-1"></i> {{ __("عرض") }}
                                         </a>
                                     </td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="7" class="text-center py-4 text-muted">لا توجد طلبات معلقة</td></tr>
+                                <tr><td colspan="7" class="text-center py-4 text-muted">{{ __("لا توجد طلبات معلقة") }}</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -378,7 +378,7 @@
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-info bg-opacity-10 py-3 border-bottom">
                     <h5 class="mb-0 fw-bold text-dark">
-                        <i class="fas fa-play text-info me-2"></i>طلبات قيد التنفيذ داخل الغرفة
+                        <i class="fas fa-play text-info me-2"></i>{{ __("طلبات قيد التنفيذ داخل الغرفة") }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -387,11 +387,11 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>نوع الفحص</th>
-                                    <th>الطبيب</th>
-                                    <th>وقت الطلب</th>
-                                    <th>الإجراء</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("نوع الفحص") }}</th>
+                                    <th>{{ __("الطبيب") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th>{{ __("الإجراء") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -401,25 +401,25 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold;">
-                                                {{ mb_substr($request->patient->user->name ?? '؟', 0, 1) }}
+                                                {{ mb_substr($request->patient->user->name ?? __('؟'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong>{{ $request->patient->user->name ?? 'مريض غير معروف' }}</strong><br>
+                                                <strong>{{ $request->patient->user->name ?? __('مريض غير معروف') }}</strong><br>
                                                 <small class="text-muted">{{ $request->patient->user->phone ?? '-' }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td><strong class="text-primary">{{ $request->radiologyType->name ?? '-' }}</strong></td>
-                                    <td>{{ $request->doctor ? 'د. ' . $request->doctor->user->name : 'الاستعلامات' }}</td>
+                                    <td>{{ $request->doctor ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $request->doctor->user->name : __('الاستعلامات') }}</td>
                                     <td>{{ $request->requested_date->format('Y-m-d H:i') }}</td>
                                     <td>
                                         <a href="{{ route('radiology.show', $request) }}" class="btn btn-sm btn-primary px-3">
-                                            <i class="fas fa-eye me-1"></i> إكمال الفحص
+                                            <i class="fas fa-eye me-1"></i> {{ __("إكمال الفحص") }}
                                         </a>
                                     </td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد طلبات قيد التنفيذ حالياً</td></tr>
+                                <tr><td colspan="6" class="text-center py-4 text-muted">{{ __("لا توجد طلبات قيد التنفيذ حالياً") }}</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -433,7 +433,7 @@
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-success bg-opacity-10 py-3 border-bottom">
                     <h5 class="mb-0 fw-bold text-dark">
-                        <i class="fas fa-check-circle text-success me-2"></i>الفحوصات المكتملة
+                        <i class="fas fa-check-circle text-success me-2"></i>{{ __("الفحوصات المكتملة") }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -442,11 +442,11 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>نوع الفحص</th>
-                                    <th>الطبيب</th>
-                                    <th>وقت الطلب</th>
-                                    <th>الإجراءات</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("نوع الفحص") }}</th>
+                                    <th>{{ __("الطبيب") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th>{{ __("الإجراءات") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -456,30 +456,30 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold;">
-                                                {{ mb_substr($request->patient->user->name ?? '؟', 0, 1) }}
+                                                {{ mb_substr($request->patient->user->name ?? __('؟'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong>{{ $request->patient->user->name ?? 'مريض غير معروف' }}</strong><br>
+                                                <strong>{{ $request->patient->user->name ?? __('مريض غير معروف') }}</strong><br>
                                                 <small class="text-muted">{{ $request->patient->user->phone ?? '-' }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td><strong class="text-primary">{{ $request->radiologyType->name ?? '-' }}</strong></td>
-                                    <td>{{ $request->doctor ? 'د. ' . $request->doctor->user->name : 'الاستعلامات' }}</td>
+                                    <td>{{ $request->doctor ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $request->doctor->user->name : __('الاستعلامات') }}</td>
                                     <td>{{ $request->requested_date->format('Y-m-d H:i') }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('radiology.show', $request) }}" class="btn btn-primary px-2">
-                                                <i class="fas fa-eye me-1"></i> عرض
+                                                <i class="fas fa-eye me-1"></i> {{ __("عرض") }}
                                             </a>
                                             <a href="{{ route('radiology.print', $request) }}" target="_blank" class="btn btn-success px-2">
-                                                <i class="fas fa-print me-1"></i> طباعة
+                                                <i class="fas fa-print me-1"></i> {{ __("طباعة") }}
                                             </a>
                                         </div>
                                     </td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد فحوصات مكتملة</td></tr>
+                                <tr><td colspan="6" class="text-center py-4 text-muted">{{ __("لا توجد فحوصات مكتملة") }}</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -494,7 +494,7 @@
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-danger bg-opacity-10 py-3 border-bottom">
                     <h5 class="mb-0 fw-bold text-danger">
-                        <i class="fas fa-ambulance me-2"></i>سجل أشعة الطوارئ
+                        <i class="fas fa-ambulance me-2"></i>{{ __("سجل أشعة الطوارئ") }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -503,12 +503,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th class="text-start">المريض</th>
-                                    <th>أنواع الأشعة</th>
-                                    <th>الأولوية</th>
-                                    <th>الحالة</th>
-                                    <th>وقت الطلب</th>
-                                    <th>الإجراءات</th>
+                                    <th class="text-start">{{ __("المريض") }}</th>
+                                    <th>{{ __("أنواع الأشعة") }}</th>
+                                    <th>{{ __("الأولوية") }}</th>
+                                    <th>{{ __("الحالة") }}</th>
+                                    <th>{{ __("وقت الطلب") }}</th>
+                                    <th>{{ __("الإجراءات") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -518,12 +518,12 @@
                                     <td class="text-start">
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold;">
-                                                {{ mb_substr(optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? 'ط', 0, 1) }}
+                                                {{ mb_substr(optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? __('ط'), 0, 1) }}
                                             </div>
                                             <div>
-                                                <strong>{{ optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? 'مريض طوارئ' }}</strong>
+                                                <strong>{{ optional($emRequest->patient)->user->name ?? $emRequest->emergency->patient_name ?? __('مريض طوارئ') }}</strong>
                                                 <br>
-                                                <small class="text-muted">{{ optional($emRequest->patient)->user->phone ?? $emRequest->emergency->phone ?? 'لا يوجد رقم' }}</small>
+                                                <small class="text-muted">{{ optional($emRequest->patient)->user->phone ?? $emRequest->emergency->phone ?? __('لا يوجد رقم') }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -546,7 +546,7 @@
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('staff.emergency-radiology.show', $emRequest) }}" class="btn btn-primary px-3">
-                                                <i class="fas fa-eye me-1"></i> عرض
+                                                <i class="fas fa-eye me-1"></i> {{ __("عرض") }}
                                             </a>
                                             @if($emRequest->status == 'completed')
                                             <a href="{{ route('staff.emergency-radiology.print', $emRequest) }}" target="_blank" class="btn btn-success">

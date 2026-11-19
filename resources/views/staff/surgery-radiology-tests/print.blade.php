@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طباعة أشعة العملية - {{ optional($test->surgery?->patient?->user)->name ?? 'غير معروف' }}</title>
+    <title>{{ __("طباعة أشعة العملية") }} - {{ optional($test->surgery?->patient?->user)->name ?? __('غير معروف') }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Arial', 'Tahoma', sans-serif; direction: rtl; background: #fff; color: #333; padding: 20px; }
+        body { font-family: 'Arial', 'Tahoma', sans-serif; direction: {{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}; background: #fff; color: #333; padding: 20px; }
         .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; background: white; position: relative; padding: 20mm 20mm 35mm 20mm; }
         .page::before { content: ""; position: absolute; inset: 0; background-image: url('{{ asset('images/1.jpg') }}'); background-repeat: no-repeat; background-position: center center; background-size: 55% auto; opacity: 0.08; pointer-events: none; z-index: 0; }
         .page > * { position: relative; z-index: 1; }
@@ -18,7 +18,7 @@
         .logo-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; position: relative; width: 100%; min-height: 80px; }
         .logo { width: 140px; height: 80px; margin: 0; position: absolute; left: 50%; transform: translateX(-50%); top: 0; }
         .logo img { width: 100%; height: 100%; object-fit: contain; }
-        .radiology-badge { display: flex; align-items: center; gap: 8px; background: #e8f7f9; color: #17a2b8; border: 1px solid #17a2b8; padding: 8px 12px; border-radius: 20px; font-weight: bold; white-space: nowrap; position: absolute; right: 0; top: 8px; }
+        .radiology-badge { display: flex; align-items: center; gap: 8px; background: #e8f7f9; color: #17a2b8; border: 1px solid #17a2b8; padding: 8px 12px; border-radius: 20px; font-weight: bold; white-space: nowrap; position: absolute; {{ app()->getLocale() === 'en' ? 'left: 0;' : 'right: 0;' }} top: 8px; }
         .hospital-name-ar { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 4px; letter-spacing: 0.5px; }
         .hospital-name-en { font-size: 14px; color: #888; font-style: normal; margin-bottom: 8px; }
         .document-title { font-size: 16px; font-weight: bold; color: #333; margin-top: 8px; }
@@ -38,7 +38,7 @@
         .results-table tr { border-bottom: 1px solid #dee2e6; }
         .results-table tr:last-child { border-bottom: none; }
         .results-table td { padding: 12px 15px; vertical-align: top; }
-        .results-table td:first-child { background: #e8f7f9; color: #17a2b8; font-weight: bold; width: 200px; border-left: 3px solid #17a2b8; }
+        .results-table td:first-child { background: #e8f7f9; color: #17a2b8; font-weight: bold; width: 200px; {{ app()->getLocale() === 'en' ? 'border-right: 3px solid #17a2b8;' : 'border-left: 3px solid #17a2b8;' }} }
         .results-table td:last-child { color: #333; line-height: 1.6; white-space: pre-wrap; }
         .image-item { border: 2px solid #dee2e6; border-radius: 8px; overflow: hidden; background: #fff; }
         .image-item img { width: 100%; height: auto; max-height: 500px; object-fit: contain; }
@@ -56,8 +56,8 @@
 </head>
 <body>
     <div class="print-buttons">
-        <button class="btn btn-print" onclick="window.print()">🖨️ طباعة</button>
-        <button class="btn btn-back" onclick="window.history.back()">← رجوع</button>
+        <button class="btn btn-print" onclick="window.print()">🖨️ {{ __("طباعة") }}</button>
+        <button class="btn btn-back" onclick="window.history.back()">← {{ __("رجوع") }}</button>
     </div>
 
     <div class="page">
@@ -71,43 +71,43 @@
                 <div class="logo">
                     <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
                 </div>
-                <div class="radiology-badge">☢️ أشعة عمليات</div>
+                <div class="radiology-badge">☢️ {{ __("أشعة عمليات") }}</div>
             </div>
-            <div class="hospital-name-ar">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
+            <div class="hospital-name-ar">{{ \App\Models\Hospital::first()?->name ?? __('مستشفى الكفاءات الأهلي') }}</div>
             <div class="hospital-name-en">Al-Kafaat Private Hospital</div>
-            <div class="document-title">تقرير أشعة العمليات الجراحية</div>
+            <div class="document-title">{{ __("تقرير أشعة العمليات الجراحية") }}</div>
         </div>
 
         <div class="document-info">
-            <div class="info-item"><span class="info-label">التاريخ:</span><span class="info-value">{{ optional($test->created_at)->format('Y-m-d') }}</span></div>
-            <div class="info-item"><span class="info-label">رقم الطلب:</span><span class="info-value">{{ $test->id }}</span></div>
+            <div class="info-item"><span class="info-label">{{ __("التاريخ:") }}</span><span class="info-value">{{ optional($test->created_at)->format('Y-m-d') }}</span></div>
+            <div class="info-item"><span class="info-label">{{ __("رقم الطلب:") }}</span><span class="info-value">{{ $test->id }}</span></div>
         </div>
 
         <div class="patient-info">
-            <h3>معلومات المريض</h3>
+            <h3>{{ __("معلومات المريض") }}</h3>
             @if($test->surgery)
             <div class="patient-details">
-                <div class="detail-item"><span class="detail-label">الاسم:</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->name ?? '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">العمر:</span><span class="detail-value">{{ $test->surgery->patient?->age ? $test->surgery->patient->age . ' سنة' : '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">الجنس:</span><span class="detail-value">{{ $test->surgery->patient?->gender === 'male' ? 'ذكر' : ($test->surgery->patient?->gender === 'female' ? 'أنثى' : '-') }}</span></div>
-                <div class="detail-item"><span class="detail-label">الهاتف:</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->phone ?? '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">الطبيب:</span><span class="detail-value">{{ optional($test->surgery->doctor?->user)->name ? 'د. ' . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
-                <div class="detail-item"><span class="detail-label">تاريخ العملية:</span><span class="detail-value">{{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("الاسم:") }}</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->name ?? '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("العمر:") }}</span><span class="detail-value">{{ $test->surgery->patient?->age ? $test->surgery->patient->age . ' ' . __('سنة') : '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("الجنس:") }}</span><span class="detail-value">{{ $test->surgery->patient?->gender === 'male' ? __('ذكر') : ($test->surgery->patient?->gender === 'female' ? __('أنثى') : '-') }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("الهاتف:") }}</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->phone ?? '-' }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("الطبيب:") }}</span><span class="detail-value">{{ optional($test->surgery->doctor?->user)->name ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("تاريخ العملية:") }}</span><span class="detail-value">{{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : '-' }}</span></div>
             </div>
             @else
-            <p class="text-muted">معلومات العملية غير متوفرة</p>
+            <p class="text-muted">{{ __("معلومات العملية غير متوفرة") }}</p>
             @endif
         </div>
 
         <div class="results-section">
-            <h3>تفاصيل التقرير</h3>
+            <h3>{{ __("تفاصيل التقرير") }}</h3>
             <table class="results-table">
-                <tr><td>نوع الأشعة</td><td>{{ optional($test->radiologyType)->name ?? 'أشعة عامة' }}</td></tr>
-                <tr><td>الكود</td><td>{{ optional($test->radiologyType)->code ?? '-' }}</td></tr>
-                <tr><td>الحالة</td><td>{{ $test->status_text ?? ucfirst($test->status) }}</td></tr>
-                <tr><td>تاريخ الإكمال</td><td>{{ optional($test->completed_at)->format('Y-m-d H:i') ?? '-' }}</td></tr>
-                <tr><td>النتيجة</td><td>{{ $test->result ?? '-' }}</td></tr>
-                <tr><td>المرفق</td><td>
+                <tr><td>{{ __("نوع الأشعة") }}</td><td>{{ optional($test->radiologyType)->name ?? __('أشعة عامة') }}</td></tr>
+                <tr><td>{{ __("الكود") }}</td><td>{{ optional($test->radiologyType)->code ?? '-' }}</td></tr>
+                <tr><td>{{ __("الحالة") }}</td><td>{{ $test->status_text ?? ucfirst($test->status) }}</td></tr>
+                <tr><td>{{ __("تاريخ الإكمال") }}</td><td>{{ optional($test->completed_at)->format('Y-m-d H:i') ?? '-' }}</td></tr>
+                <tr><td>{{ __("النتيجة") }}</td><td>{{ $test->result ?? '-' }}</td></tr>
+                <tr><td>{{ __("المرفق") }}</td><td>
                     @if($test->result_file)
                         @php
                             $fileUrl = asset('storage/' . $test->result_file);
@@ -115,9 +115,9 @@
                             $imageExts = ['jpg','jpeg','png','gif','tiff','bmp','webp'];
                         @endphp
                         @if(in_array($ext, $imageExts))
-                            <div class="image-item"><img src="{{ $fileUrl }}" alt="مرفق الأشعة"></div>
+                            <div class="image-item"><img src="{{ $fileUrl }}" alt="{{ __('مرفق الأشعة') }}"></div>
                         @else
-                            <a href="{{ $fileUrl }}" target="_blank">عرض الملف المرفق</a>
+                            <a href="{{ $fileUrl }}" target="_blank">{{ __("عرض الملف المرفق") }}</a>
                         @endif
                     @else
                         -
@@ -131,7 +131,7 @@
                 <div class="contact-info">
                     <div class="contact-item">📞 +964 (0) 778 050 7060</div>
                     <div class="contact-item">📧 info@alkafaathospital.com</div>
-                    <div class="contact-item">📍 بغداد - الحارثية - شارع الكندي</div>
+                    <div class="contact-item">📍 {{ __("بغداد - الحارثية - شارع الكندي") }}</div>
                 </div>
                 <div class="barcode">RAD-{{ $test->id }}</div>
             </div>

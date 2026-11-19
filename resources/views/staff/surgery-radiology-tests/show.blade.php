@@ -86,27 +86,27 @@ function getRadiologyCategory($radiologyName) {
     $name = strtolower($radiologyName);
 
     if (strpos($name, 'أشعة') !== false || strpos($name, 'x-ray') !== false) {
-        return 'أشعة عادية';
+        return __('أشعة عادية');
     } elseif (strpos($name, 'رنين') !== false || strpos($name, 'mri') !== false) {
-        return 'الرنين المغناطيسي';
+        return __('الرنين المغناطيسي');
     } elseif (strpos($name, 'طبقي') !== false || strpos($name, 'ct') !== false) {
-        return 'التصوير المقطعي';
+        return __('التصوير المقطعي');
     } elseif (strpos($name, 'موجات') !== false || strpos($name, 'ultrasound') !== false) {
-        return 'الموجات فوق الصوتية';
+        return __('الموجات فوق الصوتية');
     } elseif (strpos($name, 'قلب') !== false || strpos($name, 'cardiac') !== false) {
-        return 'تصوير القلب';
+        return __('تصوير القلب');
     } elseif (strpos($name, 'عظام') !== false || strpos($name, 'bone') !== false) {
-        return 'عظام ومفاصل';
+        return __('عظام ومفاصل');
     } elseif (strpos($name, 'صدر') !== false || strpos($name, 'chest') !== false) {
-        return 'صدر وتنفس';
+        return __('صدر وتنفس');
     } elseif (strpos($name, 'مخ') !== false || strpos($name, 'brain') !== false) {
-        return 'جهاز عصبي';
+        return __('جهاز عصبي');
     } elseif (strpos($name, 'بطن') !== false || strpos($name, 'abdomen') !== false) {
-        return 'بطن وأحشاء';
+        return __('بطن وأحشاء');
     } elseif (strpos($name, 'أوعية') !== false || strpos($name, 'vascular') !== false) {
-        return 'أوعية دموية';
+        return __('أوعية دموية');
     } else {
-        return 'تصوير طبي';
+        return __('تصوير طبي');
     }
 }
 @endphp
@@ -118,18 +118,18 @@ function getRadiologyCategory($radiologyName) {
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-x-ray me-2"></i>
-                    تفاصيل طلب التصوير الإشعاعي للعملية
+                    {{ __("تفاصيل طلب التصوير الإشعاعي للعملية") }}
                 </h2>
                 <div class="d-flex gap-2">
                     @if($test->status === 'completed')
                     <a href="{{ route('staff.surgery-radiology-tests.print', $test) }}" target="_blank" class="btn btn-success">
                         <i class="fas fa-print me-1"></i>
-                        طباعة
+                        {{ __("طباعة") }}
                     </a>
                     @endif
                     <a href="{{ route('staff.surgery-radiology-tests.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        العودة للقائمة
+                        <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} me-1"></i>
+                        {{ __("العودة للقائمة") }}
                     </a>
                 </div>
             </div>
@@ -169,30 +169,30 @@ function getRadiologyCategory($radiologyName) {
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>معلومات العملية</h5>
+                    <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>{{ __("معلومات العملية") }}</h5>
                 </div>
                 <div class="card-body">
                     @if($test->surgery)
                     <div class="row">
                         <div class="col-md-4">
-                            <p><strong>المريض:</strong> {{ optional($test->surgery->patient?->user)->name ?? 'غير معروف' }}</p>
-                            <p><strong>الطبيب:</strong> د. {{ optional($test->surgery->doctor?->user)->name ?? 'غير محدد' }}</p>
+                            <p><strong>{{ __("المريض:") }}</strong> {{ optional($test->surgery->patient?->user)->name ?? __("غير معروف") }}</p>
+                            <p><strong>{{ __("الطبيب:") }}</strong> {{ (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . (optional($test->surgery->doctor?->user)->name ?? __("غير محدد")) }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>نوع العملية:</strong> {{ $test->surgery->surgery_type }}</p>
-                            <p><strong>تاريخ العملية:</strong> {{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : 'غير محدد' }}</p>
+                            <p><strong>{{ __("نوع العملية:") }}</strong> {{ $test->surgery->surgery_type }}</p>
+                            <p><strong>{{ __("تاريخ العملية:") }}</strong> {{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : __("غير محدد") }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>وقت العملية:</strong> {{ $test->surgery->scheduled_time }}</p>
-                            <p><strong>الحالة:</strong>
+                            <p><strong>{{ __("وقت العملية:") }}</strong> {{ $test->surgery->scheduled_time }}</p>
+                            <p><strong>{{ __("الحالة:") }}</strong>
                                 @if($test->surgery->status == 'scheduled')
-                                    <span class="badge bg-secondary">مجدولة</span>
+                                    <span class="badge bg-secondary">{{ __("مجدولة") }}</span>
                                 @elseif($test->surgery->status == 'in_progress')
-                                    <span class="badge bg-warning">جارية</span>
+                                    <span class="badge bg-warning">{{ __("جارية") }}</span>
                                 @elseif($test->surgery->status == 'completed')
-                                    <span class="badge bg-success">مكتملة</span>
+                                    <span class="badge bg-success">{{ __("مكتملة") }}</span>
                                 @else
-                                    <span class="badge bg-danger">ملغاة</span>
+                                    <span class="badge bg-danger">{{ __("ملغاة") }}</span>
                                 @endif
                             </p>
                         </div>
@@ -200,7 +200,7 @@ function getRadiologyCategory($radiologyName) {
                     @else
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
-                        معلومات العملية غير متوفرة
+                        {{ __("معلومات العملية غير متوفرة") }}
                     </div>
                     @endif
                 </div>
@@ -214,7 +214,7 @@ function getRadiologyCategory($radiologyName) {
             <!-- اختيار نوع الأشعة -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-search me-2"></i>اختر نوع الأشعة المطلوب</h5>
+                    <h5 class="mb-0"><i class="fas fa-search me-2"></i>{{ __("اختر نوع الأشعة المطلوب") }}</h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('staff.surgery-radiology-tests.update', $test) }}" method="POST">
@@ -225,7 +225,7 @@ function getRadiologyCategory($radiologyName) {
                         <input type="hidden" name="status" value="pending">
                         
                         <div class="mb-3">
-                            <input type="text" class="form-control form-control-lg" id="surgeryRadiologySearchInput" placeholder="🔍 ابحث عن نوع الأشعة بالاسم، الكود أو الفئة...">
+                            <input type="text" class="form-control form-control-lg" id="surgeryRadiologySearchInput" placeholder="{{ __("🔍 ابحث عن نوع الأشعة بالاسم، الكود أو الفئة...") }}">
                         </div>
 
                         @php
@@ -241,10 +241,10 @@ function getRadiologyCategory($radiologyName) {
                             <table class="table table-hover table-bordered align-middle mb-0">
                                 <thead class="table-light sticky-top">
                                     <tr>
-                                        <th style="width: 60px;" class="text-center">اختر</th>
-                                        <th>نوع الأشعة</th>
-                                        <th style="width: 120px;">الكود</th>
-                                        <th style="width: 200px;">الفئة الفرعية</th>
+                                        <th style="width: 60px;" class="text-center">{{ __("اختر") }}</th>
+                                        <th>{{ __("نوع الأشعة") }}</th>
+                                        <th style="width: 120px;">{{ __("الكود") }}</th>
+                                        <th style="width: 200px;">{{ __("الفئة الفرعية") }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -305,11 +305,11 @@ function getRadiologyCategory($radiologyName) {
 
                         <div class="alert alert-info mt-3 mb-0">
                             <i class="fas fa-info-circle me-2"></i>
-                            تم اختيار <strong><span id="selectedRadiologyCount">0</span></strong> نوع أشعة
+                            {{ __("تم اختيار") }} <strong><span id="selectedRadiologyCount">0</span></strong> {{ __("نوع أشعة") }}
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
-                            <i class="fas fa-check me-2"></i>تأكيد اختيار نوع الأشعة
+                            <i class="fas fa-check me-2"></i>{{ __("تأكيد اختيار نوع الأشعة") }}
                         </button>
                     </form>
                 </div>
@@ -320,7 +320,7 @@ function getRadiologyCategory($radiologyName) {
             @if($test->result || $test->result_file)
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>نتائج التصوير المحفوظة</h5>
+                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>{{ __("نتائج التصوير المحفوظة") }}</h5>
                 </div>
                 <div class="card-body">
                     @php
@@ -335,19 +335,19 @@ function getRadiologyCategory($radiologyName) {
                         <div class="col-md-4 col-12">
                             <div class="text-center h-100 d-flex flex-column justify-content-between">
                                 <div>
-                                    <h6>ملف التصوير:</h6>
-                                    <img src="{{ $resultFileUrl }}" alt="ملف التصوير" class="img-fluid rounded border" style="max-height: 420px; width: 100%; object-fit: contain;">
+                                    <h6>{{ __("ملف التصوير:") }}</h6>
+                                    <img src="{{ $resultFileUrl }}" alt="{{ __("ملف التصوير") }}" class="img-fluid rounded border" style="max-height: 420px; width: 100%; object-fit: contain;">
                                 </div>
                                 <div class="mt-3 text-center">
                                     <a href="{{ $resultFileUrl }}" target="_blank" class="btn btn-outline-primary w-100">
-                                        <i class="fas fa-expand me-2"></i>فتح الصورة بحجم كامل
+                                        <i class="fas fa-expand me-2"></i>{{ __("فتح الصورة بحجم كامل") }}
                                     </a>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-8 col-12">
                             @if($test->result)
-                            <h6>تقرير الطبيب الإشعاعي:</h6>
+                            <h6>{{ __("تقرير الطبيب الإشعاعي:") }}</h6>
                             <div class="bg-light p-3 rounded h-100">
                                 {{ $test->result }}
                             </div>
@@ -357,7 +357,7 @@ function getRadiologyCategory($radiologyName) {
                     @else
                         @if($test->result)
                         <div class="mb-3">
-                            <h6>تقرير الطبيب الإشعاعي:</h6>
+                            <h6>{{ __("تقرير الطبيب الإشعاعي:") }}</h6>
                             <div class="bg-light p-3 rounded">
                                 {{ $test->result }}
                             </div>
@@ -366,9 +366,9 @@ function getRadiologyCategory($radiologyName) {
 
                         @if($test->result_file)
                         <div class="mb-3">
-                            <h6>ملف التصوير:</h6>
+                            <h6>{{ __("ملف التصوير:") }}</h6>
                             <a href="{{ $resultFileUrl }}" target="_blank" class="btn btn-outline-primary">
-                                <i class="fas fa-file-download me-2"></i>عرض/تحميل الملف
+                                <i class="fas fa-file-download me-2"></i>{{ __("عرض/تحميل الملف") }}
                             </a>
                         </div>
                         @endif
@@ -380,7 +380,7 @@ function getRadiologyCategory($radiologyName) {
             <!-- تحديث النتائج -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0"><i class="fas fa-edit me-2"></i>تحديث نتائج التصوير</h6>
+                    <h6 class="mb-0"><i class="fas fa-edit me-2"></i>{{ __("تحديث نتائج التصوير") }}</h6>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('staff.surgery-radiology-tests.update', $test) }}" method="POST" enctype="multipart/form-data">
@@ -390,7 +390,7 @@ function getRadiologyCategory($radiologyName) {
                         <div class="radiology-results-section">
                             <h6 class="mb-3">
                                 <i class="fas fa-file-medical text-primary me-2"></i>
-                                معلومات التصوير
+                                {{ __("معلومات التصوير") }}
                             </h6>
                             
                             <div class="table-responsive mb-3">
@@ -398,8 +398,8 @@ function getRadiologyCategory($radiologyName) {
                                     <thead class="table-light">
                                         <tr>
                                             <th class="text-center" style="width: 50px;">#</th>
-                                            <th>نوع التصوير</th>
-                                            <th style="width: 150px;" class="text-center">الحالة</th>
+                                            <th>{{ __("نوع التصوير") }}</th>
+                                            <th style="width: 150px;" class="text-center">{{ __("الحالة") }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -425,13 +425,13 @@ function getRadiologyCategory($radiologyName) {
                                             <td class="text-center">
                                                 <select name="status" id="status" class="form-select form-select-sm @error('status') is-invalid @enderror" required>
                                                     <option value="pending" {{ $test->status == 'pending' ? 'selected' : '' }}>
-                                                        في الانتظار
+                                                        {{ __("في الانتظار") }}
                                                     </option>
                                                     <option value="completed" {{ $test->status == 'completed' ? 'selected' : '' }}>
-                                                        مكتمل
+                                                        {{ __("مكتمل") }}
                                                     </option>
                                                     <option value="cancelled" {{ $test->status == 'cancelled' ? 'selected' : '' }}>
-                                                        ملغي
+                                                        {{ __("ملغي") }}
                                                     </option>
                                                 </select>
                                                 @error('status')
@@ -447,12 +447,12 @@ function getRadiologyCategory($radiologyName) {
                                 <div class="col-md-4 col-12">
                                     <div class="card h-100 border-secondary">
                                         <div class="card-body">
-                                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-upload text-primary me-2"></i>ملف التصوير</h6>
+                                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-upload text-primary me-2"></i>{{ __("ملف التصوير") }}</h6>
 
                                             <div class="mb-3">
                                                 <input type="file" name="result_file" id="result_file" class="form-control @error('result_file') is-invalid @enderror" accept=".dcm,.dicom,.pdf,.jpg,.jpeg,.png,.tiff">
                                                 <small class="form-text text-muted">
-                                                    الصيغ المدعومة: DICOM (.dcm), PDF (.pdf), صور (.jpg, .jpeg, .png, .tiff) - الحد الأقصى 10 ميجا
+                                                    {{ __("الصيغ المدعومة: DICOM (.dcm), PDF (.pdf), صور (.jpg, .jpeg, .png, .tiff) - الحد الأقصى 10 ميجا") }}
                                                 </small>
                                                 @error('result_file')
                                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -461,7 +461,7 @@ function getRadiologyCategory($radiologyName) {
 
                                             <div id="resultFilePreview" class="mb-3" style="display: none;">
                                                 <div class="text-center mb-3">
-                                                    <img id="resultFilePreviewImage" src="#" alt="معاينة الملف" class="img-fluid rounded border" style="max-height: 320px; width: auto; display: none;" />
+                                                    <img id="resultFilePreviewImage" src="#" alt="{{ __("معاينة الملف") }}" class="img-fluid rounded border" style="max-height: 320px; width: auto; display: none;" />
                                                     <div id="resultFilePreviewMessage" class="alert alert-secondary mb-0" style="display: none;"></div>
                                                 </div>
                                             </div>
@@ -470,7 +470,7 @@ function getRadiologyCategory($radiologyName) {
                                             <div class="mt-2">
                                                 <div class="alert alert-info py-2 mb-0">
                                                     <i class="fas fa-file-alt me-1"></i>
-                                                    <small>الملف الحالي: <a href="{{ Storage::disk('public')->url($test->result_file) }}" target="_blank" class="alert-link">{{ basename($test->result_file) }}</a></small>
+                                                    <small>{{ __("الملف الحالي:") }} <a href="{{ Storage::disk('public')->url($test->result_file) }}" target="_blank" class="alert-link">{{ basename($test->result_file) }}</a></small>
                                                 </div>
                                             </div>
                                             @endif
@@ -480,10 +480,10 @@ function getRadiologyCategory($radiologyName) {
                                 <div class="col-md-8 col-12">
                                     <div class="card h-100 border-secondary">
                                         <div class="card-body d-flex flex-column">
-                                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-notes-medical text-primary me-2"></i>تقرير الطبيب الإشعاعي</h6>
+                                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-notes-medical text-primary me-2"></i>{{ __("تقرير الطبيب الإشعاعي") }}</h6>
 
                                             <div class="mb-3 flex-grow-1">
-                                                <textarea name="result" id="result" class="form-control @error('result') is-invalid @enderror" rows="14" placeholder="أدخل تقرير الطبيب الإشعاعي بالتفصيل...">{{ old('result', $test->result) }}</textarea>
+                                                <textarea name="result" id="result" class="form-control @error('result') is-invalid @enderror" rows="14" placeholder="{{ __("أدخل تقرير الطبيب الإشعاعي بالتفصيل...") }}">{{ old('result', $test->result) }}</textarea>
                                                 @error('result')
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror
@@ -491,20 +491,20 @@ function getRadiologyCategory($radiologyName) {
 
                                             <div class="mt-3">
                                                 <small class="text-muted d-block mb-2">
-                                                    <i class="fas fa-bolt me-1"></i>نتائج سريعة:
+                                                    <i class="fas fa-bolt me-1"></i>{{ __("نتائج سريعة:") }}
                                                 </small>
                                                 <div class="d-flex flex-wrap gap-2">
-                                                    <button type="button" class="btn btn-outline-success btn-sm quick-result" data-result="طبيعي - لا توجد تغييرات مرضية">
-                                                        <i class="fas fa-check"></i> طبيعي
+                                                    <button type="button" class="btn btn-outline-success btn-sm quick-result" data-result="{{ __("طبيعي - لا توجد تغييرات مرضية") }}">
+                                                        <i class="fas fa-check"></i> {{ __("طبيعي") }}
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-warning btn-sm quick-result" data-result="غير طبيعي - يتطلب مراجعة طبية">
-                                                        <i class="fas fa-exclamation-triangle"></i> غير طبيعي
+                                                    <button type="button" class="btn btn-outline-warning btn-sm quick-result" data-result="{{ __("غير طبيعي - يتطلب مراجعة طبية") }}">
+                                                        <i class="fas fa-exclamation-triangle"></i> {{ __("غير طبيعي") }}
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-info btn-sm quick-result" data-result="طبيعي مع ملاحظات طفيفة">
-                                                        <i class="fas fa-info-circle"></i> طبيعي مع ملاحظات
+                                                    <button type="button" class="btn btn-outline-info btn-sm quick-result" data-result="{{ __("طبيعي مع ملاحظات طفيفة") }}">
+                                                        <i class="fas fa-info-circle"></i> {{ __("طبيعي مع ملاحظات") }}
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-secondary btn-sm quick-result" data-result="يحتاج لفحص إضافي - غير حاسم">
-                                                        <i class="fas fa-redo"></i> يحتاج لفحص إضافي
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm quick-result" data-result="{{ __("يحتاج لفحص إضافي - غير حاسم") }}">
+                                                        <i class="fas fa-redo"></i> {{ __("يحتاج لفحص إضافي") }}
                                                     </button>
                                                 </div>
                                             </div>
@@ -518,18 +518,18 @@ function getRadiologyCategory($radiologyName) {
                                 <details class="mb-3">
                                     <summary class="text-primary fw-bold cursor-pointer">
                                         <i class="fas fa-info-circle me-2"></i>
-                                        إرشادات التصوير الإشعاعي
+                                        {{ __("إرشادات التصوير الإشعاعي") }}
                                     </summary>
                                     <div class="mt-3 p-3 bg-light rounded">
                                         <small class="text-muted">
-                                            <strong>ملاحظة:</strong> هذه إرشادات عامة للتصوير الإشعاعي. يجب استشارة الطبيب الإشعاعي للتقييم الدقيق.
+                                            <strong>{{ __("ملاحظة:") }}</strong> {{ __("هذه إرشادات عامة للتصوير الإشعاعي. يجب استشارة الطبيب الإشعاعي للتقييم الدقيق.") }}
                                         </small>
                                         <ul class="mt-2 mb-0 small">
-                                            <li><strong>الأشعة العادية (X-Ray):</strong> للكشف عن الكسور والالتهابات</li>
-                                            <li><strong>التصوير المقطعي (CT):</strong> للكشف عن الأورام والنزيف</li>
-                                            <li><strong>الرنين المغناطيسي (MRI):</strong> للكشف عن مشاكل الأنسجة الرخوة</li>
-                                            <li><strong>الموجات فوق الصوتية:</strong> للكشف عن السوائل والأعضاء الرخوة</li>
-                                            <li><strong>تصوير القلب:</strong> لتقييم وظائف القلب والأوعية الدموية</li>
+                                            <li><strong>{{ __("الأشعة العادية (X-Ray):") }}</strong> {{ __("للكشف عن الكسور والالتهابات") }}</li>
+                                            <li><strong>{{ __("التصوير المقطعي (CT):") }}</strong> {{ __("للكشف عن الأورام والنزيف") }}</li>
+                                            <li><strong>{{ __("الرنين المغناطيسي (MRI):") }}</strong> {{ __("للكشف عن مشاكل الأنسجة الرخوة") }}</li>
+                                            <li><strong>{{ __("الموجات فوق الصوتية:") }}</strong> {{ __("للكشف عن السوائل والأعضاء الرخوة") }}</li>
+                                            <li><strong>{{ __("تصوير القلب:") }}</strong> {{ __("لتقييم وظائف القلب والأوعية الدموية") }}</li>
                                         </ul>
                                     </div>
                                 </details>
@@ -537,7 +537,7 @@ function getRadiologyCategory($radiologyName) {
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
-                            <i class="fas fa-save me-2"></i>حفظ نتائج التصوير
+                            <i class="fas fa-save me-2"></i>{{ __("حفظ نتائج التصوير") }}
                         </button>
                     </form>
                 </div>
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
                 reader.readAsDataURL(file);
             } else {
-                resultFilePreviewMessage.textContent = 'تم اختيار ملف غير صورة، سيتم عرضه كملف عند الحفظ.';
+                resultFilePreviewMessage.textContent = '{{ __("تم اختيار ملف غير صورة، سيتم عرضه كملف عند الحفظ.") }}';
                 resultFilePreviewMessage.style.display = '';
             }
         });
