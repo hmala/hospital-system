@@ -78,6 +78,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 269 (2026-11-20 — `main`) — جعل زر العودة وشريط المسار في المحطة السريرية ذكياً وسياقياً لإعادة المستخدم لمحطته الأصلية بدقة (Resident/Nursing/Surgeries) بدلاً من توجيهه لقائمة الانتظار (Context-Aware Dynamic Back Navigation in Clinical Station Redirecting to Exact Workstation Origin Instead of Hardcoded Waiting List)**:
+  * **تشخيص السبب الجذري**: في [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php)، كان زر "العودة للجدول" مبرمجاً برابط ثابت نحو قائمة الانتظار اليومية `route('surgeries.waiting')` مما كان يرمي الطبيب المقيم أو الممرض في قائمة الانتظار بدلاً من إعادته لمحطته.
+  * **الحل المعماري الذكي ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - احتساب `$backUrl` و `$backLabel` ديناميكياً:
+      1. القادم من محطة المقيم (`from=resident` أو referer أو دور resident) ⬅️ يعود لـ `route('resident-station.index')` بعنوان "العودة لمحطة المقيم".
+      2. القادم من محطة التمريض (`from=nursing` أو referer أو دور nurse) ⬅️ يعود لـ `route('nursing-station.index')` بعنوان "العودة لمحطة التمريض".
+      3. القادم من صالة العمليات أو التخدير ⬅️ يعود لمحطته المختصة.
+      4. القادم من جدول العمليات ⬅️ يعود لـ `route('surgeries.index')` بعنوان "العودة لجدول العمليات".
+      5. القادم فعلياً من قائمة الانتظار ⬅️ يعود لـ `route('surgeries.waiting')`.
+    - تحديث `ResidentStationController@show` و `NursingStationController@show` لتمرير وسيط المصدر `from=resident` / `from=nursing` وحفظه عند التنقل بين تبويبات ومراحل المحطة السريرية.
+    - تحديث زر العودة في [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php) ليعيد لجدول العمليات العام بدلاً من قائمة الانتظار.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/StationFloorAndSearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/StationFloorAndSearchTest.php))**:
+    - اجتياز كامل حزمة الاختبارات بنجاح 100% (`4 passed, 27 assertions`).
+    - اجتياز تدقيق التنسيق `Laravel Pint` وتصفية وإعادة تجميع قوالب Blade (`view:clear`, `view:cache`).
+
 - **المرحلة 268 (2026-11-20 — `main`) — إضافة تبويبات الطوابق وتضمين حقل البحث الفوري عن المرضى في محطتي التمريض والطبيب المقيم (Introduce Floor Filtering Navigation and Real-Time Patient Search in Both Resident and Nursing Workstations)**:
   * **تبويبات وفلاتر الطوابق في محطة المقيم ([app/Http/Controllers/ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
     - جلب الطوابق المتوفرة تلقائياً من غرف العمليات والرقود (`Room::whereNotNull('floor')->distinct()->pluck('floor')`).

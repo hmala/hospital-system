@@ -233,4 +233,46 @@ class StationFloorAndSearchTest extends TestCase
         $response->assertSee('حيدر صباح');
         $response->assertSee('nursingPatientSearchInput');
     }
+
+    public function test_clinical_station_renders_context_aware_back_button(): void
+    {
+        $patientUser = User::factory()->create(['name' => 'سامر كاظم']);
+        $patient = Patient::create([
+            'user_id' => $patientUser->id,
+            'national_id' => 'FILE-7777',
+        ]);
+
+        $surgery = Surgery::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'major',
+            'surgery_name' => 'عملية قلب',
+            'status' => 'scheduled',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '08:00:00',
+        ]);
+
+        // Coming from resident station
+        $respResident = $this->actingAs($this->adminUser)
+            ->get(route('clinical-station.show', ['surgery' => $surgery->id, 'from' => 'resident']));
+        $respResident->assertStatus(200);
+        $respResident->assertSee('العودة لمحطة المقيم');
+        $respResident->assertSee(route('resident-station.index'));
+
+        // Coming from nursing station
+        $respNursing = $this->actingAs($this->adminUser)
+            ->get(route('clinical-station.show', ['surgery' => $surgery->id, 'from' => 'nursing']));
+        $respNursing->assertStatus(200);
+        $respNursing->assertSee('العودة لمحطة التمريض');
+        $respNursing->assertSee(route('nursing-station.index'));
+
+        // Default or coming from surgeries index
+        $respSurgeries = $this->actingAs($this->adminUser)
+            ->get(route('clinical-station.show', ['surgery' => $surgery->id, 'from' => 'surgeries']));
+        $respSurgeries->assertStatus(200);
+        $respSurgeries->assertSee('العودة لجدول العمليات');
+        $respSurgeries->assertSee(route('surgeries.index'));
+        $respSurgeries->assertDontSee('العودة للجدول');
+    }
 }

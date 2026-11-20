@@ -138,7 +138,7 @@ class ResidentStationController extends Controller
                 ->with('warning', "لا يمكن فتح المحطة السريرية للمريض: المريض مخصص للغرفة ({$roomNum}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.");
         }
 
-        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
+        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id, 'from' => 'resident'], $request->query()));
     }
 
     public function storeFollowUp(Request $request, Surgery $surgery)

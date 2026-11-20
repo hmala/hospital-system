@@ -208,7 +208,7 @@ class NursingStationController extends Controller
                 ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
         }
 
-        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id], $request->query()));
+        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id, 'from' => 'nursing'], $request->query()));
     }
 
     public function update(Request $request, Surgery $surgery)

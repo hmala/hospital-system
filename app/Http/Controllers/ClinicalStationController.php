@@ -249,6 +249,39 @@ class ClinicalStationController extends Controller
                 ->get();
         }
 
+        // تحديد مسار العودة الذكي واسم الزر بناءً على المصدر أو الدور
+        $from = $request->query('from');
+        $referer = (string) url()->previous();
+
+        if ($from === 'resident' || (! $from && str_contains($referer, 'resident'))) {
+            $backUrl = route('resident-station.index');
+            $backLabel = 'العودة لمحطة المقيم';
+        } elseif ($from === 'nursing' || (! $from && str_contains($referer, 'nursing'))) {
+            $backUrl = route('nursing-station.index');
+            $backLabel = 'العودة لمحطة التمريض';
+        } elseif ($from === 'operation_theater' || (! $from && str_contains($referer, 'operation-theater'))) {
+            $backUrl = route('operation-theater-station.index');
+            $backLabel = 'العودة لصالة العمليات';
+        } elseif ($from === 'anesthesia' || (! $from && str_contains($referer, 'anesthesia'))) {
+            $backUrl = route('anesthesia-station.index');
+            $backLabel = 'العودة لمحطة التخدير';
+        } elseif ($from === 'waiting' || (! $from && str_contains($referer, 'waiting'))) {
+            $backUrl = route('surgeries.waiting');
+            $backLabel = 'العودة لقائمة الانتظار';
+        } elseif ($from === 'surgeries' || (! $from && str_contains($referer, '/surgeries') && ! str_contains($referer, 'waiting'))) {
+            $backUrl = route('surgeries.index');
+            $backLabel = 'العودة لجدول العمليات';
+        } elseif ($user && $user->hasRole('resident')) {
+            $backUrl = route('resident-station.index');
+            $backLabel = 'العودة لمحطة المقيم';
+        } elseif ($user && $user->hasRole('nurse')) {
+            $backUrl = route('nursing-station.index');
+            $backLabel = 'العودة لمحطة التمريض';
+        } else {
+            $backUrl = route('surgeries.index');
+            $backLabel = 'العودة لجدول العمليات';
+        }
+
         return view('surgery-stations.clinical.show', compact(
             'surgery',
             'currentPhase',
@@ -282,7 +315,10 @@ class ClinicalStationController extends Controller
             'availableRadiologyTypes',
             'labPackages',
             'availableConsultantDoctors',
-            'isAdmin'
+            'isAdmin',
+            'backUrl',
+            'backLabel',
+            'from'
         ));
     }
 

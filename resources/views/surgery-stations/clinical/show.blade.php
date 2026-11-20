@@ -512,12 +512,19 @@
         }
     </style>
 
+    @php
+        $resolvedBackUrl = $backUrl ?? (url()->previous() ?: route('surgeries.index'));
+        $resolvedBackLabel = $backLabel ?? __('العودة لجدول العمليات');
+    @endphp
+
     {{-- Breadcrumb & Quick Actions --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ route('surgeries.index') }}" class="text-decoration-none">{{ __('إدارة العمليات') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('surgeries.waiting') }}" class="text-decoration-none">{{ __('قائمة الانتظار اليومية') }}</a></li>
+                @if($resolvedBackUrl !== route('surgeries.index'))
+                    <li class="breadcrumb-item"><a href="{{ $resolvedBackUrl }}" class="text-decoration-none">{{ __($resolvedBackLabel) }}</a></li>
+                @endif
                 <li class="breadcrumb-item active" aria-current="page">{{ __('المحطة السريرية الموحدة') }} (#{{ $surgery->id }})</li>
             </ol>
         </nav>
@@ -527,8 +534,8 @@
                     <i class="fas fa-sliders-h me-1"></i> {{ __('ضبط صلاحيات التبويبات') }}
                 </a>
             @endcan
-            <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __('العودة للجدول') }}
+            <a href="{{ $resolvedBackUrl }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __($resolvedBackLabel) }}
             </a>
         </div>
     </div>
@@ -628,7 +635,7 @@
                             <span>{{ __('تحضير ما قبل العملية') }}</span>
                         </span>
                         @if($postOpStation)
-                            <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab]) }}" 
+                            <a href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab, 'from' => $from ?? null])) }}" 
                                class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
                                title="{{ __('الانتقال إلى مرحلة ما بعد العملية') }}">
                                 <span>{{ __('ما بعد العملية') }}</span>
@@ -641,7 +648,7 @@
                             <span>{{ __('عناية ما بعد العملية (الرقود)') }}</span>
                         </span>
                         @if($preOpStation)
-                            <a href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab]) }}" 
+                            <a href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab, 'from' => $from ?? null])) }}" 
                                class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
                                title="{{ __('مراجعة سجل ما قبل العملية') }}">
                                 <i class="fas fa-history fa-xs"></i>
@@ -705,7 +712,7 @@
             @foreach($visibleTabs as $tKey => $tMeta)
                 <li class="clin-tab-item" role="presentation">
                     <a class="clin-nav-tab {{ $activeTab === $tKey ? 'active' : '' }}" 
-                       href="{{ route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey]) }}"
+                       href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => $currentPhase, 'tab' => $tKey, 'from' => $from ?? null])) }}"
                        title="{{ __($tMeta['label']) }}">
                         <i class="{{ $tMeta['icon'] }} small"></i>
                         <span>{{ $shortTabLabels[$tKey] ?? __($tMeta['label']) }}</span>

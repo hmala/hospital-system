@@ -470,8 +470,8 @@
                 </a>
             @endif
 
-            <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __('العودة') }}
+            <a href="{{ url()->previous() && !str_contains(url()->previous(), 'surgeries/' . $surgery->id) ? url()->previous() : route('surgeries.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __('العودة لجدول العمليات') }}
             </a>
         </div>
     </div>

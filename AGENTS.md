@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 269: جعل زر العودة وشريط المسار في المحطة السريرية ذكياً وسياقياً لإعادة المستخدم لمحطته الأصلية بدقة Context-Aware Dynamic Back Navigation in Clinical Station Redirecting to Exact Workstation Origin Instead of Hardcoded Waiting List)
+
+### Done
+- **إعادة هندسة زر العودة والـ Breadcrumb ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * تشخيص السبب: كان زر "العودة للجدول" مبرمجاً برابط ثابت نحو قائمة الانتظار اليومية `route('surgeries.waiting')`، مما كان يوجه الأطباء والممرضين لقائمة الانتظار قسراً.
+  * احتساب `$backUrl` و `$backLabel` ديناميكياً بحسب المصدر أو دور المستخدم:
+    1. محطة المقيم (`route('resident-station.index')` — "العودة لمحطة المقيم").
+    2. محطة التمريض (`route('nursing-station.index')` — "العودة لمحطة التمريض").
+    3. صالة العمليات والتخدير (`operation-theater-station.index` / `anesthesia-station.index`).
+    4. جدول العمليات العام (`route('surgeries.index')` — "العودة لجدول العمليات").
+    5. قائمة الانتظار اليومية (`route('surgeries.waiting')`).
+  * الحفاظ على معلمة المصدر `from` عند التنقل بين تبويبات ومراحل المحطة السريرية.
+  * تحديث `ResidentStationController@show` و `NursingStationController@show` لتمرير معلمة المصدر تلقائياً.
+  * تحديث زر العودة في تفاصيل العملية الجراحية ([resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php)) ليعيد لجدول العمليات العام.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/StationFloorAndSearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/StationFloorAndSearchTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (`4 passed, 27 assertions`).
+  * تصفية وتجميع قوالب Blade بنجاح (`view:clear`, `view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
 ## Session log (2026-11-20 — المرحلة 268: إضافة تبويبات الطوابق وتضمين حقل البحث الفوري عن المرضى في محطتي التمريض والطبيب المقيم Introduce Floor Filtering Navigation and Real-Time Patient Search in Both Resident and Nursing Workstations)
 
 ### Done
