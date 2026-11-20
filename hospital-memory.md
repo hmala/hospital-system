@@ -78,6 +78,20 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 267 (2026-11-20 — `main`) — حل مشكلة ظهور القائمة الجانبية في التابلت مظللة/معتمة بضبط هرم طبقات العرض z-index وعزل التظليل خلف القائمة (Fix Shaded Tablet Sidebar by Re-architecting z-index Hierarchy & Elevating Offcanvas Drawer over Backdrop)**:
+  * **تشخيص السبب الجذري (Root Cause)**:
+    - في [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php)، كانت خلفية التظليل `.sidebar-backdrop` تحمل `z-index: 1040` (تعتيم داكن 52% مع `blur(4px)`).
+    - بينما القائمة الجانبية `.sidebar` كانت تحمل قاعدة عامة بأسفل الملف `z-index: 1030 !important`.
+    - بسبب قاعدة الأولوية المتأخرة، كانت طبقة التظليل تُعرض **أمام وفوق القائمة الجانبية بالكامل** بدلاً من أن تكون خلفها، فتظهر القائمة للمستخدم مظللة ومعتمة ومشوشة تحت الـ Backdrop ويتم حجب النقر عن عناصرها.
+  * **الحل المعماري وضبط الطبقات ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - رفع القائمة الجانبية في التابلت والموبايل (`.sidebar`, `body.sidebar-open .sidebar`) إلى `z-index: 1060 !important;` لتكون في أعلى هرم الطبقات بالكامل في كلا الاتجاهين RTL و LTR.
+    - ضبط خلفية التظليل `.sidebar-backdrop` على `z-index: 1045;` لتتوسط بدقة بين محتوى الصفحة وشريط الترويسة من جهة، والقائمة الجانبية من جهة أخرى.
+    - حصر طبقة `z-index: 1030` حصراً داخل ميديا الشاشات المكتبية الكبيرة (`@media (min-width: 1401px)`).
+    - تفعيل خلفية صلبة نقية (`background: #ebf3fe !important;`) مع إلغاء البلور المزدوج (`backdrop-filter: none !important;`) وظل جانبي فاخر يفصلها عن الخلفية المظللة.
+  * **الاختبارات الآلية وضمان الجودة**:
+    - اجتياز كامل حزمة اختبارات اللغات والتخطيط `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+    - اجتياز تدقيق التنسيق `Laravel Pint` وتصفية وتجميع قوالب Blade (`view:clear`, `view:cache`).
+
 - **المرحلة 266 (2026-11-20 — `main`) — حل عدم ظهور صور الأعلام (العراق وبريطانيا) على سيرفر هوستنجر بتضمينها كبيانات متجهة فورية Base64 Data URIs ونسخها لمجلد الجذر لتجاوز قيود الـ Subfolder و LiteSpeed Rewrites (Fix Missing Flag Images on Hostinger by Inlining Base64 SVG Data URIs and Mirroring Assets to Root Directory for Resilient Subfolder & Reverse-Proxy Serving)**:
   * **تشخيص السبب الجذري على هوستنجر**:
     - يعمل مشروع هوستنجر داخل مسار فرعي: `hinpa.icu/public_html/hearmz`.

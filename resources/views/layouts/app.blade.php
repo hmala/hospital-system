@@ -666,7 +666,7 @@
             background: rgba(15, 23, 42, 0.52);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
-            z-index: 1040;
+            z-index: 1045;
             opacity: 0;
             transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
@@ -693,14 +693,17 @@
                 right: 0 !important;
                 bottom: 0 !important;
                 width: 290px !important;
-                z-index: 1050 !important;
+                z-index: 1060 !important;
                 transform: translateX(100%) !important;
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                box-shadow: -8px 0 28px rgba(15, 23, 42, 0.22) !important;
+                box-shadow: -8px 0 28px rgba(15, 23, 42, 0.3) !important;
                 background: #ebf3fe !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
             }
             body.sidebar-open .sidebar {
                 transform: translateX(0) !important;
+                z-index: 1060 !important;
             }
             body.sidebar-open .sidebar-backdrop {
                 display: block !important;
@@ -777,44 +780,51 @@
             }
         }
 
-        /* ===== القائمة الجانبية: تثبيت الإحداثيات والطبقات بالكامل ===== */
-        .sidebar {
-            top: 0 !important;
-            bottom: 0 !important;
-            z-index: 1030 !important;
-        }
-        html[dir="rtl"] .sidebar,
-        html:not([dir="ltr"]) .sidebar {
-            right: 0 !important;
-            left: auto !important;
-        }
-
-        /* ===== دعم الواجهة باللغة الإنجليزية واتجاه LTR ===== */
-        html[dir="ltr"] .sidebar {
-            top: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: auto !important;
-            z-index: 1030 !important;
-            border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
-            border-left: none !important;
-        }
+        /* ===== القائمة الجانبية: تثبيت الإحداثيات والطبقات للشاشات المكتبية الكبيرة ===== */
         @media (min-width: 1401px) and (hover: hover) and (pointer: fine) {
+            .sidebar {
+                top: 0 !important;
+                bottom: 0 !important;
+                z-index: 1030 !important;
+            }
+            html[dir="rtl"] .sidebar,
+            html:not([dir="ltr"]) .sidebar {
+                right: 0 !important;
+                left: auto !important;
+            }
+
+            /* ===== دعم الواجهة باللغة الإنجليزية واتجاه LTR للشاشات المكتبية ===== */
+            html[dir="ltr"] .sidebar {
+                top: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: auto !important;
+                z-index: 1030 !important;
+                border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+                border-left: none !important;
+            }
             html[dir="ltr"] .main-content {
                 margin-left: 250px !important;
                 margin-right: 0 !important;
                 width: calc(100% - 250px) !important;
             }
         }
+
+        /* ===== دعم التابلت والموبايل للغة الإنجليزية LTR ===== */
         @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
             html[dir="ltr"] .sidebar {
                 left: 0 !important;
                 right: auto !important;
+                z-index: 1060 !important;
                 transform: translateX(-100%) !important;
-                box-shadow: 8px 0 28px rgba(15, 23, 42, 0.22) !important;
+                box-shadow: 8px 0 28px rgba(15, 23, 42, 0.3) !important;
+                background: #ebf3fe !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
             }
             html[dir="ltr"] body.sidebar-open .sidebar {
                 transform: translateX(0) !important;
+                z-index: 1060 !important;
             }
             html[dir="ltr"] .main-content {
                 margin-left: 0 !important;

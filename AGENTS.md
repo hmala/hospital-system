@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-20 — المرحلة 267: حل مشكلة ظهور القائمة الجانبية في التابلت مظللة بضبط هرم طبقات العرض z-index وعزل التظليل خلف القائمة Fix Shaded Tablet Sidebar by Re-architecting z-index Hierarchy & Elevating Offcanvas Drawer over Backdrop)
+
+### Done
+- **إعادة هندسة طبقات العرض والقائمة في التابلت ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تشخيص السبب: قاعدة `z-index: 1030 !important` المتأخرة للقائمة الجانبية كانت تجعلها تقع تحت طبقة تظليل التابلت `.sidebar-backdrop` التي تحمل `z-index: 1040`، مما يكسو القائمة بلون أسود شفاف 52% وضبابية بلور ويحجب النقر عن عناصرها.
+  * رفع طبقة القائمة الجانبية في التابلت والموبايل عند الفتح وفي الوضع العادي إلى `z-index: 1060 !important` لتعتلي كافة عناصر الصفحة والـ Backdrop في كلا الاتجاهين RTL و LTR.
+  * ضبط طبقة الـ Backdrop على `z-index: 1045` لتتوسط الصفحة بدقة وتظلل المحتوى وشريط الترويسة فقط دون القائمة.
+  * حصر `z-index: 1030` في الشاشات المكتبية الكبيرة (`min-width: 1401px`) لمنع التعارض.
+  * إلغاء `backdrop-filter` المزدوج في وضع التابلت (`backdrop-filter: none !important`) واعتماد خلفية صلبة نقية `#ebf3fe` مع ظل جانبي فاخر لضمان أقصى درجات الوضوح والسرعة في أجهزة اللمس.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية وتجميع قوالب Blade بنجاح تام (`view:clear`, `view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
 ## Session log (2026-11-20 — المرحلة 266: حل عدم ظهور صور الأعلام على سيرفر هوستنجر بتضمينها كبيانات متجهة فورية Base64 Data URIs ونسخها لمجلد الجذر Fix Missing Flag Images on Hostinger by Inlining Base64 SVG Data URIs and Root Mirroring)
 
 ### Done
