@@ -76,6 +76,29 @@ class NursingStationController extends Controller
             }
         }
 
+        // معيار البحث عن مريض
+        $search = trim((string) $request->query('search', ''));
+        $applySearch = function ($query) use ($search) {
+            if ($search === '') {
+                return;
+            }
+            $query->where(function ($q) use ($search) {
+                $q->where('surgery_name', 'like', "%{$search}%")
+                    ->orWhere('id', $search)
+                    ->orWhereHas('patient', function ($pq) use ($search) {
+                        $pq->where('national_id', 'like', "%{$search}%")
+                            ->orWhere('id', $search)
+                            ->orWhereHas('user', function ($uq) use ($search) {
+                                $uq->where('name', 'like', "%{$search}%")
+                                    ->orWhere('phone', 'like', "%{$search}%");
+                            });
+                    })
+                    ->orWhereHas('room', function ($rq) use ($search) {
+                        $rq->where('room_number', 'like', "%{$search}%");
+                    });
+            });
+        };
+
         // 6. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
         // تشمل: العمليات المجدولة، أو في قائمة الانتظار (دخول)، أو قيد التجهيز طالما لم تكتمل صالة العمليات بعد
         $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation', 'room', 'operationTheaterStation'])
@@ -107,6 +130,7 @@ class NursingStationController extends Controller
         if ($selectedFloor) {
             $preOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
         }
+        $applySearch($preOpQuery);
 
         $preOpSurgeries = $preOpQuery->orderBy('scheduled_date')
             ->orderBy('scheduled_time')
@@ -138,6 +162,7 @@ class NursingStationController extends Controller
         if ($selectedFloor) {
             $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
         }
+        $applySearch($postOpQuery);
 
         $postOpSurgeries = $postOpQuery->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
@@ -156,6 +181,7 @@ class NursingStationController extends Controller
         if ($selectedFloor) {
             $completedQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
         }
+        $applySearch($completedQuery);
 
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
@@ -170,7 +196,8 @@ class NursingStationController extends Controller
             'stockBatches',
             'recentMovements',
             'availableFloors',
-            'selectedFloor'
+            'selectedFloor',
+            'search'
         ));
     }
 

@@ -5,8 +5,13 @@
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-gradient bg-primary text-white p-3 rounded-top-4 d-flex align-items-center">
+                <div class="card-header bg-gradient bg-primary text-white p-3 rounded-top-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h5 class="mb-0 fs-5"><i class="fas fa-user-graduate me-2"></i> {{ __('محطة الطبيب المقيم') }}</h5>
+                    @if($selectedFloor)
+                        <span class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-50 rounded-pill px-3 py-1.5 fs-6">
+                            <i class="fas fa-building text-warning me-1"></i> {{ $selectedFloor }}
+                        </span>
+                    @endif
                 </div>
                 <div class="card-body p-4">
                     @if(session('success'))
@@ -27,6 +32,68 @@
                         <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
                             <i class="fas fa-times-circle me-2"></i> {{ session('error') }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    <!-- Floor Filter Bar & Search (شريط تصفية الطوابق والبحث السريع) -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> {{ __('الطابق:') }}</span>
+                            <a href="{{ route('resident-station.index', array_filter(['floor' => 'all', 'search' => $search])) }}" 
+                               class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ empty($selectedFloor) ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
+                                {{ __('كافة الطوابق') }}
+                            </a>
+                            @foreach($availableFloors as $floorName)
+                                <a href="{{ route('resident-station.index', array_filter(['floor' => $floorName, 'search' => $search])) }}" 
+                                   class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ $selectedFloor === $floorName ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
+                                    {{ $floorName }}
+                                </a>
+                            @endforeach
+                        </div>
+
+                        <!-- Modern Integrated Search Box (بحث مدمج أنيق وفوري) -->
+                        <div class="d-flex align-items-center ms-auto">
+                            <form action="{{ route('resident-station.index') }}" method="GET" class="m-0">
+                                @if($selectedFloor)
+                                    <input type="hidden" name="floor" value="{{ $selectedFloor }}">
+                                @endif
+                                <div class="position-relative" style="min-width: 250px; max-width: 320px;">
+                                    <input type="text" name="search" id="residentPatientSearchInput" value="{{ $search ?? '' }}" 
+                                           class="form-control form-control-sm rounded-pill ps-4 bg-white border border-secondary-subtle shadow-xs" 
+                                           style="padding-right: 34px !important; height: 34px; font-size: 0.85rem;"
+                                           placeholder="{{ __('بحث بالمريض، الملف، الغرفة...') }}"
+                                           autocomplete="off">
+                                    <button type="submit" class="btn btn-link position-absolute top-50 translate-middle-y text-primary p-0 border-0 text-decoration-none" style="right: 12px;" title="{{ __('بحث') }}">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                    @if(!empty($search))
+                                        <a href="{{ route('resident-station.index', array_filter(['floor' => $selectedFloor])) }}" 
+                                           class="position-absolute top-50 translate-middle-y text-danger text-decoration-none" 
+                                           style="left: 11px;" title="{{ __('إلغاء وتفريغ البحث') }}">
+                                            <i class="fas fa-times-circle"></i>
+                                        </a>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    @if($selectedFloor || !empty($search))
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 px-1 small text-muted">
+                            <div class="d-flex align-items-center gap-2">
+                                @if($selectedFloor)
+                                    <span><i class="fas fa-filter text-primary me-1"></i> {{ __('الطابق النشط:') }} <strong>{{ $selectedFloor }}</strong></span>
+                                @endif
+                                @if(!empty($search))
+                                    <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1">
+                                        <i class="fas fa-search me-1"></i> {{ __('البحث عن:') }} {{ $search }}
+                                    </span>
+                                @endif
+                            </div>
+                            @if(!empty($search) || $selectedFloor)
+                                <a href="{{ route('resident-station.index') }}" class="text-danger text-decoration-none fw-semibold">
+                                    <i class="fas fa-redo-alt me-1"></i> {{ __('إعادة ضبط الفلاتر') }}
+                                </a>
+                            @endif
                         </div>
                     @endif
 
@@ -353,3 +420,24 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const patientSearchInput = document.getElementById('residentPatientSearchInput');
+        if (patientSearchInput) {
+            patientSearchInput.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const activePane = document.querySelector('#residentTabsContent .tab-pane.active');
+                if (!activePane) return;
+                const rows = activePane.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    if (row.querySelector('.text-muted.py-5') || row.children.length === 1) return;
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        }
+    });
+</script>
+@endpush

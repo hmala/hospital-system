@@ -40,16 +40,16 @@
                         </div>
                     @endif
 
-                    <!-- Floor Filter Bar (شريط تصفية الطوابق السريع) -->
+                    <!-- Floor Filter Bar & Search (شريط تصفية الطوابق والبحث السريع) -->
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
                             <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> {{ __('الطابق:') }}</span>
-                            <a href="{{ route('nursing-station.index', ['floor' => 'all']) }}" 
+                            <a href="{{ route('nursing-station.index', array_filter(['floor' => 'all', 'search' => $search])) }}" 
                                class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ empty($selectedFloor) ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
                                 {{ __('كافة الطوابق') }}
                             </a>
                             @foreach($availableFloors as $floorName)
-                                <a href="{{ route('nursing-station.index', ['floor' => $floorName]) }}" 
+                                <a href="{{ route('nursing-station.index', array_filter(['floor' => $floorName, 'search' => $search])) }}" 
                                    class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ $selectedFloor === $floorName ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
                                     {{ $floorName }}
                                     @if($currentLocation && (str_contains($currentLocation->name, $floorName) || str_contains($floorName, $currentLocation->name)))
@@ -58,12 +58,52 @@
                                 </a>
                             @endforeach
                         </div>
-                        @if($selectedFloor)
-                            <div class="text-muted small">
-                                <i class="fas fa-filter text-primary me-1"></i> {{ __('يتم عرض مرضى') }} <strong>{{ $selectedFloor }}</strong> {{ __('حالياً') }}
-                            </div>
-                        @endif
+
+                        <!-- Modern Integrated Search Box (بحث مدمج أنيق وفوري) -->
+                        <div class="d-flex align-items-center ms-auto">
+                            <form action="{{ route('nursing-station.index') }}" method="GET" class="m-0">
+                                @if($selectedFloor)
+                                    <input type="hidden" name="floor" value="{{ $selectedFloor }}">
+                                @endif
+                                <div class="position-relative" style="min-width: 250px; max-width: 320px;">
+                                    <input type="text" name="search" id="nursingPatientSearchInput" value="{{ $search ?? '' }}" 
+                                           class="form-control form-control-sm rounded-pill ps-4 bg-white border border-secondary-subtle shadow-xs" 
+                                           style="padding-right: 34px !important; height: 34px; font-size: 0.85rem;"
+                                           placeholder="{{ __('بحث بالمريض، الملف، الغرفة...') }}"
+                                           autocomplete="off">
+                                    <button type="submit" class="btn btn-link position-absolute top-50 translate-middle-y text-primary p-0 border-0 text-decoration-none" style="right: 12px;" title="{{ __('بحث') }}">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                    @if(!empty($search))
+                                        <a href="{{ route('nursing-station.index', array_filter(['floor' => $selectedFloor])) }}" 
+                                           class="position-absolute top-50 translate-middle-y text-danger text-decoration-none" 
+                                           style="left: 11px;" title="{{ __('إلغاء وتفريغ البحث') }}">
+                                            <i class="fas fa-times-circle"></i>
+                                        </a>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
                     </div>
+                    @if($selectedFloor || !empty($search))
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 px-1 small text-muted">
+                            <div class="d-flex align-items-center gap-2">
+                                @if($selectedFloor)
+                                    <span><i class="fas fa-filter text-primary me-1"></i> {{ __('الطابق النشط:') }} <strong>{{ $selectedFloor }}</strong></span>
+                                @endif
+                                @if(!empty($search))
+                                    <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1">
+                                        <i class="fas fa-search me-1"></i> {{ __('البحث عن:') }} {{ $search }}
+                                    </span>
+                                @endif
+                            </div>
+                            @if(!empty($search) || $selectedFloor)
+                                <a href="{{ route('nursing-station.index') }}" class="text-danger text-decoration-none fw-semibold">
+                                    <i class="fas fa-redo-alt me-1"></i> {{ __('إعادة ضبط الفلاتر') }}
+                                </a>
+                            @endif
+                        </div>
+                    @endif
 
                     <!-- Tabs Switcher -->
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm overflow-auto flex-nowrap" id="nursingTabs" role="tablist" style="width: fit-content; max-width: 100%;">
@@ -633,6 +673,21 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const patientSearchInput = document.getElementById('nursingPatientSearchInput');
+        if (patientSearchInput) {
+            patientSearchInput.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const activePane = document.querySelector('#nursingTabsContent .tab-pane.active');
+                if (!activePane) return;
+                const rows = activePane.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    if (row.querySelector('.text-muted.py-5') || row.children.length === 1) return;
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        }
+
         const searchInput = document.getElementById('floorStockSearchInput');
         const clearBtn = document.getElementById('clearFloorStockSearch');
         const filterBtns = document.querySelectorAll('.stock-filter-btn');
