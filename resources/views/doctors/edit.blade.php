@@ -109,8 +109,26 @@
                             <div class="col-md-8">
                                 <input id="consultation_fee" type="number" step="500" class="form-control @error('consultation_fee') is-invalid @enderror"
                                        name="consultation_fee" value="{{ old('consultation_fee', (int)$doctor->consultation_fee) }}" required min="0">
-                                <div class="form-text small">سعر الكشفية العادية للمراجع بدون ضمان</div>
+                                <div class="form-text small">سعر الكشفية العادية للعيادة الخارجية بدون ضمان</div>
                                 @error('consultation_fee')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="direct_consultation_fee" class="col-md-3 col-form-label text-md-end fw-bold text-primary">
+                                الكشفية المباشرة (دينار)
+                            </label>
+                            <div class="col-md-8">
+                                <input id="direct_consultation_fee" type="number" step="500" class="form-control fw-bold text-primary @error('direct_consultation_fee') is-invalid @enderror"
+                                       name="direct_consultation_fee" value="{{ old('direct_consultation_fee', $doctor->direct_consultation_fee ? (int)$doctor->direct_consultation_fee : '') }}" min="0" placeholder="مثال: 30000 أو 50000">
+                                <div class="form-text small text-muted">
+                                    أجر الاستشارة المباشرة عند استدعاء الطبيب في الطوارئ والرقود (100% للطبيب). إن تُرك فارغاً يمنع النظام تسديد الفاتورة في الكاشير لنقص التسعيرة.
+                                </div>
+                                @error('direct_consultation_fee')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
                                     </span>

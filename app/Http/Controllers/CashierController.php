@@ -4748,6 +4748,24 @@ class CashierController extends Controller
                 ->with('warning', 'هذه الدفعة غير متاحة للدفع');
         }
 
+        // التحقق من عدم وجود استشارات طبية معلقة غير مسعرة للطبيب
+        if ($payment->emergency) {
+            $unpricedConsultations = $payment->emergency->appointments()
+                ->where('payment_status', 'pending')
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($q) {
+                    $q->whereNull('consultation_fee')->orWhere('consultation_fee', '<=', 0);
+                })
+                ->with('doctor.user')
+                ->get();
+
+            if ($unpricedConsultations->isNotEmpty()) {
+                $docNames = $unpricedConsultations->map(fn ($a) => $a->doctor?->user?->name ?? 'طبيب غير محدد')->implode('، ');
+
+                return redirect()->back()->with('error', "لا يمكن إتمام التسديد في الكاشير لوجود استشارة طبية غير مسعرة للطبيب ({$docNames}). يرجى تحديد «سعر الكشفية المباشرة» في ملف الطبيب أولاً قبل التسديد.");
+            }
+        }
+
         DB::beginTransaction();
 
         try {
@@ -4868,7 +4886,7 @@ class CashierController extends Controller
                                 $discPct = (float) ($itemDiscounts[$key] ?? 0);
                                 if ($discPct > 0) {
                                     $discPct = min(100, max(0, $discPct));
-                                    $apFee = (float) ($ap->consultation_fee > 0 ? $ap->consultation_fee : 50000);
+                                    $apFee = (float) ($ap->consultation_fee ?? 0);
                                     $disVal = round($apFee * ($discPct / 100.0), 2);
                                     $totalItemDiscounts += $disVal;
                                     $itemSummaries[] = "استشارة طبية (خصم {$discPct}%)";
@@ -5001,11 +5019,11 @@ class CashierController extends Controller
                 ]);
 
                 if ($appointment->doctor_id) {
-                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 30000);
-                    // حصة استشارة الطوارئ: 24,000 د.ع للطبيب و 6,000 د.ع للمستشفى (نسبة 80% / 20%)
-                    $doctorShare = ($fee == 30000.0) ? 24000.0 : round($fee * 0.80, 2);
-                    $hospitalShare = round($fee - $doctorShare, 2);
-                    $percentage = round(($doctorShare / $fee) * 100, 2);
+                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 0);
+                    // كشفية الاستشارة المباشرة في الطوارئ تعود بالكامل 100% للطبيب دون استقطاع المستشفى
+                    $doctorShare = $fee;
+                    $hospitalShare = 0.0;
+                    $percentage = 100.0;
 
                     // قيد إيراد استشارية في ConsultationRevenue
                     \App\Models\ConsultationRevenue::updateOrCreate(

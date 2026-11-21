@@ -1,14 +1,15 @@
 <?php
+
 // app/Http/Controllers/DoctorController.php
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\User;
-use App\Models\Department;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 class DoctorController extends Controller
@@ -17,12 +18,12 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view doctors'))) {
             abort(403, 'غير مصرح لك بعرض قائمة الأطباء');
         }
 
         $query = Doctor::with(['user', 'department'])
-            ->withCount(['appointments as today_appointments_count' => function($query) {
+            ->withCount(['appointments as today_appointments_count' => function ($query) {
                 $query->whereDate('appointment_date', today());
             }]);
 
@@ -30,7 +31,7 @@ class DoctorController extends Controller
             $search = $request->search;
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             })->orWhere('specialization', 'like', "%{$search}%");
         }
 
@@ -62,11 +63,12 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create doctors'))) {
             abort(403, 'غير مصرح لك بإضافة طبيب جديد');
         }
 
         $departments = Department::where('is_active', true)->orderBy('name')->get();
+
         return view('doctors.create', compact('departments'));
     }
 
@@ -74,7 +76,7 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create doctors'))) {
             abort(403, 'غير مصرح لك بإضافة طبيب جديد');
         }
 
@@ -86,6 +88,7 @@ class DoctorController extends Controller
             'type' => 'required|in:consultant,anesthesiologist,surgeon,resident,emergency',
             'specialization' => 'required|string|max:255',
             'consultation_fee' => 'required|numeric|min:0',
+            'direct_consultation_fee' => 'nullable|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
             'is_moi_active' => 'nullable|boolean',
             'hi_price' => 'nullable|numeric|min:0',
@@ -106,7 +109,7 @@ class DoctorController extends Controller
                 'password' => Hash::make('password'), // كلمة مرور افتراضية
                 'role' => 'doctor',
             ]);
-            
+
             // إضافة صلاحية الطبيب باستخدام Spatie Permission
             $user->assignRole('doctor');
 
@@ -118,6 +121,7 @@ class DoctorController extends Controller
                 'phone' => $request->phone,
                 'specialization' => $request->specialization,
                 'consultation_fee' => $request->consultation_fee,
+                'direct_consultation_fee' => $request->direct_consultation_fee,
                 'moi_price' => $request->moi_price,
                 'is_moi_active' => $request->has('is_moi_active'),
                 'hi_price' => $request->hi_price,
@@ -132,7 +136,7 @@ class DoctorController extends Controller
                 $doctorData['qualification'] = $request->qualification ?? 'بكالوريوس طب وجراحة عامة';
             }
             if (Schema::hasColumn('doctors', 'license_number')) {
-                $doctorData['license_number'] = $request->license_number ?? ('DOC-' . rand(1000, 9999));
+                $doctorData['license_number'] = $request->license_number ?? ('DOC-'.rand(1000, 9999));
             }
 
             return Doctor::create($doctorData);
@@ -160,13 +164,13 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view doctors'))) {
             abort(403, 'غير مصرح لك بعرض بيانات الطبيب');
         }
 
-        $doctor->load(['user', 'department', 'appointments' => function($query) {
+        $doctor->load(['user', 'department', 'appointments' => function ($query) {
             $query->whereDate('appointment_date', '>=', today())
-                  ->orderBy('appointment_date');
+                ->orderBy('appointment_date');
         }]);
 
         return view('doctors.show', compact('doctor'));
@@ -176,12 +180,13 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit doctors'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات الطبيب');
         }
 
         $departments = Department::where('is_active', true)->orderBy('name')->get();
         $doctor->load('user');
+
         return view('doctors.edit', compact('doctor', 'departments'));
     }
 
@@ -189,18 +194,19 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit doctors'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات الطبيب');
         }
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $doctor->user_id,
+            'email' => 'required|email|unique:users,email,'.$doctor->user_id,
             'phone' => 'required|string|max:15',
             'department_id' => 'required|exists:departments,id',
             'type' => 'required|in:consultant,anesthesiologist,surgeon,resident,emergency',
             'specialization' => 'required|string|max:255',
             'consultation_fee' => 'required|numeric|min:0',
+            'direct_consultation_fee' => 'nullable|numeric|min:0',
             'moi_price' => 'nullable|numeric|min:0',
             'is_moi_active' => 'nullable|boolean',
             'hi_price' => 'nullable|numeric|min:0',
@@ -236,6 +242,7 @@ class DoctorController extends Controller
             'phone' => $request->phone,
             'specialization' => $request->specialization,
             'consultation_fee' => $request->consultation_fee,
+            'direct_consultation_fee' => $request->direct_consultation_fee,
             'moi_price' => $request->moi_price,
             'is_moi_active' => $request->has('is_moi_active'),
             'hi_price' => $request->hi_price,
@@ -279,7 +286,7 @@ class DoctorController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $isDoctorHimself = $user && $doctor->user_id === $user->id;
 
-        if (!$isAdmin && !$isDoctorHimself && (!$user || !$user->can('edit doctors'))) {
+        if (! $isAdmin && ! $isDoctorHimself && (! $user || ! $user->can('edit doctors'))) {
             return response()->json(['success' => false, 'message' => 'غير مصرح لك بتعديل توقيع هذا الطبيب'], 403);
         }
 
@@ -292,13 +299,13 @@ class DoctorController extends Controller
         $threshold = (int) $request->input('signature_threshold', 200);
         $input = $request->input('signature_data') ?: $request->file('signature_file');
 
-        if (!$input) {
+        if (! $input) {
             return response()->json(['success' => false, 'message' => 'لم يتم إرسال ملف توقيع صالح'], 422);
         }
 
         $savedPath = \App\Services\SignatureProcessingService::processAndSave($input, $doctor->id, $threshold);
 
-        if (!$savedPath) {
+        if (! $savedPath) {
             return response()->json(['success' => false, 'message' => 'فشلت معالجة صورة التوقيع، يرجى التأكد من وضوح الصورة'], 500);
         }
 
@@ -307,8 +314,8 @@ class DoctorController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم عزل الخلفية وحفظ التوقيع الشفاف بنجاح',
-            'signature_url' => $doctor->signature_data_uri ?: (asset($savedPath) . '?v=' . time()),
-            'signature_path' => $savedPath
+            'signature_url' => $doctor->signature_data_uri ?: (asset($savedPath).'?v='.time()),
+            'signature_path' => $savedPath,
         ]);
     }
 
@@ -317,12 +324,12 @@ class DoctorController extends Controller
      */
     public function signature(Doctor $doctor)
     {
-        if (!$doctor->signature) {
+        if (! $doctor->signature) {
             abort(404);
         }
 
         $fullPath = public_path($doctor->signature);
-        if (!file_exists($fullPath)) {
+        if (! file_exists($fullPath)) {
             abort(404);
         }
 
@@ -336,7 +343,7 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('edit doctors') && !$user->can('manage consultant availability')))) {
+        if (! $isAdmin && (! $user || (! $user->can('edit doctors') && ! $user->can('manage consultant availability')))) {
             abort(403, 'غير مصرح لك بتعديل توفر الطبيب');
         }
 
@@ -360,19 +367,19 @@ class DoctorController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('delete doctors'))) {
+        if (! $isAdmin && (! $user || ! $user->can('delete doctors'))) {
             abort(403, 'غير مصرح لك بحذف الطبيب');
         }
 
         // حذف المستخدم المرتبط (اختياري حسب متطلباتك)
         // $doctor->user->delete();
-        
+
         $doctor->delete();
 
         return redirect()->route('doctors.index')
             ->with('success', 'تم حذف الطبيب بنجاح');
     }
-    
+
     /**
      * حفظ طبيب مرسل خارجي جديد
      * يستخدم من صفحة إضافة العمليات الجراحية
@@ -394,24 +401,24 @@ class DoctorController extends Controller
 
             $nextNumber = 101;
             if ($lastExtUser && preg_match('/^ext(\d+)@hospital\.com$/', $lastExtUser->email, $matches)) {
-                $nextNumber = max($nextNumber, ((int)$matches[1]) + 1);
+                $nextNumber = max($nextNumber, ((int) $matches[1]) + 1);
             }
 
-            $email = 'ext' . $nextNumber . '@hospital.com';
+            $email = 'ext'.$nextNumber.'@hospital.com';
             while (User::where('email', $email)->exists()) {
                 $nextNumber++;
-                $email = 'ext' . $nextNumber . '@hospital.com';
+                $email = 'ext'.$nextNumber.'@hospital.com';
             }
 
             // التحقق من وجود طبيب بنفس الاسم
-            $existingDoctor = Doctor::whereHas('user', function($query) use ($request) {
+            $existingDoctor = Doctor::whereHas('user', function ($query) use ($request) {
                 $query->where('name', $request->name);
             })->first();
-            
+
             if ($existingDoctor) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'يوجد طبيب بهذا الاسم بالفعل في النظام'
+                    'message' => 'يوجد طبيب بهذا الاسم بالفعل في النظام',
                 ], 422);
             }
 
@@ -422,7 +429,7 @@ class DoctorController extends Controller
                 'password' => Hash::make('Doctor@123'), // كلمة مرور موحدة وقياسية
                 'role' => 'doctor', // دور طبيب عادي (التمييز يتم عبر is_active في جدول doctors)
             ]);
-            
+
             // إضافة صلاحية الطبيب باستخدام Spatie Permission
             $user->assignRole('doctor');
 
@@ -437,7 +444,7 @@ class DoctorController extends Controller
                     'working_hours_start' => '00:00:00',
                     'working_hours_end' => '00:00:00',
                     'max_patients_per_day' => 0,
-                    'is_active' => false // غير نشط لأنه قسم وهمي
+                    'is_active' => false, // غير نشط لأنه قسم وهمي
                 ]
             );
 
@@ -453,10 +460,10 @@ class DoctorController extends Controller
             ];
 
             if (Schema::hasColumn('doctors', 'qualification')) {
-                $refDocData['qualification'] = 'طبيب خارجي - ' . $request->specialization;
+                $refDocData['qualification'] = 'طبيب خارجي - '.$request->specialization;
             }
             if (Schema::hasColumn('doctors', 'license_number')) {
-                $refDocData['license_number'] = 'EXT-' . time() . '-' . rand(100, 999);
+                $refDocData['license_number'] = 'EXT-'.time().'-'.rand(100, 999);
             }
             if (Schema::hasColumn('doctors', 'experience_years')) {
                 $refDocData['experience_years'] = 5;
@@ -465,7 +472,7 @@ class DoctorController extends Controller
                 $refDocData['max_patients_per_day'] = 0;
             }
             if (Schema::hasColumn('doctors', 'bio')) {
-                $refDocData['bio'] = 'طبيب خارجي - ' . ($request->notes ?? 'لا توجد ملاحظات إضافية');
+                $refDocData['bio'] = 'طبيب خارجي - '.($request->notes ?? 'لا توجد ملاحظات إضافية');
             }
 
             $doctor = Doctor::create($refDocData);
@@ -477,13 +484,13 @@ class DoctorController extends Controller
                     'id' => $doctor->id,
                     'name' => $user->name,
                     'specialization' => $doctor->specialization,
-                ]
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء حفظ الطبيب: ' . $e->getMessage()
+                'message' => 'حدث خطأ أثناء حفظ الطبيب: '.$e->getMessage(),
             ], 500);
         }
     }

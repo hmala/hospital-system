@@ -39,16 +39,16 @@
         if ($scanType) {
             $serviceName = $scanType->name;
             $serviceCode = $scanType->code;
-            $serviceCategory = $scanType->main_category ?? 'سونار';
+            $serviceCategory = $scanType->main_category ?? __('سونار');
             $regularPrice = (float)$scanType->base_price;
             $moiPrice = (float)($scanType->moi_price > 0 ? $scanType->moi_price : 0);
             $isMoiActive = (bool)($scanType->is_moi_active ?? true);
             $hiPrice = (float)($scanType->hi_price > 0 ? $scanType->hi_price : 0);
             $isHiActive = (bool)($scanType->is_hi_active ?? true);
         } else {
-            $serviceName = $appointment->reason ?? 'كشف طبي عام';
+            $serviceName = $appointment->reason ?? __('كشف طبي عام');
             $serviceCode = null;
-            $serviceCategory = 'استشارية';
+            $serviceCategory = __('استشارية');
             $regularPrice = (float)($appointment->consultation_fee > 0 
                 ? $appointment->consultation_fee 
                 : ($doctor ? $doctor->getRegularPrice() : 0));
@@ -109,9 +109,9 @@
                         <div class="fw-bold text-white">{{ $serviceName }}</div>
                         <small class="text-white-50">
                             @if($doctor)
-                                د. {{ optional($doctor->user)->name }} ({{ $doctor->specialization ?? 'عام' }})
+                                {{ __('د.') }} {{ optional($doctor->user)->name }} ({{ $doctor->specialization ? __($doctor->specialization) : __('عام') }})
                             @else
-                                قسم: {{ optional($appointment->department)->name ?? 'عام' }}
+                                {{ __('قسم:') }} {{ optional($appointment->department)->name ?? __('عام') }}
                             @endif
                         </small>
                     </div>
@@ -143,7 +143,7 @@
                             <div class="col-md-4">
                                 <div class="p-3 rounded-3 border bg-light">
                                     <span class="text-muted small d-block mb-1">{{ __("السعر المعتمد للخدمة") }}</span>
-                                    <h4 class="fw-bold mb-0 text-dark" id="display_approved_price">0 د.ع</h4>
+                                    <h4 class="fw-bold mb-0 text-dark" id="display_approved_price">0 {{ __("د.ع") }}</h4>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -151,7 +151,7 @@
                                     <span class="text-primary fw-bold small d-block mb-1">
                                         <i class="fas fa-shield-alt me-1"></i>{{ __("تغطية الضمان (ذمة)") }}
                                     </span>
-                                    <h4 class="fw-bold mb-0 text-primary" id="display_insurance_share">0 د.ع</h4>
+                                    <h4 class="fw-bold mb-0 text-primary" id="display_insurance_share">0 {{ __("د.ع") }}</h4>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -159,7 +159,7 @@
                                     <span class="text-success fw-bold small d-block mb-1">
                                         <i class="fas fa-hand-holding-usd me-1"></i>{{ __("المطلوب من المريض") }}
                                     </span>
-                                    <h4 class="fw-bold mb-0 text-success" id="display_patient_share">0 د.ع</h4>
+                                    <h4 class="fw-bold mb-0 text-success" id="display_patient_share">0 {{ __("د.ع") }}</h4>
                                 </div>
                             </div>
                         </div>
@@ -247,7 +247,7 @@
                                     <input type="radio" class="btn-check" name="payment_method" id="payment_cash" value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
                                     <label class="btn btn-outline-success w-100 p-3 rounded-3 text-start d-flex align-items-center justify-content-between payment-method-card" for="payment_cash">
                                         <div>
-                                            <div class="fw-bold fs-6">💵 نقدي (Cash)</div>
+                                            <div class="fw-bold fs-6">{{ __('💵 نقدي (Cash)') }}</div>
                                             <small class="text-muted">{{ __("استلام المبلغ نقداً في الصندوق") }}</small>
                                         </div>
                                         <i class="fas fa-check-circle check-icon fs-5"></i>
@@ -320,7 +320,7 @@
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">{{ __("الطبيب:") }}</span>
-                                <strong class="text-dark">{{ $doctor ? optional($doctor->user)->name : 'عام' }}</strong>
+                                <strong class="text-dark">{{ $doctor ? optional($doctor->user)->name : __('عام') }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">{{ __("الجهة الضامنة:") }}</span>
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hiBadge = document.getElementById('patient_hi_category_badge');
 
     function formatNumber(num) {
-        return Math.round(num).toLocaleString('en-US') + ' د.ع';
+        return Math.round(num).toLocaleString('en-US') + ' ' + '{{ __("د.ع") }}';
     }
 
     function recalculate() {
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (insType === 'moi') {
             if (!isMoiActive || moiPrice <= 0) {
                 hasError = true;
-                errorMsg = 'لا يمكن التسديد! الطبيب/الخدمة غير مشمول بضمان قوى الأمن أو أن التسعيرة غير مدخلة.';
+                errorMsg = '{{ __("لا يمكن التسديد! الطبيب/الخدمة غير مشمول بضمان قوى الأمن أو أن التسعيرة غير مدخلة.") }}';
             } else {
                 approvedPrice = moiPrice;
                 isCovered = true;
@@ -447,15 +447,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-primary px-3 py-2 fs-7';
-                copayBadge.textContent = 'ضمان قوى الأمن الداخلي';
+                copayBadge.textContent = '{{ __("ضمان قوى الأمن الداخلي") }}';
             }
         } else if (insType === 'hi') {
             if (!isHiActive || hiPrice <= 0) {
                 hasError = true;
-                errorMsg = 'لا يمكن التسديد! الطبيب/الخدمة غير مشمول بالضمان الصحي أو أن تسعيرة الضمان غير مدخلة.';
+                errorMsg = '{{ __("لا يمكن التسديد! الطبيب/الخدمة غير مشمول بالضمان الصحي أو أن تسعيرة الضمان غير مدخلة.") }}';
             } else if (isDoctorConsultation && doctorHiShare <= 0) {
                 hasError = true;
-                errorMsg = 'لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.';
+                errorMsg = '{{ __("لا يمكن التسديد! لم يتم تحديد حصة الطبيب لكشفيات الضمان الصحي من قبل الإدارة في إعدادات العمولات.") }}';
             } else {
                 approvedPrice = hiPrice;
                 isCovered = true;
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-success px-3 py-2 fs-7';
-                copayBadge.textContent = 'هيئة الضمان الصحي الوطني';
+                copayBadge.textContent = '{{ __("هيئة الضمان الصحي الوطني") }}';
             }
         } else {
             // none
@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (copaySection) copaySection.style.display = 'none';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-secondary px-3 py-2 fs-7';
-                copayBadge.textContent = 'دفع نقدي كامل (100%)';
+                copayBadge.textContent = '{{ __("دفع نقدي كامل (100%)") }}';
             }
         }
 
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (val <= 0 && !(insType !== 'none' && copayVal === 0)) {
                 e.preventDefault();
-                alert('يرجى التأكد من كتابة المبلغ المستحق المطلوب قبضه.');
+                alert('{{ __("يرجى التأكد من كتابة المبلغ المستحق المطلوب قبضه.") }}');
             }
         });
     }

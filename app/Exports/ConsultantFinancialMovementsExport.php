@@ -42,6 +42,10 @@ class ConsultantFinancialMovementsExport implements FromQuery, ShouldAutoSize, W
     {
         return ConsultationRevenue::with(['appointment.patient.user', 'appointment.doctor.user', 'department', 'cashier', 'payment', 'doctor.user', 'patient.user'])
             ->where(function ($q) {
+                $q->whereNull('consultation_revenues.payment_type')
+                    ->orWhereNotIn('consultation_revenues.payment_type', ['emergency_consultation', 'surgery_consultation']);
+            })
+            ->where(function ($q) {
                 $q->whereHas('appointment.doctor', function ($dq) {
                     $dq->where('type', 'consultant')
                         ->orWhere('type', 'sonar')

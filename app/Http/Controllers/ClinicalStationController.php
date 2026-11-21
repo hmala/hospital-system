@@ -1562,9 +1562,9 @@ class ClinicalStationController extends Controller
             ? trim($validated['specialty'])
             : ($doctor->specialization ?? $doctor->department?->name ?? 'استشارة طبية تخصصية');
 
-        $fee = isset($validated['fee']) && $validated['fee'] !== ''
+        $fee = isset($validated['fee']) && $validated['fee'] !== '' && (float) $validated['fee'] > 0
             ? (float) $validated['fee']
-            : (float) ($doctor->consultation_fee ?? 0);
+            : (! is_null($doctor->direct_consultation_fee) && (float) $doctor->direct_consultation_fee > 0 ? (float) $doctor->direct_consultation_fee : 0.0);
 
         $consultation = $surgery->consultations()->create([
             'doctor_id' => $doctor->id,

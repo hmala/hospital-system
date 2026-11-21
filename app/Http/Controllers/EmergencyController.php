@@ -1318,34 +1318,13 @@ class EmergencyController extends Controller
             }
         }
 
-        // 1. إضافة خدمة "استشارة اخصائي من العيادة الاستشارية" إلى جدول خدمات الطوارئ (30,000 د.ع)
-        $consultationService = EmergencyService::where('id', 115)
-            ->orWhere('name', 'like', '%استشارة اخصائي من العيادة الاستشارية%')
-            ->first();
-
-        if ($consultationService) {
-            $existingPivot = \DB::table('emergency_emergency_service')
-                ->where('emergency_id', $emergency->id)
-                ->where('emergency_service_id', $consultationService->id)
-                ->whereNull('payment_id')
-                ->first();
-
-            if ($existingPivot) {
-                \DB::table('emergency_emergency_service')
-                    ->where('id', $existingPivot->id)
-                    ->update([
-                        'quantity' => ($existingPivot->quantity ?? 1) + 1,
-                    ]);
-            } else {
-                $emergency->services()->attach($consultationService->id, [
-                    'quantity' => 1,
-                    'payment_id' => null,
-                ]);
-            }
-        }
+        // 1. تحديد أجر الكشفية المباشرة المعتمد في بطاقة الطبيب (دون أي تعطيل سريري لإنقاذ المريض)
+        $doctorName = $doctor->user?->name ?? 'طبيب';
+        $directFee = ! is_null($doctor->direct_consultation_fee) && (float) $doctor->direct_consultation_fee > 0
+            ? (float) $doctor->direct_consultation_fee
+            : 0.0;
 
         // 2. إنشاء الموعد للطبيب الاستشاري ليدخل المريض في طابور عيادته فوراً
-        $doctorName = $doctor->user?->name ?? 'طبيب';
         $appointment = Appointment::create([
             'patient_id' => $emergency->patient_id,
             'doctor_id' => $doctorId,
@@ -1354,7 +1333,7 @@ class EmergencyController extends Controller
             'appointment_date' => $appointmentDateTime,
             'reason' => $request->reason ?: ($request->notes ? Str::limit($request->notes, 100) : 'استشارة طوارئ: د. '.$doctorName),
             'notes' => $request->notes,
-            'consultation_fee' => 0, // الرسوم محتسبة رسمياً عبر خدمة الطوارئ المضافة (استشارة اخصائي من العيادة الاستشارية - 30,000 د.ع)
+            'consultation_fee' => $directFee, // يُعتمد أجر الكشفية المباشرة للطبيب (وإن كان 0 يُمنع التسديد بالكاشير لنقص التسعيرة)
             'duration' => 30,
             'status' => 'scheduled',
             'payment_status' => 'pending',
@@ -1370,7 +1349,11 @@ class EmergencyController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', "تم طلب استشارة د. {$doctorName} بنجاح وإضافة خدمة الاستشارة (30,000 د.ع) إلى حساب الطوارئ.");
+        $feeMsg = $directFee > 0
+            ? 'برسم كشفية مباشرة ('.number_format($directFee, 0).' د.ع)'
+            : '⚠️ (بانتظار تحديد التسعيرة في الكاشير)';
+
+        return redirect()->back()->with('success', "تم طلب استشارة د. {$doctorName} بنجاح {$feeMsg}.");
     }
 
     /**

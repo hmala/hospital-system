@@ -76,6 +76,7 @@
                         $invoiceItems = [];
 
                         // 1. خدمات الطوارئ التمريضية والطبية
+                        $hasEmergencyAppointments = $em->appointments->where('status', '!=', 'cancelled')->isNotEmpty();
                         $unpaidServiceIds = \DB::table('emergency_emergency_service')
                             ->where('emergency_id', $payment->emergency_id)
                             ->where(function ($q) use ($payment) {
@@ -84,6 +85,10 @@
                             ->pluck('emergency_service_id');
 
                         foreach($em->services->whereIn('id', $unpaidServiceIds) as $service) {
+                            // استبعاد خدمة الاستشارة العامة إذا كان هناك موعد استشارة استشاري مرتبط بالحالة منعاً للازدواجية
+                            if ($hasEmergencyAppointments && ($service->id == 115 || str_contains($service->name, 'استشارة'))) {
+                                continue;
+                            }
                             $pricing = $service->calculateInsurancePricing($insuranceType, $emergencyCopay);
                             $qty = max(1, (int) ($service->pivot->quantity ?? 1));
                             $approvedPrice = (float) $pricing['approved_price'];
@@ -152,9 +157,17 @@
                         }
 
                         // 4. استشارة الطبيب الاستشاري
+                        $hasUnpricedConsultation = false;
+                        $unpricedDoctorNames = [];
+
                         foreach($em->appointments as $ap) {
                             if($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
-                                $apFee = (float) ($ap->consultation_fee > 0 ? $ap->consultation_fee : 50000);
+                                $apFee = (float) ($ap->consultation_fee ?? 0);
+                                $isUnpriced = ($apFee <= 0);
+                                if ($isUnpriced) {
+                                    $hasUnpricedConsultation = true;
+                                    $unpricedDoctorNames[] = $ap->doctor?->user?->name ?? 'طبيب غير محدد';
+                                }
                                 $docName = $ap->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $ap->doctor->user->name)) : 'الاستشاري';
                                 $spec = $ap->doctor?->specialization ? ' (' . $ap->doctor->specialization . ')' : '';
                                 $dept = $ap->department?->name ? ' - ' . $ap->department->name : '';
@@ -163,13 +176,14 @@
                                     'category' => 'استشارة طبية',
                                     'badge_class' => 'bg-purple text-white',
                                     'icon' => 'fa-user-md',
-                                    'name' => 'استشارة طبية: ' . $docName . $spec . $dept,
+                                    'name' => 'استشارة طبية: ' . $docName . $spec . $dept . ($isUnpriced ? ' [غير مسعرة]' : ''),
                                     'qty' => 1,
                                     'is_covered' => false,
                                     'price' => $apFee,
                                     'total' => $apFee,
                                     'patient_share' => $apFee,
                                     'insurance_share' => 0.0,
+                                    'is_unpriced' => $isUnpriced,
                                 ];
                             }
                         }
@@ -640,12 +654,26 @@
                                    value="{{ old('notes') }}" placeholder="أي تفاصيل أو ملاحظات حول القبض أو الإعفاء...">
                         </div>
 
+                        @if($hasUnpricedConsultation)
+                            <div class="alert alert-danger d-flex align-items-center gap-3 p-3 rounded-3 mb-4 shadow-sm border border-danger">
+                                <i class="fas fa-ban fa-2x text-danger flex-shrink-0"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-danger">⚠️ تنبيه: لا يمكن تسديد الفاتورة لوجود استشارة غير مسعرة!</h6>
+                                    <p class="mb-0 small text-dark">
+                                        الطبيب (<strong>{{ implode('، ', $unpricedDoctorNames) }}</strong>) لا يمتلك «سعر كشفية مباشرة» محدد في النظام. 
+                                        يرجى تحديد سعر الكشفية المباشرة في ملف الطبيب أولاً قبل إتمام القبض.
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
                         <!-- أزرار الإجراءات السفلية -->
                         <div class="d-flex justify-content-between align-items-center pt-3 border-top">
                             <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary px-4 rounded-pill">
                                 <i class="fas fa-times me-1"></i>إلغاء والعودة
                             </a>
-                            <button type="submit" id="submitPaymentBtn" class="btn btn-success btn-lg px-5 fw-bold rounded-pill shadow">
+                            <button type="submit" id="submitPaymentBtn" class="btn btn-success btn-lg px-5 fw-bold rounded-pill shadow"
+                                    @if($hasUnpricedConsultation) disabled title="لا يمكن التسديد لوجود استشارة غير مسعرة" @endif>
                                 <i class="fas fa-check-circle me-2"></i>
                                 {{ $dueAmount <= 0 && $isInsurance ? 'اعتماد وتسديد بالضمان (0 د.ع)' : 'تأكيد القبض وإصدار الوصل (' . number_format($dueAmount, 0) . ' د.ع)' }}
                             </button>

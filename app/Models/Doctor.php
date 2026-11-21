@@ -21,6 +21,7 @@ class Doctor extends Model
         'type',
         'schedule',
         'consultation_fee',
+        'direct_consultation_fee',
         'recheck_validity_days',
         'moi_price',
         'is_moi_active',
@@ -47,6 +48,7 @@ class Doctor extends Model
         'is_available_today' => 'boolean',
         'available_date' => 'date',
         'consultation_fee' => 'decimal:2',
+        'direct_consultation_fee' => 'decimal:2',
         'moi_price' => 'decimal:2',
         'hi_price' => 'decimal:2',
     ];

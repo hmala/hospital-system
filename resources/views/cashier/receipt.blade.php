@@ -304,12 +304,21 @@
 
         // 3. خدمات واستشارات الطوارئ
         if ($payment->emergency) {
+            // استشارات الطوارئ للأطباء الاستشاريين
+            $emergencyAppointments = $payment->emergency->appointments()
+                ->where('status', '!=', 'cancelled')
+                ->with('doctor.user')
+                ->get();
+
             $paidServices = \DB::table('emergency_emergency_service')
                 ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                 ->where('emergency_emergency_service.payment_id', $payment->id)
                 ->select('emergency_services.name', 'emergency_services.price', 'emergency_emergency_service.quantity')
                 ->get();
             foreach ($paidServices as $svc) {
+                if ($emergencyAppointments->isNotEmpty() && (str_contains($svc->name, 'استشارة') || $svc->name === 'استشارة اخصائي')) {
+                    continue;
+                }
                 $qty = max(1, (int) ($svc->quantity ?? 1));
                 $unitBase = (float) ($svc->price ?? 0);
                 $base = $unitBase * $qty;
@@ -325,23 +334,17 @@
                 ];
             }
 
-            // استشارات الطوارئ للأطباء الاستشاريين
-            $emergencyAppointments = $payment->emergency->appointments()
-                ->where('status', '!=', 'cancelled')
-                ->with('doctor.user')
-                ->get();
-
             foreach ($emergencyAppointments as $apt) {
                 $docName = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
-                $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
-                $pat = $isInsured ? round($fee * ($copayPct / 100)) : $fee;
+                $fee = (float)($apt->consultation_fee ?? 0);
+                if ($fee <= 0) continue;
                 $lineItems[] = [
                     'name' => 'استشارة طبية طوارئ: ' . $docName,
                     'category' => 'استشارة طوارئ',
                     'doctor' => $docName,
                     'approved' => $fee,
-                    'patient' => $pat,
-                    'insurance' => max(0, $fee - $pat),
+                    'patient' => $fee,
+                    'insurance' => 0.0,
                 ];
             }
 

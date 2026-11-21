@@ -121,7 +121,7 @@
                                         $pkgTestIds = $pkg->labTests()->pluck('lab_tests.id')->toArray();
                                         $items[] = [
                                             'id' => 'pkg_' . $pkg->id,
-                                            'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
+                                            'name' => '📦 ' . __('باقة:') . ' ' . $pkg->name . ' (' . count($pkgTestIds) . ' ' . __('تحاليل مشمولة') . ')',
                                             'code' => $pkg->code ?? 'PKG-' . $pkg->id,
                                             'type' => 'package',
                                             'request_id' => $reqItem->id,
@@ -144,7 +144,7 @@
                                             if ($test) {
                                                 $items[] = [
                                                     'id' => $test->id,
-                                                    'name' => '🔬 ' . $test->name . ' (تحليل إضافي)',
+                                                    'name' => '🔬 ' . $test->name . ' (' . __('تحليل إضافي') . ')',
                                                     'code' => $test->code,
                                                     'type' => 'lab',
                                                     'request_id' => $reqItem->id,
@@ -222,7 +222,7 @@
                                         if ($rad) {
                                             $items[] = [
                                                 'id' => $rad->id,
-                                                'name' => $rad->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
+                                                'name' => $rad->name . ($targetPart ? ' [' . __('العضو:') . " {$targetPart}]" : ''),
                                                 'code' => $rad->code,
                                                 'type' => 'radiology',
                                                 'request_id' => $reqItem->id,
@@ -262,7 +262,7 @@
                                         }
                                     }
                                 } else {
-                                    $desc = trim($rDetails['description'] ?? $reqItem->description ?? 'خدمة تمريضية');
+                                    $desc = trim($rDetails['description'] ?? $reqItem->description ?? __('خدمة تمريضية'));
                                     $descLower = mb_strtolower($desc);
                                     $isEcg = str_contains($desc, 'تخطيط') || str_contains($desc, 'تحطيط') || str_contains($descLower, 'ecg') || str_contains($descLower, 'echo') || str_contains($desc, 'ايكو') || str_contains($descLower, 'hear echo');
                                     $matchedSvc = null;
@@ -278,7 +278,7 @@
                                     $isHiCovered = $isEcg && $hasConsultationDoctor;
                                     $hiPrice = ($isHiCovered && $matchedSvc) ? (float)$matchedSvc->hi_price : ($isHiCovered ? 10000.00 : $basePrice);
                                     $moiPrice = $matchedSvc ? (float)$matchedSvc->moi_price : $basePrice;
-                                    $cleanName = $isEcg ? 'تخطيط قلب (ECG)' : $desc;
+                                    $cleanName = $isEcg ? __('تخطيط قلب (ECG)') : $desc;
                                     $itemCopay = ($defaultInsurance === 'hi' && $patient && $isHiCovered)
                                         ? $patient->getCopayPercentageFor('ecg')
                                         : ($isHiCovered ? $defaultCopay : 100.00);
@@ -352,7 +352,7 @@
                                     {{ __("تشمل هذه الفاتورة طلبات الزيارة غير المسددة معاً (") }}
                                     @foreach($allRequests as $ar)
                                         <span class="badge {{ $ar->type === 'lab' ? 'bg-primary' : 'bg-info text-dark' }} me-1">
-                                            {{ $ar->type === 'lab' ? '🔬 مختبر' : '🩻 أشعة' }} #{{ $ar->id }}
+                                            {{ $ar->type === 'lab' ? __('🔬 مختبر') : __('🩻 أشعة') }} #{{ $ar->id }}
                                         </span>
                                     @endforeach
                                     ) {{ __("ليتم تحصيلها معاً وإصدار") }} <strong>{{ __("وصل دفع حراري واحد شامل") }}</strong> {{ __("للمريض.") }}
@@ -417,15 +417,15 @@
                                 </h6>
                                 <div class="mb-2 d-flex justify-content-between">
                                     <span class="text-muted">{{ __("الاسم:") }}</span>
-                                    <strong>{{ optional($request->visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                    <strong>{{ optional($request->visit->patient)->user->name ?? __('غير محدد') }}</strong>
                                 </div>
                                 <div class="mb-2 d-flex justify-content-between">
                                     <span class="text-muted">{{ __("رقم الهوية:") }}</span>
-                                    <span>{{ optional($request->visit->patient)->national_id ?? 'غير محدد' }}</span>
+                                    <span>{{ optional($request->visit->patient)->national_id ?? __('غير محدد') }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">{{ __("رقم الهاتف:") }}</span>
-                                    <span>{{ optional($request->visit->patient)->user->phone ?? 'غير محدد' }}</span>
+                                    <span>{{ optional($request->visit->patient)->user->phone ?? __('غير محدد') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -455,7 +455,7 @@
                                                 @if(isset($availableExtraServices))
                                                     @foreach($availableExtraServices as $asrv)
                                                         <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}">
-                                                            {{ $asrv->name }} (افتراضي: {{ number_format($asrv->default_price, 0) }} د.ع)
+                                                            {{ $asrv->name }} ({{ __('افتراضي:') }} {{ number_format($asrv->default_price, 0) }} {{ __('د.ع') }})
                                                         </option>
                                                     @endforeach
                                                 @endif
@@ -476,7 +476,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small text-muted mb-1 fw-bold">{{ __("ملاحظات (اختياري)") }}</label>
-                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="ملاحظة أو تفصيل...">
+                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="{{ __('ملاحظة أو تفصيل...') }}">
                                     </div>
                                     <div class="col-md-1">
                                         <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs">
@@ -509,7 +509,7 @@
                                             {{ $defaultInsurance === 'hi' ? __('مشمول بالضمان الصحي الوطني') : __('مشمول بضمان الداخلية') }}
                                         </span>
                                         <span class="badge bg-secondary-subtle text-secondary border small py-1 px-2 rounded-pill">
-                                            <i class="fas fa-lock me-1"></i>مثبتة آلياً ومحمية
+                                            <i class="fas fa-lock me-1"></i>{{ __('مثبتة آلياً ومحمية') }}
                                         </span>
                                     </div>
                                 </div>
@@ -536,7 +536,7 @@
                                     <div class="col-12" id="patient_hi_category_badge">
                                         <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
                                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                                <span class="badge bg-info text-dark fs-6 px-2 py-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} (الفئة {{ $hiCategory->code }})</span>
+                                                <span class="badge bg-info text-dark fs-6 px-2 py-1"><i class="fas fa-layer-group me-1"></i>{{ $hiCategory->name }} ({{ __('الفئة') }} {{ $hiCategory->code }})</span>
                                                 <span class="text-muted small">
                                                     {{ __('نسب التحمل المعتمدة للفئة:') }} 
                                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">{{ __('المختبر:') }} {{ (float)$hiCategory->lab_copay }}%</span>
@@ -545,7 +545,7 @@
                                                 </span>
                                             </div>
                                             @if($hiCategory->requires_thermal_stamp)
-                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>شرط الختم الحراري (0%)</span>
+                                                <span class="badge bg-danger text-white"><i class="fas fa-stamp me-1"></i>{{ __('شرط الختم الحراري (0%)') }}</span>
                                             @endif
                                         </div>
                                     </div>
@@ -563,7 +563,7 @@
                                                 @endphp
                                                 @if(count($distinctCopays) > 1)
                                                     <span class="badge bg-warning text-dark fs-6 px-3 py-1" id="display_copay_badge">
-                                                        مفصلة حسب الخدمة (المختبر {{ (float)$hiCategory?->lab_copay }}% / التخطيط {{ (float)$hiCategory?->consultation_copay }}%)
+                                                        {{ __('مفصلة حسب الخدمة (المختبر :lab% / التخطيط :con%)', ['lab' => (float)$hiCategory?->lab_copay, 'con' => (float)$hiCategory?->consultation_copay]) }}
                                                     </span>
                                                 @else
                                                     <span class="badge bg-primary fs-6 px-3 py-1" id="display_copay_badge">
@@ -585,19 +585,19 @@
                                     <div class="col-4">
                                         <div class="bg-white p-2 rounded border">
                                             <small class="text-muted d-block">{{ __("إجمالي السعر المعتمد") }}</small>
-                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($initialApproved) }} د.ع</strong>
+                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($initialApproved) }} {{ __('د.ع') }}</strong>
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="bg-white p-2 rounded border border-success">
                                             <small class="text-success fw-bold d-block">{{ __("تحمل المريض (نقداً)") }}</small>
-                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($initialPatient) }} د.ع</strong>
+                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($initialPatient) }} {{ __('د.ع') }}</strong>
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="bg-white p-2 rounded border border-primary">
                                             <small class="text-primary fw-bold d-block">{{ __("حصة الضمان (ذمة)") }}</small>
-                                            <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($initialInsurance) }} د.ع</strong>
+                                            <strong class="text-primary fs-6" id="display_insurance_share">{{ number_format($initialInsurance) }} {{ __('د.ع') }}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -614,7 +614,7 @@
                                         {{ __('حساب الدفع النقدي والخصم الخاص') }}
                                     </h6>
                                     <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 rounded-pill">
-                                        دفع نقدي كامل (خارج الضمان)
+                                        {{ __('دفع نقدي كامل (خارج الضمان)') }}
                                     </span>
                                 </div>
 
@@ -634,12 +634,12 @@
                                             <span class="small fw-bold text-muted">{{ __("نوع الخصم:") }}</span>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_overall" value="overall" checked autocomplete="off" onchange="toggleDiscountScope('overall')">
-                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_overall" title="تطبيق نسبة خصم موحدة على كامل الفاتورة">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_overall" title="{{ __('تطبيق نسبة خصم موحدة على كامل الفاتورة') }}">
                                                     <i class="fas fa-receipt me-1"></i>{{ __("خصم إجمالي ع الوصل") }}
                                                 </label>
 
                                                 <input type="radio" class="btn-check" name="discount_scope" id="discount_scope_per_item" value="per_item" autocomplete="off" onchange="toggleDiscountScope('per_item')">
-                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_per_item" title="تحديد نسبة خصم مخصصة لكل خدمة أو فحص بشكل منفصل">
+                                                <label class="btn btn-outline-danger py-0 px-2 fw-bold" for="discount_scope_per_item" title="{{ __('تحديد نسبة خصم مخصصة لكل خدمة أو فحص بشكل منفصل') }}">
                                                     <i class="fas fa-list-check me-1"></i>{{ __("خصم تفصيلي لكل خدمة") }}
                                                 </label>
                                             </div>
@@ -661,7 +661,7 @@
                                                        placeholder="0" 
                                                        list="request_discount_percentage_suggestions">
                                                 <datalist id="request_discount_percentage_suggestions">
-                                                    <option value="0">0% (بدون خصم)</option>
+                                                    <option value="0">0% ({{ __('بدون خصم') }})</option>
                                                     <option value="5">5%</option>
                                                     <option value="10">10%</option>
                                                     <option value="15">15%</option>
@@ -678,10 +678,10 @@
                                                     <option value="75">75%</option>
                                                     <option value="80">80%</option>
                                                     <option value="90">90%</option>
-                                                    <option value="100">100% (إعفاء كامل)</option>
+                                                    <option value="100">100% ({{ __('إعفاء كامل') }})</option>
                                                 </datalist>
                                             </div>
-                                            <small class="text-muted d-block mt-0.5" id="discount_scope_subhint" style="font-size: 0.68rem;">اكتب النسبة أو اختر من المقترحات</small>
+                                            <small class="text-muted d-block mt-0.5" id="discount_scope_subhint" style="font-size: 0.68rem;">{{ __('اكتب النسبة أو اختر من المقترحات') }}</small>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label small text-muted mb-1 fw-bold">{{ __("سبب الخصم / التخويل") }}</label>
@@ -689,18 +689,18 @@
                                                    placeholder="{{ __("اكتب السبب أو اختر مقترحاً (مثال: إعفاء طبيب، تخفيض إنساني...)") }}" 
                                                    list="request_discount_reason_suggestions">
                                             <datalist id="request_discount_reason_suggestions">
-                                                <option value="خصم إدارة"></option>
-                                                <option value="إعفاء بتوجيه الطبيب"></option>
-                                                <option value="تخفيض إنساني"></option>
-                                                <option value="خصم نقابة الأطباء"></option>
-                                                <option value="خصم موظف / ذوي موظف"></option>
-                                                <option value="موافقة المدير التنفيذي"></option>
-                                                <option value="خصم خاص على خدمات محددة"></option>
+                                                <option value="{{ __('خصم إدارة') }}"></option>
+                                                <option value="{{ __('إعفاء بتوجيه الطبيب') }}"></option>
+                                                <option value="{{ __('تخفيض إنساني') }}"></option>
+                                                <option value="{{ __('خصم نقابة الأطباء') }}"></option>
+                                                <option value="{{ __('خصم موظف / ذوي موظف') }}"></option>
+                                                <option value="{{ __('موافقة المدير التنفيذي') }}"></option>
+                                                <option value="{{ __('خصم خاص على خدمات محددة') }}"></option>
                                             </datalist>
                                         </div>
                                         <div class="col-md-3 text-end pt-3">
                                             <span class="text-danger fw-bold small" id="display_discount_amount">
-                                                قيمة الخصم: 0 د.ع
+                                                {{ __('قيمة الخصم:') }} 0 {{ __('د.ع') }}
                                             </span>
                                         </div>
                                     </div>
@@ -711,15 +711,15 @@
                                     <div class="col-6">
                                         <div class="bg-white p-2 rounded border">
                                             <small class="text-muted d-block">{{ __("إجمالي السعر المعتمد") }}</small>
-                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($initialApproved) }} د.ع</strong>
+                                            <strong class="text-dark fs-6" id="display_approved_price">{{ number_format($initialApproved) }} {{ __('د.ع') }}</strong>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="bg-white p-2 rounded border border-success">
                                             <small class="text-success fw-bold d-block">{{ __("المطلوب نقداً من المريض") }}</small>
-                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($initialPatient) }} د.ع</strong>
+                                            <strong class="text-success fs-6" id="display_patient_share">{{ number_format($initialPatient) }} {{ __('د.ع') }}</strong>
                                             <div id="summary_discount_note" class="text-danger small mt-1 fw-bold d-none">
-                                                <i class="fas fa-tag me-1"></i>خصم: <span id="summary_discount_val">0 د.ع</span>
+                                                <i class="fas fa-tag me-1"></i>{{ __('خصم:') }} <span id="summary_discount_val">0 {{ __('د.ع') }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -791,20 +791,20 @@
                                                             <span class="fw-semibold item-name-label">{{ $item['name'] }}</span>
                                                             @if(count($allRequests) > 1 || $item['type'] === 'nursing')
                                                                 <span class="badge {{ $item['type'] === 'radiology' ? 'bg-info text-dark' : ($item['type'] === 'nursing' ? 'bg-danger text-white' : 'bg-primary') }} ms-1" style="font-size:0.68rem;">
-                                                                    {{ $item['type'] === 'radiology' ? 'أشعة' : ($item['type'] === 'nursing' ? 'تخطيط قلب / تمريض' : 'مختبر') }}
+                                                                    {{ $item['type'] === 'radiology' ? __('أشعة') : ($item['type'] === 'nursing' ? __('تخطيط قلب / تمريض') : __('مختبر')) }}
                                                                 </span>
                                                             @endif
                                                             <span class="row-coverage-badge badge {{ $rowCov ? 'bg-success-subtle text-success border border-success-subtle' : ($defaultInsurance !== 'none' ? 'bg-warning-subtle text-dark border border-warning' : '') }} small ms-1" style="{{ $defaultInsurance === 'none' ? 'display: none;' : '' }}">
                                                                 @if($rowCov)
-                                                                    <i class="fas fa-check-circle me-1"></i>مشمول بالضمان (تحمل {{ (float)$rowCopayPct }}%)
+                                                                    <i class="fas fa-check-circle me-1"></i>{{ __('مشمول بالضمان (تحمل :pct%)', ['pct' => (float)$rowCopayPct]) }}
                                                                 @elseif($defaultInsurance !== 'none')
-                                                                    <i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)
+                                                                    <i class="fas fa-coins me-1"></i>{{ __('غير مشمول (كاش 100%)') }}
                                                                 @endif
                                                             </span>
                                                         </td>
                                                         <td><code>{{ $item['code'] }}</code></td>
-                                                        <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} د.ع</td>
-                                                        <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} د.ع</td>
+                                                        <td class="text-end fw-bold row-approved-price">{{ number_format($rowApp) }} {{ __('د.ع') }}</td>
+                                                        <td class="text-end text-success fw-bold row-patient-share">{{ number_format($rowPat) }} {{ __('د.ع') }}</td>
                                                         <td class="text-center col-item-discount" style="display: none;">
                                                             <div class="input-group input-group-sm justify-content-center">
                                                                 <input type="number" 
@@ -820,7 +820,7 @@
                                                             </div>
                                                             <div class="item-discount-val-badge text-danger fw-bold mt-1 small" style="font-size: 0.7rem; display: none;"></div>
                                                         </td>
-                                                        <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} د.ع</td>
+                                                        <td class="text-end text-primary fw-bold row-insurance-share">{{ number_format($rowIns) }} {{ __('د.ع') }}</td>
                                                         <td class="text-center p-1" style="min-width: 220px;">
                                                             <div class="segmented-control-pills item-action-group">
                                                                 <input type="radio" class="segmented-pill-input item-action-radio" 
@@ -888,7 +888,7 @@
                                                                     <div>
                                                                         <strong class="text-dark">{{ $extraService->name }}</strong>
                                                                         @if($extraService->quantity > 1)
-                                                                            <span class="badge bg-secondary ms-1">الكمية: {{ $extraService->quantity }}</span>
+                                                                            <span class="badge bg-secondary ms-1">{{ __('الكمية:') }} {{ $extraService->quantity }}</span>
                                                                         @endif
                                                                         @if($extraService->notes)
                                                                             <small class="text-muted d-block"><i class="fas fa-info-circle me-1"></i>{{ $extraService->notes }}</small>
@@ -896,22 +896,22 @@
                                                                     </div>
                                                                     <div>
                                                                         <span class="badge bg-warning text-dark border border-warning">
-                                                                            <i class="fas fa-coins me-1"></i>خدمة إضافية (كاش 100%)
+                                                                            <i class="fas fa-coins me-1"></i>{{ __('خدمة إضافية (كاش 100%)') }}
                                                                         </span>
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             <td><code>EXTRA</code></td>
-                                                            <td class="text-end fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
-                                                            <td class="text-end text-success fw-bold">{{ number_format($extraService->total_amount) }} د.ع</td>
+                                                            <td class="text-end fw-bold">{{ number_format($extraService->total_amount) }} {{ __('د.ع') }}</td>
+                                                            <td class="text-end text-success fw-bold">{{ number_format($extraService->total_amount) }} {{ __('د.ع') }}</td>
                                                             <td class="text-center col-item-discount text-muted small" style="display: none;">-</td>
                                                             <td class="text-end text-muted">-</td>
                                                             <td class="text-center">
                                                                 <button type="button" 
                                                                         class="btn btn-outline-danger btn-sm px-2 py-1 delete-extra-service-btn shadow-2xs" 
                                                                         data-url="{{ route('cashier.request.extra-services.remove', [$request->id, $extraService->id]) }}"
-                                                                        title="حذف هذه الخدمة الإضافية من الفاتورة">
-                                                                    <i class="fas fa-trash-alt me-1"></i> حذف
+                                                                        title="{{ __('حذف هذه الخدمة الإضافية من الفاتورة') }}">
+                                                                    <i class="fas fa-trash-alt me-1"></i> {{ __('حذف') }}
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -921,10 +921,10 @@
                                             <tfoot class="table-success">
                                                 <tr>
                                                     <th colspan="3" class="text-end fw-bold">{{ __("المجموع الإجمالي (المسدد):") }}</th>
-                                                    <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} د.ع</th>
-                                                    <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} د.ع</th>
-                                                    <th class="text-center col-item-discount text-danger fw-bold fs-6" id="table_total_discount_items" style="display: none;">-0 د.ع</th>
-                                                    <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} د.ع</th>
+                                                    <th class="text-end fw-bold fs-6 text-dark" id="table_total_approved">{{ number_format($initialApproved) }} {{ __('د.ع') }}</th>
+                                                    <th class="text-end fw-bold fs-6 text-success" id="table_total_patient">{{ number_format($initialPatient) }} {{ __('د.ع') }}</th>
+                                                    <th class="text-center col-item-discount text-danger fw-bold fs-6" id="table_total_discount_items" style="display: none;">-0 {{ __('د.ع') }}</th>
+                                                    <th class="text-end fw-bold fs-6 text-primary" id="table_total_insurance">{{ number_format($initialInsurance) }} {{ __('د.ع') }}</th>
                                                     <th class="text-center p-1" id="table_actions_summary">
                                                         <span class="badge bg-success">{{ __("كل الفحوصات مسددة") }}</span>
                                                     </th>
@@ -935,7 +935,7 @@
                                 @else
                                     <div class="alert alert-secondary mb-0">
                                         <i class="fas fa-info-circle me-2"></i>
-                                        {{ $request->description ?: 'طلب طبي مباشر' }}
+                                        {{ $request->description ?: __('طلب طبي مباشر') }}
                                     </div>
                                 @endif
                             </div>
@@ -953,14 +953,14 @@
                                         <input class="form-check-input" type="radio" name="payment_method" id="request_payment_cash" 
                                                value="cash" {{ old('payment_method', 'cash') == 'cash' ? 'checked' : '' }} required>
                                         <label class="form-check-label fw-semibold" for="request_payment_cash">
-                                            💵 نقدي (Cash)
+                                            {{ __('💵 نقدي (Cash)') }}
                                         </label>
                                     </div>
                                     <div class="form-check form-check-lg">
                                         <input class="form-check-input" type="radio" name="payment_method" id="request_payment_card" 
                                                value="card" {{ old('payment_method') == 'card' ? 'checked' : '' }}>
                                         <label class="form-check-label fw-semibold" for="request_payment_card">
-                                            💳 بطاقة دفع إلكتروني / ائتمان (Electronic / Card POS)
+                                            {{ __('💳 بطاقة دفع إلكتروني / ائتمان (Electronic / Card POS)') }}
                                         </label>
                                     </div>
                                 </div>
@@ -976,7 +976,7 @@
                                         {{ __('المبلغ المحصل نقداً من المريض (IQD) *') }}
                                     </span>
                                     <span class="badge bg-success-subtle text-success border border-success-subtle small fw-bold" style="font-size: 0.72rem;">
-                                        <i class="fas fa-lock me-1"></i>محسوب آلياً ومطابق للوصل
+                                        <i class="fas fa-lock me-1"></i>{{ __('محسوب آلياً ومطابق للوصل') }}
                                     </span>
                                 </label>
                                 <div class="input-group input-group-lg">
@@ -991,7 +991,7 @@
                                            required>
                                     <span class="input-group-text bg-success text-white fw-bold">IQD</span>
                                 </div>
-                                <small class="text-muted">المبلغ الفعلي المستلم في الصندوق من المريض (محسوب بدقة من جدول الخدمات لضمان تطابق الوصل).</small>
+                                <small class="text-muted">{{ __('المبلغ الفعلي المستلم في الصندوق من المريض (محسوب بدقة من جدول الخدمات لضمان تطابق الوصل).') }}</small>
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -1086,15 +1086,15 @@ window.toggleDiscountScope = function(scope) {
             overallInput.readOnly = true;
             overallInput.classList.add('bg-light');
         }
-        if (label) label.textContent = 'إجمالي الخصم %';
-        if (hint) hint.textContent = 'محسوب تلقائياً من مجموع خصومات الخدمات في الجدول';
+        if (label) label.textContent = '{{ __("إجمالي الخصم %") }}';
+        if (hint) hint.textContent = '{{ __("محسوب تلقائياً من مجموع خصومات الخدمات في الجدول") }}';
     } else {
         if (overallInput) {
             overallInput.readOnly = false;
             overallInput.classList.remove('bg-light');
         }
-        if (label) label.textContent = 'نسبة الخصم %';
-        if (hint) hint.textContent = 'اكتب النسبة أو اختر من المقترحات';
+        if (label) label.textContent = '{{ __("نسبة الخصم %") }}';
+        if (hint) hint.textContent = '{{ __("اكتب النسبة أو اختر من المقترحات") }}';
         document.querySelectorAll('.item-discount-input').forEach(inp => {
             inp.value = 0;
         });
@@ -1137,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const actionsSummary = document.getElementById('table_actions_summary');
 
     function formatNumber(num) {
-        return Math.round(num).toLocaleString('en-US') + ' د.ع';
+        return Math.round(num).toLocaleString('en-US') + ' ' + '{{ __("د.ع") }}';
     }
 
     function recalculate() {
@@ -1151,14 +1151,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-primary';
-                copayBadge.textContent = 'ضمان قوى الأمن الداخلي';
+                copayBadge.textContent = '{{ __("ضمان قوى الأمن الداخلي") }}';
             }
         } else if (insType === 'hi') {
             if (insuranceCardCol) insuranceCardCol.style.display = 'block';
             if (copaySection) copaySection.style.display = 'block';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-success';
-                copayBadge.textContent = 'هيئة الضمان الصحي الوطني';
+                copayBadge.textContent = '{{ __("هيئة الضمان الصحي الوطني") }}';
             }
         } else {
             // none
@@ -1167,7 +1167,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (copaySection) copaySection.style.display = 'none';
             if (copayBadge) {
                 copayBadge.className = 'badge bg-secondary';
-                copayBadge.textContent = 'دفع نقدي كامل (100%)';
+                copayBadge.textContent = '{{ __("دفع نقدي كامل (100%)") }}';
             }
         }
 
@@ -1259,11 +1259,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (rowCovered) {
                     covBadge.style.display = 'inline-block';
                     covBadge.className = 'row-coverage-badge badge bg-success-subtle text-success border border-success-subtle small ms-1';
-                    covBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i>مشمول بالضمان (تحمل ${effCopay}%)`;
+                    covBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + '{{ __("مشمول بالضمان (تحمل") }} ' + effCopay + '%)';
                 } else {
                     covBadge.style.display = 'inline-block';
                     covBadge.className = 'row-coverage-badge badge bg-warning text-dark border border-warning small ms-1';
-                    covBadge.innerHTML = '<i class="fas fa-coins me-1"></i>غير مشمول (كاش 100%)';
+                    covBadge.innerHTML = '<i class="fas fa-coins me-1"></i>' + '{{ __("غير مشمول (كاش 100%)") }}';
                 }
             }
         });
@@ -1282,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hasUncovered && insType !== 'none') {
             if (alertBox) {
                 alertBox.className = 'alert alert-warning fw-semibold small mb-3 text-center';
-                alertBox.innerHTML = '<i class="fas fa-info-circle me-1 text-warning"></i> تنبيه للكاشير: يحتوي الطلب على فحوصات غير مشمولة بالضمان، تم احتسابها نقداً 100% على المريض تلقائياً.';
+                alertBox.innerHTML = '<i class="fas fa-info-circle me-1 text-warning"></i> ' + '{{ __("تنبيه للكاشير: يحتوي الطلب على فحوصات غير مشمولة بالضمان، تم احتسابها نقداً 100% على المريض تلقائياً.") }}';
                 alertBox.classList.remove('d-none');
             }
         } else {
@@ -1328,7 +1328,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (badge) {
                         if (itemDiscAmt > 0 && isRowPaid) {
                             badge.style.display = 'block';
-                            badge.textContent = 'خصم: -' + formatNumber(itemDiscAmt);
+                            badge.textContent = '{{ __("خصم:") }} -' + formatNumber(itemDiscAmt);
                         } else {
                             badge.style.display = 'none';
                             badge.textContent = '';
@@ -1336,9 +1336,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     if (rowPatCell) {
                         if (itemDiscAmt > 0 && isRowPaid) {
-                            rowPatCell.innerHTML = '<span class="text-decoration-line-through text-muted small me-1">' + formatNumber(basePat) + '</span><span class="text-success fw-bold">' + formatNumber(basePat - itemDiscAmt) + ' د.ع</span>';
+                            rowPatCell.innerHTML = '<span class="text-decoration-line-through text-muted small me-1">' + formatNumber(basePat) + '</span><span class="text-success fw-bold">' + formatNumber(basePat - itemDiscAmt) + ' ' + '{{ __("د.ع") }}' + '</span>';
                         } else {
-                            rowPatCell.textContent = formatNumber(basePat) + ' د.ع';
+                            rowPatCell.textContent = formatNumber(basePat) + ' ' + '{{ __("د.ع") }}';
                         }
                     }
                 });
@@ -1349,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const tableTotalDiscountItems = document.getElementById('table_total_discount_items');
                 if (tableTotalDiscountItems) {
-                    tableTotalDiscountItems.textContent = discountAmount > 0 ? ('-' + formatNumber(discountAmount)) : '0 د.ع';
+                    tableTotalDiscountItems.textContent = discountAmount > 0 ? ('-' + formatNumber(discountAmount)) : '0 ' + '{{ __("د.ع") }}';
                 }
             } else {
                 discountPct = parseFloat(discountSelect ? discountSelect.value : 0) || 0;
@@ -1362,7 +1362,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const rowPatCell = row.querySelector('.row-patient-share');
                     const badge = row.querySelector('.item-discount-val-badge');
                     let basePat = parseFloat(row.dataset.basePrice) || 0;
-                    if (rowPatCell) rowPatCell.textContent = formatNumber(basePat) + ' د.ع';
+                    if (rowPatCell) rowPatCell.textContent = formatNumber(basePat) + ' ' + '{{ __("د.ع") }}';
                     if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
                 });
             }
@@ -1379,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let netPatient = Math.max(0, totalPatient - discountAmount);
 
         if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
-        if (displayDiscountAmount) displayDiscountAmount.textContent = 'قيمة الخصم: ' + formatNumber(discountAmount);
+        if (displayDiscountAmount) displayDiscountAmount.textContent = '{{ __("قيمة الخصم:") }} ' + formatNumber(discountAmount);
         if (summaryDiscountNote) {
             if (discountAmount > 0) {
                 summaryDiscountNote.classList.remove('d-none');
@@ -1404,12 +1404,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (actionsSummary) {
             if (countPay > 0 && countCancel === 0 && countPostpone === 0) {
-                actionsSummary.innerHTML = '<span class="badge bg-success">تسديد الكل (' + countPay + ')</span>';
+                actionsSummary.innerHTML = '<span class="badge bg-success">' + '{{ __("تسديد الكل") }}' + ' (' + countPay + ')</span>';
             } else {
                 let sumHtml = '';
-                if (countPay > 0) sumHtml += '<span class="badge bg-success me-1">' + countPay + ' تسديد</span>';
-                if (countPostpone > 0) sumHtml += '<span class="badge bg-warning text-dark me-1">' + countPostpone + ' تأجيل</span>';
-                if (countCancel > 0) sumHtml += '<span class="badge bg-danger">' + countCancel + ' إلغاء</span>';
+                if (countPay > 0) sumHtml += '<span class="badge bg-success me-1">' + countPay + ' ' + '{{ __("تسديد") }}' + '</span>';
+                if (countPostpone > 0) sumHtml += '<span class="badge bg-warning text-dark me-1">' + countPostpone + ' ' + '{{ __("تأجيل") }}' + '</span>';
+                if (countCancel > 0) sumHtml += '<span class="badge bg-danger">' + countCancel + ' ' + '{{ __("إلغاء") }}' + '</span>';
                 actionsSummary.innerHTML = sumHtml;
             }
         }
@@ -1422,13 +1422,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (submitBtn) {
                 if (countCancel > 0 && countPostpone === 0) {
                     submitBtn.className = 'btn btn-danger btn-lg px-4';
-                    submitBtn.innerHTML = '<i class="fas fa-ban me-2"></i> تأكيد إلغاء كافة الفحوصات بطلب المريض';
+                    submitBtn.innerHTML = '<i class="fas fa-ban me-2"></i> ' + '{{ __("تأكيد إلغاء كافة الفحوصات بطلب المريض") }}';
                 } else if (countPostpone > 0 && countCancel === 0) {
                     submitBtn.className = 'btn btn-warning btn-lg px-4 text-dark';
-                    submitBtn.innerHTML = '<i class="fas fa-hourglass-half me-2"></i> تأكيد تأجيل كافة الفحوصات بطلب المريض';
+                    submitBtn.innerHTML = '<i class="fas fa-hourglass-half me-2"></i> ' + '{{ __("تأكيد تأجيل كافة الفحوصات بطلب المريض") }}';
                 } else {
                     submitBtn.className = 'btn btn-secondary btn-lg px-4';
-                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد تحديث الفحوصات (إلغاء وتأجيل)';
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __("تأكيد تحديث الفحوصات (إلغاء وتأجيل)") }}';
                 }
             }
         } else {
@@ -1439,9 +1439,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (submitBtn) {
                 submitBtn.className = 'btn btn-success btn-lg px-4';
                 if (countCancel > 0 || countPostpone > 0) {
-                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد دفع الفحوصات المختارة (' + formatNumber(netPatient) + ')';
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __("تأكيد دفع الفحوصات المختارة") }} (' + formatNumber(netPatient) + ')';
                 } else {
-                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> تأكيد الدفع وإصدار الإيصال (' + formatNumber(netPatient) + ')';
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __("تأكيد الدفع وإصدار الإيصال") }} (' + formatNumber(netPatient) + ')';
                 }
             }
         }
@@ -1498,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.delete-extra-service-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (confirm('هل أنت متأكد من حذف هذه الخدمة الإضافية من الطلب؟')) {
+            if (confirm('{{ __("هل أنت متأكد من حذف هذه الخدمة الإضافية من الطلب؟") }}')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = this.dataset.url;

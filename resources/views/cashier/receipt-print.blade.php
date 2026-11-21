@@ -611,12 +611,21 @@
 
             // 4. Emergency
             if ($payment->emergency) {
+                // استشارات الطوارئ للأطباء الاستشاريين
+                $emergencyAppointments = $payment->emergency->appointments()
+                    ->where('status', '!=', 'cancelled')
+                    ->with('doctor.user')
+                    ->get();
+
                 $paidServices = \DB::table('emergency_emergency_service')
                     ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                     ->where('emergency_emergency_service.payment_id', $payment->id)
                     ->select('emergency_services.*', 'emergency_emergency_service.quantity')
                     ->get();
                 foreach ($paidServices as $svc) {
+                    if ($emergencyAppointments->isNotEmpty() && (str_contains($svc->name, 'استشارة') || $svc->id == 115)) {
+                        continue;
+                    }
                     $qty = max(1, (int) ($svc->quantity ?? 1));
                     $esModel = \App\Models\EmergencyService::find($svc->id);
                     $pricing = $esModel && $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -627,18 +636,10 @@
                     $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => $qty, 'price' => $price];
                 }
 
-                // استشارات الطوارئ للأطباء الاستشاريين
-                $emergencyAppointments = $payment->emergency->appointments()
-                    ->where('status', '!=', 'cancelled')
-                    ->with('doctor.user')
-                    ->get();
-
                 foreach ($emergencyAppointments as $apt) {
                     $docTitle = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
-                    $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
-                    if ($payment->insurance_type && $payment->insurance_type !== 'none') {
-                        $fee = round($fee * ((float)($payment->copay_percentage ?? 0) / 100));
-                    }
+                    $fee = (float)($apt->consultation_fee ?? 0);
+                    if ($fee <= 0) continue;
                     $lineItems[] = [
                         'name' => 'استشارة طبية طوارئ: ' . $docTitle,
                         'qty' => 1,
