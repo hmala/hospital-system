@@ -8,14 +8,14 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-plus-circle me-2"></i>
-                    إضافة حالة طوارئ جديدة
+                    {{ __('إضافة حالة طوارئ جديدة') }}
                 </h2>
                 @php
                     $isFromInquiry = request('return_to') === 'inquiry' 
                         || request('from_inquiry') 
                         || (!auth()->user()->can('view emergencies') && !auth()->user()->hasRole(['emergency_staff', 'doctor', 'nurse']));
                     $backUrl = $isFromInquiry ? route('inquiry.index') : route('emergency.index');
-                    $backLabel = $isFromInquiry ? 'العودة للاستعلامات' : 'العودة لقائمة الطوارئ';
+                    $backLabel = $isFromInquiry ? __('العودة للاستعلامات') : __('العودة لقائمة الطوارئ');
                 @endphp
                 <a href="{{ $backUrl }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-right me-2"></i>{{ $backLabel }}
@@ -34,22 +34,22 @@
                         </div>
                         <div>
                             <h6 class="fw-bold text-danger mb-1">
-                                📥 إحالة طوارئ وتمريض واردة من: د. {{ optional(optional(optional($referralRequest->visit)->doctor)->user)->name ?? 'الاستشاري' }}
+                                📥 {{ __('إحالة طوارئ وتمريض واردة من: د. :name', ['name' => optional(optional(optional($referralRequest->visit)->doctor)->user)->name ?? __('الاستشاري')]) }}
                             </h6>
                             <p class="mb-0 small text-dark">
-                                <strong>الخدمات والتوجيهات المطلوبة:</strong> {{ $referralRequest->description }}
+                                <strong>{{ __('الخدمات والتوجيهات المطلوبة:') }}</strong> {{ $referralRequest->description }}
                             </p>
                         </div>
                     </div>
                     <span class="badge bg-danger text-white px-3 py-2 fs-7 rounded-pill">
-                        الأولوية: {{ $referralRequest->priority ?? 'عاجل' }}
+                        {{ __('الأولوية:') }} {{ $referralRequest->priority ? __($referralRequest->priority) : __('عاجل') }}
                     </span>
                 </div>
             @endif
 
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">بيانات حالة الطوارئ</h5>
+                    <h5 class="mb-0">{{ __('بيانات حالة الطوارئ') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('emergency.store') }}">
@@ -62,7 +62,7 @@
                         <div class="row">
                             <!-- اختيار المريض التفاعلي بالبحث المباشر -->
                             <div class="col-md-6 mb-3">
-                                <label for="patientSearchInput" class="form-label fw-bold">المريض <span class="text-danger">*</span></label>
+                                <label for="patientSearchInput" class="form-label fw-bold">{{ __('المريض') }} <span class="text-danger">*</span></label>
                                 
                                 <!-- الحقل المخفي لـ patient_id -->
                                 <input type="hidden" name="patient_id" id="patient_id" value="{{ old('patient_id', $selectedPatient->id ?? '') }}">
@@ -75,10 +75,10 @@
                                             <input type="text" 
                                                    class="form-control border-start-0 @error('patient_id') is-invalid @enderror" 
                                                    id="patientSearchInput" 
-                                                   placeholder="ابحث باسم المريض، رقم الهاتف، أو الرقم الطبي / الوطني..."
+                                                   placeholder="{{ __('ابحث باسم المريض، رقم الهاتف، أو الرقم الطبي / الوطني...') }}"
                                                    autocomplete="off">
-                                            <button type="button" class="btn btn-outline-info" id="newPatientBtn" title="تسجيل مريض جديد غير مسجل">
-                                                <i class="fas fa-user-plus me-1"></i> مريض جديد
+                                            <button type="button" class="btn btn-outline-info" id="newPatientBtn" title="{{ __('تسجيل مريض جديد غير مسجل') }}">
+                                                <i class="fas fa-user-plus me-1"></i> {{ __('مريض جديد') }}
                                             </button>
                                         </div>
                                         <div id="patientSearchSpinner" class="position-absolute" style="left: 125px; top: 10px; display: none;">
@@ -87,7 +87,7 @@
                                         <!-- قائمة نتائج البحث المنبثقة -->
                                         <div id="patientSearchResults" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 280px; overflow-y: auto; display: none;"></div>
                                     </div>
-                                    <div class="form-text text-muted mt-1"><i class="fas fa-info-circle me-1"></i>اكتب حرفين أو أكثر للبحث السريع وعرض النتائج المطابقة فورياً.</div>
+                                    <div class="form-text text-muted mt-1"><i class="fas fa-info-circle me-1"></i>{{ __('اكتب حرفين أو أكثر للبحث السريع وعرض النتائج المطابقة فورياً.') }}</div>
                                 </div>
 
                                 <!-- بطاقة المريض المختار -->
@@ -100,19 +100,19 @@
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-primary" id="selectedPatientName">{{ $selectedPatient->user->name ?? '' }}</h6>
                                                 <div class="small text-muted d-flex flex-wrap gap-2 mt-1 align-items-center">
-                                                    <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? 'لا يوجد') }}</span></span>
+                                                    <span><i class="fas fa-phone-alt me-1 text-secondary"></i><span id="selectedPatientPhone">{{ $selectedPatient->user->phone ?? ($selectedPatient->phone ?? __('لا يوجد')) }}</span></span>
                                                     <span class="badge bg-secondary" id="selectedPatientIdBadge">#{{ $selectedPatient->id ?? '' }}</span>
                                                     @if(isset($selectedPatient) && $selectedPatient->national_id)
                                                         <span class="badge bg-info text-dark" id="selectedPatientRefBadge">{{ $selectedPatient->national_id }}</span>
                                                     @endif
                                                     <span class="badge bg-success-subtle text-success border border-success border-opacity-25" id="selectedPatientInsuranceBadge" style="{{ isset($selectedPatient) && ($selectedPatient->healthInsuranceCategory || ($selectedPatient->insurance_type && $selectedPatient->insurance_type !== 'none')) ? '' : 'display: none;' }}">
-                                                        <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">{{ $selectedPatient->healthInsuranceCategory->name ?? 'مشمول بالضمان الصحي' }}</span>
+                                                        <i class="fas fa-shield-alt me-1"></i><span id="selectedPatientInsuranceText">{{ $selectedPatient->healthInsuranceCategory->name ?? __('مشمول بالضمان الصحي') }}</span>
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                         <button type="button" class="btn btn-outline-danger btn-sm" id="clearSelectedPatientBtn">
-                                            <i class="fas fa-times me-1"></i> تغيير المريض
+                                            <i class="fas fa-times me-1"></i> {{ __('تغيير المريض') }}
                                         </button>
                                     </div>
                                 </div>
@@ -128,23 +128,23 @@
                                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <div>
                                             <h6 class="fw-bold text-success mb-1">
-                                                <i class="fas fa-shield-alt me-1"></i> مظلة الضمان الصحي للمريض: <span id="selectedPatientInsuranceCategoryText">{{ $selectedPatient->healthInsuranceCategory->name ?? ($selectedPatient && $selectedPatient->insurance_type !== 'none' ? 'مشمول بالضمان الصحي' : '') }}</span>
+                                                <i class="fas fa-shield-alt me-1"></i> {{ __('مظلة الضمان الصحي للمريض:') }} <span id="selectedPatientInsuranceCategoryText">{{ $selectedPatient->healthInsuranceCategory->name ?? ($selectedPatient && $selectedPatient->insurance_type !== 'none' ? __('مشمول بالضمان الصحي') : '') }}</span>
                                             </h6>
                                             <p class="small text-muted mb-0">
-                                                حدد ما إذا كانت هذه الحالة الطارئة والخدمات المقدمة سيتم احتسابها على ذمة الضمان الصحي أم حساب كاش مباشر للمريض.
+                                                {{ __('حدد ما إذا كانت هذه الحالة الطارئة والخدمات المقدمة سيتم احتسابها على ذمة الضمان الصحي أم حساب كاش مباشر للمريض.') }}
                                             </p>
                                         </div>
                                         <div class="d-flex align-items-center gap-3 bg-white p-2 rounded-3 border shadow-xs">
                                             <div class="form-check mb-0">
                                                 <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_yes" value="1" {{ old('apply_insurance') === '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-success cursor-pointer" for="apply_insurance_yes">
-                                                    🛡️ حجز تحت مظلة الضمان
+                                                    🛡️ {{ __('حجز تحت مظلة الضمان') }}
                                                 </label>
                                             </div>
                                             <div class="form-check mb-0">
                                                 <input class="form-check-input" type="radio" name="apply_insurance" id="apply_insurance_no" value="0" {{ old('apply_insurance', '0') == '0' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-secondary cursor-pointer" for="apply_insurance_no">
-                                                    💵 حجز كاش عادي (بدون ضمان)
+                                                    💵 {{ __('حجز كاش عادي (بدون ضمان)') }}
                                                 </label>
                                             </div>
                                         </div>
@@ -156,56 +156,56 @@
                             <div class="col-md-12 mb-3" id="newPatientFields" style="{{ old('new_patient_name') ? '' : 'display: none;' }}">
                                 <div class="card border-info p-3">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0 text-info fw-bold"><i class="fas fa-user-plus me-1"></i>بيانات المريض الجديد غير المسجل</h6>
+                                        <h6 class="mb-0 text-info fw-bold"><i class="fas fa-user-plus me-1"></i>{{ __('بيانات المريض الجديد غير المسجل') }}</h6>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelNewPatientBtn">
-                                            <i class="fas fa-arrow-right me-1"></i> العودة لاختيار مريض مسجل
+                                            <i class="fas fa-arrow-right me-1"></i> {{ __('العودة لاختيار مريض مسجل') }}
                                         </button>
                                     </div>
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">الاسم الكامل *</label>
+                                            <label class="form-label">{{ __('الاسم الكامل *') }}</label>
                                             <input type="text" class="form-control @error('new_patient_name') is-invalid @enderror" name="new_patient_name" id="new_patient_name" value="{{ old('new_patient_name') }}">
                                             @error('new_patient_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">رقم الهاتف</label>
+                                            <label class="form-label">{{ __('رقم الهاتف') }}</label>
                                             <input type="text" class="form-control @error('new_patient_phone') is-invalid @enderror" name="new_patient_phone" id="new_patient_phone" value="{{ old('new_patient_phone') }}">
                                             @error('new_patient_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">الجنس</label>
+                                            <label class="form-label">{{ __('الجنس') }}</label>
                                             <select class="form-select @error('new_patient_gender') is-invalid @enderror" name="new_patient_gender" id="new_patient_gender">
-                                                <option value="" @selected(old('new_patient_gender')=='')>غير محدد</option>
-                                                <option value="male" @selected(old('new_patient_gender')=='male')>ذكر</option>
-                                                <option value="female" @selected(old('new_patient_gender')=='female')>أنثى</option>
+                                                <option value="" @selected(old('new_patient_gender')=='')>{{ __('غير محدد') }}</option>
+                                                <option value="male" @selected(old('new_patient_gender')=='male')>{{ __('ذكر') }}</option>
+                                                <option value="female" @selected(old('new_patient_gender')=='female')>{{ __('أنثى') }}</option>
                                             </select>
                                             @error('new_patient_gender')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
                                     </div>
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">تاريخ الميلاد</label>
+                                            <label class="form-label">{{ __('تاريخ الميلاد') }}</label>
                                             <input type="date" class="form-control @error('new_patient_dob') is-invalid @enderror" name="new_patient_dob" id="new_patient_dob" value="{{ old('new_patient_dob') }}">
                                             @error('new_patient_dob')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
+                        </div>
 
                         <div class="row">
                             <!-- الأولوية -->
                             <div class="col-md-6 mb-3">
-                                <label for="priority" class="form-label">الأولوية *</label>
+                                <label for="priority" class="form-label">{{ __('الأولوية *') }}</label>
                                 <select class="form-select @error('priority') is-invalid @enderror"
                                         id="priority"
                                         name="priority"
                                         required>
-                                    <option value="">اختر الأولوية</option>
-                                    <option value="critical" {{ old('priority') == 'critical' ? 'selected' : '' }}>حرجة</option>
-                                    <option value="urgent" {{ old('priority') == 'urgent' ? 'selected' : '' }}>عاجلة</option>
-                                    <option value="semi_urgent" {{ old('priority') == 'semi_urgent' ? 'selected' : '' }}>شبه عاجلة</option>
-                                    <option value="non_urgent" {{ old('priority') == 'non_urgent' ? 'selected' : '' }}>غير عاجلة</option>
+                                    <option value="">{{ __('اختر الأولوية') }}</option>
+                                    <option value="critical" {{ old('priority') == 'critical' ? 'selected' : '' }}>{{ __('حرجة') }}</option>
+                                    <option value="urgent" {{ old('priority') == 'urgent' ? 'selected' : '' }}>{{ __('عاجلة') }}</option>
+                                    <option value="semi_urgent" {{ old('priority') == 'semi_urgent' ? 'selected' : '' }}>{{ __('شبه عاجلة') }}</option>
+                                    <option value="non_urgent" {{ old('priority') == 'non_urgent' ? 'selected' : '' }}>{{ __('غير عاجلة') }}</option>
                                 </select>
                                 @error('priority')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -216,7 +216,7 @@
                             @if(isset($assignedDoctor) && $assignedDoctor)
                                 <input type="hidden" name="doctor_id" id="doctor_id" value="{{ $assignedDoctor->id }}">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">الطبيب المسؤول</label>
+                                    <label class="form-label fw-bold">{{ __('الطبيب المسؤول') }}</label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
                                         <input type="text" class="form-control bg-light text-primary fw-bold" 
@@ -226,14 +226,14 @@
                                 </div>
                             @else
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">الطبيب المسؤول <span class="text-danger">*</span></label>
+                                    <label class="form-label fw-bold">{{ __('الطبيب المسؤول') }} <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-white text-primary"><i class="fas fa-user-md"></i></span>
                                         <select class="form-select @error('doctor_id') is-invalid @enderror" name="doctor_id" id="doctor_id" required>
-                                            <option value="">اختر طبيب الطوارئ المسؤول...</option>
+                                            <option value="">{{ __('اختر طبيب الطوارئ المسؤول...') }}</option>
                                             @foreach($doctors as $doc)
                                                 <option value="{{ $doc->id }}" {{ (old('doctor_id') == $doc->id || $doc->id == 244) ? 'selected' : '' }}>
-                                                    د. {{ $doc->user->name ?? $doc->name }} ({{ $doc->specialization }})
+                                                    {{ __('د.') }} {{ $doc->user->name ?? $doc->name }} ({{ __($doc->specialization) }})
                                                 </option>
                                             @endforeach
                                         </select>
@@ -247,13 +247,20 @@
                             <!-- طريقة الوصول والجهة المحولة لتقرير الطوارئ الرسمي -->
                             <div class="col-md-6 mb-3">
                                 <label for="arrival_mode" class="form-label fw-bold">
-                                    <i class="fas fa-ambulance text-danger me-1"></i> طريقة الوصول <span class="text-danger">*</span>
+                                    <i class="fas fa-ambulance text-danger me-1"></i> {{ __('طريقة الوصول') }} <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select @error('arrival_mode') is-invalid @enderror" id="arrival_mode" name="arrival_mode">
-                                    <option value="إسعاف المستشفى (الوصول)" {{ old('arrival_mode', 'إسعاف المستشفى (الوصول)') == 'إسعاف المستشفى (الوصول)' ? 'selected' : '' }}>🚑 إسعاف المستشفى (الوصول)</option>
-                                    <option value="وصول شخصي / مباشر" {{ old('arrival_mode') == 'وصول شخصي / مباشر' ? 'selected' : '' }}>🚶‍♂️ وصول شخصي / مباشر</option>
-                                    <option value="سيارة خاصة" {{ old('arrival_mode') == 'سيارة خاصة' ? 'selected' : '' }}>🚗 سيارة خاصة</option>
-                                    <option value="إسعاف خارجي / دفاع مدني" {{ old('arrival_mode') == 'إسعاف خارجي / دفاع مدني' ? 'selected' : '' }}>🚨 إسعاف خارجي / دفاع مدني</option>
+                                    @php
+                                        $arrivalModes = [
+                                            __('إسعاف المستشفى (الوصول)') => '🚑 ' . __('إسعاف المستشفى (الوصول)'),
+                                            __('وصول شخصي / مباشر') => '🚶‍♂️ ' . __('وصول شخصي / مباشر'),
+                                            __('سيارة خاصة') => '🚗 ' . __('سيارة خاصة'),
+                                            __('إسعاف خارجي / دفاع مدني') => '🚨 ' . __('إسعاف خارجي / دفاع مدني'),
+                                        ];
+                                    @endphp
+                                    @foreach($arrivalModes as $modeVal => $modeLabel)
+                                        <option value="{{ $modeVal }}" {{ old('arrival_mode', __('إسعاف المستشفى (الوصول)')) == $modeVal ? 'selected' : '' }}>{{ $modeLabel }}</option>
+                                    @endforeach
                                 </select>
                                 @error('arrival_mode')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -262,9 +269,9 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="referred_from" class="form-label fw-bold">
-                                    <i class="fas fa-hospital text-info me-1"></i> الجهة المحولة (إن وجدت)
+                                    <i class="fas fa-hospital text-info me-1"></i> {{ __('الجهة المحولة (إن وجدت)') }}
                                 </label>
-                                <input type="text" class="form-control @error('referred_from') is-invalid @enderror" id="referred_from" name="referred_from" value="{{ old('referred_from') }}" placeholder="مثال: عيادة خارجية، مستشفى آخر، أو اتركها فارغة...">
+                                <input type="text" class="form-control @error('referred_from') is-invalid @enderror" id="referred_from" name="referred_from" value="{{ old('referred_from') }}" placeholder="{{ __('مثال: عيادة خارجية، مستشفى آخر، أو اتركها فارغة...') }}">
                                 @error('referred_from')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -273,13 +280,13 @@
 
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
-                            <strong>ملاحظة:</strong> يمكنك إضافة العلامات الحيوية بعد إنشاء الحالة من صفحة التفاصيل
+                            <strong>{{ __('ملاحظة:') }}</strong> {{ __('يمكنك إضافة العلامات الحيوية بعد إنشاء الحالة من صفحة التفاصيل') }}
                         </div>
 
                         <div class="d-flex justify-content-end">
-                            <a href="{{ route('emergency.index') }}" class="btn btn-secondary me-2">إلغاء</a>
+                            <a href="{{ route('emergency.index') }}" class="btn btn-secondary me-2">{{ __('إلغاء') }}</a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>حفظ حالة الطوارئ
+                                <i class="fas fa-save me-2"></i>{{ __('حفظ حالة الطوارئ') }}
                             </button>
                         </div>
                     </form>
@@ -342,8 +349,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!Array.isArray(patients) || patients.length === 0) {
                         searchResults.innerHTML = `
                             <div class="list-group-item text-center text-muted py-3">
-                                <i class="fas fa-user-slash me-1"></i> لم يتم العثور على مريض مطابق. 
-                                <button type="button" class="btn btn-link btn-sm p-0 text-info fw-bold" id="quickNewPatientBtn">تسجيله كمريض جديد؟</button>
+                                <i class="fas fa-user-slash me-1"></i> ${@json(__('لم يتم العثور على مريض مطابق.'))} 
+                                <button type="button" class="btn btn-link btn-sm p-0 text-info fw-bold" id="quickNewPatientBtn">${@json(__('تسجيله كمريض جديد؟'))}</button>
                             </div>
                         `;
                         searchResults.style.display = 'block';
@@ -370,11 +377,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <div class="fw-bold text-primary mb-1 d-flex align-items-center gap-2">
                                     <span><i class="fas fa-user-circle me-1"></i>${p.name}</span>
-                                    ${p.is_insurance ? `<span class="badge bg-success-subtle text-success border border-success border-opacity-25 py-0 px-1" style="font-size: 0.7rem;"><i class="fas fa-shield-alt me-1"></i>${p.insurance_name || 'ضمان صحي'}</span>` : ''}
+                                    ${p.is_insurance ? `<span class="badge bg-success-subtle text-success border border-success border-opacity-25 py-0 px-1" style="font-size: 0.7rem;"><i class="fas fa-shield-alt me-1"></i>${p.insurance_name || @json(__('ضمان صحي'))}</span>` : ''}
                                 </div>
                                 <div class="small text-muted">
                                     <i class="fas fa-phone-alt me-1 text-secondary"></i>${p.phone} 
-                                    ${p.age ? ` | <i class="fas fa-birthday-cake me-1 text-secondary"></i>${p.age} سنة (${p.gender})` : ''}
+                                    ${p.age ? ` | <i class="fas fa-birthday-cake me-1 text-secondary"></i>${p.age} ${@json(__('سنة'))} (${p.gender})` : ''}
                                 </div>
                             </div>
                             <div class="text-start">
@@ -441,9 +448,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const applyNo = document.getElementById('apply_insurance_no');
 
         if (patient.is_insurance) {
-            if (insText) insText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insText) insText.textContent = patient.insurance_name || @json(__('مشمول بالضمان الصحي'));
             if (insBadge) insBadge.style.display = 'inline-block';
-            if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || 'مشمول بالضمان الصحي';
+            if (insuranceCatText) insuranceCatText.textContent = patient.insurance_name || @json(__('مشمول بالضمان الصحي'));
             if (insuranceSection) insuranceSection.style.display = 'block';
             // الحجز المباشر في الطوارئ افتراضياً كاش، ويتاح للموظف تفعيل الضمان يدوياً إذا وُجدت موافقة
             if (applyNo) applyNo.checked = true;
@@ -538,14 +545,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const name = newPatientNameInput ? newPatientNameInput.value.trim() : '';
                 if (!name) {
                     e.preventDefault();
-                    alert('يرجى إدخال اسم المريض الجديد');
+                    alert(@json(__('يرجى إدخال اسم المريض الجديد')));
                     newPatientNameInput.focus();
                     return;
                 }
             } else {
                 if (!hiddenPatientId.value) {
                     e.preventDefault();
-                    alert('يرجى اختيار المريض من نتائج البحث أو تسجيل مريض جديد');
+                    alert(@json(__('يرجى اختيار المريض من نتائج البحث أو تسجيل مريض جديد')));
                     if (searchContainer.style.display === 'none') {
                         searchContainer.style.display = 'block';
                     }
