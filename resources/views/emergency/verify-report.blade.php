@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التحقق الرقمي من التقرير الطبي - مستشفى الكفاءات الأهلي</title>
+    <title>{{ __('التحقق الرقمي من التقرير الطبي - مستشفى الكفاءات الأهلي') }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,8 +20,8 @@
         }
 
         body {
-            direction: rtl;
-            text-align: right;
+            direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
+            text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
             background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
             min-height: 100vh;
             display: flex;
@@ -137,7 +137,7 @@
             color: #64748b;
             font-weight: 700;
             width: 38%;
-            border-left: 1px solid #e2e8f0;
+            border-{{ app()->getLocale() == 'ar' ? 'left' : 'right' }}: 1px solid #e2e8f0;
         }
         .data-table .val-col {
             color: #0f172a;
@@ -189,11 +189,11 @@
 <body>
 
 @php
-    $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد';
+    $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? __('غير محدد');
     $emergencyId = 'EMR-' . str_pad($emergency->id, 6, '0', STR_PAD_LEFT);
     $actualDoctor = $doctor ?? $emergency->doctor;
-    $doctorName = $actualDoctor?->user?->name ?? 'طبيب الطوارئ المناوب';
-    $doctorSpec = $actualDoctor?->specialization ?? 'طب الطوارئ والحالات الحرجة';
+    $doctorName = $actualDoctor?->user?->name ?? __('طبيب الطوارئ المناوب');
+    $doctorSpec = $actualDoctor?->specialization ? __($actualDoctor->specialization) : __('طب الطوارئ والحالات الحرجة');
     $signaturePath = $actualDoctor?->signature;
 @endphp
 
@@ -201,10 +201,10 @@
     <!-- Header -->
     <div class="verify-header">
         <div class="hospital-logo">
-            <img src="{{ asset('images/1.jpg') }}" alt="شعار المستشفى">
+            <img src="{{ asset('images/1.jpg') }}" alt="{{ __('شعار المستشفى') }}">
         </div>
-        <h1>مستشفى الكفاءات الأهلي</h1>
-        <h2>بوابة التحقق الرقمي المعتمد من التقارير الطبية</h2>
+        <h1>{{ __('مستشفى الكفاءات الأهلي') }}</h1>
+        <h2>{{ __('بوابة التحقق الرقمي المعتمد من التقارير الطبية') }}</h2>
     </div>
 
     <!-- Status Banner -->
@@ -213,8 +213,8 @@
             <i class="fas fa-check"></i>
         </div>
         <div class="status-text">
-            <h3>وثيقة رسمية معتمدة وموثقة</h3>
-            <p>التقرير الطبي مسجل وصادر رسمياً من قسم الطوارئ بالنظام الإلكتروني للمستشفى.</p>
+            <h3>{{ __('وثيقة رسمية معتمدة وموثقة') }}</h3>
+            <p>{{ __('التقرير الطبي مسجل وصادر رسمياً من قسم الطوارئ بالنظام الإلكتروني للمستشفى.') }}</p>
         </div>
     </div>
 
@@ -222,62 +222,62 @@
     <div class="verify-body">
         <table class="data-table">
             <tr>
-                <td class="label-col"><i class="fas fa-hashtag text-primary me-1"></i> رقم التقرير</td>
+                <td class="label-col"><i class="fas fa-hashtag text-primary me-1"></i> {{ __('رقم التقرير') }}</td>
                 <td class="val-col"><strong style="color: #0f766e;">{{ $emergencyId }}</strong></td>
             </tr>
             <tr>
-                <td class="label-col"><i class="fas fa-user text-secondary me-1"></i> اسم المريض</td>
+                <td class="label-col"><i class="fas fa-user text-secondary me-1"></i> {{ __('اسم المريض') }}</td>
                 <td class="val-col" style="font-size: 14px; color: #0f172a;">{{ $patientName }}</td>
             </tr>
             <tr>
-                <td class="label-col"><i class="fas fa-calendar-alt text-info me-1"></i> تاريخ وتوقيت الدخول</td>
+                <td class="label-col"><i class="fas fa-calendar-alt text-info me-1"></i> {{ __('تاريخ وتوقيت الدخول') }}</td>
                 <td class="val-col">{{ $emergency->created_at->format('Y-m-d H:i') }}</td>
             </tr>
             <tr>
-                <td class="label-col"><i class="fas fa-heartbeat text-danger me-1"></i> الفرز ودرجة الخطورة</td>
+                <td class="label-col"><i class="fas fa-heartbeat text-danger me-1"></i> {{ __('الفرز ودرجة الخطورة') }}</td>
                 <td class="val-col">
                     @if($emergency->priority === 'critical')
-                        <span style="color: #b91c1c; font-weight: 800;">حالة حرجة (Critical)</span>
+                        <span style="color: #b91c1c; font-weight: 800;">{{ __('حالة حرجة (Critical)') }}</span>
                     @elseif($emergency->priority === 'urgent')
-                        <span style="color: #b45309; font-weight: 800;">حالة عاجلة (Urgent)</span>
+                        <span style="color: #b45309; font-weight: 800;">{{ __('حالة عاجلة (Urgent)') }}</span>
                     @elseif($emergency->priority === 'semi_urgent')
-                        <span style="color: #0369a1; font-weight: 800;">شبه عاجلة (Semi-urgent)</span>
+                        <span style="color: #0369a1; font-weight: 800;">{{ __('شبه عاجلة (Semi-urgent)') }}</span>
                     @else
-                        <span style="color: #15803d; font-weight: 800;">غير عاجلة (Non-urgent)</span>
+                        <span style="color: #15803d; font-weight: 800;">{{ __('غير عاجلة (Non-urgent)') }}</span>
                     @endif
                 </td>
             </tr>
             <tr>
-                <td class="label-col"><i class="fas fa-stethoscope text-primary me-1"></i> التشخيص السريري</td>
-                <td class="val-col">{{ $emergency->diagnosis ?: ($emergency->initial_assessment ?: 'تمت المعاينة والتقييم السريري') }}</td>
+                <td class="label-col"><i class="fas fa-stethoscope text-primary me-1"></i> {{ __('التشخيص السريري') }}</td>
+                <td class="val-col">{{ $emergency->diagnosis ?: ($emergency->initial_assessment ?: __('تمت المعاينة والتقييم السريري')) }}</td>
             </tr>
             <tr>
-                <td class="label-col"><i class="fas fa-door-open text-success me-1"></i> حالة الخروج</td>
+                <td class="label-col"><i class="fas fa-door-open text-success me-1"></i> {{ __('حالة الخروج') }}</td>
                 <td class="val-col">
                     @if($emergency->discharge_type === 'recovered')
-                        <span style="color: #15803d; font-weight: 800;">خروج بعد الاستقرار والتعافي</span>
+                        <span style="color: #15803d; font-weight: 800;">{{ __('خروج بعد الاستقرار والتعافي') }}</span>
                     @elseif($emergency->discharge_type === 'against_medical_advice')
-                        <span style="color: #b45309; font-weight: 800;">خروج على مسؤولية المريض</span>
+                        <span style="color: #b45309; font-weight: 800;">{{ __('خروج على مسؤولية المريض') }}</span>
                     @elseif($emergency->discharge_type === 'transferred_to_consultation')
-                        <span style="color: #0369a1; font-weight: 800;">تحويل للعيادات الاستشارية</span>
+                        <span style="color: #0369a1; font-weight: 800;">{{ __('تحويل للعيادات الاستشارية') }}</span>
                     @elseif($emergency->discharge_type === 'deceased')
-                        <span style="color: #1e293b; font-weight: 800;">خرج متوفي</span>
+                        <span style="color: #1e293b; font-weight: 800;">{{ __('خرج متوفي') }}</span>
                         @if($emergency->discharge_notes)
                             <div style="font-size: 0.82rem; color: #b91c1c; font-weight: 700; margin-top: 3px;">
-                                سبب الوفاة: {{ $emergency->discharge_notes }}
+                                {{ __('سبب الوفاة:') }} {{ $emergency->discharge_notes }}
                             </div>
                         @endif
                         @if($emergency->discharge_time)
                             <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
-                                وقت الوفاة: {{ $emergency->discharge_time->format('Y-m-d H:i') }} | الجهة: {{ $emergency->discharge_destination ?? 'ذوي المتوفي' }}
+                                {{ __('وقت الوفاة:') }} {{ $emergency->discharge_time->format('Y-m-d H:i') }} | {{ __('الجهة:') }} {{ $emergency->discharge_destination ? __($emergency->discharge_destination) : __('ذوي المتوفي') }}
                             </div>
                         @endif
                     @elseif($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery')
-                        <span style="color: #b91c1c; font-weight: 800;">تحويل لصالة العمليات</span>
+                        <span style="color: #b91c1c; font-weight: 800;">{{ __('تحويل لصالة العمليات') }}</span>
                     @elseif($emergency->requires_admission || $emergency->status === 'transferred_to_admission')
-                        <span style="color: #0369a1; font-weight: 800;">تحويل إلى الرقود</span>
+                        <span style="color: #0369a1; font-weight: 800;">{{ __('تحويل إلى الرقود') }}</span>
                     @else
-                        <span>مستمر بالرعاية الطارئة</span>
+                        <span>{{ __('مستمر بالرعاية الطارئة') }}</span>
                     @endif
                 </td>
             </tr>
@@ -285,7 +285,7 @@
 
         <!-- Attending Doctor Box -->
         <div class="doctor-box">
-            <h4>الطبيب المعالج المعتمد: {{ $doctorName }}</h4>
+            <h4>{{ __('الطبيب المعالج المعتمد:') }} {{ $doctorName }}</h4>
             <p>{{ $doctorSpec }}</p>
             @php
                 $verifySigSrc = null;
@@ -294,10 +294,10 @@
                 }
             @endphp
             @if($verifySigSrc)
-                <img src="{{ $verifySigSrc }}" class="sig-img" alt="توقيع الطبيب">
+                <img src="{{ $verifySigSrc }}" class="sig-img" alt="{{ __('توقيع الطبيب') }}">
             @else
                 <div style="font-size: 12px; color: #64748b; margin-top: 8px; font-weight: 600;">
-                    (توقيع معتمد يدوياً)
+                    {{ __('(توقيع معتمد يدوياً)') }}
                 </div>
             @endif
         </div>
@@ -305,9 +305,9 @@
 
     <!-- Footer -->
     <div class="verify-footer">
-        <div>مستشفى الكفاءات الأهلي — نظام الأرشفة والتوثيق الطبي الإلكتروني الموحد</div>
+        <div>{{ __('مستشفى الكفاءات الأهلي — نظام الأرشفة والتوثيق الطبي الإلكتروني الموحد') }}</div>
         <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">
-            تاريخ التحقق الفوري: {{ now()->format('Y-m-d H:i:s') }} | رقم التحقق الرقمي: {{ md5($emergency->id . '-' . $emergency->created_at) }}
+            {{ __('تاريخ التحقق الفوري:') }} {{ now()->format('Y-m-d H:i:s') }} | {{ __('رقم التحقق الرقمي:') }} {{ md5($emergency->id . '-' . $emergency->created_at) }}
         </div>
     </div>
 </div>

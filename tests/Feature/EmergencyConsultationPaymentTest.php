@@ -288,4 +288,110 @@ class EmergencyConsultationPaymentTest extends TestCase
         $payment->refresh();
         $this->assertEquals(40000, (float) $payment->total_amount);
     }
+
+    public function test_emergency_cashier_can_postpone_and_cancel_items_and_override_prices()
+    {
+        $service1 = \App\Models\EmergencyService::create([
+            'name' => 'تضميد جرح',
+            'code' => 'EM-WOUND',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $service2 = \App\Models\EmergencyService::create([
+            'name' => 'جبيرة يد',
+            'code' => 'EM-CAST',
+            'price' => 25000,
+            'is_active' => true,
+        ]);
+
+        $emergency = Emergency::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'emergency_type' => 'medical',
+            'symptoms' => 'ألم حاد',
+            'status' => 'admitted',
+            'priority' => 'yellow',
+            'arrival_mode' => 'walking',
+            'admission_time' => now(),
+            'payment_status' => 'pending',
+            'is_insured' => false,
+            'insurance_type' => 'none',
+        ]);
+
+        $emergency->services()->attach($service1->id, ['quantity' => 1]);
+        $emergency->services()->attach($service2->id, ['quantity' => 1]);
+
+        $appointment = Appointment::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'department_id' => $this->consultantDoctor->department_id,
+            'emergency_id' => $emergency->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => now()->format('H:i'),
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'consultation_fee' => 30000,
+            'appointment_type' => 'emergency',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $payment = app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($emergency);
+
+        // Submit with:
+        // service 1: postpone
+        // service 2: cancel
+        // appointment: pay with custom price 45000
+        $response = $this->actingAs($this->admin)->post(route('cashier.emergency.payment.process', $payment), [
+            'payment_method' => 'cash',
+            'amount' => 45000,
+            'item_actions' => [
+                'service_'.$service1->id => 'postpone',
+                'service_'.$service2->id => 'cancel',
+                'appointment_'.$appointment->id => 'pay',
+            ],
+            'item_custom_prices' => [
+                'service_'.$service1->id => 15000,
+                'service_'.$service2->id => 25000,
+                'appointment_'.$appointment->id => 45000,
+            ],
+            'notes' => 'تسديد مخصص وتأجيل وإلغاء',
+        ]);
+
+        $response->assertRedirect(route('cashier.receipt', $payment));
+
+        // 1. Service 2 must be deleted from pivot
+        $this->assertDatabaseMissing('emergency_emergency_service', [
+            'emergency_id' => $emergency->id,
+            'emergency_service_id' => $service2->id,
+        ]);
+
+        // 2. Service 1 must be postponed (payment_id null or new payment)
+        $this->assertDatabaseHas('emergency_emergency_service', [
+            'emergency_id' => $emergency->id,
+            'emergency_service_id' => $service1->id,
+        ]);
+
+        // 3. Appointment paid with custom price 45,000
+        $appointment->refresh();
+        $this->assertEquals('paid', $appointment->payment_status);
+        $this->assertEquals(45000, (float) $appointment->consultation_fee);
+        $payment = $payment->fresh();
+        $this->assertEquals($payment->id, $appointment->payment_id);
+
+        // 4. Payment must have amount 45,000
+        $this->assertEquals(45000, (float) $payment->amount);
+        $this->assertNotNull($payment->paid_at);
+
+        // 5. Emergency has remaining postponed service, so payment_status must still be pending
+        $emergency->refresh();
+        $this->assertEquals('pending', $emergency->payment_status);
+
+        // 6. A fresh pending payment exists for the postponed service 1
+        $pendingPayment = Payment::where('emergency_id', $emergency->id)
+            ->whereNull('paid_at')
+            ->first();
+        $this->assertNotNull($pendingPayment);
+        $this->assertEquals(15000, (float) $pendingPayment->amount);
+    }
 }

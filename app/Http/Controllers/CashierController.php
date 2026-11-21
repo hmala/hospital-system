@@ -4779,7 +4779,11 @@ class CashierController extends Controller
             }
         }
 
-        // التحقق من عدم وجود استشارات طبية معلقة غير مسعرة للطبيب
+        $itemActions = (array) $request->input('item_actions', []);
+        $itemCustomPrices = (array) $request->input('item_custom_prices', []);
+        $itemReasons = (array) $request->input('item_reasons', []);
+
+        // التحقق من عدم وجود استشارات طبية معلقة غير مسعرة للطبيب حصراً للبنود المشمولة بالتسديد
         if ($payment->emergency) {
             $unpricedConsultations = $payment->emergency->appointments()
                 ->where('payment_status', 'pending')
@@ -4790,10 +4794,20 @@ class CashierController extends Controller
                 ->with('doctor.user')
                 ->get();
 
-            if ($unpricedConsultations->isNotEmpty()) {
-                $docNames = $unpricedConsultations->map(fn ($a) => $a->doctor?->user?->name ?? 'طبيب غير محدد')->implode('، ');
+            $unpricedToPay = $unpricedConsultations->filter(function ($a) use ($itemActions, $itemCustomPrices) {
+                $action = $itemActions['appointment_'.$a->id] ?? 'pay';
+                if ($action !== 'pay') {
+                    return false;
+                }
+                $customPrice = isset($itemCustomPrices['appointment_'.$a->id]) ? (float) $itemCustomPrices['appointment_'.$a->id] : 0;
 
-                return redirect()->back()->with('error', "لا يمكن إتمام التسديد في الكاشير لوجود استشارة طبية غير مسعرة للطبيب ({$docNames}). يرجى تحديد «سعر الكشفية المباشرة» في ملف الطبيب أولاً قبل التسديد.");
+                return $customPrice <= 0;
+            });
+
+            if ($unpricedToPay->isNotEmpty()) {
+                $docNames = $unpricedToPay->map(fn ($a) => $a->doctor?->user?->name ?? 'طبيب غير محدد')->implode('، ');
+
+                return redirect()->back()->with('error', "لا يمكن إتمام التسديد في الكاشير لوجود استشارة طبية غير مسعرة للطبيب ({$docNames}). يرجى تحديد «سعر الكشفية المباشرة» في ملف الطبيب أو إدخال السعر في جدول الفاتورة أولاً.");
             }
         }
 
@@ -4817,24 +4831,359 @@ class CashierController extends Controller
 
             $cardNo = $request->input('insurance_card_no', $payment->insurance_card_no ?? $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? null);
 
-            $patientPaidAmount = (float) $request->amount;
-            $totalApproved = ($payment->total_amount && $payment->total_amount > 0) ? (float) $payment->total_amount : $patientPaidAmount;
+            $hasPaidItems = false;
+            $paidTotalApproved = 0.0;
+            $paidPatientShare = 0.0;
+            $paidInsuranceShare = 0.0;
 
-            if ($insuranceType !== 'none') {
-                $patientShare = $patientPaidAmount;
-                $insuranceShare = max(0, $totalApproved - $patientShare);
-            } else {
-                $patientShare = ($payment->patient_share && $payment->patient_share > 0) ? (float) $payment->patient_share : (($totalApproved > 0) ? $totalApproved : $patientPaidAmount);
-                $insuranceShare = 0;
+            // 1. معالجة خدمات الطوارئ
+            $unpaidServicePivots = \DB::table('emergency_emergency_service')
+                ->where('emergency_id', $payment->emergency_id)
+                ->where(function ($q) use ($payment) {
+                    $q->whereNull('payment_id')->orWhere('payment_id', $payment->id);
+                })
+                ->get();
+
+            $hasEmergencyAppointments = $payment->emergency->appointments->where('status', '!=', 'cancelled')->isNotEmpty();
+
+            foreach ($unpaidServicePivots as $pivotRow) {
+                $svc = \App\Models\EmergencyService::find($pivotRow->emergency_service_id);
+                if (! $svc) {
+                    continue;
+                }
+                // استبعاد خدمة الاستشارة العامة إذا كان هناك استشاري
+                if ($hasEmergencyAppointments && ($svc->id == 115 || str_contains($svc->name, 'استشارة'))) {
+                    continue;
+                }
+
+                $key = 'service_'.$svc->id;
+                $action = $itemActions[$key] ?? 'pay';
+                $qty = max(1, (int) ($pivotRow->quantity ?? 1));
+
+                if ($action === 'cancel') {
+                    \DB::table('emergency_emergency_service')->where('id', $pivotRow->id)->delete();
+                } elseif ($action === 'postpone') {
+                    \DB::table('emergency_emergency_service')->where('id', $pivotRow->id)->update(['payment_id' => null]);
+                } else {
+                    $hasPaidItems = true;
+                    \DB::table('emergency_emergency_service')->where('id', $pivotRow->id)->update(['payment_id' => $payment->id]);
+
+                    $pricing = $svc->calculateInsurancePricing($insuranceType, $copayPercentage);
+                    $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $pricing['approved_price'];
+                    $lineTotal = round($unitPrice * $qty, 2);
+
+                    if ($insuranceType !== 'none' && $pricing['is_covered']) {
+                        $linePatient = round($lineTotal * ($copayPercentage / 100.0), 2);
+                        $lineInsurance = max(0, $lineTotal - $linePatient);
+                    } else {
+                        $linePatient = $lineTotal;
+                        $lineInsurance = 0.0;
+                    }
+
+                    $paidTotalApproved += $lineTotal;
+                    $paidPatientShare += $linePatient;
+                    $paidInsuranceShare += $lineInsurance;
+                }
             }
-            $claimStatus = ($insuranceShare > 0) ? 'pending' : 'none';
 
+            // 2. معالجة طلبات المختبر
+            if ($payment->emergency && $payment->emergency->labRequests) {
+                $applicableLabRequests = $payment->emergency->labRequests->filter(function ($lr) use ($payment) {
+                    return is_null($lr->payment_id) || $lr->payment_id == $payment->id;
+                });
+
+                $labCopay = ($insuranceType === 'hi' && $patient) ? (float) $patient->getCopayPercentageFor('lab') : $copayPercentage;
+
+                foreach ($applicableLabRequests as $lr) {
+                    $tests = $lr->labTests;
+                    $reqHasPay = false;
+                    $reqAllCancel = true;
+
+                    foreach ($tests as $test) {
+                        $key = 'lab_'.$test->id;
+                        $action = $itemActions[$key] ?? 'pay';
+
+                        if ($action === 'pay') {
+                            $reqHasPay = true;
+                            $reqAllCancel = false;
+                            $hasPaidItems = true;
+
+                            $pricing = $test->calculateInsurancePricing($insuranceType, $labCopay);
+                            $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $pricing['approved_price'];
+
+                            if ($insuranceType !== 'none' && $pricing['is_covered']) {
+                                $linePatient = round($unitPrice * ($labCopay / 100.0), 2);
+                                $lineInsurance = max(0, $unitPrice - $linePatient);
+                            } else {
+                                $linePatient = $unitPrice;
+                                $lineInsurance = 0.0;
+                            }
+
+                            $paidTotalApproved += $unitPrice;
+                            $paidPatientShare += $linePatient;
+                            $paidInsuranceShare += $lineInsurance;
+                        } elseif ($action === 'postpone') {
+                            $reqAllCancel = false;
+                        }
+                    }
+
+                    if ($reqAllCancel) {
+                        $lr->update([
+                            'status' => 'cancelled',
+                            'payment_status' => 'cancelled',
+                            'payment_id' => null,
+                            'notes' => trim(($lr->notes ?? '').' (إلغاء عند الكاشير بطلب المريض)'),
+                        ]);
+                    } elseif ($reqHasPay) {
+                        $lr->update([
+                            'payment_status' => 'paid',
+                            'payment_id' => $payment->id,
+                        ]);
+                    } else {
+                        $lr->update([
+                            'payment_status' => 'pending',
+                            'payment_id' => null,
+                        ]);
+                    }
+                }
+            }
+
+            // 3. معالجة طلبات الأشعة
+            if ($payment->emergency && $payment->emergency->radiologyRequests) {
+                $applicableRadRequests = $payment->emergency->radiologyRequests->filter(function ($rr) use ($payment) {
+                    return is_null($rr->payment_id) || $rr->payment_id == $payment->id;
+                });
+
+                $radCopay = ($insuranceType === 'hi' && $patient) ? (float) $patient->getCopayPercentageFor('radiology') : $copayPercentage;
+
+                foreach ($applicableRadRequests as $rr) {
+                    $types = $rr->radiologyTypes;
+                    $reqHasPay = false;
+                    $reqAllCancel = true;
+
+                    foreach ($types as $rad) {
+                        $key = 'radiology_'.$rad->id;
+                        $action = $itemActions[$key] ?? 'pay';
+
+                        if ($action === 'pay') {
+                            $reqHasPay = true;
+                            $reqAllCancel = false;
+                            $hasPaidItems = true;
+
+                            $pricing = $rad->calculateInsurancePricing($insuranceType, $radCopay);
+                            $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $pricing['approved_price'];
+
+                            if ($insuranceType !== 'none' && $pricing['is_covered']) {
+                                $linePatient = round($unitPrice * ($radCopay / 100.0), 2);
+                                $lineInsurance = max(0, $unitPrice - $linePatient);
+                            } else {
+                                $linePatient = $unitPrice;
+                                $lineInsurance = 0.0;
+                            }
+
+                            $paidTotalApproved += $unitPrice;
+                            $paidPatientShare += $linePatient;
+                            $paidInsuranceShare += $lineInsurance;
+                        } elseif ($action === 'postpone') {
+                            $reqAllCancel = false;
+                        }
+                    }
+
+                    if ($reqAllCancel) {
+                        $rr->update([
+                            'status' => 'cancelled',
+                            'payment_status' => 'cancelled',
+                            'payment_id' => null,
+                            'notes' => trim(($rr->notes ?? '').' (إلغاء عند الكاشير بطلب المريض)'),
+                        ]);
+                    } elseif ($reqHasPay) {
+                        $rr->update([
+                            'payment_status' => 'paid',
+                            'payment_id' => $payment->id,
+                        ]);
+                    } else {
+                        $rr->update([
+                            'payment_status' => 'pending',
+                            'payment_id' => null,
+                        ]);
+                    }
+                }
+            }
+
+            // 4. معالجة استشارات الأطباء
+            $emergencyAppointments = $payment->emergency->appointments()
+                ->where('payment_status', 'pending')
+                ->where('status', '!=', 'cancelled')
+                ->get();
+
+            foreach ($emergencyAppointments as $appointment) {
+                $key = 'appointment_'.$appointment->id;
+                $action = $itemActions[$key] ?? 'pay';
+
+                if ($action === 'cancel') {
+                    $appointment->update([
+                        'status' => 'cancelled',
+                        'payment_status' => 'cancelled',
+                        'payment_id' => null,
+                        'notes' => trim(($appointment->notes ?? '').' (إلغاء الاستشارة عند الكاشير بطلب المريض)'),
+                    ]);
+                } elseif ($action === 'postpone') {
+                    $appointment->update([
+                        'payment_status' => 'pending',
+                        'payment_id' => null,
+                    ]);
+                } else {
+                    $hasPaidItems = true;
+                    $fee = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) ($appointment->consultation_fee ?? 0);
+                    if ($fee <= 0 && $appointment->doctor && (float) $appointment->doctor->direct_consultation_fee > 0) {
+                        $fee = (float) $appointment->doctor->direct_consultation_fee;
+                    }
+
+                    $appointment->update([
+                        'consultation_fee' => $fee,
+                        'payment_status' => 'paid',
+                        'payment_id' => $payment->id,
+                    ]);
+
+                    $paidTotalApproved += $fee;
+                    $paidPatientShare += $fee; // الاستشارات خارج الضمان 100% نقداً على المريض
+
+                    if ($appointment->doctor_id) {
+                        $doctorShare = $fee;
+                        $hospitalShare = 0.0;
+                        $percentage = 100.0;
+
+                        \App\Models\ConsultationRevenue::updateOrCreate(
+                            [
+                                'appointment_id' => $appointment->id,
+                            ],
+                            [
+                                'payment_id' => $payment->id,
+                                'receipt_number' => $payment->receipt_number ?: Payment::generateReceiptNumber(),
+                                'payment_method' => $request->payment_method ?? 'cash',
+                                'payment_type' => 'emergency_consultation',
+                                'cashier_id' => $user->id,
+                                'patient_id' => $appointment->patient_id,
+                                'doctor_id' => $appointment->doctor_id,
+                                'department_id' => $appointment->department_id,
+                                'service_type_id' => null,
+                                'examination_count' => 1,
+                                'total_amount' => $fee,
+                                'doctor_share' => $doctorShare,
+                                'hospital_share' => $hospitalShare,
+                                'doctor_percentage' => $percentage,
+                                'movement_type' => 'payment',
+                                'revenue_date' => now()->toDateString(),
+                                'paid_at' => now(),
+                                'notes' => 'استشارة طوارئ لحالة #'.$payment->emergency_id.($appointment->reason ? ' ('.$appointment->reason.')' : ''),
+                                'transaction_reference' => $payment->receipt_number,
+                            ]
+                        );
+
+                        \App\Models\DoctorDue::updateOrCreate(
+                            [
+                                'doctor_id' => $appointment->doctor_id,
+                                'payment_id' => $payment->id,
+                            ],
+                            [
+                                'amount' => $doctorShare,
+                                'status' => 'pending',
+                                'notes' => 'مستحقات استشارة طوارئ لحالة #'.$payment->emergency_id.' (إيصال '.$payment->receipt_number.')',
+                            ]
+                        );
+
+                        $doctorAccount = \App\Models\DoctorFinancialAccount::firstOrCreate(
+                            ['doctor_id' => $appointment->doctor_id],
+                            ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
+                        );
+                        $totalEarned = (float) \App\Models\DoctorDue::where('doctor_id', $appointment->doctor_id)->sum('amount');
+                        $totalPaid = (float) ($doctorAccount->total_paid ?? 0);
+                        $doctorAccount->total_earned = $totalEarned;
+                        $doctorAccount->balance = round($totalEarned - $totalPaid, 2);
+                        $doctorAccount->last_paid_at = now();
+                        $doctorAccount->save();
+                    }
+                }
+            }
+
+            // 5. معالجة رسوم المتابعة
+            if ($payment->emergency && $payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
+                $key = 'follow_up_'.$payment->emergency->id;
+                $action = $itemActions[$key] ?? 'pay';
+
+                if ($action === 'cancel') {
+                    $payment->emergency->update([
+                        'doctor_follow_up_fee' => 0,
+                        'follow_up_payment_id' => null,
+                    ]);
+                } elseif ($action === 'postpone') {
+                    $payment->emergency->update([
+                        'follow_up_payment_id' => null,
+                    ]);
+                } else {
+                    $hasPaidItems = true;
+                    $fFee = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $payment->emergency->doctor_follow_up_fee;
+                    $payment->emergency->update([
+                        'doctor_follow_up_fee' => $fFee,
+                        'follow_up_payment_id' => $payment->id,
+                    ]);
+
+                    $fPatient = ($insuranceType !== 'none') ? round($fFee * ($copayPercentage / 100.0), 2) : $fFee;
+                    $fIns = round($fFee - $fPatient, 2);
+
+                    $paidTotalApproved += $fFee;
+                    $paidPatientShare += $fPatient;
+                    $paidInsuranceShare += $fIns;
+                }
+            }
+
+            // فحص حالة عدم تسديد أي بند (تأجيل أو إلغاء كامل)
+            if (! $hasPaidItems) {
+                $payment->delete();
+
+                $hasPendingServices = \DB::table('emergency_emergency_service')
+                    ->where('emergency_id', $payment->emergency_id)
+                    ->whereNull('payment_id')
+                    ->exists();
+                $hasPendingLabs = \DB::table('emergency_lab_requests')
+                    ->where('emergency_id', $payment->emergency_id)
+                    ->where('status', '!=', 'cancelled')
+                    ->whereNull('payment_id')
+                    ->exists();
+                $hasPendingRad = \DB::table('emergency_radiology_requests')
+                    ->where('emergency_id', $payment->emergency_id)
+                    ->where('status', '!=', 'cancelled')
+                    ->whereNull('payment_id')
+                    ->exists();
+                $hasPendingAppts = $payment->emergency->appointments()
+                    ->where('payment_status', 'pending')
+                    ->where('status', '!=', 'cancelled')
+                    ->exists();
+
+                $emergencyPaymentStatus = ($hasPendingServices || $hasPendingLabs || $hasPendingRad || $hasPendingAppts || ($payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id))
+                    ? 'pending'
+                    : 'paid';
+
+                $payment->emergency->update([
+                    'payment_status' => $emergencyPaymentStatus,
+                ]);
+
+                if ($emergencyPaymentStatus === 'pending') {
+                    app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($payment->emergency);
+                }
+
+                DB::commit();
+
+                return redirect()->route('cashier.index')
+                    ->with('success', 'تم حفظ إجراءات تأجيل وإلغاء خدمات الطوارئ بنجاح دون تحصيل مالي.');
+            }
+
+            // في حال وجود بنود مسددة، حساب الخصم المالي للبنود المسددة فقط
             $discountPercentage = 0.00;
             $discountAmount = 0.00;
             $discountReason = null;
             $discountBy = null;
 
-            // الخصم مسموح حصراً للمرضى النقديين (خارج الضمان تماماً)
             if ($insuranceType === 'none') {
                 $discountScope = $request->input('discount_scope', 'overall');
 
@@ -4843,23 +5192,20 @@ class CashierController extends Controller
                     $totalItemDiscounts = 0.0;
                     $itemSummaries = [];
 
-                    // 1. خدمات الطوارئ
-                    $unpaidServiceIds = \DB::table('emergency_emergency_service')
-                        ->where('emergency_id', $payment->emergency_id)
-                        ->where(function ($q) use ($payment) {
-                            $q->whereNull('payment_id')->orWhere('payment_id', $payment->id);
-                        })
-                        ->pluck('emergency_service_id');
-
-                    if ($payment->emergency && $payment->emergency->services) {
-                        foreach ($payment->emergency->services->whereIn('id', $unpaidServiceIds) as $svc) {
-                            $key = 'service_'.$svc->id;
+                    // 1. خدمات الطوارئ المسددة
+                    foreach ($unpaidServicePivots as $pivotRow) {
+                        $svc = \App\Models\EmergencyService::find($pivotRow->emergency_service_id);
+                        if (! $svc) {
+                            continue;
+                        }
+                        $key = 'service_'.$svc->id;
+                        if (($itemActions[$key] ?? 'pay') === 'pay') {
                             $discPct = (float) ($itemDiscounts[$key] ?? 0);
                             if ($discPct > 0) {
                                 $discPct = min(100, max(0, $discPct));
-                                $qty = max(1, (int) ($svc->pivot->quantity ?? 1));
-                                $pricing = $svc->calculateInsurancePricing('none', 100);
-                                $basePrice = (float) $pricing['patient_share'] * $qty;
+                                $qty = max(1, (int) ($pivotRow->quantity ?? 1));
+                                $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $svc->price;
+                                $basePrice = $unitPrice * $qty;
                                 $disVal = round($basePrice * ($discPct / 100.0), 2);
                                 $totalItemDiscounts += $disVal;
                                 $itemSummaries[] = "{$svc->name} (خصم {$discPct}%)";
@@ -4867,82 +5213,62 @@ class CashierController extends Controller
                         }
                     }
 
-                    // 2. طلبات التحاليل
+                    // 2. تحاليل المختبر المسددة
                     if ($payment->emergency && $payment->emergency->labRequests) {
-                        $applicableLabRequests = $payment->emergency->labRequests->filter(function ($lr) use ($payment) {
-                            return is_null($lr->payment_id) || $lr->payment_id == $payment->id;
-                        });
-                        foreach ($applicableLabRequests as $lr) {
+                        foreach ($payment->emergency->labRequests as $lr) {
                             foreach ($lr->labTests as $test) {
                                 $key = 'lab_'.$test->id;
-                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
-                                if ($discPct > 0) {
-                                    $discPct = min(100, max(0, $discPct));
-                                    $pricing = $test->calculateInsurancePricing('none', 100);
-                                    $basePrice = (float) $pricing['patient_share'];
-                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
-                                    $totalItemDiscounts += $disVal;
-                                    $itemSummaries[] = "{$test->name} (خصم {$discPct}%)";
+                                if (($itemActions[$key] ?? 'pay') === 'pay') {
+                                    $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                    if ($discPct > 0) {
+                                        $discPct = min(100, max(0, $discPct));
+                                        $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $test->getRegularPrice();
+                                        $disVal = round($unitPrice * ($discPct / 100.0), 2);
+                                        $totalItemDiscounts += $disVal;
+                                        $itemSummaries[] = "{$test->name} (خصم {$discPct}%)";
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // 3. طلبات الأشعة
+                    // 3. أشعة مسددة
                     if ($payment->emergency && $payment->emergency->radiologyRequests) {
-                        $applicableRadRequests = $payment->emergency->radiologyRequests->filter(function ($rr) use ($payment) {
-                            return is_null($rr->payment_id) || $rr->payment_id == $payment->id;
-                        });
-                        foreach ($applicableRadRequests as $rr) {
+                        foreach ($payment->emergency->radiologyRequests as $rr) {
                             foreach ($rr->radiologyTypes as $rad) {
                                 $key = 'radiology_'.$rad->id;
-                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
-                                if ($discPct > 0) {
-                                    $discPct = min(100, max(0, $discPct));
-                                    $pricing = $rad->calculateInsurancePricing('none', 100);
-                                    $basePrice = (float) $pricing['patient_share'];
-                                    $disVal = round($basePrice * ($discPct / 100.0), 2);
-                                    $totalItemDiscounts += $disVal;
-                                    $itemSummaries[] = "{$rad->name} (خصم {$discPct}%)";
+                                if (($itemActions[$key] ?? 'pay') === 'pay') {
+                                    $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                                    if ($discPct > 0) {
+                                        $discPct = min(100, max(0, $discPct));
+                                        $unitPrice = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) $rad->getRegularPrice();
+                                        $disVal = round($unitPrice * ($discPct / 100.0), 2);
+                                        $totalItemDiscounts += $disVal;
+                                        $itemSummaries[] = "{$rad->name} (خصم {$discPct}%)";
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // 4. استشارة الطبيب
-                    if ($payment->emergency && $payment->emergency->appointments) {
-                        foreach ($payment->emergency->appointments as $ap) {
-                            if ($ap->payment_status === 'pending' && $ap->status !== 'cancelled') {
-                                $key = 'appointment_'.$ap->id;
-                                $discPct = (float) ($itemDiscounts[$key] ?? 0);
-                                if ($discPct > 0) {
-                                    $discPct = min(100, max(0, $discPct));
-                                    $apFee = (float) ($ap->consultation_fee ?? 0);
-                                    $disVal = round($apFee * ($discPct / 100.0), 2);
-                                    $totalItemDiscounts += $disVal;
-                                    $itemSummaries[] = "استشارة طبية (خصم {$discPct}%)";
-                                }
+                    // 4. استشارة مسددة
+                    foreach ($emergencyAppointments as $ap) {
+                        $key = 'appointment_'.$ap->id;
+                        if (($itemActions[$key] ?? 'pay') === 'pay') {
+                            $discPct = (float) ($itemDiscounts[$key] ?? 0);
+                            if ($discPct > 0) {
+                                $discPct = min(100, max(0, $discPct));
+                                $fee = isset($itemCustomPrices[$key]) ? (float) $itemCustomPrices[$key] : (float) ($ap->consultation_fee ?? 0);
+                                $disVal = round($fee * ($discPct / 100.0), 2);
+                                $totalItemDiscounts += $disVal;
+                                $itemSummaries[] = "استشارة طبية (خصم {$discPct}%)";
                             }
-                        }
-                    }
-
-                    // 5. متابعة الطبيب
-                    if ($payment->emergency && $payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
-                        $key = 'follow_up_'.$payment->emergency->id;
-                        $discPct = (float) ($itemDiscounts[$key] ?? 0);
-                        if ($discPct > 0) {
-                            $discPct = min(100, max(0, $discPct));
-                            $fFee = (float) $payment->emergency->doctor_follow_up_fee;
-                            $disVal = round($fFee * ($discPct / 100.0), 2);
-                            $totalItemDiscounts += $disVal;
-                            $itemSummaries[] = "متابعة طبيب (خصم {$discPct}%)";
                         }
                     }
 
                     if ($totalItemDiscounts > 0) {
-                        $discountAmount = min($patientShare, round($totalItemDiscounts, 2));
-                        $discountPercentage = $patientShare > 0 ? round(($discountAmount / $patientShare) * 100, 2) : 0;
-                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountAmount = min($paidPatientShare, round($totalItemDiscounts, 2));
+                        $discountPercentage = $paidPatientShare > 0 ? round(($discountAmount / $paidPatientShare) * 100, 2) : 0;
                         $customReason = trim($request->input('discount_reason') ?: 'خصم تفصيلي للخدمات');
                         $discountReason = ! empty($itemSummaries) ? "{$customReason} [".implode('، ', $itemSummaries).']' : $customReason;
                         $discountBy = $user->id;
@@ -4951,21 +5277,23 @@ class CashierController extends Controller
                     $rawDiscountPerc = (float) $request->input('discount_percentage', 0);
                     if ($rawDiscountPerc > 0 && $rawDiscountPerc <= 100) {
                         $discountPercentage = $rawDiscountPerc;
-                        $discountAmount = round($patientShare * ($discountPercentage / 100.0), 2);
-                        $patientPaidAmount = max(0, $patientShare - $discountAmount);
+                        $discountAmount = round($paidPatientShare * ($discountPercentage / 100.0), 2);
                         $discountReason = trim($request->input('discount_reason') ?: 'خصم إدارة');
                         $discountBy = $user->id;
                     }
                 }
             }
 
-            // تحديث الدفعة
+            $patientPaidAmount = max(0, $paidPatientShare - $discountAmount);
+            $claimStatus = ($paidInsuranceShare > 0) ? 'pending' : 'none';
+
+            // تحديث سجل الدفعة
             $payment->update([
                 'payment_method' => $request->payment_method,
                 'amount' => $patientPaidAmount,
-                'total_amount' => $totalApproved,
-                'patient_share' => $patientShare,
-                'insurance_share' => $insuranceShare,
+                'total_amount' => $paidTotalApproved,
+                'patient_share' => $paidPatientShare,
+                'insurance_share' => $paidInsuranceShare,
                 'discount_percentage' => $discountPercentage,
                 'discount_amount' => $discountAmount,
                 'discount_reason' => $discountReason,
@@ -4980,134 +5308,39 @@ class CashierController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // تعيين payment_id في جميع الخدمات غير المدفوعة
-            // 1. الخدمات (emergency_emergency_service)
-            \DB::table('emergency_emergency_service')
-                ->where('emergency_id', $payment->emergency_id)
-                ->whereNull('payment_id')
-                ->update(['payment_id' => $payment->id]);
-
-            // 2. طلبات التحاليل
-            \DB::table('emergency_lab_requests')
-                ->where('emergency_id', $payment->emergency_id)
-                ->whereNull('payment_id')
-                ->update([
-                    'payment_id' => $payment->id,
-                    'payment_status' => 'paid',
-                ]);
-
-            // 3. طلبات الأشعة
-            \DB::table('emergency_radiology_requests')
-                ->where('emergency_id', $payment->emergency_id)
-                ->whereNull('payment_id')
-                ->update([
-                    'payment_id' => $payment->id,
-                    'payment_status' => 'paid',
-                ]);
-
-            // 4. رسوم المتابعة
-            if ($payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id) {
-                $payment->emergency->update([
-                    'follow_up_payment_id' => $payment->id,
-                ]);
-            }
-
-            // تحديث حالة الدفع في حالة الطوارئ
-            // تحقق إذا كانت جميع الخدمات مدفوعة
-            $hasUnpaidServices = \DB::table('emergency_emergency_service')
+            // التحقق مما إذا كانت هناك خدمات طوارئ متبقية غير مسددة
+            $hasRemainingServices = \DB::table('emergency_emergency_service')
                 ->where('emergency_id', $payment->emergency_id)
                 ->whereNull('payment_id')
                 ->exists();
-
-            $hasUnpaidLabs = \DB::table('emergency_lab_requests')
+            $hasRemainingLabs = \DB::table('emergency_lab_requests')
                 ->where('emergency_id', $payment->emergency_id)
+                ->where('status', '!=', 'cancelled')
                 ->whereNull('payment_id')
                 ->exists();
-
-            $hasUnpaidRadiology = \DB::table('emergency_radiology_requests')
+            $hasRemainingRad = \DB::table('emergency_radiology_requests')
                 ->where('emergency_id', $payment->emergency_id)
+                ->where('status', '!=', 'cancelled')
                 ->whereNull('payment_id')
                 ->exists();
+            $hasRemainingAppts = $payment->emergency->appointments()
+                ->where('payment_status', 'pending')
+                ->where('status', '!=', 'cancelled')
+                ->exists();
 
-            $paymentStatus = ($hasUnpaidServices || $hasUnpaidLabs || $hasUnpaidRadiology)
+            $finalPaymentStatus = ($hasRemainingServices || $hasRemainingLabs || $hasRemainingRad || $hasRemainingAppts || ($payment->emergency->doctor_follow_up_fee > 0 && ! $payment->emergency->follow_up_payment_id))
                 ? 'pending'
                 : 'paid';
 
             $payment->emergency->update([
-                'payment_status' => $paymentStatus,
+                'payment_status' => $finalPaymentStatus,
             ]);
 
-            // تحديث جميع المواعيد المرتبطة بحالة الطوارئ إلى مدفوعة واحتساب حصص الأطباء الاستشاريين
-            $emergencyAppointments = $payment->emergency->appointments()
-                ->where('payment_status', 'pending')
-                ->where('status', '!=', 'cancelled')
-                ->get();
-
-            foreach ($emergencyAppointments as $appointment) {
-                $appointment->update([
-                    'payment_status' => 'paid',
-                    'payment_id' => $payment->id,
-                ]);
-
-                if ($appointment->doctor_id) {
-                    $fee = (float) ($appointment->consultation_fee > 0 ? $appointment->consultation_fee : 0);
-                    // كشفية الاستشارة المباشرة في الطوارئ تعود بالكامل 100% للطبيب دون استقطاع المستشفى
-                    $doctorShare = $fee;
-                    $hospitalShare = 0.0;
-                    $percentage = 100.0;
-
-                    // قيد إيراد استشارية في ConsultationRevenue
-                    \App\Models\ConsultationRevenue::updateOrCreate(
-                        [
-                            'appointment_id' => $appointment->id,
-                        ],
-                        [
-                            'payment_id' => $payment->id,
-                            'receipt_number' => $payment->receipt_number,
-                            'payment_method' => $payment->payment_method ?? 'cash',
-                            'payment_type' => 'emergency_consultation',
-                            'cashier_id' => $user->id,
-                            'patient_id' => $appointment->patient_id,
-                            'doctor_id' => $appointment->doctor_id,
-                            'department_id' => $appointment->department_id,
-                            'service_type_id' => null,
-                            'examination_count' => 1,
-                            'total_amount' => $fee,
-                            'doctor_share' => $doctorShare,
-                            'hospital_share' => $hospitalShare,
-                            'doctor_percentage' => $percentage,
-                            'movement_type' => 'payment',
-                            'revenue_date' => ($payment->paid_at ?? now())->toDateString(),
-                            'paid_at' => $payment->paid_at ?? now(),
-                            'notes' => 'استشارة طوارئ لحالة #'.$payment->emergency_id.($appointment->reason ? ' ('.$appointment->reason.')' : ''),
-                            'transaction_reference' => $payment->receipt_number,
-                        ]
-                    );
-
-                    // قيد مستحقات الطبيب في DoctorDue
-                    \App\Models\DoctorDue::updateOrCreate(
-                        [
-                            'doctor_id' => $appointment->doctor_id,
-                            'payment_id' => $payment->id,
-                        ],
-                        [
-                            'amount' => $doctorShare,
-                            'status' => 'pending',
-                            'notes' => 'مستحقات استشارة طوارئ لحالة #'.$payment->emergency_id.' (إيصال '.$payment->receipt_number.')',
-                        ]
-                    );
-
-                    // مزامنة وتحديث رصيد حساب الطبيب
-                    $doctorAccount = \App\Models\DoctorFinancialAccount::firstOrCreate(
-                        ['doctor_id' => $appointment->doctor_id],
-                        ['balance' => 0, 'total_earned' => 0, 'total_paid' => 0]
-                    );
-                    $totalEarned = (float) \App\Models\DoctorDue::where('doctor_id', $appointment->doctor_id)->sum('amount');
-                    $totalPaid = (float) ($doctorAccount->total_paid ?? 0);
-                    $doctorAccount->total_earned = $totalEarned;
-                    $doctorAccount->balance = round($totalEarned - $totalPaid, 2);
-                    $doctorAccount->last_paid_at = $payment->paid_at ?? now();
-                    $doctorAccount->save();
+            // إذا بقيت خدمات مؤجلة، توليد إشعار دفع جديد للخدمات المتبقية
+            if ($finalPaymentStatus === 'pending') {
+                $emergencyFresh = $payment->emergency->fresh();
+                if ($emergencyFresh) {
+                    app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($emergencyFresh);
                 }
             }
 
