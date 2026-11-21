@@ -834,6 +834,92 @@
 
 @section('scripts')
 <script>
+window.formatNumber = function(num) {
+    return Math.round(num).toLocaleString('en-US') + ' ' + '{{ __('د.ع') }}';
+};
+
+window.handleItemActionChange = function(radioElem) {
+    const row = radioElem.closest('.emergency-item-row');
+    if (!row) return;
+    const itemKey = row.getAttribute('data-key');
+    const reasonBox = document.getElementById('reason_box_' + itemKey);
+    const nameLabel = row.querySelector('.item-name-label');
+
+    if (radioElem.value === 'cancel') {
+        row.classList.add('table-danger');
+        row.classList.remove('table-warning');
+        row.style.opacity = '0.7';
+        if (nameLabel) nameLabel.style.textDecoration = 'line-through';
+        if (reasonBox) {
+            reasonBox.classList.remove('d-none');
+            const select = reasonBox.querySelector('.item-reason-select');
+            if (select) select.value = 'patient_refused';
+        }
+    } else if (radioElem.value === 'postpone') {
+        row.classList.add('table-warning');
+        row.classList.remove('table-danger');
+        row.style.opacity = '0.75';
+        if (nameLabel) nameLabel.style.textDecoration = 'none';
+        if (reasonBox) {
+            reasonBox.classList.remove('d-none');
+            const select = reasonBox.querySelector('.item-reason-select');
+            if (select) select.value = 'time_constraint';
+        }
+    } else {
+        row.classList.remove('table-danger', 'table-warning');
+        row.style.opacity = '1';
+        if (nameLabel) nameLabel.style.textDecoration = 'none';
+        if (reasonBox) {
+            reasonBox.classList.add('d-none');
+        }
+    }
+
+    if (typeof window.recalculateEmergencyDiscount === 'function') {
+        window.recalculateEmergencyDiscount();
+    }
+};
+
+window.handleItemPriceChange = function(inputElem) {
+    const row = inputElem.closest('.emergency-item-row');
+    if (!row) return;
+    let newPrice = parseFloat(inputElem.value);
+    if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+    inputElem.value = newPrice;
+
+    const qty = parseInt(row.getAttribute('data-qty')) || 1;
+    const totalPrice = newPrice * qty;
+    const isCovered = row.getAttribute('data-is-covered') === '1';
+    const isInsurance = @json($isInsurance);
+    const copay = parseFloat(row.getAttribute('data-copay')) || 100;
+
+    let patShare = totalPrice;
+    let insShare = 0;
+
+    if (isCovered && isInsurance) {
+        patShare = Math.round(totalPrice * (copay / 100));
+        insShare = Math.max(0, totalPrice - patShare);
+    }
+
+    row.setAttribute('data-base-price', newPrice);
+    row.setAttribute('data-base-patient', patShare);
+    row.setAttribute('data-base-insurance', insShare);
+
+    const patCell = row.querySelector('.row-patient-share');
+    const insCell = row.querySelector('.row-insurance-share');
+    if (patCell) patCell.textContent = window.formatNumber(patShare);
+    if (insCell) insCell.textContent = window.formatNumber(insShare);
+
+    if (row.getAttribute('data-is-unpriced') === '1') {
+        if (newPrice > 0) {
+            row.setAttribute('data-is-unpriced', '0');
+        }
+    }
+
+    if (typeof window.recalculateEmergencyDiscount === 'function') {
+        window.recalculateEmergencyDiscount();
+    }
+};
+
 window.toggleDiscountScope = function(scope) {
     const isPerItem = (scope === 'per_item');
     const cols = document.querySelectorAll('.col-item-discount');
@@ -886,110 +972,200 @@ window.handleItemDiscountInput = function(inputElem) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const isInsurance = @json($isInsurance);
-    const baseDueAmount = @json((float)$dueAmount);
     const amountInput = document.getElementById('amount');
     const discountInput = document.getElementById('discount_percentage');
     const displayDiscountBadge = document.getElementById('display_discount_badge');
     const displayDiscountAmount = document.getElementById('display_discount_amount');
     const displayPatientShare = document.getElementById('display_patient_share');
+    const displayApprovedPrice = document.getElementById('display_approved_price');
+    const displayInsuranceShare = document.getElementById('display_insurance_share');
     const summaryDiscountNote = document.getElementById('summary_discount_note');
     const summaryDiscountVal = document.getElementById('summary_discount_val');
     const submitBtn = document.getElementById('submitPaymentBtn');
 
-    function formatNumber(num) {
-        return Math.round(num).toLocaleString('en-US') + ' ' + '{{ __('د.ع') }}';
-    }
-
     window.recalculateEmergencyDiscount = function() {
-        if (isInsurance) return;
+        let countPay = 0;
+        let countPostpone = 0;
+        let countCancel = 0;
+        let paidTotalApproved = 0;
+        let paidTotalPatient = 0;
+        let paidTotalInsurance = 0;
+        let hasUnpricedPaidConsultation = false;
 
-        const isPerItemScope = document.getElementById('discount_scope_per_item')?.checked;
+        const rows = document.querySelectorAll('.emergency-item-row');
+        rows.forEach(row => {
+            const payRadio = row.querySelector('.item-action-radio[value="pay"]');
+            const postponeRadio = row.querySelector('.item-action-radio[value="postpone"]');
+            const cancelRadio = row.querySelector('.item-action-radio[value="cancel"]');
+
+            const isPay = payRadio ? payRadio.checked : true;
+            const isPostpone = postponeRadio ? postponeRadio.checked : false;
+            const isCancel = cancelRadio ? cancelRadio.checked : false;
+
+            const unitPrice = parseFloat(row.getAttribute('data-base-price')) || 0;
+            const qty = parseInt(row.getAttribute('data-qty')) || 1;
+            const rowPat = parseFloat(row.getAttribute('data-base-patient')) || 0;
+            const rowIns = parseFloat(row.getAttribute('data-base-insurance')) || 0;
+
+            if (isCancel) {
+                countCancel++;
+            } else if (isPostpone) {
+                countPostpone++;
+            } else {
+                countPay++;
+                paidTotalApproved += (unitPrice * qty);
+                paidTotalPatient += rowPat;
+                paidTotalInsurance += rowIns;
+
+                if (row.getAttribute('data-is-unpriced') === '1' && unitPrice <= 0) {
+                    hasUnpricedPaidConsultation = true;
+                }
+            }
+        });
+
+        // تحديث عدادات الشارات
+        const countPayEl = document.getElementById('summary_count_pay');
+        const countPostponeEl = document.getElementById('summary_count_postpone');
+        const countCancelEl = document.getElementById('summary_count_cancel');
+        if (countPayEl) countPayEl.textContent = countPay;
+        if (countPostponeEl) countPostponeEl.textContent = countPostpone;
+        if (countCancelEl) countCancelEl.textContent = countCancel;
+
+        const actionSummaryBadge = document.getElementById('table_actions_badge');
+        if (actionSummaryBadge) {
+            if (countPostpone === 0 && countCancel === 0) {
+                actionSummaryBadge.className = 'badge bg-success';
+                actionSummaryBadge.textContent = '{{ __('كل الخدمات مسددة') }}';
+            } else {
+                actionSummaryBadge.className = 'badge bg-dark';
+                actionSummaryBadge.textContent = countPay + ' ' + '{{ __('مسدد') }}' + ' | ' + countPostpone + ' ' + '{{ __('مؤجل') }}' + ' | ' + countCancel + ' ' + '{{ __('ملغي') }}';
+            }
+        }
+
+        // حساب الخصم
         let discountPct = 0;
         let discountAmount = 0;
 
-        if (isPerItemScope) {
-            let totalItemsDiscount = 0;
-            const rows = document.querySelectorAll('.emergency-item-row');
-            rows.forEach(row => {
-                const discInput = row.querySelector('.item-discount-input');
-                const badge = row.querySelector('.item-discount-val-badge');
-                const rowPatCell = row.querySelector('.row-patient-share');
-                let basePat = parseFloat(row.dataset.basePatient) || 0;
-                let itemDiscPct = parseFloat(discInput ? discInput.value : 0) || 0;
+        if (!isInsurance) {
+            const isPerItemScope = document.getElementById('discount_scope_per_item')?.checked;
 
-                if (itemDiscPct > 0) {
-                    let itemDiscVal = Math.round(basePat * (itemDiscPct / 100));
-                    let discountedPat = Math.max(0, basePat - itemDiscVal);
-                    totalItemsDiscount += itemDiscVal;
+            if (isPerItemScope) {
+                let totalItemsDiscount = 0;
+                rows.forEach(row => {
+                    const payRadio = row.querySelector('.item-action-radio[value="pay"]');
+                    const isRowPaid = payRadio ? payRadio.checked : true;
+                    const discInput = row.querySelector('.item-discount-input');
+                    const badge = row.querySelector('.item-discount-val-badge');
+                    const rowPatCell = row.querySelector('.row-patient-share');
+                    let basePat = parseFloat(row.getAttribute('data-base-patient')) || 0;
+                    let itemDiscPct = isRowPaid ? (parseFloat(discInput ? discInput.value : 0) || 0) : 0;
 
-                    if (badge) {
-                        badge.textContent = '-' + formatNumber(itemDiscVal);
-                        badge.style.display = 'block';
+                    if (itemDiscPct > 0) {
+                        let itemDiscVal = Math.round(basePat * (itemDiscPct / 100));
+                        let discountedPat = Math.max(0, basePat - itemDiscVal);
+                        totalItemsDiscount += itemDiscVal;
+
+                        if (badge) {
+                            badge.textContent = '-' + window.formatNumber(itemDiscVal);
+                            badge.style.display = 'block';
+                        }
+                        if (rowPatCell) {
+                            rowPatCell.innerHTML = '<span class="text-muted text-decoration-line-through small me-1">' + window.formatNumber(basePat) + '</span><span class="text-danger fw-bold">' + window.formatNumber(discountedPat) + '</span>';
+                        }
+                    } else {
+                        if (badge) {
+                            badge.textContent = '';
+                            badge.style.display = 'none';
+                        }
+                        if (rowPatCell) {
+                            rowPatCell.innerHTML = window.formatNumber(basePat);
+                        }
                     }
-                    if (rowPatCell) {
-                        rowPatCell.innerHTML = '<span class="text-muted text-decoration-line-through small me-1">' + formatNumber(basePat) + '</span><span class="text-danger fw-bold">' + formatNumber(discountedPat) + '</span>';
-                    }
-                } else {
-                    if (badge) {
-                        badge.textContent = '';
-                        badge.style.display = 'none';
-                    }
-                    if (rowPatCell) {
-                        rowPatCell.innerHTML = formatNumber(basePat);
-                    }
+                });
+
+                discountAmount = totalItemsDiscount;
+                discountPct = paidTotalPatient > 0 ? Math.round((discountAmount / paidTotalPatient) * 1000) / 10 : 0;
+
+                if (discountInput) {
+                    discountInput.value = discountPct;
                 }
-            });
 
-            discountAmount = totalItemsDiscount;
-            discountPct = baseDueAmount > 0 ? Math.round((discountAmount / baseDueAmount) * 1000) / 10 : 0;
-
-            if (discountInput) {
-                discountInput.value = discountPct;
-            }
-
-            const tableTotalDiscountItems = document.getElementById('table_total_discount_items');
-            if (tableTotalDiscountItems) {
-                tableTotalDiscountItems.textContent = '-' + formatNumber(discountAmount);
-            }
-        } else {
-            discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
-            if (discountPct < 0) discountPct = 0;
-            if (discountPct > 100) discountPct = 100;
-            if (discountInput && discountInput.value !== '' && (parseFloat(discountInput.value) > 100 || parseFloat(discountInput.value) < 0)) {
-                discountInput.value = discountPct;
-            }
-
-            if (discountPct > 0) {
-                discountAmount = Math.round(baseDueAmount * (discountPct / 100));
-            }
-
-            document.querySelectorAll('.emergency-item-row').forEach(row => {
-                const rowPatCell = row.querySelector('.row-patient-share');
-                let basePat = parseFloat(row.dataset.basePatient) || 0;
-                if (rowPatCell) {
-                    rowPatCell.innerHTML = formatNumber(basePat);
+                const tableTotalDiscountItems = document.getElementById('table_total_discount_items');
+                if (tableTotalDiscountItems) {
+                    tableTotalDiscountItems.textContent = '-' + window.formatNumber(discountAmount);
                 }
-            });
+            } else {
+                discountPct = parseFloat(discountInput ? discountInput.value : 0) || 0;
+                if (discountPct < 0) discountPct = 0;
+                if (discountPct > 100) discountPct = 100;
+
+                if (discountPct > 0) {
+                    discountAmount = Math.round(paidTotalPatient * (discountPct / 100));
+                }
+
+                rows.forEach(row => {
+                    const rowPatCell = row.querySelector('.row-patient-share');
+                    let basePat = parseFloat(row.getAttribute('data-base-patient')) || 0;
+                    if (rowPatCell) {
+                        rowPatCell.innerHTML = window.formatNumber(basePat);
+                    }
+                });
+            }
         }
 
-        let netAmount = Math.max(0, baseDueAmount - discountAmount);
+        let netAmount = Math.max(0, paidTotalPatient - discountAmount);
+
+        // تحديث إجماليات الجدول
+        const tableTotalApproved = document.getElementById('table_total_approved');
+        const tableTotalPatient = document.getElementById('table_total_patient');
+        const tableTotalInsurance = document.getElementById('table_total_insurance');
+
+        if (tableTotalApproved) tableTotalApproved.textContent = window.formatNumber(paidTotalApproved);
+        if (tableTotalPatient) tableTotalPatient.textContent = window.formatNumber(netAmount);
+        if (tableTotalInsurance) tableTotalInsurance.textContent = window.formatNumber(paidTotalInsurance);
+
+        // تحديث البطاقات العلوية
+        if (displayApprovedPrice) displayApprovedPrice.textContent = window.formatNumber(paidTotalApproved);
+        if (displayPatientShare) displayPatientShare.textContent = window.formatNumber(netAmount);
+        if (displayInsuranceShare) displayInsuranceShare.textContent = window.formatNumber(paidTotalInsurance);
 
         if (displayDiscountBadge) displayDiscountBadge.textContent = discountPct + '%';
-        if (displayDiscountAmount) displayDiscountAmount.textContent = '{{ __('قيمة الخصم:') }} ' + formatNumber(discountAmount);
+        if (displayDiscountAmount) displayDiscountAmount.textContent = '{{ __('قيمة الخصم:') }} ' + window.formatNumber(discountAmount);
         if (amountInput) amountInput.value = netAmount;
-        if (displayPatientShare) displayPatientShare.textContent = formatNumber(netAmount);
 
         if (summaryDiscountNote) {
             if (discountAmount > 0) {
                 summaryDiscountNote.classList.remove('d-none');
-                if (summaryDiscountVal) summaryDiscountVal.textContent = '-' + formatNumber(discountAmount);
+                if (summaryDiscountVal) summaryDiscountVal.textContent = '-' + window.formatNumber(discountAmount);
             } else {
                 summaryDiscountNote.classList.add('d-none');
             }
         }
 
+        // تحديث زر التأكيد
         if (submitBtn) {
-            submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __('تأكيد القبض وإصدار الوصل') }}' + ' (' + formatNumber(netAmount) + ')';
+            if (hasUnpricedPaidConsultation) {
+                submitBtn.disabled = true;
+                submitBtn.className = 'btn btn-secondary btn-lg px-5 fw-bold rounded-pill shadow';
+                submitBtn.innerHTML = '<i class="fas fa-ban me-2"></i> ' + '{{ __('لا يمكن التسديد لوجود استشارة غير مسعرة') }}';
+            } else if (countPay === 0) {
+                submitBtn.disabled = false;
+                if (countPostpone > 0) {
+                    submitBtn.className = 'btn btn-warning text-dark btn-lg px-5 fw-bold rounded-pill shadow';
+                    submitBtn.innerHTML = '<i class="fas fa-clock me-2"></i> ' + '{{ __('حفظ وتأجيل كافة الخدمات المحددة') }}';
+                } else {
+                    submitBtn.className = 'btn btn-danger btn-lg px-5 fw-bold rounded-pill shadow';
+                    submitBtn.innerHTML = '<i class="fas fa-times-circle me-2"></i> ' + '{{ __('تأكيد إلغاء كافة الخدمات المحددة') }}';
+                }
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.className = 'btn btn-success btn-lg px-5 fw-bold rounded-pill shadow';
+                if (netAmount <= 0 && isInsurance) {
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __('اعتماد وتسديد بالضمان (0 د.ع)') }}';
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> ' + '{{ __('تأكيد القبض وإصدار الوصل') }}' + ' (' + window.formatNumber(netAmount) + ')';
+                }
+            }
         }
     };
 
@@ -997,5 +1173,8 @@ document.addEventListener('DOMContentLoaded', function() {
         discountInput.addEventListener('input', window.recalculateEmergencyDiscount);
         discountInput.addEventListener('change', window.recalculateEmergencyDiscount);
     }
+
+    // تشغيل الحسبة الأولية
+    window.recalculateEmergencyDiscount();
 });
 </script>
