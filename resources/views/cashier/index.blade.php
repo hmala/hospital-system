@@ -384,10 +384,10 @@
                                                             @if($canConsultation)
                                                                 @foreach($pendingAppointments ?? [] as $appointment)
                                                                     @php
-                                                                        $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
+                                                                        $patientName = optional(optional($appointment->patient)->user)->name ?? __('غير محدد');
                                                                         $patientId = optional($appointment->patient)->national_id ?? '---';
-                                                                        $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
-                                                                        $department = optional($appointment->department)->name ?? 'غير محدد';
+                                                                        $doctorName = optional(optional($appointment->doctor)->user)->name ?? __('غير محدد');
+                                                                        $department = optional($appointment->department)->name ?? __('غير محدد');
                                                                         $insType = $appointment->insurance_type ?? optional($appointment->patient)->insurance_type ?? 'none';
                                                                         $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : (optional($appointment->doctor)->consultation_fee ?? 0));
                                                                         $doctor = $appointment->doctor;
@@ -420,16 +420,16 @@
                                                                         </td>
                                                                         <td>
                                                                             <small class="text-muted">
-                                                                                @if($doctorName !== 'غير محدد') د. {{ $doctorName }}<br> @endif
+                                                                                @if($doctorName !== __('غير محدد')) {{ __('د.') }} {{ $doctorName }}<br> @endif
                                                                                 {{ $department }}
                                                                             </small>
                                                                         </td>
                                                                         <td class="text-end">
                                                                             @if($isIns)
-                                                                                <div class="text-success fw-bold">{{ number_format($patientShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
-                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($approvedFee) }} د.ع</small>
+                                                                                <div class="text-success fw-bold">{{ number_format($patientShare) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($approvedFee) }} {{ __('د.ع') }}</small>
                                                                             @else
-                                                                                <span class="text-success fw-bold">{{ number_format($baseFee) }} د.ع</span>
+                                                                                <span class="text-success fw-bold">{{ number_format($baseFee) }} {{ __('د.ع') }}</span>
                                                                             @endif
                                                                         </td>
                                                                         <td>
@@ -524,7 +524,7 @@
                                                                                                 $totalComputedPatient += $p['patient_share'];
                                                                                             }
                                                                                         }
-                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($testIds) . ' تحليل</span>';
+                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($testIds) . ' ' . __('تحليل') . '</span>';
                                                                                     } elseif (!empty($subDetails['tests'])) {
                                                                                         $hasAnyComputedItems = true;
                                                                                         foreach ($subDetails['tests'] as $tName) {
@@ -535,9 +535,9 @@
                                                                                                 $totalComputedPatient += $p['patient_share'];
                                                                                             }
                                                                                         }
-                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($subDetails['tests']) . ' تحليل</span>';
+                                                                                        $detailsSummaries[] = '<span class="text-primary"><i class="fas fa-vial me-1"></i> ' . count($subDetails['tests']) . ' ' . __('تحليل') . '</span>';
                                                                                     } else {
-                                                                                        $detailsSummaries[] = e($subReq->description ?? 'تحاليل مخبرية');
+                                                                                        $detailsSummaries[] = e($subReq->description ?? __('تحاليل مخبرية'));
                                                                                     }
                                                                                 }
                                                                             } elseif ($subReq->type === 'radiology') {
@@ -553,9 +553,9 @@
                                                                                             $totalComputedPatient += $p['patient_share'];
                                                                                         }
                                                                                     }
-                                                                                    $detailsSummaries[] = '<span class="text-info"><i class="fas fa-camera me-1"></i> ' . count($typeIds) . ' فحص أشعة</span>';
+                                                                                    $detailsSummaries[] = '<span class="text-info"><i class="fas fa-camera me-1"></i> ' . count($typeIds) . ' ' . __('فحص أشعة') . '</span>';
                                                                                 } else {
-                                                                                    $detailsSummaries[] = e($subReq->description ?? 'فحص شعاعي');
+                                                                                    $detailsSummaries[] = e($subReq->description ?? __('فحص شعاعي'));
                                                                                 }
                                                                             } else {
                                                                                 if ($subReq->total_amount > 0) {
@@ -588,7 +588,7 @@
                                                                             @endif
                                                                         </td>
                                                                         <td>
-                                                                            <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
+                                                                            <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? __('غير محدد') }}
                                                                                 @if($primaryInsType === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>{{ __("داخليّة") }}</span>
                                                                                 @elseif($primaryInsType === 'hi')
@@ -597,16 +597,16 @@
                                                                                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="{{ __("دفع نقدي كامل (خارج الضمان)") }}"><i class="fas fa-money-bill-wave me-1"></i>{{ __("نقدي (كاش)") }}</span>
                                                                                 @endif
                                                                             </div>
-                                                                            <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
+                                                                            <small class="text-muted">{{ optional($reqPatient)->national_id ?? __('غير محدد') }}</small>
                                                                         </td>
                                                                         <td>
                                                                             {!! implode(' <span class="text-muted mx-1">+</span> ', $detailsSummaries) !!}
-                                                                            @if($docName) <br><small class="text-muted">طلب: د. {{ $docName }}</small> @endif
+                                                                            @if($docName) <br><small class="text-muted">{{ __('طلب:') }} {{ __('د.') }} {{ $docName }}</small> @endif
                                                                         </td>
                                                                         <td class="text-end">
                                                                             @if($isIns && $hasAnyComputedItems)
-                                                                                <div class="text-success fw-bold">{{ number_format($totalComputedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$primaryCopayPct }}%</span></div>
-                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($totalComputedApproved) }} د.ع</small>
+                                                                                <div class="text-success fw-bold">{{ number_format($totalComputedPatient) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$primaryCopayPct }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($totalComputedApproved) }} {{ __('د.ع') }}</small>
                                                                             @else
                                                                                 <span class="text-success fw-bold">{{ $hasAnyComputedItems ? number_format($totalComputedApproved) . ' ' . __('د.ع') : __('يحدد عند التسديد') }}</span>
                                                                             @endif
@@ -617,7 +617,7 @@
                                                                         </td>
                                                                         <td class="text-center">
                                                                             <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                                <i class="fas fa-money-bill-wave me-1"></i> {{ $siblingRequests->count() > 1 ? 'تسديد شامل (' . $siblingRequests->count() . ')' : 'تسديد' }}
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> {{ $siblingRequests->count() > 1 ? __('تسديد شامل') . ' (' . $siblingRequests->count() . ')' : __('تسديد') }}
                                                                             </a>
                                                                         </td>
                                                                     </tr>
@@ -629,7 +629,7 @@
                                                                 @foreach($pendingEmergencyPayments ?? [] as $payment)
                                                                     @php
                                                                         $em = $payment->emergency;
-                                                                        $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                        $patientName = $em->patient ? (optional($em->patient->user)->name ?? __('غير محدد')) : ($em->emergencyPatient->name ?? __('غير محدد'));
                                                                         $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
                                                                         $emServicesCount = $em->services->count();
                                                                         $emServicesTotalQty = (int) $em->services->sum(fn($s) => max(1, (int)($s->pivot->quantity ?? 1)));
@@ -653,7 +653,7 @@
                                                                         </td>
                                                                         <td>
                                                                             <span class="badge bg-{{ $payment->emergency->priority_color }}">{{ $payment->emergency->priority_text }}</span>
-                                                                            <small class="text-muted d-block mt-1">خدمات: {{ $emServicesTotalQty }}{{ $emServicesTotalQty != $emServicesCount ? " ({$emServicesCount} أنواع)" : '' }}</small>
+                                                                            <small class="text-muted d-block mt-1">{{ __('خدمات:') }} {{ $emServicesTotalQty }}{{ $emServicesTotalQty != $emServicesCount ? ' (' . $emServicesCount . ' ' . __('أنواع') . ')' : '' }}</small>
                                                                         </td>
                                                                         <td class="text-end text-success fw-bold">{{ number_format($payment->amount, 2) }} IQD</td>
                                                                         <td>
@@ -730,10 +730,10 @@
                                                         <tbody>
                                                             @foreach($pendingAppointments ?? [] as $appointment)
                                                                 @php
-                                                                    $patientName = optional(optional($appointment->patient)->user)->name ?? 'غير محدد';
+                                                                    $patientName = optional(optional($appointment->patient)->user)->name ?? __('غير محدد');
                                                                     $patientId = optional($appointment->patient)->national_id ?? '---';
-                                                                    $doctorName = optional(optional($appointment->doctor)->user)->name ?? 'غير محدد';
-                                                                    $department = optional($appointment->department)->name ?? 'غير محدد';
+                                                                    $doctorName = optional(optional($appointment->doctor)->user)->name ?? __('غير محدد');
+                                                                    $department = optional($appointment->department)->name ?? __('غير محدد');
                                                                     $insType = $appointment->insurance_type ?? optional($appointment->patient)->insurance_type ?? 'none';
                                                                     $baseFee = (float)($appointment->consultation_fee > 0 ? $appointment->consultation_fee : (optional($appointment->doctor)->consultation_fee ?? 0));
                                                                     $doctor = $appointment->doctor;
@@ -763,20 +763,20 @@
                                                                         </div>
                                                                         <small class="text-muted">{{ $patientId }}</small>
                                                                     </td>
-                                                                    <td>د. {{ $doctorName }}</td>
+                                                                    <td>{{ __('د.') }} {{ $doctorName }}</td>
                                                                     <td>{{ $department }}</td>
                                                                     <td class="text-end">
                                                                         @if($isIns)
-                                                                            <div class="text-success fw-bold">{{ number_format($patientShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
-                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($approvedFee) }} د.ع</small>
+                                                                            <div class="text-success fw-bold">{{ number_format($patientShare) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($approvedFee) }} {{ __('د.ع') }}</small>
                                                                         @else
-                                                                            <span class="text-success fw-bold">{{ number_format($baseFee) }} د.ع</span>
+                                                                            <span class="text-success fw-bold">{{ number_format($baseFee) }} {{ __('د.ع') }}</span>
                                                                         @endif
                                                                     </td>
                                                                     <td>{{ $appointment->created_at->format('Y-m-d H:i') }}</td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.payment.form', $appointment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ __("تسديد") }} الكشفية
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ __('تسديد الكشفية') }}
                                                                         </a>
                                                                     </td>
                                                                 </tr>
@@ -786,7 +786,7 @@
                                                 </div>
                                                 @if(isset($pendingAppointments) && $pendingAppointments->hasPages())
                                                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                                        <span class="small text-muted">عرض {{ $pendingAppointments->firstItem() }} إلى {{ $pendingAppointments->lastItem() }} من أصل {{ $pendingAppointments->total() }} موعد</span>
+                                                        <span class="small text-muted">{{ __('عرض') }} {{ $pendingAppointments->firstItem() }} {{ __('إلى') }} {{ $pendingAppointments->lastItem() }} {{ __('من أصل') }} {{ $pendingAppointments->total() }} {{ __('موعد') }}</span>
                                                         {{ $pendingAppointments->links() }}
                                                     </div>
                                                 @endif
@@ -944,7 +944,7 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? 'غير محدد' }}
+                                                                        <div class="fw-semibold">{{ optional(optional($reqPatient)->user)->name ?? __('غير محدد') }}
                                                                             @if($insType === 'moi')
                                                                                 <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>{{ __("داخليّة") }}</span>
                                                                             @elseif($insType === 'hi')
@@ -953,36 +953,36 @@
                                                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="{{ __("دفع نقدي كامل (خارج الضمان)") }}"><i class="fas fa-money-bill-wave me-1"></i>{{ __("نقدي (كاش)") }}</span>
                                                                             @endif
                                                                         </div>
-                                                                        <small class="text-muted">{{ optional($reqPatient)->national_id ?? 'غير محدد' }}</small>
+                                                                        <small class="text-muted">{{ optional($reqPatient)->national_id ?? __('غير محدد') }}</small>
                                                                     </td>
                                                                     <td>
                                                                         @if($request->type === 'lab')
                                                                             @if(!empty($details['package_id']))
-                                                                                @php $pkgName = $details['package_name'] ?? optional(\App\Models\Package::find($details['package_id']))->name ?? 'باقة مختبر'; @endphp
+                                                                                @php $pkgName = $details['package_name'] ?? optional(\App\Models\Package::find($details['package_id']))->name ?? __('باقة مختبر'); @endphp
                                                                                 <div>
                                                                                     <span class="text-primary fw-bold"><i class="fas fa-box text-warning me-1"></i> {{ $pkgName }}</span>
                                                                                     <small class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-1">{{ count($details['lab_test_ids'] ?? []) }} {{ __('تحليل مشمول') }}</small>
                                                                                 </div>
                                                                             @elseif(isset($details['lab_test_ids']))
-                                                                                <span class="text-dark fw-bold"><i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} تحليل</span>
+                                                                                <span class="text-dark fw-bold"><i class="fas fa-vial text-primary me-1"></i> {{ count($details['lab_test_ids']) }} {{ __('تحليل') }}</span>
                                                                             @else
                                                                                 <span>{{ $request->description }}</span>
                                                                             @endif
                                                                         @elseif($request->type === 'radiology' && isset($details['radiology_type_ids']))
-                                                                            <span class="text-dark fw-bold"><i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} فحص أشعة</span>
+                                                                            <span class="text-dark fw-bold"><i class="fas fa-camera text-info me-1"></i> {{ count($details['radiology_type_ids']) }} {{ __('فحص أشعة') }}</span>
                                                                         @else
                                                                             <span>{{ $request->description }}</span>
                                                                         @endif
                                                                     </td>
-                                                                    <td>د. {{ $docName }}</td>
+                                                                    <td>{{ __('د.') }} {{ $docName }}</td>
                                                                     <td class="text-end">
                                                                         @if($isIns && $hasComputedItems)
-                                                                            <div class="text-success fw-bold">{{ number_format($computedPatient) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
-                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($computedApproved) }} د.ع</small>
+                                                                            <div class="text-success fw-bold">{{ number_format($computedPatient) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($computedApproved) }} {{ __('د.ع') }}</small>
                                                                         @elseif($isIns && $request->total_amount > 0)
                                                                             @php $pShare = round($request->total_amount * ($copayPct / 100)); @endphp
-                                                                            <div class="text-success fw-bold">{{ number_format($pShare) }} د.ع <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
-                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($request->total_amount) }} د.ع</small>
+                                                                            <div class="text-success fw-bold">{{ number_format($pShare) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ (float)$copayPct }}%</span></div>
+                                                                            <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("معتمد:") }} {{ number_format($request->total_amount) }} {{ __('د.ع') }}</small>
                                                                         @else
                                                                             <span class="text-success fw-bold">{{ $request->total_amount !== null ? number_format($request->total_amount) . ' ' . __('د.ع') : ($hasComputedItems ? number_format($computedApproved) . ' ' . __('د.ع') : __('يحدد عند التسديد')) }}</span>
                                                                         @endif
@@ -1000,14 +1000,14 @@
                                                 </div>
                                                 @if(isset($pendingMedicalRequests) && $pendingMedicalRequests->hasPages())
                                                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                                        <span class="small text-muted">عرض {{ $pendingMedicalRequests->firstItem() }} إلى {{ $pendingMedicalRequests->lastItem() }} من أصل {{ $pendingMedicalRequests->total() }} طلب</span>
+                                                        <span class="small text-muted">{{ __('عرض') }} {{ $pendingMedicalRequests->firstItem() }} {{ __('إلى') }} {{ $pendingMedicalRequests->lastItem() }} {{ __('من أصل') }} {{ $pendingMedicalRequests->total() }} {{ __('طلب') }}</span>
                                                         {{ $pendingMedicalRequests->links() }}
                                                     </div>
                                                 @endif
                                             @else
                                                 <div class="text-center py-5">
                                                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                                                    <p class="text-muted mb-0">لا توجد طلبات فحوصات أو {{ __("تحاليل معلقة") }} بانتظار الدفع</p>
+                                                    <p class="text-muted mb-0">{{ __('لا توجد طلبات فحوصات أو خدمات بانتظار الدفع') }}</p>
                                                 </div>
                                             @endif
                                         </div>
@@ -1034,7 +1034,7 @@
                                                              @foreach($pendingEmergencyPayments ?? [] as $payment)
                                                                  @php
                                                                      $em = $payment->emergency;
-                                                                     $patientName = $em->patient ? (optional($em->patient->user)->name ?? 'غير محدد') : ($em->emergencyPatient->name ?? 'غير محدد');
+                                                                     $patientName = $em->patient ? (optional($em->patient->user)->name ?? __('غير محدد')) : ($em->emergencyPatient->name ?? __('غير محدد'));
                                                                      $patientId = $em->patient ? (optional($em->patient->user)->phone ?? '---') : ($em->emergencyPatient->phone ?? '---');
                                                                      $emInsType = $payment->insurance_type ?? optional($em->patient)->insurance_type ?? 'none';
                                                                  @endphp
@@ -1068,7 +1068,7 @@
                                                                      <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
                                                                      <td class="text-center">
                                                                          <a href="{{ route('cashier.emergency.payment.form', $payment->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
-                                                                             <i class="fas fa-money-bill-wave me-1"></i> {{ __("تسديد") }} الطوارئ
+                                                                             <i class="fas fa-money-bill-wave me-1"></i> {{ __('تسديد الطوارئ') }}
                                                                          </a>
                                                                      </td>
                                                                  </tr>
@@ -1078,7 +1078,7 @@
                                                  </div>
                                                  @if(isset($pendingEmergencyPayments) && $pendingEmergencyPayments->hasPages())
                                                      <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                                         <span class="small text-muted">عرض {{ $pendingEmergencyPayments->firstItem() }} إلى {{ $pendingEmergencyPayments->lastItem() }} من أصل {{ $pendingEmergencyPayments->total() }} حالة</span>
+                                                         <span class="small text-muted">{{ __('عرض') }} {{ $pendingEmergencyPayments->firstItem() }} {{ __('إلى') }} {{ $pendingEmergencyPayments->lastItem() }} {{ __('من أصل') }} {{ $pendingEmergencyPayments->total() }} {{ __('حالة') }}</span>
                                                          {{ $pendingEmergencyPayments->links() }}
                                                      </div>
                                                  @endif
@@ -1113,7 +1113,7 @@
                                                             @foreach($postponedMedicalRequests ?? [] as $request)
                                                                 @php
                                                                     $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-                                                                    $pName = optional(optional($request->visit)->patient)->user->name ?? 'غير محدد';
+                                                                    $pName = optional(optional($request->visit)->patient)->user->name ?? __('غير محدد');
                                                                     $pPhone = optional(optional($request->visit)->patient)->user->phone ?? (optional(optional($request->visit)->patient)->national_id ?? '---');
                                                                     $docName = optional(optional(optional($request->visit)->doctor)->user)->name ?? '---';
                                                                     $pReqInsType = $request->insurance_type ?? optional(optional($request->visit)->patient)->insurance_type ?? 'none';
@@ -1138,7 +1138,7 @@
                                                                         }
                                                                     }
                                                                     
-                                                                    $postponementReason = $details['postponement_reason'] ?? $details['custom_postponement_reason'] ?? $details['cancellation_reason'] ?? 'بطلب من المريض';
+                                                                    $postponementReason = $details['postponement_reason'] ?? $details['custom_postponement_reason'] ?? $details['cancellation_reason'] ?? __('بطلب من المريض');
                                                                     $estAmount = (float)($request->total_amount > 0 ? $request->total_amount : 0);
                                                                 @endphp
                                                                 <tr>
@@ -1174,7 +1174,7 @@
                                                                             @if(!empty($testsList))
                                                                                 {{ implode('، ', $testsList) }}
                                                                             @else
-                                                                                {{ $request->description ?: 'فحوصات طبية مؤجلة' }}
+                                                                                {{ $request->description ?: __('فحوصات طبية مؤجلة') }}
                                                                             @endif
                                                                         </div>
                                                                         <div class="d-inline-flex align-items-center gap-1 bg-warning bg-opacity-10 border border-warning border-opacity-25 px-2 py-0.5 rounded-pill text-dark small">
@@ -1184,13 +1184,13 @@
                                                                     </td>
                                                                     <td>
                                                                         <small class="text-muted">
-                                                                            @if($docName !== '---') د. {{ $docName }}<br> @endif
-                                                                            {{ optional(optional($request->visit)->department)->name ?? 'العيادة' }}
+                                                                            @if($docName !== '---') {{ __('د.') }} {{ $docName }}<br> @endif
+                                                                            {{ optional(optional($request->visit)->department)->name ?? __('العيادة') }}
                                                                         </small>
                                                                     </td>
                                                                     <td class="text-end">
                                                                         @if($estAmount > 0)
-                                                                            <span class="fw-bold text-dark">{{ number_format($estAmount, 0) }} د.ع</span>
+                                                                            <span class="fw-bold text-dark">{{ number_format($estAmount, 0) }} {{ __('د.ع') }}</span>
                                                                         @else
                                                                             <span class="text-muted small">{{ __('حسب التسعيرة') }}</span>
                                                                         @endif
@@ -1201,7 +1201,7 @@
                                                                     </td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.request.payment.form', $request->id) }}" class="btn btn-warning btn-sm px-3 fw-bold text-dark shadow-sm">
-                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ __("تسديد") }} الآن
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ __('تسديد الآن') }}
                                                                         </a>
                                                                     </td>
                                                                 </tr>
@@ -1211,7 +1211,7 @@
                                                 </div>
                                                 @if(isset($postponedMedicalRequests) && $postponedMedicalRequests->hasPages())
                                                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                                        <span class="small text-muted">عرض {{ $postponedMedicalRequests->firstItem() }} إلى {{ $postponedMedicalRequests->lastItem() }} من أصل {{ $postponedMedicalRequests->total() }} طلب مؤجل</span>
+                                                        <span class="small text-muted">{{ __('عرض') }} {{ $postponedMedicalRequests->firstItem() }} {{ __('إلى') }} {{ $postponedMedicalRequests->lastItem() }} {{ __('من أصل') }} {{ $postponedMedicalRequests->total() }} {{ __('طلب مؤجل') }}</span>
                                                         {{ $postponedMedicalRequests->links() }}
                                                     </div>
                                                 @endif
@@ -1259,19 +1259,19 @@
                                                                 @php
                                                                     $res = $acc['reservation'];
                                                                     $stay = $acc['stay_details'];
-                                                                    $babyName = $res->baby_name ?: 'طفل ' . ($res->patient?->name ?? 'غير محدد');
-                                                                    $parentName = $res->patient?->name ?? 'غير محدد';
+                                                                    $babyName = $res->baby_name ?: __('طفل') . ' ' . ($res->patient?->name ?? __('غير محدد'));
+                                                                    $parentName = $res->patient?->name ?? __('غير محدد');
                                                                     $phone = $res->patient?->phone ?? '-';
                                                                     $isSettled = $acc['net_balance'] <= 0;
                                                                 @endphp
                                                                 <tr class="{{ $isSettled ? 'table-success bg-opacity-25' : '' }}">
                                                                     <td>
                                                                         <strong>#{{ $res->id }}</strong>
-                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</span>
+                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">{{ __('ملف:') }} #{{ $res->patient?->national_id ?: $res->patient_id }}</span>
                                                                     </td>
                                                                     <td>
                                                                         <div class="fw-bold text-dark">{{ $babyName }}</div>
-                                                                        <small class="text-muted">المسؤول: {{ $parentName }} • {{ $phone }}</small>
+                                                                        <small class="text-muted">{{ __('المسؤول:') }} {{ $parentName }} • {{ $phone }}</small>
                                                                         @if($res->status === 'discharged')
                                                                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-block mt-1" style="font-size: 0.68rem;">
                                                                                 <i class="fas fa-exclamation-triangle me-1"></i> {{ __('خروج معلق مالياً') }}
@@ -1282,20 +1282,20 @@
                                                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold">
                                                                             <i class="fas fa-baby me-1"></i> #{{ $res->incubator?->name ?? $res->incubator_id }}
                                                                         </span>
-                                                                        <div class="small text-muted mt-1">{{ $res->nicuService?->name ?? 'باقة الخدج' }}</div>
+                                                                        <div class="small text-muted mt-1">{{ $res->nicuService?->name ?? __('باقة الخدج') }}</div>
                                                                     </td>
                                                                     <td>
                                                                         <span class="small font-monospace">{{ optional($res->admission_date)->format('Y-m-d') ?: optional($res->created_at)->format('Y-m-d') }}</span>
                                                                         <small class="text-muted d-block">({{ $stay['billable_days'] ?? 1 }} {{ __("يوم فندقي") }})</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <strong class="text-dark">{{ number_format($acc['gross_total'], 0) }} د.ع</strong>
+                                                                        <strong class="text-dark">{{ number_format($acc['gross_total'], 0) }} {{ __('د.ع') }}</strong>
                                                                         @if(!empty($res->insurance_type) && $res->insurance_type !== 'none')
                                                                             <small class="text-info d-block" style="font-size:0.75rem;">({{ __('حصة المريض بعد الضمان') }})</small>
                                                                         @endif
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <strong class="text-success">{{ number_format($acc['total_paid'], 0) }} د.ع</strong>
+                                                                        <strong class="text-success">{{ number_format($acc['total_paid'], 0) }} {{ __('د.ع') }}</strong>
                                                                         @if($acc['total_paid'] > 0)
                                                                             <small class="text-muted d-block" style="font-size:0.72rem;">({{ $res->payments->count() }} {{ __("دفعات") }})</small>
                                                                         @endif
@@ -1303,15 +1303,15 @@
                                                                     <td class="text-end">
                                                                         @if($acc['excess_deposit'] > 0)
                                                                             <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 fs-7">
-                                                                                <i class="fas fa-hand-holding-usd text-warning me-1"></i> {{ __("فائض:") }} +{{ number_format($acc['excess_deposit'], 0) }} د.ع
+                                                                                <i class="fas fa-hand-holding-usd text-warning me-1"></i> {{ __("فائض:") }} +{{ number_format($acc['excess_deposit'], 0) }} {{ __('د.ع') }}
                                                                             </span>
                                                                             <small class="text-primary d-block fw-bold" style="font-size:0.72rem;">{{ __('مستحق الصرف للمريض') }}</small>
                                                                         @elseif($isSettled)
                                                                             <span class="badge bg-success px-2 py-1 fs-7">
-                                                                                <i class="fas fa-check-circle me-1"></i> {{ __("خالص (0 د.ع)") }}
+                                                                                <i class="fas fa-check-circle me-1"></i> {{ __('خالص (0 د.ع)') }}
                                                                             </span>
                                                                         @else
-                                                                            <strong class="text-danger fs-6">{{ number_format($acc['net_balance'], 0) }} د.ع</strong>
+                                                                            <strong class="text-danger fs-6">{{ number_format($acc['net_balance'], 0) }} {{ __('د.ع') }}</strong>
                                                                             <small class="text-danger d-block" style="font-size:0.72rem;">{{ __('مستحق بالصندوق') }}</small>
                                                                         @endif
                                                                     </td>
@@ -1382,7 +1382,7 @@
                                                                 @endphp
                                                                 <tr>
                                                                     <td>
-                                                                        <div class="fw-bold text-dark">#{{ $adm->id }} — {{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <div class="fw-bold text-dark">#{{ $adm->id }} — {{ $adm->patient?->user?->name ?? __('مريض') }}</div>
                                                                         <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
                                                                         @if($adm->status === 'discharged')
                                                                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.68rem;">{{ __('خروج معلق مالياً') }}</span>
@@ -1392,30 +1392,30 @@
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
                                                                             <i class="fas fa-bed me-1"></i> {{ $adm->bed?->bed_number ?? '#'.$adm->icu_bed_id }}
                                                                         </span>
-                                                                        <div class="small text-muted mt-1">{{ $stay['active_service']?->name ?? 'تلقائي' }}</div>
+                                                                        <div class="small text-muted mt-1">{{ $stay['active_service']?->name ?? __('تلقائي') }}</div>
                                                                     </td>
                                                                     <td>
                                                                         <span class="small font-monospace">{{ optional($adm->admission_date)->format('Y-m-d') }}</span>
-                                                                        <small class="text-muted d-block">({{ $stay['days_count'] ?? 1 }} يوم)</small>
+                                                                        <small class="text-muted d-block">({{ $stay['days_count'] ?? 1 }} {{ __('يوم') }})</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <strong class="text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }} د.ع</strong>
+                                                                        <strong class="text-dark font-monospace">{{ number_format($acc['gross_total'], 0) }} {{ __('د.ع') }}</strong>
                                                                         @if($stay['is_insured'])
-                                                                            <small class="text-info d-block" style="font-size:0.72rem;">بعد حصة الضمان ({{ number_format($stay['insurance_grand_total']) }})</small>
+                                                                            <small class="text-info d-block" style="font-size:0.72rem;">{{ __('بعد حصة الضمان') }} ({{ number_format($stay['insurance_grand_total']) }})</small>
                                                                         @endif
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <strong class="text-success font-monospace">{{ number_format($acc['total_paid'], 0) }} د.ع</strong>
+                                                                        <strong class="text-success font-monospace">{{ number_format($acc['total_paid'], 0) }} {{ __('د.ع') }}</strong>
                                                                     </td>
                                                                     <td class="text-end">
                                                                         @if($acc['excess_deposit'] > 0)
                                                                             <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1">
-                                                                                فائض: +{{ number_format($acc['excess_deposit'], 0) }} د.ع
+                                                                                {{ __('فائض:') }} +{{ number_format($acc['excess_deposit'], 0) }} {{ __('د.ع') }}
                                                                             </span>
                                                                         @elseif($isSettled)
-                                                                            <span class="badge bg-success px-2 py-1">خالص (0 د.ع)</span>
+                                                                            <span class="badge bg-success px-2 py-1">{{ __('خالص (0 د.ع)') }}</span>
                                                                         @else
-                                                                            <strong class="text-danger fs-6 font-monospace">{{ number_format($acc['net_balance'], 0) }} د.ع</strong>
+                                                                            <strong class="text-danger fs-6 font-monospace">{{ number_format($acc['net_balance'], 0) }} {{ __('د.ع') }}</strong>
                                                                         @endif
                                                                     </td>
                                                                     <td class="text-center">
@@ -1472,30 +1472,30 @@
                                                             @foreach($pendingRefundRequests ?? [] as $req)
                                                                 @php
                                                                     $details = is_string($req->details) ? json_decode($req->details, true) : $req->details;
-                                                                    $pName = $req->visit?->patient?->user?->name ?? $req->payments->first()?->patient?->user?->name ?? 'غير محدد';
+                                                                    $pName = $req->visit?->patient?->user?->name ?? $req->payments->first()?->patient?->user?->name ?? __('غير محدد');
                                                                     $pPhone = $req->visit?->patient?->user?->phone ?? $req->payments->first()?->patient?->user?->phone ?? ($req->visit?->patient?->national_id ?? '---');
                                                                     $paidAmount = (float)($details['paid_amount'] ?? $req->payments()->where('amount', '>', 0)->sum('amount'));
                                                                     $alreadyRefunded = abs((float)$req->payments()->where('amount', '<', 0)->sum('amount'));
                                                                     $netRefund = max(0, $paidAmount - $alreadyRefunded);
                                                                     $receiptNo = $details['paid_receipt_number'] ?? optional($req->payments()->where('amount', '>', 0)->latest()->first())->receipt_number;
                                                                     $cancelledAt = $details['cancelled_at'] ?? $req->updated_at->format('Y-m-d H:i');
-                                                                    $cancelledBy = $details['cancelled_by_name'] ?? 'موظف القسم';
-                                                                    $cancelReason = $details['cancel_reason'] ?? 'بطلب من المريض';
+                                                                    $cancelledBy = $details['cancelled_by_name'] ?? __('موظف القسم');
+                                                                    $cancelReason = $details['cancel_reason'] ?? __('بطلب من المريض');
                                                                     $rInsType = $req->insurance_type ?? optional($req->visit?->patient)->insurance_type ?? 'none';
                                                                 @endphp
                                                                 <tr>
                                                                     <td>
-                                                                        <strong class="text-danger">طلب #{{ $req->id }}</strong>
+                                                                        <strong class="text-danger">{{ __('طلب') }} #{{ $req->id }}</strong>
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 ms-1">{{ __('ملغي بعد الدفع') }}</span>
                                                                     </td>
                                                                     <td>
                                                                         @if($req->type === 'lab')
                                                                             <span class="badge bg-primary text-white"><i class="fas fa-flask me-1"></i> {{ __("مختبر") }}</span>
                                                                             @if(!empty($details['package_name']))
-                                                                                <div class="small fw-semibold text-dark mt-1">باقة: {{ $details['package_name'] }}</div>
+                                                                                <div class="small fw-semibold text-dark mt-1">{{ __('باقة:') }} {{ $details['package_name'] }}</div>
                                                                             @endif
                                                                         @else
-                                                                            <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> أشعة / تصوير</span>
+                                                                            <span class="badge bg-info text-dark"><i class="fas fa-x-ray me-1"></i> {{ __('أشعة / تصوير') }}</span>
                                                                         @endif
                                                                     </td>
                                                                     <td>
@@ -1522,7 +1522,7 @@
                                                                         <small class="text-muted">{{ __("بواسطة:") }} {{ $cancelledBy }} ({{ $cancelledAt }})</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($netRefund, 0) }} د.ع</span>
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($netRefund, 0) }} {{ __('د.ع') }}</span>
                                                                     </td>
                                                                     <td class="text-center">
                                                                         <button type="button" 
@@ -1531,7 +1531,7 @@
                                                                                 data-patient="{{ $pName }}"
                                                                                 data-receipt="{{ $receiptNo ?? '---' }}"
                                                                                 data-amount="{{ $netRefund }}"
-                                                                                data-service="{{ $req->type === 'lab' ? 'تحاليل المختبر' : 'الأشعة والتصوير' }}"
+                                                                                data-service="{{ $req->type === 'lab' ? __('تحاليل المختبر') : __('الأشعة والتصوير') }}"
                                                                                 data-action="{{ route('cashier.request.refund.process', $req->id) }}">
                                                                             <i class="fas fa-undo-alt me-1"></i> {{ __("صرف استرجاع (Refund)") }}
                                                                         </button>
@@ -1542,7 +1542,7 @@
                                                             {{-- استرجاع حالات الطوارئ الملغاة بعد السداد --}}
                                                             @foreach($pendingEmergencyRefunds ?? [] as $emg)
                                                                 @php
-                                                                    $emgPatientName = $emg->patient?->user?->name ?? $emg->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientName = $emg->patient?->user?->name ?? $emg->emergencyPatient?->name ?? __('غير محدد');
                                                                     $emgPatientPhone = $emg->patient?->user?->phone ?? $emg->emergencyPatient?->phone ?? '---';
                                                                     $emgPaidAmount = (float)$emg->payments()->where('amount', '>', 0)->sum('amount');
                                                                     $emgAlreadyRefunded = abs((float)$emg->payments()->where('amount', '<', 0)->sum('amount'));
@@ -1553,13 +1553,13 @@
                                                                 @endphp
                                                                 <tr>
                                                                     <td>
-                                                                        <strong class="text-danger">طوارئ #{{ $emg->id }}</strong>
+                                                                        <strong class="text-danger">{{ __('طوارئ') }} #{{ $emg->id }}</strong>
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 ms-1">{{ __('ملغي بعد الدفع') }}</span>
                                                                     </td>
                                                                     <td>
                                                                         <span class="badge bg-danger text-white"><i class="fas fa-ambulance me-1"></i> {{ __('طوارئ وإسعاف') }}</span>
                                                                         @if($emg->doctor)
-                                                                            <div class="small fw-semibold text-dark mt-1">د. {{ $emg->doctor->user?->name ?? $emg->doctor->name }}</div>
+                                                                            <div class="small fw-semibold text-dark mt-1">{{ __('د.') }} {{ $emg->doctor->user?->name ?? $emg->doctor->name }}</div>
                                                                         @endif
                                                                     </td>
                                                                     <td>
@@ -1582,11 +1582,11 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> حالة طوارئ ملغاة</div>
-                                                                        <small class="text-muted">بتأريخ: {{ $emgCancelledAt }}</small>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ __('حالة طوارئ ملغاة') }}</div>
+                                                                        <small class="text-muted">{{ __('بتأريخ:') }} {{ $emgCancelledAt }}</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($emgNetRefund, 0) }} د.ع</span>
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($emgNetRefund, 0) }} {{ __('د.ع') }}</span>
                                                                     </td>
                                                                     <td class="text-center">
                                                                         <button type="button" 
@@ -1606,7 +1606,7 @@
                                                             {{-- استرجاع طلبات أشعة الطوارئ الملغاة بعد السداد --}}
                                                             @foreach($pendingEmergencyRadRefunds ?? [] as $radReq)
                                                                 @php
-                                                                    $emgPatientName = $radReq->emergency?->patient?->user?->name ?? $radReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientName = $radReq->emergency?->patient?->user?->name ?? $radReq->emergency?->emergencyPatient?->name ?? __('غير محدد');
                                                                     $emgPatientPhone = $radReq->emergency?->patient?->user?->phone ?? $radReq->emergency?->emergencyPatient?->phone ?? '---';
                                                                     $radItems = $radReq->radiologyTypes;
                                                                     $radRefundAmount = (float)$radItems->sum(fn($t) => $t->base_price ?? $t->price ?? 0);
@@ -1617,7 +1617,7 @@
                                                                 <tr>
                                                                     <td>
                                                                         <strong class="text-danger">{{ __('أشعة طوارئ') }} #{{ $radReq->id }}</strong>
-                                                                        <div class="small text-muted font-monospace">حالة #{{ $radReq->emergency_id }}</div>
+                                                                        <div class="small text-muted font-monospace">{{ __('حالة') }} #{{ $radReq->emergency_id }}</div>
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">{{ __('ملغي بعد الدفع') }}</span>
                                                                     </td>
                                                                     <td>
@@ -1636,11 +1636,11 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $radReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
-                                                                        <small class="text-muted">بتأريخ: {{ $radCancelledAt }}</small>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $radReq->notes ?: __('طلب إلغاء من قبل الطبيب / المريض') }}</div>
+                                                                        <small class="text-muted">{{ __('بتأريخ:') }} {{ $radCancelledAt }}</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($radRefundAmount, 0) }} د.ع</span>
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($radRefundAmount, 0) }} {{ __('د.ع') }}</span>
                                                                     </td>
                                                                     <td class="text-center">
                                                                         <button type="button" 
@@ -1660,7 +1660,7 @@
                                                             {{-- استرجاع طلبات مختبر الطوارئ الملغاة بعد السداد --}}
                                                             @foreach($pendingEmergencyLabRefunds ?? [] as $labReq)
                                                                 @php
-                                                                    $emgPatientName = $labReq->emergency?->patient?->user?->name ?? $labReq->emergency?->emergencyPatient?->name ?? 'غير محدد';
+                                                                    $emgPatientName = $labReq->emergency?->patient?->user?->name ?? $labReq->emergency?->emergencyPatient?->name ?? __('غير محدد');
                                                                     $emgPatientPhone = $labReq->emergency?->patient?->user?->phone ?? $labReq->emergency?->emergencyPatient?->phone ?? '---';
                                                                     $labItems = $labReq->labTests;
                                                                     $labRefundAmount = (float)$labItems->sum('price');
@@ -1671,7 +1671,7 @@
                                                                 <tr>
                                                                     <td>
                                                                         <strong class="text-danger">{{ __('مختبر طوارئ') }} #{{ $labReq->id }}</strong>
-                                                                        <div class="small text-muted font-monospace">حالة #{{ $labReq->emergency_id }}</div>
+                                                                        <div class="small text-muted font-monospace">{{ __('حالة') }} #{{ $labReq->emergency_id }}</div>
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1">{{ __('ملغي بعد الدفع') }}</span>
                                                                     </td>
                                                                     <td>
@@ -1690,11 +1690,11 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $labReq->notes ?: 'طلب إلغاء من قبل الطبيب / المريض' }}</div>
-                                                                        <small class="text-muted">بتأريخ: {{ $labCancelledAt }}</small>
+                                                                        <div class="small text-danger fw-semibold"><i class="fas fa-ban me-1"></i> {{ $labReq->notes ?: __('طلب إلغاء من قبل الطبيب / المريض') }}</div>
+                                                                        <small class="text-muted">{{ __('بتأريخ:') }} {{ $labCancelledAt }}</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($labRefundAmount, 0) }} د.ع</span>
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($labRefundAmount, 0) }} {{ __('د.ع') }}</span>
                                                                     </td>
                                                                     <td class="text-center">
                                                                         <button type="button" 
@@ -1715,44 +1715,44 @@
                                                             @foreach($nicuRefundAccounts ?? [] as $acc)
                                                                 @php
                                                                     $res = $acc['reservation'];
-                                                                    $babyName = $res->baby_name ?: 'طفل ' . ($res->patient?->name ?? 'غير محدد');
-                                                                    $parentName = $res->patient?->name ?? 'غير محدد';
+                                                                    $babyName = $res->baby_name ?: __('طفل') . ' ' . ($res->patient?->name ?? __('غير محدد'));
+                                                                    $parentName = $res->patient?->name ?? __('غير محدد');
                                                                     $phone = $res->patient?->phone ?? '-';
                                                                 @endphp
                                                                 <tr class="table-warning bg-opacity-10">
                                                                     <td>
-                                                                        <strong class="text-primary">حاضنة #{{ $res->id }}</strong>
+                                                                        <strong class="text-primary">{{ __('حاضنة') }} #{{ $res->id }}</strong>
                                                                         <span class="badge bg-primary-subtle text-primary border border-primary border-opacity-25 ms-1">
-                                                                            <i class="fas fa-baby me-1"></i> الخدج
+                                                                            <i class="fas fa-baby me-1"></i> {{ __('الخدج') }}
                                                                         </span>
-                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">ملف: #{{ $res->patient?->national_id ?: $res->patient_id }}</span>
+                                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">{{ __('ملف:') }} #{{ $res->patient?->national_id ?: $res->patient_id }}</span>
                                                                     </td>
                                                                     <td>
                                                                         <span class="badge bg-info text-dark">
                                                                             <i class="fas fa-procedures me-1"></i> #{{ $res->incubator?->name ?? $res->incubator_id }}
                                                                         </span>
-                                                                        <div class="small fw-semibold text-dark mt-1">{{ $res->nicuService?->name ?? 'باقة الخدج' }}</div>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $res->nicuService?->name ?? __('باقة الخدج') }}</div>
                                                                     </td>
                                                                     <td>
                                                                         <div class="fw-bold text-dark">{{ $babyName }}</div>
-                                                                        <small class="text-muted">المسؤول: {{ $parentName }} • {{ $phone }}</small>
+                                                                        <small class="text-muted">{{ __('المسؤول:') }} {{ $parentName }} • {{ $phone }}</small>
                                                                     </td>
                                                                     <td>
                                                                         <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace">
-                                                                            أمانات: {{ number_format($acc['total_paid'], 0) }} د.ع
+                                                                            {{ __('أمانات:') }} {{ number_format($acc['total_paid'], 0) }} {{ __('د.ع') }}
                                                                         </span>
-                                                                        <small class="text-muted d-block" style="font-size: 0.72rem;">المطالبة: {{ number_format($acc['gross_total'], 0) }} د.ع</small>
+                                                                        <small class="text-muted d-block" style="font-size: 0.72rem;">{{ __('المطالبة:') }} {{ number_format($acc['gross_total'], 0) }} {{ __('د.ع') }}</small>
                                                                     </td>
                                                                     <td>
                                                                         <div class="small text-danger fw-semibold"><i class="fas fa-undo-alt me-1"></i> {{ __('فائض أمانات بعد تصفية الحساب') }}</div>
-                                                                        <small class="text-muted">الحالة: {{ $res->status_arabic ?? $res->status }}</small>
+                                                                        <small class="text-muted">{{ __('الحالة:') }} {{ $res->status_arabic ?? $res->status }}</small>
                                                                     </td>
                                                                     <td class="text-end">
-                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} د.ع</span>
+                                                                        <span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} {{ __('د.ع') }}</span>
                                                                         <small class="text-muted d-block" style="font-size: 0.72rem;">{{ __('فائض أمانات') }}</small>
                                                                     </td>
                                                                     <td class="text-center">
-                                                                        <a href="{{ route('cashier.nicu.payment.form', $res->id) }}#refund_section" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" title="صرف واسترجاع فائض الأمانات">
+                                                                        <a href="{{ route('cashier.nicu.payment.form', $res->id) }}#refund_section" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" title="{{ __('صرف واسترجاع فائض الأمانات') }}">
                                                                             <i class="fas fa-undo-alt me-1 text-danger"></i> {{ __("إرجاع الأمانات") }}
                                                                         </a>
                                                                     </td>
@@ -1766,22 +1766,22 @@
                                                                 @endphp
                                                                 <tr class="table-warning bg-opacity-10">
                                                                     <td>
-                                                                        <strong class="text-danger">عناية #{{ $adm->id }}</strong>
+                                                                        <strong class="text-danger">{{ __('عناية') }} #{{ $adm->id }}</strong>
                                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">CCU</span>
                                                                     </td>
                                                                     <td>
-                                                                        <span class="badge bg-info text-dark">سرير {{ $adm->bed?->bed_number }}</span>
-                                                                        <div class="small fw-semibold text-dark mt-1">{{ $acc['stay_details']['active_service']?->name ?? 'العناية المركزة' }}</div>
+                                                                        <span class="badge bg-info text-dark">{{ __('سرير') }} {{ $adm->bed?->bed_number }}</span>
+                                                                        <div class="small fw-semibold text-dark mt-1">{{ $acc['stay_details']['active_service']?->name ?? __('العناية المركزة') }}</div>
                                                                     </td>
                                                                     <td>
-                                                                        <div class="fw-bold text-dark">{{ $adm->patient?->user?->name ?? 'مريض' }}</div>
+                                                                        <div class="fw-bold text-dark">{{ $adm->patient?->user?->name ?? __('مريض') }}</div>
                                                                         <small class="text-muted">{{ $adm->patient?->user?->phone ?? '-' }}</small>
                                                                     </td>
                                                                     <td>
-                                                                        <span class="badge bg-success-subtle text-success font-monospace">أمانات: {{ number_format($acc['total_paid'], 0) }} د.ع</span>
+                                                                        <span class="badge bg-success-subtle text-success font-monospace">{{ __('أمانات:') }} {{ number_format($acc['total_paid'], 0) }} {{ __('د.ع') }}</span>
                                                                     </td>
-                                                                    <td><div class="small text-danger fw-semibold">{{ __('فائض أمانات') }} عناية مركزة</div></td>
-                                                                    <td class="text-end"><span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} د.ع</span></td>
+                                                                    <td><div class="small text-danger fw-semibold">{{ __('فائض أمانات عناية مركزة') }}</div></td>
+                                                                    <td class="text-end"><span class="fs-6 fw-bold text-danger">{{ number_format($acc['excess_deposit'], 0) }} {{ __('د.ع') }}</span></td>
                                                                     <td class="text-center">
                                                                         <a href="{{ route('cashier.ccu.payment.form', $adm->id) }}" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm">
                                                                             <i class="fas fa-undo-alt me-1 text-danger"></i> {{ __("صرف الفائض") }}
@@ -1847,7 +1847,7 @@
                         <hr class="my-2">
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="fw-bold text-dark">{{ __("المبلغ المستحق إرجاعه:") }}</span>
-                            <span id="refundModalAmount" class="fs-5 fw-bold text-danger">0 د.ع</span>
+                            <span id="refundModalAmount" class="fs-5 fw-bold text-danger">0 {{ __('د.ع') }}</span>
                         </div>
                     </div>
 
@@ -1902,12 +1902,12 @@ function updateLiveIndicatorUI() {
     
     if (refreshInterval === 0) {
         indicator.removeClass('bg-success').addClass('bg-secondary')
-                 .html('<i class="fas fa-pause fa-xs me-1"></i> متوقف (يدوي)');
+                 .html('<i class="fas fa-pause fa-xs me-1"></i> ' + @json(__('متوقف (يدوي)')));
     } else {
         const seconds = Math.round(refreshInterval / 1000);
-        const label = seconds >= 60 ? (seconds / 60) + ' د' : seconds + ' ث';
+        const label = seconds >= 60 ? (seconds / 60) + ' ' + @json(__('د')) : seconds + ' ' + @json(__('ث'));
         indicator.removeClass('bg-secondary').addClass('bg-success')
-                 .html('<i class="fas fa-circle fa-xs me-1"></i> مباشر (' + label + ')');
+                 .html('<i class="fas fa-circle fa-xs me-1"></i> ' + @json(__('مباشر')) + ' (' + label + ')');
     }
 }
 
@@ -1972,14 +1972,14 @@ function performCashierRefresh(isManual) {
                 
                 const now = new Date();
                 const time = now.toLocaleTimeString('ar-IQ');
-                $('#last-update').text('آخر تحديث: ' + time);
+                $('#last-update').text(@json(__('آخر تحديث:')) + ' ' + time);
 
                 // مزامنة أداة الاختيار ومؤشر المباشر بعد حقن المحتوى
                 updateLiveIndicatorUI();
             }
         },
         error: function(error) {
-            console.error('خطأ في تحديث الكاشير:', error);
+            console.error('Cashier refresh error:', error);
         },
         complete: function() {
             isRefreshing = false;
@@ -2015,10 +2015,10 @@ function openRefundModal(requestId, patientName, receiptNo, amount, serviceType,
     const modalEl = document.getElementById('medicalRefundModal');
     const form = document.getElementById('medicalRefundForm');
     
-    document.getElementById('refundModalPatientName').textContent = patientName || 'غير محدد';
+    document.getElementById('refundModalPatientName').textContent = patientName || @json(__('غير محدد'));
     document.getElementById('refundModalServiceType').textContent = serviceType || '---';
     document.getElementById('refundModalReceiptNo').textContent = '#' + (receiptNo || '---');
-    document.getElementById('refundModalAmount').textContent = Number(amount || 0).toLocaleString('en-US') + ' د.ع';
+    document.getElementById('refundModalAmount').textContent = Number(amount || 0).toLocaleString('en-US') + ' {{ __('د.ع') }}';
     
     form.action = customActionUrl || `{{ url('/cashier/request-refund') }}/${requestId}`;
     
@@ -2046,7 +2046,7 @@ $(document).on('click', '.btn-open-refund', function(e) {
 $(document).ready(function() {
     const now = new Date();
     const time = now.toLocaleTimeString('ar-IQ');
-    $('#last-update').text('آخر تحديث: ' + time);
+    $('#last-update').text(@json(__('آخر تحديث:')) + ' ' + time);
 
     updateLiveIndicatorUI();
     scheduleNextRefresh();
@@ -2094,9 +2094,9 @@ $(document).on('click', '.filter-finance-btn', function() {
         if (filter === 'all') {
             countText.text('{{ __('عرض كافة المعاملات المعلقة') }} (' + visibleCount + ')');
         } else if (filter === 'cash') {
-            countText.html('<span class="badge bg-secondary-subtle text-secondary border">عرض المعاملات النقدية فقط (' + visibleCount + ')</span>');
+            countText.html('<span class="badge bg-secondary-subtle text-secondary border">' + @json(__('عرض المعاملات النقدية فقط')) + ' (' + visibleCount + ')</span>');
         } else if (filter === 'insurance') {
-            countText.html('<span class="badge bg-info-subtle text-dark border">عرض معاملات الضمان الصحي وقوى الأمن (' + visibleCount + ')</span>');
+            countText.html('<span class="badge bg-info-subtle text-dark border">' + @json(__('عرض معاملات الضمان الصحي وقوى الأمن')) + ' (' + visibleCount + ')</span>');
         }
     }
 });

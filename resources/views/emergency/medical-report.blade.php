@@ -1105,6 +1105,32 @@
             </div>
 
             <!-- Section 4: Final Disposition & Follow-up Recommendations -->
+            @if($emergency->discharge_type === 'deceased')
+                <div class="section-card" style="border: 2px solid #0f172a; margin-bottom: 6px;">
+                    <div class="section-banner" style="background: #0f172a; color: #ffffff;">
+                        <i class="fas fa-heart-broken" style="color: #ef4444;"></i>
+                        <span>توثيق واقعة الوفاة في قسم الطوارئ (Emergency Death Documentation)</span>
+                    </div>
+                    <div style="padding: 8px 12px; font-size: 10px; line-height: 1.6;">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; margin-bottom: 6px;">
+                            <span><strong>تاريخ وساعة الوفاة المثبتة:</strong> {{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : 'غير محدد' }}</span>
+                            <span><strong>جهة تسليم الجثمان:</strong> {{ $emergency->discharge_destination ?? 'ذوي المتوفي' }}</span>
+                        </div>
+                        <div style="margin-bottom: 4px;">
+                            <strong style="color: #b91c1c;">سبب الوفاة والتقرير السريري:</strong>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; margin-top: 2px; font-size: 11px; font-weight: 700; color: #0f172a;">
+                                {{ $emergency->discharge_notes ?: 'لم تسجل تفاصيل إضافية' }}
+                            </div>
+                        </div>
+                        @if($emergency->discharge_recommendations)
+                            <div style="font-size: 9.5px; color: #475569; margin-top: 4px;">
+                                <strong>الإجراءات الرسمية والتوصيات:</strong> {{ $emergency->discharge_recommendations }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-clipboard-check"></i>

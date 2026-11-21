@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إيصال تسديد رسوم الخدج - {{ $nicuPayment->receipt_number }}</title>
+    <title>{{ __('إيصال تسديد رسوم الخدج') }} - {{ $nicuPayment->receipt_number }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -216,107 +216,107 @@
 <body>
 
     <div class="no-print">
-        <button onclick="window.print()" class="btn-print">🖨️ طباعة الوصل (Print)</button>
-        <button onclick="window.close()" class="btn-back">✕ إغلاق النافذة</button>
+        <button onclick="window.print()" class="btn-print">{{ __('🖨️ طباعة الوصل (Print)') }}</button>
+        <button onclick="window.close()" class="btn-back">{{ __('✕ إغلاق النافذة') }}</button>
     </div>
 
     @php
         $res = $nicuPayment->reservation;
-        $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? 'غير مسجل'))) : 'الخديج';
-        $incName = $res?->incubator?->name ?? ('حاضنة #' . ($res?->incubator_id ?? ''));
-        $docName = $res?->doctor?->user?->name ? ('د. ' . $res->doctor->user->name) : 'طبيب الخدج المشرف';
-        $guardian = $res?->patient?->name ?? 'غير مسجل';
+        $babyTitle = $res ? ($res->baby_name ?: (__('طفل') . ' ' . ($res->patient?->name ?? __('غير مسجل')))) : __('الخديج');
+        $incName = $res?->incubator?->name ?? (__('حاضنة') . ' #' . ($res?->incubator_id ?? ''));
+        $docName = $res?->doctor?->user?->name ? (__('د.') . ' ' . $res->doctor->user->name) : __('طبيب الخدج المشرف');
+        $guardian = $res?->patient?->name ?? __('غير مسجل');
         $phone = $res?->patient?->phone ?? '—';
     @endphp
 
     <div class="thermal-ticket">
         <!-- الترويسة الرسمية -->
         <div class="header-box">
-            <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
+            <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? __('مستشفى الكفاءات الأهلي') }}</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
             @if($nicuPayment->payment_type === 'refund')
-                <div class="sub-title">سند صرف واسترجاع رسوم - قسم الخدج (NICU)</div>
+                <div class="sub-title">{{ __('سند صرف واسترجاع رسوم - قسم الخدج (NICU)') }}</div>
             @else
-                <div class="sub-title">سند تسديد رسوم - قسم الخدج والحاضنات (NICU)</div>
+                <div class="sub-title">{{ __('سند تسديد رسوم - قسم الخدج والحاضنات (NICU)') }}</div>
             @endif
         </div>
 
         <!-- بيانات السند والكاشير -->
         <div class="ticket-info">
-            <span>رقم الوصل: <strong>{{ $nicuPayment->receipt_number }}</strong></span>
+            <span>{{ __('رقم الوصل:') }} <strong>{{ $nicuPayment->receipt_number }}</strong></span>
             <span>{{ $nicuPayment->paid_at ? $nicuPayment->paid_at->format('Y/m/d H:i') : now()->format('Y/m/d H:i') }}</span>
         </div>
         <div class="ticket-info">
-            <span>الكاشير: <strong>{{ $nicuPayment->cashier?->name ?? 'الكاشير' }}</strong></span>
-            <span>النوع: <strong>{{ $nicuPayment->payment_type_name }}</strong></span>
+            <span>{{ __('الكاشير:') }} <strong>{{ $nicuPayment->cashier?->name ?? __('الكاشير') }}</strong></span>
+            <span>{{ __('النوع:') }} <strong>{{ $nicuPayment->payment_type_name }}</strong></span>
         </div>
 
         <!-- بيانات الطفل والحاضنة -->
         <div class="patient-box">
             <div class="patient-row">
-                <span class="patient-label">الطفل الخديج:</span>
+                <span class="patient-label">{{ __('الطفل الخديج:') }}</span>
                 <span class="patient-val">{{ $babyTitle }}</span>
             </div>
             <div class="patient-row">
-                <span class="patient-label">رقم الحاضنة:</span>
+                <span class="patient-label">{{ __('رقم الحاضنة:') }}</span>
                 <span class="patient-val">{{ $incName }}</span>
             </div>
             <div class="patient-row">
-                <span class="patient-label">الطبيب المشرف:</span>
+                <span class="patient-label">{{ __('الطبيب المشرف:') }}</span>
                 <span class="patient-val">{{ $docName }}</span>
             </div>
             <div class="patient-row">
-                <span class="patient-label">ولي الأمر / الهاتف:</span>
+                <span class="patient-label">{{ __('ولي الأمر / الهاتف:') }}</span>
                 <span class="patient-val">{{ $guardian }} / {{ $phone }}</span>
             </div>
         </div>
 
         <!-- صندوق المبلغ المقبوض / المصروف -->
         <div class="amount-box">
-            <div class="amount-title">{{ $nicuPayment->payment_type === 'refund' ? 'المبلغ المصروف والمسترجع نقداً للمريض' : 'المبلغ المقبوض في الصندوق (نقداً)' }}</div>
-            <div class="amount-val">{{ $nicuPayment->payment_type === 'refund' ? '-' : '' }}{{ number_format($nicuPayment->amount) }} د.ع</div>
-            <small style="font-size: 11px; font-weight: 700;">طريقة {{ $nicuPayment->payment_type === 'refund' ? 'الصرف' : 'القبض' }}: {{ $nicuPayment->payment_method === 'cash' ? 'نقدي' : 'بطاقة' }}</small>
+            <div class="amount-title">{{ $nicuPayment->payment_type === 'refund' ? __('المبلغ المصروف والمسترجع نقداً للمريض') : __('المبلغ المقبوض في الصندوق (نقداً)') }}</div>
+            <div class="amount-val">{{ $nicuPayment->payment_type === 'refund' ? '-' : '' }}{{ number_format($nicuPayment->amount) }} {{ __('د.ع') }}</div>
+            <small style="font-size: 11px; font-weight: 700;">{{ __('طريقة') }} {{ $nicuPayment->payment_type === 'refund' ? __('الصرف') : __('القبض') }}: {{ $nicuPayment->payment_method === 'cash' ? __('نقدي') : __('بطاقة') }}</small>
         </div>
 
         <!-- جدول الموقف المالي التراكمي -->
         @if(isset($stayDetails))
-            <div style="font-size: 11.5px; font-weight: 800; margin-bottom: 2px;">الموقف المالي التراكمي للحاضنة:</div>
+            <div style="font-size: 11.5px; font-weight: 800; margin-bottom: 2px;">{{ __('الموقف المالي التراكمي للحاضنة:') }}</div>
             <table class="summary-table">
                 <tr>
-                    <td>أجور الحاضنة والإقامة:</td>
-                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['total_service_cost']) }} د.ع</td>
+                    <td>{{ __('أجور الحاضنة والإقامة:') }}</td>
+                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['total_service_cost']) }} {{ __('د.ع') }}</td>
                 </tr>
                 <tr>
-                    <td>التحاليل والمختبر ({{ $stayDetails['medical_orders']->where('order_type', 'lab')->count() }} فحص):</td>
-                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['medical_orders']->where('order_type', 'lab')->sum('price')) }} د.ع</td>
+                    <td>{{ __('التحاليل والمختبر') }} ({{ $stayDetails['medical_orders']->where('order_type', 'lab')->count() }} {{ __('فحص') }}):</td>
+                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['medical_orders']->where('order_type', 'lab')->sum('price')) }} {{ __('د.ع') }}</td>
                 </tr>
                 <tr>
-                    <td>الأشعة والسونار ({{ $stayDetails['medical_orders']->where('order_type', 'radiology')->count() }} فحص):</td>
-                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['medical_orders']->where('order_type', 'radiology')->sum('price')) }} د.ع</td>
+                    <td>{{ __('الأشعة والسونار') }} ({{ $stayDetails['medical_orders']->where('order_type', 'radiology')->count() }} {{ __('فحص') }}):</td>
+                    <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['medical_orders']->where('order_type', 'radiology')->sum('price')) }} {{ __('د.ع') }}</td>
                 </tr>
                 @if($stayDetails['total_consultations_cost'] > 0)
                     <tr>
-                        <td>استشارات الأطباء:</td>
-                        <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['total_consultations_cost']) }} د.ع</td>
+                        <td>{{ __('استشارات الأطباء:') }}</td>
+                        <td style="text-align: left; font-weight: 700;">{{ number_format($stayDetails['total_consultations_cost']) }} {{ __('د.ع') }}</td>
                     </tr>
                 @endif
                 <tr class="total-row">
-                    <td>إجمالي المطالبة حتى الآن:</td>
-                    <td style="text-align: left;">{{ number_format($stayDetails['patient_grand_total']) }} د.ع</td>
+                    <td>{{ __('إجمالي المطالبة حتى الآن:') }}</td>
+                    <td style="text-align: left;">{{ number_format($stayDetails['patient_grand_total']) }} {{ __('د.ع') }}</td>
                 </tr>
                 <tr>
-                    <td>إجمالي المسدد حتى الآن:</td>
-                    <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</td>
+                    <td>{{ __('إجمالي المسدد حتى الآن:') }}</td>
+                    <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} {{ __('د.ع') }}</td>
                 </tr>
                 @if(($stayDetails['excess_deposit'] ?? 0) > 0)
                     <tr>
-                        <td>فائض رسوم متبقي للأهل:</td>
-                        <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['excess_deposit']) }} د.ع</td>
+                        <td>{{ __('فائض رسوم متبقي للأهل:') }}</td>
+                        <td style="text-align: left; font-weight: 900;">{{ number_format($stayDetails['excess_deposit']) }} {{ __('د.ع') }}</td>
                     </tr>
                 @endif
                 <tr class="total-row">
-                    <td>الصافي المتبقي بذمة المريض:</td>
-                    <td style="text-align: left; font-size: 13px;">{{ number_format($stayDetails['net_balance']) }} د.ع</td>
+                    <td>{{ __('الصافي المتبقي بذمة المريض:') }}</td>
+                    <td style="text-align: left; font-size: 13px;">{{ number_format($stayDetails['net_balance']) }} {{ __('د.ع') }}</td>
                 </tr>
             </table>
         @endif
@@ -324,8 +324,8 @@
         <div class="dotted-divider"></div>
 
         <div class="footer">
-            <div>{{ $nicuPayment->payment_type === 'refund' ? 'سند صرف واسترجاع مالي رسمي صادر من قسم حسابات المستشفى' : 'وصل قبض مالي رسمي صادر من قسم حسابات المستشفى' }}</div>
-            <div style="font-size: 10px; margin-top: 2px;">تمنياتنا للطفل الخديج بدوام الصحة والسلامة والشفاء العاجل</div>
+            <div>{{ $nicuPayment->payment_type === 'refund' ? __('سند صرف واسترجاع مالي رسمي صادر من قسم حسابات المستشفى') : __('وصل قبض مالي رسمي صادر من قسم حسابات المستشفى') }}</div>
+            <div style="font-size: 10px; margin-top: 2px;">{{ __('تمنياتنا للطفل الخديج بدوام الصحة والسلامة والشفاء العاجل') }}</div>
         </div>
     </div>
 

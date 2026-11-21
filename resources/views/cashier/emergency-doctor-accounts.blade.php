@@ -5,11 +5,11 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-wallet me-2 text-danger"></i>حسابات أطباء الطوارئ</h2>
-                <p class="text-muted mb-0">مراقبة وتسجيل صرف مستحقات أطباء الطوارئ من أجور المتابعة.</p>
+                <h2><i class="fas fa-wallet me-2 text-danger"></i>{{ __('حسابات أطباء الطوارئ') }}</h2>
+                <p class="text-muted mb-0">{{ __('مراقبة وتسجيل صرف مستحقات أطباء الطوارئ من أجور المتابعة.') }}</p>
             </div>
             <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>العودة إلى الكاشير الرئيسية
+                <i class="fas fa-arrow-left me-2"></i>{{ __('العودة إلى الكاشير الرئيسية') }}
             </a>
         </div>
     </div>
@@ -38,13 +38,13 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>الطبيب</th>
-                                        <th>القسم</th>
-                                        <th>عدد حالات المتابعة</th>
-                                        <th>إجمالي المستحقات (د.ع)</th>
-                                        <th>إجمالي المدفوع للطبيب (د.ع)</th>
-                                        <th>الرصيد المتبقي (د.ع)</th>
-                                        <th>الإجراءات</th>
+                                        <th>{{ __('الطبيب') }}</th>
+                                        <th>{{ __('القسم') }}</th>
+                                        <th>{{ __('عدد حالات المتابعة') }}</th>
+                                        <th>{{ __('إجمالي المستحقات (د.ع)') }}</th>
+                                        <th>{{ __('إجمالي المدفوع للطبيب (د.ع)') }}</th>
+                                        <th>{{ __('الرصيد المتبقي (د.ع)') }}</th>
+                                        <th>{{ __('الإجراءات') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -52,17 +52,17 @@
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
-                                                <div class="fw-bold">د. {{ optional($account['doctor']->user)->name }}</div>
+                                                <div class="fw-bold">{{ __('د.') }} {{ optional($account['doctor']->user)->name }}</div>
                                                 <small class="text-muted">{{ $account['doctor']->specialization }}</small>
                                             </td>
                                             <td>{{ optional($account['doctor']->department)->name ?? '---' }}</td>
-                                            <td class="fw-bold text-primary">{{ $account['cases_count'] }} حالة</td>
+                                            <td class="fw-bold text-primary">{{ $account['cases_count'] }} {{ __('حالة') }}</td>
                                             <td class="text-success fw-bold">{{ number_format($account['total_earned'], 0) }}</td>
                                             <td class="text-secondary">{{ number_format($account['total_paid'], 0) }}</td>
                                             <td class="text-danger fw-bold fs-6">{{ number_format($account['balance'], 0) }}</td>
                                             <td>
                                                 <a href="{{ route('cashier.emergency.doctor-account', $account['doctor']) }}" class="btn btn-sm btn-outline-danger">
-                                                    <i class="fas fa-search-dollar me-1"></i>كشف الحساب والصرف
+                                                    <i class="fas fa-search-dollar me-1"></i>{{ __('كشف الحساب والصرف') }}
                                                 </a>
                                             </td>
                                         </tr>
@@ -73,7 +73,7 @@
                     @else
                         <div class="text-center py-5">
                             <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">لا توجد مستحقات مالية مسجلة لأي طبيب طوارئ حالياً.</p>
+                            <p class="text-muted mb-0">{{ __('لا توجد مستحقات مالية مسجلة لأي طبيب طوارئ حالياً.') }}</p>
                         </div>
                     @endif
                 </div>

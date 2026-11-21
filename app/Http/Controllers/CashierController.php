@@ -74,7 +74,12 @@ class CashierController extends Controller
                 $q->where(function ($sq) {
                     $sq->where('subtype', 'ultrasound')
                         ->orWhere('description', 'LIKE', '%سونار%');
-                })->where('details', 'LIKE', '%created_at_inquiry%');
+                })->where(function ($subQ) {
+                    $subQ->where('details', 'LIKE', '%created_at_inquiry%')
+                        ->orWhere('insurance_type', 'none')
+                        ->orWhereNull('insurance_type')
+                        ->orWhere('insurance_type', '');
+                });
             });
         }
 
@@ -133,12 +138,17 @@ class CashierController extends Controller
             ->whereDoesntHave('visit.surgery');
 
         if ($canUltrasoundOnly) {
-            // تصفية حصرية لطلبات السونار الخارجي المباشر فقط (المحجوزة من الاستعلامات)
+            // تصفية حصرية لطلبات السونار الخارجي (سواء المحجوزة من الاستعلامات أو الصادرة من العيادات الاستشارية لمرضى خارج الضمان)
             $pendingRequestsQuery->where(function ($q) {
                 $q->where(function ($sq) {
                     $sq->where('subtype', 'ultrasound')
                         ->orWhere('description', 'LIKE', '%سونار%');
-                })->where('details', 'LIKE', '%created_at_inquiry%');
+                })->where(function ($subQ) {
+                    $subQ->where('details', 'LIKE', '%created_at_inquiry%')
+                        ->orWhere('insurance_type', 'none')
+                        ->orWhereNull('insurance_type')
+                        ->orWhere('insurance_type', '');
+                });
             });
         }
 
@@ -188,7 +198,12 @@ class CashierController extends Controller
                 $q->where(function ($sq) {
                     $sq->where('subtype', 'ultrasound')
                         ->orWhere('description', 'LIKE', '%سونار%');
-                })->where('details', 'LIKE', '%created_at_inquiry%');
+                })->where(function ($subQ) {
+                    $subQ->where('details', 'LIKE', '%created_at_inquiry%')
+                        ->orWhere('insurance_type', 'none')
+                        ->orWhereNull('insurance_type')
+                        ->orWhere('insurance_type', '');
+                });
             });
         }
 
@@ -4711,6 +4726,14 @@ class CashierController extends Controller
                 ->with('info', 'هذه الدفعة مسددة مسبقاً، تم فتح الوصل الرسمي');
         }
 
+        // تحديث ومزامنة الفاتورة الموحدة وأجور الكشفية المباشرة للأطباء
+        if ($payment->emergency) {
+            $updatedPayment = app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($payment->emergency);
+            if ($updatedPayment) {
+                $payment = $updatedPayment;
+            }
+        }
+
         $payment->load([
             'emergency.patient.user',
             'emergency.patient.healthInsuranceCategory',
@@ -4746,6 +4769,14 @@ class CashierController extends Controller
         if ($payment->payment_type !== 'emergency' || $payment->paid_at !== null || $payment->appointment_id !== null) {
             return redirect()->route('cashier.index')
                 ->with('warning', 'هذه الدفعة غير متاحة للدفع');
+        }
+
+        // تحديث ومزامنة الفاتورة الموحدة وأجور الكشفية المباشرة للأطباء قبل التحقق
+        if ($payment->emergency) {
+            $updatedPayment = app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($payment->emergency);
+            if ($updatedPayment) {
+                $payment = $updatedPayment;
+            }
         }
 
         // التحقق من عدم وجود استشارات طبية معلقة غير مسعرة للطبيب

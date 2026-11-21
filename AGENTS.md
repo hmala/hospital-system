@@ -54,6 +54,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-21 — المرحلة 271: التعريب والترجمة الإنجليزية الكاملة بنسبة 100% لكافة واجهات قسم الكاشير والمدفوعات والمطالبات وتصفير المفاتيح الناقصة في القاموس Full 100% Cashier Module Localization Across All 38 Views & Complete lang/en.json Dictionary Sync)
+
+### Done
+- **تعريب وترجمة كافة واجهات قسم الكاشير والمدفوعات الـ 38 بنسبة 100% ([resources/views/cashier/](file:///c:/wamp64/www/hospital-system/resources/views/cashier/))**:
+  * **استمارات الدفع والقبض**: استمارة العيادات الخارجية والسونار (`payment-form.blade.php`)، الفحوصات الطبية والمختبر والأشعة (`request-payment-form.blade.php`)، كاشير العمليات الجراحية المتقدم (`surgeries/payment-form.blade.php`)، كاشير الطوارئ ومطالبات الاستشارات (`emergency-payment-form.blade.php`)، كاشير العناية المركزة للكبار CCU (`ccu/payment-form.blade.php`)، وكاشير قسم الخدج والحواضن NICU (`nicu/payment-form.blade.php`).
+  * **لوحات التحكم والتقارير الرقابية**: لوحة الكاشير الرئيسية والعداد اللحظي والتبويبات (`index.blade.php`)، تقرير الحركات اليومية وفلاتر الصناديق والضمان (`report.blade.php` و `report-print.blade.php`)، سجل العمليات الملغاة وإبطال الإيصالات الرقابي (`payments/void-logs.blade.php` و `payments/void.blade.php`)، وسجل الفواتير المدفوعة (`payments.blade.php`).
+  * **كشوفات وحسابات العمليات الجراحية**: جدول العمليات قيد الانتظار (`surgeries/index.blade.php`)، العمليات المسددة وأرشيف البحث (`surgeries/paid.blade.php`)، وأرصدة وكشوفات الجراحين والتسويات وتخفيضات الباقات (`surgeries/doctor-accounts.blade.php` و `surgeries/doctor-account-details.blade.php`).
+  * **كشوفات وحسابات الطوارئ**: مطالبات وكشوفات الطوارئ والاتجاهات الشهرية (`emergency-statements.blade.php`)، الحركات المالية للمقبوضات والمستردات (`emergency-movements.blade.php`)، حسابات وأرصدة أطباء الطوارئ والمتابعة (`emergency-doctor-accounts.blade.php` و `emergency-doctor-account.blade.php`)، وحوافز إحالات الأطباء (`emergency-referrals.blade.php`).
+  * **كشوفات وإيصالات العناية المركزة للكبار والحواضن CCU & NICU (12 قالباً)**: ترجمة شاملة لكشوفات الحساب والمطالبات اليومية، سجل الحركات المالية، مطالبات هيئة الضمان، حسابات أطباء الخدج، وسندات القبض والصرف والاسترجاع الحرارية والرسمية والمفصلة.
+  * **كشوفات الحسابات العامة وأطباء الاستشارية**: كشوفات الحسابات الشاملة، الملخص حسب الطبيب، والاتجاهات والنسب الشهرية (`statements.blade.php`).
+- **مزامنة القاموس الإنجليزي وتصفير المفاتيح الناقصة ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+  * استخراج كافة المفاتيح العربية في قسم الكاشير (1,639 مفتاحاً).
+  * تغذية القاموس بالترجمات الإنجليزية التخصصية والطبية والمحاسبية لجميع المفاتيح المستخرجة وتحقيق نسبة 0 مفاتيح ناقصة (`Missing keys in lang/en.json: 0`).
+- **التدقيق وضمان الجودة والاختبارات الآلية**:
+  * نجاح تصفية وتجميع قوالب Blade بنسبة 100% دون أي خطأ نحوي أو تركيبي (`php artisan view:clear ; php artisan view:cache`).
+  * اجتياز تدقيق التنسيق القياسي `Laravel Pint` لجميع الملفات المعدلة بنسبة 100%.
+  * اجتياز حزمة الاختبارات الآلية بنسبة 100% (`19 passed, 177 assertions`) في `CashierLocalizationTest`, `SurgeriesCashierStayBillingTest`, `LocalizationTest`, و `EmergencyConsultationPaymentTest`.
+
 ## Session log (2026-11-21 — المرحلة 270: توحيد تسعير استشارات الأطباء المباشرة وإضافة عمود الكشفية المباشرة للأطباء، احتساب كشفية الطوارئ 100% للطبيب دون استقطاع المستشفى، حظر تسديد الكاشير عند غياب التسعيرة، وإلغاء الازدواجية في الوصولات والتقارير المالية Direct Doctor Consultation Fee Architecture, 100% Doctor Share for Emergency Consultations, Cashier Payment Block on Missing Pricing, and Financial Report Segregation)
 
 ### Done

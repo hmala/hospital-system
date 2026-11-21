@@ -46,7 +46,7 @@
                 <h6 class="fw-bold mb-1 text-danger">{{ __("تنبيه رقابي: هذا الوصل تم إبطاله رسمياً وغير معتمد مالياً") }}</h6>
                 <div class="small text-dark">
                     <strong>{{ __("تاريخ الإبطال:") }}</strong> {{ $payment->voided_at?->format('Y-m-d H:i:s') }} |
-                    <strong>{{ __("بواسطة:") }}</strong> {{ $payment->voidedBy?->name ?? 'المشرف الإداري' }} |
+                    <strong>{{ __("بواسطة:") }}</strong> {{ $payment->voidedBy?->name ?? __('المشرف الإداري') }} |
                     <strong>{{ __("نوع الإجراء:") }}</strong> {{ $payment->void_type === 'rebill' ? __('إعادة فتح في الكاشير للتسديد الصحيح') : __('إلغاء واسترداد نقدي') }} <br>
                     <strong>{{ __("سبب الإلغاء:") }}</strong> <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">{{ $payment->void_reason }}</span>
                 </div>
@@ -59,17 +59,17 @@
         $p = $payment->patient;
         if ($payment->incubatorReservation) {
             $res = $payment->incubatorReservation;
-            $pname = $res->baby_name ?: ('طفل ' . ($res->patient?->name ?? 'غير محدد'));
+            $pname = $res->baby_name ?: (__('طفل') . ' ' . ($res->patient?->name ?? __('غير محدد')));
             $pphone = $res->patient?->phone ?? ($res->patient?->user?->phone ?? '—');
-            $pid = 'حاضنة #' . ($res->incubator?->id ?? $res->id);
+            $pid = __('حاضنة') . ' #' . ($res->incubator?->id ?? $res->id);
         } elseif(!$p && $payment->emergency) {
             $ep = $payment->emergency->emergencyPatient;
-            $pname = $ep ? $ep->name : 'غير محدد';
-            $pphone = $ep ? ($ep->phone ?? 'غير محدد') : 'غير محدد';
-            $pid = '(طوارئ)';
+            $pname = $ep ? $ep->name : __('غير محدد');
+            $pphone = $ep ? ($ep->phone ?? __('غير محدد')) : __('غير محدد');
+            $pid = '(' . __('طوارئ') . ')';
         } else {
-            $pname = $p ? ($p->user?->name ?? 'غير محدد') : 'غير محدد';
-            $pphone = $p ? ($p->user?->phone ?? 'غير محدد') : 'غير محدد';
+            $pname = $p ? ($p->user?->name ?? __('غير محدد')) : __('غير محدد');
+            $pphone = $p ? ($p->user?->phone ?? __('غير محدد')) : __('غير محدد');
             $pid = $p ? ($p->national_id ?? '#'.$p->id) : '-';
         }
 
@@ -80,7 +80,7 @@
 
         // 1. كشف استشارية أو سونار
         if ($payment->appointment) {
-            $serviceTitle = 'رسوم كشف العيادة الاستشارية';
+            $serviceTitle = __(__('رسوم كشف العيادة الاستشارية'));
             $scanType = null;
             if ($payment->appointment->visit) {
                 $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
@@ -93,7 +93,7 @@
                 }
             }
             if ($scanType) {
-                $serviceTitle = 'فحص سونار: ' . $scanType->name;
+                $serviceTitle = __('فحص سونار:') . ' ' . $scanType->name;
             } elseif (!empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
                 $serviceTitle = $payment->appointment->reason;
             }
@@ -104,8 +104,8 @@
 
             $lineItems[] = [
                 'name' => $serviceTitle,
-                'category' => $scanType ? 'سونار' : 'استشارية',
-                'doctor' => $payment->appointment->doctor?->user?->name ? ('د. ' . $payment->appointment->doctor->user->name) : 'عام',
+                'category' => $scanType ? __('سونار') : __('استشارية'),
+                'doctor' => $payment->appointment->doctor?->user?->name ? (__('د.') . ' ' . $payment->appointment->doctor->user->name) : __('عام'),
                 'approved' => $approvedPrice,
                 'patient' => $patientShare,
                 'insurance' => $insuranceShare,
@@ -120,7 +120,7 @@
 
         foreach ($linkedRequests as $reqItem) {
             $details = is_string($reqItem->details) ? json_decode($reqItem->details, true) : $reqItem->details;
-            $doctorName = $reqItem->visit?->doctor?->user?->name ? ('د. ' . $reqItem->visit->doctor->user->name) : 'المختبر / الأشعة';
+            $doctorName = $reqItem->visit?->doctor?->user?->name ? (__('د.') . ' ' . $reqItem->visit->doctor->user->name) : __('المختبر / الأشعة');
 
             if ($reqItem->type === 'lab') {
                 $packageId = $details['package_id'] ?? null;
@@ -131,8 +131,8 @@
                     $base = (float)$pkg->price;
                     $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
                     $lineItems[] = [
-                        'name' => '📦 باقة: ' . $pkg->name . ' (' . count($pkgTestIds) . ' تحاليل مشمولة)',
-                        'category' => 'باقة مختبرية متكاملة',
+                        'name' => '📦 ' . __('باقة:') . ' ' . $pkg->name . ' (' . count($pkgTestIds) . ' ' . __('تحاليل مشمولة') . ')',
+                        'category' => __('باقة مختبرية متكاملة'),
                         'doctor' => $doctorName,
                         'approved' => $base,
                         'patient' => $pat,
@@ -151,8 +151,8 @@
                             $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                             $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
-                                'name' => '🔬 تحليل إضافي: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
-                                'category' => 'تحاليل مختبرية إضافية',
+                                'name' => '🔬 ' . __('تحليل إضافي:') . ' ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => __('تحاليل مختبرية إضافية'),
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
@@ -171,8 +171,8 @@
                             $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                             $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
-                                'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
-                                'category' => 'تحاليل مختبرية',
+                                'name' => __('تحليل:') . ' ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => __('تحاليل مختبرية'),
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
@@ -191,8 +191,8 @@
                             $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                             $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
-                                'name' => 'تحليل: ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
-                                'category' => 'تحاليل مختبرية',
+                                'name' => __('تحليل:') . ' ' . $test->name . ($test->code ? ' (' . $test->code . ')' : ''),
+                                'category' => __('تحاليل مختبرية'),
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
@@ -215,8 +215,8 @@
                         $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                         $targetPart = isset($radTargets[$typeId]) && !empty($radTargets[$typeId]) ? trim($radTargets[$typeId]) : null;
                         $lineItems[] = [
-                            'name' => 'أشعة: ' . $type->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
-                            'category' => 'فحص إشعاعي',
+                            'name' => __('أشعة:') . ' ' . $type->name . ($targetPart ? " [العضو: {$targetPart}]" : ""),
+                            'category' => __('فحص إشعاعي'),
                             'doctor' => $doctorName,
                             'approved' => $base,
                             'patient' => $pat,
@@ -237,8 +237,8 @@
                             $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                             $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                             $lineItems[] = [
-                                'name' => 'تمريض: ' . $nSvc->name,
-                                'category' => 'خدمات تمريضية وتخطيط قلب',
+                                'name' => __('تمريض:') . ' ' . $nSvc->name,
+                                'category' => __('خدمات تمريضية وتخطيط قلب'),
                                 'doctor' => $doctorName,
                                 'approved' => $base,
                                 'patient' => $pat,
@@ -267,10 +267,10 @@
                         $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
                         $ins = max(0, $base - $pat);
                     }
-                    $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                    $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? __('فحص تخطيط قلب (ECG)') : ($reqItem->description ?: __('خدمة تمريضية'));
                     $lineItems[] = [
                         'name' => $cleanTitle,
-                        'category' => 'خدمات تمريضية وتخطيط قلب',
+                        'category' => __('خدمات تمريضية وتخطيط قلب'),
                         'doctor' => $doctorName,
                         'approved' => $base,
                         'patient' => $pat,
@@ -293,9 +293,9 @@
         foreach ($paidVisitExtraServices as $extraSvc) {
             $eTotal = (float)$extraSvc->total_amount;
             $lineItems[] = [
-                'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
-                'category' => 'خدمات إضافية وفندقية',
-                'doctor' => 'الكاشير',
+                'name' => __('خدمة إضافية:') . ' ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                'category' => __('خدمات إضافية وفندقية'),
+                'doctor' => __('الكاشير'),
                 'approved' => $eTotal,
                 'patient' => $eTotal,
                 'insurance' => 0,
@@ -323,11 +323,11 @@
                 $unitBase = (float) ($svc->price ?? 0);
                 $base = $unitBase * $qty;
                 $pat = $isInsured ? round($base * ($copayPct / 100)) : $base;
-                $nameStr = 'خدمة طوارئ: ' . $svc->name . ($qty > 1 ? " (×{$qty})" : '');
+                $nameStr = __('خدمة طوارئ:') . ' ' . $svc->name . ($qty > 1 ? " (×{$qty})" : '');
                 $lineItems[] = [
                     'name' => $nameStr,
-                    'category' => 'طوارئ',
-                    'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'كادر الطوارئ',
+                    'category' => __('طوارئ'),
+                    'doctor' => $payment->emergency->doctor?->user?->name ? (__('د.') . ' ' . $payment->emergency->doctor->user->name) : __('كادر الطوارئ'),
                     'approved' => $base,
                     'patient' => $pat,
                     'insurance' => max(0, $base - $pat),
@@ -335,12 +335,12 @@
             }
 
             foreach ($emergencyAppointments as $apt) {
-                $docName = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
+                $docName = $apt->doctor?->user?->name ? (__('د.') . ' ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : __('الاستشاري');
                 $fee = (float)($apt->consultation_fee ?? 0);
                 if ($fee <= 0) continue;
                 $lineItems[] = [
-                    'name' => 'استشارة طبية طوارئ: ' . $docName,
-                    'category' => 'استشارة طوارئ',
+                    'name' => __('استشارة طبية طوارئ:') . ' ' . $docName,
+                    'category' => __('استشارة طوارئ'),
                     'doctor' => $docName,
                     'approved' => $fee,
                     'patient' => $fee,
@@ -359,9 +359,9 @@
                     $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                     $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                     $lineItems[] = [
-                        'name' => 'تحليل طوارئ: ' . $lt->name . ($lt->code ? ' (' . $lt->code . ')' : ''),
-                        'category' => 'مختبر طوارئ',
-                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'المختبر',
+                        'name' => __('تحليل طوارئ:') . ' ' . $lt->name . ($lt->code ? ' (' . $lt->code . ')' : ''),
+                        'category' => __('مختبر طوارئ'),
+                        'doctor' => $payment->emergency->doctor?->user?->name ? (__('د.') . ' ' . $payment->emergency->doctor->user->name) : __('المختبر'),
                         'approved' => $base,
                         'patient' => $pat,
                         'insurance' => $ins,
@@ -380,9 +380,9 @@
                     $pat = $pricing ? (float)$pricing['patient_share'] : ($isInsured ? round($base * ($copayPct / 100)) : $base);
                     $ins = $pricing ? (float)$pricing['insurance_share'] : max(0, $base - $pat);
                     $lineItems[] = [
-                        'name' => 'أشعة طوارئ: ' . $rt->name,
-                        'category' => 'أشعة وتصوير',
-                        'doctor' => $payment->emergency->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'قسم الأشعة',
+                        'name' => __('أشعة طوارئ:') . ' ' . $rt->name,
+                        'category' => __('أشعة وتصوير'),
+                        'doctor' => $payment->emergency->doctor?->user?->name ? (__('د.') . ' ' . $payment->emergency->doctor->user->name) : __('قسم الأشعة'),
                         'approved' => $base,
                         'patient' => $pat,
                         'insurance' => $ins,
@@ -398,15 +398,15 @@
                 $surgery = \App\Models\Surgery::with(['doctor.user', 'room', 'extraServices'])->find($matches[1]);
             }
             if ($surgery) {
-                $surgDoc = $surgery->doctor?->user?->name ? ('د. ' . $surgery->doctor->user->name) : ($surgery->surgeon_name ?: 'جراحة');
+                $surgDoc = $surgery->doctor?->user?->name ? (__('د.') . ' ' . $surgery->doctor->user->name) : ($surgery->surgeon_name ?: __('جراحة'));
                 
                 // رسوم العملية
                 if (str_contains($payment->description ?? '', 'رسوم العملية')) {
                     $surgFee = (float)$surgery->surgery_fee;
                     $pat = $isInsured ? round($surgFee * ($copayPct / 100)) : $surgFee;
                     $lineItems[] = [
-                        'name' => 'رسوم العملية الجراحية: ' . $surgery->surgery_type,
-                        'category' => 'عمليات',
+                        'name' => __('رسوم العملية الجراحية:') . ' ' . $surgery->surgery_type,
+                        'category' => __('عمليات'),
                         'doctor' => $surgDoc,
                         'approved' => $surgFee,
                         'patient' => $pat,
@@ -418,10 +418,10 @@
                 if (str_contains($payment->description ?? '', 'أجور الغرفة')) {
                     $roomFee = (float)$surgery->room_fee;
                     $pat = $isInsured ? round($roomFee * ($copayPct / 100)) : $roomFee;
-                    $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
+                    $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - ' . __('رقم') . ' ' . $surgery->room->room_number . ')') : '';
                     $lineItems[] = [
-                        'name' => 'أجور الإقامة والغرفة' . $roomInfo,
-                        'category' => 'إقامة وفندقة',
+                        'name' => __('أجور الإقامة والغرفة') . $roomInfo,
+                        'category' => __('إقامة وفندقة'),
                         'doctor' => $surgDoc,
                         'approved' => $roomFee,
                         'patient' => $pat,
@@ -439,8 +439,8 @@
                 foreach ($paidExtraServices as $extraSvc) {
                     $eTotal = (float)$extraSvc->total_amount;
                     $lineItems[] = [
-                        'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
-                        'category' => 'خدمات إضافية وفندقية',
+                        'name' => __('خدمة إضافية:') . ' ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
+                        'category' => __('خدمات إضافية وفندقية'),
                         'doctor' => $surgDoc,
                         'approved' => $eTotal,
                         'patient' => $eTotal,
@@ -453,11 +453,11 @@
         // 5. دفعات وأمانات حاضنة الخدج
         if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
             $res = $payment->incubatorReservation;
-            $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
-            $docName = $res?->doctor?->user?->name ? ('د. ' . $res->doctor->user->name) : 'طبيب الخدج';
+            $babyTitle = $res ? ($res->baby_name ?: (__('طفل') . ' ' . ($res->patient?->name ?? ''))) : __('الخديج');
+            $docName = $res?->doctor?->user?->name ? (__('د.') . ' ' . $res->doctor->user->name) : __('طبيب الخدج');
             $lineItems[] = [
-                'name' => $payment->description ?: ("دفعة / أمانات حاضنة الخدج - " . ($res?->incubator?->name ?? '') . " ({$babyTitle})"),
-                'category' => 'الخدج والحاضنات (NICU)',
+                'name' => $payment->description ?: (__('دفعة / أمانات حاضنة الخدج') . ' - ' . ($res?->incubator?->name ?? '') . " ({$babyTitle})"),
+                'category' => __('الخدج والحاضنات (NICU)'),
                 'doctor' => $docName,
                 'approved' => (float)$payment->amount,
                 'patient' => (float)$payment->amount,
@@ -472,12 +472,12 @@
             $insuranceShare = (float)($payment->insurance_share ?? max(0, $approvedPrice - $patientShare));
 
             $docTitle = $payment->appointment?->doctor?->user?->name 
-                ? ('د. ' . $payment->appointment->doctor->user->name) 
-                : ($payment->emergency?->doctor?->user?->name ? ('د. ' . $payment->emergency->doctor->user->name) : 'الكادر الطبي');
+                ? (__('د.') . ' ' . $payment->appointment->doctor->user->name) 
+                : ($payment->emergency?->doctor?->user?->name ? (__('د.') . ' ' . $payment->emergency->doctor->user->name) : __('الكادر الطبي'));
 
             $lineItems[] = [
-                'name' => $payment->description ?: 'خدمة طبية عامة',
-                'category' => $payment->payment_type ?? 'عام',
+                'name' => $payment->description ?: __('خدمة طبية عامة'),
+                'category' => $payment->payment_type ?? __('عام'),
                 'doctor' => $docTitle,
                 'approved' => $approvedPrice,
                 'patient' => $patientShare,
@@ -489,9 +489,9 @@
         if ($isRefund) {
             $lineItems = [
                 [
-                    'name' => $payment->description ?: 'استرجاع مالي للمريض: إلغاء طلب فحص خارجي',
-                    'category' => 'سند صرف استرجاع نقدي',
-                    'doctor' => optional($payment->cashier)->name ?? 'الكاشير',
+                    'name' => $payment->description ?: __('استرجاع مالي للمريض: إلغاء طلب فحص خارجي'),
+                    'category' => __('سند صرف استرجاع نقدي'),
+                    'doctor' => optional($payment->cashier)->name ?? __('الكاشير'),
                     'approved' => abs((float)$payment->amount),
                     'patient' => abs((float)$payment->amount),
                     'insurance' => 0,
@@ -540,7 +540,7 @@
                         </div>
                         <div>
                             <span class="text-muted small d-block">{{ __("أمين الصندوق (الكاشير):") }}</span>
-                            <strong class="text-dark">{{ optional($payment->cashier)->name ?? 'النظام' }}</strong>
+                            <strong class="text-dark">{{ optional($payment->cashier)->name ?? __('النظام') }}</strong>
                         </div>
                     </div>
                 </div>
@@ -603,11 +603,11 @@
                                                 <span class="badge bg-light text-dark border ms-1">{{ $item['category'] }}</span>
                                             </td>
                                             <td class="text-muted small">{{ $item['doctor'] }}</td>
-                                            <td class="text-end fw-semibold">{{ number_format($item['approved']) }} د.ع</td>
+                                            <td class="text-end fw-semibold">{{ number_format($item['approved']) }} {{ __('د.ع') }}</td>
                                             @if($isInsured)
-                                                <td class="text-end text-primary fw-semibold">{{ number_format($item['insurance']) }} د.ع</td>
+                                                <td class="text-end text-primary fw-semibold">{{ number_format($item['insurance']) }} {{ __('د.ع') }}</td>
                                             @endif
-                                            <td class="text-end text-success fw-bold">{{ number_format($item['patient']) }} د.ع</td>
+                                            <td class="text-end text-success fw-bold">{{ number_format($item['patient']) }} {{ __('د.ع') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -623,11 +623,11 @@
                                     <span class="text-muted small">{{ __("طريقة الدفع:") }}</span>
                                     <span class="badge bg-white text-dark border px-3 py-2 fs-7 fw-bold">
                                         @if($payment->payment_method === 'split')
-                                            🔄 دفع مركب (نقداً: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} د.ع | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }} د.ع)
+                                            🔄 {{ __('دفع مركب') }} ({{ __('نقداً:') }} {{ number_format((float)($payment->cash_amount ?? 0), 0) }} {{ __('د.ع') }} | {{ __('بطاقة:') }} {{ number_format((float)($payment->card_amount ?? 0), 0) }} {{ __('د.ع') }})
                                         @elseif($payment->payment_method === 'card')
-                                            💳 بطاقة دفع إلكتروني (POS / Card)
+                                            {{ __('💳 بطاقة دفع إلكتروني (POS / Card)') }}
                                         @else
-                                            💵 نقدي (Cash)
+                                            {{ __('💵 نقدي (Cash)') }}
                                         @endif
                                     </span>
                                 </div>
@@ -641,13 +641,13 @@
                             <div class="col-md-6 text-md-end">
                                 @if($isInsured)
                                     <div class="text-muted small mb-1">
-                                        {{ __("إجمالي التسعيرة:") }} {{ number_format($totalApprovedSum) }} د.ع | {{ __("تغطية الضمان:") }} <strong class="text-primary">{{ number_format($totalInsuranceSum) }} د.ع</strong>
+                                        {{ __("إجمالي التسعيرة:") }} {{ number_format($totalApprovedSum) }} {{ __('د.ع') }} | {{ __("تغطية الضمان:") }} <strong class="text-primary">{{ number_format($totalInsuranceSum) }} {{ __('د.ع') }}</strong>
                                     </div>
                                 @elseif($payment->discount_amount > 0)
                                     <div class="text-muted small mb-1">
-                                        {{ __("إجمالي الفاتورة:") }} {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} د.ع |
+                                        {{ __("إجمالي الفاتورة:") }} {{ number_format((float)($payment->patient_share > 0 ? $payment->patient_share : ($totalApprovedSum > 0 ? $totalApprovedSum : ($payment->amount + $payment->discount_amount)))) }} {{ __('د.ع') }} |
                                         <span class="text-danger fw-bold">
-                                            <i class="fas fa-tags me-1"></i> {{ __("خصم خاص") }} ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} د.ع
+                                            <i class="fas fa-tags me-1"></i> {{ __("خصم خاص") }} ({{ (float)$payment->discount_percentage }}%): -{{ number_format($payment->discount_amount) }} {{ __('د.ع') }}
                                         </span>
                                         @if($payment->discount_reason)
                                             <span class="text-muted small">({{ $payment->discount_reason }})</span>
@@ -656,7 +656,7 @@
                                 @endif
                                 <div class="d-inline-block bg-white p-2 px-4 rounded-3 border {{ $isRefund ? 'border-danger' : 'border-success' }} shadow-sm">
                                     <span class="text-muted small d-block">{{ $isRefund ? __('المبلغ المسترجع للمريض:') : __('المبلغ المقبوض نقداً من المريض:') }}</span>
-                                    <span class="fs-3 fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}">{{ number_format($totalPatientSum) }} د.ع</span>
+                                    <span class="fs-3 fw-bold {{ $isRefund ? 'text-danger' : 'text-success' }}">{{ number_format($totalPatientSum) }} {{ __('د.ع') }}</span>
                                 </div>
                             </div>
                         </div>

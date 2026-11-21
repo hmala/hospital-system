@@ -373,7 +373,7 @@
                         <span class="report-badge">
                             <i class="fas fa-calendar-alt me-1"></i>
                             @if($fromDate && $toDate)
-                                {{ $fromDate == $toDate ? $fromDate : ($fromDate . ' إلى ' . $toDate) }}
+                                {{ $fromDate == $toDate ? $fromDate : ($fromDate . ' ' . __('إلى') . ' ' . $toDate) }}
                             @elseif($fromDate)
                                 {{ __('من:') }} {{ $fromDate }}
                             @elseif($toDate)

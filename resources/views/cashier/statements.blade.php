@@ -5,17 +5,16 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-file-invoice-dollar me-2 text-primary"></i>كشوفات الحسابات</h2>
-                <p class="text-muted mb-0">واجهة جديدة لعرض كشوفات المحاسبة المالية والتقارير الخاصة.</p>
+                <h2><i class="fas fa-file-invoice-dollar me-2 text-primary"></i>{{ __('كشوفات الحسابات') }}</h2>
+                <p class="text-muted mb-0">{{ __('واجهة جديدة لعرض كشوفات المحاسبة المالية والتقارير الخاصة.') }}</p>
             </div>
-          
         </div>
     </div>
 
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-info">
-                <strong>ملاحظة:</strong> هذه الصفحة جاهزة لعرض الكشوفات التي تريد إضافتها لاحقًا.
+                <strong>{{ __('ملاحظة:') }}</strong> {{ __('هذه الصفحة جاهزة لعرض الكشوفات التي تريد إضافتها لاحقًا.') }}
             </div>
         </div>
     </div>
@@ -24,17 +23,17 @@
         <div class="col-12">
             <form method="GET" action="{{ route('cashier.statements') }}" class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label for="from_date" class="form-label">من تاريخ</label>
+                    <label for="from_date" class="form-label">{{ __('من تاريخ') }}</label>
                     <input type="date" id="from_date" name="from_date" class="form-control" value="{{ request('from_date') }}">
                 </div>
                 <div class="col-md-3">
-                    <label for="to_date" class="form-label">إلى تاريخ</label>
+                    <label for="to_date" class="form-label">{{ __('إلى تاريخ') }}</label>
                     <input type="date" id="to_date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
                 <div class="col-md-4 d-flex flex-column gap-2 align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">عرض</button>
+                    <button type="submit" class="btn btn-primary w-100">{{ __('عرض') }}</button>
                     <a href="{{ route('cashier.statements.export', request()->only(['from_date', 'to_date'])) }}" class="btn btn-success w-100">
-                        <i class="fas fa-file-excel me-2"></i>تصدير إكسل
+                        <i class="fas fa-file-excel me-2"></i>{{ __('تصدير إكسل') }}
                     </a>
                 </div>
             </form>
@@ -45,10 +44,10 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>كشف أطباء الاستشارية</h5>
+                    <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>{{ __('كشف أطباء الاستشارية') }}</h5>
                     <div>
-                        <span class="badge bg-light text-dark me-2">عدد السجلات: {{ $totals['count'] ?? 0 }}</span>
-                        <span class="badge bg-light text-dark">إجمالي المدفوع: {{ number_format($totals['total_amount'] ?? 0, 0) }}</span>
+                        <span class="badge bg-light text-dark me-2">{{ __('عدد السجلات:') }} {{ $totals['count'] ?? 0 }}</span>
+                        <span class="badge bg-light text-dark">{{ __('إجمالي المدفوع:') }} {{ number_format($totals['total_amount'] ?? 0, 0) }}</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -57,14 +56,14 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>التاريخ</th>
-                                    <th>عدد الفحوصات</th>
-                                    <th>نوع الخدمة</th>
-                                    <th>اسم الطبيب</th>
-                                    <th>اسم المريض</th>
-                                    <th>المبلغ المسدد</th>
-                                    <th>حصة الطبيب</th>
-                                    <th>ربح المستشفى</th>
+                                    <th>{{ __('التاريخ') }}</th>
+                                    <th>{{ __('عدد الفحوصات') }}</th>
+                                    <th>{{ __('نوع الخدمة') }}</th>
+                                    <th>{{ __('اسم الطبيب') }}</th>
+                                    <th>{{ __('اسم المريض') }}</th>
+                                    <th>{{ __('المبلغ المسدد') }}</th>
+                                    <th>{{ __('حصة الطبيب') }}</th>
+                                    <th>{{ __('ربح المستشفى') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -82,14 +81,14 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-5">لا توجد بيانات لهذا الكشف.</td>
+                                        <td colspan="9" class="text-center text-muted py-5">{{ __('لا توجد بيانات لهذا الكشف.') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
                             @if(!empty($revenues) && $revenues->count() > 0)
                                 <tfoot class="table-light">
                                     <tr>
-                                        <th colspan="6" class="text-end">الإجمالي</th>
+                                        <th colspan="6" class="text-end">{{ __('الإجمالي') }}</th>
                                         <th>{{ number_format($totals['total_amount'] ?? 0, 0) }}</th>
                                         <th>{{ number_format($totals['total_doctor_share'] ?? 0, 0) }}</th>
                                         <th>{{ number_format($totals['total_hospital_share'] ?? 0, 0) }}</th>
@@ -107,10 +106,10 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>الملخص حسب الطبيب</h5>
+                    <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>{{ __('الملخص حسب الطبيب') }}</h5>
                     <div>
-                        <span class="badge bg-light text-dark me-2">عدد الأطباء: {{ $totals['grouped_count'] ?? 0 }}</span>
-                        <span class="badge bg-light text-dark">إجمالي المدفوع: {{ number_format($totals['grouped_total_amount'] ?? 0, 0) }}</span>
+                        <span class="badge bg-light text-dark me-2">{{ __('عدد الأطباء:') }} {{ $totals['grouped_count'] ?? 0 }}</span>
+                        <span class="badge bg-light text-dark">{{ __('إجمالي المدفوع:') }} {{ number_format($totals['grouped_total_amount'] ?? 0, 0) }}</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -119,13 +118,13 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>التاريخ</th>
-                                    <th>عدد الفحوصات</th>
-                                    <th>نوع الخدمة</th>
-                                    <th>اسم الطبيب</th>
-                                    <th>المبلغ المسدد</th>
-                                    <th>حصة الطبيب</th>
-                                    <th>ربح المستشفى</th>
+                                    <th>{{ __('التاريخ') }}</th>
+                                    <th>{{ __('عدد الفحوصات') }}</th>
+                                    <th>{{ __('نوع الخدمة') }}</th>
+                                    <th>{{ __('اسم الطبيب') }}</th>
+                                    <th>{{ __('المبلغ المسدد') }}</th>
+                                    <th>{{ __('حصة الطبيب') }}</th>
+                                    <th>{{ __('ربح المستشفى') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -134,7 +133,7 @@
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $group->first_appointment_date ? \Carbon\Carbon::parse($group->first_appointment_date)->format('Y-m-d') : '-' }}</td>
                                         <td>{{ $group->examination_count }}</td>
-                                        <td>جميع الخدمات</td>
+                                        <td>{{ __('جميع الخدمات') }}</td>
                                         <td>{{ $group->doctor?->user?->name ?? '-' }}</td>
                                         <td>{{ number_format($group->total_amount, 0) }}</td>
                                         <td>{{ number_format($group->doctor_share, 0) }}</td>
@@ -142,14 +141,14 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-5">لا توجد بيانات مجمعة حسب الطبيب.</td>
+                                        <td colspan="9" class="text-center text-muted py-5">{{ __('لا توجد بيانات مجمعة حسب الطبيب.') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
                             @if(!empty($groupedRevenues) && $groupedRevenues->count() > 0)
                                 <tfoot class="table-light">
                                     <tr>
-                                        <th colspan="5" class="text-end">الإجمالي</th>
+                                        <th colspan="5" class="text-end">{{ __('الإجمالي') }}</th>
                                         <th>{{ number_format($totals['grouped_total_amount'] ?? 0, 0) }}</th>
                                         <th>{{ number_format($totals['grouped_total_doctor_share'] ?? 0, 0) }}</th>
                                         <th>{{ number_format($totals['grouped_total_hospital_share'] ?? 0, 0) }}</th>
@@ -167,10 +166,10 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>الملخص الشهري حسب الطبيب</h5>
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ __('الملخص الشهري حسب الطبيب') }}</h5>
                     <div>
-                        <span class="badge bg-light text-dark me-2">عدد الأطباء: {{ $totals['monthly_grouped_count'] ?? 0 }}</span>
-                        <span class="badge bg-light text-dark">إجمالي الفحوصات: {{ $totals['monthly_examination_count'] ?? 0 }}</span>
+                        <span class="badge bg-light text-dark me-2">{{ __('عدد الأطباء:') }} {{ $totals['monthly_grouped_count'] ?? 0 }}</span>
+                        <span class="badge bg-light text-dark">{{ __('إجمالي الفحوصات:') }} {{ $totals['monthly_examination_count'] ?? 0 }}</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -179,12 +178,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
-                                    <th>اسم الطبيب</th>
+                                    <th>{{ __('اسم الطبيب') }}</th>
                                     @foreach($monthNames as $monthName)
-                                        <th>{{ $monthName }}</th>
+                                        <th>{{ __($monthName) }}</th>
                                     @endforeach
-                                    <th>الإجمالي</th>
-                                    <th>النسبة %</th>
+                                    <th>{{ __('الإجمالي') }}</th>
+                                    <th>{{ __('النسبة %') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -218,14 +217,14 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="15" class="text-center text-muted py-5">لا توجد بيانات شهرية حسب الطبيب.</td>
+                                        <td colspan="15" class="text-center text-muted py-5">{{ __('لا توجد بيانات شهرية حسب الطبيب.') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
                             @if(!empty($monthlyDoctorSummary) && $monthlyDoctorSummary->count() > 0)
                                 <tfoot class="table-light">
                                     <tr>
-                                        <th colspan="2" class="text-end">الإجمالي</th>
+                                        <th colspan="2" class="text-end">{{ __('الإجمالي') }}</th>
                                         @foreach($monthlyTotals as $count)
                                             <th>{{ number_format($count, 0) }}</th>
                                         @endforeach

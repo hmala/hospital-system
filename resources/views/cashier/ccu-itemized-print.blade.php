@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>كشف الحساب والمطالبة التفصيلي CCU #{{ $admission->id }}</title>
+    <title>{{ __('كشف الحساب والمطالبة التفصيلي CCU') }} #{{ $admission->id }}</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 20px; color: #111; font-size: 13px; }
         .doc { max-width: 960px; margin: auto; }
@@ -25,30 +25,30 @@
     </div>
 
     <div class="header">
-        <h2 style="margin:0;">كشف حساب ومطالبة ردهات العناية المركزة للكبار (CCU / ICU)</h2>
-        <div>إضبارة رقم #{{ $admission->id }} — تاريخ الإصدار: {{ now()->format('Y-m-d H:i') }}</div>
+        <h2 style="margin:0;">{{ __('كشف حساب ومطالبة ردهات العناية المركزة للكبار (CCU / ICU)') }}</h2>
+        <div>{{ __('إضبارة رقم') }} #{{ $admission->id }} — تاريخ الإصدار: {{ now()->format('Y-m-d H:i') }}</div>
     </div>
 
     <div class="grid">
-        <div><strong>المريض:</strong> {{ $admission->patient?->user?->name ?? 'مريض' }}</div>
-        <div><strong>التغطية:</strong> {{ $stayDetails['is_insured'] ? 'مشمول بالضمان الصحي (فئة ' . $stayDetails['policy_category'] . ')' : 'نقدي (كاش)' }}</div>
-        <div><strong>السرير:</strong> {{ $admission->bed?->bed_number }} ({{ $admission->bed?->type_name }})</div>
-        <div><strong>التشخيص الأولي:</strong> {{ $admission->primary_diagnosis ?: 'قيد التحديد' }} {{ $admission->icd10_code ? '(' . $admission->icd10_code . ')' : '' }}</div>
-        <div><strong>تاريخ الدخول:</strong> {{ optional($admission->admission_date)->format('Y-m-d H:i') }}</div>
-        <div><strong>عدد الأيام المحتسبة:</strong> {{ $stayDetails['days_count'] }} يوم @if($stayDetails['is_insured']) (السنوي التراكمي: {{ $stayDetails['total_annual_days_with_current'] }}/{{ $stayDetails['annual_max_days'] }}) @endif</div>
+        <div><strong>{{ __('المريض:') }}</strong> {{ $admission->patient?->user?->name ?? __('مريض') }}</div>
+        <div><strong>{{ __('التغطية:') }}</strong> {{ $stayDetails['is_insured'] ? __('مشمول بالضمان الصحي') . ' (' . __('فئة') . ' ' . $stayDetails['policy_category'] . ')' : __('نقدي (كاش)') }}</div>
+        <div><strong>{{ __('السرير:') }}</strong> {{ $admission->bed?->bed_number }} ({{ $admission->bed?->type_name }})</div>
+        <div><strong>{{ __('التشخيص الأولي:') }}</strong> {{ $admission->primary_diagnosis ?: __('قيد التحديد') }} {{ $admission->icd10_code ? '(' . $admission->icd10_code . ')' : '' }}</div>
+        <div><strong>{{ __('تاريخ الدخول:') }}</strong> {{ optional($admission->admission_date)->format('Y-m-d H:i') }}</div>
+        <div><strong>{{ __('عدد الأيام المحتسبة:') }}</strong> {{ $stayDetails['days_count'] }} {{ __('يوم') }} @if($stayDetails['is_insured']) ({{ __('السنوي التراكمي:') }} {{ $stayDetails['total_annual_days_with_current'] }}/{{ $stayDetails['annual_max_days'] }}) @endif</div>
     </div>
 
-    <h4>1. تفصيل الإقامة اليومية وشرائح التغطية المعتمدة</h4>
+    <h4>{{ __('1. تفصيل الإقامة اليومية وشرائح التغطية المعتمدة') }}</h4>
     <table>
         <thead>
             <tr>
-                <th>اليوم</th>
-                <th>السجل السنوي</th>
-                <th class="text-start">الباقة / نظام التسعير</th>
-                <th>اليومية</th>
-                <th>الشريحة</th>
-                <th>حصة الضمان</th>
-                <th>حصة المريض</th>
+                <th>{{ __('اليوم') }}</th>
+                <th>{{ __('السجل السنوي') }}</th>
+                <th class="text-start">{{ __('الباقة / نظام التسعير') }}</th>
+                <th>{{ __('اليومية') }}</th>
+                <th>{{ __('الشريحة') }}</th>
+                <th>{{ __('حصة الضمان') }}</th>
+                <th>{{ __('حصة المريض') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -67,15 +67,15 @@
     </table>
 
     @if(count($stayDetails['addon_breakdown']) > 0)
-        <h4>2. الخدمات المخصصة المنفصلة (كاش / أجهزة إضافية)</h4>
+        <h4>{{ __('2. الخدمات المخصصة المنفصلة (كاش / أجهزة إضافية)') }}</h4>
         <table>
             <thead>
                 <tr>
-                    <th class="text-start">الخدمة</th>
-                    <th>السعر</th>
-                    <th>الكمية</th>
-                    <th>حصة الضمان</th>
-                    <th>حصة المريض</th>
+                    <th class="text-start">{{ __('الخدمة') }}</th>
+                    <th>{{ __('السعر') }}</th>
+                    <th>{{ __('الكمية') }}</th>
+                    <th>{{ __('حصة الضمان') }}</th>
+                    <th>{{ __('حصة المريض') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -92,47 +92,47 @@
         </table>
     @endif
 
-    <h4>3. الفحوصات المختبرية والشعاعية (توضيح القيمة الأصلية مقابل المشمول 0 د.ع)</h4>
+    <h4>{{ __('3. الفحوصات المختبرية والشعاعية (توضيح القيمة الأصلية مقابل المشمول 0 د.ع)') }}</h4>
     <table>
         <thead>
             <tr>
-                <th>النوع</th>
-                <th class="text-start">اسم الفحص</th>
-                <th>القيمة الأصلية (للمطالبة)</th>
-                <th>حالة الشمول</th>
-                <th>حصة الضمان الإضافية</th>
-                <th>حصة المريض</th>
+                <th>{{ __('النوع') }}</th>
+                <th class="text-start">{{ __('اسم الفحص') }}</th>
+                <th>{{ __('القيمة الأصلية (للمطالبة)') }}</th>
+                <th>{{ __('حالة الشمول') }}</th>
+                <th>{{ __('حصة الضمان الإضافية') }}</th>
+                <th>{{ __('حصة المريض') }}</th>
             </tr>
         </thead>
         <tbody>
             @forelse($stayDetails['medical_orders'] as $ord)
                 <tr>
-                    <td>{{ $ord->order_type === 'lab' ? 'مختبر' : 'أشعة' }}</td>
+                    <td>{{ $ord->order_type === 'lab' ? __('مختبر') : __('أشعة') }}</td>
                     <td class="text-start">{{ $ord->labTest?->name ?? $ord->radiologyType?->name ?? $ord->item_name }}</td>
                     <td>{{ number_format($ord->original_price_display ?? $ord->original_price ?? 0) }}</td>
-                    <td>{{ $ord->is_bundled ? 'مشمول بالباقة اليومية (0 د.ع على المريض)' : 'محتسب منفرداً' }}</td>
+                    <td>{{ $ord->is_bundled ? __('مشمول بالباقة اليومية (0 د.ع على المريض)') : __('محتسب منفرداً') }}</td>
                     <td>{{ number_format($ord->insurance_share ?? 0) }}</td>
                     <td>{{ number_format($ord->patient_share ?? 0) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6">لا توجد طلبات مختبر أو أشعة.</td></tr>
+                <tr><td colspan="6">{{ __('لا توجد طلبات مختبر أو أشعة.') }}</td></tr>
             @endforelse
         </tbody>
     </table>
 
     <div class="summary-box">
         <div>
-            <strong>ملخص حساب المريض</strong><br>
-            صافي المستحق على المريض: <strong>{{ number_format($stayDetails['patient_grand_total']) }} د.ع</strong><br>
-            المدفوع حتى الآن: <strong>{{ number_format($stayDetails['total_paid']) }} د.ع</strong><br>
-            المتبقي بذمة المريض: <strong>{{ number_format($stayDetails['net_balance']) }} د.ع</strong>
+            <strong>{{ __('ملخص حساب المريض') }}</strong><br>
+            {{ __('صافي المستحق على المريض:') }} <strong>{{ number_format($stayDetails['patient_grand_total']) }} {{ __('د.ع') }}</strong><br>
+            {{ __('المدفوع حتى الآن:') }} <strong>{{ number_format($stayDetails['total_paid']) }} {{ __('د.ع') }}</strong><br>
+            {{ __('المتبقي بذمة المريض:') }} <strong>{{ number_format($stayDetails['net_balance']) }} {{ __('د.ع') }}</strong>
         </div>
         <div>
-            <strong>ملخص مطالبة هيئة الضمان الصحي</strong><br>
-            القيمة الأصلية للفحوصات المشمولة: <strong>{{ number_format($stayDetails['bundled_reference_total']) }} د.ع</strong><br>
-            صافي المطالبة الفعلية للضمان: <strong>{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</strong><br>
-            المستلم من الضمان: <strong>{{ number_format($stayDetails['hia_collected_amount']) }} د.ع</strong><br>
-            الباقي بذمة الضمان الصحي: <strong>{{ number_format($stayDetails['hia_remaining_balance']) }} د.ع</strong>
+            <strong>{{ __('ملخص مطالبة هيئة الضمان الصحي') }}</strong><br>
+            {{ __('القيمة الأصلية للفحوصات المشمولة:') }} <strong>{{ number_format($stayDetails['bundled_reference_total']) }} {{ __('د.ع') }}</strong><br>
+            {{ __('صافي المطالبة الفعلية للضمان:') }} <strong>{{ number_format($stayDetails['insurance_grand_total']) }} {{ __('د.ع') }}</strong><br>
+            {{ __('المستلم من الضمان:') }} <strong>{{ number_format($stayDetails['hia_collected_amount']) }} {{ __('د.ع') }}</strong><br>
+            {{ __('الباقي بذمة الضمان الصحي:') }} <strong>{{ number_format($stayDetails['hia_remaining_balance']) }} {{ __('د.ع') }}</strong>
         </div>
     </div>
 </div>

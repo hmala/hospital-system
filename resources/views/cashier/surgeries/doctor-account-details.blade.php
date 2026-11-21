@@ -12,25 +12,25 @@
                     </div>
                     <div>
                         <h2 class="h4 fw-bold text-dark mb-1">
-                            كشف حساب الجراح: د. {{ $doctor->user?->name ?? 'غير محدد' }}
+                            {{ __('كشف حساب الجراح:') }} {{ __('د.') }} {{ $doctor->user?->name ?? __('غير محدد') }}
                         </h2>
                         <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
                             <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 rounded-pill">
-                                <i class="fas fa-stethoscope me-1"></i> {{ $doctor->specialization ?? 'جراحة' }}
+                                <i class="fas fa-stethoscope me-1"></i> {{ $doctor->specialization ?? __('جراحة') }}
                             </span>
                             <span>•</span>
-                            <span>{{ $doctor->department?->name ?? 'قسم العمليات الجراحية' }}</span>
+                            <span>{{ $doctor->department?->name ?? __('قسم العمليات الجراحية') }}</span>
                             <span>•</span>
-                            <span>هاتف: {{ $doctor->user?->phone ?? '---' }}</span>
+                            <span>{{ __('هاتف:') }} {{ $doctor->user?->phone ?? '---' }}</span>
                         </div>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('cashier.surgeries.doctor-accounts') }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-arrow-left me-1"></i> العودة لقائمة الجراحين
+                        <i class="fas fa-arrow-left me-1"></i> {{ __('العودة لقائمة الجراحين') }}
                     </a>
                     <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-outline-danger rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-procedures me-1"></i> كاشير العمليات
+                        <i class="fas fa-procedures me-1"></i> {{ __('كاشير العمليات') }}
                     </a>
                 </div>
             </div>
@@ -57,9 +57,9 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-success text-white">
                 <div class="card-body p-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-white-50 small fw-bold d-block mb-1">الرصيد الحالي المتبقي للطبيب</span>
+                        <span class="text-white-50 small fw-bold d-block mb-1">{{ __('الرصيد الحالي المتبقي للطبيب') }}</span>
                         <h2 class="mb-0 fw-bold">{{ number_format($stats['balance'], 0) }}</h2>
-                        <small class="text-white-50">د.ع بذمة المستشفى</small>
+                        <small class="text-white-50">{{ __('د.ع بذمة المستشفى') }}</small>
                     </div>
                     <div class="bg-white bg-opacity-25 rounded-circle p-3 text-white">
                         <i class="fas fa-wallet fa-2x"></i>
@@ -70,36 +70,36 @@
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">العمليات المنفذة</span>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('العمليات المنفذة') }}</span>
                     <h3 class="mb-0 fw-bold text-dark">{{ number_format($stats['surgeries_count']) }}</h3>
-                    <small class="text-muted">عملية مسددة</small>
+                    <small class="text-muted">{{ __('عملية مسددة') }}</small>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">الأتعاب الاسمية</span>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('الأتعاب الاسمية') }}</span>
                     <h4 class="mb-0 fw-bold text-secondary">{{ number_format($stats['gross_fees'], 0) }}</h4>
-                    <small class="text-muted">د.ع قبل الاستقطاع</small>
+                    <small class="text-muted">{{ __('د.ع قبل الاستقطاع') }}</small>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">استقطاعات الباقة</span>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('استقطاعات الباقة') }}</span>
                     <h4 class="mb-0 fw-bold text-danger">-{{ number_format($stats['package_deductions'], 0) }}</h4>
-                    <small class="text-danger">د.ع لصالح المستشفى</small>
+                    <small class="text-danger">{{ __('د.ع لصالح المستشفى') }}</small>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">إجمالي المصروف</span>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('إجمالي المصروف') }}</span>
                     <h4 class="mb-0 fw-bold text-success">{{ number_format($stats['total_paid'], 0) }}</h4>
-                    <small class="text-success">د.ع مسدد فعلياً</small>
+                    <small class="text-success">{{ __('د.ع مسدد فعلياً') }}</small>
                 </div>
             </div>
         </div>
@@ -111,22 +111,22 @@
             <div class="card-body p-3">
                 <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
                     <i class="fas fa-hand-holding-usd text-success"></i>
-                    <span>تسجيل سند صرف دفعة من مستحقات الجراح</span>
+                    <span>{{ __('تسجيل سند صرف دفعة من مستحقات الجراح') }}</span>
                 </h6>
                 <form action="{{ route('cashier.surgeries.doctor-payout', $doctor) }}" method="POST" id="payoutForm" class="row g-2 align-items-end">
                     @csrf
                     <div class="col-12 col-md-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">المبلغ المراد صرفه (د.ع)</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">{{ __('المبلغ المراد صرفه (د.ع)') }}</label>
                         <input type="number" name="amount" class="form-control form-control-sm rounded-3 fw-bold font-monospace" max="{{ $stats['balance'] }}" min="1" step="500" value="{{ $stats['balance'] }}" required>
-                        <small class="text-muted" style="font-size: 0.7rem;">الحد الأقصى المتاح: {{ number_format($stats['balance'], 0) }} د.ع</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">{{ __('الحد الأقصى المتاح:') }} {{ number_format($stats['balance'], 0) }} {{ __('د.ع') }}</small>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label small fw-bold text-secondary mb-1">البيان والملاحظات</label>
-                        <input type="text" name="notes" class="form-control form-control-sm rounded-3" placeholder="مثال: صرف دفعة نقدية من أتعاب العمليات الجراحية عن شهر...">
+                        <label class="form-label small fw-bold text-secondary mb-1">{{ __('البيان والملاحظات') }}</label>
+                        <input type="text" name="notes" class="form-control form-control-sm rounded-3" placeholder="{{ __('مثال: صرف دفعة نقدية من أتعاب العمليات الجراحية عن شهر...') }}">
                     </div>
                     <div class="col-12 col-md-3">
                         <button type="submit" class="btn btn-success btn-sm w-100 rounded-3 fw-bold py-1-5 shadow-sm">
-                            <i class="fas fa-check-circle me-1"></i> تسجيل واعتماد سند الصرف
+                            <i class="fas fa-check-circle me-1"></i> {{ __('تسجيل واعتماد سند الصرف') }}
                         </button>
                     </div>
                 </form>
@@ -140,12 +140,12 @@
             <div class="d-flex align-items-center gap-2">
                 <i class="fas fa-exclamation-triangle text-danger fs-5"></i>
                 <div>
-                    <strong class="text-danger">تنبيه رقابي:</strong>
-                    <span class="text-dark small">يوجد لهذا الجراح <strong>{{ $cancelledSurgeries->count() }} عملية ملغاة ومسترجعة للمواطنين</strong> (استحقاقها 0 د.ع ومحفوظة في تبويب الأرشيف الرقابي دون التأثير على حسابه).</span>
+                    <strong class="text-danger">{{ __('تنبيه رقابي:') }}</strong>
+                    <span class="text-dark small">{{ __('يوجد لهذا الجراح') }} <strong>{{ $cancelledSurgeries->count() }} {{ __('عملية ملغاة ومسترجعة للمواطنين') }}</strong> ({{ __('استحقاقها 0 د.ع ومحفوظة في تبويب الأرشيف الرقابي دون التأثير على حسابه') }}).</span>
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm" onclick="if(window.activateDoctorTab) window.activateDoctorTab('#cancelled-surgeries-pane');">
-                <i class="fas fa-eye me-1"></i> عرض العمليات الملغاة ({{ $cancelledSurgeries->count() }})
+                <i class="fas fa-eye me-1"></i> {{ __('عرض العمليات الملغاة') }} ({{ $cancelledSurgeries->count() }})
             </button>
         </div>
     @endif
@@ -156,7 +156,7 @@
             <button class="nav-link active doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
                     id="active-surgeries-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#active-surgeries-pane" data-target="#active-surgeries-pane" type="button" role="tab" aria-controls="active-surgeries-pane" aria-selected="true">
                 <i class="fas fa-procedures text-primary"></i>
-                <span>العمليات الجراحية المستحقة</span>
+                <span>{{ __('العمليات الجراحية المستحقة') }}</span>
                 <span class="badge bg-primary text-white rounded-pill px-2">{{ $surgeries->total() }}</span>
             </button>
         </li>
@@ -164,7 +164,7 @@
             <button class="nav-link doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2 {{ $cancelledSurgeries->isNotEmpty() ? 'text-danger' : 'text-muted' }}" 
                     id="cancelled-surgeries-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#cancelled-surgeries-pane" data-target="#cancelled-surgeries-pane" type="button" role="tab" aria-controls="cancelled-surgeries-pane" aria-selected="false">
                 <i class="fas fa-ban text-danger"></i>
-                <span>العمليات الملغاة والمسترجعة (للعلم)</span>
+                <span>{{ __('العمليات الملغاة والمسترجعة (للعلم)') }}</span>
                 <span class="badge {{ $cancelledSurgeries->isNotEmpty() ? 'bg-danger text-white' : 'bg-light text-secondary border' }} rounded-pill px-2">
                     {{ $cancelledSurgeries->count() }}
                 </span>
@@ -174,7 +174,7 @@
             <button class="nav-link doctor-account-tab-btn rounded-pill fw-bold px-3 py-2 d-flex align-items-center gap-2" 
                     id="payouts-history-tab" data-bs-toggle="tab" data-toggle="tab" data-bs-target="#payouts-history-pane" data-target="#payouts-history-pane" type="button" role="tab" aria-controls="payouts-history-pane" aria-selected="false">
                 <i class="fas fa-history text-success"></i>
-                <span>سجل سندات الصرف والتسويات</span>
+                <span>{{ __('سجل سندات الصرف والتسويات') }}</span>
                 <span class="badge bg-success text-white rounded-pill px-2">{{ $payouts->count() }}</span>
             </button>
         </li>
@@ -187,10 +187,10 @@
                 <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
                         <i class="fas fa-procedures text-danger"></i>
-                        <span>سجل العمليات الجراحية المعتمدة واستقطاعاتها وتصفيتها</span>
+                        <span>{{ __('سجل العمليات الجراحية المعتمدة واستقطاعاتها وتصفيتها') }}</span>
                     </h5>
                     <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
-                        عدد العمليات: {{ $surgeries->total() }}
+                        {{ __('عدد العمليات:') }} {{ $surgeries->total() }}
                     </span>
                 </div>
                 <div class="card-body p-0">
@@ -199,14 +199,14 @@
                     <thead class="table-light text-secondary small fw-bold">
                         <tr>
                             <th class="ps-4"># / العملية</th>
-                            <th>التاريخ والإيصال</th>
-                            <th>المريض</th>
-                            <th>نوع الحساب</th>
-                            <th class="text-end">أتعاب الجراحة الاسمية</th>
-                            <th class="text-end">استقطاعات الباقة (المستشفى)</th>
-                            <th class="text-end">صافي مستحق الجراح</th>
-                            <th class="text-center">سداد الكاشير</th>
-                            <th class="text-center pe-4">تصفية المستحق</th>
+                            <th>{{ __('التاريخ والإيصال') }}</th>
+                            <th>{{ __('المريض') }}</th>
+                            <th>{{ __('نوع الحساب') }}</th>
+                            <th class="text-end">{{ __('أتعاب الجراحة الاسمية') }}</th>
+                            <th class="text-end">{{ __('استقطاعات الباقة (المستشفى)') }}</th>
+                            <th class="text-end">{{ __('صافي مستحق الجراح') }}</th>
+                            <th class="text-center">{{ __('سداد الكاشير') }}</th>
+                            <th class="text-center pe-4">{{ __('تصفية المستحق') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -230,7 +230,7 @@
                                     <div class="fw-bold text-dark fs-6">#{{ $surgery->id }} - {{ $surgery->surgery_type }}</div>
                                     @if($surgery->room)
                                         <span class="badge bg-light text-dark border mt-1" style="font-size: 0.7rem;">
-                                            غرفة {{ $surgery->room->room_number }}
+                                            {{ __('غرفة') }} {{ $surgery->room->room_number }}
                                         </span>
                                     @endif
                                 </td>
@@ -239,13 +239,13 @@
                                 <td>
                                     <div class="fw-bold text-secondary">{{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '---' }}</div>
                                     @if($payment)
-                                        <small class="text-muted font-monospace d-block">إيصال #{{ $payment->receipt_number ?? $payment->id }}</small>
+                                        <small class="text-muted font-monospace d-block">{{ __('إيصال') }} #{{ $payment->receipt_number ?? $payment->id }}</small>
                                     @endif
                                 </td>
 
                                 {{-- اسم المريض --}}
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $patient?->user?->name ?? $patient?->name ?? 'مريض غير محدد' }}</div>
+                                    <div class="fw-bold text-dark">{{ $patient?->user?->name ?? $patient?->name ?? __('مريض غير محدد') }}</div>
                                     <small class="text-muted">{{ $patient?->user?->phone ?? '---' }}</small>
                                 </td>
 
@@ -253,54 +253,54 @@
                                 <td>
                                     @if($isIns)
                                         <span class="badge bg-info-subtle text-info border border-info border-opacity-25 rounded-pill px-2 py-1" style="font-size: 0.75rem;">
-                                            ضمان ({{ strtoupper($surgery->insurance_type) }})
+                                            {{ __('ضمان') }} ({{ strtoupper($surgery->insurance_type) }})
                                         </span>
                                     @else
                                         <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1" style="font-size: 0.75rem;">
-                                            نقدي (Cash)
+                                            {{ __('نقدي (Cash)') }}
                                         </span>
                                     @endif
                                 </td>
 
                                 {{-- أتعاب الجراحة الاسمية --}}
                                 <td class="text-end font-monospace text-secondary fw-bold">
-                                    {{ number_format($grossFee, 0) }} <small class="text-muted">د.ع</small>
+                                    {{ number_format($grossFee, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
                                 </td>
 
                                 {{-- استقطاعات الباقة وزر المودال --}}
                                 <td class="text-end">
                                     @if($deductions > 0)
-                                        <span class="fw-bold text-danger font-monospace">-{{ number_format($deductions, 0) }} د.ع</span>
+                                        <span class="fw-bold text-danger font-monospace">-{{ number_format($deductions, 0) }} {{ __('د.ع') }}</span>
                                         <button type="button" 
                                                 class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0 d-block ms-auto mt-1 show-package-breakdown-btn"
                                                 style="font-size: 0.7rem;"
                                                 data-surgery="#{{ $surgery->id }} - {{ $surgery->surgery_type }}"
                                                 data-receipt="{{ $payment?->receipt_number ?? $payment?->id }}"
-                                                data-deductions="{{ number_format($deductions, 0) }} د.ع"
+                                                data-deductions="{{ number_format($deductions, 0) }} {{ __('د.ع') }}"
                                                 data-items="{{ json_encode($itemsSnapshot, JSON_UNESCAPED_UNICODE) }}">
-                                            <i class="fas fa-list me-1"></i> تفاصيل ({{ count($itemsSnapshot) }})
+                                            <i class="fas fa-list me-1"></i> {{ __('تفاصيل') }} ({{ count($itemsSnapshot) }})
                                         </button>
                                     @else
                                         <span class="text-muted font-monospace">0</span>
                                         @if($isIns)
-                                            <small class="text-info d-block" style="font-size: 0.7rem;">عقد ضمان</small>
+                                            <small class="text-info d-block" style="font-size: 0.7rem;">{{ __('عقد ضمان') }}</small>
                                         @endif
                                     @endif
                                 </td>
 
                                 {{-- صافي مستحق الجراح --}}
                                 <td class="text-end font-monospace text-success fs-6 fw-bold">
-                                    {{ number_format($netFee, 0) }} <small class="text-muted">د.ع</small>
+                                    {{ number_format($netFee, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
                                 </td>
 
                                 {{-- حالة السداد في الكاشير --}}
                                 <td class="text-center">
                                     @if($surgery->payment_status === 'paid')
-                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1">مسدد بالكامل</span>
+                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1">{{ __('مسدد بالكامل') }}</span>
                                     @elseif($surgery->payment_status === 'partial')
-                                        <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 rounded-pill px-2 py-1">دفع جزئي</span>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 rounded-pill px-2 py-1">{{ __('دفع جزئي') }}</span>
                                     @else
-                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1">معلق</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1">{{ __('معلق') }}</span>
                                     @endif
                                 </td>
 
@@ -309,7 +309,7 @@
                                     @if($isSettled)
                                         <div class="d-inline-flex flex-column align-items-center">
                                             <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-3 py-1 fw-bold">
-                                                <i class="fas fa-check-circle me-1"></i> تم الصرف
+                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم الصرف') }}
                                             </span>
                                             <small class="text-muted mt-1" style="font-size: 0.7rem;">
                                                 {{ $due->paid_at ? $due->paid_at->format('Y-m-d H:i') : '' }}
@@ -321,16 +321,16 @@
                                     @else
                                         <div class="d-inline-flex flex-column align-items-center gap-1">
                                             <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1 fw-bold">
-                                                <i class="fas fa-clock me-1"></i> بانتظار الصرف
+                                                <i class="fas fa-clock me-1"></i> {{ __('بانتظار الصرف') }}
                                             </span>
                                             @if($payment)
                                                 <button type="button" 
                                                         class="btn btn-sm btn-success rounded-pill px-3 py-0 settle-single-surgery-btn shadow-sm"
                                                         style="font-size: 0.75rem;"
                                                         data-surgery-id="{{ $surgery->id }}"
-                                                        data-amount="{{ number_format($netFee, 0) }} د.ع"
+                                                        data-amount="{{ number_format($netFee, 0) }} {{ __('د.ع') }}"
                                                         data-action="{{ route('cashier.surgeries.settle-single-surgery', [$doctor, $surgery]) }}">
-                                                    <i class="fas fa-hand-holding-usd me-1"></i> صرف العملية
+                                                    <i class="fas fa-hand-holding-usd me-1"></i> {{ __('صرف العملية') }}
                                                 </button>
                                             @endif
                                         </div>
@@ -341,7 +341,7 @@
                             <tr>
                                 <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="fas fa-procedures fa-3x mb-3 text-secondary opacity-50"></i>
-                                    <p class="mb-0 fw-bold">لا توجد عمليات جراحية مسجلة لهذا الطبيب حتى الآن.</p>
+                                    <p class="mb-0 fw-bold">{{ __('لا توجد عمليات جراحية مسجلة لهذا الطبيب حتى الآن.') }}</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -363,10 +363,10 @@
                 <div class="card-header bg-danger bg-opacity-10 py-3 px-4 border-bottom border-danger border-opacity-25 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold text-danger d-flex align-items-center gap-2">
                         <i class="fas fa-ban"></i>
-                        <span>أرشيف العمليات الملغاة والمسترجعة (للعلم والتدقيق الرقابي)</span>
+                        <span>{{ __('أرشيف العمليات الملغاة والمسترجعة (للعلم والتدقيق الرقابي)') }}</span>
                     </h5>
                     <span class="badge bg-danger text-white px-3 py-2 rounded-pill">
-                        عدد العمليات: {{ $cancelledSurgeries->count() }} (استحقاق الطبيب: 0 د.ع)
+                        {{ __('عدد العمليات:') }} {{ $cancelledSurgeries->count() }} ({{ __('استحقاق الطبيب: 0 د.ع') }})
                     </span>
                 </div>
                 <div class="card-body p-0">
@@ -375,12 +375,12 @@
                             <thead class="table-light text-secondary small fw-bold">
                                 <tr>
                                     <th class="ps-4"># / العملية</th>
-                                    <th>التاريخ</th>
-                                    <th>المريض</th>
-                                    <th class="text-end">أجور الجراحة الاسمية</th>
-                                    <th class="text-center">استحقاق الجراح</th>
-                                    <th class="text-center">حالة الإلغاء والاسترجاع</th>
-                                    <th class="pe-4">سندات الاسترجاع والتفاصيل</th>
+                                    <th>{{ __('التاريخ') }}</th>
+                                    <th>{{ __('المريض') }}</th>
+                                    <th class="text-end">{{ __('أجور الجراحة الاسمية') }}</th>
+                                    <th class="text-center">{{ __('استحقاق الجراح') }}</th>
+                                    <th class="text-center">{{ __('حالة الإلغاء والاسترجاع') }}</th>
+                                    <th class="pe-4">{{ __('سندات الاسترجاع والتفاصيل') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -394,7 +394,7 @@
                                         <td class="ps-4">
                                             <div class="fw-bold text-dark fs-6">#{{ $cancelledSurgery->id }} - {{ $cancelledSurgery->surgery_type }}</div>
                                             <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 mt-1" style="font-size: 0.7rem;">
-                                                <i class="fas fa-times-circle me-1"></i>عملية ملغاة
+                                                <i class="fas fa-times-circle me-1"></i>{{ __('عملية ملغاة') }}
                                             </span>
                                         </td>
 
@@ -405,26 +405,26 @@
 
                                         {{-- المريض --}}
                                         <td>
-                                            <div class="fw-bold text-dark">{{ $cPatient?->user?->name ?? $cPatient?->name ?? 'مريض غير محدد' }}</div>
+                                            <div class="fw-bold text-dark">{{ $cPatient?->user?->name ?? $cPatient?->name ?? __('مريض غير محدد') }}</div>
                                             <small class="text-muted font-monospace">{{ $cPatient?->patient_id ?? '-' }}</small>
                                         </td>
 
                                         {{-- الأجور الاسمية --}}
                                         <td class="text-end text-muted text-decoration-line-through font-monospace">
-                                            {{ number_format($cancelledSurgery->surgery_fee, 0) }} د.ع
+                                            {{ number_format($cancelledSurgery->surgery_fee, 0) }} {{ __('د.ع') }}
                                         </td>
 
                                         {{-- استحقاق الجراح --}}
                                         <td class="text-center">
                                             <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1 fw-bold">
-                                                <i class="fas fa-ban me-1"></i>0 د.ع (لا يترتب استحقاق)
+                                                <i class="fas fa-ban me-1"></i>0 {{ __('د.ع') }} ({{ __('لا يترتب استحقاق') }})
                                             </span>
                                         </td>
 
                                         {{-- حالة الاسترجاع --}}
                                         <td class="text-center">
                                             <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
-                                                <i class="fas fa-undo me-1"></i>تم استرجاع المبلغ للمواطن
+                                                <i class="fas fa-undo me-1"></i>{{ __('تم استرجاع المبلغ للمواطن') }}
                                             </span>
                                         </td>
 
@@ -432,11 +432,11 @@
                                         <td class="pe-4 small text-muted">
                                             @if($refundPayment)
                                                 <span class="fw-bold text-danger font-monospace d-block">
-                                                    إيصال استرجاع #{{ $refundPayment->receipt_number }} ({{ number_format(abs($refundPayment->amount), 0) }} د.ع)
+                                                    {{ __('إيصال استرجاع') }} #{{ $refundPayment->receipt_number }} ({{ number_format(abs($refundPayment->amount), 0) }} {{ __('د.ع') }})
                                                 </span>
                                                 <small class="text-muted">{{ $refundPayment->paid_at ? $refundPayment->paid_at->format('Y-m-d H:i') : '' }}</small>
                                             @else
-                                                <span class="text-muted">أُلغيت قبل التسديد المالي</span>
+                                                <span class="text-muted">{{ __('أُلغيت قبل التسديد المالي') }}</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -444,7 +444,7 @@
                                     <tr>
                                         <td colspan="7" class="text-center py-5 text-muted">
                                             <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
-                                            <p class="mb-0 fw-bold">لا توجد أي عمليات ملغاة أو مسترجعة لهذا الطبيب.</p>
+                                            <p class="mb-0 fw-bold">{{ __('لا توجد أي عمليات ملغاة أو مسترجعة لهذا الطبيب.') }}</p>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -461,10 +461,10 @@
                 <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
                         <i class="fas fa-history text-success"></i>
-                        <span>سجل سندات الصرف والتسويات السابقة للطبيب</span>
+                        <span>{{ __('سجل سندات الصرف والتسويات السابقة للطبيب') }}</span>
                     </h6>
                     <span class="badge bg-success text-white px-3 py-2 rounded-pill">
-                        عدد السندات: {{ $payouts->count() }} (الإجمالي: {{ number_format($stats['total_paid'], 0) }} د.ع)
+                        {{ __('عدد السندات:') }} {{ $payouts->count() }} ({{ __('الإجمالي:') }} {{ number_format($stats['total_paid'], 0) }} {{ __('د.ع') }})
                     </span>
                 </div>
                 <div class="card-body p-0">
@@ -472,11 +472,11 @@
                         <table class="table table-hover align-middle mb-0 text-nowrap">
                             <thead class="table-light text-secondary small fw-bold">
                                 <tr>
-                                    <th class="ps-4">رقم السند</th>
-                                    <th>تاريخ ووقت الصرف</th>
-                                    <th>المحاسب المسؤول</th>
-                                    <th class="text-end">المبلغ المصروف</th>
-                                    <th class="pe-4">البيان والملاحظات</th>
+                                    <th class="ps-4">{{ __('رقم السند') }}</th>
+                                    <th>{{ __('تاريخ ووقت الصرف') }}</th>
+                                    <th>{{ __('المحاسب المسؤول') }}</th>
+                                    <th class="text-end">{{ __('المبلغ المصروف') }}</th>
+                                    <th class="pe-4">{{ __('البيان والملاحظات') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -486,10 +486,10 @@
                                         <td>{{ $payout->paid_at ? $payout->paid_at->format('Y-m-d H:i') : '---' }}</td>
                                         <td>
                                             <i class="fas fa-user-tag text-muted me-1"></i>
-                                            {{ $payout->paidBy?->name ?? 'محاسب' }}
+                                            {{ $payout->paidBy?->name ?? __('محاسب') }}
                                         </td>
                                         <td class="text-end font-monospace text-success fw-bold fs-6">
-                                            {{ number_format($payout->amount, 0) }} د.ع
+                                            {{ number_format($payout->amount, 0) }} {{ __('د.ع') }}
                                         </td>
                                         <td class="pe-4 text-muted small">{{ $payout->notes ?? '---' }}</td>
                                     </tr>
@@ -497,7 +497,7 @@
                                     <tr>
                                         <td colspan="5" class="text-center py-5 text-muted">
                                             <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
-                                            <p class="mb-0 fw-bold">لا توجد سندات صرف مسجلة لهذا الطبيب حتى الآن.</p>
+                                            <p class="mb-0 fw-bold">{{ __('لا توجد سندات صرف مسجلة لهذا الطبيب حتى الآن.') }}</p>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -517,23 +517,23 @@
             <div class="modal-header bg-danger text-white py-3">
                 <h5 class="modal-title fw-bold fs-6 d-flex align-items-center gap-2">
                     <i class="fas fa-cut"></i>
-                    <span>تفاصيل الخدمات المشمولة بالباقة والمستقطعة من الجراح</span>
+                    <span>{{ __('تفاصيل الخدمات المشمولة بالباقة والمستقطعة من الجراح') }}</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ __('إغلاق') }}"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="bg-light p-3 rounded-3 mb-3 border">
                     <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted small">العملية الجراحية:</span>
+                        <span class="text-muted small">{{ __('العملية الجراحية:') }}</span>
                         <strong class="text-dark" id="modalSurgeryName">---</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted small">رقم الإيصال:</span>
+                        <span class="text-muted small">{{ __('رقم الإيصال:') }}</span>
                         <span class="badge bg-secondary font-monospace" id="modalReceiptNo">---</span>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <span class="text-muted small">إجمالي الاستقطاع المخصوم:</span>
-                        <strong class="text-danger fs-6 font-monospace" id="modalTotalDeductions">0 د.ع</strong>
+                        <span class="text-muted small">{{ __('إجمالي الاستقطاع المخصوم:') }}</span>
+                        <strong class="text-danger fs-6 font-monospace" id="modalTotalDeductions">0 {{ __('د.ع') }}</strong>
                     </div>
                 </div>
 
@@ -542,9 +542,9 @@
                         <thead class="table-light small">
                             <tr>
                                 <th>#</th>
-                                <th>الخدمة / البند</th>
-                                <th>النوع</th>
-                                <th class="text-end">القيمة المستقطعة</th>
+                                <th>{{ __('الخدمة / البند') }}</th>
+                                <th>{{ __('النوع') }}</th>
+                                <th class="text-end">{{ __('القيمة المستقطعة') }}</th>
                             </tr>
                         </thead>
                         <tbody id="modalItemsTbody">
@@ -554,7 +554,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light py-2 px-3 border-top">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('إغلاق') }}</button>
             </div>
         </div>
     </div>
@@ -588,18 +588,18 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.innerHTML = '';
 
             if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">لا توجد عناصر مسجلة</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">' + @json(__('لا توجد عناصر مسجلة')) + '</td></tr>';
             } else {
                 items.forEach((item, index) => {
                     let typeBadge = '';
                     if (item.type === 'room') {
-                        typeBadge = '<span class="badge bg-secondary-subtle text-secondary border">غرفة وإقامة</span>';
+                        typeBadge = '<span class="badge bg-secondary-subtle text-secondary border">' + @json(__('غرفة وإقامة')) + '</span>';
                     } else if (item.type === 'lab') {
-                        typeBadge = '<span class="badge bg-info-subtle text-info border">تحليل مختبري</span>';
+                        typeBadge = '<span class="badge bg-info-subtle text-info border">' + @json(__('تحليل مختبري')) + '</span>';
                     } else if (item.type === 'radiology') {
-                        typeBadge = '<span class="badge bg-warning-subtle text-dark border">فحص أشعة</span>';
+                        typeBadge = '<span class="badge bg-warning-subtle text-dark border">' + @json(__('فحص أشعة')) + '</span>';
                     } else {
-                        typeBadge = '<span class="badge bg-primary-subtle text-primary border">خدمة إضافية</span>';
+                        typeBadge = '<span class="badge bg-primary-subtle text-primary border">' + @json(__('خدمة إضافية')) + '</span>';
                     }
 
                     const row = document.createElement('tr');
@@ -607,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <td class="text-center text-muted small">${index + 1}</td>
                         <td class="fw-bold text-dark">${item.name || '---'}</td>
                         <td class="text-center">${typeBadge}</td>
-                        <td class="text-end font-monospace text-danger fw-bold">${Number(item.price || 0).toLocaleString()} د.ع</td>
+                        <td class="text-end font-monospace text-danger fw-bold">${Number(item.price || 0).toLocaleString()} ' + @json(__('د.ع')) + '</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -628,18 +628,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
             Swal.fire({
-                title: 'تأكيد صرف مستحقات العملية',
-                html: `هل أنت متأكد من صرف مستحقات هذه العملية للجراح بمبلغ <b class="text-success">${amount}</b>؟`,
+                title: @json(__('تأكيد صرف مستحقات العملية')),
+                html: @json(__('هل أنت متأكد من صرف مستحقات هذه العملية للجراح بمبلغ')) + ' <b class="text-success">' + amount + '</b>' + @json(__('؟')),
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#198754',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-hand-holding-usd me-1"></i> نعم، تأكيد الصرف',
-                cancelButtonText: 'إلغاء'
+                confirmButtonText: '<i class="fas fa-hand-holding-usd me-1"></i> ' + @json(__('نعم، تأكيد الصرف')),
+                cancelButtonText: @json(__('إلغاء'))
             }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire({
-                        title: 'جارٍ تسجيل الصرف...',
+                        title: @json(__('جارٍ تسجيل الصرف...')),
                         allowOutsideClick: false,
                         didOpen: () => Swal.showLoading()
                     });
@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (data.success) {
                             Swal.fire({
                                 icon: 'success',
-                                title: 'تم الصرف بنجاح',
+                                title: @json(__('تم الصرف بنجاح')),
                                 text: data.message,
                                 timer: 1800,
                                 showConfirmButton: false
@@ -668,8 +668,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         } else {
                             Swal.fire({
                                 icon: 'error',
-                                title: 'تعذر الصرف',
-                                text: data.message || 'حدث خطأ'
+                                title: @json(__('تعذر الصرف')),
+                                text: data.message || @json(__('حدث خطأ'))
                             });
                         }
                     })
@@ -677,8 +677,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error(err);
                         Swal.fire({
                             icon: 'error',
-                            title: 'خطأ في الاتصال',
-                            text: 'تعذر الاتصال بالسيرفر'
+                            title: @json(__('خطأ في الاتصال')),
+                            text: @json(__('تعذر الاتصال بالسيرفر'))
                         });
                     });
                 }

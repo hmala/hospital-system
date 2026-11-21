@@ -5,11 +5,11 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-wallet me-2 text-info"></i>كشف حساب الخدج والحاضنات للطبيب</h2>
-                <p class="text-muted mb-0">كشف تفصيلي باستشارات الحواضن والحالات المشرف عليها وسجل الصرف للطبيب د. {{ optional($doctor->user)->name }}.</p>
+                <h2><i class="fas fa-wallet me-2 text-info"></i>{{ __('كشف حساب الخدج والحاضنات للطبيب') }}</h2>
+                <p class="text-muted mb-0">{{ __('كشف تفصيلي باستشارات الحواضن والحالات المشرف عليها وسجل الصرف للطبيب') }} {{ __('د.') }} {{ optional($doctor->user)->name }}.</p>
             </div>
             <a href="{{ route('cashier.nicu.doctor-accounts') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-right me-2"></i>العودة لحسابات أطباء الخدج
+                <i class="fas fa-arrow-right me-2"></i>{{ __('العودة لحسابات أطباء الخدج') }}
             </a>
         </div>
     </div>
@@ -33,27 +33,27 @@
         <div class="col-md-4">
             <div class="card border-0 shadow-sm text-white bg-success">
                 <div class="card-body text-center">
-                    <h6 class="mb-1 opacity-75">إجمالي المستحقات المكتسبة</h6>
-                    <h2 class="fw-bold mb-0">{{ number_format($totalEarned, 0) }} د.ع</h2>
-                    <small>استشارات الخدج المنجزة</small>
+                    <h6 class="mb-1 opacity-75">{{ __('إجمالي المستحقات المكتسبة') }}</h6>
+                    <h2 class="fw-bold mb-0">{{ number_format($totalEarned, 0) }} {{ __('د.ع') }}</h2>
+                    <small>{{ __('استشارات الخدج المنجزة') }}</small>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card border-0 shadow-sm text-white bg-secondary">
                 <div class="card-body text-center">
-                    <h6 class="mb-1 opacity-75">إجمالي المبالغ المصروفة</h6>
-                    <h2 class="fw-bold mb-0">{{ number_format($totalPaid, 0) }} د.ع</h2>
-                    <small>المدفوعة نقداً للطبيب من الخدج</small>
+                    <h6 class="mb-1 opacity-75">{{ __('إجمالي المبالغ المصروفة') }}</h6>
+                    <h2 class="fw-bold mb-0">{{ number_format($totalPaid, 0) }} {{ __('د.ع') }}</h2>
+                    <small>{{ __('المدفوعة نقداً للطبيب من الخدج') }}</small>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card border-0 shadow-sm text-white bg-info">
                 <div class="card-body text-center">
-                    <h6 class="mb-1 opacity-75">الرصيد المتبقي مستحق الصرف</h6>
-                    <h2 class="fw-bold mb-0">{{ number_format($balance, 0) }} د.ع</h2>
-                    <small>جاهز للصرف</small>
+                    <h6 class="mb-1 opacity-75">{{ __('الرصيد المتبقي مستحق الصرف') }}</h6>
+                    <h2 class="fw-bold mb-0">{{ number_format($balance, 0) }} {{ __('د.ع') }}</h2>
+                    <small>{{ __('جاهز للصرف') }}</small>
                 </div>
             </div>
         </div>
@@ -63,22 +63,22 @@
     @if($balance > 0)
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent py-3">
-                <h5 class="card-title mb-0 fw-bold"><i class="fas fa-hand-holding-usd text-info me-2"></i>تسجيل دفعة صرف مستحقات لطبيب الخدج</h5>
+                <h5 class="card-title mb-0 fw-bold"><i class="fas fa-hand-holding-usd text-info me-2"></i>{{ __('تسجيل دفعة صرف مستحقات لطبيب الخدج') }}</h5>
             </div>
             <div class="card-body">
                 <form action="{{ route('cashier.nicu.doctor-payout', $doctor) }}" method="POST" class="row g-3 align-items-end">
                     @csrf
                     <div class="col-md-4">
-                        <label for="amount" class="form-label fw-bold">المبلغ المراد صرفه للطبيب (د.ع)</label>
-                        <input type="number" id="amount" name="amount" class="form-control" max="{{ $balance }}" min="1000" step="250" placeholder="مثال: 50000" required>
+                        <label for="amount" class="form-label fw-bold">{{ __('المبلغ المراد صرفه للطبيب (د.ع)') }}</label>
+                        <input type="number" id="amount" name="amount" class="form-control" max="{{ $balance }}" min="1000" step="250" placeholder="{{ __('مثال: 50000') }}" required>
                     </div>
                     <div class="col-md-5">
-                        <label for="notes" class="form-label fw-bold">ملاحظات وبيان الصرف</label>
-                        <input type="text" id="notes" name="notes" class="form-control" placeholder="مثال: صرف مستحقات استشارات الخدج للفترة الحالية">
+                        <label for="notes" class="form-label fw-bold">{{ __('ملاحظات وبيان الصرف') }}</label>
+                        <input type="text" id="notes" name="notes" class="form-control" placeholder="{{ __('مثال: صرف مستحقات استشارات الخدج للفترة الحالية') }}">
                     </div>
                     <div class="col-md-3">
                         <button type="submit" class="btn btn-info text-white w-100 fw-bold">
-                            <i class="fas fa-check-circle me-1"></i>تسجيل صرف الدفعة
+                            <i class="fas fa-check-circle me-1"></i>{{ __('تسجيل صرف الدفعة') }}
                         </button>
                     </div>
                 </form>
@@ -92,8 +92,8 @@
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-stethoscope text-info me-2"></i>سجل استشارات الخدج المنجزة</h5>
-                    <span class="badge bg-info bg-opacity-10 text-info">{{ $consultations->total() }} استشارة</span>
+                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-stethoscope text-info me-2"></i>{{ __('سجل استشارات الخدج المنجزة') }}</h5>
+                    <span class="badge bg-info bg-opacity-10 text-info">{{ $consultations->total() }} {{ __('استشارة') }}</span>
                 </div>
                 <div class="card-body">
                     @if($consultations->count() > 0)
@@ -102,10 +102,10 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>التاريخ</th>
-                                        <th>المولود / الحاضنة</th>
-                                        <th>التخصص والسبب</th>
-                                        <th>قيمة الاستشارة</th>
+                                        <th>{{ __('التاريخ') }}</th>
+                                        <th>{{ __('المولود / الحاضنة') }}</th>
+                                        <th>{{ __('التخصص والسبب') }}</th>
+                                        <th>{{ __('قيمة الاستشارة') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -114,14 +114,14 @@
                                             <td>{{ $consultations->firstItem() + $loop->index }}</td>
                                             <td>{{ $item->completed_at ? $item->completed_at->format('Y-m-d H:i') : $item->created_at->format('Y-m-d') }}</td>
                                             <td>
-                                                <div class="fw-bold">{{ $item->reservation?->baby_title ?? 'طفل غير محدد' }}</div>
-                                                <small class="text-muted">حاضنة: {{ $item->reservation?->incubator?->incubator_number ?? '—' }}</small>
+                                                <div class="fw-bold">{{ $item->reservation?->baby_title ?? __('طفل غير محدد') }}</div>
+                                                <small class="text-muted">{{ __('حاضنة:') }} {{ $item->reservation?->incubator?->incubator_number ?? '—' }}</small>
                                             </td>
                                             <td>
-                                                <span class="badge bg-light text-dark border">{{ $item->specialty ?: 'أطفال' }}</span>
+                                                <span class="badge bg-light text-dark border">{{ $item->specialty ?: __('أطفال') }}</span>
                                                 <div class="small text-muted">{{ Str::limit($item->reason, 40) }}</div>
                                             </td>
-                                            <td class="fw-bold text-success">{{ number_format($item->fee, 0) }} د.ع</td>
+                                            <td class="fw-bold text-success">{{ number_format($item->fee, 0) }} {{ __('د.ع') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -131,15 +131,15 @@
                             {{ $consultations->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
                     @else
-                        <p class="text-muted text-center py-4 mb-0">لا توجد استشارات منجزة مدفوعة مسجلة لهذا الطبيب.</p>
+                        <p class="text-muted text-center py-4 mb-0">{{ __('لا توجد استشارات منجزة مدفوعة مسجلة لهذا الطبيب.') }}</p>
                     @endif
                 </div>
             </div>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-baby text-primary me-2"></i>الحالات المشرف عليها كطبيب رئيسي</h5>
-                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ $supervisedCases->total() }} حالة</span>
+                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-baby text-primary me-2"></i>{{ __('الحالات المشرف عليها كطبيب رئيسي') }}</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ $supervisedCases->total() }} {{ __('حالة') }}</span>
                 </div>
                 <div class="card-body">
                     @if($supervisedCases->count() > 0)
@@ -148,11 +148,11 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>المولود</th>
-                                        <th>الحاضنة</th>
-                                        <th>الدخول</th>
-                                        <th>الحالة</th>
-                                        <th>إجراء</th>
+                                        <th>{{ __('المولود') }}</th>
+                                        <th>{{ __('الحاضنة') }}</th>
+                                        <th>{{ __('الدخول') }}</th>
+                                        <th>{{ __('الحالة') }}</th>
+                                        <th>{{ __('إجراء') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -162,12 +162,12 @@
                                             <td>
                                                 <strong>{{ $sc->baby_title }}</strong>
                                             </td>
-                                            <td>حاضنة {{ $sc->incubator?->incubator_number ?? '—' }}</td>
+                                            <td>{{ __('حاضنة') }} {{ $sc->incubator?->incubator_number ?? '—' }}</td>
                                             <td>{{ $sc->admission_date->format('Y-m-d') }}</td>
                                             <td><span class="badge bg-{{ $sc->status_color }}">{{ $sc->status_name }}</span></td>
                                             <td>
                                                 <a href="{{ route('nicu.statement', $sc) }}" class="btn btn-xs btn-outline-info">
-                                                    كشف الحساب
+                                                    {{ __('كشف الحساب') }}
                                                 </a>
                                             </td>
                                         </tr>
@@ -179,7 +179,7 @@
                             {{ $supervisedCases->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
                     @else
-                        <p class="text-muted text-center py-3 mb-0">لا توجد حالات مسجلة تحت إشراف هذا الطبيب.</p>
+                        <p class="text-muted text-center py-3 mb-0">{{ __('لا توجد حالات مسجلة تحت إشراف هذا الطبيب.') }}</p>
                     @endif
                 </div>
             </div>
@@ -189,7 +189,7 @@
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-history text-secondary me-2"></i>سجل دفعات الصرف المالي</h5>
+                    <h5 class="card-title mb-0 fw-bold text-dark"><i class="fas fa-history text-secondary me-2"></i>{{ __('سجل دفعات الصرف المالي') }}</h5>
                 </div>
                 <div class="card-body">
                     @if($payouts->count() > 0)
@@ -198,10 +198,10 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>التاريخ</th>
-                                        <th>المبلغ</th>
-                                        <th>بواسطة</th>
-                                        <th>ملاحظات</th>
+                                        <th>{{ __('التاريخ') }}</th>
+                                        <th>{{ __('المبلغ') }}</th>
+                                        <th>{{ __('بواسطة') }}</th>
+                                        <th>{{ __('ملاحظات') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -209,7 +209,7 @@
                                         <tr>
                                             <td>{{ $payouts->firstItem() + $loop->index }}</td>
                                             <td>{{ $payout->created_at->format('Y-m-d H:i') }}</td>
-                                            <td class="fw-bold text-danger">{{ number_format($payout->amount, 0) }} د.ع</td>
+                                            <td class="fw-bold text-danger">{{ number_format($payout->amount, 0) }} {{ __('د.ع') }}</td>
                                             <td>{{ optional($payout->paidBy)->name ?? '-' }}</td>
                                             <td><span class="small text-muted">{{ $payout->notes }}</span></td>
                                         </tr>
@@ -221,7 +221,7 @@
                             {{ $payouts->appends(request()->query())->links('pagination::bootstrap-5') }}
                         </div>
                     @else
-                        <p class="text-muted text-center py-5">لا توجد دفعات صرف مسجلة لهذا الطبيب لقسم الخدج.</p>
+                        <p class="text-muted text-center py-5">{{ __('لا توجد دفعات صرف مسجلة لهذا الطبيب لقسم الخدج.') }}</p>
                     @endif
                 </div>
             </div>

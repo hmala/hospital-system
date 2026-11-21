@@ -296,7 +296,7 @@
             // Patient Name
             $patientName = '-';
             if ($payment->incubatorReservation) {
-                $patientName = $payment->incubatorReservation->baby_name ?: ('طفل ' . ($payment->incubatorReservation->patient?->name ?? 'غير محدد'));
+                $patientName = $payment->incubatorReservation->baby_name ?: (__('طفل') . ' ' . ($payment->incubatorReservation->patient?->name ?? __('غير محدد')));
             } elseif ($payment->patient && $payment->patient->user) {
                 $patientName = $payment->patient->user->name;
             } elseif ($payment->appointment && $payment->appointment->patient && $payment->appointment->patient->user) {
@@ -344,7 +344,7 @@
                     $consultFee = (float)($payment->patient_share ?: round((float)$consultFee * ((float)($payment->copay_percentage ?? 0) / 100)));
                 }
                 
-                $serviceTitle = 'اجور كشف استشارية';
+                $serviceTitle = __('اجور كشف استشارية');
                 $scanType = null;
                 if ($payment->appointment && $payment->appointment->visit) {
                     $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
@@ -358,7 +358,7 @@
                 }
 
                 if ($scanType) {
-                    $serviceTitle = 'فحص سونار: ' . $scanType->name;
+                    $serviceTitle = __('فحص سونار:') . ' ' . $scanType->name;
                 } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
                     $serviceTitle = trim($m[1]);
                 } elseif ($payment->appointment && !empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
@@ -397,22 +397,22 @@
                             } else {
                                 $price = $surgery->surgery_fee ?? 0;
                             }
-                            $serviceName = 'رسوم العملية: ' . $surgery->surgery_type;
+                            $serviceName = __('رسوم العملية:') . ' ' . $surgery->surgery_type;
                         } elseif (str_contains($line, 'أجور الغرفة')) {
                             if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
                                 $price = (float)str_replace(',', '', $pm[1]);
                             } else {
                                 $price = $surgery->room_fee ?? 0;
                             }
-                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
-                            $serviceName = 'أجور الغرفة' . $roomInfo;
+                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - ' . __('رقم') . ' ' . $surgery->room->room_number . ')') : '';
+                            $serviceName = __('أجور الغرفة') . $roomInfo;
                         } elseif (str_contains($line, 'تحليل:')) {
                             if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $lm)) {
-                                $serviceName = 'تحليل: ' . trim($lm[1]);
+                                $serviceName = __('تحليل:') . ' ' . trim($lm[1]);
                                 $price = (float)str_replace(',', '', $lm[2]);
                             } else {
                                 $name = trim(str_replace('تحليل:', '', $line));
-                                $serviceName = 'تحليل: ' . $name;
+                                $serviceName = __('تحليل:') . ' ' . $name;
                                 foreach ($surgery->labTests as $labTest) {
                                     if ($labTest->labTest && (str_contains($name, $labTest->labTest->name) || $labTest->labTest->name === $name)) {
                                         $price = $labTest->labTest->price ?? 0;
@@ -422,11 +422,11 @@
                             }
                         } elseif (str_contains($line, 'أشعة:')) {
                             if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $rm)) {
-                                $serviceName = 'أشعة: ' . trim($rm[1]);
+                                $serviceName = __('أشعة:') . ' ' . trim($rm[1]);
                                 $price = (float)str_replace(',', '', $rm[2]);
                             } else {
                                 $name = trim(str_replace('أشعة:', '', $line));
-                                $serviceName = 'أشعة: ' . $name;
+                                $serviceName = __('أشعة:') . ' ' . $name;
                                 foreach ($surgery->radiologyTests as $rad) {
                                     if ($rad->radiologyType && (str_contains($name, $rad->radiologyType->name) || $rad->radiologyType->name === $name)) {
                                         $price = $rad->radiologyType->base_price ?? 0;
@@ -458,7 +458,7 @@
                     $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
 
                     if ($pkg) {
-                        $pkgName = 'باقة: ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' تحاليل مشمولة)';
+                        $pkgName = __('باقة:') . ' ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' ' . __('تحاليل مشمولة') . ')';
                         if (!in_array($pkgName, array_column($lineItems, 'name'))) {
                             $pkgPrice = (float)$pkg->price;
                             if ($payment->insurance_type && $payment->insurance_type !== 'none') {
@@ -473,7 +473,7 @@
                         foreach ($extraTestIds as $testId) {
                             $test = \App\Models\LabTest::find($testId);
                             if ($test && $test->is_active) {
-                                $itemName = 'تحليل إضافي: ' . trim($test->name);
+                                $itemName = __('تحليل إضافي:') . ' ' . trim($test->name);
                                 if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
@@ -491,7 +491,7 @@
                             foreach ($testIds as $testId) {
                                 $test = \App\Models\LabTest::find($testId);
                                 if ($test && $test->is_active) {
-                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    $itemName = __('تحليل:') . ' ' . trim($test->name);
                                     if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -511,7 +511,7 @@
                                     })
                                     ->first();
                                 if ($test && !in_array($test->id, $foundTestIds)) {
-                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    $itemName = __('تحليل:') . ' ' . trim($test->name);
                                     if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -519,8 +519,8 @@
                                         : null;
                                     $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
-                                } elseif (!$test && !in_array(mb_strtolower('تحليل: ' . trim($tName)), array_map('mb_strtolower', array_column($lineItems, 'name')))) {
-                                    $lineItems[] = ['name' => 'تحليل: ' . trim($tName), 'qty' => 1, 'price' => 0];
+                                } elseif (!$test && !in_array(mb_strtolower(__('تحليل:') . ' ' . trim($tName)), array_map('mb_strtolower', array_column($lineItems, 'name')))) {
+                                    $lineItems[] = ['name' => __('تحليل:') . ' ' . trim($tName), 'qty' => 1, 'price' => 0];
                                 }
                             }
                         }
@@ -532,7 +532,7 @@
                             $type = \App\Models\RadiologyType::find($typeId);
                             if ($type) {
                                 $targetName = $details['radiology_targets'][$typeId] ?? null;
-                                $displayName = $targetName ? "أشعة: {$type->name} [العضو: {$targetName}]" : "أشعة: {$type->name}";
+                                $displayName = $targetName ? (__('أشعة:') . " {$type->name} [" . __('العضو:') . " {$targetName}]") : (__('أشعة:') . " {$type->name}");
                                 if (in_array($displayName, array_column($lineItems, 'name'))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $type->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
@@ -547,7 +547,7 @@
                 } elseif ($reqItem->type === 'pharmacy') {
                     if (isset($details['tests']) && is_array($details['tests'])) {
                         foreach ($details['tests'] as $drugName) {
-                            $itemName = 'صيدلية: ' . $drugName;
+                            $itemName = __('صيدلية:') . ' ' . $drugName;
                             if (in_array($itemName, array_column($lineItems, 'name'))) continue;
                             $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => 0];
                         }
@@ -562,7 +562,7 @@
                                     ? $nSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
                                 $price = $pricing ? (float)$pricing['patient_share'] : ($nSvc->price ?? 0);
-                                $lineItems[] = ['name' => 'تمريض: ' . $nSvc->name, 'qty' => 1, 'price' => $price];
+                                $lineItems[] = ['name' => __('تمريض:') . ' ' . $nSvc->name, 'qty' => 1, 'price' => $price];
                             }
                         }
                     } else {
@@ -585,7 +585,7 @@
                                 $price = round($price * ((float)($payment->copay_percentage ?? 0) / 100));
                             }
                         }
-                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? __('فحص تخطيط قلب (ECG)') : ($reqItem->description ?: __('خدمة تمريضية'));
                         $lineItems[] = ['name' => $cleanTitle, 'qty' => 1, 'price' => $price];
                     }
                 }
@@ -603,7 +603,7 @@
             }
             foreach ($paidVisitExtraServices as $extraSvc) {
                 $lineItems[] = [
-                    'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
+                    'name' => __('خدمة إضافية:') . ' ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
                     'qty' => $extraSvc->quantity ?: 1,
                     'price' => (float)$extraSvc->total_amount,
                 ];
@@ -633,15 +633,15 @@
                         : null;
                     $unitPrice = $pricing ? (float) $pricing['patient_share'] : ($svc->price ?? 0);
                     $price = $unitPrice * $qty;
-                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => $qty, 'price' => $price];
+                    $lineItems[] = ['name' => __('خدمة طوارئ:') . ' ' . $svc->name, 'qty' => $qty, 'price' => $price];
                 }
 
                 foreach ($emergencyAppointments as $apt) {
-                    $docTitle = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
+                    $docTitle = $apt->doctor?->user?->name ? (__('د.') . ' ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : __('الاستشاري');
                     $fee = (float)($apt->consultation_fee ?? 0);
                     if ($fee <= 0) continue;
                     $lineItems[] = [
-                        'name' => 'استشارة طبية طوارئ: ' . $docTitle,
+                        'name' => __('استشارة طبية طوارئ:') . ' ' . $docTitle,
                         'qty' => 1,
                         'price' => $fee,
                     ];
@@ -655,7 +655,7 @@
                             ? $lt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                             : null;
                         $price = $pricing ? (float)$pricing['patient_share'] : ($lt->price ?? 0);
-                        $lineItems[] = ['name' => 'تحليل طوارئ: ' . $lt->name, 'qty' => 1, 'price' => $price];
+                        $lineItems[] = ['name' => __('تحليل طوارئ:') . ' ' . $lt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
@@ -666,21 +666,21 @@
                             ? $rt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                             : null;
                         $price = $pricing ? (float)$pricing['patient_share'] : ($rt->base_price ?? 0);
-                        $lineItems[] = ['name' => 'أشعة طوارئ: ' . $rt->name, 'qty' => 1, 'price' => $price];
+                        $lineItems[] = ['name' => __('أشعة طوارئ:') . ' ' . $rt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
                 if ($payment->emergency->follow_up_payment_id === $payment->id && $payment->emergency->doctor_follow_up_fee > 0) {
-                    $lineItems[] = ['name' => 'رسوم متابعة طبيب الطوارئ', 'qty' => 1, 'price' => $payment->emergency->doctor_follow_up_fee];
+                    $lineItems[] = ['name' => __('رسوم متابعة طبيب الطوارئ'), 'qty' => 1, 'price' => $payment->emergency->doctor_follow_up_fee];
                 }
             }
 
             // 5. Incubator / NICU
             if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
                 $res = $payment->incubatorReservation;
-                $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
+                $babyTitle = $res ? ($res->baby_name ?: (__('طفل') . ' ' . ($res->patient?->name ?? ''))) : __('الخديج');
                 $lineItems[] = [
-                    'name' => $payment->description ?: ("دفعة / أمانات حاضنة الخدج ({$babyTitle})"),
+                    'name' => $payment->description ?: (__('دفعة / أمانات حاضنة الخدج') . " ({$babyTitle})"),
                     'qty' => 1,
                     'price' => (float)$payment->amount,
                 ];
@@ -689,10 +689,10 @@
             // Fallback if no item matched or refund
             if ((float)$payment->amount < 0) {
                 $lineItems = [
-                    ['name' => $payment->description ?: 'استرجاع مالي للمريض: إلغاء فحص خارجي', 'qty' => 1, 'price' => abs((float)$payment->amount)]
+                    ['name' => $payment->description ?: __('استرجاع مالي للمريض: إلغاء فحص خارجي'), 'qty' => 1, 'price' => abs((float)$payment->amount)]
                 ];
             } elseif (empty($lineItems)) {
-                $lineItems[] = ['name' => $payment->description ?: 'خدمات طبية', 'qty' => 1, 'price' => $payment->total_amount ?: $payment->amount];
+                $lineItems[] = ['name' => $payment->description ?: __('خدمات طبية'), 'qty' => 1, 'price' => $payment->total_amount ?: $payment->amount];
             }
         @endphp
 

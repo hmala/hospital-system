@@ -78,6 +78,22 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 271 (2026-11-21 — `main`) — التعريب والترجمة الإنجليزية الكاملة بنسبة 100% لكافة واجهات قسم الكاشير والمدفوعات والمطالبات (Full 100% Cashier Module Localization Across All 38 Views & Complete lang/en.json Dictionary Sync)**:
+  * **تعريب وترجمة كافة واجهات الكاشير الـ 38 بنسبة 100% ([resources/views/cashier/](file:///c:/wamp64/www/hospital-system/resources/views/cashier/))**:
+    - ترجمة استمارات الدفع والقبض: العيادات الخارجية (`payment-form.blade.php`)، الفحوصات الطبية والمختبر والأشعة (`request-payment-form.blade.php`)، العمليات الجراحية (`surgeries/payment-form.blade.php`)، الطوارئ (`emergency-payment-form.blade.php`)، العناية المركزة للكبار CCU (`ccu/payment-form.blade.php`)، والحواضن والخدج NICU (`nicu/payment-form.blade.php`).
+    - ترجمة لوحات التحكم والتقارير الرقابية: لوحة الكاشير الرئيسية ومؤقت التحديث والتبويبات (`index.blade.php`)، تقرير الحركات اليومية وفلاتر الصناديق والضمان (`report.blade.php` و `report-print.blade.php`)، سجل العمليات الملغاة وإبطال الإيصالات الرقابي (`payments/void-logs.blade.php` و `payments/void.blade.php`)، وسجل الفواتير المدفوعة (`payments.blade.php`).
+    - ترجمة كشوفات وحسابات العمليات: العمليات قيد الانتظار (`surgeries/index.blade.php`)، العمليات المسددة (`surgeries/paid.blade.php`)، وأرصدة وكشوفات الجراحين والتسويات وتخفيضات الباقات (`surgeries/doctor-accounts.blade.php` و `surgeries/doctor-account-details.blade.php`).
+    - ترجمة كشوفات الطوارئ: مطالبات وكشوفات الطوارئ والاتجاهات الشهرية (`emergency-statements.blade.php`)، الحركات المالية للمقبوضات والمستردات (`emergency-movements.blade.php`)، حسابات وأرصدة أطباء الطوارئ والمتابعة (`emergency-doctor-accounts.blade.php` و `emergency-doctor-account.blade.php`)، وحوافز إحالات الأطباء (`emergency-referrals.blade.php`).
+    - ترجمة كشوفات وحسابات وإيصالات العناية المركزة للكبار والحواضن CCU & NICU بالكامل (12 ملفاً تشمل كشوفات الحساب، الحركات، مطالبات الضمان، حسابات أطباء الخدج، والوصولات وسندات القبض والاسترجاع الحرارية والرسمية والمفصلة).
+    - ترجمة كشوفات الحسابات العامة وأطباء الاستشارية (`statements.blade.php`).
+  * **مزامنة القاموس الإنجليزي وتصفير المفاتيح الناقصة ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json))**:
+    - استخراج كافة المفاتيح العربية في قسم الكاشير (1,639 مفتاحاً) وإضافة الترجمات الإنجليزية بدقة طبية ومحاسبية عالية.
+    - تحقيق نسبة 0 مفاتيح ناقصة (`Missing keys in lang/en.json: 0`).
+  * **التدقيق وضمان الجودة والاختبارات الآلية**:
+    - نجاح تصفية وتجميع قوالب Blade بنسبة 100% دون أي خطأ نحوي أو تركيبي (`php artisan view:clear ; php artisan view:cache`).
+    - اجتياز اختبارات التنسيق القياسي `Laravel Pint` لجميع الملفات المعدلة بنجاح.
+    - اجتياز حزمة الاختبارات الآلية الشاملة بنسبة 100% (`19 passed, 177 assertions`) في `CashierLocalizationTest`, `SurgeriesCashierStayBillingTest`, `LocalizationTest`, و `EmergencyConsultationPaymentTest`.
+
 - **المرحلة 270 (2026-11-21 — `main`) — توحيد تسعير استشارات الأطباء المباشرة وإضافة عمود الكشفية المباشرة للأطباء، احتساب كشفية الطوارئ 100% للطبيب دون استقطاع المستشفى، حظر تسديد الكاشير عند غياب التسعيرة، وإلغاء الازدواجية في الوصولات والتقارير المالية (Direct Doctor Consultation Fee Architecture, 100% Doctor Share for Emergency Consultations, Cashier Payment Block on Missing Pricing, and Financial Report Segregation)**:
   * **إضافة عمود الكشفية المباشرة للأطباء ([database/migrations/2026_11_21_120000_add_direct_consultation_fee_to_doctors_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_21_120000_add_direct_consultation_fee_to_doctors_table.php), [app/Models/Doctor.php](file:///c:/wamp64/www/hospital-system/app/Models/Doctor.php), [app/Http/Controllers/DoctorController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorController.php), [resources/views/doctors/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/create.blade.php), [resources/views/doctors/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/edit.blade.php))**:
     - إضافة عمود `direct_consultation_fee` (decimal 10,2) لجدول `doctors` ليكون المرجع المالي المباشر المعتمد لاستشارات الطوارئ والرقود والمقيم بدلاً من الاعتماد على أسعار ثابتة أو عشوائية.

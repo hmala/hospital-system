@@ -5,11 +5,11 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-wallet me-2 text-info"></i>حسابات أطباء الخدج والأطفال</h2>
-                <p class="text-muted mb-0">مراقبة وتسجيل صرف مستحقات أطباء الأطفال وحديثي الولادة من استشارات ومتابعة الحواضن.</p>
+                <h2><i class="fas fa-wallet me-2 text-info"></i>{{ __('حسابات أطباء الخدج والأطفال') }}</h2>
+                <p class="text-muted mb-0">{{ __('مراقبة وتسجيل صرف مستحقات أطباء الأطفال وحديثي الولادة من استشارات ومتابعة الحواضن.') }}</p>
             </div>
             <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>العودة إلى الكاشير الرئيسية
+                <i class="fas fa-arrow-left me-2"></i>{{ __('العودة إلى الكاشير الرئيسية') }}
             </a>
         </div>
     </div>
@@ -38,14 +38,14 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>الطبيب</th>
-                                        <th>القسم</th>
-                                        <th>استشارات الخدج</th>
-                                        <th>حالات الحواضن المشرف عليها</th>
-                                        <th>إجمالي المستحقات (د.ع)</th>
-                                        <th>إجمالي المدفوع للطبيب (د.ع)</th>
-                                        <th>الرصيد المتبقي (د.ع)</th>
-                                        <th>الإجراءات</th>
+                                        <th>{{ __('الطبيب') }}</th>
+                                        <th>{{ __('القسم') }}</th>
+                                        <th>{{ __('استشارات الخدج') }}</th>
+                                        <th>{{ __('حالات الحواضن المشرف عليها') }}</th>
+                                        <th>{{ __('إجمالي المستحقات (د.ع)') }}</th>
+                                        <th>{{ __('إجمالي المدفوع للطبيب (د.ع)') }}</th>
+                                        <th>{{ __('الرصيد المتبقي (د.ع)') }}</th>
+                                        <th>{{ __('الإجراءات') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -53,18 +53,18 @@
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
-                                                <div class="fw-bold">د. {{ optional($account['doctor']->user)->name }}</div>
-                                                <small class="text-muted">{{ $account['doctor']->specialization ?? 'أطفال وحديثي ولادة' }}</small>
+                                                <div class="fw-bold">{{ __('د.') }} {{ optional($account['doctor']->user)->name }}</div>
+                                                <small class="text-muted">{{ $account['doctor']->specialization ?? __('أطفال وحديثي ولادة') }}</small>
                                             </td>
-                                            <td>{{ optional($account['doctor']->department)->name ?? 'قسم الخدج والأطفال' }}</td>
-                                            <td class="fw-bold text-success">{{ $account['consultations_count'] }} استشارة</td>
-                                            <td class="fw-bold text-primary">{{ $account['supervised_cases_count'] }} حالة</td>
+                                            <td>{{ optional($account['doctor']->department)->name ?? __('قسم الخدج والأطفال') }}</td>
+                                            <td class="fw-bold text-success">{{ $account['consultations_count'] }} {{ __('استشارة') }}</td>
+                                            <td class="fw-bold text-primary">{{ $account['supervised_cases_count'] }} {{ __('حالة') }}</td>
                                             <td class="text-success fw-bold">{{ number_format($account['total_earned'], 0) }}</td>
                                             <td class="text-secondary">{{ number_format($account['total_paid'], 0) }}</td>
                                             <td class="text-info fw-bold fs-6">{{ number_format($account['balance'], 0) }}</td>
                                             <td>
                                                 <a href="{{ route('cashier.nicu.doctor-account', $account['doctor']) }}" class="btn btn-sm btn-outline-info">
-                                                    <i class="fas fa-search-dollar me-1"></i>كشف الحساب والصرف
+                                                    <i class="fas fa-search-dollar me-1"></i>{{ __('كشف الحساب والصرف') }}
                                                 </a>
                                             </td>
                                         </tr>
@@ -75,7 +75,7 @@
                     @else
                         <div class="text-center py-5">
                             <i class="fas fa-user-md fa-3x text-muted mb-3 opacity-50"></i>
-                            <p class="text-muted mb-0">لا توجد مستحقات مالية مسجلة لأي طبيب أطفال أو خدج حالياً.</p>
+                            <p class="text-muted mb-0">{{ __('لا توجد مستحقات مالية مسجلة لأي طبيب أطفال أو خدج حالياً.') }}</p>
                         </div>
                     @endif
                 </div>

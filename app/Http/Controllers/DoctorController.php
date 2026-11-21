@@ -253,6 +253,27 @@ class DoctorController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
+        // مزامنة أجر الكشفية المباشرة مع أي مواعيد استشارية معلقة وغير مسعرة للطبيب
+        if ($request->filled('direct_consultation_fee') && (float) $request->direct_consultation_fee > 0) {
+            $pendingApts = \App\Models\Appointment::where('doctor_id', $doctor->id)
+                ->where('payment_status', 'pending')
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($q) {
+                    $q->whereNull('consultation_fee')->orWhere('consultation_fee', '<=', 0);
+                })
+                ->get();
+
+            foreach ($pendingApts as $apt) {
+                $apt->update(['consultation_fee' => (float) $request->direct_consultation_fee]);
+                if ($apt->emergency_id) {
+                    $em = \App\Models\Emergency::find($apt->emergency_id);
+                    if ($em) {
+                        app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($em);
+                    }
+                }
+            }
+        }
+
         // معالجة وحفظ التوقيع اليدوي للطبيب
         $threshold = (int) $request->input('signature_threshold', 200);
 
