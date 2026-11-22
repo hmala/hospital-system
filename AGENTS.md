@@ -54,6 +54,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-22 — المرحلة 273: حل استثناء فقدان دور تمريض الخدج والعناية وحصانة استعلامات جدول توفر التمريض Immunity for Nurse Availability Query against Missing Roles & Automated Role Seeding Migration)
+
+### Done
+- **الحل البرمجي الوقائي في الكنترولر ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php))**:
+  * استبدال `$q->role(...)` المباشر باستعلام العلاقات المعياري المتين `whereHas('roles', fn($rq) => $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse']))->orWhere('role', 'nurse')`.
+  * حماية النظام ومنع انهيار الصفحة بخطأ 500 (`RoleDoesNotExist: There is no role named 'nicu_nurse' for guard 'web'`) في بيئات العمل أو الاستضافة غير المحدثة الأدوار.
+- **ميجريشن التوليد التلقائي للأدوار السريرية ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+  * إنشاء ميجريشن تنفذ تلقائياً عند تشغيل `php artisan migrate` في السيرفر وتنشئ الأدوار السريرية المفقودة (`nurse`, `nicu_nurse`, `icu_nurse`, `head_nurse`, `anesthesia`) بجدول `roles` مع مسح الكاش تلقائياً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * إضافة اختبار ميزة مخصص `test_nurse_query_does_not_throw_when_role_does_not_exist_in_database` يؤكد فتح صفحة إدارة توفر التمريض بنجاح (HTTP 200) حتى لو حذف الدور من قاعدة البيانات.
+  * اجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 42 assertions`) واجتياز فحص `Laravel Pint`.
+
 ## Session log (2026-11-21 — المرحلة 272: توحيد واجهة كاشير الطوارئ مع باقي الأقسام بإضافة خيارات [تسديد / تأجيل / إلغاء] لكل خدمة والتحكم المباشر بالأسعار وإعادة احتساب الفاتورة لحظياً Unify Emergency Cashier Payment with Segmented Action Pills [Pay/Postpone/Cancel], Direct In-Line Price Overrides, Real-Time Recalculation, and Split Payment Handling)
 
 ### Done

@@ -16,8 +16,11 @@ class NurseAvailabilityTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $headNurse;
+
     protected User $nurse1;
+
     protected User $nurse2;
 
     protected function setUp(): void
@@ -248,5 +251,14 @@ class NurseAvailabilityTest extends TestCase
 
         $response->assertRedirect();
         $this->assertAuthenticatedAs($this->admin);
+    }
+
+    public function test_nurse_query_does_not_throw_when_role_does_not_exist_in_database(): void
+    {
+        \Spatie\Permission\Models\Role::where('name', 'nicu_nurse')->delete();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $response = $this->actingAs($this->admin)->get(route('nurse-availability.index'));
+        $response->assertOk();
     }
 }

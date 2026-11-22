@@ -78,6 +78,23 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 273 (2026-11-22 — `main`) — حل استثناء فقدان دور تمريض الخدج والعناية (RoleDoesNotExist: nicu_nurse) وحصانة استعلامات جدول توفر التمريض (Immunity for Nurse Availability Query against Missing Roles & Automated Role Seeding Migration)**:
+  * **السبب الجذري للمشكلة:**
+    - عند استدعاء `$q->role(['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse'])` في `NurseAvailabilityController`، تقوم حزمة Spatie بالبحث الإجباري عن كل اسم دور في جدول `roles` عبر `Role::findByName()`. في بيئة الإنتاج (Hostinger `hinpa.icu`) لم تكن الأدوار الجديدة منشأة بعد في قاعدة البيانات، مما أدى لانهيار الصفحة بخطأ 500 (`There is no role named 'nicu_nurse' for guard 'web'`).
+  * **الحل البرمجي الوقائي في الكنترولر ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php))**:
+    - استبدال استدعاء `$q->role(...)` المباشر باستعلام العلاقات المعياري المتين:
+      ```php
+      $q->whereHas('roles', function ($rq) {
+          $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse']);
+      })->orWhere('role', 'nurse');
+      ```
+    - هذا الاستعلام يعتمد على SQL Subquery خالص (`WHERE EXISTS`) ويعمل بمرونة وحصانة 100% حتى لو كان أحد الأدوار غير موجود بجدول الأدوار دون إطلاق أي استثناء أو توقف للنظام.
+  * **ميجريشن التوليد التلقائي للأدوار السريرية ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+    - إنشاء ميجريشن تنفذ تلقائياً عند تشغيل `php artisan migrate` في السيرفر وتنشئ الأدوار السريرية المفقودة (`nurse`, `nicu_nurse`, `icu_nurse`, `head_nurse`, `anesthesia`) بجدول `roles` مع مسح الكاش تلقائياً.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+    - إضافة اختبار ميزة مخصص `test_nurse_query_does_not_throw_when_role_does_not_exist_in_database` يحاكي حذف دور `nicu_nurse` من قاعدة البيانات ويؤكد عمل صفحة إدارة توفر التمريض بنجاح تام (HTTP 200).
+    - اجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 42 assertions`) واجتياز فحص `Laravel Pint`.
+
 - **المرحلة 272 (2026-11-21 — `main`) — توحيد واجهة كاشير الطوارئ مع باقي الأقسام بإضافة خيارات [تسديد / تأجيل / إلغاء] لكل خدمة والتحكم المباشر بالأسعار وإعادة احتساب الفاتورة لحظياً (Unify Emergency Cashier Payment with Segmented Action Pills [Pay/Postpone/Cancel], Direct In-Line Price Overrides, Real-Time Recalculation, and Split Payment Handling)**:
   * **الواجهة التفاعلية وإعادة هندسة جدول البنود ([resources/views/cashier/emergency-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
     - إضافة أزرار الإجراءات المقسمة (Segmented Control Pills) `[تسديد / تأجيل / إلغاء]` لكل بند (خدمات طوارئ، تحاليل، أشعة، استشارات، ورسوم متابعة) مع ألوان واضحة (أخضر للتسديد، برتقالي للتأجيل، أحمر للإلغاء).
