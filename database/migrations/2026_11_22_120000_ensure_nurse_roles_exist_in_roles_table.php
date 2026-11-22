@@ -28,6 +28,12 @@ return new class extends Migration
             ]);
         }
 
+        // ضمان منح صلاحيات إدارة جدول التمريض ومحطة التمريض لدور رئيس / مشرف التمريض
+        $headNurseRole = Role::firstOrCreate(['name' => 'head_nurse', 'guard_name' => 'web']);
+        $managePerm = \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
+        $viewNursingPerm = \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view nursing station', 'guard_name' => 'web']);
+        $headNurseRole->givePermissionTo([$managePerm, $viewNursingPerm]);
+
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 

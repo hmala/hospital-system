@@ -57,11 +57,13 @@ class NurseAvailabilityTest extends TestCase
         $responseAdmin->assertSee('جدول توفر ودوام التمريض اليومي');
         $responseAdmin->assertSee('ممرض أحمد');
         $responseAdmin->assertSee('ممرضة فاطمة');
+        $responseAdmin->assertDontSee('data-nurse-id="'.$this->headNurse->id.'"', false);
 
         // Head Nurse
         $responseHeadNurse = $this->actingAs($this->headNurse)->get(route('nurse-availability.index'));
         $responseHeadNurse->assertStatus(200);
         $responseHeadNurse->assertSee('جدول توفر ودوام التمريض اليومي');
+        $responseHeadNurse->assertDontSee('data-nurse-id="'.$this->headNurse->id.'"', false);
     }
 
     public function test_regular_nurse_without_permission_cannot_access_index(): void

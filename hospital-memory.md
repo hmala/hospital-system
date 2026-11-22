@@ -78,6 +78,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 274 (2026-11-22 — `main`) — فصل رئيس ومشرف التمريض (Head Nurse) عن قائمة التمريض المجدول ومنحه الصلاحيات الإشرافية الكاملة (Segregate Head Nurse Supervisor from Staff Nurse Duty Scheduling & Authorize Full Supervisory Governance)**:
+  * **عزل المشرف عن جدول دوام الممرضين ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php))**:
+    - تصحيح استعلام كادر التمريض `$nursesQuery` في `index()` و `bulkUpdate()` باستبعاد دور `head_nurse` وأدوار الإدارة نهائياً عبر `whereDoesntHave('roles', fn($rq) => $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))`.
+    - إزالة شارة مشرف التمريض من جدول التمريض التابع، بحيث لا يظهر رئيس/مشرف التمريض كممرض يُفتح ويُغلق دوامه بالمفتاح التفاعلي بل يدير الجدول كمشرف ومسؤول.
+  * **حصانة حساب مشرف التمريض بالنظام ([app/Models/User.php](file:///c:/wamp64/www/hospital-system/app/Models/User.php))**:
+    - تحديث دالة `isNurseAvailableToday()` لإعادة `true` فورياً لأي مستخدم يحمل دور `head_nurse` أو أحد الأدوار الإدارية، لمنع حجب المشرف أو توجيهه لشاشة خارج الدوام مهما كانت حالته بقاعدة البيانات أو في حال وجود بقايا قديمة لحقل `role = nurse`.
+  * **تثبيت الصلاحيات بالميجريشن ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+    - ربط صلاحيتي `manage nurse availability` و `view nursing station` تلقائياً بدور `head_nurse` عند تنفيذ الميجريشن بالسيرفر لضمان قدرته على التحكم الكامل بكادر التمريض ومحطة التمريض.
+  * **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+    - إضافة فحص يؤكد عدم ظهور حساب مشرف التمريض ضمن جدول كادر التمريض للمدير والمشرف، واجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 44 assertions`) واجتياز فحص `Laravel Pint`.
+
 - **المرحلة 273 (2026-11-22 — `main`) — حل استثناء فقدان دور تمريض الخدج والعناية (RoleDoesNotExist: nicu_nurse) وحصانة استعلامات جدول توفر التمريض (Immunity for Nurse Availability Query against Missing Roles & Automated Role Seeding Migration)**:
   * **السبب الجذري للمشكلة:**
     - عند استدعاء `$q->role(['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse'])` في `NurseAvailabilityController`، تقوم حزمة Spatie بالبحث الإجباري عن كل اسم دور في جدول `roles` عبر `Role::findByName()`. في بيئة الإنتاج (Hostinger `hinpa.icu`) لم تكن الأدوار الجديدة منشأة بعد في قاعدة البيانات، مما أدى لانهيار الصفحة بخطأ 500 (`There is no role named 'nicu_nurse' for guard 'web'`).

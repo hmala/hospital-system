@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-22 — المرحلة 274: فصل رئيس ومشرف التمريض عن قائمة كادر التمريض المجدول وتمكين الصلاحيات الإشرافية Segregate Head Nurse Supervisor from Staff Nurse Duty Scheduling & Authorize Full Supervisory Governance)
+
+### Done
+- **عزل المشرف عن جدول دوام الممرضين ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php))**:
+  * تصحيح استعلام كادر التمريض `$nursesQuery` في `index()` و `bulkUpdate()` باستبعاد دور `head_nurse` وأدوار الإدارة نهائياً عبر `whereDoesntHave('roles', fn($rq) => $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))`.
+  * إزالة شارة مشرف التمريض من جدول التمريض التابع، بحيث لا يظهر رئيس/مشرف التمريض كممرض يُفتح ويُغلق دوامه بالمفتاح التفاعلي بل يدير الجدول كمشرف ومسؤول.
+- **حصانة حساب مشرف التمريض بالنظام ([app/Models/User.php](file:///c:/wamp64/www/hospital-system/app/Models/User.php))**:
+  * تحديث دالة `isNurseAvailableToday()` لإعادة `true` فورياً لأي مستخدم يحمل دور `head_nurse` أو أحد الأدوار الإدارية، لمنع حجب المشرف أو توجيهه لشاشة خارج الدوام مهما كانت حالته بقاعدة البيانات أو في حال وجود بقايا قديمة لحقل `role = nurse`.
+- **تثبيت الصلاحيات بالميجريشن ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+  * ربط صلاحيتي `manage nurse availability` و `view nursing station` تلقائياً بدور `head_nurse` عند تنفيذ الميجريشن بالسيرفر لضمان قدرته على التحكم الكامل بكادر التمريض ومحطة التمريض.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * إضافة فحص يؤكد عدم ظهور حساب مشرف التمريض ضمن جدول كادر التمريض للمدير والمشرف، واجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 44 assertions`) واجتياز فحص `Laravel Pint`.
+
 ## Session log (2026-11-22 — المرحلة 273: حل استثناء فقدان دور تمريض الخدج والعناية وحصانة استعلامات جدول توفر التمريض Immunity for Nurse Availability Query against Missing Roles & Automated Role Seeding Migration)
 
 ### Done

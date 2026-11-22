@@ -59,9 +59,17 @@ class NurseAvailabilityController extends Controller
 
         $nursesQuery = User::where(function ($q) {
             $q->whereHas('roles', function ($rq) {
-                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse']);
-            })->orWhere('role', 'nurse');
+                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']);
+            })->orWhere(function ($oq) {
+                $oq->where('role', 'nurse')
+                    ->whereDoesntHave('roles', function ($rq) {
+                        $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+                    });
+            });
         })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+            })
             ->where('is_active', true)
             ->with(['nurseAvailabilities' => function ($q) use ($selectedDate) {
                 $q->whereDate('date', $selectedDate);
@@ -290,9 +298,18 @@ class NurseAvailabilityController extends Controller
 
         $nursesQuery = User::where(function ($q) {
             $q->whereHas('roles', function ($rq) {
-                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse']);
-            })->orWhere('role', 'nurse');
-        })->where('is_active', true);
+                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']);
+            })->orWhere(function ($oq) {
+                $oq->where('role', 'nurse')
+                    ->whereDoesntHave('roles', function ($rq) {
+                        $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+                    });
+            });
+        })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+            })
+            ->where('is_active', true);
 
         $nurses = $nursesQuery->get();
 
