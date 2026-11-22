@@ -78,6 +78,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 275 (2026-11-22 — `main`) — الترقية التلقائية لحساب رئيس/مشرف التمريض في بيئة الإنتاج ومنح الصلاحيات الإشرافية عبر ميجريشن مخصصة (Automated Head Nurse Supervisor Role Promotion & Permission Synchronization Migration)**:
+  * **السبب الجذري للمشكلة في هوستنجر:**
+    - في بيئة سيرفر هوستنجر (`hinpa.icu`)، حساب المستخدم (عبدالله الحسين `abdullahalhussen247@gmail.com`) تم إنشاؤه مسبقاً قبل إضافة دور `head_nurse`، فكان مربوطاً في جدول `model_has_roles` برقم الدور `11` (`nurse`).
+    - عند تشغيل الميجريشن بالمرحلة 273، تم إنشاء دور `head_nurse` في جدول `roles` فقط، لكن أمر الميجريشن لا يعدل تلقائياً سجلات المستخدمين القديمة في جدول `model_has_roles`.
+    - بالنتيجة، ظل الحساب مسجلاً بدور `nurse` فظهر في واجهة المستخدمين `/users` بشارة `كادر تمريضي`، وظهر في جدول دوام التمريض.
+  * **الحل البرمجي عبر ميجريشن مخصصة ([database/migrations/2026_11_22_133000_promote_head_nurse_supervisor_user.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_22_133000_promote_head_nurse_supervisor_user.php))**:
+    - إنشاء ميجريشن فورية تنفذ عند أمر `php artisan migrate --force` بالسيرفر لتقوم تلقائياً بترقية الحساب (`abdullahalhussen247@gmail.com` أو أي حساب بمسمى مشرف/رئيس التمريض) إلى دور `head_nurse` حصراً في `model_has_roles` وتحديث حقل `users.role = 'head_nurse'`.
+    - مسح كاش الصلاحيات تلقائياً `forgetCachedPermissions()` وتثبيت الصلاحيات `manage nurse availability` و `view nursing station`.
+  * **التحقق والاختبارات الآلية**:
+    - تنفيذ الميجريشن بنجاح واجتياز اختبارات `NurseAvailabilityTest` بنسبة 100% (`11 passed, 46 assertions`)، وفحص `Laravel Pint`.
+
 - **المرحلة 274 (2026-11-22 — `main`) — فصل رئيس ومشرف التمريض (Head Nurse) عن قائمة التمريض المجدول ومنحه الصلاحيات الإشرافية الكاملة (Segregate Head Nurse Supervisor from Staff Nurse Duty Scheduling & Authorize Full Supervisory Governance)**:
   * **عزل المشرف عن جدول دوام الممرضين ([app/Http/Controllers/NurseAvailabilityController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [resources/views/nurse-availability/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nurse-availability/index.blade.php))**:
     - تصحيح استعلام كادر التمريض `$nursesQuery` في `index()` و `bulkUpdate()` باستبعاد دور `head_nurse` وأدوار الإدارة نهائياً عبر `whereDoesntHave('roles', fn($rq) => $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))`.
